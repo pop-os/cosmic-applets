@@ -143,11 +143,5 @@ pub unsafe fn set_position(
     y: c_int,
 ) {
     // XXX check error return value
-    let hints = xlib::XAllocSizeHints();
-    let mut supplied: c_long = 0;
-    xlib::XGetWMNormalHints(display.xdisplay(), surface.xid(), hints, &mut supplied);
-    (*hints).x = x;
-    (*hints).y = y;
-    xlib::XSetWMNormalHints(display.xdisplay(), surface.xid(), hints);
-    xlib::XFree(hints as *mut _);
+    xlib::XMoveWindow(display.xdisplay(), surface.xid(), x, y);
 }
