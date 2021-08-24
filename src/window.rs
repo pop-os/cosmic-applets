@@ -35,6 +35,26 @@ pub fn window(monitor: gdk::Monitor) -> gtk4::Window {
         ..show();
     };
 
+    fn monitor_geometry_changed(window: &gtk4::Window, monitor: &gdk::Monitor) {
+        let geometry = monitor.geometry();
+        window.set_size_request(geometry.width, 0);
+
+        if let Some((display, surface)) = x::get_window_x11(&window) {
+            let top: x::c_ulong = 32;
+            let top_start_x = geometry.x as x::c_ulong;
+            let top_end_x = top_start_x + geometry.width as x::c_ulong;
+            unsafe {
+                x::change_property(
+                    &display,
+                    &surface,
+                    "_NET_WM_STRUT_PARTIAL",
+                    x::PropMode::Replace,
+                    &[0, 0, top, 0, 0, 0, 0, 0, top_start_x, top_end_x, 0, 0],
+                );
+            }
+        }
+    }
+
     if let Some((display, surface)) = x::get_window_x11(&window) {
         unsafe {
             surface.set_skip_pager_hint(true);
@@ -63,13 +83,6 @@ pub fn window(monitor: gdk::Monitor) -> gtk4::Window {
             x::change_property(
                 &display,
                 &surface,
-                "_NET_WM_STRUT",
-                x::PropMode::Replace,
-                &[0, 0, 32 as x::c_ulong, 0],
-            );
-            x::change_property(
-                &display,
-                &surface,
                 "_NET_WM_WINDOW_TYPE",
                 x::PropMode::Replace,
                 &[x::Atom::new(&display, "_NET_WM_WINDOW_TYPE_DOCK").unwrap()],
@@ -77,17 +90,11 @@ pub fn window(monitor: gdk::Monitor) -> gtk4::Window {
         }
     }
 
-    let gdk::Rectangle {
-        x,
-        y,
-        width,
-        height,
-    } = monitor.geometry();
-    window.set_size_request(width, 0);
     monitor.connect_geometry_notify(clone!(@strong window => move |monitor| {
-        let gdk::Rectangle { x, y, width, height } = monitor.geometry();
-        window.set_size_request(width, 0);
+        monitor_geometry_changed(&window, &monitor);
     }));
+    monitor_geometry_changed(&window, &monitor);
+
     monitor.connect_invalidate(clone!(@strong window => move |_| window.close()));
 
     window
