@@ -40,10 +40,15 @@ pub fn window(monitor: gdk::Monitor) -> gtk4::Window {
         window.set_size_request(geometry.width, 0);
 
         if let Some((display, surface)) = x::get_window_x11(&window) {
-            let top: x::c_ulong = 32;
+            let top: x::c_ulong = 32; // XXX arbitrary
             let top_start_x = geometry.x as x::c_ulong;
-            let top_end_x = top_start_x + geometry.width as x::c_ulong;
+            let top_end_x = top_start_x + geometry.width as x::c_ulong - 1;
+
+            println!("{} {}", top_start_x, top_end_x);
+
             unsafe {
+                x::set_position(&display, &surface, top_start_x as _, 0);
+
                 x::change_property(
                     &display,
                     &surface,

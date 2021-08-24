@@ -3,7 +3,7 @@ use glib::translate::ToGlibPtr;
 use gtk4::{glib, prelude::*};
 use std::{
     ffi::{CString, NulError},
-    os::raw::c_int,
+    os::raw::{c_int, c_long},
 };
 
 pub use std::os::raw::{c_uchar, c_ulong, c_ushort};
@@ -134,4 +134,20 @@ pub unsafe fn change_property<T: XProp>(
         value.ptr(),
         value.nelements(),
     );
+}
+
+pub unsafe fn set_position(
+    display: &gdk4_x11::X11Display,
+    surface: &gdk4_x11::X11Surface,
+    x: c_int,
+    y: c_int,
+) {
+    // XXX check error return value
+    let hints = xlib::XAllocSizeHints();
+    let mut supplied: c_long = 0;
+    xlib::XGetWMNormalHints(display.xdisplay(), surface.xid(), hints, &mut supplied);
+    (*hints).x = x;
+    (*hints).y = y;
+    xlib::XSetWMNormalHints(display.xdisplay(), surface.xid(), hints);
+    xlib::XFree(hints as *mut _);
 }
