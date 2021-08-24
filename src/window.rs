@@ -27,11 +27,7 @@ pub fn window(monitor: gdk::Monitor) -> gtk4::Window {
     let window = cascade! {
         gtk4::Window::new();
         ..set_decorated(false);
-        //..set_keep_above(true);
-        //..stick();
         ..set_child(Some(&box_));
-        ..connect_realize(|window| {
-        });
         ..show();
     };
 
@@ -43,8 +39,6 @@ pub fn window(monitor: gdk::Monitor) -> gtk4::Window {
             let top: x::c_ulong = 32; // XXX arbitrary
             let top_start_x = geometry.x as x::c_ulong;
             let top_end_x = top_start_x + geometry.width as x::c_ulong - 1;
-
-            println!("{} {}", top_start_x, top_end_x);
 
             unsafe {
                 x::set_position(&display, &surface, top_start_x as _, 0);
@@ -64,16 +58,8 @@ pub fn window(monitor: gdk::Monitor) -> gtk4::Window {
         unsafe {
             surface.set_skip_pager_hint(true);
             surface.set_skip_taskbar_hint(true);
-            x::change_property(
-                &display,
-                &surface,
-                "_NET_WM_STATE",
-                x::PropMode::Append,
-                &[
-                    x::Atom::new(&display, "_NET_WM_STATE_ABOVE").unwrap(),
-                    x::Atom::new(&display, "_NET_WM_STATE_STICKY").unwrap(),
-                ],
-            ); // XXX not working?
+            x::wm_state_add(&display, &surface, "_NET_WM_STATE_ABOVE");
+            x::wm_state_add(&display, &surface, "_NET_WM_STATE_STICKY");
             x::change_property(
                 &display,
                 &surface,

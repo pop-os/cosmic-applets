@@ -1,9 +1,11 @@
+use cascade::cascade;
 use gdk4_x11::x11::xlib;
 use glib::translate::ToGlibPtr;
 use gtk4::{glib, prelude::*};
 use std::{
     ffi::{CString, NulError},
     os::raw::{c_int, c_long},
+    ptr,
 };
 
 pub use std::os::raw::{c_uchar, c_ulong, c_ushort};
@@ -144,4 +146,39 @@ pub unsafe fn set_position(
 ) {
     // XXX check error return value
     xlib::XMoveWindow(display.xdisplay(), surface.xid(), x, y);
+}
+
+pub unsafe fn wm_state_add(
+    display: &gdk4_x11::X11Display,
+    surface: &gdk4_x11::X11Surface,
+    state: &str,
+) {
+    const _NET_WM_STATE_ADD: c_long = 1;
+    // XXX check error return value
+    let mut event = xlib::XEvent {
+        client_message: xlib::XClientMessageEvent {
+            type_: xlib::ClientMessage,
+            serial: 0,
+            send_event: 0,
+            display: ptr::null_mut(),
+            window: surface.xid(),
+            message_type: Atom::new(display, "_NET_WM_STATE").unwrap().0,
+            format: 32,
+            data: cascade! {
+                xlib::ClientMessageData::new();
+                ..set_long(0, _NET_WM_STATE_ADD);
+                ..set_long(1, Atom::new(display, state).unwrap().0 as _);
+                ..set_long(2, Atom::new(display, "").unwrap().0 as _);
+                ..set_long(3, 1);
+                ..set_long(3, 0);
+            },
+        },
+    };
+    xlib::XSendEvent(
+        display.xdisplay(),
+        display.xrootwindow(),
+        0,
+        xlib::SubstructureRedirectMask | xlib::SubstructureNotifyMask,
+        &mut event,
+    );
 }
