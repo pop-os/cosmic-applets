@@ -1,0 +1,12 @@
+[package]
+name = "cosmic-panel"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+cascade = "1"
+gdk4-x11 = "0.2"
+gtk4 = "0.2"
+toml = "0.5"
+x11 = { version = "2", features = ["xlib"] }
+zbus = "1"
