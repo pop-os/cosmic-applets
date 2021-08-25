@@ -131,19 +131,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cosmic-panel"
-version = "0.1.0"
-dependencies = [
- "cascade",
- "chrono",
- "gdk4-x11",
- "gtk4",
- "toml",
- "x11",
- "zbus",
-]
-
-[[package]]
 name = "derivative"
 version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -766,6 +753,19 @@ dependencies = [
  "log",
  "wepoll-ffi",
  "winapi",
+]
+
+[[package]]
+name = "pop-cosmic-panel"
+version = "0.1.0"
+dependencies = [
+ "cascade",
+ "chrono",
+ "gdk4-x11",
+ "gtk4",
+ "toml",
+ "x11",
+ "zbus",
 ]
 
 [[package]]
