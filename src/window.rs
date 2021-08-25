@@ -5,6 +5,16 @@ use gtk4::{gdk, glib, prelude::*};
 use crate::x;
 
 pub fn window(monitor: gdk::Monitor) -> gtk4::Window {
+    let time_button = cascade! {
+        gtk4::MenuButton::new();
+        ..set_popover(Some(&cascade! {
+            gtk4::Popover::new();
+            ..set_child(Some(&cascade! {
+                gtk4::Calendar::new();
+            }));
+        }));
+    };
+
     let box_ = cascade! {
         gtk4::CenterBox::new();
         ..set_start_widget(Some(&cascade! {
@@ -12,16 +22,7 @@ pub fn window(monitor: gdk::Monitor) -> gtk4::Window {
             ..append(&gtk4::Button::with_label("Workspaces"));
             ..append(&gtk4::Button::with_label("Applications"));
         }));
-        ..set_center_widget(Some(&cascade! {
-            gtk4::MenuButton::new();
-            ..set_label("Jan 1 00:00 AM");
-            ..set_popover(Some(&cascade! {
-                gtk4::Popover::new();
-                ..set_child(Some(&cascade! {
-                    gtk4::Calendar::new();
-                }));
-            }));
-        }));
+        ..set_center_widget(Some(&time_button));
     };
 
     let window = cascade! {
@@ -30,6 +31,23 @@ pub fn window(monitor: gdk::Monitor) -> gtk4::Window {
         ..set_child(Some(&box_));
         ..show();
     };
+
+    fn update_time(time_button: &gtk4::MenuButton) {
+        // TODO: Locale-based formatting?
+        let time = chrono::Local::now();
+        time_button.set_label(&time.format("%b %-d %-I:%M %p").to_string());
+        // time.format("%B %-d %Y")
+    }
+
+    // TODO: better way to do this?
+    glib::timeout_add_seconds_local(
+        1,
+        clone!(@weak time_button => @default-return glib::Continue(false), move || {
+            update_time(&time_button);
+            glib::Continue(true)
+        }),
+    );
+    update_time(&time_button);
 
     fn monitor_geometry_changed(window: &gtk4::Window, monitor: &gdk::Monitor) {
         let geometry = monitor.geometry();

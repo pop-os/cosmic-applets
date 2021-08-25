@@ -5,6 +5,7 @@ edition = "2018"
 
 [dependencies]
 cascade = "1"
+chrono = "0.4"
 gdk4-x11 = "0.2"
 gtk4 = "0.2"
 toml = "0.5"

@@ -5,6 +5,8 @@ mod x;
 
 fn main() {
     gtk4::init().unwrap();
+    let main_context = glib::MainContext::default();
+    let _acquire_guard = main_context.acquire().unwrap();
 
     let display = gdk::Display::default().unwrap();
     let monitors = display.monitors().unwrap();
