@@ -2,6 +2,7 @@ use gtk4::{gdk, glib, prelude::*};
 
 mod deref_cell;
 mod mpris;
+mod status_area;
 mod time_button;
 mod window;
 mod x;

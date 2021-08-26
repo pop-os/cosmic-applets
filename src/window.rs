@@ -2,6 +2,7 @@ use cascade::cascade;
 use glib::clone;
 use gtk4::{gdk, glib, prelude::*};
 
+use crate::status_area::StatusArea;
 use crate::time_button::TimeButton;
 use crate::x;
 
@@ -14,6 +15,7 @@ pub fn window(monitor: gdk::Monitor) -> gtk4::Window {
             ..append(&gtk4::Button::with_label("Applications"));
         }));
         ..set_center_widget(Some(&TimeButton::new()));
+        ..set_end_widget(Some(&StatusArea::new()));
     };
 
     let window = cascade! {
