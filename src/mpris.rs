@@ -20,6 +20,7 @@ pub struct MprisControlsInner {
     dbus: OnceCell<DBus>,
     players: RefCell<HashMap<String, Player>>,
     picture: DerefCell<gtk4::Picture>,
+    picture_uri: RefCell<Option<String>>,
     title_label: DerefCell<gtk4::Label>,
     artist_label: DerefCell<gtk4::Label>,
 }
@@ -198,6 +199,13 @@ impl MprisControls {
     }
 
     async fn update_arturl(&self, arturl: Option<&str>) {
+        let mut picture_uri = self.inner().picture_uri.borrow_mut();
+        if picture_uri.as_deref() == arturl {
+            return;
+        }
+        *picture_uri = arturl.map(String::from);
+        drop(picture_uri);
+
         let pixbuf = async {
             let file = gio::File::for_uri(&arturl?);
             let stream = file.read_async_future(glib::PRIORITY_DEFAULT).await.ok()?;
