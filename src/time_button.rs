@@ -55,7 +55,7 @@ impl ObjectImpl for TimeButtonInner {
         obj.update_time();
     }
 
-    fn dispose(&self, obj: &TimeButton) {
+    fn dispose(&self, _obj: &TimeButton) {
         self.menu_button.unparent();
     }
 }

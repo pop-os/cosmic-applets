@@ -5,7 +5,8 @@ use gtk4::{
     prelude::*,
     subclass::prelude::*,
 };
-use std::cell::RefCell;
+use once_cell::unsync::OnceCell;
+use std::{cell::RefCell, collections::HashMap};
 
 use crate::deref_cell::DerefCell;
 
@@ -15,6 +16,8 @@ pub struct MprisControlsInner {
     backward_button: DerefCell<gtk4::Button>,
     play_pause_button: DerefCell<gtk4::Button>,
     forward_button: DerefCell<gtk4::Button>,
+    dbus: OnceCell<DBus>,
+    players: RefCell<HashMap<String, Player>>,
 }
 
 #[glib::object_subclass]
@@ -32,17 +35,17 @@ impl ObjectImpl for MprisControlsInner {
     fn constructed(&self, obj: &MprisControls) {
         let backward_button = cascade! {
             gtk4::Button::from_icon_name(Some("media-skip-backward-symbolic"));
-            ..connect_clicked(|_| {});
+            ..connect_clicked(clone!(@strong obj => move |_| obj.call("Previous")));
         };
 
         let play_pause_button = cascade! {
             gtk4::Button::from_icon_name(Some("media-playback-start-symbolic"));
-            ..connect_clicked(|_| {});
+            ..connect_clicked(clone!(@strong obj => move |_| obj.call("PlayPause")));
         };
 
         let forward_button = cascade! {
             gtk4::Button::from_icon_name(Some("media-skip-forward-symbolic"));
-            ..connect_clicked(|_| {});
+            ..connect_clicked(clone!(@strong obj => move |_| obj.call("Next")));
         };
 
         let box_ = cascade! {
@@ -53,31 +56,41 @@ impl ObjectImpl for MprisControlsInner {
             ..append(&forward_button);
         };
 
-        /*
         glib::MainContext::default().spawn_local(clone!(@strong obj => async move {
-            // XXX unwrap
-            let dbus = DBus::new().await.unwrap();
-            dbus.connect_name_owner_changed(|a, b, c| {
-                println!("{:?}", (a, b, c));
-            });
-            for name in dbus.list_names().await.unwrap() {
-                if !name.starts_with("org.mpris.MediaPlayer2.") {
-                    continue;
+            let dbus = match DBus::new().await {
+                Ok(dbus) => dbus,
+                Err(err) => {
+                    eprintln!("Failed to connect to 'org.freedesktop.DBus': {}", err);
+                    return;
                 }
-                let player = Player::new(&name).await.unwrap();
+            };
 
-                println!("{}", name);
-                let status = player.playback_status();
-                let metadata = player.metadata().unwrap();
-                let title = metadata.title();
-                let album = metadata.album();
-                let artist = metadata.artist();
-                let art = metadata.arturl();
-                println!("{:?}", (title, art));
+            dbus.connect_name_owner_changed(clone!(@strong obj => move |name, old, new| {
+                if name.starts_with("org.mpris.MediaPlayer2.") {
+                    if !old.is_empty() {
+                        obj.player_removed(&name);
+                    }
+                    if !new.is_empty() {
+                        glib::MainContext::default().spawn_local(clone!(@strong obj => async move {
+                        obj.player_added(&name).await;
+                        }));
+                    }
+                }
+            }));
+
+            match dbus.list_names().await {
+                Ok(names) => for name in names {
+                    if name.starts_with("org.mpris.MediaPlayer2.") {
+                        glib::MainContext::default().spawn_local(clone!(@strong obj => async move {
+                        obj.player_added(&name).await;
+                        }));
+                    }
+                }
+                Err(err) => eprintln!("Failed to call 'ListNames: {}'", err)
             }
-            std::mem::forget(dbus);
+
+            let _ = obj.inner().dbus.set(dbus);
         }));
-        */
 
         self.box_.set(box_);
         self.backward_button.set(backward_button);
@@ -85,7 +98,7 @@ impl ObjectImpl for MprisControlsInner {
         self.forward_button.set(forward_button);
     }
 
-    fn dispose(&self, obj: &MprisControls) {
+    fn dispose(&self, _obj: &MprisControls) {
         self.box_.unparent();
     }
 }
@@ -100,6 +113,52 @@ glib::wrapper! {
 impl MprisControls {
     pub fn new() -> Self {
         glib::Object::new(&[]).unwrap()
+    }
+
+    fn inner(&self) -> &MprisControlsInner {
+        MprisControlsInner::from_instance(self)
+    }
+
+    fn player(&self) -> Option<Player> {
+        // XXX correctly choose which player to show
+        self.inner().players.borrow().values().next().cloned()
+    }
+
+    async fn player_added(&self, name: &str) {
+        let player = match Player::new(&name).await {
+            Ok(player) => player,
+            Err(err) => {
+                eprintln!("Failed to connect to '{}': {}", name, err);
+                return;
+            }
+        };
+
+        let status = player.playback_status();
+        let metadata = player.metadata().unwrap(); // XXX unwrap
+        let title = metadata.title();
+        let album = metadata.album();
+        let artist = metadata.artist();
+        let arturl = metadata.arturl();
+        println!("{:?}", (status, title, album, artist, arturl));
+
+        self.inner()
+            .players
+            .borrow_mut()
+            .insert(name.to_owned(), player);
+    }
+
+    fn player_removed(&self, name: &str) {
+        self.inner().players.borrow_mut().remove(name);
+    }
+
+    fn call(&self, method: &'static str) {
+        glib::MainContext::default().spawn_local(clone!(@strong self as self_ => async move {
+            if let Some(player) = self_.player() {
+                if let Err(err) = player.call(method).await {
+                    eprintln!("Failed to call '{}': {}", method, err);
+                }
+            }
+        }));
     }
 }
 
@@ -127,6 +186,7 @@ impl Metadata {
     }
 }
 
+#[derive(Clone)]
 struct Player(gio::DBusProxy);
 
 impl Player {
@@ -141,6 +201,13 @@ impl Player {
         )
         .await?;
         Ok(Self(proxy))
+    }
+
+    async fn call(&self, method: &str) -> Result<(), glib::Error> {
+        self.0
+            .call_future(method, None, gio::DBusCallFlags::NONE, 1000)
+            .await?;
+        Ok(())
     }
 
     fn property<T: glib::FromVariant>(&self, prop: &str) -> Option<T> {
