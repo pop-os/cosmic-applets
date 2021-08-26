@@ -1,7 +1,8 @@
 use cascade::cascade;
 use gtk4::{
-    gio,
+    gdk, gdk_pixbuf, gio,
     glib::{self, clone},
+    pango,
     prelude::*,
     subclass::prelude::*,
 };
@@ -18,6 +19,9 @@ pub struct MprisControlsInner {
     forward_button: DerefCell<gtk4::Button>,
     dbus: OnceCell<DBus>,
     players: RefCell<HashMap<String, Player>>,
+    picture: DerefCell<gtk4::Picture>,
+    title_label: DerefCell<gtk4::Label>,
+    artist_label: DerefCell<gtk4::Label>,
 }
 
 #[glib::object_subclass]
@@ -33,6 +37,30 @@ impl ObjectSubclass for MprisControlsInner {
 
 impl ObjectImpl for MprisControlsInner {
     fn constructed(&self, obj: &MprisControls) {
+        let picture = cascade! {
+            gtk4::Picture::new();
+            ..set_halign(gtk4::Align::Center);
+            ..set_valign(gtk4::Align::Center);
+            ..set_can_shrink(true);
+            ..set_size_request(32, 32);
+        };
+
+        let title_label = cascade! {
+            gtk4::Label::new(None);
+            ..set_ellipsize(pango::EllipsizeMode::End);
+            ..set_max_width_chars(20);
+            ..set_attributes(Some(&cascade! {
+                pango::AttrList::new();
+                ..insert(pango::Attribute::new_weight(pango::Weight::Bold));
+            }));
+        };
+
+        let artist_label = cascade! {
+            gtk4::Label::new(None);
+            ..set_ellipsize(pango::EllipsizeMode::End);
+            ..set_max_width_chars(20);
+        };
+
         let backward_button = cascade! {
             gtk4::Button::from_icon_name(Some("media-skip-backward-symbolic"));
             ..connect_clicked(clone!(@strong obj => move |_| obj.call("Previous")));
@@ -49,11 +77,18 @@ impl ObjectImpl for MprisControlsInner {
         };
 
         let box_ = cascade! {
-            gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
+            gtk4::Box::new(gtk4::Orientation::Vertical, 0);
             ..set_parent(obj);
-            ..append(&backward_button);
-            ..append(&play_pause_button);
-            ..append(&forward_button);
+            ..append(&picture);
+            ..append(&title_label);
+            ..append(&artist_label);
+            ..append(&cascade! {
+                gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
+                ..set_valign(gtk4::Align::Start);
+                ..append(&backward_button);
+                ..append(&play_pause_button);
+                ..append(&forward_button);
+            });
         };
 
         glib::MainContext::default().spawn_local(clone!(@strong obj => async move {
@@ -96,6 +131,9 @@ impl ObjectImpl for MprisControlsInner {
         self.backward_button.set(backward_button);
         self.play_pause_button.set(play_pause_button);
         self.forward_button.set(forward_button);
+        self.picture.set(picture);
+        self.title_label.set(title_label);
+        self.artist_label.set(artist_label);
     }
 
     fn dispose(&self, _obj: &MprisControls) {
@@ -133,18 +171,16 @@ impl MprisControls {
             }
         };
 
-        let status = player.playback_status();
-        let metadata = player.metadata().unwrap(); // XXX unwrap
-        let title = metadata.title();
-        let album = metadata.album();
-        let artist = metadata.artist();
-        let arturl = metadata.arturl();
-        println!("{:?}", (status, title, album, artist, arturl));
-
         self.inner()
             .players
             .borrow_mut()
-            .insert(name.to_owned(), player);
+            .insert(name.to_owned(), player.clone());
+
+        player.connect_properties_changed(clone!(@weak self as self_ => move |_player| {
+            // TODO
+            self_.update();
+        }));
+        self.update();
     }
 
     fn player_removed(&self, name: &str) {
@@ -159,6 +195,51 @@ impl MprisControls {
                 }
             }
         }));
+    }
+
+    async fn update_arturl(&self, arturl: Option<&str>) {
+        let pixbuf = async {
+            let file = gio::File::for_uri(&arturl?);
+            let stream = file.read_async_future(glib::PRIORITY_DEFAULT).await.ok()?;
+            gdk_pixbuf::Pixbuf::from_stream_at_scale_async_future(&stream, 256, 256, false)
+                .await
+                .ok()
+        }
+        .await;
+        if let Some(pixbuf) = pixbuf {
+            let texture = gdk::Texture::for_pixbuf(&pixbuf);
+            self.inner().picture.set_paintable(Some(&texture));
+        }
+    }
+
+    fn update(&self) {
+        let player = match self.player() {
+            Some(player) => player,
+            None => return,
+        };
+
+        // XXX status
+        let (_status, metadata) = match (player.playback_status(), player.metadata()) {
+            (Some(status), Some(metadata)) => (status, metadata),
+            _ => return,
+        };
+
+        let title = metadata.title().unwrap_or_else(|| String::new());
+        // XXX correct way to handle multiple?
+        let artist = metadata
+            .artist()
+            .and_then(|x| x.get(0).cloned())
+            .unwrap_or_else(|| String::new());
+
+        let _album = metadata.album(); // TODO
+
+        let arturl = metadata.arturl();
+        glib::MainContext::default().spawn_local(clone!(@strong self as self_ => async move {
+            self_.update_arturl(arturl.as_deref()).await;
+        }));
+
+        self.inner().title_label.set_label(&title);
+        self.inner().artist_label.set_label(&artist);
     }
 }
 
@@ -214,17 +295,22 @@ impl Player {
         self.0.cached_property(prop)?.get()
     }
 
-    fn connect_properties_changed<F: Fn() + 'static>(&self, f: F) {
+    fn connect_properties_changed<F: Fn(Self) + 'static>(&self, f: F) -> glib::SignalHandlerId {
+        let proxy = &self.0;
         self.0
-            .connect_local("g-properties-changed", false, move |_| {
-                f();
-                None
-            })
-            .unwrap();
+            .connect_local(
+                "g-properties-changed",
+                false,
+                clone!(@weak proxy => @default-panic, move |_| {
+                    f(Self(proxy));
+                    None
+                }),
+            )
+            .unwrap()
     }
 
     fn playback_status(&self) -> Option<String> {
-        self.property("PlayBackStatus")
+        self.property("PlaybackStatus")
     }
 
     fn metadata(&self) -> Option<Metadata> {
@@ -258,7 +344,10 @@ impl DBus {
             .filter_map(|x| x.get::<String>()))
     }
 
-    fn connect_name_owner_changed<F: Fn(String, String, String) + 'static>(&self, f: F) {
+    fn connect_name_owner_changed<F: Fn(String, String, String) + 'static>(
+        &self,
+        f: F,
+    ) -> glib::SignalHandlerId {
         self.0
             .connect_local("g-signal", false, move |args| {
                 if &args[2].get::<String>().unwrap() == "NameOwnerChanged" {
@@ -267,6 +356,6 @@ impl DBus {
                 }
                 None
             })
-            .unwrap();
+            .unwrap()
     }
 }
