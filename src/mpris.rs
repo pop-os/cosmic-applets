@@ -243,7 +243,7 @@ impl MprisControls {
         let artist = metadata
             .artist()
             .and_then(|x| x.get(0).cloned())
-            .unwrap_or_else(|| String::new());
+            .unwrap_or_default();
 
         let _album = metadata.album(); // TODO
 
