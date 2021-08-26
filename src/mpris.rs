@@ -103,31 +103,27 @@ impl MprisControls {
     }
 }
 
-fn dict_lookup<T: glib::FromVariant>(dict: &glib::VariantDict, key: &str) -> Option<T> {
-    dict.lookup_value(key, None)?.get()
-}
-
-fn property<T: glib::FromVariant>(proxy: &gio::DBusProxy, prop: &str) -> Option<T> {
-    proxy.cached_property(prop)?.get()
-}
-
 struct Metadata(glib::VariantDict);
 
 impl Metadata {
+    fn lookup<T: glib::FromVariant>(&self, key: &str) -> Option<T> {
+        self.0.lookup_value(key, None)?.get()
+    }
+
     fn title(&self) -> Option<String> {
-        dict_lookup(&self.0, "xesam:title")
+        self.lookup("xesam:title")
     }
 
     fn album(&self) -> Option<String> {
-        dict_lookup(&self.0, "xesam:album")
+        self.lookup("xesam:album")
     }
 
     fn artist(&self) -> Option<Vec<String>> {
-        dict_lookup(&self.0, "xesam:artist")
+        self.lookup("xesam:artist")
     }
 
     fn arturl(&self) -> Option<String> {
-        dict_lookup(&self.0, "mpris:artUrl")
+        self.lookup("mpris:artUrl")
     }
 }
 
@@ -147,6 +143,10 @@ impl Player {
         Ok(Self(proxy))
     }
 
+    fn property<T: glib::FromVariant>(&self, prop: &str) -> Option<T> {
+        self.0.cached_property(prop)?.get()
+    }
+
     fn connect_properties_changed<F: Fn() + 'static>(&self, f: F) {
         self.0
             .connect_local("g-properties-changed", false, move |_| {
@@ -157,11 +157,11 @@ impl Player {
     }
 
     fn playback_status(&self) -> Option<String> {
-        property(&self.0, "PlayBackStatus")
+        self.property("PlayBackStatus")
     }
 
     fn metadata(&self) -> Option<Metadata> {
-        Some(Metadata(property(&self.0, "Metadata")?))
+        Some(Metadata(self.property("Metadata")?))
     }
 }
 
