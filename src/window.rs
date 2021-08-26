@@ -7,6 +7,7 @@ use crate::x;
 pub fn window(monitor: gdk::Monitor) -> gtk4::Window {
     let time_button = cascade! {
         gtk4::MenuButton::new();
+        ..set_direction(gtk4::ArrowType::None);
         ..set_popover(Some(&cascade! {
             gtk4::Popover::new();
             ..set_child(Some(&cascade! {
