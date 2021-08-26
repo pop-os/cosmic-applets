@@ -219,9 +219,15 @@ impl MprisControls {
         };
 
         // XXX status
-        let (_status, metadata) = match (player.playback_status(), player.metadata()) {
+        let (status, metadata) = match (player.playback_status(), player.metadata()) {
             (Some(status), Some(metadata)) => (status, metadata),
             _ => return,
+        };
+
+        let play_pause_icon = if status == "Playing" {
+            "media-playback-pause-symbolic"
+        } else {
+            "media-playback-start-symbolic"
         };
 
         let title = metadata.title().unwrap_or_else(|| String::new());
@@ -238,6 +244,9 @@ impl MprisControls {
             self_.update_arturl(arturl.as_deref()).await;
         }));
 
+        self.inner()
+            .play_pause_button
+            .set_icon_name(play_pause_icon);
         self.inner().title_label.set_label(&title);
         self.inner().artist_label.set_label(&artist);
     }
