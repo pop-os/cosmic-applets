@@ -1,5 +1,7 @@
 use gtk4::{gdk, glib, prelude::*};
 
+mod deref_cell;
+mod mpris;
 mod window;
 mod x;
 

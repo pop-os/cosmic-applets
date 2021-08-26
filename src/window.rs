@@ -2,6 +2,7 @@ use cascade::cascade;
 use glib::clone;
 use gtk4::{gdk, glib, prelude::*};
 
+use crate::mpris::MprisControls;
 use crate::x;
 
 pub fn window(monitor: gdk::Monitor) -> gtk4::Window {
@@ -11,7 +12,11 @@ pub fn window(monitor: gdk::Monitor) -> gtk4::Window {
         ..set_popover(Some(&cascade! {
             gtk4::Popover::new();
             ..set_child(Some(&cascade! {
-                gtk4::Calendar::new();
+                gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
+                ..append(&MprisControls::new());
+                ..append(&cascade! {
+                    gtk4::Calendar::new();
+                });
             }));
         }));
     };

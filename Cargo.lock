@@ -763,6 +763,7 @@ dependencies = [
  "chrono",
  "gdk4-x11",
  "gtk4",
+ "once_cell",
  "toml",
  "x11",
  "zbus",
