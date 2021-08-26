@@ -11,7 +11,7 @@ use gtk4::{
     subclass::prelude::*,
 };
 use once_cell::unsync::OnceCell;
-use std::{cell::RefCell, collections::HashMap};
+use std::{borrow::Cow, cell::RefCell, collections::HashMap};
 
 use crate::deref_cell::DerefCell;
 
@@ -98,6 +98,10 @@ impl StatusArea {
                 let image = gtk4::Image::from_icon_name(item.icon_name().as_deref());
                 self.inner().box_.append(&image);
 
+                if let Some(menu) = item.menu() {
+                    println!("{:?}", menu.get_layout(0, -1, &[]).await);
+                }
+
                 self.item_unregistered(name);
                 self.inner()
                     .icons
@@ -115,21 +119,86 @@ impl StatusArea {
     }
 }
 
-struct StatusNotifierItem(gio::DBusProxy);
+#[derive(Debug)]
+struct Layout(i32, HashMap<String, glib::Variant>, Vec<Layout>);
 
-impl StatusNotifierItem {
-    async fn new(name: &str) -> Result<Self, glib::Error> {
-        let idx = name.find('/').unwrap();
+impl glib::StaticVariantType for Layout {
+    fn static_variant_type() -> Cow<'static, glib::VariantTy> {
+        glib::VariantTy::new("(ia{sv}av)").unwrap().into()
+    }
+}
+
+impl glib::FromVariant for Layout {
+    fn from_variant(variant: &glib::Variant) -> Option<Self> {
+        let (id, props, children) = variant.get::<(_, _, Vec<glib::Variant>)>()?;
+        let children = children.iter().filter_map(Self::from_variant).collect();
+        Some(Self(id, props, children))
+    }
+}
+
+#[derive(Clone)]
+struct DBusMenu(gio::DBusProxy);
+
+impl DBusMenu {
+    async fn new(dest: &str, path: &str) -> Result<Self, glib::Error> {
         let proxy = gio::DBusProxy::for_bus_future(
             gio::BusType::Session,
             gio::DBusProxyFlags::NONE,
             None,
-            &name[..idx],
-            &name[idx..],
-            "org.kde.StatusNotifierItem",
+            dest,
+            path,
+            "com.canonical.dbusmenu",
         )
         .await?;
         Ok(Self(proxy))
+    }
+
+    async fn get_layout(
+        &self,
+        parent: i32,
+        depth: i32,
+        properties: &[&str],
+    ) -> Result<(u32, Layout), glib::Error> {
+        // XXX unwrap
+        Ok(self
+            .0
+            .call_future(
+                "GetLayout",
+                Some(&(parent, depth, properties).to_variant()),
+                gio::DBusCallFlags::NONE,
+                1000,
+            )
+            .await?
+            .get()
+            .unwrap())
+    }
+}
+
+struct StatusNotifierItem(gio::DBusProxy, Option<DBusMenu>);
+
+impl StatusNotifierItem {
+    async fn new(name: &str) -> Result<Self, glib::Error> {
+        let idx = name.find('/').unwrap();
+        let dest = &name[..idx];
+        let path = &name[idx..];
+        let proxy = gio::DBusProxy::for_bus_future(
+            gio::BusType::Session,
+            gio::DBusProxyFlags::NONE,
+            None,
+            dest,
+            path,
+            "org.kde.StatusNotifierItem",
+        )
+        .await?;
+        let menu_path = proxy
+            .cached_property("Menu")
+            .and_then(|x| x.get::<String>());
+        let menu = if let Some(menu_path) = menu_path {
+            Some(DBusMenu::new(dest, &menu_path).await?)
+        } else {
+            None
+        };
+        Ok(Self(proxy, menu))
     }
 
     fn property<T: glib::FromVariant>(&self, prop: &str) -> Option<T> {
@@ -141,9 +210,8 @@ impl StatusNotifierItem {
         self.property("IconName")
     }
 
-    fn menu(&self) -> Option<String> {
-        // TODO: Return menu rather than just string
-        self.property("Menu")
+    fn menu(&self) -> Option<DBusMenu> {
+        self.1.clone()
     }
 }
 
