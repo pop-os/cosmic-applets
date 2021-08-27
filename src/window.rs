@@ -58,7 +58,7 @@ impl WidgetImpl for PanelWindowInner {
     fn show(&self, obj: &PanelWindow) {
         self.parent_show(obj);
 
-        if let Some((display, surface)) = x::get_window_x11(&obj.upcast_ref()) {
+        if let Some((display, surface)) = x::get_window_x11(obj) {
             unsafe {
                 surface.set_skip_pager_hint(true);
                 surface.set_skip_taskbar_hint(true);
@@ -127,7 +127,7 @@ impl PanelWindow {
             return;
         };
 
-        if let Some((display, surface)) = x::get_window_x11(self.upcast_ref()) {
+        if let Some((display, surface)) = x::get_window_x11(self) {
             let top_start_x = geometry.x as x::c_ulong;
             let top_end_x = top_start_x + geometry.width as x::c_ulong - 1;
 

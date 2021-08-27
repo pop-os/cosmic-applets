@@ -10,10 +10,14 @@ use std::{
 
 pub use std::os::raw::{c_uchar, c_ulong, c_ushort};
 
-pub fn get_window_x11(
-    window: &gtk4::Window,
+pub fn get_window_x11<T: IsA<gtk4::Window>>(
+    window: &T,
 ) -> Option<(gdk4_x11::X11Display, gdk4_x11::X11Surface)> {
-    let surface = window.surface()?.downcast::<gdk4_x11::X11Surface>().ok()?;
+    let surface = window
+        .upcast_ref()
+        .surface()?
+        .downcast::<gdk4_x11::X11Surface>()
+        .ok()?;
     let display = surface.display()?.downcast::<gdk4_x11::X11Display>().ok()?;
     Some((display, surface))
 }
