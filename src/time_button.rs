@@ -10,6 +10,7 @@ use crate::mpris::MprisControls;
 
 #[derive(Default)]
 pub struct TimeButtonInner {
+    calendar: DerefCell<gtk4::Calendar>,
     menu_button: DerefCell<gtk4::MenuButton>,
 }
 
@@ -26,6 +27,10 @@ impl ObjectSubclass for TimeButtonInner {
 
 impl ObjectImpl for TimeButtonInner {
     fn constructed(&self, obj: &TimeButton) {
+        let calendar = cascade! {
+            gtk4::Calendar::new();
+        };
+
         let menu_button = cascade! {
             gtk4::MenuButton::new();
             ..set_parent(obj);
@@ -35,13 +40,13 @@ impl ObjectImpl for TimeButtonInner {
                 ..set_child(Some(&cascade! {
                     gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
                     ..append(&MprisControls::new());
-                    ..append(&cascade! {
-                        gtk4::Calendar::new();
-                    });
+                    ..append(&calendar);
                 }));
+                ..connect_show(clone!(@strong obj => move |_| obj.opening()));
             }));
         };
 
+        self.calendar.set(calendar);
         self.menu_button.set(menu_button);
 
         // TODO: better way to do this?
@@ -74,6 +79,12 @@ impl TimeButton {
 
     fn inner(&self) -> &TimeButtonInner {
         TimeButtonInner::from_instance(self)
+    }
+
+    fn opening(&self) {
+        let date = glib::DateTime::new_now(&glib::TimeZone::new_local()).unwrap();
+        self.inner().calendar.clear_marks();
+        self.inner().calendar.select_day(&date);
     }
 
     fn update_time(&self) {
