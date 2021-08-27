@@ -21,7 +21,7 @@ fn main() {
             .unwrap()
             .downcast::<gdk::Monitor>()
             .unwrap();
-        window::window(monitor);
+        window::PanelWindow::new(monitor).show();
     }
 
     monitors.connect_items_changed(|monitors, position, _removed, added| {
@@ -31,7 +31,7 @@ fn main() {
                 .unwrap()
                 .downcast::<gdk::Monitor>()
                 .unwrap();
-            window::window(monitor);
+            window::PanelWindow::new(monitor).show();
         }
     });
 

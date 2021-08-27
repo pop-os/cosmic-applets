@@ -1,47 +1,128 @@
 use cascade::cascade;
 use glib::clone;
-use gtk4::{gdk, glib, prelude::*};
+use gtk4::{gdk, glib, prelude::*, subclass::prelude::*};
 use std::cell::Cell;
 
+use crate::deref_cell::DerefCell;
 use crate::status_area::StatusArea;
 use crate::time_button::TimeButton;
 use crate::x;
 
-pub fn window(monitor: gdk::Monitor) -> gtk4::Window {
-    let box_ = cascade! {
-        gtk4::CenterBox::new();
-        ..set_start_widget(Some(&cascade! {
-            gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
-            ..append(&gtk4::Button::with_label("Workspaces"));
-            ..append(&gtk4::Button::with_label("Applications"));
+#[derive(Default)]
+pub struct PanelWindowInner {
+    size: Cell<Option<(i32, i32)>>,
+    monitor: DerefCell<gdk::Monitor>,
+}
+
+#[glib::object_subclass]
+impl ObjectSubclass for PanelWindowInner {
+    const NAME: &'static str = "S76PanelWindow";
+    type ParentType = gtk4::Window;
+    type Type = PanelWindow;
+}
+
+impl ObjectImpl for PanelWindowInner {
+    fn constructed(&self, obj: &PanelWindow) {
+        let box_ = cascade! {
+            gtk4::CenterBox::new();
+            ..set_start_widget(Some(&cascade! {
+                gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
+                ..append(&gtk4::Button::with_label("Workspaces"));
+                ..append(&gtk4::Button::with_label("Applications"));
+            }));
+            ..set_center_widget(Some(&TimeButton::new()));
+            ..set_end_widget(Some(&StatusArea::new()));
+        };
+
+        cascade! {
+            obj;
+            ..set_decorated(false);
+            ..set_child(Some(&box_));
+        };
+    }
+}
+
+impl WidgetImpl for PanelWindowInner {
+    fn realize(&self, obj: &PanelWindow) {
+        self.parent_realize(obj);
+
+        let surface = obj.surface().unwrap();
+        surface.connect_layout(clone!(@weak obj => move |_surface, width, height| {
+            let size = Some((width, height));
+            if obj.inner().size.replace(size) != size {
+                println!("height: {}", height);
+                println!("width: {}", width);
+            }
         }));
-        ..set_center_widget(Some(&TimeButton::new()));
-        ..set_end_widget(Some(&StatusArea::new()));
-    };
+    }
 
-    let window = cascade! {
-        gtk4::Window::new();
-        ..set_decorated(false);
-        ..set_child(Some(&box_));
-        ..set_size_request(monitor.geometry().width, 0);
-        ..connect_realize(|window| {
-            let surface = window.surface().unwrap();
-            let size = Cell::new(None);
-            surface.connect_layout(move |surface, width, height| {
-                if size.replace(Some((width, height))) != Some((width, height)) {
-                    println!("height: {}", height);
-                    println!("width: {}", width);
-                }
-            });
-        });
-        ..show();
-    };
+    fn show(&self, obj: &PanelWindow) {
+        self.parent_show(obj);
 
-    fn monitor_geometry_changed(window: &gtk4::Window, monitor: &gdk::Monitor) {
-        let geometry = monitor.geometry();
-        window.set_size_request(geometry.width, 0);
+        if let Some((display, surface)) = x::get_window_x11(&obj.upcast_ref()) {
+            unsafe {
+                surface.set_skip_pager_hint(true);
+                surface.set_skip_taskbar_hint(true);
+                x::wm_state_add(&display, &surface, "_NET_WM_STATE_ABOVE");
+                x::wm_state_add(&display, &surface, "_NET_WM_STATE_STICKY");
+                x::change_property(
+                    &display,
+                    &surface,
+                    "_NET_WM_ALLOWED_ACTIONS",
+                    x::PropMode::Replace,
+                    &[
+                        x::Atom::new(&display, "_NET_WM_ACTION_CHANGE_DESKTOP").unwrap(),
+                        x::Atom::new(&display, "_NET_WM_ACTION_ABOVE").unwrap(),
+                        x::Atom::new(&display, "_NET_WM_ACTION_BELOW").unwrap(),
+                    ],
+                );
+                x::change_property(
+                    &display,
+                    &surface,
+                    "_NET_WM_WINDOW_TYPE",
+                    x::PropMode::Replace,
+                    &[x::Atom::new(&display, "_NET_WM_WINDOW_TYPE_DOCK").unwrap()],
+                );
+            }
+        }
 
-        if let Some((display, surface)) = x::get_window_x11(&window) {
+        self.monitor
+            .connect_geometry_notify(clone!(@strong obj => move |_| {
+                obj.monitor_geometry_changed();
+            }));
+        obj.monitor_geometry_changed();
+    }
+}
+
+impl WindowImpl for PanelWindowInner {}
+
+glib::wrapper! {
+    pub struct PanelWindow(ObjectSubclass<PanelWindowInner>)
+        @extends gtk4::Window, gtk4::Widget,
+        @implements gtk4::Accessible, gtk4::Buildable, gtk4::ConstraintTarget, gtk4::Native, gtk4::Root, gtk4::ShortcutManager;
+}
+
+impl PanelWindow {
+    pub fn new(monitor: gdk::Monitor) -> Self {
+        let obj = glib::Object::new::<Self>(&[]).unwrap();
+
+        monitor.connect_invalidate(clone!(@weak obj => move |_| obj.close()));
+
+        obj.set_size_request(monitor.geometry().width, 0);
+        obj.inner().monitor.set(monitor);
+
+        obj
+    }
+
+    fn inner(&self) -> &PanelWindowInner {
+        PanelWindowInner::from_instance(self)
+    }
+
+    fn monitor_geometry_changed(&self) {
+        let geometry = self.inner().monitor.geometry();
+        self.set_size_request(geometry.width, 0);
+
+        if let Some((display, surface)) = x::get_window_x11(self.upcast_ref()) {
             let top: x::c_ulong = 32; // XXX arbitrary
             let top_start_x = geometry.x as x::c_ulong;
             let top_end_x = top_start_x + geometry.width as x::c_ulong - 1;
@@ -59,40 +140,4 @@ pub fn window(monitor: gdk::Monitor) -> gtk4::Window {
             }
         }
     }
-
-    if let Some((display, surface)) = x::get_window_x11(&window) {
-        unsafe {
-            surface.set_skip_pager_hint(true);
-            surface.set_skip_taskbar_hint(true);
-            x::wm_state_add(&display, &surface, "_NET_WM_STATE_ABOVE");
-            x::wm_state_add(&display, &surface, "_NET_WM_STATE_STICKY");
-            x::change_property(
-                &display,
-                &surface,
-                "_NET_WM_ALLOWED_ACTIONS",
-                x::PropMode::Replace,
-                &[
-                    x::Atom::new(&display, "_NET_WM_ACTION_CHANGE_DESKTOP").unwrap(),
-                    x::Atom::new(&display, "_NET_WM_ACTION_ABOVE").unwrap(),
-                    x::Atom::new(&display, "_NET_WM_ACTION_BELOW").unwrap(),
-                ],
-            );
-            x::change_property(
-                &display,
-                &surface,
-                "_NET_WM_WINDOW_TYPE",
-                x::PropMode::Replace,
-                &[x::Atom::new(&display, "_NET_WM_WINDOW_TYPE_DOCK").unwrap()],
-            );
-        }
-    }
-
-    monitor.connect_geometry_notify(clone!(@strong window => move |monitor| {
-        monitor_geometry_changed(&window, &monitor);
-    }));
-    monitor_geometry_changed(&window, &monitor);
-
-    monitor.connect_invalidate(clone!(@strong window => move |_| window.close()));
-
-    window
 }
