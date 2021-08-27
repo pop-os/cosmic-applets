@@ -3,6 +3,7 @@
 // - Register with StatusNotiferWatcher
 // - Handle signals for registered/unreigisted items
 
+use byte_string::ByteStr;
 use cascade::cascade;
 use gtk4::{
     gio,
@@ -11,7 +12,7 @@ use gtk4::{
     subclass::prelude::*,
 };
 use once_cell::unsync::OnceCell;
-use std::{borrow::Cow, cell::RefCell, collections::HashMap};
+use std::{borrow::Cow, cell::RefCell, collections::HashMap, fmt};
 
 use crate::deref_cell::DerefCell;
 
@@ -99,7 +100,7 @@ impl StatusArea {
                 self.inner().box_.append(&image);
 
                 if let Some(menu) = item.menu() {
-                    println!("{:?}", menu.get_layout(0, -1, &[]).await);
+                    println!("{:#?}", menu.get_layout(0, -1, &[]).await);
                 }
 
                 self.item_unregistered(name);
@@ -119,8 +120,73 @@ impl StatusArea {
     }
 }
 
-#[derive(Debug)]
+//#[derive(Debug)]
 struct Layout(i32, HashMap<String, glib::Variant>, Vec<Layout>);
+
+impl fmt::Debug for Layout {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut s = f.debug_struct("Layout");
+        s.field("id", &self.0);
+        for (k, v) in &self.1 {
+            if let Some(v) = v.get::<String>() {
+                s.field(k, &v);
+            } else if let Some(v) = v.get::<i32>() {
+                s.field(k, &v);
+            } else if let Some(v) = v.get::<bool>() {
+                s.field(k, &v);
+            } else if let Some(v) = v.get::<Vec<u8>>() {
+                s.field(k, &ByteStr::new(&v));
+            } else {
+                s.field(k, v);
+            }
+        }
+        s.field("children", &self.2);
+        s.finish()
+    }
+}
+
+#[allow(dead_code)]
+impl Layout {
+    fn prop<T: glib::FromVariant>(&self, name: &str) -> Option<T> {
+        self.1.get(name)?.get()
+    }
+
+    fn accessible_desc(&self) -> Option<String> {
+        self.prop("accessible-desc")
+    }
+
+    fn children_display(&self) -> Option<String> {
+        self.prop("children-display")
+    }
+
+    fn label(&self) -> Option<String> {
+        self.prop("label")
+    }
+
+    fn enabled(&self) -> Option<bool> {
+        self.prop("enabled")
+    }
+
+    fn visible(&self) -> Option<bool> {
+        self.prop("visible")
+    }
+
+    fn type_(&self) -> Option<String> {
+        self.prop("type")
+    }
+
+    fn toggle_type(&self) -> Option<String> {
+        self.prop("toggle-type")
+    }
+
+    fn toggle_state(&self) -> Option<bool> {
+        self.prop("toggle-state")
+    }
+
+    fn icon_data(&self) -> Option<Vec<u8>> {
+        self.prop("icon-data")
+    }
+}
 
 impl glib::StaticVariantType for Layout {
     fn static_variant_type() -> Cow<'static, glib::VariantTy> {
