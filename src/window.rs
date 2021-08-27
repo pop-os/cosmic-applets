@@ -1,6 +1,7 @@
 use cascade::cascade;
 use glib::clone;
 use gtk4::{gdk, glib, prelude::*};
+use std::cell::Cell;
 
 use crate::status_area::StatusArea;
 use crate::time_button::TimeButton;
@@ -22,6 +23,17 @@ pub fn window(monitor: gdk::Monitor) -> gtk4::Window {
         gtk4::Window::new();
         ..set_decorated(false);
         ..set_child(Some(&box_));
+        ..set_size_request(monitor.geometry().width, 0);
+        ..connect_realize(|window| {
+            let surface = window.surface().unwrap();
+            let size = Cell::new(None);
+            surface.connect_layout(move |surface, width, height| {
+                if size.replace(Some((width, height))) != Some((width, height)) {
+                    println!("height: {}", height);
+                    println!("width: {}", width);
+                }
+            });
+        });
         ..show();
     };
 
