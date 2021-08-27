@@ -35,6 +35,7 @@ impl ObjectImpl for TimeButtonInner {
             gtk4::MenuButton::new();
             ..set_parent(obj);
             ..set_direction(gtk4::ArrowType::None);
+            ..style_context().remove_class("toggle");
             ..set_popover(Some(&cascade! {
                 gtk4::Popover::new();
                 ..set_child(Some(&cascade! {

@@ -27,8 +27,14 @@ impl ObjectImpl for PanelWindowInner {
             gtk4::CenterBox::new();
             ..set_start_widget(Some(&cascade! {
                 gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
-                ..append(&gtk4::Button::with_label("Workspaces"));
-                ..append(&gtk4::Button::with_label("Applications"));
+                ..append(&cascade! {
+                    gtk4::Button::with_label("Workspaces");
+                    ..style_context().add_class("flat");
+                });
+                ..append(&cascade! {
+                    gtk4::Button::with_label("Applications");
+                    ..style_context().add_class("flat");
+                });
             }));
             ..set_center_widget(Some(&TimeButton::new()));
             ..set_end_widget(Some(&StatusArea::new()));
