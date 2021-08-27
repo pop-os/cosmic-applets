@@ -50,8 +50,7 @@ impl WidgetImpl for PanelWindowInner {
         surface.connect_layout(clone!(@weak obj => move |_surface, width, height| {
             let size = Some((width, height));
             if obj.inner().size.replace(size) != size {
-                println!("height: {}", height);
-                println!("width: {}", width);
+                obj.monitor_geometry_changed();
             }
         }));
     }
@@ -122,8 +121,13 @@ impl PanelWindow {
         let geometry = self.inner().monitor.geometry();
         self.set_size_request(geometry.width, 0);
 
+        let top = if let Some((_width, height)) = self.inner().size.get() {
+            height as x::c_ulong
+        } else {
+            return;
+        };
+
         if let Some((display, surface)) = x::get_window_x11(self.upcast_ref()) {
-            let top: x::c_ulong = 32; // XXX arbitrary
             let top_start_x = geometry.x as x::c_ulong;
             let top_end_x = top_start_x + geometry.width as x::c_ulong - 1;
 
