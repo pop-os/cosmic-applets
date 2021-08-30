@@ -115,6 +115,7 @@ impl StatusMenu {
                 }
 
                 let id = i.id();
+                let close_on_click = i.children_display().as_deref() != Some("submenu");
                 let button = cascade! {
                     gtk4::Button::new();
                     ..set_child(Some(&hbox));
@@ -122,6 +123,9 @@ impl StatusMenu {
                     ..set_sensitive(i.enabled().unwrap_or(true)); // default to true?
                     ..connect_clicked(clone!(@weak self as self_ => move |_| {
                             // XXX data, timestamp
+                            if close_on_click {
+                                self_.inner().menu_button.popdown();
+                            }
                             self_.inner().dbus_menu.event(id, "clicked", &0.to_variant(), 0);
                     }));
                 };
