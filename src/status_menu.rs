@@ -44,6 +44,7 @@ impl ObjectImpl for StatusMenuInner {
         let menu_button = cascade! {
             gtk4::MenuButton::new();
             ..set_parent(obj);
+            ..set_has_frame(false);
             ..set_popover(Some(&cascade! {
                 gtk4::Popover::new();
                 ..set_child(Some(&vbox));
