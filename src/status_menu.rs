@@ -1,6 +1,11 @@
 use byte_string::ByteStr;
 use cascade::cascade;
-use gtk4::{gdk_pixbuf, gio, glib, prelude::*, subclass::prelude::*};
+use gtk4::{
+    gdk_pixbuf, gio,
+    glib::{self, clone},
+    prelude::*,
+    subclass::prelude::*,
+};
 use std::{borrow::Cow, collections::HashMap, fmt, io};
 
 use crate::deref_cell::DerefCell;
@@ -9,6 +14,9 @@ use crate::deref_cell::DerefCell;
 pub struct StatusMenuInner {
     menu_button: DerefCell<gtk4::MenuButton>,
     vbox: DerefCell<gtk4::Box>,
+    item: DerefCell<StatusNotifierItem>,
+    layout: DerefCell<Layout>,
+    dbus_menu: DerefCell<DBusMenu>,
 }
 
 #[glib::object_subclass]
@@ -61,11 +69,15 @@ impl StatusMenu {
             obj.inner().menu_button.set_icon_name(&icon_name);
         }
 
-        if let Some(menu) = item.menu() {
-            let layout = menu.get_layout(0, -1, &[]).await?.1;
-            println!("{:#?}", layout);
-            populate_menu(&obj.inner().vbox, &layout);
-        }
+        let menu = item.menu().unwrap(); // XXX unwrap?
+        let layout = menu.get_layout(0, -1, &[]).await?.1;
+
+        obj.inner().item.set(item);
+        obj.inner().layout.set(layout);
+        obj.inner().dbus_menu.set(menu);
+
+        println!("{:#?}", &*obj.inner().layout);
+        obj.populate_menu(&obj.inner().vbox, &obj.inner().layout);
 
         Ok(obj)
     }
@@ -73,61 +85,66 @@ impl StatusMenu {
     fn inner(&self) -> &StatusMenuInner {
         StatusMenuInner::from_instance(self)
     }
-}
 
-fn populate_menu(box_: &gtk4::Box, layout: &Layout) {
-    for i in layout.children() {
-        if i.type_().as_deref() == Some("separator") {
-            let separator = gtk4::Separator::new(gtk4::Orientation::Horizontal);
-            box_.append(&separator);
-        } else if let Some(label) = i.label() {
-            let label_widget = cascade! {
-                gtk4::Label::new(Some(&label));
-                ..set_halign(gtk4::Align::Start);
-                ..set_hexpand(true);
-                ..set_use_underline(true);
-            };
-
-            let hbox = cascade! {
-                gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
-                ..append(&label_widget);
-            };
-
-            if let Some(icon_data) = i.icon_data() {
-                let icon_data = io::Cursor::new(icon_data);
-                let pixbuf = gdk_pixbuf::Pixbuf::from_read(icon_data).unwrap(); // XXX unwrap
-                let image = cascade! {
-                    gtk4::Image::from_pixbuf(Some(&pixbuf));
-                    ..set_halign(gtk4::Align::End);
-                };
-                hbox.append(&image);
-            }
-
-            let button = cascade! {
-                gtk4::Button::new();
-                ..set_child(Some(&hbox));
-                ..style_context().add_class("flat");
-                ..set_sensitive(i.enabled().unwrap_or(true)); // default to true?
-            };
-            box_.append(&button);
-
-            if i.children_display().as_deref() == Some("submenu") {
-                let vbox = cascade! {
-                    gtk4::Box::new(gtk4::Orientation::Vertical, 0);
+    fn populate_menu(&self, box_: &gtk4::Box, layout: &Layout) {
+        for i in layout.children() {
+            if i.type_().as_deref() == Some("separator") {
+                let separator = gtk4::Separator::new(gtk4::Orientation::Horizontal);
+                box_.append(&separator);
+            } else if let Some(label) = i.label() {
+                let label_widget = cascade! {
+                    gtk4::Label::new(Some(&label));
+                    ..set_halign(gtk4::Align::Start);
+                    ..set_hexpand(true);
+                    ..set_use_underline(true);
                 };
 
-                let revealer = cascade! {
-                    gtk4::Revealer::new();
-                    ..set_child(Some(&vbox));
+                let hbox = cascade! {
+                    gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
+                    ..append(&label_widget);
                 };
 
-                populate_menu(&vbox, &i);
+                if let Some(icon_data) = i.icon_data() {
+                    let icon_data = io::Cursor::new(icon_data);
+                    let pixbuf = gdk_pixbuf::Pixbuf::from_read(icon_data).unwrap(); // XXX unwrap
+                    let image = cascade! {
+                        gtk4::Image::from_pixbuf(Some(&pixbuf));
+                        ..set_halign(gtk4::Align::End);
+                    };
+                    hbox.append(&image);
+                }
 
-                box_.append(&revealer);
+                let id = i.id();
+                let button = cascade! {
+                    gtk4::Button::new();
+                    ..set_child(Some(&hbox));
+                    ..style_context().add_class("flat");
+                    ..set_sensitive(i.enabled().unwrap_or(true)); // default to true?
+                    ..connect_clicked(clone!(@weak self as self_ => move |_| {
+                            // XXX data, timestamp
+                            self_.inner().dbus_menu.event(id, "clicked", &0.to_variant(), 0);
+                    }));
+                };
+                box_.append(&button);
 
-                button.connect_clicked(move |_| {
-                    revealer.set_reveal_child(!revealer.reveals_child());
-                });
+                if i.children_display().as_deref() == Some("submenu") {
+                    let vbox = cascade! {
+                        gtk4::Box::new(gtk4::Orientation::Vertical, 0);
+                    };
+
+                    let revealer = cascade! {
+                        gtk4::Revealer::new();
+                        ..set_child(Some(&vbox));
+                    };
+
+                    self.populate_menu(&vbox, &i);
+
+                    box_.append(&revealer);
+
+                    button.connect_clicked(move |_| {
+                        revealer.set_reveal_child(!revealer.reveals_child());
+                    });
+                }
             }
         }
     }
@@ -161,6 +178,10 @@ impl fmt::Debug for Layout {
 impl Layout {
     fn prop<T: glib::FromVariant>(&self, name: &str) -> Option<T> {
         self.1.get(name)?.get()
+    }
+
+    fn id(&self) -> i32 {
+        self.0
     }
 
     fn accessible_desc(&self) -> Option<String> {
@@ -253,6 +274,20 @@ impl DBusMenu {
             .await?
             .get()
             .unwrap())
+    }
+
+    fn event(&self, id: i32, eventid: &str, data: &glib::Variant, timestamp: u32) {
+        let res = self.0.call_future(
+            "Event",
+            Some(&(id, eventid, data, timestamp).to_variant()),
+            gio::DBusCallFlags::NONE,
+            1000,
+        );
+        glib::MainContext::default().spawn_local(async move {
+            if let Err(err) = res.await {
+                eprintln!("Failed to call `Event`: {}", err);
+            }
+        });
     }
 }
 
