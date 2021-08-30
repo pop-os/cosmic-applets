@@ -1,6 +1,6 @@
 use cascade::cascade;
 use gtk4::{
-    gdk, gdk_pixbuf, gio,
+    gdk_pixbuf, gio,
     glib::{self, clone},
     pango,
     prelude::*,
@@ -17,8 +17,8 @@ pub struct MprisPlayerInner {
     play_pause_button: DerefCell<gtk4::Button>,
     forward_button: DerefCell<gtk4::Button>,
     player: DerefCell<Player>,
-    picture: DerefCell<gtk4::Picture>,
-    picture_uri: RefCell<Option<String>>,
+    image: DerefCell<gtk4::Image>,
+    image_uri: RefCell<Option<String>>,
     title_label: DerefCell<gtk4::Label>,
     artist_label: DerefCell<gtk4::Label>,
 }
@@ -36,16 +36,14 @@ impl ObjectSubclass for MprisPlayerInner {
 
 impl ObjectImpl for MprisPlayerInner {
     fn constructed(&self, obj: &MprisPlayer) {
-        let picture = cascade! {
-            gtk4::Picture::new();
-            ..set_halign(gtk4::Align::Center);
-            ..set_valign(gtk4::Align::Center);
-            ..set_can_shrink(true);
-            ..set_size_request(32, 32);
+        let image = cascade! {
+            gtk4::Image::new();
+            ..set_pixel_size(64);
         };
 
         let title_label = cascade! {
             gtk4::Label::new(None);
+            ..set_halign(gtk4::Align::Start);
             ..set_ellipsize(pango::EllipsizeMode::End);
             ..set_max_width_chars(20);
             ..set_attributes(Some(&cascade! {
@@ -56,6 +54,7 @@ impl ObjectImpl for MprisPlayerInner {
 
         let artist_label = cascade! {
             gtk4::Label::new(None);
+            ..set_halign(gtk4::Align::Start);
             ..set_ellipsize(pango::EllipsizeMode::End);
             ..set_max_width_chars(20);
         };
@@ -76,17 +75,20 @@ impl ObjectImpl for MprisPlayerInner {
         };
 
         let box_ = cascade! {
-            gtk4::Box::new(gtk4::Orientation::Vertical, 0);
+            gtk4::Box::new(gtk4::Orientation::Horizontal, 6);
             ..set_parent(obj);
-            ..append(&picture);
-            ..append(&title_label);
-            ..append(&artist_label);
+            ..append(&image);
             ..append(&cascade! {
-                gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
-                ..set_valign(gtk4::Align::Start);
-                ..append(&backward_button);
-                ..append(&play_pause_button);
-                ..append(&forward_button);
+                gtk4::Box::new(gtk4::Orientation::Vertical, 0);
+                ..append(&title_label);
+                ..append(&artist_label);
+                ..append(&cascade! {
+                    gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
+                    ..set_valign(gtk4::Align::Start);
+                    ..append(&backward_button);
+                    ..append(&play_pause_button);
+                    ..append(&forward_button);
+                });
             });
         };
 
@@ -94,7 +96,7 @@ impl ObjectImpl for MprisPlayerInner {
         self.backward_button.set(backward_button);
         self.play_pause_button.set(play_pause_button);
         self.forward_button.set(forward_button);
-        self.picture.set(picture);
+        self.image.set(image);
         self.title_label.set(title_label);
         self.artist_label.set(artist_label);
     }
@@ -138,24 +140,23 @@ impl MprisPlayer {
     }
 
     async fn update_arturl(&self, arturl: Option<&str>) {
-        let mut picture_uri = self.inner().picture_uri.borrow_mut();
-        if picture_uri.as_deref() == arturl {
+        let mut image_uri = self.inner().image_uri.borrow_mut();
+        if image_uri.as_deref() == arturl {
             return;
         }
-        *picture_uri = arturl.map(String::from);
-        drop(picture_uri);
+        *image_uri = arturl.map(String::from);
+        drop(image_uri);
 
         let pixbuf = async {
             let file = gio::File::for_uri(&arturl?);
             let stream = file.read_async_future(glib::PRIORITY_DEFAULT).await.ok()?;
-            gdk_pixbuf::Pixbuf::from_stream_at_scale_async_future(&stream, 256, 256, false)
+            gdk_pixbuf::Pixbuf::from_stream_async_future(&stream)
                 .await
                 .ok()
         }
         .await;
         if let Some(pixbuf) = pixbuf {
-            let texture = gdk::Texture::for_pixbuf(&pixbuf);
-            self.inner().picture.set_paintable(Some(&texture));
+            self.inner().image.set_from_pixbuf(Some(&pixbuf));
         }
     }
 

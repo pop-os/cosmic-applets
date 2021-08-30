@@ -13,7 +13,7 @@ use crate::mpris_player::MprisPlayer;
 
 #[derive(Default)]
 pub struct MprisControlsInner {
-    box_: DerefCell<gtk4::Box>,
+    listbox: DerefCell<gtk4::ListBox>,
     dbus: OnceCell<DBus>,
     players: RefCell<HashMap<String, MprisPlayer>>,
 }
@@ -31,8 +31,8 @@ impl ObjectSubclass for MprisControlsInner {
 
 impl ObjectImpl for MprisControlsInner {
     fn constructed(&self, obj: &MprisControls) {
-        let box_ = cascade! {
-            gtk4::Box::new(gtk4::Orientation::Vertical, 0);
+        let listbox = cascade! {
+            gtk4::ListBox::new();
             ..set_parent(obj);
         };
 
@@ -72,11 +72,11 @@ impl ObjectImpl for MprisControlsInner {
             let _ = obj.inner().dbus.set(dbus);
         }));
 
-        self.box_.set(box_);
+        self.listbox.set(listbox);
     }
 
     fn dispose(&self, _obj: &MprisControls) {
-        self.box_.unparent();
+        self.listbox.unparent();
     }
 }
 
@@ -105,7 +105,12 @@ impl MprisControls {
             }
         };
 
-        self.inner().box_.append(&player); // XXX
+        let row = cascade! {
+            gtk4::ListBoxRow::new();
+            ..set_selectable(false);
+            ..set_child(Some(&player));
+        };
+        self.inner().listbox.append(&row);
 
         self.inner()
             .players
