@@ -77,32 +77,8 @@ impl StatusMenu {
         let menu = item.menu().unwrap(); // XXX unwrap?
         let layout = menu.get_layout(0, -1, &[]).await?.1;
 
-        menu.connect_layout_updated(clone!(@weak obj => move |_revision, parent| {
-            let mut menus = obj.inner().menus.borrow_mut();
-
-            if let Some(Menu { box_, children }) = menus.remove(&parent) {
-                let mut next_child = box_.first_child();
-                while let Some(child) = next_child {
-                    next_child = child.next_sibling();
-                    box_.remove(&child);
-                }
-
-                fn remove_child_menus(menus: &mut HashMap<i32, Menu>, children: Vec<i32>) {
-                    for i in children {
-                        if let Some(menu) = menus.remove(&i) {
-                            remove_child_menus(menus, menu.children);
-                        }
-                    }
-                }
-                remove_child_menus(&mut menus, children);
-
-                glib::MainContext::default().spawn_local(clone!(@weak obj => async move {
-                    match obj.inner().dbus_menu.get_layout(parent, -1, &[]).await {
-                        Ok((_, layout)) => obj.populate_menu(&box_, &layout),
-                        Err(err) => eprintln!("Failed to call 'GetLayout': {}", err),
-                    }
-                }));
-            }
+        menu.connect_layout_updated(clone!(@weak obj => move |revision, parent| {
+            obj.layout_updated(revision, parent);
         }));
 
         obj.inner().item.set(item);
@@ -116,6 +92,34 @@ impl StatusMenu {
 
     fn inner(&self) -> &StatusMenuInner {
         StatusMenuInner::from_instance(self)
+    }
+
+    fn layout_updated(&self, _revision: u32, parent: i32) {
+        let mut menus = self.inner().menus.borrow_mut();
+
+        if let Some(Menu { box_, children }) = menus.remove(&parent) {
+            let mut next_child = box_.first_child();
+            while let Some(child) = next_child {
+                next_child = child.next_sibling();
+                box_.remove(&child);
+            }
+
+            fn remove_child_menus(menus: &mut HashMap<i32, Menu>, children: Vec<i32>) {
+                for i in children {
+                    if let Some(menu) = menus.remove(&i) {
+                        remove_child_menus(menus, menu.children);
+                    }
+                }
+            }
+            remove_child_menus(&mut menus, children);
+
+            glib::MainContext::default().spawn_local(clone!(@weak self as self_ => async move {
+                match self_.inner().dbus_menu.get_layout(parent, -1, &[]).await {
+                    Ok((_, layout)) => self_.populate_menu(&box_, &layout),
+                    Err(err) => eprintln!("Failed to call 'GetLayout': {}", err),
+                }
+            }));
+        }
     }
 
     fn populate_menu(&self, box_: &gtk4::Box, layout: &Layout) {
