@@ -3,7 +3,6 @@
 // - Register with StatusNotiferWatcher
 // - Handle signals for registered/unreigisted items
 
-use byte_string::ByteStr;
 use cascade::cascade;
 use gtk4::{
     gio,
@@ -12,15 +11,16 @@ use gtk4::{
     subclass::prelude::*,
 };
 use once_cell::unsync::OnceCell;
-use std::{borrow::Cow, cell::RefCell, collections::HashMap, fmt};
+use std::{cell::RefCell, collections::HashMap};
 
 use crate::deref_cell::DerefCell;
+use crate::status_menu::StatusMenu;
 
 #[derive(Default)]
 pub struct StatusAreaInner {
     box_: DerefCell<gtk4::Box>,
     watcher: OnceCell<StatusNotifierWatcher>,
-    icons: RefCell<HashMap<String, gtk4::Image>>,
+    icons: RefCell<HashMap<String, StatusMenu>>,
 }
 
 #[glib::object_subclass]
@@ -94,20 +94,15 @@ impl StatusArea {
     }
 
     async fn item_registered(&self, name: &str) {
-        match StatusNotifierItem::new(&name).await {
+        match StatusMenu::new(&name).await {
             Ok(item) => {
-                let image = gtk4::Image::from_icon_name(item.icon_name().as_deref());
-                self.inner().box_.append(&image);
-
-                if let Some(menu) = item.menu() {
-                    println!("{:#?}", menu.get_layout(0, -1, &[]).await);
-                }
+                self.inner().box_.append(&item);
 
                 self.item_unregistered(name);
                 self.inner()
                     .icons
                     .borrow_mut()
-                    .insert(name.to_owned(), image);
+                    .insert(name.to_owned(), item);
             }
             Err(err) => eprintln!("Failed to connect to '{}': {}", name, err),
         }
@@ -117,167 +112,6 @@ impl StatusArea {
         if let Some(icon) = self.inner().icons.borrow_mut().remove(name) {
             self.inner().box_.remove(&icon);
         }
-    }
-}
-
-//#[derive(Debug)]
-struct Layout(i32, HashMap<String, glib::Variant>, Vec<Layout>);
-
-impl fmt::Debug for Layout {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut s = f.debug_struct("Layout");
-        s.field("id", &self.0);
-        for (k, v) in &self.1 {
-            if let Some(v) = v.get::<String>() {
-                s.field(k, &v);
-            } else if let Some(v) = v.get::<i32>() {
-                s.field(k, &v);
-            } else if let Some(v) = v.get::<bool>() {
-                s.field(k, &v);
-            } else if let Some(v) = v.get::<Vec<u8>>() {
-                s.field(k, &ByteStr::new(&v));
-            } else {
-                s.field(k, v);
-            }
-        }
-        s.field("children", &self.2);
-        s.finish()
-    }
-}
-
-#[allow(dead_code)]
-impl Layout {
-    fn prop<T: glib::FromVariant>(&self, name: &str) -> Option<T> {
-        self.1.get(name)?.get()
-    }
-
-    fn accessible_desc(&self) -> Option<String> {
-        self.prop("accessible-desc")
-    }
-
-    fn children_display(&self) -> Option<String> {
-        self.prop("children-display")
-    }
-
-    fn label(&self) -> Option<String> {
-        self.prop("label")
-    }
-
-    fn enabled(&self) -> Option<bool> {
-        self.prop("enabled")
-    }
-
-    fn visible(&self) -> Option<bool> {
-        self.prop("visible")
-    }
-
-    fn type_(&self) -> Option<String> {
-        self.prop("type")
-    }
-
-    fn toggle_type(&self) -> Option<String> {
-        self.prop("toggle-type")
-    }
-
-    fn toggle_state(&self) -> Option<bool> {
-        self.prop("toggle-state")
-    }
-
-    fn icon_data(&self) -> Option<Vec<u8>> {
-        self.prop("icon-data")
-    }
-}
-
-impl glib::StaticVariantType for Layout {
-    fn static_variant_type() -> Cow<'static, glib::VariantTy> {
-        glib::VariantTy::new("(ia{sv}av)").unwrap().into()
-    }
-}
-
-impl glib::FromVariant for Layout {
-    fn from_variant(variant: &glib::Variant) -> Option<Self> {
-        let (id, props, children) = variant.get::<(_, _, Vec<glib::Variant>)>()?;
-        let children = children.iter().filter_map(Self::from_variant).collect();
-        Some(Self(id, props, children))
-    }
-}
-
-#[derive(Clone)]
-struct DBusMenu(gio::DBusProxy);
-
-impl DBusMenu {
-    async fn new(dest: &str, path: &str) -> Result<Self, glib::Error> {
-        let proxy = gio::DBusProxy::for_bus_future(
-            gio::BusType::Session,
-            gio::DBusProxyFlags::NONE,
-            None,
-            dest,
-            path,
-            "com.canonical.dbusmenu",
-        )
-        .await?;
-        Ok(Self(proxy))
-    }
-
-    async fn get_layout(
-        &self,
-        parent: i32,
-        depth: i32,
-        properties: &[&str],
-    ) -> Result<(u32, Layout), glib::Error> {
-        // XXX unwrap
-        Ok(self
-            .0
-            .call_future(
-                "GetLayout",
-                Some(&(parent, depth, properties).to_variant()),
-                gio::DBusCallFlags::NONE,
-                1000,
-            )
-            .await?
-            .get()
-            .unwrap())
-    }
-}
-
-struct StatusNotifierItem(gio::DBusProxy, Option<DBusMenu>);
-
-impl StatusNotifierItem {
-    async fn new(name: &str) -> Result<Self, glib::Error> {
-        let idx = name.find('/').unwrap();
-        let dest = &name[..idx];
-        let path = &name[idx..];
-        let proxy = gio::DBusProxy::for_bus_future(
-            gio::BusType::Session,
-            gio::DBusProxyFlags::NONE,
-            None,
-            dest,
-            path,
-            "org.kde.StatusNotifierItem",
-        )
-        .await?;
-        let menu_path = proxy
-            .cached_property("Menu")
-            .and_then(|x| x.get::<String>());
-        let menu = if let Some(menu_path) = menu_path {
-            Some(DBusMenu::new(dest, &menu_path).await?)
-        } else {
-            None
-        };
-        Ok(Self(proxy, menu))
-    }
-
-    fn property<T: glib::FromVariant>(&self, prop: &str) -> Option<T> {
-        self.0.cached_property(prop)?.get()
-    }
-
-    fn icon_name(&self) -> Option<String> {
-        // TODO: IconThemePath? AttentionIconName?
-        self.property("IconName")
-    }
-
-    fn menu(&self) -> Option<DBusMenu> {
-        self.1.clone()
     }
 }
 
