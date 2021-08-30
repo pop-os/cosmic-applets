@@ -6,17 +6,22 @@ use gtk4::{
     prelude::*,
     subclass::prelude::*,
 };
-use std::{borrow::Cow, collections::HashMap, fmt, io};
+use std::{borrow::Cow, cell::RefCell, collections::HashMap, fmt, io};
 
 use crate::deref_cell::DerefCell;
+
+struct Menu {
+    box_: gtk4::Box,
+    children: Vec<i32>,
+}
 
 #[derive(Default)]
 pub struct StatusMenuInner {
     menu_button: DerefCell<gtk4::MenuButton>,
     vbox: DerefCell<gtk4::Box>,
     item: DerefCell<StatusNotifierItem>,
-    layout: DerefCell<Layout>,
     dbus_menu: DerefCell<DBusMenu>,
+    menus: RefCell<HashMap<i32, Menu>>,
 }
 
 #[glib::object_subclass]
@@ -72,12 +77,39 @@ impl StatusMenu {
         let menu = item.menu().unwrap(); // XXX unwrap?
         let layout = menu.get_layout(0, -1, &[]).await?.1;
 
+        menu.connect_layout_updated(clone!(@weak obj => move |_revision, parent| {
+            let mut menus = obj.inner().menus.borrow_mut();
+
+            if let Some(Menu { box_, children }) = menus.remove(&parent) {
+                let mut next_child = box_.first_child();
+                while let Some(child) = next_child {
+                    next_child = child.next_sibling();
+                    box_.remove(&child);
+                }
+
+                fn remove_child_menus(menus: &mut HashMap<i32, Menu>, children: Vec<i32>) {
+                    for i in children {
+                        if let Some(menu) = menus.remove(&i) {
+                            remove_child_menus(menus, menu.children);
+                        }
+                    }
+                }
+                remove_child_menus(&mut menus, children);
+
+                glib::MainContext::default().spawn_local(clone!(@weak obj => async move {
+                    match obj.inner().dbus_menu.get_layout(parent, -1, &[]).await {
+                        Ok((_, layout)) => obj.populate_menu(&box_, &layout),
+                        Err(err) => eprintln!("Failed to call 'GetLayout': {}", err),
+                    }
+                }));
+            }
+        }));
+
         obj.inner().item.set(item);
-        obj.inner().layout.set(layout);
         obj.inner().dbus_menu.set(menu);
 
-        println!("{:#?}", &*obj.inner().layout);
-        obj.populate_menu(&obj.inner().vbox, &obj.inner().layout);
+        println!("{:#?}", layout);
+        obj.populate_menu(&obj.inner().vbox, &layout);
 
         Ok(obj)
     }
@@ -87,7 +119,11 @@ impl StatusMenu {
     }
 
     fn populate_menu(&self, box_: &gtk4::Box, layout: &Layout) {
+        let mut children = Vec::new();
+
         for i in layout.children() {
+            children.push(i.id());
+
             if i.type_().as_deref() == Some("separator") {
                 let separator = gtk4::Separator::new(gtk4::Orientation::Horizontal);
                 box_.append(&separator);
@@ -151,6 +187,14 @@ impl StatusMenu {
                 }
             }
         }
+
+        self.inner().menus.borrow_mut().insert(
+            layout.id(),
+            Menu {
+                box_: box_.clone(),
+                children,
+            },
+        );
     }
 }
 
@@ -292,6 +336,19 @@ impl DBusMenu {
                 eprintln!("Failed to call `Event`: {}", err);
             }
         });
+    }
+
+    fn connect_layout_updated<F: Fn(u32, i32) + 'static>(&self, f: F) -> glib::SignalHandlerId {
+        self.0
+            .connect_local("g-signal", false, move |args| {
+                if &args[2].get::<String>().unwrap() == "LayoutUpdated" {
+                    // XXX unwrap
+                    let (revision, parent) = args[3].get::<glib::Variant>().unwrap().get().unwrap();
+                    f(revision, parent);
+                }
+                None
+            })
+            .unwrap()
     }
 }
 
