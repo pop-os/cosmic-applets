@@ -1,7 +1,7 @@
 use byte_string::ByteStr;
 use cascade::cascade;
-use gtk4::{gio, glib, prelude::*, subclass::prelude::*};
-use std::{borrow::Cow, collections::HashMap, fmt};
+use gtk4::{gdk_pixbuf, gio, glib, prelude::*, subclass::prelude::*};
+use std::{borrow::Cow, collections::HashMap, fmt, io};
 
 use crate::deref_cell::DerefCell;
 
@@ -81,8 +81,31 @@ fn populate_menu(box_: &gtk4::Box, layout: &Layout) {
             let separator = gtk4::Separator::new(gtk4::Orientation::Horizontal);
             box_.append(&separator);
         } else if let Some(label) = i.label() {
+            let label_widget = cascade! {
+                gtk4::Label::new(Some(&label));
+                ..set_halign(gtk4::Align::Start);
+                ..set_hexpand(true);
+                ..set_use_underline(true);
+            };
+
+            let hbox = cascade! {
+                gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
+                ..append(&label_widget);
+            };
+
+            if let Some(icon_data) = i.icon_data() {
+                let icon_data = io::Cursor::new(icon_data);
+                let pixbuf = gdk_pixbuf::Pixbuf::from_read(icon_data).unwrap(); // XXX unwrap
+                let image = cascade! {
+                    gtk4::Image::from_pixbuf(Some(&pixbuf));
+                    ..set_halign(gtk4::Align::End);
+                };
+                hbox.append(&image);
+            }
+
             let button = cascade! {
-                gtk4::Button::with_label(&label);
+                gtk4::Button::new();
+                ..set_child(Some(&hbox));
                 ..style_context().add_class("flat");
                 ..set_sensitive(i.enabled().unwrap_or(true)); // default to true?
             };
@@ -95,7 +118,6 @@ fn populate_menu(box_: &gtk4::Box, layout: &Layout) {
 
                 let revealer = cascade! {
                     gtk4::Revealer::new();
-                    //..set_label(&label);
                     ..set_child(Some(&vbox));
                 };
 
