@@ -130,9 +130,18 @@ impl StatusMenu {
             children.push(i.id());
 
             if i.type_().as_deref() == Some("separator") {
-                let separator = gtk4::Separator::new(gtk4::Orientation::Horizontal);
+                let separator = cascade! {
+                    gtk4::Separator::new(gtk4::Orientation::Horizontal);
+                    ..set_visible(i.visible());
+                };
                 box_.append(&separator);
-            } else if let Some(label) = i.label() {
+            } else if let Some(mut label) = i.label() {
+                if let Some(toggle_state) = i.toggle_state() {
+                    if toggle_state != 0 {
+                        label = format!("✓ {}", label);
+                    }
+                }
+
                 let label_widget = cascade! {
                     gtk4::Label::new(Some(&label));
                     ..set_halign(gtk4::Align::Start);
@@ -161,7 +170,8 @@ impl StatusMenu {
                     gtk4::Button::new();
                     ..set_child(Some(&hbox));
                     ..style_context().add_class("flat");
-                    ..set_sensitive(i.enabled().unwrap_or(true)); // default to true?
+                    ..set_visible(i.visible());
+                    ..set_sensitive(i.enabled());
                     ..connect_clicked(clone!(@weak self as self_ => move |_| {
                             // XXX data, timestamp
                             if close_on_click {
@@ -249,12 +259,12 @@ impl Layout {
         self.prop("label")
     }
 
-    fn enabled(&self) -> Option<bool> {
-        self.prop("enabled")
+    fn enabled(&self) -> bool {
+        self.prop("enabled").unwrap_or(true)
     }
 
-    fn visible(&self) -> Option<bool> {
-        self.prop("visible")
+    fn visible(&self) -> bool {
+        self.prop("visible").unwrap_or(true)
     }
 
     fn type_(&self) -> Option<String> {
@@ -265,7 +275,7 @@ impl Layout {
         self.prop("toggle-type")
     }
 
-    fn toggle_state(&self) -> Option<bool> {
+    fn toggle_state(&self) -> Option<i32> {
         self.prop("toggle-state")
     }
 
