@@ -8,6 +8,7 @@ use crate::deref_cell::DerefCell;
 #[derive(Default)]
 pub struct StatusMenuInner {
     menu_button: DerefCell<gtk4::MenuButton>,
+    vbox: DerefCell<gtk4::Box>,
 }
 
 #[glib::object_subclass]
@@ -23,12 +24,21 @@ impl ObjectSubclass for StatusMenuInner {
 
 impl ObjectImpl for StatusMenuInner {
     fn constructed(&self, obj: &StatusMenu) {
+        let vbox = cascade! {
+            gtk4::Box::new(gtk4::Orientation::Vertical, 0);
+        };
+
         let menu_button = cascade! {
             gtk4::MenuButton::new();
             ..set_parent(obj);
+            ..set_popover(Some(&cascade! {
+                gtk4::Popover::new();
+                ..set_child(Some(&vbox));
+            }));
         };
 
         self.menu_button.set(menu_button);
+        self.vbox.set(vbox);
     }
 
     fn dispose(&self, _obj: &StatusMenu) {
@@ -52,7 +62,9 @@ impl StatusMenu {
         }
 
         if let Some(menu) = item.menu() {
-            println!("{:#?}", menu.get_layout(0, -1, &[]).await);
+            let layout = menu.get_layout(0, -1, &[]).await?.1;
+            println!("{:#?}", layout);
+            populate_menu(&obj.inner().vbox, &layout);
         }
 
         Ok(obj)
@@ -60,6 +72,42 @@ impl StatusMenu {
 
     fn inner(&self) -> &StatusMenuInner {
         StatusMenuInner::from_instance(self)
+    }
+}
+
+fn populate_menu(box_: &gtk4::Box, layout: &Layout) {
+    for i in layout.children() {
+        if i.type_().as_deref() == Some("separator") {
+            let separator = gtk4::Separator::new(gtk4::Orientation::Horizontal);
+            box_.append(&separator);
+        } else if let Some(label) = i.label() {
+            let button = cascade! {
+                gtk4::Button::with_label(&label);
+                ..style_context().add_class("flat");
+                ..set_sensitive(i.enabled().unwrap_or(true)); // default to true?
+            };
+            box_.append(&button);
+
+            if i.children_display().as_deref() == Some("submenu") {
+                let vbox = cascade! {
+                    gtk4::Box::new(gtk4::Orientation::Vertical, 0);
+                };
+
+                let revealer = cascade! {
+                    gtk4::Revealer::new();
+                    //..set_label(&label);
+                    ..set_child(Some(&vbox));
+                };
+
+                populate_menu(&vbox, &i);
+
+                box_.append(&revealer);
+
+                button.connect_clicked(move |_| {
+                    revealer.set_reveal_child(!revealer.reveals_child());
+                });
+            }
+        }
     }
 }
 
@@ -127,6 +175,10 @@ impl Layout {
 
     fn icon_data(&self) -> Option<Vec<u8>> {
         self.prop("icon-data")
+    }
+
+    fn children(&self) -> &[Self] {
+        &self.2
     }
 }
 
