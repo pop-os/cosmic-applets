@@ -2,6 +2,7 @@
 name = "pop-cosmic-panel"
 version = "0.1.0"
 edition = "2018"
+license = "LGPL-3.0-or-later"
 
 [dependencies]
 cascade = "1"
