@@ -4,11 +4,11 @@ use glib::translate::ToGlibPtr;
 use gtk4::{glib, prelude::*};
 use std::{
     ffi::{CString, NulError},
-    os::raw::{c_int, c_long},
+    os::raw::c_long,
     ptr,
 };
 
-pub use std::os::raw::{c_uchar, c_ulong, c_ushort};
+pub use std::os::raw::{c_int, c_uchar, c_ulong, c_ushort};
 
 pub fn get_window_x11<T: IsA<gtk4::Window>>(
     window: &T,

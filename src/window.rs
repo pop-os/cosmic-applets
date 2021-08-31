@@ -8,6 +8,8 @@ use crate::status_area::StatusArea;
 use crate::time_button::TimeButton;
 use crate::x;
 
+const BOTTOM: bool = false;
+
 #[derive(Default)]
 pub struct PanelWindowInner {
     size: Cell<Option<(i32, i32)>>,
@@ -127,25 +129,37 @@ impl PanelWindow {
         let geometry = self.inner().monitor.geometry();
         self.set_size_request(geometry.width, 0);
 
-        let top = if let Some((_width, height)) = self.inner().size.get() {
+        let height = if let Some((_width, height)) = self.inner().size.get() {
             height as x::c_ulong
         } else {
             return;
         };
 
         if let Some((display, surface)) = x::get_window_x11(self) {
-            let top_start_x = geometry.x as x::c_ulong;
-            let top_end_x = top_start_x + geometry.width as x::c_ulong - 1;
+            let start_x = geometry.x as x::c_ulong;
+            let end_x = start_x + geometry.width as x::c_ulong - 1;
 
             unsafe {
-                x::set_position(&display, &surface, top_start_x as _, 0);
+                let y = if BOTTOM {
+                    geometry.height as x::c_int - height as x::c_int
+                } else {
+                    0
+                };
+
+                x::set_position(&display, &surface, start_x as _, y);
+
+                let strut = if BOTTOM {
+                    [0, 0, 0, height, 0, 0, 0, 0, 0, 0, start_x, end_x]
+                } else {
+                    [0, 0, height, 0, 0, 0, 0, 0, start_x, end_x, 0, 0]
+                };
 
                 x::change_property(
                     &display,
                     &surface,
                     "_NET_WM_STRUT_PARTIAL",
                     x::PropMode::Replace,
-                    &[0, 0, top, 0, 0, 0, 0, 0, top_start_x, top_end_x, 0, 0],
+                    &strut,
                 );
             }
         }
