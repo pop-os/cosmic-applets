@@ -56,7 +56,7 @@ fn name_acquired(connection: gio::DBusConnection, _name: &str) {
         .unwrap();
     let items = Arc::new(Mutex::new(Vec::<String>::new()));
     let method_call = clone!(@strong items => move |connection: gio::DBusConnection,
-                       _sender: &str,
+                       sender: &str,
                        path: &str,
                        interface: &str,
                        method: &str,
@@ -65,6 +65,7 @@ fn name_acquired(connection: gio::DBusConnection, _name: &str) {
         match method {
             "RegisterStatusNotifierItem" => {
                 let (service,) = args.get::<(String,)>().unwrap();
+                let service = format!("{}{}", sender, service);
                 connection.emit_signal(None, path, interface, "StatusNotifierItemRegistered", Some(&(&service,).to_variant())).unwrap();
                 // XXX emit unreigstered
                 items.lock().unwrap().push(service);
