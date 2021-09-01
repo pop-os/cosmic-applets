@@ -5,6 +5,7 @@ mod mpris;
 mod mpris_player;
 mod status_area;
 mod status_menu;
+mod status_notifier_watcher;
 mod time_button;
 mod window;
 mod x;
@@ -36,6 +37,8 @@ fn main() {
             window::PanelWindow::new(monitor).show();
         }
     });
+
+    status_notifier_watcher::start();
 
     glib::MainLoop::new(None, false).run();
 }
