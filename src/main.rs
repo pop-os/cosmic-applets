@@ -3,6 +3,7 @@ use gtk4::{gdk, glib, prelude::*};
 mod deref_cell;
 mod mpris;
 mod mpris_player;
+mod notifications;
 mod status_area;
 mod status_menu;
 mod status_notifier_watcher;
@@ -39,6 +40,7 @@ fn main() {
     });
 
     status_notifier_watcher::start();
+    let _notificiations = notifications::Notifications::new();
 
     glib::MainLoop::new(None, false).run();
 }

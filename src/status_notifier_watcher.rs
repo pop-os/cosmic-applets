@@ -102,4 +102,5 @@ fn name_acquired(connection: gio::DBusConnection, _name: &str) {
         eprintln!("Failed to register object: {}", err);
     }
 }
+
 fn name_lost(_connection: Option<gio::DBusConnection>, _name: &str) {}
