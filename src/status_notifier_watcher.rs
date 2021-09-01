@@ -36,7 +36,6 @@ static STATUS_NOTIFIER_XML: &str = "
 ";
 
 pub fn start() {
-    // XXX flags?
     gio::bus_own_name(
         gio::BusType::Session,
         "org.kde.StatusNotifierWatcher",
@@ -69,14 +68,15 @@ fn name_acquired(connection: gio::DBusConnection, _name: &str) {
                 connection.emit_signal(None, path, interface, "StatusNotifierItemRegistered", Some(&(&service,).to_variant())).unwrap();
                 // XXX emit unreigstered
                 items.lock().unwrap().push(service);
+                invocation.return_value(None);
             }
             "RegisterStatusNotifierHost" => {
                 let (_service,) = args.get::<(String,)>().unwrap();
                 // XXX emit registed/unregistered
+                invocation.return_value(None);
             }
             _ => unreachable!()
         }
-        invocation.return_dbus_error("DBus.Error.UnknownMethod", "Unknown method");
     });
     let get_property = clone!(@strong items => move |_: gio::DBusConnection, _sender: &str, _path: &str, _interface: &str, prop: &str| {
         match prop {
