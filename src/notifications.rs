@@ -4,7 +4,9 @@ use gtk4::{
     prelude::*,
 };
 use std::{
+    borrow::Cow,
     collections::HashMap,
+    fmt,
     num::NonZeroU32,
     sync::{Arc, Mutex},
 };
@@ -56,6 +58,93 @@ pub struct Notifications {
     next_id: Mutex<NonZeroU32>,
 }
 
+struct Hints(HashMap<String, glib::Variant>);
+
+#[allow(dead_code)]
+impl Hints {
+    fn prop<T: glib::FromVariant>(&self, name: &str) -> Option<T> {
+        self.0.get(name)?.get()
+    }
+
+    fn actions_icon(&self) -> bool {
+        self.prop("actions-icon").unwrap_or(false)
+    }
+
+    fn category(&self) -> Option<String> {
+        self.prop("category")
+    }
+
+    fn desktop_entry(&self) -> Option<String> {
+        self.prop("desktop-entry")
+    }
+
+    fn image_data(&self) -> Option<(i32, i32, i32, bool, i32, i32, Vec<u8>)> {
+        self.prop("image-data")
+            .or_else(|| self.prop("image_data"))
+            .or_else(|| self.prop("icon_data"))
+    }
+
+    fn image_path(&self) -> Option<String> {
+        self.prop("image-path").or_else(|| self.prop("image_path"))
+    }
+
+    fn resident(&self) -> bool {
+        self.prop("resident").unwrap_or(false)
+    }
+
+    fn sound_file(&self) -> Option<String> {
+        self.prop("sound-file")
+    }
+
+    fn sound_name(&self) -> Option<String> {
+        self.prop("sound-name")
+    }
+
+    fn transient(&self) -> bool {
+        self.prop("transient").unwrap_or(false)
+    }
+
+    fn xy(&self) -> Option<(u8, u8)> {
+        Some((self.prop("x")?, self.prop("y")?))
+    }
+
+    fn urgency(&self) -> Option<u8> {
+        self.prop("urgency")
+    }
+}
+
+impl fmt::Debug for Hints {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut s = f.debug_struct("Hints");
+        for (k, v) in &self.0 {
+            if let Some(v) = v.get::<String>() {
+                s.field(k, &v);
+            } else if let Some(v) = v.get::<i32>() {
+                s.field(k, &v);
+            } else if let Some(v) = v.get::<bool>() {
+                s.field(k, &v);
+            } else if let Some(v) = v.get::<u8>() {
+                s.field(k, &v);
+            } else {
+                s.field(k, v);
+            };
+        }
+        s.finish()
+    }
+}
+
+impl glib::StaticVariantType for Hints {
+    fn static_variant_type() -> Cow<'static, glib::VariantTy> {
+        glib::VariantTy::new("a{sv}").unwrap().into()
+    }
+}
+
+impl glib::FromVariant for Hints {
+    fn from_variant(variant: &glib::Variant) -> Option<Self> {
+        variant.get().map(Self)
+    }
+}
+
 impl Notifications {
     pub fn new() -> Arc<Self> {
         let notifications = Arc::new(Notifications {
@@ -84,16 +173,30 @@ impl Notifications {
 
     fn notify(
         &self,
-        _app_name: String,
+        app_name: String,
         replaces_id: Option<NonZeroU32>,
-        _app_icon: String,
-        _summary: String,
-        _body: String,
-        _actions: Vec<String>,
-        _hints: HashMap<String, glib::Variant>,
-        _expire_timeout: i32,
+        app_icon: String,
+        summary: String,
+        body: String,
+        actions: Vec<String>,
+        hints: Hints,
+        expire_timeout: i32,
     ) -> NonZeroU32 {
         let id = replaces_id.unwrap_or_else(|| self.next_id());
+
+        println!(
+            "{:?}",
+            (
+                id,
+                app_name,
+                app_icon,
+                summary,
+                body,
+                actions,
+                hints,
+                expire_timeout
+            )
+        );
 
         // TODO
 
