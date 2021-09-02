@@ -74,6 +74,14 @@ impl Notifications {
         notifications
     }
 
+    fn next_id(&self) -> NonZeroU32 {
+        let mut next_id = self.next_id.lock().unwrap();
+        let id = *next_id;
+        *next_id = NonZeroU32::new(u32::from(*next_id).wrapping_add(1))
+            .unwrap_or(NonZeroU32::new(1).unwrap());
+        id
+    }
+
     fn notify(
         &self,
         _app_name: String,
@@ -85,13 +93,7 @@ impl Notifications {
         _hints: HashMap<String, glib::Variant>,
         _expire_timeout: i32,
     ) -> NonZeroU32 {
-        let id = replaces_id.unwrap_or_else(|| {
-            let mut next_id = self.next_id.lock().unwrap();
-            let id = *next_id;
-            *next_id = NonZeroU32::new(u32::from(*next_id).wrapping_add(1))
-                .unwrap_or(NonZeroU32::new(1).unwrap());
-            id
-        });
+        let id = replaces_id.unwrap_or_else(|| self.next_id());
 
         // TODO
 
