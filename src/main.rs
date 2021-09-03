@@ -3,6 +3,7 @@ use gtk4::{gdk, glib, prelude::*};
 mod deref_cell;
 mod mpris;
 mod mpris_player;
+mod notification_popover;
 mod notifications;
 mod popover_container;
 mod status_area;

@@ -8,6 +8,7 @@ use gtk4::{
 
 use crate::deref_cell::DerefCell;
 use crate::mpris::MprisControls;
+use crate::notification_popover::NotificationPopover;
 use crate::popover_container::PopoverContainer;
 
 #[derive(Default)]
@@ -15,6 +16,7 @@ pub struct TimeButtonInner {
     calendar: DerefCell<gtk4::Calendar>,
     button: DerefCell<gtk4::ToggleButton>,
     label: DerefCell<gtk4::Label>,
+    notification_popover: DerefCell<NotificationPopover>,
 }
 
 #[glib::object_subclass]
@@ -60,9 +62,15 @@ impl ObjectImpl for TimeButtonInner {
             ..popover().bind_property("visible", &button, "active").flags(glib::BindingFlags::BIDIRECTIONAL).build();
         };
 
+        let notification_popover = cascade! {
+            NotificationPopover::new();
+            ..set_parent(obj);
+        };
+
         self.calendar.set(calendar);
         self.button.set(button);
         self.label.set(label);
+        self.notification_popover.set(notification_popover);
 
         // TODO: better way to do this?
         glib::timeout_add_seconds_local(
@@ -77,6 +85,7 @@ impl ObjectImpl for TimeButtonInner {
 
     fn dispose(&self, _obj: &TimeButton) {
         self.button.unparent();
+        self.notification_popover.unparent();
     }
 }
 
