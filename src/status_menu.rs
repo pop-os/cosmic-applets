@@ -9,6 +9,7 @@ use gtk4::{
 use std::{borrow::Cow, cell::RefCell, collections::HashMap, fmt, io};
 
 use crate::deref_cell::DerefCell;
+use crate::popover_container::PopoverContainer;
 
 struct Menu {
     box_: gtk4::Box,
@@ -17,7 +18,8 @@ struct Menu {
 
 #[derive(Default)]
 pub struct StatusMenuInner {
-    menu_button: DerefCell<gtk4::MenuButton>,
+    button: DerefCell<gtk4::ToggleButton>,
+    popover_container: DerefCell<PopoverContainer>,
     vbox: DerefCell<gtk4::Box>,
     item: DerefCell<StatusNotifierItem>,
     dbus_menu: DerefCell<DBusMenu>,
@@ -41,22 +43,25 @@ impl ObjectImpl for StatusMenuInner {
             gtk4::Box::new(gtk4::Orientation::Vertical, 0);
         };
 
-        let menu_button = cascade! {
-            gtk4::MenuButton::new();
-            ..set_parent(obj);
+        let button = cascade! {
+            gtk4::ToggleButton::new();
             ..set_has_frame(false);
-            ..set_popover(Some(&cascade! {
-                gtk4::Popover::new();
-                ..set_child(Some(&vbox));
-            }));
         };
 
-        self.menu_button.set(menu_button);
+        let popover_container = cascade! {
+            PopoverContainer::new(&button);
+            ..set_parent(obj);
+            ..popover().set_child(Some(&vbox));
+            ..popover().bind_property("visible", &button, "active").flags(glib::BindingFlags::BIDIRECTIONAL).build();
+        };
+
+        self.button.set(button);
+        self.popover_container.set(popover_container);
         self.vbox.set(vbox);
     }
 
     fn dispose(&self, _obj: &StatusMenu) {
-        self.menu_button.unparent();
+        self.button.unparent();
     }
 }
 
@@ -72,7 +77,7 @@ impl StatusMenu {
         let item = StatusNotifierItem::new(name).await?;
         let obj = glib::Object::new::<Self>(&[]).unwrap();
         if let Some(icon_name) = item.icon_name().as_deref() {
-            obj.inner().menu_button.set_icon_name(&icon_name);
+            obj.inner().button.set_icon_name(&icon_name);
         }
 
         let menu = item.menu().unwrap(); // XXX unwrap?
@@ -175,7 +180,7 @@ impl StatusMenu {
                     ..connect_clicked(clone!(@weak self as self_ => move |_| {
                             // XXX data, timestamp
                             if close_on_click {
-                                self_.inner().menu_button.popdown();
+                                self_.inner().popover_container.popdown();
                             }
                             self_.inner().dbus_menu.event(id, "clicked", &0.to_variant(), 0);
                     }));

@@ -7,11 +7,12 @@ use gtk4::{
 
 use crate::deref_cell::DerefCell;
 use crate::mpris::MprisControls;
+use crate::popover_container::PopoverContainer;
 
 #[derive(Default)]
 pub struct TimeButtonInner {
     calendar: DerefCell<gtk4::Calendar>,
-    menu_button: DerefCell<gtk4::MenuButton>,
+    button: DerefCell<gtk4::ToggleButton>,
 }
 
 #[glib::object_subclass]
@@ -31,25 +32,25 @@ impl ObjectImpl for TimeButtonInner {
             gtk4::Calendar::new();
         };
 
-        let menu_button = cascade! {
-            gtk4::MenuButton::new();
-            ..set_parent(obj);
+        let button = cascade! {
+            gtk4::ToggleButton::new();
             ..set_has_frame(false);
-            ..set_direction(gtk4::ArrowType::None);
-            ..style_context().remove_class("toggle");
-            ..set_popover(Some(&cascade! {
-                gtk4::Popover::new();
-                ..set_child(Some(&cascade! {
-                    gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
-                    ..append(&MprisControls::new());
-                    ..append(&calendar);
-                }));
-                ..connect_show(clone!(@strong obj => move |_| obj.opening()));
+        };
+
+        cascade! {
+            PopoverContainer::new(&button);
+            ..set_parent(obj);
+            ..popover().set_child(Some(&cascade! {
+                gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
+                ..append(&MprisControls::new());
+                ..append(&calendar);
             }));
+            ..popover().connect_show(clone!(@strong obj => move |_| obj.opening()));
+            ..popover().bind_property("visible", &button, "active").flags(glib::BindingFlags::BIDIRECTIONAL).build();
         };
 
         self.calendar.set(calendar);
-        self.menu_button.set(menu_button);
+        self.button.set(button);
 
         // TODO: better way to do this?
         glib::timeout_add_seconds_local(
@@ -63,7 +64,7 @@ impl ObjectImpl for TimeButtonInner {
     }
 
     fn dispose(&self, _obj: &TimeButton) {
-        self.menu_button.unparent();
+        self.button.unparent();
     }
 }
 
@@ -93,7 +94,7 @@ impl TimeButton {
         // TODO: Locale-based formatting?
         let time = chrono::Local::now();
         self.inner()
-            .menu_button
+            .button
             .set_label(&time.format("%b %-d %-I:%M %p").to_string());
         // time.format("%B %-d %Y")
     }
