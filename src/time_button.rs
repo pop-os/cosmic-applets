@@ -1,6 +1,7 @@
 use cascade::cascade;
 use gtk4::{
     glib::{self, clone},
+    pango,
     prelude::*,
     subclass::prelude::*,
 };
@@ -13,6 +14,7 @@ use crate::popover_container::PopoverContainer;
 pub struct TimeButtonInner {
     calendar: DerefCell<gtk4::Calendar>,
     button: DerefCell<gtk4::ToggleButton>,
+    label: DerefCell<gtk4::Label>,
 }
 
 #[glib::object_subclass]
@@ -32,9 +34,18 @@ impl ObjectImpl for TimeButtonInner {
             gtk4::Calendar::new();
         };
 
+        let label = cascade! {
+            gtk4::Label::new(None);
+            ..set_attributes(Some(&cascade! {
+                pango::AttrList::new();
+                ..insert(pango::Attribute::new_weight(pango::Weight::Bold));
+            }));
+        };
+
         let button = cascade! {
             gtk4::ToggleButton::new();
             ..set_has_frame(false);
+            ..set_child(Some(&label));
         };
 
         cascade! {
@@ -51,6 +62,7 @@ impl ObjectImpl for TimeButtonInner {
 
         self.calendar.set(calendar);
         self.button.set(button);
+        self.label.set(label);
 
         // TODO: better way to do this?
         glib::timeout_add_seconds_local(
@@ -94,7 +106,7 @@ impl TimeButton {
         // TODO: Locale-based formatting?
         let time = chrono::Local::now();
         self.inner()
-            .button
+            .label
             .set_label(&time.format("%b %-d %-I:%M %p").to_string());
         // time.format("%B %-d %Y")
     }

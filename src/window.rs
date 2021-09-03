@@ -1,6 +1,6 @@
 use cascade::cascade;
 use glib::clone;
-use gtk4::{gdk, glib, prelude::*, subclass::prelude::*};
+use gtk4::{gdk, glib, pango, prelude::*, subclass::prelude::*};
 use std::cell::Cell;
 
 use crate::deref_cell::DerefCell;
@@ -9,6 +9,22 @@ use crate::time_button::TimeButton;
 use crate::x;
 
 const BOTTOM: bool = false;
+
+fn button(text: &str) -> gtk4::Button {
+    let label = cascade! {
+        gtk4::Label::new(Some(text));
+        ..set_attributes(Some(&cascade! {
+            pango::AttrList::new();
+            ..insert(pango::Attribute::new_weight(pango::Weight::Bold));
+        }));
+    };
+
+    cascade! {
+        gtk4::Button::new();
+        ..set_has_frame(false);
+        ..set_child(Some(&label));
+    }
+}
 
 #[derive(Default)]
 pub struct PanelWindowInner {
@@ -29,14 +45,8 @@ impl ObjectImpl for PanelWindowInner {
             gtk4::CenterBox::new();
             ..set_start_widget(Some(&cascade! {
                 gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
-                ..append(&cascade! {
-                    gtk4::Button::with_label("Workspaces");
-                    ..set_has_frame(false);
-                });
-                ..append(&cascade! {
-                    gtk4::Button::with_label("Applications");
-                    ..set_has_frame(false);
-                });
+                ..append(&button("Workspaces"));
+                ..append(&button("Applications"));
             }));
             ..set_center_widget(Some(&TimeButton::new()));
             ..set_end_widget(Some(&StatusArea::new()));
