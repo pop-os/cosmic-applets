@@ -3,6 +3,7 @@ use glib::clone;
 use gtk4::{gdk, glib, pango, prelude::*, subclass::prelude::*};
 use std::cell::Cell;
 
+use crate::application::PanelApp;
 use crate::deref_cell::DerefCell;
 use crate::status_area::StatusArea;
 use crate::time_button::TimeButton;
@@ -121,13 +122,15 @@ glib::wrapper! {
 }
 
 impl PanelWindow {
-    pub fn new(monitor: gdk::Monitor) -> Self {
+    pub fn new(app: &PanelApp, monitor: gdk::Monitor) -> Self {
         let obj = glib::Object::new::<Self>(&[]).unwrap();
 
         monitor.connect_invalidate(clone!(@weak obj => move |_| obj.close()));
 
         obj.set_size_request(monitor.geometry().width, 0);
         obj.inner().monitor.set(monitor);
+
+        app.add_window(&obj);
 
         obj
     }

@@ -81,9 +81,9 @@ impl PanelApp {
     }
 
     fn add_window_for_monitor(&self, monitor: gdk::Monitor) {
-        self.add_window(&cascade! {
-            PanelWindow::new(monitor);
+        cascade! {
+            PanelWindow::new(self, monitor);
             ..show();
-        });
+        };
     }
 }
