@@ -1,0 +1,89 @@
+use cascade::cascade;
+use gtk4::{
+    gdk, gio,
+    glib::{self, clone},
+    prelude::*,
+    subclass::prelude::*,
+};
+use once_cell::unsync::OnceCell;
+use std::{cell::Cell, sync::Arc};
+
+use crate::notifications::Notifications;
+use crate::status_notifier_watcher;
+use crate::window::PanelWindow;
+
+#[derive(Default)]
+pub struct PanelAppInner {
+    notifications: OnceCell<Arc<Notifications>>,
+    activated: Cell<bool>,
+}
+
+#[glib::object_subclass]
+impl ObjectSubclass for PanelAppInner {
+    const NAME: &'static str = "S76CosmicPanelApp";
+    type ParentType = gtk4::Application;
+    type Type = PanelApp;
+}
+
+impl ObjectImpl for PanelAppInner {
+    fn constructed(&self, obj: &PanelApp) {
+        obj.set_application_id(Some("com.system76.cosmicpanel"));
+
+        self.parent_constructed(obj);
+    }
+}
+
+impl ApplicationImpl for PanelAppInner {
+    fn activate(&self, obj: &PanelApp) {
+        self.parent_activate(obj);
+
+        if self.activated.get() {
+            return;
+        }
+        self.activated.set(true);
+
+        let display = gdk::Display::default().unwrap();
+        let monitors = display.monitors().unwrap();
+
+        for i in 0..monitors.n_items() {
+            obj.add_window_for_monitor(monitors.item(i).unwrap().downcast().unwrap());
+        }
+
+        monitors.connect_items_changed(
+            clone!(@weak obj => move |monitors, position, _removed, added| {
+                for i in position..position + added {
+                    obj.add_window_for_monitor(monitors
+                        .item(i)
+                        .unwrap()
+                        .downcast::<gdk::Monitor>()
+                        .unwrap());
+                }
+            }),
+        );
+
+        status_notifier_watcher::start();
+
+        let _ = self.notifications.set(Notifications::new());
+    }
+}
+
+impl GtkApplicationImpl for PanelAppInner {}
+
+glib::wrapper! {
+    pub struct PanelApp(ObjectSubclass<PanelAppInner>)
+        @extends gtk4::Application, gio::Application,
+        @implements gio::ActionGroup, gio::ActionMap;
+}
+
+impl PanelApp {
+    pub fn new() -> Self {
+        glib::Object::new::<Self>(&[]).unwrap()
+    }
+
+    fn add_window_for_monitor(&self, monitor: gdk::Monitor) {
+        self.add_window(&cascade! {
+            PanelWindow::new(monitor);
+            ..show();
+        });
+    }
+}

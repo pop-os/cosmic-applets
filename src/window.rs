@@ -35,7 +35,7 @@ pub struct PanelWindowInner {
 #[glib::object_subclass]
 impl ObjectSubclass for PanelWindowInner {
     const NAME: &'static str = "S76PanelWindow";
-    type ParentType = gtk4::Window;
+    type ParentType = gtk4::ApplicationWindow;
     type Type = PanelWindow;
 }
 
@@ -112,10 +112,11 @@ impl WidgetImpl for PanelWindowInner {
 }
 
 impl WindowImpl for PanelWindowInner {}
+impl ApplicationWindowImpl for PanelWindowInner {}
 
 glib::wrapper! {
     pub struct PanelWindow(ObjectSubclass<PanelWindowInner>)
-        @extends gtk4::Window, gtk4::Widget,
+        @extends gtk4::ApplicationWindow, gtk4::Window, gtk4::Widget,
         @implements gtk4::Accessible, gtk4::Buildable, gtk4::ConstraintTarget, gtk4::Native, gtk4::Root, gtk4::ShortcutManager;
 }
 
