@@ -2,14 +2,9 @@ use gtk4::{
     gio,
     glib::{self, clone},
     prelude::*,
+    subclass::prelude::*,
 };
-use std::{
-    borrow::Cow,
-    collections::HashMap,
-    fmt,
-    num::NonZeroU32,
-    sync::{Arc, Mutex},
-};
+use std::{borrow::Cow, cell::Cell, collections::HashMap, fmt, num::NonZeroU32};
 
 static NOTIFICATIONS_XML: &str = "
 <node name='/org/freedesktop/Notifications'>
@@ -54,9 +49,32 @@ static NOTIFICATIONS_XML: &str = "
 </node>
 ";
 
-pub struct Notifications {
-    next_id: Mutex<NonZeroU32>,
+pub struct NotificationsInner {
+    next_id: Cell<NonZeroU32>,
 }
+
+#[glib::object_subclass]
+impl ObjectSubclass for NotificationsInner {
+    const NAME: &'static str = "S76Notifications";
+    type ParentType = glib::Object;
+    type Type = Notifications;
+
+    fn new() -> Self {
+        Self {
+            next_id: Cell::new(NonZeroU32::new(1).unwrap()),
+        }
+    }
+}
+
+impl ObjectImpl for NotificationsInner {}
+
+glib::wrapper! {
+    pub struct Notifications(ObjectSubclass<NotificationsInner>);
+}
+
+// XXX hack: https://github.com/gtk-rs/gtk-rs-core/issues/263
+unsafe impl Send for Notifications {}
+unsafe impl Sync for Notifications {}
 
 struct Hints(HashMap<String, glib::Variant>);
 
@@ -146,10 +164,8 @@ impl glib::FromVariant for Hints {
 }
 
 impl Notifications {
-    pub fn new() -> Arc<Self> {
-        let notifications = Arc::new(Notifications {
-            next_id: Mutex::new(NonZeroU32::new(1).unwrap()),
-        });
+    pub fn new() -> Self {
+        let notifications = glib::Object::new::<Self>(&[]).unwrap();
 
         gio::bus_own_name(
             gio::BusType::Session,
@@ -163,11 +179,16 @@ impl Notifications {
         notifications
     }
 
+    fn inner(&self) -> &NotificationsInner {
+        NotificationsInner::from_instance(self)
+    }
+
     fn next_id(&self) -> NonZeroU32 {
-        let mut next_id = self.next_id.lock().unwrap();
-        let id = *next_id;
-        *next_id = NonZeroU32::new(u32::from(*next_id).wrapping_add(1))
-            .unwrap_or(NonZeroU32::new(1).unwrap());
+        let next_id = &self.inner().next_id;
+        let id = next_id.get();
+        next_id.set(
+            NonZeroU32::new(u32::from(id).wrapping_add(1)).unwrap_or(NonZeroU32::new(1).unwrap()),
+        );
         id
     }
 
@@ -205,9 +226,9 @@ impl Notifications {
 
     fn close_notification(&self, _id: u32) {}
 
-    fn bus_acquired(self: &Arc<Self>, _connection: gio::DBusConnection, _name: &str) {}
+    fn bus_acquired(&self, _connection: gio::DBusConnection, _name: &str) {}
 
-    fn name_acquired(self: &Arc<Self>, connection: gio::DBusConnection, _name: &str) {
+    fn name_acquired(&self, connection: gio::DBusConnection, _name: &str) {
         let introspection_data = gio::DBusNodeInfo::for_xml(NOTIFICATIONS_XML).unwrap();
         let interface_info = introspection_data
             .lookup_interface("org.freedesktop.Notifications")
@@ -267,5 +288,5 @@ impl Notifications {
         }
     }
 
-    fn name_lost(self: &Arc<Self>, _connection: Option<gio::DBusConnection>, _name: &str) {}
+    fn name_lost(&self, _connection: Option<gio::DBusConnection>, _name: &str) {}
 }

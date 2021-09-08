@@ -6,7 +6,7 @@ use gtk4::{
     subclass::prelude::*,
 };
 use once_cell::unsync::OnceCell;
-use std::{cell::Cell, sync::Arc};
+use std::cell::Cell;
 
 use crate::notifications::Notifications;
 use crate::status_notifier_watcher;
@@ -14,7 +14,7 @@ use crate::window::PanelWindow;
 
 #[derive(Default)]
 pub struct PanelAppInner {
-    notifications: OnceCell<Arc<Notifications>>,
+    notifications: OnceCell<Notifications>,
     activated: Cell<bool>,
 }
 
