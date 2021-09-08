@@ -132,6 +132,16 @@ impl PanelWindow {
 
         app.add_window(&obj);
 
+        let notifications = app.notifications().clone();
+        app.notifications()
+            .connect_notification_recieved(clone!(@weak obj => move |id| {
+                let notification = notifications.get(id);
+                println!(
+                    "{:?}",
+                    notification
+                );
+            }));
+
         obj
     }
 

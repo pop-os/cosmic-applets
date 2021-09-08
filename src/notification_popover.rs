@@ -1,9 +1,5 @@
 use cascade::cascade;
-use gtk4::{
-    glib::{self, clone},
-    prelude::*,
-    subclass::prelude::*,
-};
+use gtk4::{glib, prelude::*, subclass::prelude::*};
 
 use crate::deref_cell::DerefCell;
 
@@ -53,5 +49,9 @@ impl NotificationPopover {
 
     fn inner(&self) -> &NotificationPopoverInner {
         NotificationPopoverInner::from_instance(self)
+    }
+
+    pub fn set_body(&self, body: &str) {
+        self.inner().label.set_label(body);
     }
 }

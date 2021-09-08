@@ -5,7 +5,15 @@ use gtk4::{
     subclass::prelude::*,
 };
 use once_cell::sync::Lazy;
-use std::{borrow::Cow, cell::Cell, collections::HashMap, fmt, num::NonZeroU32, time::Duration};
+use std::{
+    borrow::Cow,
+    cell::{Cell, RefCell},
+    collections::HashMap,
+    fmt,
+    num::NonZeroU32,
+    rc::Rc,
+    time::Duration,
+};
 
 static NOTIFICATIONS_XML: &str = "
 <node name='/org/freedesktop/Notifications'>
@@ -53,6 +61,7 @@ static NOTIFICATIONS_XML: &str = "
 #[derive(Default)]
 pub struct NotificationsInner {
     next_id: Cell<NotificationId>,
+    notifications: RefCell<HashMap<NotificationId, Rc<Notification>>>,
 }
 
 #[glib::object_subclass]
@@ -180,7 +189,7 @@ impl glib::FromVariant for Hints {
 }
 
 #[repr(transparent)]
-#[derive(Debug, Clone, Copy, Hash, glib::GBoxed)]
+#[derive(Debug, Clone, Copy, Hash, glib::GBoxed, PartialEq, Eq)]
 #[gboxed(type_name = "S76NotificationId")]
 pub struct NotificationId(NonZeroU32);
 
@@ -202,7 +211,9 @@ impl NotificationId {
     }
 }
 
-struct Notification {
+#[derive(Debug)]
+#[allow(dead_code)]
+pub struct Notification {
     id: NotificationId,
     app_name: String,
     app_icon: String, // decode?
@@ -252,21 +263,20 @@ impl Notifications {
     ) -> NotificationId {
         let id = replaces_id.unwrap_or_else(|| self.next_id());
 
-        println!(
-            "{:?}",
-            (
-                id,
-                app_name,
-                app_icon,
-                summary,
-                body,
-                actions,
-                hints,
-                expire_timeout
-            )
-        );
+        let notification = Rc::new(Notification {
+            id,
+            app_name,
+            app_icon,
+            summary,
+            body,
+            actions,
+            hints,
+        });
 
-        // TODO
+        self.inner()
+            .notifications
+            .borrow_mut()
+            .insert(id, notification);
 
         if expire_timeout != 0 {
             let expire_timeout = if expire_timeout < 0 {
@@ -359,6 +369,10 @@ impl Notifications {
     }
 
     fn name_lost(&self, _connection: Option<gio::DBusConnection>, _name: &str) {}
+
+    pub fn get(&self, id: NotificationId) -> Option<Rc<Notification>> {
+        self.inner().notifications.borrow().get(&id).cloned()
+    }
 
     pub fn connect_notification_recieved<F: Fn(NotificationId) + 'static>(
         &self,
