@@ -5,16 +5,16 @@ use gtk4::{
     prelude::*,
     subclass::prelude::*,
 };
-use once_cell::unsync::OnceCell;
 use std::cell::Cell;
 
+use crate::deref_cell::DerefCell;
 use crate::notifications::Notifications;
 use crate::status_notifier_watcher;
 use crate::window::PanelWindow;
 
 #[derive(Default)]
 pub struct PanelAppInner {
-    notifications: OnceCell<Notifications>,
+    notifications: DerefCell<Notifications>,
     activated: Cell<bool>,
 }
 
@@ -30,6 +30,9 @@ impl ObjectImpl for PanelAppInner {
         obj.set_application_id(Some("com.system76.cosmicpanel"));
 
         self.parent_constructed(obj);
+
+        status_notifier_watcher::start();
+        self.notifications.set(Notifications::new());
     }
 }
 
@@ -60,10 +63,6 @@ impl ApplicationImpl for PanelAppInner {
                 }
             }),
         );
-
-        status_notifier_watcher::start();
-
-        let _ = self.notifications.set(Notifications::new());
     }
 }
 
@@ -80,10 +79,18 @@ impl PanelApp {
         glib::Object::new::<Self>(&[]).unwrap()
     }
 
+    fn inner(&self) -> &PanelAppInner {
+        PanelAppInner::from_instance(self)
+    }
+
     fn add_window_for_monitor(&self, monitor: gdk::Monitor) {
         cascade! {
             PanelWindow::new(self, monitor);
             ..show();
         };
+    }
+
+    pub fn notifications(&self) -> &Notifications {
+        &*self.inner().notifications
     }
 }

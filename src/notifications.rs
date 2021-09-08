@@ -5,7 +5,7 @@ use gtk4::{
     subclass::prelude::*,
 };
 use once_cell::sync::Lazy;
-use std::{borrow::Cow, cell::Cell, collections::HashMap, fmt, num::NonZeroU32};
+use std::{borrow::Cow, cell::Cell, collections::HashMap, fmt, num::NonZeroU32, time::Duration};
 
 static NOTIFICATIONS_XML: &str = "
 <node name='/org/freedesktop/Notifications'>
@@ -50,8 +50,9 @@ static NOTIFICATIONS_XML: &str = "
 </node>
 ";
 
+#[derive(Default)]
 pub struct NotificationsInner {
-    next_id: Cell<NonZeroU32>,
+    next_id: Cell<NotificationId>,
 }
 
 #[glib::object_subclass]
@@ -59,18 +60,25 @@ impl ObjectSubclass for NotificationsInner {
     const NAME: &'static str = "S76Notifications";
     type ParentType = glib::Object;
     type Type = Notifications;
-
-    fn new() -> Self {
-        Self {
-            next_id: Cell::new(NonZeroU32::new(1).unwrap()),
-        }
-    }
 }
 
 impl ObjectImpl for NotificationsInner {
     fn signals() -> &'static [Signal] {
         static SIGNALS: Lazy<Vec<Signal>> = Lazy::new(|| {
-            vec![Signal::builder("notification-received", &[], glib::Type::UNIT.into()).build()]
+            vec![
+                Signal::builder(
+                    "notification-received",
+                    &[NotificationId::static_type().into()],
+                    glib::Type::UNIT.into(),
+                )
+                .build(),
+                Signal::builder(
+                    "notification-closed",
+                    &[NotificationId::static_type().into()],
+                    glib::Type::UNIT.into(),
+                )
+                .build(),
+            ]
         });
         SIGNALS.as_ref()
     }
@@ -171,6 +179,39 @@ impl glib::FromVariant for Hints {
     }
 }
 
+#[repr(transparent)]
+#[derive(Debug, Clone, Copy, Hash, glib::GBoxed)]
+#[gboxed(type_name = "S76NotificationId")]
+pub struct NotificationId(NonZeroU32);
+
+impl Default for NotificationId {
+    fn default() -> Self {
+        Self(NonZeroU32::new(1).unwrap())
+    }
+}
+
+impl From<NotificationId> for u32 {
+    fn from(id: NotificationId) -> u32 {
+        id.0.into()
+    }
+}
+
+impl NotificationId {
+    fn new(value: u32) -> Option<Self> {
+        NonZeroU32::new(value).map(Self)
+    }
+}
+
+struct Notification {
+    id: NotificationId,
+    app_name: String,
+    app_icon: String, // decode?
+    summary: String,
+    body: String,
+    actions: Vec<String>, // enum?
+    hints: Hints,
+}
+
 impl Notifications {
     pub fn new() -> Self {
         let notifications = glib::Object::new::<Self>(&[]).unwrap();
@@ -191,26 +232,24 @@ impl Notifications {
         NotificationsInner::from_instance(self)
     }
 
-    fn next_id(&self) -> NonZeroU32 {
+    fn next_id(&self) -> NotificationId {
         let next_id = &self.inner().next_id;
         let id = next_id.get();
-        next_id.set(
-            NonZeroU32::new(u32::from(id).wrapping_add(1)).unwrap_or(NonZeroU32::new(1).unwrap()),
-        );
+        next_id.set(NotificationId::new(u32::from(id).wrapping_add(1)).unwrap_or_default());
         id
     }
 
     fn handle_notify(
         &self,
         app_name: String,
-        replaces_id: Option<NonZeroU32>,
+        replaces_id: Option<NotificationId>,
         app_icon: String,
         summary: String,
         body: String,
         actions: Vec<String>,
         hints: Hints,
         expire_timeout: i32,
-    ) -> NonZeroU32 {
+    ) -> NotificationId {
         let id = replaces_id.unwrap_or_else(|| self.next_id());
 
         println!(
@@ -229,13 +268,31 @@ impl Notifications {
 
         // TODO
 
+        if expire_timeout != 0 {
+            let expire_timeout = if expire_timeout < 0 {
+                1000 // XXX
+            } else {
+                expire_timeout as u64
+            };
+            let expire_timeout = Duration::from_millis(expire_timeout);
+            glib::timeout_add_local(
+                expire_timeout,
+                clone!(@strong self as self_ => move || {
+                    self_.close_notification(id);
+                    Continue(false)
+                }),
+            );
+        }
+
         // XXX
-        self.emit_by_name("notification-received", &[]).unwrap();
+        self.emit_by_name("notification-received", &[&id]).unwrap();
 
         id
     }
 
-    fn handle_close_notification(&self, _id: u32) {}
+    fn close_notification(&self, id: NotificationId) {
+        self.emit_by_name("notification-closed", &[&id]).unwrap();
+    }
 
     fn bus_acquired(&self, _connection: gio::DBusConnection, _name: &str) {}
 
@@ -254,14 +311,16 @@ impl Notifications {
             match method {
                 "Notify" => {
                     let (app_name, replaces_id, app_icon, summary, body, actions, hints, expire_timeout) = args.get().unwrap();
-                    let replaces_id = NonZeroU32::new(replaces_id);
+                    let replaces_id = NotificationId::new(replaces_id);
                     let res = self_.handle_notify(app_name, replaces_id, app_icon, summary, body, actions, hints, expire_timeout);
                     invocation.return_value(Some(&(u32::from(res),).to_variant()));
                     // TODO error?
                 }
                 "CloseNotification" => {
                     let (id,) = args.get::<(u32,)>().unwrap();
-                    self_.handle_close_notification(id);
+                    if let Some(id) = NotificationId::new(id) {
+                        self_.close_notification(id);
+                    }
                     invocation.return_value(None);
                     // TODO error?
                 }
@@ -301,9 +360,13 @@ impl Notifications {
 
     fn name_lost(&self, _connection: Option<gio::DBusConnection>, _name: &str) {}
 
-    pub fn connect_notification_recieved<F: Fn() + 'static>(&self, cb: F) -> SignalHandlerId {
-        self.connect_local("notification-received", false, move |_values| {
-            cb();
+    pub fn connect_notification_recieved<F: Fn(NotificationId) + 'static>(
+        &self,
+        cb: F,
+    ) -> SignalHandlerId {
+        self.connect_local("notification-received", false, move |values| {
+            let id = values[1].get().unwrap();
+            cb(id);
             None
         })
         .unwrap()
