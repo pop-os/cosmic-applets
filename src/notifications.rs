@@ -1,9 +1,10 @@
 use gtk4::{
     gio,
-    glib::{self, clone},
+    glib::{self, clone, subclass::Signal, SignalHandlerId},
     prelude::*,
     subclass::prelude::*,
 };
+use once_cell::sync::Lazy;
 use std::{borrow::Cow, cell::Cell, collections::HashMap, fmt, num::NonZeroU32};
 
 static NOTIFICATIONS_XML: &str = "
@@ -66,7 +67,14 @@ impl ObjectSubclass for NotificationsInner {
     }
 }
 
-impl ObjectImpl for NotificationsInner {}
+impl ObjectImpl for NotificationsInner {
+    fn signals() -> &'static [Signal] {
+        static SIGNALS: Lazy<Vec<Signal>> = Lazy::new(|| {
+            vec![Signal::builder("notification-received", &[], glib::Type::UNIT.into()).build()]
+        });
+        SIGNALS.as_ref()
+    }
+}
 
 glib::wrapper! {
     pub struct Notifications(ObjectSubclass<NotificationsInner>);
@@ -192,7 +200,7 @@ impl Notifications {
         id
     }
 
-    fn notify(
+    fn handle_notify(
         &self,
         app_name: String,
         replaces_id: Option<NonZeroU32>,
@@ -221,10 +229,13 @@ impl Notifications {
 
         // TODO
 
+        // XXX
+        self.emit_by_name("notification-received", &[]).unwrap();
+
         id
     }
 
-    fn close_notification(&self, _id: u32) {}
+    fn handle_close_notification(&self, _id: u32) {}
 
     fn bus_acquired(&self, _connection: gio::DBusConnection, _name: &str) {}
 
@@ -244,13 +255,13 @@ impl Notifications {
                 "Notify" => {
                     let (app_name, replaces_id, app_icon, summary, body, actions, hints, expire_timeout) = args.get().unwrap();
                     let replaces_id = NonZeroU32::new(replaces_id);
-                    let res = self_.notify(app_name, replaces_id, app_icon, summary, body, actions, hints, expire_timeout);
+                    let res = self_.handle_notify(app_name, replaces_id, app_icon, summary, body, actions, hints, expire_timeout);
                     invocation.return_value(Some(&(u32::from(res),).to_variant()));
                     // TODO error?
                 }
                 "CloseNotification" => {
                     let (id,) = args.get::<(u32,)>().unwrap();
-                    self_.close_notification(id);
+                    self_.handle_close_notification(id);
                     invocation.return_value(None);
                     // TODO error?
                 }
@@ -289,4 +300,12 @@ impl Notifications {
     }
 
     fn name_lost(&self, _connection: Option<gio::DBusConnection>, _name: &str) {}
+
+    pub fn connect_notification_recieved<F: Fn() + 'static>(&self, cb: F) -> SignalHandlerId {
+        self.connect_local("notification-received", false, move |_values| {
+            cb();
+            None
+        })
+        .unwrap()
+    }
 }
