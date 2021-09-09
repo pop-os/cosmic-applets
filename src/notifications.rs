@@ -214,12 +214,12 @@ impl NotificationId {
 #[derive(Debug)]
 #[allow(dead_code)]
 pub struct Notification {
-    id: NotificationId,
-    app_name: String,
-    app_icon: String, // decode?
-    summary: String,
-    body: String,
-    actions: Vec<String>, // enum?
+    pub id: NotificationId,
+    pub app_name: String,
+    pub app_icon: String, // decode?
+    pub summary: String,
+    pub body: String,
+    pub actions: Vec<String>, // enum?
     hints: Hints,
 }
 

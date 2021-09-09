@@ -6,9 +6,11 @@ use gtk4::{
     subclass::prelude::*,
 };
 
+use crate::application::PanelApp;
 use crate::deref_cell::DerefCell;
 use crate::mpris::MprisControls;
 use crate::notification_popover::NotificationPopover;
+use crate::notifications::Notification;
 use crate::popover_container::PopoverContainer;
 
 #[derive(Default)]
@@ -97,8 +99,18 @@ glib::wrapper! {
 }
 
 impl TimeButton {
-    pub fn new() -> Self {
-        glib::Object::new(&[]).unwrap()
+    pub fn new(app: &PanelApp) -> Self {
+        let obj = glib::Object::new::<Self>(&[]).unwrap();
+
+        let notifications = app.notifications().clone();
+        app.notifications()
+            .connect_notification_recieved(clone!(@weak obj => move |id| {
+                if let Some(notification) = notifications.get(id) {
+                    obj.handle_notification(&notification);
+                }
+            }));
+
+        obj
     }
 
     fn inner(&self) -> &TimeButtonInner {
@@ -118,5 +130,13 @@ impl TimeButton {
             .label
             .set_label(&time.format("%b %-d %-I:%M %p").to_string());
         // time.format("%B %-d %Y")
+    }
+
+    fn handle_notification(&self, notification: &Notification) {
+        println!("{:?}", notification);
+
+        let popover = &self.inner().notification_popover;
+        popover.set_body(&notification.body);
+        popover.popup();
     }
 }

@@ -31,6 +31,7 @@ fn button(text: &str) -> gtk4::Button {
 pub struct PanelWindowInner {
     size: Cell<Option<(i32, i32)>>,
     monitor: DerefCell<gdk::Monitor>,
+    box_: DerefCell<gtk4::CenterBox>,
 }
 
 #[glib::object_subclass]
@@ -49,7 +50,6 @@ impl ObjectImpl for PanelWindowInner {
                 ..append(&button("Workspaces"));
                 ..append(&button("Applications"));
             }));
-            ..set_center_widget(Some(&TimeButton::new()));
             ..set_end_widget(Some(&StatusArea::new()));
         };
 
@@ -58,6 +58,8 @@ impl ObjectImpl for PanelWindowInner {
             ..set_decorated(false);
             ..set_child(Some(&box_));
         };
+
+        self.box_.set(box_);
     }
 }
 
@@ -130,17 +132,11 @@ impl PanelWindow {
         obj.set_size_request(monitor.geometry().width, 0);
         obj.inner().monitor.set(monitor);
 
-        app.add_window(&obj);
+        obj.inner()
+            .box_
+            .set_center_widget(Some(&TimeButton::new(app)));
 
-        let notifications = app.notifications().clone();
-        app.notifications()
-            .connect_notification_recieved(clone!(@weak obj => move |id| {
-                let notification = notifications.get(id);
-                println!(
-                    "{:?}",
-                    notification
-                );
-            }));
+        app.add_window(&obj);
 
         obj
     }
