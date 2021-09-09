@@ -1,18 +1,18 @@
 use cascade::cascade;
 use gtk4::{
     glib::{self, clone},
-    pango,
     prelude::*,
     subclass::prelude::*,
 };
 
 use crate::deref_cell::DerefCell;
-use crate::notifications::Notification;
+use crate::notification_widget::NotificationWidget;
+use crate::notifications::{Notification, Notifications};
 
 #[derive(Default)]
 pub struct NotificationPopoverInner {
-    summary_label: DerefCell<gtk4::Label>,
-    body_label: DerefCell<gtk4::Label>,
+    notification_widget: DerefCell<NotificationWidget>,
+    notifications: DerefCell<Notifications>,
 }
 
 #[glib::object_subclass]
@@ -31,16 +31,8 @@ impl ObjectImpl for NotificationPopoverInner {
             }));
         });
 
-        let summary_label = cascade! {
-            gtk4::Label::new(None);
-            ..set_attributes(Some(&cascade! {
-                pango::AttrList::new();
-                ..insert(pango::Attribute::new_weight(pango::Weight::Bold));
-            }));
-        };
-
-        let body_label = cascade! {
-            gtk4::Label::new(None);
+        let notification_widget = cascade! {
+            NotificationWidget::new();
         };
 
         cascade! {
@@ -48,15 +40,10 @@ impl ObjectImpl for NotificationPopoverInner {
             ..set_autohide(false);
             ..set_has_arrow(false);
             ..set_offset(0, 12);
-            ..set_child(Some(&cascade! {
-                gtk4::Box::new(gtk4::Orientation::Vertical, 0);
-                ..append(&summary_label);
-                ..append(&body_label);
-            }));
+            ..set_child(Some(&notification_widget));
         };
 
-        self.summary_label.set(summary_label);
-        self.body_label.set(body_label);
+        self.notification_widget.set(notification_widget);
     }
 }
 
@@ -69,8 +56,15 @@ glib::wrapper! {
 }
 
 impl NotificationPopover {
-    pub fn new() -> Self {
+    pub fn new(notifications: &Notifications) -> Self {
         let obj = glib::Object::new::<Self>(&[]).unwrap();
+
+        // XXX disconnect?
+        obj.inner().notifications.set(notifications.clone());
+        notifications.connect_notification_recieved(clone!(@weak obj => move |notification| {
+             obj.handle_notification(&notification);
+        }));
+
         obj
     }
 
@@ -78,8 +72,10 @@ impl NotificationPopover {
         NotificationPopoverInner::from_instance(self)
     }
 
-    pub fn set_notification(&self, notification: &Notification) {
-        self.inner().summary_label.set_label(&notification.summary);
-        self.inner().body_label.set_label(&notification.body);
+    fn handle_notification(&self, notification: &Notification) {
+        self.inner()
+            .notification_widget
+            .set_notification(notification);
+        self.popup();
     }
 }

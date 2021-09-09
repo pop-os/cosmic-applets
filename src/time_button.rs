@@ -9,8 +9,8 @@ use gtk4::{
 use crate::application::PanelApp;
 use crate::deref_cell::DerefCell;
 use crate::mpris::MprisControls;
+use crate::notification_list::NotificationList;
 use crate::notification_popover::NotificationPopover;
-use crate::notifications::Notification;
 use crate::popover_container::PopoverContainer;
 
 #[derive(Default)]
@@ -19,6 +19,7 @@ pub struct TimeButtonInner {
     button: DerefCell<gtk4::ToggleButton>,
     label: DerefCell<gtk4::Label>,
     notification_popover: DerefCell<NotificationPopover>,
+    left_box: DerefCell<gtk4::Box>,
 }
 
 #[glib::object_subclass]
@@ -52,27 +53,27 @@ impl ObjectImpl for TimeButtonInner {
             ..set_child(Some(&label));
         };
 
+        let left_box = cascade! {
+            gtk4::Box::new(gtk4::Orientation::Vertical, 0);
+            ..append(&MprisControls::new());
+        };
+
         cascade! {
             PopoverContainer::new(&button);
             ..set_parent(obj);
             ..popover().set_child(Some(&cascade! {
                 gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
-                ..append(&MprisControls::new());
+                ..append(&left_box);
                 ..append(&calendar);
             }));
             ..popover().connect_show(clone!(@strong obj => move |_| obj.opening()));
             ..popover().bind_property("visible", &button, "active").flags(glib::BindingFlags::BIDIRECTIONAL).build();
         };
 
-        let notification_popover = cascade! {
-            NotificationPopover::new();
-            ..set_parent(obj);
-        };
-
         self.calendar.set(calendar);
         self.button.set(button);
         self.label.set(label);
-        self.notification_popover.set(notification_popover);
+        self.left_box.set(left_box);
 
         // TODO: better way to do this?
         glib::timeout_add_seconds_local(
@@ -102,13 +103,14 @@ impl TimeButton {
     pub fn new(app: &PanelApp) -> Self {
         let obj = glib::Object::new::<Self>(&[]).unwrap();
 
-        let notifications = app.notifications().clone();
-        app.notifications()
-            .connect_notification_recieved(clone!(@weak obj => move |id| {
-                if let Some(notification) = notifications.get(id) {
-                    obj.handle_notification(&notification);
-                }
-            }));
+        let notification_list = NotificationList::new(app.notifications());
+        obj.inner().left_box.prepend(&notification_list);
+
+        let notification_popover = cascade! {
+            NotificationPopover::new(app.notifications());
+            ..set_parent(&obj);
+        };
+        obj.inner().notification_popover.set(notification_popover);
 
         obj
     }
@@ -130,14 +132,5 @@ impl TimeButton {
             .label
             .set_label(&time.format("%b %-d %-I:%M %p").to_string());
         // time.format("%B %-d %Y")
-    }
-
-    fn handle_notification(&self, notification: &Notification) {
-        println!("{:?}", notification);
-
-        self.inner()
-            .notification_popover
-            .set_notification(notification);
-        self.inner().notification_popover.popup();
     }
 }

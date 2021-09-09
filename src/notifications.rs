@@ -382,13 +382,16 @@ impl Notifications {
         self.inner().notifications.borrow().get(&id).cloned()
     }
 
-    pub fn connect_notification_recieved<F: Fn(NotificationId) + 'static>(
+    pub fn connect_notification_recieved<F: Fn(Rc<Notification>) + 'static>(
         &self,
         cb: F,
     ) -> SignalHandlerId {
         self.connect_local("notification-received", false, move |values| {
+            let obj = values[0].get::<Self>().unwrap();
             let id = values[1].get().unwrap();
-            cb(id);
+            if let Some(notification) = obj.get(id) {
+                cb(notification);
+            }
             None
         })
         .unwrap()
