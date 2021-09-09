@@ -135,8 +135,9 @@ impl TimeButton {
     fn handle_notification(&self, notification: &Notification) {
         println!("{:?}", notification);
 
-        let popover = &self.inner().notification_popover;
-        popover.set_body(&notification.body);
-        popover.popup();
+        self.inner()
+            .notification_popover
+            .set_notification(notification);
+        self.inner().notification_popover.popup();
     }
 }
