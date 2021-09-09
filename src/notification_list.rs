@@ -4,15 +4,17 @@ use gtk4::{
     prelude::*,
     subclass::prelude::*,
 };
+use std::{cell::RefCell, collections::HashMap};
 
 use crate::deref_cell::DerefCell;
 use crate::notification_widget::NotificationWidget;
-use crate::notifications::{Notification, Notifications};
+use crate::notifications::{Notification, NotificationId, Notifications};
 
 #[derive(Default)]
 pub struct NotificationListInner {
     listbox: DerefCell<gtk4::ListBox>,
     notifications: DerefCell<Notifications>,
+    rows: RefCell<HashMap<NotificationId, gtk4::ListBoxRow>>,
 }
 
 #[glib::object_subclass]
@@ -31,6 +33,11 @@ impl ObjectImpl for NotificationListInner {
         let listbox = cascade! {
             gtk4::ListBox::new();
             ..set_parent(obj);
+            ..connect_row_activated(clone!(@weak obj => move |_, row| {
+                if let Some(id) = obj.id_for_row(row) {
+                    // TODO
+                }
+            }));
         };
 
         self.listbox.set(listbox);
@@ -71,6 +78,18 @@ impl NotificationList {
             ..set_notification(notification);
         };
 
-        self.inner().listbox.prepend(&notification_widget);
+        let row = cascade! {
+            gtk4::ListBoxRow::new();
+            ..set_selectable(false);
+            ..set_child(Some(&notification_widget));
+        };
+
+        self.inner().listbox.prepend(&row);
+        self.inner().rows.borrow_mut().insert(notification.id, row);
+    }
+
+    fn id_for_row(&self, row: &gtk4::ListBoxRow) -> Option<NotificationId> {
+        let rows = self.inner().rows.borrow();
+        Some(*rows.iter().find(|(_, i)| i == &row)?.0)
     }
 }
