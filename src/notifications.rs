@@ -12,9 +12,10 @@ use std::{
     fmt,
     num::NonZeroU32,
     rc::Rc,
-    time::Duration,
 };
 
+static PATH: &str = "/org/freedesktop/Notifications";
+static INTERFACE: &str = "org.freedesktop.Notifications";
 static NOTIFICATIONS_XML: &str = "
 <node name='/org/freedesktop/Notifications'>
   <interface name='org.freedesktop.Notifications'>
@@ -62,6 +63,7 @@ static NOTIFICATIONS_XML: &str = "
 pub struct NotificationsInner {
     next_id: Cell<NotificationId>,
     notifications: RefCell<HashMap<NotificationId, Rc<Notification>>>,
+    connection: RefCell<Option<gio::DBusConnection>>,
 }
 
 #[glib::object_subclass]
@@ -223,13 +225,22 @@ pub struct Notification {
     hints: Hints,
 }
 
+#[repr(u32)]
+#[allow(dead_code)]
+enum CloseReason {
+    Expire = 1,
+    Dismiss,
+    Call,
+    Undefined,
+}
+
 impl Notifications {
     pub fn new() -> Self {
         let notifications = glib::Object::new::<Self>(&[]).unwrap();
 
         gio::bus_own_name(
             gio::BusType::Session,
-            "org.freedesktop.Notifications",
+            INTERFACE,
             gio::BusNameOwnerFlags::NONE,
             clone!(@strong notifications => move |connection, name| notifications.bus_acquired(connection, name)),
             clone!(@strong notifications => move |connection, name| notifications.name_acquired(connection, name)),
@@ -259,8 +270,10 @@ impl Notifications {
         body: String,
         actions: Vec<String>,
         hints: Hints,
-        expire_timeout: i32,
+        _expire_timeout: i32,
     ) -> NotificationId {
+        // Ignores `expire-timeout`, like Gnome Shell
+
         let id = replaces_id.unwrap_or_else(|| self.next_id());
 
         let notification = Rc::new(Notification {
@@ -278,39 +291,34 @@ impl Notifications {
             .borrow_mut()
             .insert(id, notification);
 
-        if expire_timeout != 0 {
-            let expire_timeout = if expire_timeout < 0 {
-                1000 // XXX
-            } else {
-                expire_timeout as u64
-            };
-            let expire_timeout = Duration::from_millis(expire_timeout);
-            glib::timeout_add_local(
-                expire_timeout,
-                clone!(@strong self as self_ => move || {
-                    self_.close_notification(id);
-                    Continue(false)
-                }),
-            );
-        }
-
-        // XXX
         self.emit_by_name("notification-received", &[&id]).unwrap();
 
         id
     }
 
-    fn close_notification(&self, id: NotificationId) {
+    fn close_notification(&self, id: NotificationId, reason: CloseReason) {
         self.emit_by_name("notification-closed", &[&id]).unwrap();
+
+        if let Some(connection) = self.inner().connection.borrow().as_ref() {
+            connection
+                .emit_signal(
+                    None,
+                    PATH,
+                    INTERFACE,
+                    "CloseNotification",
+                    Some(&(&(reason as u32),).to_variant()),
+                )
+                .unwrap();
+        }
     }
 
-    fn bus_acquired(&self, _connection: gio::DBusConnection, _name: &str) {}
+    fn bus_acquired(&self, connection: gio::DBusConnection, _name: &str) {
+        *self.inner().connection.borrow_mut() = Some(connection);
+    }
 
     fn name_acquired(&self, connection: gio::DBusConnection, _name: &str) {
         let introspection_data = gio::DBusNodeInfo::for_xml(NOTIFICATIONS_XML).unwrap();
-        let interface_info = introspection_data
-            .lookup_interface("org.freedesktop.Notifications")
-            .unwrap();
+        let interface_info = introspection_data.lookup_interface(INTERFACE).unwrap();
         let method_call = clone!(@strong self as self_ => move |_connection: gio::DBusConnection,
                            _sender: &str,
                            _path: &str,
@@ -329,7 +337,7 @@ impl Notifications {
                 "CloseNotification" => {
                     let (id,) = args.get::<(u32,)>().unwrap();
                     if let Some(id) = NotificationId::new(id) {
-                        self_.close_notification(id);
+                        self_.close_notification(id, CloseReason::Call);
                     }
                     invocation.return_value(None);
                     // TODO error?
@@ -358,7 +366,7 @@ impl Notifications {
                             _prop: &str,
                             _value: glib::Variant| { unreachable!() };
         if let Err(err) = connection.register_object(
-            "/org/freedesktop/Notifications",
+            PATH,
             &interface_info,
             method_call,
             get_property,
