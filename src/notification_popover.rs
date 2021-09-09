@@ -1,5 +1,9 @@
 use cascade::cascade;
-use gtk4::{glib, prelude::*, subclass::prelude::*};
+use gtk4::{
+    glib::{self, clone},
+    prelude::*,
+    subclass::prelude::*,
+};
 
 use crate::deref_cell::DerefCell;
 
@@ -17,6 +21,13 @@ impl ObjectSubclass for NotificationPopoverInner {
 
 impl ObjectImpl for NotificationPopoverInner {
     fn constructed(&self, obj: &NotificationPopover) {
+        obj.add_controller(&cascade! {
+            gtk4::GestureClick::new();
+            ..connect_pressed(clone!(@weak obj => move |_, _, _, _| {
+                obj.popdown();
+            }));
+        });
+
         let label = cascade! {
             gtk4::Label::new(None);
         };
