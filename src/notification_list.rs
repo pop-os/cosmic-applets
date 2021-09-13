@@ -64,6 +64,9 @@ impl NotificationList {
         notifications.connect_notification_recieved(clone!(@weak obj => move |notification| {
             obj.handle_notification(&notification);
         }));
+        notifications.connect_notification_closed(clone!(@weak obj => move |id| {
+            obj.remove_notification(id);
+        }));
 
         obj
     }
@@ -74,7 +77,7 @@ impl NotificationList {
 
     fn handle_notification(&self, notification: &Notification) {
         let notification_widget = cascade! {
-            NotificationWidget::new();
+            NotificationWidget::new(&*self.inner().notifications);
             ..set_notification(notification);
         };
 
@@ -86,6 +89,12 @@ impl NotificationList {
 
         self.inner().listbox.prepend(&row);
         self.inner().rows.borrow_mut().insert(notification.id, row);
+    }
+
+    fn remove_notification(&self, id: NotificationId) {
+        if let Some(row) = self.inner().rows.borrow_mut().remove(&id) {
+            self.inner().listbox.remove(&row);
+        }
     }
 
     fn id_for_row(&self, row: &gtk4::ListBoxRow) -> Option<NotificationId> {

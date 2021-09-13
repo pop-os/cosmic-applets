@@ -297,6 +297,8 @@ impl Notifications {
     }
 
     fn close_notification(&self, id: NotificationId, reason: CloseReason) {
+        self.inner().notifications.borrow_mut().remove(&id);
+
         self.emit_by_name("notification-closed", &[&id]).unwrap();
 
         if let Some(connection) = self.inner().connection.borrow().as_ref() {
@@ -310,6 +312,10 @@ impl Notifications {
                 )
                 .unwrap();
         }
+    }
+
+    pub fn dismiss(&self, id: NotificationId) {
+        self.close_notification(id, CloseReason::Dismiss);
     }
 
     fn bus_acquired(&self, connection: gio::DBusConnection, _name: &str) {
@@ -392,6 +398,18 @@ impl Notifications {
             if let Some(notification) = obj.get(id) {
                 cb(notification);
             }
+            None
+        })
+        .unwrap()
+    }
+
+    pub fn connect_notification_closed<F: Fn(NotificationId) + 'static>(
+        &self,
+        cb: F,
+    ) -> SignalHandlerId {
+        self.connect_local("notification-closed", false, move |values| {
+            let id = values[1].get().unwrap();
+            cb(id);
             None
         })
         .unwrap()

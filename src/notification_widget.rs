@@ -1,14 +1,22 @@
 use cascade::cascade;
-use gtk4::{glib, pango, prelude::*, subclass::prelude::*};
+use gtk4::{
+    glib::{self, clone},
+    pango,
+    prelude::*,
+    subclass::prelude::*,
+};
+use std::cell::Cell;
 
 use crate::deref_cell::DerefCell;
-use crate::notifications::Notification;
+use crate::notifications::{Notification, NotificationId, Notifications};
 
 #[derive(Default)]
 pub struct NotificationWidgetInner {
     box_: DerefCell<gtk4::Box>,
     summary_label: DerefCell<gtk4::Label>,
     body_label: DerefCell<gtk4::Label>,
+    notifications: DerefCell<Notifications>,
+    id: Cell<Option<NotificationId>>,
 }
 
 #[glib::object_subclass]
@@ -37,10 +45,25 @@ impl ObjectImpl for NotificationWidgetInner {
         };
 
         let box_ = cascade! {
-            gtk4::Box::new(gtk4::Orientation::Vertical, 0);
+            gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
             ..set_parent(obj);
-            ..append(&summary_label);
-            ..append(&body_label);
+            ..append(&cascade! {
+                gtk4::Box::new(gtk4::Orientation::Vertical, 0);
+                ..append(&summary_label);
+                ..append(&body_label);
+            });
+            ..append(&cascade! {
+                gtk4::Button::new();
+                ..set_valign(gtk4::Align::Start);
+                ..set_child(Some(&cascade! {
+                    gtk4::Image::from_icon_name(Some("window-close-symbolic"));
+                }));
+                ..connect_clicked(clone!(@weak obj => move |_| {
+                    if let Some(id) = obj.inner().id.get() {
+                        obj.inner().notifications.dismiss(id);
+                    }
+                }));
+            });
         };
 
         self.box_.set(box_);
@@ -61,8 +84,10 @@ glib::wrapper! {
 }
 
 impl NotificationWidget {
-    pub fn new() -> Self {
-        glib::Object::new(&[]).unwrap()
+    pub fn new(notifications: &Notifications) -> Self {
+        let obj = glib::Object::new::<Self>(&[]).unwrap();
+        obj.inner().notifications.set(notifications.clone());
+        obj
     }
 
     fn inner(&self) -> &NotificationWidgetInner {
@@ -72,5 +97,6 @@ impl NotificationWidget {
     pub fn set_notification(&self, notification: &Notification) {
         self.inner().summary_label.set_label(&notification.summary);
         self.inner().body_label.set_label(&notification.body);
+        self.inner().id.set(Some(notification.id));
     }
 }

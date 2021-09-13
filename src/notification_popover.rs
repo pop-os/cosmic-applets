@@ -31,19 +31,12 @@ impl ObjectImpl for NotificationPopoverInner {
             }));
         });
 
-        let notification_widget = cascade! {
-            NotificationWidget::new();
-        };
-
         cascade! {
             obj;
             ..set_autohide(false);
             ..set_has_arrow(false);
             ..set_offset(0, 12);
-            ..set_child(Some(&notification_widget));
         };
-
-        self.notification_widget.set(notification_widget);
     }
 }
 
@@ -58,6 +51,12 @@ glib::wrapper! {
 impl NotificationPopover {
     pub fn new(notifications: &Notifications) -> Self {
         let obj = glib::Object::new::<Self>(&[]).unwrap();
+
+        let notification_widget = cascade! {
+            NotificationWidget::new(notifications);
+        };
+        obj.set_child(Some(&notification_widget));
+        obj.inner().notification_widget.set(notification_widget);
 
         // XXX disconnect?
         obj.inner().notifications.set(notifications.clone());
