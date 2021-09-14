@@ -63,6 +63,11 @@ impl NotificationPopover {
         notifications.connect_notification_recieved(clone!(@weak obj => move |notification| {
              obj.handle_notification(&notification);
         }));
+        notifications.connect_notification_closed(clone!(@weak obj => move |id| {
+            if obj.inner().notification_widget.id() == Some(id) {
+                obj.popdown();
+            }
+        }));
 
         obj
     }

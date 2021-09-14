@@ -65,7 +65,7 @@ impl ObjectImpl for NotificationWidgetInner {
                         ..set_pixel_size(8);
                     }));
                     ..connect_clicked(clone!(@weak obj => move |_| {
-                        if let Some(id) = obj.inner().id.get() {
+                        if let Some(id) = obj.id() {
                             obj.inner().notifications.dismiss(id);
                         }
                     }));
@@ -105,5 +105,9 @@ impl NotificationWidget {
         self.inner().summary_label.set_label(&notification.summary);
         self.inner().body_label.set_label(&notification.body);
         self.inner().id.set(Some(notification.id));
+    }
+
+    pub fn id(&self) -> Option<NotificationId> {
+        self.inner().id.get()
     }
 }
