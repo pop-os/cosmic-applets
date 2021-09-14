@@ -45,25 +45,32 @@ impl ObjectImpl for NotificationWidgetInner {
         };
 
         let box_ = cascade! {
-            gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
+            gtk4::Box::new(gtk4::Orientation::Horizontal, 6);
             ..set_parent(obj);
             ..append(&cascade! {
                 gtk4::Box::new(gtk4::Orientation::Vertical, 0);
                 ..append(&summary_label);
                 ..append(&body_label);
             });
-            ..append(&cascade! {
-                gtk4::Button::new();
-                ..set_valign(gtk4::Align::Start);
-                ..set_child(Some(&cascade! {
-                    gtk4::Image::from_icon_name(Some("window-close-symbolic"));
-                }));
-                ..connect_clicked(clone!(@weak obj => move |_| {
-                    if let Some(id) = obj.inner().id.get() {
-                        obj.inner().notifications.dismiss(id);
-                    }
-                }));
-            });
+                ..append(&cascade! {
+                    gtk4::Button::new();
+                    ..style_context().add_provider(&cascade! {
+                        gtk4::CssProvider::new();
+                        ..load_from_data(b"button { min-width: 0; min-height: 0; padding: 4px 4px; }");
+                    }, gtk4::STYLE_PROVIDER_PRIORITY_APPLICATION);
+                    ..style_context().add_class("flat");
+                    ..set_valign(gtk4::Align::Start);
+                    ..set_child(Some(&cascade! {
+                        gtk4::Image::from_icon_name(Some("window-close-symbolic"));
+                        ..set_pixel_size(8);
+                    }));
+                    ..connect_clicked(clone!(@weak obj => move |_| {
+                        if let Some(id) = obj.inner().id.get() {
+                            obj.inner().notifications.dismiss(id);
+                        }
+                    }));
+                });
+
         };
 
         self.box_.set(box_);
