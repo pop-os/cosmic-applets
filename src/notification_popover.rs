@@ -26,7 +26,10 @@ impl ObjectImpl for NotificationPopoverInner {
     fn constructed(&self, obj: &NotificationPopover) {
         obj.add_controller(&cascade! {
             gtk4::GestureClick::new();
-            ..connect_pressed(clone!(@weak obj => move |_, _, _, _| {
+            ..connect_released(clone!(@weak obj => move |_, n_press, _, _| {
+                if n_press != 1 {
+                    return;
+                }
                 if let Some(id) = obj.id() {
                     obj.inner().notifications.invoke_action(id, "default");
                 }
