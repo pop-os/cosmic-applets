@@ -207,6 +207,12 @@ impl From<NotificationId> for u32 {
     }
 }
 
+impl ToVariant for NotificationId {
+    fn to_variant(&self) -> glib::Variant {
+        self.0.get().to_variant()
+    }
+}
+
 impl NotificationId {
     fn new(value: u32) -> Option<Self> {
         NonZeroU32::new(value).map(Self)
@@ -308,7 +314,7 @@ impl Notifications {
                     PATH,
                     INTERFACE,
                     "CloseNotification",
-                    Some(&(&(reason as u32),).to_variant()),
+                    Some(&(id, &(reason as u32)).to_variant()),
                 )
                 .unwrap();
         }
@@ -316,6 +322,20 @@ impl Notifications {
 
     pub fn dismiss(&self, id: NotificationId) {
         self.close_notification(id, CloseReason::Dismiss);
+    }
+
+    pub fn invoke_action(&self, id: NotificationId, action_key: &str) {
+        if let Some(connection) = self.inner().connection.borrow().as_ref() {
+            connection
+                .emit_signal(
+                    None,
+                    PATH,
+                    INTERFACE,
+                    "ActionInvoked",
+                    Some(&(&(id, action_key),).to_variant()),
+                )
+                .unwrap();
+        }
     }
 
     fn bus_acquired(&self, connection: gio::DBusConnection, _name: &str) {

@@ -35,7 +35,7 @@ impl ObjectImpl for NotificationListInner {
             ..set_parent(obj);
             ..connect_row_activated(clone!(@weak obj => move |_, row| {
                 if let Some(id) = obj.id_for_row(row) {
-                    // TODO
+                    obj.inner().notifications.invoke_action(id, "default");
                 }
             }));
         };

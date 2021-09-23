@@ -7,7 +7,7 @@ use gtk4::{
 
 use crate::deref_cell::DerefCell;
 use crate::notification_widget::NotificationWidget;
-use crate::notifications::{Notification, Notifications};
+use crate::notifications::{Notification, NotificationId, Notifications};
 
 #[derive(Default)]
 pub struct NotificationPopoverInner {
@@ -27,6 +27,9 @@ impl ObjectImpl for NotificationPopoverInner {
         obj.add_controller(&cascade! {
             gtk4::GestureClick::new();
             ..connect_pressed(clone!(@weak obj => move |_, _, _, _| {
+                if let Some(id) = obj.id() {
+                    obj.inner().notifications.invoke_action(id, "default");
+                }
                 obj.popdown();
             }));
         });
@@ -64,7 +67,7 @@ impl NotificationPopover {
              obj.handle_notification(&notification);
         }));
         notifications.connect_notification_closed(clone!(@weak obj => move |id| {
-            if obj.inner().notification_widget.id() == Some(id) {
+            if obj.id() == Some(id) {
                 obj.popdown();
             }
         }));
@@ -74,6 +77,10 @@ impl NotificationPopover {
 
     fn inner(&self) -> &NotificationPopoverInner {
         NotificationPopoverInner::from_instance(self)
+    }
+
+    fn id(&self) -> Option<NotificationId> {
+        self.inner().notification_widget.id()
     }
 
     fn handle_notification(&self, notification: &Notification) {
