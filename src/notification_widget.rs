@@ -34,6 +34,8 @@ impl ObjectImpl for NotificationWidgetInner {
     fn constructed(&self, obj: &NotificationWidget) {
         let summary_label = cascade! {
             gtk4::Label::new(None);
+            ..set_width_chars(20);
+            ..set_max_width_chars(20);
             ..set_attributes(Some(&cascade! {
                 pango::AttrList::new();
                 ..insert(pango::Attribute::new_weight(pango::Weight::Bold));
@@ -42,6 +44,8 @@ impl ObjectImpl for NotificationWidgetInner {
 
         let body_label = cascade! {
             gtk4::Label::new(None);
+            ..set_width_chars(20);
+            ..set_max_width_chars(20);
         };
 
         let box_ = cascade! {
