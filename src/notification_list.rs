@@ -14,6 +14,7 @@ use crate::notifications::{Notification, NotificationId, Notifications};
 pub struct NotificationListInner {
     listbox: DerefCell<gtk4::ListBox>,
     notifications: DerefCell<Notifications>,
+    ids: RefCell<Vec<glib::SignalHandlerId>>,
     rows: RefCell<HashMap<NotificationId, gtk4::ListBoxRow>>,
 }
 
@@ -43,8 +44,12 @@ impl ObjectImpl for NotificationListInner {
         self.listbox.set(listbox);
     }
 
-    fn dispose(&self, _obj: &NotificationList) {
+    fn dispose(&self, obj: &NotificationList) {
         self.listbox.unparent();
+
+        for i in obj.inner().ids.take().into_iter() {
+            obj.inner().notifications.disconnect(i);
+        }
     }
 }
 
@@ -59,14 +64,15 @@ impl NotificationList {
     pub fn new(notifications: &Notifications) -> Self {
         let obj = glib::Object::new::<Self>(&[]).unwrap();
 
-        // XXX disconnect?
         obj.inner().notifications.set(notifications.clone());
-        notifications.connect_notification_recieved(clone!(@weak obj => move |notification| {
-            obj.handle_notification(&notification);
-        }));
-        notifications.connect_notification_closed(clone!(@weak obj => move |id| {
-            obj.remove_notification(id);
-        }));
+        *obj.inner().ids.borrow_mut() = vec![
+            notifications.connect_notification_recieved(clone!(@weak obj => move |notification| {
+                obj.handle_notification(&notification);
+            })),
+            notifications.connect_notification_closed(clone!(@weak obj => move |id| {
+                obj.remove_notification(id);
+            })),
+        ];
 
         obj
     }

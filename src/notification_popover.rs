@@ -14,6 +14,7 @@ use crate::notifications::{Notification, NotificationId, Notifications};
 pub struct NotificationPopoverInner {
     notification_widget: DerefCell<NotificationWidget>,
     notifications: DerefCell<Notifications>,
+    ids: RefCell<Vec<glib::SignalHandlerId>>,
     source: RefCell<Option<glib::SourceId>>,
 }
 
@@ -54,6 +55,12 @@ impl ObjectImpl for NotificationPopoverInner {
             });
         };
     }
+
+    fn dispose(&self, obj: &NotificationPopover) {
+        for i in obj.inner().ids.take().into_iter() {
+            obj.inner().notifications.disconnect(i);
+        }
+    }
 }
 
 impl WidgetImpl for NotificationPopoverInner {}
@@ -74,16 +81,17 @@ impl NotificationPopover {
         obj.set_child(Some(&notification_widget));
         obj.inner().notification_widget.set(notification_widget);
 
-        // XXX disconnect?
         obj.inner().notifications.set(notifications.clone());
-        notifications.connect_notification_recieved(clone!(@weak obj => move |notification| {
-             obj.handle_notification(&notification);
-        }));
-        notifications.connect_notification_closed(clone!(@weak obj => move |id| {
-            if obj.id() == Some(id) {
-                obj.popdown();
-            }
-        }));
+        *obj.inner().ids.borrow_mut() = vec![
+            notifications.connect_notification_recieved(clone!(@weak obj => move |notification| {
+                 obj.handle_notification(&notification);
+            })),
+            notifications.connect_notification_closed(clone!(@weak obj => move |id| {
+                if obj.id() == Some(id) {
+                    obj.popdown();
+                }
+            })),
+        ];
 
         obj
     }
