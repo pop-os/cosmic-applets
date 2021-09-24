@@ -41,7 +41,6 @@ impl ObjectImpl for NotificationPopoverInner {
                         obj.inner().notifications.invoke_action(id, "default");
                     }
                     obj.popdown();
-                    obj.stop_timer();
                 }));
             });
             ..add_controller(&cascade! {
@@ -83,7 +82,6 @@ impl NotificationPopover {
         notifications.connect_notification_closed(clone!(@weak obj => move |id| {
             if obj.id() == Some(id) {
                 obj.popdown();
-                obj.stop_timer();
             }
         }));
 
@@ -118,6 +116,7 @@ impl NotificationPopover {
             1,
             clone!(@weak self as self_ => @default-return Continue(false), move || {
                 self_.popdown();
+                *self_.inner().source.borrow_mut() = None;
                 Continue(false)
             }),
         );
