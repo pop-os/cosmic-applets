@@ -1,8 +1,3 @@
-// TODO
-// - Implement StatusNotifierWatcher if one is not running
-// - Register with StatusNotiferWatcher
-// - Handle signals for registered/unreigisted items
-
 use cascade::cascade;
 use gtk4::{
     gio,
@@ -51,6 +46,10 @@ impl ObjectImpl for StatusAreaInner {
                     return;
                 }
             };
+
+            if let Err(err) = watcher.register_host().await {
+                eprintln!("Failed to register status notifier host: {}", err);
+            }
 
             for name in watcher.registered_items().await {
                 glib::MainContext::default().spawn_local(clone!(@strong obj => async move {
@@ -159,5 +158,18 @@ impl StatusNotifierWatcher {
                 None
             })
             .unwrap()
+    }
+
+    async fn register_host(&self) -> Result<(), glib::Error> {
+        let service = self.0.connection().unique_name().unwrap();
+        self.0
+            .call_future(
+                "RegisterStatusNotifierHost",
+                Some(&(service.as_str(),).to_variant()),
+                gio::DBusCallFlags::NONE,
+                1000,
+            )
+            .await?;
+        Ok(())
     }
 }
