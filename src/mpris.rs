@@ -1,12 +1,13 @@
 use cascade::cascade;
+use futures::stream::StreamExt;
 use gtk4::{
-    gio,
     glib::{self, clone},
     prelude::*,
     subclass::prelude::*,
 };
 use once_cell::unsync::OnceCell;
 use std::{cell::RefCell, collections::HashMap};
+use zbus::fdo::DBusProxy;
 
 use crate::deref_cell::DerefCell;
 use crate::mpris_player::MprisPlayer;
@@ -14,7 +15,7 @@ use crate::mpris_player::MprisPlayer;
 #[derive(Default)]
 pub struct MprisControlsInner {
     listbox: DerefCell<gtk4::ListBox>,
-    dbus: OnceCell<DBus>,
+    dbus: OnceCell<DBusProxy<'static>>,
     players: RefCell<HashMap<String, MprisPlayer>>,
 }
 
@@ -37,23 +38,32 @@ impl ObjectImpl for MprisControlsInner {
         };
 
         glib::MainContext::default().spawn_local(clone!(@strong obj => async move {
-            let dbus = match DBus::new().await {
-                Ok(dbus) => dbus,
+            let (dbus, mut name_owner_changed_stream) = match async {
+                let connection = zbus::Connection::session().await?;
+                let dbus = DBusProxy::new(&connection).await?;
+                let stream = dbus.receive_name_owner_changed().await?;
+                Ok::<_, zbus::Error>((dbus, stream))
+            }.await {
+                Ok(value) => value,
                 Err(err) => {
                     eprintln!("Failed to connect to 'org.freedesktop.DBus': {}", err);
                     return;
                 }
             };
 
-            dbus.connect_name_owner_changed(clone!(@strong obj => move |name, old, new| {
-                if name.starts_with("org.mpris.MediaPlayer2.") {
-                    if !old.is_empty() {
-                        obj.player_removed(&name);
-                    }
-                    if !new.is_empty() {
-                        glib::MainContext::default().spawn_local(clone!(@strong obj => async move {
-                        obj.player_added(&name).await;
-                        }));
+            glib::MainContext::default().spawn_local(clone!(@strong obj => async move {
+                while let Some(evt) = name_owner_changed_stream.next().await {
+                    let args = match evt.args() {
+                        Ok(args) => args,
+                        Err(_) => { continue; },
+                    };
+                    if args.name.starts_with("org.mpris.MediaPlayer2.") {
+                        if !args.old_owner.is_none() {
+                            obj.player_removed(&args.name);
+                        }
+                        if !args.new_owner.is_none() {
+                            obj.player_added(&args.name).await;
+                        }
                     }
                 }
             }));
@@ -120,47 +130,5 @@ impl MprisControls {
 
     fn player_removed(&self, name: &str) {
         self.inner().players.borrow_mut().remove(name);
-    }
-}
-
-struct DBus(gio::DBusProxy);
-
-impl DBus {
-    async fn new() -> Result<Self, glib::Error> {
-        let proxy = gio::DBusProxy::for_bus_future(
-            gio::BusType::Session,
-            gio::DBusProxyFlags::NONE,
-            None,
-            "org.freedesktop.DBus",
-            "/org/freedesktop/DBus",
-            "org.freedesktop.DBus",
-        )
-        .await?;
-        Ok(Self(proxy))
-    }
-
-    async fn list_names(&self) -> Result<impl Iterator<Item = String>, glib::Error> {
-        Ok(self
-            .0
-            .call_future("ListNames", None, gio::DBusCallFlags::NONE, 1000)
-            .await?
-            .child_value(0)
-            .iter()
-            .filter_map(|x| x.get::<String>()))
-    }
-
-    fn connect_name_owner_changed<F: Fn(String, String, String) + 'static>(
-        &self,
-        f: F,
-    ) -> glib::SignalHandlerId {
-        self.0
-            .connect_local("g-signal", false, move |args| {
-                if &args[2].get::<String>().unwrap() == "NameOwnerChanged" {
-                    let (name, old, new) = args[3].get::<glib::Variant>().unwrap().get().unwrap();
-                    f(name, old, new);
-                }
-                None
-            })
-            .unwrap()
     }
 }

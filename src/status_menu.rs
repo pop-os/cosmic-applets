@@ -1,12 +1,14 @@
-use byte_string::ByteStr;
 use cascade::cascade;
+use futures::StreamExt;
 use gtk4::{
-    gdk_pixbuf, gio,
+    gdk_pixbuf,
     glib::{self, clone},
     prelude::*,
     subclass::prelude::*,
 };
-use std::{borrow::Cow, cell::RefCell, collections::HashMap, fmt, io};
+use std::{cell::RefCell, collections::HashMap, io};
+use zbus::dbus_proxy;
+use zvariant::OwnedValue;
 
 use crate::deref_cell::DerefCell;
 use crate::popover_container::PopoverContainer;
@@ -21,8 +23,8 @@ pub struct StatusMenuInner {
     button: DerefCell<gtk4::ToggleButton>,
     popover_container: DerefCell<PopoverContainer>,
     vbox: DerefCell<gtk4::Box>,
-    item: DerefCell<StatusNotifierItem>,
-    dbus_menu: DerefCell<DBusMenu>,
+    item: DerefCell<StatusNotifierItemProxy<'static>>,
+    dbus_menu: DerefCell<DBusMenuProxy<'static>>,
     menus: RefCell<HashMap<i32, Menu>>,
 }
 
@@ -73,18 +75,38 @@ glib::wrapper! {
 }
 
 impl StatusMenu {
-    pub async fn new(name: &str) -> Result<Self, glib::Error> {
-        let item = StatusNotifierItem::new(name).await?;
-        let obj = glib::Object::new::<Self>(&[]).unwrap();
-        if let Some(icon_name) = item.icon_name().as_deref() {
-            obj.inner().button.set_icon_name(&icon_name);
-        }
+    pub async fn new(name: &str) -> zbus::Result<Self> {
+        let idx = name.find('/').unwrap();
+        let dest = &name[..idx];
+        let path = &name[idx..];
 
-        let menu = item.menu().unwrap(); // XXX unwrap?
+        let connection = zbus::Connection::session().await?;
+        let item = StatusNotifierItemProxy::builder(&connection)
+            .destination(dest.to_string())?
+            .path(path.to_string())?
+            .build()
+            .await?;
+        let obj = glib::Object::new::<Self>(&[]).unwrap();
+        let icon_name = item.icon_name().await?;
+        obj.inner().button.set_icon_name(&icon_name);
+
+        let menu = item.menu().await?;
+        let menu = DBusMenuProxy::builder(&connection)
+            .destination(dest.to_string())?
+            .path(menu)?
+            .build()
+            .await?;
         let layout = menu.get_layout(0, -1, &[]).await?.1;
 
-        menu.connect_layout_updated(clone!(@weak obj => move |revision, parent| {
-            obj.layout_updated(revision, parent);
+        let mut layout_updated_stream = menu.receive_layout_updated().await?;
+        glib::MainContext::default().spawn_local(clone!(@strong obj => async move {
+            while let Some(evt) = layout_updated_stream.next().await {
+                let args = match evt.args() {
+                    Ok(args) => args,
+                    Err(_) => { continue; },
+                };
+                obj.layout_updated(args.revision, args.parent);
+            }
         }));
 
         obj.inner().item.set(item);
@@ -140,7 +162,8 @@ impl StatusMenu {
                     ..set_visible(i.visible());
                 };
                 box_.append(&separator);
-            } else if let Some(mut label) = i.label() {
+            } else if let Some(label) = i.label() {
+                let mut label = label.to_string();
                 if let Some(toggle_state) = i.toggle_state() {
                     if toggle_state != 0 {
                         label = format!("✓ {}", label);
@@ -160,7 +183,7 @@ impl StatusMenu {
                 };
 
                 if let Some(icon_data) = i.icon_data() {
-                    let icon_data = io::Cursor::new(icon_data);
+                    let icon_data = io::Cursor::new(icon_data.to_vec());
                     let pixbuf = gdk_pixbuf::Pixbuf::from_read(icon_data).unwrap(); // XXX unwrap
                     let image = cascade! {
                         gtk4::Image::from_pixbuf(Some(&pixbuf));
@@ -182,7 +205,9 @@ impl StatusMenu {
                             if close_on_click {
                                 self_.inner().popover_container.popdown();
                             }
-                            self_.inner().dbus_menu.event(id, "clicked", &0.to_variant(), 0);
+                            glib::MainContext::default().spawn_local(clone!(@strong self_ => async move {
+                                let _ = self_.inner().dbus_menu.event(id, "clicked", &0.into(), 0).await;
+                            }))
                     }));
                 };
                 box_.append(&button);
@@ -218,197 +243,111 @@ impl StatusMenu {
     }
 }
 
-struct Layout(i32, HashMap<String, glib::Variant>, Vec<Layout>);
+#[dbus_proxy(interface = "org.kde.StatusNotifierItem")]
+trait StatusNotifierItem {
+    #[dbus_proxy(property)]
+    fn icon_name(&self) -> zbus::Result<String>;
 
-impl fmt::Debug for Layout {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut s = f.debug_struct("Layout");
-        s.field("id", &self.0);
-        for (k, v) in &self.1 {
-            if let Some(v) = v.get::<String>() {
-                s.field(k, &v);
-            } else if let Some(v) = v.get::<i32>() {
-                s.field(k, &v);
-            } else if let Some(v) = v.get::<bool>() {
-                s.field(k, &v);
-            } else if let Some(v) = v.get::<Vec<u8>>() {
-                s.field(k, &ByteStr::new(&v));
-            } else {
-                s.field(k, v);
-            }
-        }
-        s.field("children", &self.2);
-        s.finish()
+    #[dbus_proxy(property)]
+    fn menu(&self) -> zbus::Result<zvariant::OwnedObjectPath>;
+}
+
+#[derive(Debug)]
+pub struct Layout(i32, LayoutProps, Vec<Layout>);
+
+impl<'a> serde::Deserialize<'a> for Layout {
+    fn deserialize<D: serde::Deserializer<'a>>(deserializer: D) -> Result<Self, D::Error> {
+        let (id, props, children) =
+            <(i32, LayoutProps, Vec<(zvariant::Signature<'_>, Self)>)>::deserialize(deserializer)
+                .unwrap();
+        Ok(Self(id, props, children.into_iter().map(|x| x.1).collect()))
     }
+}
+
+impl zvariant::Type for Layout {
+    fn signature() -> zvariant::Signature<'static> {
+        zvariant::Signature::try_from("(ia{sv}av)").unwrap()
+    }
+}
+
+#[derive(Debug, zvariant::DeserializeDict, zvariant::Type)]
+pub struct LayoutProps {
+    #[zvariant(rename = "accessible-desc")]
+    accessible_desc: Option<String>,
+    #[zvariant(rename = "children-display")]
+    children_display: Option<String>,
+    label: Option<String>,
+    enabled: Option<bool>,
+    visible: Option<bool>,
+    #[zvariant(rename = "type")]
+    type_: Option<String>,
+    #[zvariant(rename = "toggle-type")]
+    toggle_type: Option<String>,
+    #[zvariant(rename = "toggle-state")]
+    toggle_state: Option<i32>,
+    #[zvariant(rename = "icon-data")]
+    icon_data: Option<Vec<u8>>,
 }
 
 #[allow(dead_code)]
 impl Layout {
-    fn prop<T: glib::FromVariant>(&self, name: &str) -> Option<T> {
-        self.1.get(name)?.get()
-    }
-
     fn id(&self) -> i32 {
         self.0
-    }
-
-    fn accessible_desc(&self) -> Option<String> {
-        self.prop("accessible-desc")
-    }
-
-    fn children_display(&self) -> Option<String> {
-        self.prop("children-display")
-    }
-
-    fn label(&self) -> Option<String> {
-        self.prop("label")
-    }
-
-    fn enabled(&self) -> bool {
-        self.prop("enabled").unwrap_or(true)
-    }
-
-    fn visible(&self) -> bool {
-        self.prop("visible").unwrap_or(true)
-    }
-
-    fn type_(&self) -> Option<String> {
-        self.prop("type")
-    }
-
-    fn toggle_type(&self) -> Option<String> {
-        self.prop("toggle-type")
-    }
-
-    fn toggle_state(&self) -> Option<i32> {
-        self.prop("toggle-state")
-    }
-
-    fn icon_data(&self) -> Option<Vec<u8>> {
-        self.prop("icon-data")
     }
 
     fn children(&self) -> &[Self] {
         &self.2
     }
-}
 
-impl glib::StaticVariantType for Layout {
-    fn static_variant_type() -> Cow<'static, glib::VariantTy> {
-        glib::VariantTy::new("(ia{sv}av)").unwrap().into()
+    fn accessible_desc(&self) -> Option<&str> {
+        self.1.accessible_desc.as_deref()
+    }
+
+    fn children_display(&self) -> Option<&str> {
+        self.1.children_display.as_deref()
+    }
+
+    fn label(&self) -> Option<&str> {
+        self.1.label.as_deref()
+    }
+
+    fn enabled(&self) -> bool {
+        self.1.enabled.unwrap_or(true)
+    }
+
+    fn visible(&self) -> bool {
+        self.1.visible.unwrap_or(true)
+    }
+
+    fn type_(&self) -> Option<&str> {
+        self.1.type_.as_deref()
+    }
+
+    fn toggle_type(&self) -> Option<&str> {
+        self.1.toggle_type.as_deref()
+    }
+
+    fn toggle_state(&self) -> Option<i32> {
+        self.1.toggle_state
+    }
+
+    fn icon_data(&self) -> Option<&[u8]> {
+        self.1.icon_data.as_deref()
     }
 }
 
-impl glib::FromVariant for Layout {
-    fn from_variant(variant: &glib::Variant) -> Option<Self> {
-        let (id, props, children) = variant.get::<(_, _, Vec<glib::Variant>)>()?;
-        let children = children.iter().filter_map(Self::from_variant).collect();
-        Some(Self(id, props, children))
-    }
-}
-
-#[derive(Clone)]
-struct DBusMenu(gio::DBusProxy);
-
-impl DBusMenu {
-    async fn new(dest: &str, path: &str) -> Result<Self, glib::Error> {
-        let proxy = gio::DBusProxy::for_bus_future(
-            gio::BusType::Session,
-            gio::DBusProxyFlags::NONE,
-            None,
-            dest,
-            path,
-            "com.canonical.dbusmenu",
-        )
-        .await?;
-        Ok(Self(proxy))
-    }
-
-    async fn get_layout(
+#[dbus_proxy(interface = "com.canonical.dbusmenu")]
+trait DBusMenu {
+    fn get_layout(
         &self,
-        parent: i32,
-        depth: i32,
-        properties: &[&str],
-    ) -> Result<(u32, Layout), glib::Error> {
-        // XXX unwrap
-        Ok(self
-            .0
-            .call_future(
-                "GetLayout",
-                Some(&(parent, depth, properties).to_variant()),
-                gio::DBusCallFlags::NONE,
-                1000,
-            )
-            .await?
-            .get()
-            .unwrap())
-    }
+        parent_id: i32,
+        recursion_depth: i32,
+        property_names: &[&str],
+    ) -> zbus::Result<(u32, Layout)>;
 
-    fn event(&self, id: i32, eventid: &str, data: &glib::Variant, timestamp: u32) {
-        let res = self.0.call_future(
-            "Event",
-            Some(&(id, eventid, data, timestamp).to_variant()),
-            gio::DBusCallFlags::NONE,
-            1000,
-        );
-        glib::MainContext::default().spawn_local(async move {
-            if let Err(err) = res.await {
-                eprintln!("Failed to call `Event`: {}", err);
-            }
-        });
-    }
+    fn event(&self, id: i32, event_id: &str, data: &OwnedValue, timestamp: u32)
+        -> zbus::Result<()>;
 
-    fn connect_layout_updated<F: Fn(u32, i32) + 'static>(&self, f: F) -> glib::SignalHandlerId {
-        self.0
-            .connect_local("g-signal", false, move |args| {
-                if &args[2].get::<String>().unwrap() == "LayoutUpdated" {
-                    // XXX unwrap
-                    let (revision, parent) = args[3].get::<glib::Variant>().unwrap().get().unwrap();
-                    f(revision, parent);
-                }
-                None
-            })
-            .unwrap()
-    }
-}
-
-struct StatusNotifierItem(gio::DBusProxy, Option<DBusMenu>);
-
-impl StatusNotifierItem {
-    async fn new(name: &str) -> Result<Self, glib::Error> {
-        let idx = name.find('/').unwrap();
-        let dest = &name[..idx];
-        let path = &name[idx..];
-        let proxy = gio::DBusProxy::for_bus_future(
-            gio::BusType::Session,
-            gio::DBusProxyFlags::NONE,
-            None,
-            dest,
-            path,
-            "org.kde.StatusNotifierItem",
-        )
-        .await?;
-        let menu_path = proxy
-            .cached_property("Menu")
-            .and_then(|x| x.get::<String>());
-        let menu = if let Some(menu_path) = menu_path {
-            Some(DBusMenu::new(dest, &menu_path).await?)
-        } else {
-            None
-        };
-        Ok(Self(proxy, menu))
-    }
-
-    fn property<T: glib::FromVariant>(&self, prop: &str) -> Option<T> {
-        self.0.cached_property(prop)?.get()
-    }
-
-    fn icon_name(&self) -> Option<String> {
-        // TODO: IconThemePath? AttentionIconName?
-        self.property("IconName")
-    }
-
-    fn menu(&self) -> Option<DBusMenu> {
-        self.1.clone()
-    }
+    #[dbus_proxy(signal)]
+    fn layout_updated(&self, revision: u32, parent: i32) -> zbus::Result<()>;
 }

@@ -39,7 +39,10 @@ impl ObjectImpl for NotificationPopoverInner {
                         return;
                     }
                     if let Some(id) = obj.id() {
-                        obj.inner().notifications.invoke_action(id, "default");
+                        let notifications = obj.inner().notifications.clone();
+                        glib::MainContext::default().spawn_local(async move {
+                            notifications.invoke_action(id, "default").await;
+                        });
                     }
                     obj.popdown();
                 }));
@@ -83,7 +86,7 @@ impl NotificationPopover {
 
         obj.inner().notifications.set(notifications.clone());
         *obj.inner().ids.borrow_mut() = vec![
-            notifications.connect_notification_recieved(clone!(@weak obj => move |notification| {
+            notifications.connect_notification_received(clone!(@weak obj => move |notification| {
                  obj.handle_notification(&notification);
             })),
             notifications.connect_notification_closed(clone!(@weak obj => move |id| {

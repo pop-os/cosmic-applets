@@ -1,69 +1,161 @@
+#![allow(non_snake_case)]
+
+use futures::stream::StreamExt;
+use futures_channel::mpsc;
 use gtk4::{
-    gio,
     glib::{self, clone, subclass::Signal, SignalHandlerId},
     prelude::*,
     subclass::prelude::*,
 };
 use once_cell::sync::Lazy;
+use once_cell::unsync::OnceCell;
 use std::{
-    borrow::Cow,
-    cell::{Cell, RefCell},
     collections::HashMap,
+    convert::TryFrom,
     fmt,
     num::NonZeroU32,
-    rc::Rc,
+    sync::{Arc, Mutex},
 };
+use zbus::{dbus_interface, Result, SignalContext};
+use zvariant::OwnedValue;
+
+use crate::dbus_service;
+use crate::deref_cell::DerefCell;
 
 static PATH: &str = "/org/freedesktop/Notifications";
 static INTERFACE: &str = "org.freedesktop.Notifications";
-static NOTIFICATIONS_XML: &str = "
-<node name='/org/freedesktop/Notifications'>
-  <interface name='org.freedesktop.Notifications'>
-    <method name='Notify'>
-      <arg type='s' name='app_name' direction='in'/>
-      <arg type='u' name='replaces_id' direction='in'/>
-      <arg type='s' name='app_icon' direction='in'/>
-      <arg type='s' name='summary' direction='in'/>
-      <arg type='s' name='body' direction='in'/>
-      <arg type='as' name='actions' direction='in'/>
-      <arg type='a{sv}' name='hints' direction='in'/>
-      <arg type='i' name='expire_timeout' direction='in'/>
-      <arg type='u' name='id' direction='out'/>
-    </method>
 
-    <method name='CloseNotification'>
-      <arg type='u' name='id' direction='in'/>
-    </method>
+enum Event {
+    NotificationReceived(NotificationId),
+    CloseNotification(NotificationId),
+}
 
-    <method name='GetCapabilities'>
-      <arg type='as' direction='out'/>
-    </method>
+pub struct NotificationsInterfaceInner {
+    next_id: Mutex<NotificationId>,
+    notifications: Mutex<HashMap<NotificationId, Arc<Notification>>>,
+    sender: mpsc::UnboundedSender<Event>,
+}
 
-    <method name='GetServerInformation'>
-      <arg type='s' name='name' direction='out'/>
-      <arg type='s' name='vendor' direction='out'/>
-      <arg type='s' name='version' direction='out'/>
-      <arg type='s' name='spec_version' direction='out'/>
-    </method>
+#[derive(Clone)]
+pub struct NotificationsInterface(Arc<NotificationsInterfaceInner>);
 
-    <signal name='NotificationClosed'>
-      <arg type='u' name='id'/>
-      <arg type='u' name='reason'/>
-    </signal>
+impl NotificationsInterface {
+    fn new() -> (Self, mpsc::UnboundedReceiver<Event>) {
+        let (sender, receiver) = mpsc::unbounded();
+        (
+            Self(Arc::new(NotificationsInterfaceInner {
+                next_id: Default::default(),
+                notifications: Default::default(),
+                sender,
+            })),
+            receiver,
+        )
+    }
 
-    <signal name='ActionInvoked'>
-      <arg type='u' name='id'/>
-      <arg type='s' name='action_key'/>
-    </signal>
-  </interface>
-</node>
-";
+    fn next_id(&self) -> NotificationId {
+        let mut next_id = self.0.next_id.lock().unwrap();
+        let id = *next_id;
+        *next_id = NotificationId::new(u32::from(id).wrapping_add(1)).unwrap_or_default();
+        id
+    }
+
+    fn handle_notify(
+        &self,
+        app_name: String,
+        replaces_id: Option<NotificationId>,
+        app_icon: String,
+        summary: String,
+        body: String,
+        actions: Vec<String>,
+        hints: Hints,
+        _expire_timeout: i32,
+    ) -> NotificationId {
+        // Ignores `expire-timeout`, like Gnome Shell
+
+        let id = replaces_id.unwrap_or_else(|| self.next_id());
+
+        let notification = Arc::new(Notification {
+            id,
+            app_name,
+            app_icon,
+            summary,
+            body,
+            actions,
+            hints,
+        });
+
+        self.0
+            .notifications
+            .lock()
+            .unwrap()
+            .insert(id, notification);
+
+        self.0
+            .sender
+            .unbounded_send(Event::NotificationReceived(id))
+            .unwrap();
+
+        id
+    }
+}
+
+// TODO: return value variable names in introspection data?
+
+#[dbus_interface(name = "org.freedesktop.Notifications")]
+impl NotificationsInterface {
+    fn Notify(
+        &self,
+        app_name: String,
+        replaces_id: u32,
+        app_icon: String,
+        summary: String,
+        body: String,
+        actions: Vec<String>,
+        hints: HashMap<String, OwnedValue>,
+        expire_timeout: i32,
+    ) -> u32 {
+        u32::from(self.handle_notify(
+            app_name,
+            NotificationId::new(replaces_id),
+            app_icon,
+            summary,
+            body,
+            actions,
+            Hints(hints),
+            expire_timeout,
+        ))
+    }
+
+    async fn CloseNotification(&self, id: u32) {
+        if let Some(id) = NotificationId::new(id) {
+            self.0
+                .sender
+                .unbounded_send(Event::CloseNotification(id))
+                .unwrap();
+        }
+        // TODO error?
+    }
+
+    fn GetCapabilities(&self) -> Vec<&'static str> {
+        // TODO: body-markup, sound
+        vec!["actions", "body", "icon-static", "persistence"]
+    }
+
+    fn GetServerInformation(&self) -> (&'static str, &'static str, &'static str, &'static str) {
+        ("cosmic-panel", "system76", env!("CARGO_PKG_VERSION"), "1.2")
+    }
+
+    #[dbus_interface(signal)]
+    async fn NotificationClosed(ctxt: &SignalContext<'_>, id: u32, reason: u32) -> Result<()>;
+
+    #[dbus_interface(signal)]
+    async fn ActionInvoked(ctxt: &SignalContext<'_>, id: u32, action_key: &str) -> Result<()>;
+}
 
 #[derive(Default)]
 pub struct NotificationsInner {
-    next_id: Cell<NotificationId>,
-    notifications: RefCell<HashMap<NotificationId, Rc<Notification>>>,
-    connection: RefCell<Option<gio::DBusConnection>>,
+    interface: DerefCell<NotificationsInterface>,
+    connection: OnceCell<zbus::Connection>,
 }
 
 #[glib::object_subclass]
@@ -99,16 +191,12 @@ glib::wrapper! {
     pub struct Notifications(ObjectSubclass<NotificationsInner>);
 }
 
-// XXX hack: https://github.com/gtk-rs/gtk-rs-core/issues/263
-unsafe impl Send for Notifications {}
-unsafe impl Sync for Notifications {}
-
-struct Hints(HashMap<String, glib::Variant>);
+struct Hints(HashMap<String, OwnedValue>);
 
 #[allow(dead_code)]
 impl Hints {
-    fn prop<T: glib::FromVariant>(&self, name: &str) -> Option<T> {
-        self.0.get(name)?.get()
+    fn prop<T: TryFrom<OwnedValue>>(&self, name: &str) -> Option<T> {
+        T::try_from(self.0.get(name)?.clone()).ok()
     }
 
     fn actions_icon(&self) -> bool {
@@ -162,31 +250,19 @@ impl fmt::Debug for Hints {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut s = f.debug_struct("Hints");
         for (k, v) in &self.0 {
-            if let Some(v) = v.get::<String>() {
+            if let Ok(v) = <&str>::try_from(v) {
                 s.field(k, &v);
-            } else if let Some(v) = v.get::<i32>() {
+            } else if let Ok(v) = i32::try_from(v) {
                 s.field(k, &v);
-            } else if let Some(v) = v.get::<bool>() {
+            } else if let Ok(v) = bool::try_from(v) {
                 s.field(k, &v);
-            } else if let Some(v) = v.get::<u8>() {
+            } else if let Ok(v) = u8::try_from(v) {
                 s.field(k, &v);
             } else {
                 s.field(k, v);
             };
         }
         s.finish()
-    }
-}
-
-impl glib::StaticVariantType for Hints {
-    fn static_variant_type() -> Cow<'static, glib::VariantTy> {
-        glib::VariantTy::new("a{sv}").unwrap().into()
-    }
-}
-
-impl glib::FromVariant for Hints {
-    fn from_variant(variant: &glib::Variant) -> Option<Self> {
-        variant.get().map(Self)
     }
 }
 
@@ -204,12 +280,6 @@ impl Default for NotificationId {
 impl From<NotificationId> for u32 {
     fn from(id: NotificationId) -> u32 {
         id.0.into()
-    }
-}
-
-impl ToVariant for NotificationId {
-    fn to_variant(&self) -> glib::Variant {
-        self.0.get().to_variant()
     }
 }
 
@@ -244,14 +314,30 @@ impl Notifications {
     pub fn new() -> Self {
         let notifications = glib::Object::new::<Self>(&[]).unwrap();
 
-        gio::bus_own_name(
-            gio::BusType::Session,
-            INTERFACE,
-            gio::BusNameOwnerFlags::NONE,
-            clone!(@strong notifications => move |connection, name| notifications.bus_acquired(connection, name)),
-            clone!(@strong notifications => move |connection, name| notifications.name_acquired(connection, name)),
-            clone!(@strong notifications => move |connection, name| notifications.name_lost(connection, name)),
-        );
+        let (interface, mut receiver) = NotificationsInterface::new();
+        notifications.inner().interface.set(interface);
+
+        glib::MainContext::default().spawn_local(clone!(@strong notifications => async move {
+            let connection = match dbus_service::create(INTERFACE, |builder| builder.serve_at(PATH, notifications.inner().interface.clone())).await {
+                Ok(connection) => connection,
+                Err(err) => {
+                    eprintln!("Failed to start `Notifications` service: {}", err);
+                    return;
+                }
+            };
+            let _ = notifications.inner().connection.set(connection.clone());
+
+            if let Some(event) = receiver.next().await {
+                match event {
+                    Event::NotificationReceived(id) => {
+                        notifications.emit_by_name("notification-received", &[&id]).unwrap();
+                    }
+                    Event::CloseNotification(id) =>  {
+                        notifications.close_notification(id, CloseReason::Call).await
+                    }
+                }
+            }
+        }));
 
         notifications
     }
@@ -260,155 +346,49 @@ impl Notifications {
         NotificationsInner::from_instance(self)
     }
 
-    fn next_id(&self) -> NotificationId {
-        let next_id = &self.inner().next_id;
-        let id = next_id.get();
-        next_id.set(NotificationId::new(u32::from(id).wrapping_add(1)).unwrap_or_default());
-        id
-    }
-
-    fn handle_notify(
-        &self,
-        app_name: String,
-        replaces_id: Option<NotificationId>,
-        app_icon: String,
-        summary: String,
-        body: String,
-        actions: Vec<String>,
-        hints: Hints,
-        _expire_timeout: i32,
-    ) -> NotificationId {
-        // Ignores `expire-timeout`, like Gnome Shell
-
-        let id = replaces_id.unwrap_or_else(|| self.next_id());
-
-        let notification = Rc::new(Notification {
-            id,
-            app_name,
-            app_icon,
-            summary,
-            body,
-            actions,
-            hints,
-        });
-
+    async fn close_notification(&self, id: NotificationId, reason: CloseReason) {
         self.inner()
+            .interface
+            .0
             .notifications
-            .borrow_mut()
-            .insert(id, notification);
-
-        self.emit_by_name("notification-received", &[&id]).unwrap();
-
-        id
-    }
-
-    fn close_notification(&self, id: NotificationId, reason: CloseReason) {
-        self.inner().notifications.borrow_mut().remove(&id);
+            .lock()
+            .unwrap()
+            .remove(&id);
 
         self.emit_by_name("notification-closed", &[&id]).unwrap();
 
-        if let Some(connection) = self.inner().connection.borrow().as_ref() {
-            connection
-                .emit_signal(
-                    None,
-                    PATH,
-                    INTERFACE,
-                    "CloseNotification",
-                    Some(&(id, &(reason as u32)).to_variant()),
-                )
-                .unwrap();
+        if let Some(connection) = self.inner().connection.get() {
+            let ctxt = SignalContext::new(connection, PATH).unwrap(); // XXX unwrap?
+            let _ =
+                NotificationsInterface::NotificationClosed(&ctxt, id.into(), reason as u32).await;
         }
     }
 
     pub fn dismiss(&self, id: NotificationId) {
-        self.close_notification(id, CloseReason::Dismiss);
+        glib::MainContext::default().spawn_local(clone!(@strong self as self_ => async move {
+            self_.close_notification(id, CloseReason::Dismiss).await
+        }));
     }
 
-    pub fn invoke_action(&self, id: NotificationId, action_key: &str) {
-        if let Some(connection) = self.inner().connection.borrow().as_ref() {
-            connection
-                .emit_signal(
-                    None,
-                    PATH,
-                    INTERFACE,
-                    "ActionInvoked",
-                    Some(&(&(id, action_key),).to_variant()),
-                )
-                .unwrap();
+    pub async fn invoke_action(&self, id: NotificationId, action_key: &str) {
+        if let Some(connection) = self.inner().connection.get() {
+            let ctxt = SignalContext::new(connection, PATH).unwrap(); // XXX unwrap?
+            let _ = NotificationsInterface::ActionInvoked(&ctxt, id.into(), action_key).await;
         }
     }
 
-    fn bus_acquired(&self, connection: gio::DBusConnection, _name: &str) {
-        *self.inner().connection.borrow_mut() = Some(connection);
+    pub fn get(&self, id: NotificationId) -> Option<Arc<Notification>> {
+        self.inner()
+            .interface
+            .0
+            .notifications
+            .lock()
+            .unwrap()
+            .get(&id)
+            .cloned()
     }
 
-    fn name_acquired(&self, connection: gio::DBusConnection, _name: &str) {
-        let introspection_data = gio::DBusNodeInfo::for_xml(NOTIFICATIONS_XML).unwrap();
-        let interface_info = introspection_data.lookup_interface(INTERFACE).unwrap();
-        let method_call = clone!(@strong self as self_ => move |_connection: gio::DBusConnection,
-                           _sender: &str,
-                           _path: &str,
-                           _interface: &str,
-                           method: &str,
-                           args: glib::Variant,
-                           invocation: gio::DBusMethodInvocation| {
-            match method {
-                "Notify" => {
-                    let (app_name, replaces_id, app_icon, summary, body, actions, hints, expire_timeout) = args.get().unwrap();
-                    let replaces_id = NotificationId::new(replaces_id);
-                    let res = self_.handle_notify(app_name, replaces_id, app_icon, summary, body, actions, hints, expire_timeout);
-                    invocation.return_value(Some(&(u32::from(res),).to_variant()));
-                    // TODO error?
-                }
-                "CloseNotification" => {
-                    let (id,) = args.get::<(u32,)>().unwrap();
-                    if let Some(id) = NotificationId::new(id) {
-                        self_.close_notification(id, CloseReason::Call);
-                    }
-                    invocation.return_value(None);
-                    // TODO error?
-                }
-                "GetCapabilities" => {
-                    // TODO: body-markup, sound
-                    let capabilities = vec!["actions", "body", "icon-static", "persistence"];
-                    invocation.return_value(Some(&(capabilities,).to_variant()));
-                }
-                "GetServerInformation" => {
-                    let information = ("cosmic-panel", "system76", env!("CARGO_PKG_VERSION"), "1.2");
-                    invocation.return_value(Some(&information.to_variant()));
-                }
-                _ => unreachable!()
-            }
-        });
-        let get_property = |_: gio::DBusConnection,
-                            _sender: &str,
-                            _path: &str,
-                            _interface: &str,
-                            _prop: &str| { unreachable!() };
-        let set_property = |_: gio::DBusConnection,
-                            _sender: &str,
-                            _path: &str,
-                            _interface: &str,
-                            _prop: &str,
-                            _value: glib::Variant| { unreachable!() };
-        if let Err(err) = connection.register_object(
-            PATH,
-            &interface_info,
-            method_call,
-            get_property,
-            set_property,
-        ) {
-            eprintln!("Failed to register object: {}", err);
-        }
-    }
-
-    fn name_lost(&self, _connection: Option<gio::DBusConnection>, _name: &str) {}
-
-    pub fn get(&self, id: NotificationId) -> Option<Rc<Notification>> {
-        self.inner().notifications.borrow().get(&id).cloned()
-    }
-
-    pub fn connect_notification_recieved<F: Fn(Rc<Notification>) + 'static>(
+    pub fn connect_notification_received<F: Fn(Arc<Notification>) + 'static>(
         &self,
         cb: F,
     ) -> SignalHandlerId {

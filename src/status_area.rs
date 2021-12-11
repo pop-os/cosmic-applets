@@ -1,12 +1,13 @@
 use cascade::cascade;
+use futures::stream::StreamExt;
 use gtk4::{
-    gio,
     glib::{self, clone},
     prelude::*,
     subclass::prelude::*,
 };
 use once_cell::unsync::OnceCell;
 use std::{cell::RefCell, collections::HashMap};
+use zbus::dbus_proxy;
 
 use crate::deref_cell::DerefCell;
 use crate::status_menu::StatusMenu;
@@ -14,7 +15,7 @@ use crate::status_menu::StatusMenu;
 #[derive(Default)]
 pub struct StatusAreaInner {
     box_: DerefCell<gtk4::Box>,
-    watcher: OnceCell<StatusNotifierWatcher>,
+    watcher: OnceCell<StatusNotifierWatcherProxy<'static>>,
     icons: RefCell<HashMap<String, StatusMenu>>,
 }
 
@@ -39,35 +40,46 @@ impl ObjectImpl for StatusAreaInner {
         self.box_.set(box_);
 
         glib::MainContext::default().spawn_local(clone!(@strong obj => async move {
-            let watcher = match StatusNotifierWatcher::new().await {
-                Ok(watcher) => watcher,
-                Err(err) => {
-                    eprintln!("Failed to connect to 'org.kde.StatusNotifierWatcher': {}", err);
-                    return;
+            async {
+                let connection = zbus::Connection::session().await?;
+                let watcher = StatusNotifierWatcherProxy::new(&connection).await?;
+
+                let name = connection.unique_name().unwrap().as_str();
+                if let Err(err) = watcher.register_status_notifier_host(name).await {
+                    eprintln!("Failed to register status notifier host: {}", err);
                 }
-            };
 
-            if let Err(err) = watcher.register_host().await {
-                eprintln!("Failed to register status notifier host: {}", err);
-            }
+                let mut registered_stream = watcher.receive_status_notifier_item_registered().await?;
+                let mut unregistered_stream = watcher.receive_status_notifier_item_unregistered().await?;
 
-            for name in watcher.registered_items().await {
-                glib::MainContext::default().spawn_local(clone!(@strong obj => async move {
-                    obj.item_registered(&name).await;
-                }));
-            }
-
-            watcher.connect_item_registered_unregistered(clone!(@strong obj => move |name, registered| {
-                if registered {
+                for name in watcher.registered_status_notifier_items().await? {
                     glib::MainContext::default().spawn_local(clone!(@strong obj => async move {
                         obj.item_registered(&name).await;
                     }));
-                } else {
-                    obj.item_unregistered(&name);
                 }
-            }));
 
-            let _ = obj.inner().watcher.set(watcher);
+                glib::MainContext::default().spawn_local(clone!(@strong obj => async move {
+                    if let Some(evt) = registered_stream.next().await {
+                        if let Ok(args) = evt.args() {
+                            obj.item_registered(&args.name).await;
+                        }
+                    }
+                }));
+
+                glib::MainContext::default().spawn_local(clone!(@strong obj => async move {
+                    if let Some(evt) = unregistered_stream.next().await {
+                        if let Ok(args) = evt.args() {
+                            obj.item_unregistered(&args.name);
+                        }
+                    }
+                }));
+
+                let _ = obj.inner().watcher.set(watcher);
+
+                Ok::<_, zbus::Error>(())
+            }.await.unwrap_or_else(|err| {
+                eprintln!("Failed to connect to 'org.kde.StatusNotifierWatcher': {}", err);
+            });
         }));
     }
 
@@ -114,62 +126,20 @@ impl StatusArea {
     }
 }
 
-struct StatusNotifierWatcher(gio::DBusProxy);
+#[dbus_proxy(
+    interface = "org.kde.StatusNotifierWatcher",
+    default_service = "org.kde.StatusNotifierWatcher",
+    default_path = "/StatusNotifierWatcher"
+)]
+trait StatusNotifierWatcher {
+    fn register_status_notifier_host(&self, name: &str) -> zbus::Result<()>;
 
-impl StatusNotifierWatcher {
-    async fn new() -> Result<Self, glib::Error> {
-        let proxy = gio::DBusProxy::for_bus_future(
-            gio::BusType::Session,
-            gio::DBusProxyFlags::NONE,
-            None,
-            "org.kde.StatusNotifierWatcher",
-            "/StatusNotifierWatcher",
-            "org.kde.StatusNotifierWatcher",
-        )
-        .await?;
-        Ok(Self(proxy))
-    }
+    #[dbus_proxy(property)]
+    fn registered_status_notifier_items(&self) -> zbus::Result<Vec<String>>;
 
-    fn property<T: glib::FromVariant>(&self, prop: &str) -> Option<T> {
-        self.0.cached_property(prop)?.get()
-    }
+    #[dbus_proxy(signal)]
+    fn status_notifier_item_registered(&self, name: &str) -> zbus::Result<()>;
 
-    async fn registered_items(&self) -> Vec<String> {
-        self.property::<Vec<String>>("RegisteredStatusNotifierItems")
-            .unwrap_or_default()
-    }
-
-    fn connect_item_registered_unregistered<F: Fn(String, bool) + 'static>(
-        &self,
-        f: F,
-    ) -> glib::SignalHandlerId {
-        self.0
-            .connect_local("g-signal", false, move |args| {
-                let signal_args = args[3].get::<glib::Variant>().unwrap();
-                match args[2].get::<String>().unwrap().as_str() {
-                    "StatusNotifierItemRegistered" => {
-                        f(signal_args.get::<(String,)>().unwrap().0, true);
-                    }
-                    "StatusNotifierItemUnregistered" => {
-                        f(signal_args.get::<(String,)>().unwrap().0, false);
-                    }
-                    _ => {}
-                }
-                None
-            })
-            .unwrap()
-    }
-
-    async fn register_host(&self) -> Result<(), glib::Error> {
-        let service = self.0.connection().unique_name().unwrap();
-        self.0
-            .call_future(
-                "RegisterStatusNotifierHost",
-                Some(&(service.as_str(),).to_variant()),
-                gio::DBusCallFlags::NONE,
-                1000,
-            )
-            .await?;
-        Ok(())
-    }
+    #[dbus_proxy(signal)]
+    fn status_notifier_item_unregistered(&self, name: &str) -> zbus::Result<()>;
 }

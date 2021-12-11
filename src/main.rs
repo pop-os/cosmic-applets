@@ -1,6 +1,7 @@
-use gtk4::prelude::*;
+use gtk4::{glib, prelude::*};
 
 mod application;
+mod dbus_service;
 mod deref_cell;
 mod mpris;
 mod mpris_player;
@@ -18,5 +19,5 @@ mod window;
 use application::PanelApp;
 
 fn main() {
-    PanelApp::new().run();
+    glib::MainContext::default().with_thread_default(|| PanelApp::new().run());
 }

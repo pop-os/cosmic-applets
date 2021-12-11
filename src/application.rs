@@ -30,7 +30,7 @@ impl ObjectImpl for PanelAppInner {
 
         self.parent_constructed(obj);
 
-        status_notifier_watcher::start();
+        glib::MainContext::default().spawn_local(status_notifier_watcher::start());
         self.notifications.set(Notifications::new());
     }
 }

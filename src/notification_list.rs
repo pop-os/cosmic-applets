@@ -36,7 +36,10 @@ impl ObjectImpl for NotificationListInner {
             ..set_parent(obj);
             ..connect_row_activated(clone!(@weak obj => move |_, row| {
                 if let Some(id) = obj.id_for_row(row) {
-                    obj.inner().notifications.invoke_action(id, "default");
+                    let notifications = obj.inner().notifications.clone();
+                    glib::MainContext::default().spawn_local(async move {
+                        notifications.invoke_action(id, "default").await;
+                    });
                 }
             }));
         };
@@ -66,7 +69,7 @@ impl NotificationList {
 
         obj.inner().notifications.set(notifications.clone());
         *obj.inner().ids.borrow_mut() = vec![
-            notifications.connect_notification_recieved(clone!(@weak obj => move |notification| {
+            notifications.connect_notification_received(clone!(@weak obj => move |notification| {
                 obj.handle_notification(&notification);
             })),
             notifications.connect_notification_closed(clone!(@weak obj => move |id| {

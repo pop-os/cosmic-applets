@@ -1,4 +1,5 @@
 use cascade::cascade;
+use futures::StreamExt;
 use gtk4::{
     gdk_pixbuf, gio,
     glib::{self, clone},
@@ -6,7 +7,9 @@ use gtk4::{
     prelude::*,
     subclass::prelude::*,
 };
-use std::cell::RefCell;
+use std::{cell::RefCell, collections::HashMap};
+use zbus::dbus_proxy;
+use zvariant::OwnedValue;
 
 use crate::deref_cell::DerefCell;
 
@@ -16,7 +19,7 @@ pub struct MprisPlayerInner {
     backward_button: DerefCell<gtk4::Button>,
     play_pause_button: DerefCell<gtk4::Button>,
     forward_button: DerefCell<gtk4::Button>,
-    player: DerefCell<Player>,
+    player: DerefCell<PlayerProxy<'static>>,
     image: DerefCell<gtk4::Image>,
     image_uri: RefCell<Option<String>>,
     title_label: DerefCell<gtk4::Label>,
@@ -114,14 +117,29 @@ glib::wrapper! {
 }
 
 impl MprisPlayer {
-    pub async fn new(name: &str) -> Result<Self, glib::Error> {
+    pub async fn new(name: &str) -> zbus::Result<Self> {
         let obj = glib::Object::new::<Self>(&[]).unwrap();
 
-        let player = Player::new(name).await?;
-        player.connect_properties_changed(clone!(@weak obj => move |_player| {
-            obj.update();
-        }));
+        let connection = zbus::Connection::session().await?;
+        let player = PlayerProxy::builder(&connection)
+            .destination(name.to_string())?
+            .build()
+            .await?;
+
+        let metadata_stream = player.receive_metadata_changed().await;
+        let playback_status_stream = player.receive_playback_status_changed().await;
+        let mut stream = futures::stream_select!(
+            metadata_stream.map(|_| ()),
+            playback_status_stream.map(|_| ())
+        );
+
         obj.inner().player.set(player);
+
+        glib::MainContext::default().spawn_local(clone!(@strong obj => async move {
+            if stream.next().await.is_some() {
+                obj.update();
+            }
+        }));
         obj.update();
 
         Ok(obj)
@@ -133,7 +151,7 @@ impl MprisPlayer {
 
     fn call(&self, method: &'static str) {
         glib::MainContext::default().spawn_local(clone!(@strong self as self_ => async move {
-            if let Err(err) = self_.inner().player.call(method).await {
+            if let Err(err) = self_.inner().player.call::<_, _, ()>(method, &()).await {
                 eprintln!("Failed to call '{}': {}", method, err);
             }
         }));
@@ -164,8 +182,8 @@ impl MprisPlayer {
         let player = &self.inner().player;
 
         // XXX status
-        let (status, metadata) = match (player.playback_status(), player.metadata()) {
-            (Some(status), Some(metadata)) => (status, metadata),
+        let (status, metadata) = match (player.cached_playback_status(), player.cached_metadata()) {
+            (Ok(Some(status)), Ok(Some(metadata))) => (status, Metadata(metadata)),
             _ => return,
         };
 
@@ -197,11 +215,11 @@ impl MprisPlayer {
     }
 }
 
-struct Metadata(glib::VariantDict);
+struct Metadata(HashMap<String, OwnedValue>);
 
 impl Metadata {
-    fn lookup<T: glib::FromVariant>(&self, key: &str) -> Option<T> {
-        self.0.lookup_value(key, None)?.get()
+    fn lookup<'a, T: TryFrom<OwnedValue>>(&self, key: &str) -> Option<T> {
+        T::try_from(self.0.get(key)?.clone()).ok()
     }
 
     fn title(&self) -> Option<String> {
@@ -221,53 +239,14 @@ impl Metadata {
     }
 }
 
-#[derive(Clone)]
-struct Player(gio::DBusProxy);
+#[dbus_proxy(
+    interface = "org.mpris.MediaPlayer2.Player",
+    default_path = "/org/mpris/MediaPlayer2"
+)]
+trait Player {
+    #[dbus_proxy(property)]
+    fn metadata(&self) -> zbus::Result<HashMap<String, OwnedValue>>;
 
-impl Player {
-    async fn new(name: &str) -> Result<Self, glib::Error> {
-        let proxy = gio::DBusProxy::for_bus_future(
-            gio::BusType::Session,
-            gio::DBusProxyFlags::NONE,
-            None,
-            name,
-            "/org/mpris/MediaPlayer2",
-            "org.mpris.MediaPlayer2.Player",
-        )
-        .await?;
-        Ok(Self(proxy))
-    }
-
-    async fn call(&self, method: &str) -> Result<(), glib::Error> {
-        self.0
-            .call_future(method, None, gio::DBusCallFlags::NONE, 1000)
-            .await?;
-        Ok(())
-    }
-
-    fn property<T: glib::FromVariant>(&self, prop: &str) -> Option<T> {
-        self.0.cached_property(prop)?.get()
-    }
-
-    fn connect_properties_changed<F: Fn(Self) + 'static>(&self, f: F) -> glib::SignalHandlerId {
-        let proxy = &self.0;
-        self.0
-            .connect_local(
-                "g-properties-changed",
-                false,
-                clone!(@weak proxy => @default-panic, move |_| {
-                    f(Self(proxy));
-                    None
-                }),
-            )
-            .unwrap()
-    }
-
-    fn playback_status(&self) -> Option<String> {
-        self.property("PlaybackStatus")
-    }
-
-    fn metadata(&self) -> Option<Metadata> {
-        Some(Metadata(self.property("Metadata")?))
-    }
+    #[dbus_proxy(property)]
+    fn playback_status(&self) -> zbus::Result<String>;
 }
