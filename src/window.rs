@@ -11,6 +11,57 @@ use crate::x;
 
 const BOTTOM: bool = false;
 
+pub fn create(app: &PanelApp, monitor: gdk::Monitor) {
+    #[cfg(feature = "layer-shell")]
+    if let Some(wayland_monitor) = monitor.downcast_ref() {
+        wayland_create(app, wayland_monitor);
+        return;
+    }
+
+    cascade! {
+        PanelWindow::new(app, monitor);
+        ..show();
+    };
+}
+
+#[cfg(feature = "layer-shell")]
+fn wayland_create(app: &PanelApp, monitor: &gdk4_wayland::WaylandMonitor) {
+    use crate::wayland::{Anchor, Layer, LayerShellWindow};
+
+    let window = LayerShellWindow::new(Some(monitor), Layer::Top, "");
+
+    window.connect_realize(|window| {
+        let surface = window.surface().unwrap();
+        surface.connect_layout(clone!(@weak window => move |_surface, _width, height| {
+            window.set_exclusive_zone(height);
+        }));
+    });
+
+    window.set_child(Some(&window_box(app)));
+    window.set_size_request(monitor.geometry().width, 0);
+    window.set_anchor(if BOTTOM { Anchor::Bottom } else { Anchor::Top });
+    window.show();
+
+    // XXX
+    unsafe { window.set_data("cosmic-app-hold", app.hold()) };
+}
+
+// XXX better handle duplication
+#[cfg(feature = "layer-shell")]
+fn window_box(app: &PanelApp) -> gtk4::Widget {
+    let widget = cascade! {
+        gtk4::CenterBox::new();
+        ..set_start_widget(Some(&cascade! {
+            gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
+            ..append(&button("Workspaces"));
+            ..append(&button("Applications"));
+        }));
+        ..set_center_widget(Some(&TimeButton::new(app)));
+        ..set_end_widget(Some(&StatusArea::new()));
+    };
+    widget.upcast()
+}
+
 fn button(text: &str) -> gtk4::Button {
     let label = cascade! {
         gtk4::Label::new(Some(text));
