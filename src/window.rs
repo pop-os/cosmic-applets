@@ -1,13 +1,13 @@
 use cascade::cascade;
 use glib::clone;
 use gtk4::{gdk, glib, pango, prelude::*, subclass::prelude::*};
+use libcosmic::x;
 use std::cell::Cell;
 
 use crate::application::PanelApp;
 use crate::deref_cell::DerefCell;
 use crate::status_area::StatusArea;
 use crate::time_button::TimeButton;
-use crate::x;
 
 const BOTTOM: bool = false;
 
@@ -26,7 +26,7 @@ pub fn create(app: &PanelApp, monitor: gdk::Monitor) {
 
 #[cfg(feature = "layer-shell")]
 fn wayland_create(app: &PanelApp, monitor: &gdk4_wayland::WaylandMonitor) {
-    use crate::wayland::{Anchor, Layer, LayerShellWindow};
+    use libcosmic::wayland::{Anchor, Layer, LayerShellWindow};
 
     let window = LayerShellWindow::new(Some(monitor), Layer::Top, "");
 

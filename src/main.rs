@@ -13,12 +13,7 @@ mod status_area;
 mod status_menu;
 mod status_notifier_watcher;
 mod time_button;
-#[cfg(feature = "layer-shell")]
-mod wayland;
-#[cfg(feature = "layer-shell")]
-mod wayland_custom_surface;
 mod window;
-mod x;
 
 use application::PanelApp;
 
