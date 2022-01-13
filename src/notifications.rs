@@ -111,7 +111,7 @@ impl NotificationsInterface {
         summary: String,
         body: String,
         actions: Vec<String>,
-        hints: HashMap<String, OwnedValue>,
+        hints: Hints,
         expire_timeout: i32,
     ) -> u32 {
         u32::from(self.handle_notify(
@@ -121,7 +121,7 @@ impl NotificationsInterface {
             summary,
             body,
             actions,
-            Hints(hints),
+            hints,
             expire_timeout,
         ))
     }
@@ -191,6 +191,7 @@ glib::wrapper! {
     pub struct Notifications(ObjectSubclass<NotificationsInner>);
 }
 
+#[derive(zvariant::Type, serde::Deserialize)]
 struct Hints(HashMap<String, OwnedValue>);
 
 #[allow(dead_code)]
