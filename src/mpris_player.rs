@@ -136,7 +136,7 @@ impl MprisPlayer {
         obj.inner().player.set(player);
 
         glib::MainContext::default().spawn_local(clone!(@strong obj => async move {
-            if stream.next().await.is_some() {
+            while stream.next().await.is_some() {
                 obj.update();
             }
         }));
@@ -166,6 +166,7 @@ impl MprisPlayer {
         drop(image_uri);
 
         let pixbuf = async {
+            // TODO: Security?
             let file = gio::File::for_uri(&arturl?);
             let stream = file.read_async_future(glib::PRIORITY_DEFAULT).await.ok()?;
             gdk_pixbuf::Pixbuf::from_stream_async_future(&stream)
@@ -180,10 +181,8 @@ impl MprisPlayer {
 
     fn update(&self) {
         let player = &self.inner().player;
-
-        // XXX status
         let (status, metadata) = match (player.cached_playback_status(), player.cached_metadata()) {
-            (Ok(Some(status)), Ok(Some(metadata))) => (status, Metadata(metadata)),
+            (Ok(Some(status)), Ok(Some(metadata))) => (status, metadata),
             _ => return,
         };
 
@@ -215,7 +214,15 @@ impl MprisPlayer {
     }
 }
 
-struct Metadata(HashMap<String, OwnedValue>);
+pub struct Metadata(HashMap<String, OwnedValue>);
+
+impl TryFrom<OwnedValue> for Metadata {
+    type Error = zbus::Error;
+
+    fn try_from(value: OwnedValue) -> zbus::Result<Self> {
+        Ok(Self(value.try_into()?))
+    }
+}
 
 impl Metadata {
     fn lookup<'a, T: TryFrom<OwnedValue>>(&self, key: &str) -> Option<T> {
@@ -245,7 +252,7 @@ impl Metadata {
 )]
 trait Player {
     #[dbus_proxy(property)]
-    fn metadata(&self) -> zbus::Result<HashMap<String, OwnedValue>>;
+    fn metadata(&self) -> zbus::Result<Metadata>;
 
     #[dbus_proxy(property)]
     fn playback_status(&self) -> zbus::Result<String>;
