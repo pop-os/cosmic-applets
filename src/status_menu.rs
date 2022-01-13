@@ -76,9 +76,11 @@ glib::wrapper! {
 
 impl StatusMenu {
     pub async fn new(name: &str) -> zbus::Result<Self> {
-        let idx = name.find('/').unwrap();
-        let dest = &name[..idx];
-        let path = &name[idx..];
+        let (dest, path) = if let Some(idx) = name.find('/') {
+            (&name[..idx], &name[idx..])
+        } else {
+            (name, "/StatusNotifierItem")
+        };
 
         let connection = zbus::Connection::session().await?;
         let item = StatusNotifierItemProxy::builder(&connection)
