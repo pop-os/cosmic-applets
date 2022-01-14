@@ -260,8 +260,7 @@ pub struct Layout(i32, LayoutProps, Vec<Layout>);
 impl<'a> serde::Deserialize<'a> for Layout {
     fn deserialize<D: serde::Deserializer<'a>>(deserializer: D) -> Result<Self, D::Error> {
         let (id, props, children) =
-            <(i32, LayoutProps, Vec<(zvariant::Signature<'_>, Self)>)>::deserialize(deserializer)
-                .unwrap();
+            <(i32, LayoutProps, Vec<(zvariant::Signature<'_>, Self)>)>::deserialize(deserializer)?;
         Ok(Self(id, props, children.into_iter().map(|x| x.1).collect()))
     }
 }
