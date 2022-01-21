@@ -31,14 +31,14 @@ fn wayland_create(app: &PanelApp, monitor: &gdk4_wayland::WaylandMonitor) {
     let window = LayerShellWindow::new(Some(monitor), Layer::Top, "");
 
     window.connect_realize(|window| {
-        let surface = window.surface().unwrap();
+        let surface = window.surface();
         surface.connect_layout(clone!(@weak window => move |_surface, _width, height| {
             window.set_exclusive_zone(height);
         }));
     });
 
     window.set_child(Some(&window_box(app)));
-    window.set_size_request(monitor.geometry().width, 0);
+    window.set_size_request(monitor.geometry().width(), 0);
     window.set_anchor(if BOTTOM { Anchor::Bottom } else { Anchor::Top });
     window.show();
 
