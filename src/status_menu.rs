@@ -209,7 +209,7 @@ impl StatusMenu {
                             }
                             glib::MainContext::default().spawn_local(clone!(@strong self_ => async move {
                                 let _ = self_.inner().dbus_menu.event(id, "clicked", &0.into(), 0).await;
-                            }))
+                            }));
                     }));
                 };
                 box_.append(&button);

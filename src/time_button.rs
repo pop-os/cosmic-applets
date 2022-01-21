@@ -43,7 +43,7 @@ impl ObjectImpl for TimeButtonInner {
             gtk4::Label::new(None);
             ..set_attributes(Some(&cascade! {
                 pango::AttrList::new();
-                ..insert(pango::Attribute::new_weight(pango::Weight::Bold));
+                ..insert(pango::AttrInt::new_weight(pango::Weight::Bold));
             }));
         };
 
@@ -120,7 +120,7 @@ impl TimeButton {
     }
 
     fn opening(&self) {
-        let date = glib::DateTime::new_now(&glib::TimeZone::new_local()).unwrap();
+        let date = glib::DateTime::now(&glib::TimeZone::local()).unwrap();
         self.inner().calendar.clear_marks();
         self.inner().calendar.select_day(&date);
     }

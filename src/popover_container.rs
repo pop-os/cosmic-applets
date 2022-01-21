@@ -44,15 +44,8 @@ impl WidgetImpl for PopoverContainerInner {
     }
 
     fn size_allocate(&self, _obj: &PopoverContainer, width: i32, height: i32, baseline: i32) {
-        self.child.size_allocate(
-            &gtk4::Allocation {
-                x: 0,
-                y: 0,
-                width,
-                height,
-            },
-            baseline,
-        );
+        self.child
+            .size_allocate(&gtk4::Allocation::new(0, 0, width, height), baseline);
         self.popover.present();
     }
 

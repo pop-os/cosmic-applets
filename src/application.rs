@@ -45,7 +45,7 @@ impl ApplicationImpl for PanelAppInner {
         self.activated.set(true);
 
         let display = gdk::Display::default().unwrap();
-        let monitors = display.monitors().unwrap();
+        let monitors = display.monitors();
 
         for i in 0..monitors.n_items() {
             obj.add_window_for_monitor(monitors.item(i).unwrap().downcast().unwrap());

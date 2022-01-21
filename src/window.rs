@@ -67,7 +67,7 @@ fn button(text: &str) -> gtk4::Button {
         gtk4::Label::new(Some(text));
         ..set_attributes(Some(&cascade! {
             pango::AttrList::new();
-            ..insert(pango::Attribute::new_weight(pango::Weight::Bold));
+            ..insert(pango::AttrInt::new_weight(pango::Weight::Bold));
         }));
     };
 
@@ -118,7 +118,7 @@ impl WidgetImpl for PanelWindowInner {
     fn realize(&self, obj: &PanelWindow) {
         self.parent_realize(obj);
 
-        let surface = obj.surface().unwrap();
+        let surface = obj.surface();
         surface.connect_layout(clone!(@weak obj => move |_surface, width, height| {
             let size = Some((width, height));
             if obj.inner().size.replace(size) != size {
@@ -180,7 +180,7 @@ impl PanelWindow {
 
         monitor.connect_invalidate(clone!(@weak obj => move |_| obj.close()));
 
-        obj.set_size_request(monitor.geometry().width, 0);
+        obj.set_size_request(monitor.geometry().width(), 0);
         obj.inner().monitor.set(monitor);
 
         obj.inner()
@@ -198,7 +198,7 @@ impl PanelWindow {
 
     fn monitor_geometry_changed(&self) {
         let geometry = self.inner().monitor.geometry();
-        self.set_size_request(geometry.width, 0);
+        self.set_size_request(geometry.width(), 0);
 
         let height = if let Some((_width, height)) = self.inner().size.get() {
             height as x::c_ulong
@@ -207,12 +207,12 @@ impl PanelWindow {
         };
 
         if let Some((display, surface)) = x::get_window_x11(self) {
-            let start_x = geometry.x as x::c_ulong;
-            let end_x = start_x + geometry.width as x::c_ulong - 1;
+            let start_x = geometry.x() as x::c_ulong;
+            let end_x = start_x + geometry.width() as x::c_ulong - 1;
 
             unsafe {
                 let y = if BOTTOM {
-                    geometry.height as x::c_int - height as x::c_int
+                    geometry.height() as x::c_int - height as x::c_int
                 } else {
                     0
                 };

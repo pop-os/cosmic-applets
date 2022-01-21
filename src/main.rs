@@ -19,5 +19,7 @@ mod window;
 use application::PanelApp;
 
 fn main() {
-    glib::MainContext::default().with_thread_default(|| PanelApp::new().run());
+    glib::MainContext::default()
+        .with_thread_default(|| PanelApp::new().run())
+        .unwrap();
 }

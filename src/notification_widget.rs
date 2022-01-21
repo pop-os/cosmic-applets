@@ -38,7 +38,7 @@ impl ObjectImpl for NotificationWidgetInner {
             ..set_max_width_chars(20);
             ..set_attributes(Some(&cascade! {
                 pango::AttrList::new();
-                ..insert(pango::Attribute::new_weight(pango::Weight::Bold));
+                ..insert(pango::AttrInt::new_weight(pango::Weight::Bold));
             }));
         };
 
@@ -65,7 +65,7 @@ impl ObjectImpl for NotificationWidgetInner {
                     ..style_context().add_class("flat");
                     ..set_valign(gtk4::Align::Start);
                     ..set_child(Some(&cascade! {
-                        gtk4::Image::from_icon_name(Some("window-close-symbolic"));
+                        gtk4::Image::from_icon_name("window-close-symbolic");
                         ..set_pixel_size(8);
                     }));
                     ..connect_clicked(clone!(@weak obj => move |_| {

@@ -51,7 +51,7 @@ impl ObjectImpl for MprisPlayerInner {
             ..set_max_width_chars(20);
             ..set_attributes(Some(&cascade! {
                 pango::AttrList::new();
-                ..insert(pango::Attribute::new_weight(pango::Weight::Bold));
+                ..insert(pango::AttrInt::new_weight(pango::Weight::Bold));
             }));
         };
 
@@ -63,17 +63,17 @@ impl ObjectImpl for MprisPlayerInner {
         };
 
         let backward_button = cascade! {
-            gtk4::Button::from_icon_name(Some("media-skip-backward-symbolic"));
+            gtk4::Button::from_icon_name("media-skip-backward-symbolic");
             ..connect_clicked(clone!(@strong obj => move |_| obj.call("Previous")));
         };
 
         let play_pause_button = cascade! {
-            gtk4::Button::from_icon_name(Some("media-playback-start-symbolic"));
+            gtk4::Button::from_icon_name("media-playback-start-symbolic");
             ..connect_clicked(clone!(@strong obj => move |_| obj.call("PlayPause")));
         };
 
         let forward_button = cascade! {
-            gtk4::Button::from_icon_name(Some("media-skip-forward-symbolic"));
+            gtk4::Button::from_icon_name("media-skip-forward-symbolic");
             ..connect_clicked(clone!(@strong obj => move |_| obj.call("Next")));
         };
 
@@ -168,10 +168,8 @@ impl MprisPlayer {
         let pixbuf = async {
             // TODO: Security?
             let file = gio::File::for_uri(&arturl?);
-            let stream = file.read_async_future(glib::PRIORITY_DEFAULT).await.ok()?;
-            gdk_pixbuf::Pixbuf::from_stream_async_future(&stream)
-                .await
-                .ok()
+            let stream = file.read_future(glib::PRIORITY_DEFAULT).await.ok()?;
+            gdk_pixbuf::Pixbuf::from_stream_future(&stream).await.ok()
         }
         .await;
         if let Some(pixbuf) = pixbuf {

@@ -268,8 +268,8 @@ impl fmt::Debug for Hints {
 }
 
 #[repr(transparent)]
-#[derive(Debug, Clone, Copy, Hash, glib::GBoxed, PartialEq, Eq)]
-#[gboxed(type_name = "S76NotificationId")]
+#[derive(Debug, Clone, Copy, Hash, glib::Boxed, PartialEq, Eq)]
+#[boxed_type(name = "S76NotificationId")]
 pub struct NotificationId(NonZeroU32);
 
 impl Default for NotificationId {
@@ -331,7 +331,7 @@ impl Notifications {
             if let Some(event) = receiver.next().await {
                 match event {
                     Event::NotificationReceived(id) => {
-                        notifications.emit_by_name("notification-received", &[&id]).unwrap();
+                        notifications.emit_by_name::<()>("notification-received", &[&id]);
                     }
                     Event::CloseNotification(id) =>  {
                         notifications.close_notification(id, CloseReason::Call).await
@@ -356,7 +356,7 @@ impl Notifications {
             .unwrap()
             .remove(&id);
 
-        self.emit_by_name("notification-closed", &[&id]).unwrap();
+        self.emit_by_name::<()>("notification-closed", &[&id]);
 
         if let Some(connection) = self.inner().connection.get() {
             let ctxt = SignalContext::new(connection, PATH).unwrap(); // XXX unwrap?
@@ -401,7 +401,6 @@ impl Notifications {
             }
             None
         })
-        .unwrap()
     }
 
     pub fn connect_notification_closed<F: Fn(NotificationId) + 'static>(
@@ -413,6 +412,5 @@ impl Notifications {
             cb(id);
             None
         })
-        .unwrap()
     }
 }

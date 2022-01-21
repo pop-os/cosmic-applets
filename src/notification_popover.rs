@@ -117,7 +117,7 @@ impl NotificationPopover {
 
     fn stop_timer(&self) {
         if let Some(source) = self.inner().source.borrow_mut().take() {
-            glib::source_remove(source);
+            source.remove();
         }
     }
 
