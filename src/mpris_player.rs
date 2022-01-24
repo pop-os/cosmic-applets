@@ -126,21 +126,21 @@ impl MprisPlayer {
             .build()
             .await?;
 
-        let metadata_stream = player.receive_metadata_changed().await;
-        let playback_status_stream = player.receive_playback_status_changed().await;
-        let mut stream = futures::stream_select!(
-            metadata_stream.map(|_| ()),
-            playback_status_stream.map(|_| ())
-        );
+        let mut status_stream = player.receive_playback_status_changed().await;
+        let mut metadata_stream = player.receive_metadata_changed().await;
 
         obj.inner().player.set(player);
 
         glib::MainContext::default().spawn_local(clone!(@strong obj => async move {
-            while stream.next().await.is_some() {
-                obj.update();
+            while status_stream.next().await.is_some() {
+                obj.update_status();
             }
         }));
-        obj.update();
+        glib::MainContext::default().spawn_local(clone!(@strong obj => async move {
+            while metadata_stream.next().await.is_some() {
+                obj.update_metadata();
+            }
+        }));
 
         Ok(obj)
     }
@@ -177,10 +177,9 @@ impl MprisPlayer {
         }
     }
 
-    fn update(&self) {
-        let player = &self.inner().player;
-        let (status, metadata) = match (player.cached_playback_status(), player.cached_metadata()) {
-            (Ok(Some(status)), Ok(Some(metadata))) => (status, metadata),
+    fn update_status(&self) {
+        let status = match self.inner().player.cached_playback_status() {
+            Ok(Some(status)) => status,
             _ => return,
         };
 
@@ -188,6 +187,17 @@ impl MprisPlayer {
             "media-playback-pause-symbolic"
         } else {
             "media-playback-start-symbolic"
+        };
+
+        self.inner()
+            .play_pause_button
+            .set_icon_name(play_pause_icon);
+    }
+
+    fn update_metadata(&self) {
+        let metadata = match self.inner().player.cached_metadata() {
+            Ok(Some(metadata)) => metadata,
+            _ => return,
         };
 
         let title = metadata.title().unwrap_or_else(|| String::new());
@@ -204,9 +214,6 @@ impl MprisPlayer {
             self_.update_arturl(arturl.as_deref()).await;
         }));
 
-        self.inner()
-            .play_pause_button
-            .set_icon_name(play_pause_icon);
         self.inner().title_label.set_label(&title);
         self.inner().artist_label.set_label(&artist);
     }
