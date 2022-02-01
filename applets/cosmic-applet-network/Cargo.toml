@@ -1,0 +1,9 @@
+[package]
+name = "cosmic-applet-network"
+version = "0.1.0"
+edition = "2021"
+license = "LGPL-3.0-or-later"
+
+[dependencies]
+gtk4 = "0.4.6"
+zbus = "2.0.1"
