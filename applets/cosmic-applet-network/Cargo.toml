@@ -5,5 +5,8 @@ edition = "2021"
 license = "LGPL-3.0-or-later"
 
 [dependencies]
+cosmic-dbus-networkmanager = { git = "https://github.com/pop-os/dbus-settings-bindings" }
 gtk4 = "0.4.6"
+relm4-macros = "0.4.1"
+tokio = { version = "1.15.0", features = ["full"] }
 zbus = "2.0.1"
