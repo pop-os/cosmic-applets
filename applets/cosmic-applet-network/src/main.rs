@@ -5,6 +5,7 @@ extern crate relm4_macros;
 
 pub mod task;
 pub mod ui;
+pub mod widgets;
 
 use gtk4::{gio::ApplicationFlags, prelude::*, Orientation};
 use once_cell::sync::Lazy;
