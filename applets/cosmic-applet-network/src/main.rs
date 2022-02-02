@@ -7,7 +7,7 @@ pub mod task;
 pub mod ui;
 pub mod widgets;
 
-use gtk4::{gio::ApplicationFlags, prelude::*, Orientation};
+use gtk4::{gio::ApplicationFlags, prelude::*, Orientation, Separator};
 use once_cell::sync::Lazy;
 use tokio::runtime::Runtime;
 
@@ -41,6 +41,10 @@ fn build_ui(application: &gtk4::Application) {
         }
     }
     ui::toggles::add_toggles(&main_box);
+    main_box.append(&Separator::new(Orientation::Horizontal));
+    ui::current_networks::add_current_networks(&main_box);
+    main_box.append(&Separator::new(Orientation::Horizontal));
+    ui::available_wifi::add_available_wifi(&main_box);
     window.set_child(Some(&main_box));
 
     window.show();
