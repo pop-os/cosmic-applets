@@ -33,7 +33,7 @@ fn build_ui(application: &gtk4::Application) {
     view! {
         main_box = gtk4::Box {
             set_orientation: Orientation::Vertical,
-            set_spacing: 20,
+            set_spacing: 10,
             set_margin_top: 20,
             set_margin_bottom: 20,
             set_margin_start: 24,
