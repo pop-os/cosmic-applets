@@ -43,8 +43,10 @@ fn build_ui(application: &gtk4::Application) {
     ui::toggles::add_toggles(&main_box);
     main_box.append(&Separator::new(Orientation::Horizontal));
     ui::current_networks::add_current_networks(&main_box);
-    main_box.append(&Separator::new(Orientation::Horizontal));
-    ui::available_wifi::add_available_wifi(&main_box);
+    let available_wifi_separator = Separator::new(Orientation::Horizontal);
+    main_box.append(&available_wifi_separator);
+    available_wifi_separator.hide();
+    ui::available_wifi::add_available_wifi(&main_box, available_wifi_separator);
     window.set_child(Some(&main_box));
 
     window.show();

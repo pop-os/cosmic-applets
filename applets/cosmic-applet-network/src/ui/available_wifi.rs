@@ -9,12 +9,12 @@ use futures_util::StreamExt;
 use gtk4::{
     glib::{self, clone, source::PRIORITY_DEFAULT, MainContext, Sender},
     prelude::*,
-    Align, Image,
+    Align, Image, Separator,
 };
 use std::{cell::RefCell, rc::Rc};
 use zbus::Connection;
 
-pub fn add_available_wifi(target: &gtk4::Box) {
+pub fn add_available_wifi(target: &gtk4::Box, separator: Separator) {
     let ap_entries = Rc::<RefCell<Vec<SettingsEntry>>>::default();
     let (tx, rx) = MainContext::channel::<Vec<AccessPoint>>(PRIORITY_DEFAULT);
     task::spawn(async move {
@@ -24,8 +24,9 @@ pub fn add_available_wifi(target: &gtk4::Box) {
     });
     rx.attach(
         None,
-        clone!(@strong ap_entries, @weak target => @default-return Continue(true), move |aps| {
+        clone!(@strong ap_entries, @weak target, @weak separator, => @default-return Continue(true), move |aps| {
             build_aps_list(ap_entries.clone(), target, dbg!(aps));
+            separator.set_visible(!ap_entries.borrow().is_empty());
             Continue(true)
         }),
     );
