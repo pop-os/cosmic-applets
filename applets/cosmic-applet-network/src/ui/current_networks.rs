@@ -9,14 +9,79 @@ use cosmic_dbus_networkmanager::{
 use gtk4::{
     glib::{self, clone, source::PRIORITY_DEFAULT, MainContext, Sender},
     prelude::*,
+    Image, Orientation,
 };
+use std::{cell::RefCell, rc::Rc};
 use zbus::Connection;
 
 pub fn add_current_networks(target: &gtk4::Box) {
-    let our_box = gtk4::Box::new(gtk4::Orientation::Vertical, 0);
+    let our_box = gtk4::Box::new(Orientation::Vertical, 8);
+    let entries = Rc::<RefCell<Vec<gtk4::Box>>>::default();
     let (tx, rx) = MainContext::channel::<Vec<ActiveConnectionInfo>>(PRIORITY_DEFAULT);
     crate::task::spawn(handle_devices(tx));
+    rx.attach(
+        None,
+        clone!(@weak our_box, @strong entries => @default-return Continue(true), move |connections| {
+            let mut entries = entries.borrow_mut();
+            display_active_connections(connections, &our_box, &mut *entries);
+            Continue(true)
+        }),
+    );
     target.append(&our_box);
+}
+
+fn display_active_connections(
+    connections: Vec<ActiveConnectionInfo>,
+    target: &gtk4::Box,
+    entries: &mut Vec<gtk4::Box>,
+) {
+    for old_entry in entries.drain(..) {
+        target.remove(&old_entry);
+    }
+    for connection in connections {
+        let entry = match connection {
+            ActiveConnectionInfo::Wired {
+                name,
+                hw_address,
+                speed,
+            } => render_wired_connection(name, speed),
+            ActiveConnectionInfo::WiFi {
+                name,
+                hw_address,
+                flags,
+                rsn_flags,
+                wpa_flags,
+            } => todo!(),
+        };
+        target.append(&entry);
+        entries.push(entry);
+    }
+}
+
+fn render_wired_connection(name: String, speed: u32) -> gtk4::Box {
+    view! {
+        entry = gtk4::Box {
+            set_orientation: Orientation::Horizontal,
+            set_spacing: 8,
+            append: wired_icon = &Image {
+                set_icon_name: Some("network-wired-symbolic"),
+            },
+            append: wired_label_box = &gtk4::Box {
+                set_orientation: Orientation::Vertical,
+                append: wired_label = &gtk4::Label {
+                    set_label: &name,
+                },
+                append: wired_ip = &gtk4::Label {
+                    set_label: "IP Address: N/A",
+                }
+            },
+            append: wired_speed = &gtk4::Label {
+                set_label: &format!("Connected - {} Mbps", speed),
+                set_valign: gtk4::Align::Center,
+            },
+        }
+    }
+    entry
 }
 
 async fn handle_devices(tx: Sender<Vec<ActiveConnectionInfo>>) -> zbus::Result<()> {
@@ -49,6 +114,8 @@ async fn handle_devices(tx: Sender<Vec<ActiveConnectionInfo>>) -> zbus::Result<(
                 }
             }
         }
+        tx.send(info)
+            .expect("failed to send active connections back to main thread");
         tokio::time::sleep(std::time::Duration::from_secs(5)).await;
     }
 }
