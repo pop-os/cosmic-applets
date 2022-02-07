@@ -25,7 +25,7 @@ pub fn add_available_wifi(target: &gtk4::Box, separator: Separator) {
     rx.attach(
         None,
         clone!(@strong ap_entries, @weak target, @weak separator, => @default-return Continue(true), move |aps| {
-            build_aps_list(ap_entries.clone(), target, dbg!(aps));
+            build_aps_list(ap_entries.clone(), target, aps);
             separator.set_visible(!ap_entries.borrow().is_empty());
             Continue(true)
         }),
@@ -44,13 +44,13 @@ fn build_aps_list(
     for ap in aps {
         view! {
             ap_entry = SettingsEntry {
-                align_child: Align::Start,
                 set_title: &ap.ssid,
                 set_child: ap_icon = &Image {
                     set_icon_name: Some("network-wireless-symbolic"),
                 }
             }
         }
+        ap_entry.align_child(Align::Start); // view! seems to reorder everything in alphabetical order, but align_child must always come after set_child
         target.append(&ap_entry);
         ap_entries.push(ap_entry);
     }

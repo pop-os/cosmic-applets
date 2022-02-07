@@ -6,7 +6,9 @@ use cosmic_dbus_networkmanager::{
 use gtk4::glib::{self, clone, source::PRIORITY_DEFAULT, MainContext, Sender};
 use zbus::Connection;
 
-pub fn add_current_networks(target: &gtk4::Box) {}
+pub fn add_current_networks(target: &gtk4::Box) {
+    crate::task::spawn(handle_devices());
+}
 
 fn add_vpn(target: &gtk4::Box) {}
 
@@ -18,8 +20,10 @@ async fn handle_devices() -> zbus::Result<()> {
     let conn = Connection::system().await?;
     let network_manager = NetworkManager::new(&conn).await?;
     loop {
-        // TODO: NetworkManager::active_connections
+        let active_connections = network_manager.active_connections().await?;
+        for connection in active_connections {
+            eprintln!("{}", connection.type_().await?);
+        }
         tokio::time::sleep(std::time::Duration::from_secs(5)).await;
     }
-    Ok(())
 }
