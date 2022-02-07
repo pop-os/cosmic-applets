@@ -1,5 +1,6 @@
 use crate::{task, widgets::SettingsEntry};
 use cosmic_dbus_networkmanager::nm::NetworkManager;
+use futures_util::StreamExt;
 use gtk4::{
     glib::{self, clone, source::PRIORITY_DEFAULT, MainContext, Sender},
     prelude::*,
@@ -53,6 +54,18 @@ async fn get_wifi_mode(tx: Sender<bool>) -> zbus::Result<()> {
     let wireless_enabled = network_manager.wireless_enabled().await?;
     tx.send(wireless_enabled)
         .expect("Failed to send wifi enablement back to main thread");
+    tokio::spawn(async move {
+        let connection = Connection::system().await?;
+        let network_manager = NetworkManager::new(&connection).await?;
+        let mut stream = network_manager.receive_wireless_enabled_changed().await;
+        while let Some(wireless_enabled) = stream.next().await {
+            if let Ok(wireless_enabled) = wireless_enabled.get().await {
+                tx.send(wireless_enabled)
+                    .expect("Failed to send wifi enablement back to main thread");
+            }
+        }
+        zbus::Result::Ok(())
+    });
     Ok(())
 }
 
