@@ -10,6 +10,14 @@ where
     crate::RT.spawn(future)
 }
 
+pub fn block_on<O, F>(future: F) -> O
+where
+    F: Future<Output = O> + Send + 'static,
+    O: Send + 'static,
+{
+    crate::RT.block_on(future)
+}
+
 pub fn spawn_local<F: Future<Output = ()> + 'static>(future: F) {
     gtk4::glib::MainContext::default().spawn_local(future);
 }

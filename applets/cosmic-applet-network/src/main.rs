@@ -40,9 +40,9 @@ fn build_ui(application: &gtk4::Application) {
             set_margin_end: 24
         }
     }
-    ui::toggles::add_toggles(&main_box);
-    main_box.append(&Separator::new(Orientation::Horizontal));
     ui::current_networks::add_current_networks(&main_box);
+    main_box.append(&Separator::new(Orientation::Horizontal));
+    ui::toggles::add_toggles(&main_box);
     let available_wifi_separator = Separator::new(Orientation::Horizontal);
     main_box.append(&available_wifi_separator);
     available_wifi_separator.hide();
