@@ -236,7 +236,7 @@ dependencies = [
 [[package]]
 name = "cosmic-dbus-networkmanager"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/dbus-settings-bindings#8bdccc1f18fb80543318c7748cf0b78ced268add"
+source = "git+https://github.com/pop-os/dbus-settings-bindings#a81830cd20bd97922c7ead697ac6ef87635bf374"
 dependencies = [
  "bitflags",
  "derive_builder",
