@@ -111,9 +111,9 @@ dependencies = [
 
 [[package]]
 name = "autocfg"
-version = "1.0.1"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cdb031dd78e28731d87d56cc8ffef4a8f36ca26c38fe2de700543e627f8a464a"
+checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
 
 [[package]]
 name = "bitflags"
@@ -236,7 +236,7 @@ dependencies = [
 [[package]]
 name = "cosmic-dbus-networkmanager"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/dbus-settings-bindings#4704a1672daeab75e83035449895862dfab3f816"
+source = "git+https://github.com/pop-os/dbus-settings-bindings#8bdccc1f18fb80543318c7748cf0b78ced268add"
 dependencies = [
  "bitflags",
  "derive_builder",
