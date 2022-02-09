@@ -11,7 +11,7 @@ use gtk4::{
     prelude::*,
     Image, Orientation,
 };
-use std::{cell::RefCell, net::Ipv4Addr, rc::Rc};
+use std::{cell::RefCell, net::IpAddr, rc::Rc};
 use zbus::Connection;
 
 pub fn add_current_networks(target: &gtk4::Box) {
@@ -44,8 +44,8 @@ fn display_active_connections(
                 name,
                 hw_address,
                 speed,
-                ip_address,
-            } => render_wired_connection(name, speed, ip_address),
+                ip_addresses,
+            } => render_wired_connection(name, speed, ip_addresses),
             ActiveConnectionInfo::WiFi {
                 name,
                 hw_address,
@@ -59,7 +59,7 @@ fn display_active_connections(
     }
 }
 
-fn render_wired_connection(name: String, speed: u32, ip_address: Ipv4Addr) -> gtk4::Box {
+fn render_wired_connection(name: String, speed: u32, ip_addresses: Vec<IpAddr>) -> gtk4::Box {
     view! {
         entry = gtk4::Box {
             set_orientation: Orientation::Horizontal,
@@ -71,9 +71,6 @@ fn render_wired_connection(name: String, speed: u32, ip_address: Ipv4Addr) -> gt
                 set_orientation: Orientation::Vertical,
                 append: wired_label = &gtk4::Label {
                     set_label: &name,
-                },
-                append: wired_ip = &gtk4::Label {
-                    set_label: &format!("IP Address: {}", ip_address),
                 }
             },
             append: wired_speed = &gtk4::Label {
@@ -81,6 +78,15 @@ fn render_wired_connection(name: String, speed: u32, ip_address: Ipv4Addr) -> gt
                 set_valign: gtk4::Align::Center,
             },
         }
+    }
+    for address in ip_addresses {
+        view! {
+            wired_ip = gtk4::Label {
+                set_label: &format!("IP Address: {}", address),
+                set_halign: gtk4::Align::Start,
+            }
+        }
+        wired_label_box.append(&wired_ip);
     }
     entry
 }
@@ -95,21 +101,18 @@ async fn handle_devices(tx: Sender<Vec<ActiveConnectionInfo>>) -> zbus::Result<(
             for device in connection.devices().await? {
                 match device.downcast_to_device().await? {
                     Some(SpecificDevice::Wired(wired_device)) => {
-                        let ip4_config = device.ip4_config().await?;
-                        let ip_address = ip4_config
-                            .addresses()
-                            .await?
-                            .into_iter()
-                            .next()
-                            .unwrap()
-                            .into_iter()
-                            .next()
-                            .unwrap();
+                        let mut ip_addresses = Vec::new();
+                        for address_data in device.ip4_config().await?.address_data().await? {
+                            ip_addresses.push(IpAddr::V4(address_data.address));
+                        }
+                        for address_data in device.ip6_config().await?.address_data().await? {
+                            ip_addresses.push(IpAddr::V6(address_data.address));
+                        }
                         info.push(ActiveConnectionInfo::Wired {
                             name: connection.id().await?,
                             hw_address: wired_device.hw_address().await?,
                             speed: wired_device.speed().await?,
-                            ip_address,
+                            ip_addresses,
                         });
                     }
                     Some(SpecificDevice::Wireless(wireless_device)) => {
@@ -137,7 +140,7 @@ enum ActiveConnectionInfo {
         name: String,
         hw_address: String,
         speed: u32,
-        ip_address: Ipv4Addr,
+        ip_addresses: Vec<IpAddr>,
     },
     WiFi {
         name: String,
