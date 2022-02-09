@@ -9,32 +9,34 @@ use futures_util::StreamExt;
 use gtk4::{
     glib::{self, clone, source::PRIORITY_DEFAULT, MainContext, Sender},
     prelude::*,
-    Align, Image, Separator,
+    Align, Image, ListBox, ListBoxRow, Separator,
 };
 use std::{cell::RefCell, rc::Rc};
 use zbus::Connection;
 
 pub fn add_available_wifi(target: &gtk4::Box, separator: Separator) {
-    let ap_entries = Rc::<RefCell<Vec<SettingsEntry>>>::default();
+    let ap_entries = Rc::<RefCell<Vec<ListBoxRow>>>::default();
     let (tx, rx) = MainContext::channel::<Vec<AccessPoint>>(PRIORITY_DEFAULT);
     task::spawn(async move {
         if let Err(err) = scan_for_wifi(tx).await {
             eprintln!("scan_for_wifi failed: {}", err);
         }
     });
+    let wifi_list = ListBox::new();
     rx.attach(
         None,
-        clone!(@strong ap_entries, @weak target, @weak separator, => @default-return Continue(true), move |aps| {
-            build_aps_list(ap_entries.clone(), target, aps);
+        clone!(@strong ap_entries, @weak wifi_list, @weak separator, => @default-return Continue(true), move |aps| {
+            build_aps_list(ap_entries.clone(), &wifi_list, aps);
             separator.set_visible(!ap_entries.borrow().is_empty());
             Continue(true)
         }),
     );
+    target.append(&wifi_list);
 }
 
 fn build_aps_list(
-    ap_entries: Rc<RefCell<Vec<SettingsEntry>>>,
-    target: gtk4::Box,
+    ap_entries: Rc<RefCell<Vec<ListBoxRow>>>,
+    target: &ListBox,
     aps: Vec<AccessPoint>,
 ) {
     let mut ap_entries = ap_entries.borrow_mut();
@@ -51,8 +53,9 @@ fn build_aps_list(
             }
         }
         ap_entry.align_child(Align::Start); // view! seems to reorder everything in alphabetical order, but align_child must always come after set_child
-        target.append(&ap_entry);
-        ap_entries.push(ap_entry);
+        let entry = ListBoxRow::builder().child(&ap_entry).build();
+        target.append(&entry);
+        ap_entries.push(entry);
     }
 }
 

@@ -9,31 +9,31 @@ use cosmic_dbus_networkmanager::{
 use gtk4::{
     glib::{self, clone, source::PRIORITY_DEFAULT, MainContext, Sender},
     prelude::*,
-    Image, Orientation,
+    Image, ListBox, ListBoxRow, Orientation,
 };
 use std::{cell::RefCell, net::IpAddr, rc::Rc};
 use zbus::Connection;
 
 pub fn add_current_networks(target: &gtk4::Box) {
-    let our_box = gtk4::Box::new(Orientation::Vertical, 8);
-    let entries = Rc::<RefCell<Vec<gtk4::Box>>>::default();
+    let networks_list = ListBox::new();
+    let entries = Rc::<RefCell<Vec<ListBoxRow>>>::default();
     let (tx, rx) = MainContext::channel::<Vec<ActiveConnectionInfo>>(PRIORITY_DEFAULT);
     crate::task::spawn(handle_devices(tx));
     rx.attach(
         None,
-        clone!(@weak our_box, @strong entries => @default-return Continue(true), move |connections| {
+        clone!(@weak networks_list, @strong entries => @default-return Continue(true), move |connections| {
             let mut entries = entries.borrow_mut();
-            display_active_connections(connections, &our_box, &mut *entries);
+            display_active_connections(connections, &networks_list, &mut *entries);
             Continue(true)
         }),
     );
-    target.append(&our_box);
+    target.append(&networks_list);
 }
 
 fn display_active_connections(
     connections: Vec<ActiveConnectionInfo>,
-    target: &gtk4::Box,
-    entries: &mut Vec<gtk4::Box>,
+    target: &ListBox,
+    entries: &mut Vec<ListBoxRow>,
 ) {
     for old_entry in entries.drain(..) {
         target.remove(&old_entry);
@@ -54,6 +54,7 @@ fn display_active_connections(
                 wpa_flags,
             } => todo!(),
         };
+        let entry = ListBoxRow::builder().child(&entry).build();
         target.append(&entry);
         entries.push(entry);
     }
