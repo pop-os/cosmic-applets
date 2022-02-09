@@ -9,13 +9,13 @@ use cosmic_dbus_networkmanager::{
 use gtk4::{
     glib::{self, clone, source::PRIORITY_DEFAULT, MainContext, Sender},
     prelude::*,
-    Image, ListBox, ListBoxRow, Orientation,
+    IconSize, Image, ListBox, ListBoxRow, Orientation,
 };
 use std::{cell::RefCell, net::IpAddr, rc::Rc};
 use zbus::Connection;
 
 pub fn add_current_networks(target: &gtk4::Box) {
-    let networks_list = ListBox::new();
+    let networks_list = ListBox::builder().show_separators(true).build();
     let entries = Rc::<RefCell<Vec<ListBoxRow>>>::default();
     let (tx, rx) = MainContext::channel::<Vec<ActiveConnectionInfo>>(PRIORITY_DEFAULT);
     crate::task::spawn(handle_devices(tx));
@@ -67,11 +67,13 @@ fn render_wired_connection(name: String, speed: u32, ip_addresses: Vec<IpAddr>) 
             set_spacing: 8,
             append: wired_icon = &Image {
                 set_icon_name: Some("network-wired-symbolic"),
+                set_icon_size: IconSize::Large
             },
             append: wired_label_box = &gtk4::Box {
                 set_orientation: Orientation::Vertical,
                 append: wired_label = &gtk4::Label {
                     set_label: &name,
+                    set_halign: gtk4::Align::Start,
                 }
             },
             append: wired_speed = &gtk4::Label {
