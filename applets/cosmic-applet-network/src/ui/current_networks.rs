@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
 use cosmic_dbus_networkmanager::{
-    access_point::AccessPoint,
-    device::{wired::WiredDevice, SpecificDevice},
+    device::SpecificDevice,
     interface::enums::{ApFlags, ApSecurityFlags},
     nm::NetworkManager,
 };
