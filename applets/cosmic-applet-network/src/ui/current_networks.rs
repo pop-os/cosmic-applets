@@ -53,6 +53,7 @@ fn display_active_connections(
                 rsn_flags,
                 wpa_flags,
             } => todo!(),
+            ActiveConnectionInfo::Vpn { name, ip_addresses } => render_vpn(name, ip_addresses),
         };
         let entry = ListBoxRow::builder().child(&entry).build();
         target.append(&entry);
@@ -94,6 +95,36 @@ fn render_wired_connection(name: String, speed: u32, ip_addresses: Vec<IpAddr>) 
     entry
 }
 
+fn render_vpn(name: String, ip_addresses: Vec<IpAddr>) -> gtk4::Box {
+    view! {
+        entry = gtk4::Box {
+            set_orientation: Orientation::Horizontal,
+            set_spacing: 8,
+            append: wired_icon = &Image {
+                set_icon_name: Some("network-vpn-symbolic"),
+                set_icon_size: IconSize::Large
+            },
+            append: wired_label_box = &gtk4::Box {
+                set_orientation: Orientation::Vertical,
+                append: wired_label = &gtk4::Label {
+                    set_label: &name,
+                    set_halign: gtk4::Align::Start,
+                }
+            }
+        }
+    }
+    for address in ip_addresses {
+        view! {
+            wired_ip = gtk4::Label {
+                set_label: &format!("IP Address: {}", address),
+                set_halign: gtk4::Align::Start,
+            }
+        }
+        wired_label_box.append(&wired_ip);
+    }
+    entry
+}
+
 async fn handle_devices(tx: Sender<Vec<ActiveConnectionInfo>>) -> zbus::Result<()> {
     let conn = Connection::system().await?;
     let network_manager = NetworkManager::new(&conn).await?;
@@ -101,6 +132,20 @@ async fn handle_devices(tx: Sender<Vec<ActiveConnectionInfo>>) -> zbus::Result<(
         let active_connections = network_manager.active_connections().await?;
         let mut info = Vec::<ActiveConnectionInfo>::with_capacity(active_connections.len());
         for connection in active_connections {
+            if connection.vpn().await? {
+                let mut ip_addresses = Vec::new();
+                for address_data in connection.ip4_config().await?.address_data().await? {
+                    ip_addresses.push(IpAddr::V4(address_data.address));
+                }
+                for address_data in connection.ip6_config().await?.address_data().await? {
+                    ip_addresses.push(IpAddr::V6(address_data.address));
+                }
+                info.push(ActiveConnectionInfo::Vpn {
+                    name: connection.id().await?,
+                    ip_addresses,
+                });
+                continue;
+            }
             for device in connection.devices().await? {
                 match device.downcast_to_device().await? {
                     Some(SpecificDevice::Wired(wired_device)) => {
@@ -151,5 +196,9 @@ enum ActiveConnectionInfo {
         flags: ApFlags,
         rsn_flags: ApSecurityFlags,
         wpa_flags: ApSecurityFlags,
+    },
+    Vpn {
+        name: String,
+        ip_addresses: Vec<IpAddr>,
     },
 }
