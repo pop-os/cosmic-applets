@@ -173,6 +173,19 @@ async fn handle_devices(tx: Sender<Vec<ActiveConnectionInfo>>) -> zbus::Result<(
                             wpa_flags: access_point.wpa_flags().await?,
                         });
                     }
+                    Some(SpecificDevice::WireGuard(_)) => {
+                        let mut ip_addresses = Vec::new();
+                        for address_data in connection.ip4_config().await?.address_data().await? {
+                            ip_addresses.push(IpAddr::V4(address_data.address));
+                        }
+                        for address_data in connection.ip6_config().await?.address_data().await? {
+                            ip_addresses.push(IpAddr::V6(address_data.address));
+                        }
+                        info.push(ActiveConnectionInfo::Vpn {
+                            name: connection.id().await?,
+                            ip_addresses,
+                        });
+                    }
                     _ => {}
                 }
             }
