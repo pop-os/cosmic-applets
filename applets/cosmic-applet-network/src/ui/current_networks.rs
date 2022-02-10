@@ -1,10 +1,15 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
 use cosmic_dbus_networkmanager::{
+    active_connection::ActiveConnection,
     device::SpecificDevice,
-    interface::enums::{ApFlags, ApSecurityFlags},
+    interface::{
+        active_connection::ActiveConnectionProxy,
+        enums::{ApFlags, ApSecurityFlags},
+    },
     nm::NetworkManager,
 };
+use futures_util::StreamExt;
 use gtk4::{
     glib::{self, clone, source::PRIORITY_DEFAULT, MainContext, Sender},
     prelude::*,
@@ -127,72 +132,92 @@ fn render_vpn(name: String, ip_addresses: Vec<IpAddr>) -> gtk4::Box {
 async fn handle_devices(tx: Sender<Vec<ActiveConnectionInfo>>) -> zbus::Result<()> {
     let conn = Connection::system().await?;
     let network_manager = NetworkManager::new(&conn).await?;
-    loop {
-        let active_connections = network_manager.active_connections().await?;
-        let mut info = Vec::<ActiveConnectionInfo>::with_capacity(active_connections.len());
-        for connection in active_connections {
-            if connection.vpn().await? {
-                let mut ip_addresses = Vec::new();
-                for address_data in connection.ip4_config().await?.address_data().await? {
-                    ip_addresses.push(IpAddr::V4(address_data.address));
-                }
-                for address_data in connection.ip6_config().await?.address_data().await? {
-                    ip_addresses.push(IpAddr::V6(address_data.address));
-                }
-                info.push(ActiveConnectionInfo::Vpn {
-                    name: connection.id().await?,
-                    ip_addresses,
-                });
-                continue;
+    handle_active_connections(tx.clone(), network_manager.active_connections().await?).await?;
+    let mut active_connections_changed = network_manager.receive_active_connections_changed().await;
+    while let Some(active_connection_objects) = active_connections_changed.next().await {
+        let active_connection_objects = active_connection_objects.get().await?;
+        let mut active_connections = Vec::with_capacity(active_connection_objects.len());
+        for object in active_connection_objects {
+            active_connections.push(
+                ActiveConnectionProxy::builder(&conn)
+                    .path(object)?
+                    .build()
+                    .await
+                    .map(ActiveConnection::from)?,
+            );
+        }
+        handle_active_connections(tx.clone(), active_connections).await?;
+    }
+    Ok(())
+}
+
+async fn handle_active_connections(
+    tx: Sender<Vec<ActiveConnectionInfo>>,
+    active_connections: Vec<ActiveConnection<'_>>,
+) -> zbus::Result<()> {
+    let mut info = Vec::<ActiveConnectionInfo>::with_capacity(active_connections.len());
+    for connection in active_connections {
+        if connection.vpn().await? {
+            let mut ip_addresses = Vec::new();
+            for address_data in connection.ip4_config().await?.address_data().await? {
+                ip_addresses.push(IpAddr::V4(address_data.address));
             }
-            for device in connection.devices().await? {
-                match device.downcast_to_device().await? {
-                    Some(SpecificDevice::Wired(wired_device)) => {
-                        let mut ip_addresses = Vec::new();
-                        for address_data in device.ip4_config().await?.address_data().await? {
-                            ip_addresses.push(IpAddr::V4(address_data.address));
-                        }
-                        for address_data in device.ip6_config().await?.address_data().await? {
-                            ip_addresses.push(IpAddr::V6(address_data.address));
-                        }
-                        info.push(ActiveConnectionInfo::Wired {
-                            name: connection.id().await?,
-                            hw_address: wired_device.hw_address().await?,
-                            speed: wired_device.speed().await?,
-                            ip_addresses,
-                        });
+            for address_data in connection.ip6_config().await?.address_data().await? {
+                ip_addresses.push(IpAddr::V6(address_data.address));
+            }
+            info.push(ActiveConnectionInfo::Vpn {
+                name: connection.id().await?,
+                ip_addresses,
+            });
+            continue;
+        }
+        for device in connection.devices().await? {
+            match device.downcast_to_device().await? {
+                Some(SpecificDevice::Wired(wired_device)) => {
+                    let mut ip_addresses = Vec::new();
+                    for address_data in device.ip4_config().await?.address_data().await? {
+                        ip_addresses.push(IpAddr::V4(address_data.address));
                     }
-                    Some(SpecificDevice::Wireless(wireless_device)) => {
-                        let access_point = wireless_device.active_access_point().await?;
-                        info.push(ActiveConnectionInfo::WiFi {
-                            name: String::from_utf8_lossy(&access_point.ssid().await?).into_owned(),
-                            hw_address: wireless_device.hw_address().await?,
-                            flags: access_point.flags().await?,
-                            rsn_flags: access_point.rsn_flags().await?,
-                            wpa_flags: access_point.wpa_flags().await?,
-                        });
+                    for address_data in device.ip6_config().await?.address_data().await? {
+                        ip_addresses.push(IpAddr::V6(address_data.address));
                     }
-                    Some(SpecificDevice::WireGuard(_)) => {
-                        let mut ip_addresses = Vec::new();
-                        for address_data in connection.ip4_config().await?.address_data().await? {
-                            ip_addresses.push(IpAddr::V4(address_data.address));
-                        }
-                        for address_data in connection.ip6_config().await?.address_data().await? {
-                            ip_addresses.push(IpAddr::V6(address_data.address));
-                        }
-                        info.push(ActiveConnectionInfo::Vpn {
-                            name: connection.id().await?,
-                            ip_addresses,
-                        });
-                    }
-                    _ => {}
+                    info.push(ActiveConnectionInfo::Wired {
+                        name: connection.id().await?,
+                        hw_address: wired_device.hw_address().await?,
+                        speed: wired_device.speed().await?,
+                        ip_addresses,
+                    });
                 }
+                Some(SpecificDevice::Wireless(wireless_device)) => {
+                    let access_point = wireless_device.active_access_point().await?;
+                    info.push(ActiveConnectionInfo::WiFi {
+                        name: String::from_utf8_lossy(&access_point.ssid().await?).into_owned(),
+                        hw_address: wireless_device.hw_address().await?,
+                        flags: access_point.flags().await?,
+                        rsn_flags: access_point.rsn_flags().await?,
+                        wpa_flags: access_point.wpa_flags().await?,
+                    });
+                }
+                Some(SpecificDevice::WireGuard(_)) => {
+                    let mut ip_addresses = Vec::new();
+                    for address_data in connection.ip4_config().await?.address_data().await? {
+                        ip_addresses.push(IpAddr::V4(address_data.address));
+                    }
+                    for address_data in connection.ip6_config().await?.address_data().await? {
+                        ip_addresses.push(IpAddr::V6(address_data.address));
+                    }
+                    info.push(ActiveConnectionInfo::Vpn {
+                        name: connection.id().await?,
+                        ip_addresses,
+                    });
+                }
+                _ => {}
             }
         }
-        tx.send(info)
-            .expect("failed to send active connections back to main thread");
-        tokio::time::sleep(std::time::Duration::from_secs(5)).await;
     }
+    tx.send(info)
+        .expect("failed to send active connections back to main thread");
+    Ok(())
 }
 
 enum ActiveConnectionInfo {
