@@ -219,6 +219,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "cosmic-applet-graphics"
+version = "0.1.0"
+dependencies = [
+ "gtk4",
+ "once_cell",
+ "relm4-macros",
+ "tokio",
+ "zbus",
+]
+
+[[package]]
 name = "cosmic-applet-network"
 version = "0.1.0"
 dependencies = [
