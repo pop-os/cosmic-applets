@@ -5,6 +5,7 @@ extern crate relm4_macros;
 
 pub mod dbus;
 pub mod graphics;
+pub mod mode_box;
 pub mod profile;
 
 use gtk4::{gio::ApplicationFlags, prelude::*, Orientation};
@@ -22,6 +23,18 @@ fn main() {
     application.run();
 }
 
+async fn get_current_graphics() -> zbus::Result<graphics::Graphics> {
+    let connection = zbus::Connection::system().await?;
+    let proxy = dbus::PowerDaemonProxy::new(&connection).await?;
+    graphics::get_current_graphics(&proxy).await
+}
+
+async fn set_graphics(graphics_mode: graphics::Graphics) -> zbus::Result<()> {
+    let connection = zbus::Connection::system().await?;
+    let proxy = dbus::PowerDaemonProxy::new(&connection).await?;
+    graphics::set_graphics(&proxy, graphics_mode).await
+}
+
 fn build_ui(application: &gtk4::Application) {
     let window = gtk4::ApplicationWindow::builder()
         .application(application)
@@ -29,7 +42,9 @@ fn build_ui(application: &gtk4::Application) {
         .default_width(400)
         .default_height(300)
         .build();
-
+    let current_graphics = RT
+        .block_on(get_current_graphics())
+        .expect("failed to connect to system76-power");
     view! {
         main_box = gtk4::Box {
             set_orientation: Orientation::Vertical,
@@ -37,7 +52,13 @@ fn build_ui(application: &gtk4::Application) {
             set_margin_top: 20,
             set_margin_bottom: 20,
             set_margin_start: 24,
-            set_margin_end: 24
+            set_margin_end: 24,
+            append: mode_label = &gtk4::Label {
+                set_text: "Graphics Mode"
+            },
+            append: separator = &gtk4::Separator {
+                set_orientation: Orientation::Horizontal
+            }
         }
     }
 
