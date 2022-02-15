@@ -20,7 +20,11 @@
 
 use zbus::dbus_proxy;
 
-#[dbus_proxy(interface = "com.system76.PowerDaemon")]
+#[dbus_proxy(
+    interface = "com.system76.PowerDaemon",
+    default_service = "com.system76.PowerDaemon",
+    default_path = "/com/system76/PowerDaemon"
+)]
 trait PowerDaemon {
     /// Balanced method
     fn balanced(&self) -> zbus::Result<()>;

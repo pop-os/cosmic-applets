@@ -2,10 +2,11 @@
 use crate::dbus::PowerDaemonProxy;
 use zbus::Result;
 
+#[derive(PartialEq, Eq)]
 pub enum Graphics {
     Integrated,
     Hybrid,
-    External,
+    Nvidia,
     Compute,
 }
 
@@ -14,7 +15,7 @@ pub async fn get_current_graphics(daemon: &PowerDaemonProxy<'_>) -> Result<Graph
     match graphics.as_str() {
         "integrated" => Ok(Graphics::Integrated),
         "hybrid" => Ok(Graphics::Hybrid),
-        "external" => Ok(Graphics::External),
+        "nvidia" => Ok(Graphics::Nvidia),
         "compute" => Ok(Graphics::Compute),
         _ => panic!("Unknown graphics profile: {}", graphics),
     }
@@ -25,7 +26,7 @@ pub async fn get_default_graphics(daemon: &PowerDaemonProxy<'_>) -> Result<Graph
     match graphics.as_str() {
         "integrated" => Ok(Graphics::Integrated),
         "hybrid" => Ok(Graphics::Hybrid),
-        "external" => Ok(Graphics::External),
+        "nvidia" => Ok(Graphics::Nvidia),
         "compute" => Ok(Graphics::Compute),
         _ => panic!("Unknown graphics profile: {}", graphics),
     }
@@ -35,7 +36,7 @@ pub async fn set_graphics(daemon: &PowerDaemonProxy<'_>, graphics: Graphics) -> 
     let graphics_str = match graphics {
         Graphics::Integrated => "integrated",
         Graphics::Hybrid => "hybrid",
-        Graphics::External => "external",
+        Graphics::Nvidia => "nvidia",
         Graphics::Compute => "compute",
     };
     daemon.set_graphics(graphics_str).await

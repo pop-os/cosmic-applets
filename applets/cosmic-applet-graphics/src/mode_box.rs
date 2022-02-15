@@ -36,12 +36,18 @@ impl ModeSelection {
         self.inner().check.set_active(setting)
     }
 
-    pub fn set_group(&self, group: Option<&impl IsA<CheckButton>>) {
-        self.inner().check.set_group(group)
+    pub fn set_group(&self, group: Option<&ModeSelection>) {
+        self.inner()
+            .check
+            .set_group(group.map(|x| &x.inner().check))
     }
 
     pub fn connect_toggled<F: Fn(&CheckButton) + 'static>(&self, f: F) {
         self.inner().check.connect_toggled(f);
+    }
+
+    pub fn emit_activate(&self) {
+        self.inner().check.emit_activate();
     }
 
     fn inner(&self) -> &ModeSelectionImp {
@@ -92,12 +98,14 @@ impl ObjectImpl for ModeSelectionImp {
         self.description.hide();
 
         self.label_box.set_orientation(Orientation::Vertical);
+        self.label_box.set_hexpand(true);
         self.label_box.append(&self.label);
         self.label_box.append(&self.description);
 
         self.inner_box.set_orientation(Orientation::Horizontal);
         self.inner_box.append(&self.label_box);
         self.inner_box.append(&self.check);
+        self.inner_box.set_parent(obj);
     }
 
     fn dispose(&self, _obj: &Self::Type) {
