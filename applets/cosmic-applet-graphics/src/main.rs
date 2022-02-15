@@ -4,6 +4,8 @@
 extern crate relm4_macros;
 
 pub mod dbus;
+pub mod profile;
+
 use gtk4::{gio::ApplicationFlags, prelude::*, Orientation};
 use once_cell::sync::Lazy;
 use tokio::runtime::Runtime;
