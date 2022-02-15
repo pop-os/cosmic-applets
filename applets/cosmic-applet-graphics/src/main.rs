@@ -4,6 +4,7 @@
 extern crate relm4_macros;
 
 pub mod dbus;
+pub mod graphics;
 pub mod profile;
 
 use gtk4::{gio::ApplicationFlags, prelude::*, Orientation};
