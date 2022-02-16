@@ -8,7 +8,6 @@ extern crate relm4_macros;
 pub mod dbus;
 pub mod graphics;
 pub mod mode_box;
-pub mod profile;
 
 use self::{dbus::PowerDaemonProxy, graphics::Graphics, mode_box::ModeSelection};
 use gtk4::{

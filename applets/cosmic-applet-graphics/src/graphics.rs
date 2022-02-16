@@ -21,17 +21,6 @@ pub async fn get_current_graphics(daemon: &PowerDaemonProxy<'_>) -> Result<Graph
     }
 }
 
-pub async fn get_default_graphics(daemon: &PowerDaemonProxy<'_>) -> Result<Graphics> {
-    let graphics = daemon.get_default_graphics().await?;
-    match graphics.as_str() {
-        "integrated" => Ok(Graphics::Integrated),
-        "hybrid" => Ok(Graphics::Hybrid),
-        "nvidia" => Ok(Graphics::Nvidia),
-        "compute" => Ok(Graphics::Compute),
-        _ => panic!("Unknown graphics profile: {}", graphics),
-    }
-}
-
 pub async fn set_graphics(daemon: &PowerDaemonProxy<'_>, graphics: Graphics) -> Result<()> {
     let graphics_str = match graphics {
         Graphics::Integrated => "integrated",
