@@ -3,6 +3,8 @@
 #[macro_use]
 extern crate relm4_macros;
 
+pub mod ui;
+
 use gtk4::{gio::ApplicationFlags, prelude::*, Orientation, Separator};
 use once_cell::sync::Lazy;
 use tokio::runtime::Runtime;
@@ -26,6 +28,7 @@ fn build_ui(application: &gtk4::Application) {
         .default_height(300)
         .build();
 
+    let system_section = ui::system::build();
     view! {
         main_box = gtk4::Box {
             set_orientation: Orientation::Vertical,
@@ -33,7 +36,10 @@ fn build_ui(application: &gtk4::Application) {
             set_margin_top: 20,
             set_margin_bottom: 20,
             set_margin_start: 24,
-            set_margin_end: 24
+            set_margin_end: 24,
+            append: first_separator = &Separator {},
+            append: second_separator = &Separator {},
+            append: &system_section
         }
     }
     window.set_child(Some(&main_box));
