@@ -245,6 +245,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "cosmic-applet-power"
+version = "0.1.0"
+dependencies = [
+ "futures-util",
+ "gtk4",
+ "logind-zbus",
+ "once_cell",
+ "relm4-macros",
+ "tokio",
+ "zbus",
+]
+
+[[package]]
 name = "cosmic-dbus-networkmanager"
 version = "0.1.0"
 source = "git+https://github.com/pop-os/dbus-settings-bindings#4f28c3c02be771a542df4a10a00f51a409010fe4"
@@ -937,6 +950,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "51b9bbe6c47d51fc3e1a9b945965946b4c44142ab8792c50835a980d362c2710"
 dependencies = [
  "cfg-if",
+]
+
+[[package]]
+name = "logind-zbus"
+version = "3.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c03958f20018a20963daf0c16ada4f271ae2da3e0017fb40caa8b0e3dc5b0226"
+dependencies = [
+ "serde",
+ "zbus",
+ "zvariant",
 ]
 
 [[package]]
