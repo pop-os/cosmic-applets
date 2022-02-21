@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
 use crate::RT;
-use gtk4::{prelude::*, Align, Button, IconSize, Image, Label, Orientation};
+use gtk4::{prelude::*, Button, IconSize, Image, Label, Orientation};
 use logind_zbus::manager::ManagerProxy;
 use zbus::Connection;
 

@@ -28,6 +28,7 @@ fn build_ui(application: &gtk4::Application) {
         .default_height(300)
         .build();
 
+    let session_section = ui::session::build();
     let system_section = ui::system::build();
     view! {
         main_box = gtk4::Box {
@@ -38,6 +39,7 @@ fn build_ui(application: &gtk4::Application) {
             set_margin_start: 24,
             set_margin_end: 24,
             append: first_separator = &Separator {},
+            append: &session_section,
             append: second_separator = &Separator {},
             append: &system_section
         }
