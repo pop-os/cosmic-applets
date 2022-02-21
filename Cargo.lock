@@ -251,6 +251,7 @@ dependencies = [
  "futures-util",
  "gtk4",
  "logind-zbus",
+ "nix 0.23.1",
  "once_cell",
  "relm4-macros",
  "tokio",
