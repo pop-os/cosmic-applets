@@ -3,6 +3,7 @@
 #[macro_use]
 extern crate relm4_macros;
 
+pub mod session_manager;
 pub mod ui;
 
 use gtk4::{gio::ApplicationFlags, prelude::*, Orientation, Separator};

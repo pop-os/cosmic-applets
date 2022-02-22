@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
-use crate::RT;
+use crate::{session_manager::SessionManagerProxy, RT};
 use gtk4::{prelude::*, Align, Button, Image, Label, Orientation};
 use logind_zbus::{
     manager::ManagerProxy,
@@ -35,10 +35,9 @@ async fn lock_screen() -> zbus::Result<()> {
 }
 
 async fn log_out() -> zbus::Result<()> {
-    let connection = Connection::system().await?;
-    let manager_proxy = ManagerProxy::new(&connection).await?;
-    // TODO: figure out what function logs the current user out
-    manager_proxy.lock_sessions().await
+    let connection = Connection::session().await?;
+    let manager_proxy = SessionManagerProxy::new(&connection).await?;
+    manager_proxy.logout(0).await
 }
 
 pub fn build() -> gtk4::Box {
