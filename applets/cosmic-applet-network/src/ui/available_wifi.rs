@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
-use crate::{task, widgets::SettingsEntry};
+use crate::task;
 use cosmic_dbus_networkmanager::{
     device::{wireless::WirelessDevice, SpecificDevice},
     nm::NetworkManager,
@@ -11,6 +11,7 @@ use gtk4::{
     prelude::*,
     Align, Image, ListBox, ListBoxRow, Separator,
 };
+use libcosmic_widgets::LabeledItem;
 use std::{cell::RefCell, rc::Rc};
 use zbus::Connection;
 
@@ -44,16 +45,9 @@ fn build_aps_list(
         target.remove(&old_ap_box);
     }
     for ap in aps {
-        view! {
-            ap_entry = SettingsEntry {
-                set_title: &ap.ssid,
-                set_child: ap_icon = &Image {
-                    set_icon_name: Some("network-wireless-symbolic"),
-                }
-            }
-        }
-        ap_entry.align_child(Align::Start); // view! seems to reorder everything in alphabetical order, but align_child must always come after set_child
-        let entry = ListBoxRow::builder().child(&ap_entry).build();
+        let entry_box = gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
+        let labeled_item = LabeledItem::new().attach_to(&entry_box).launch(()).detach();
+        let entry = ListBoxRow::builder().child(&entry_box).build();
         target.append(&entry);
         ap_entries.push(entry);
     }
