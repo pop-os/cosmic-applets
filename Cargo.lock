@@ -983,7 +983,7 @@ dependencies = [
 [[package]]
 name = "libcosmic-widgets"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic?branch=lucy/widgets#6f7d0fad8009b716197c16459492efbd69cf25b6"
+source = "git+https://github.com/pop-os/libcosmic?branch=lucy/widgets#feee2bacc313dd15768129de5baabb3aece0e8ec"
 dependencies = [
  "gtk4",
  "relm4",
@@ -1434,7 +1434,7 @@ checksum = "f497285884f3fcff424ffc933e56d7cbca511def0c9831a7f9b5f6153e3cc89b"
 [[package]]
 name = "relm4"
 version = "0.4.1"
-source = "git+https://github.com/AaronErhardt/relm4?branch=new-approach#f5b777ff9530f1dffe3c48614e9a855264c779ec"
+source = "git+https://github.com/AaronErhardt/relm4?branch=new-approach#ca2817bec39b0e7720cee4c653c7366484ca0586"
 dependencies = [
  "async-broadcast",
  "async-oneshot",
@@ -1450,7 +1450,7 @@ dependencies = [
 [[package]]
 name = "relm4-macros"
 version = "0.4.1"
-source = "git+https://github.com/AaronErhardt/relm4?branch=new-approach#f5b777ff9530f1dffe3c48614e9a855264c779ec"
+source = "git+https://github.com/AaronErhardt/relm4?branch=new-approach#ca2817bec39b0e7720cee4c653c7366484ca0586"
 dependencies = [
  "proc-macro2",
  "quote",

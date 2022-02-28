@@ -9,9 +9,9 @@ use futures_util::StreamExt;
 use gtk4::{
     glib::{self, clone, source::PRIORITY_DEFAULT, MainContext, Sender},
     prelude::*,
-    Align, Image, ListBox, ListBoxRow, Separator,
+    Image, ListBox, ListBoxRow, Separator,
 };
-use libcosmic_widgets::LabeledItem;
+use libcosmic_widgets::{relm4::RelmContainerExt, LabeledItem};
 use std::{cell::RefCell, rc::Rc};
 use zbus::Connection;
 
@@ -45,9 +45,18 @@ fn build_aps_list(
         target.remove(&old_ap_box);
     }
     for ap in aps {
-        let entry_box = gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
-        let labeled_item = LabeledItem::new().attach_to(&entry_box).launch(()).detach();
-        let entry = ListBoxRow::builder().child(&entry_box).build();
+        view! {
+            entry = ListBoxRow {
+                set_child: entry_box = Some(&gtk4::Box) {
+                    container_add: labeled_item = &LabeledItem {
+                        set_title: &ap.ssid,
+                        set_child: icon = &Image {
+                            set_icon_name: Some("network-wireless-symbolic")
+                        }
+                    }
+                }
+            }
+        }
         target.append(&entry);
         ap_entries.push(entry);
     }

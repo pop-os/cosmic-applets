@@ -56,7 +56,7 @@ fn display_active_connections(
                 flags,
                 rsn_flags,
                 wpa_flags,
-            } => todo!(),
+            } => continue,
             ActiveConnectionInfo::Vpn { name, ip_addresses } => render_vpn(name, ip_addresses),
         };
         let entry = ListBoxRow::builder().child(&entry).build();
