@@ -3,6 +3,8 @@
 #[macro_use]
 extern crate relm4;
 
+mod app;
+
 use once_cell::sync::Lazy;
 use tokio::runtime::Runtime;
 
