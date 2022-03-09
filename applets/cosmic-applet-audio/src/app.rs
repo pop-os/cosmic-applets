@@ -1,6 +1,6 @@
 use gtk4::{
-    prelude::*, Box as GtkBox, Image, ListBox, Orientation, PositionType, Revealer,
-    RevealerTransitionType, Scale, Separator, Window,
+    prelude::*, Box as GtkBox, Image, ListBox, Orientation, PositionType, RevealerTransitionType,
+    Scale, Separator, Stack, Window,
 };
 use libcosmic_widgets::LabeledItem;
 use pulsectl::controllers::types::DeviceInfo;
@@ -15,6 +15,7 @@ pub struct App {
 }
 
 pub struct Widgets {
+    output_stack: Stack,
     inputs: ListBox,
     outputs: ListBox,
 }
@@ -83,8 +84,16 @@ impl Component for App {
                 append: _sep = &Separator {
                     set_orientation: Orientation::Horizontal,
                 },
-                append: output_revealer = &Revealer {
-                    set_transition_type: RevealerTransitionType::SlideLeft
+                append: output_stack = &Stack {
+                    add_child: current_output = &Label {
+                        set_text: watch! { model.name.unwrap_or_else(|| "Output Device".into()) }
+                    },
+                    add_child: list_outputs = &GtkBox {
+                        append: outputs = &ListBox {
+                            set_selection_mode: gtk4::SelectionMode::None,
+                            set_activate_on_single_click: true,
+                        },
+                    }
                 }
             }
         }
