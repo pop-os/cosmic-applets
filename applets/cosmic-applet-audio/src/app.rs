@@ -1,17 +1,18 @@
 use gtk4::{
-    prelude::*, Box as GtkBox, Image, Label, ListBox, Orientation, PositionType,
-    RevealerTransitionType, Scale, Separator, Stack, Window,
+    glib::{self, clone},
+    prelude::*,
+    Box as GtkBox, Button, Image, Label, ListBox, Orientation, PositionType, Scale, Separator,
+    Stack, Window,
 };
 use libcosmic_widgets::LabeledItem;
 use libpulse_binding::volume::Volume;
 use pulsectl::controllers::{types::DeviceInfo, DeviceControl, SinkController, SourceController};
 use relm4::{Component, ComponentParts, Sender};
+use std::rc::Rc;
 
 pub struct App {
-    input_controller: SourceController,
     default_input: Option<DeviceInfo>,
     inputs: Vec<DeviceInfo>,
-    output_controller: SinkController,
     default_output: Option<DeviceInfo>,
     outputs: Vec<DeviceInfo>,
 }
@@ -27,10 +28,8 @@ impl Default for App {
         let default_output = output_controller.get_default_device().ok();
         let outputs = output_controller.list_devices().unwrap_or_default();
         Self {
-            input_controller,
             default_input,
             inputs,
-            output_controller,
             default_output,
             outputs,
         }
@@ -67,15 +66,47 @@ pub struct Widgets {
     outputs: ListBox,
 }
 
-pub enum Input {
-    Compute,
-}
+pub enum Input {}
 
 pub enum Output {}
 
 pub enum Command {}
 
 pub enum CmdOut {}
+
+impl App {
+    pub fn update_outputs(&self, widgets: &mut Widgets) {
+        let mut output_controller =
+            SinkController::create().expect("failed to create output controller");
+        let outputs = output_controller.list_devices().unwrap_or_default();
+        while let Some(row) = widgets.outputs.row_at_index(1) {
+            widgets.outputs.remove(&row);
+        }
+        for output in outputs {
+            let output = Rc::new(output);
+            view! {
+                item = LabeledItem {
+                    set_title: output.description
+                        .as_ref()
+                        .or_else(|| output.name.as_ref())
+                        .cloned()
+                        .unwrap_or_else(|| "Unknown".to_string()),
+                    set_child: set_current_output_device = &Button {
+                        set_label: "Switch",
+                        connect_clicked: clone!(@strong output, => move |_| {
+                            if let Some(name) = &output.name {
+                                SinkController::create()
+                                    .expect("failed to create output controller")
+                                    .set_default_device(name)
+                                    .expect("failed to set default device");
+                            }
+                        })
+                    }
+                }
+            }
+        }
+    }
+}
 
 impl Component for App {
     type Command = Command;
@@ -130,7 +161,10 @@ impl Component for App {
                         set_format_value_func: |_, value| {
                             format!("{:.0}%", value)
                         },
-                        set_value: model.default_input.as_ref().map(|info| (info.volume.avg().0 as f64 / Volume::NORMAL.0 as f64) * 100.).unwrap_or(0.),
+                        set_value: model.default_input
+                            .as_ref()
+                            .map(|info| (info.volume.avg().0 as f64 / Volume::NORMAL.0 as f64) * 100.)
+                            .unwrap_or(0.),
                         set_value_pos: PositionType::Right,
                         set_hexpand: true
                     }
@@ -139,30 +173,34 @@ impl Component for App {
                     set_orientation: Orientation::Horizontal,
                 },
                 append: output_stack = &Stack {
-                    add_child: current_output = &Label {
-                        set_text: watch! { model.get_default_output_name() }
-                    },
                     add_child: outputs = &ListBox {
                         set_selection_mode: gtk4::SelectionMode::None,
                         set_activate_on_single_click: true
+                    },
+                    add_child: open_outputs_button = &Button {
+                        set_child: current_output = Some(&Label) {
+                            set_text: watch! { model.get_default_output_name() }
+                        },
                     }
                 },
                 append: _sep = &Separator {
                     set_orientation: Orientation::Horizontal,
                 },
                 append: input_stack = &Stack {
-                    add_child: current_input = &Label {
-                        set_text: watch! { model.get_default_input_name() }
-                    },
                     add_child: inputs = &ListBox {
                         set_selection_mode: gtk4::SelectionMode::None,
                         set_activate_on_single_click: true
+                    },
+                    add_child: open_inputs_button = &Button {
+                        set_child: current_input = Some(&Label) {
+                            set_text: watch! { model.get_default_input_name() }
+                        }
                     }
                 }
             }
         }
-        output_stack.set_visible_child(&current_output);
-        input_stack.set_visible_child(&current_input);
+        output_stack.set_visible_child(&open_outputs_button);
+        input_stack.set_visible_child(&open_inputs_button);
         root.set_child(Some(&container));
         ComponentParts {
             model,
