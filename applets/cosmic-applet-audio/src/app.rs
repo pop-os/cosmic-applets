@@ -7,7 +7,9 @@ use gtk4::{
 use libcosmic_widgets::LabeledItem;
 use libpulse_binding::volume::Volume;
 use pulsectl::controllers::{types::DeviceInfo, DeviceControl, SinkController, SourceController};
-use relm4::{component, Component, ComponentParts, Sender, SimpleComponent};
+use relm4::{
+    component, view, Component, ComponentParts, RelmContainerExt, Sender, SimpleComponent,
+};
 use std::rc::Rc;
 
 pub struct App {
@@ -58,10 +60,46 @@ impl App {
     }
 }
 
-pub enum Input {}
+pub enum Input {
+    UpdateInputs,
+    UpdateOutputs,
+}
 
 impl App {
-    pub fn update_outputs(&self, widgets: &mut AppWidgets) {
+    pub fn update_inputs(&self, widgets: &AppWidgets) {
+        let mut input_controller =
+            SourceController::create().expect("failed to create input controller");
+        let inputs = input_controller.list_devices().unwrap_or_default();
+        while let Some(row) = widgets.inputs.row_at_index(1) {
+            widgets.inputs.remove(&row);
+        }
+        for input in inputs {
+            let input = Rc::new(input);
+            view! {
+                item = LabeledItem {
+                    set_title: input.description
+                        .as_ref()
+                        .or_else(|| input.name.as_ref())
+                        .cloned()
+                        .unwrap_or_else(|| "Unknown".to_string()),
+                    set_child: set_current_input_device = &Button {
+                        set_label: "Switch",
+                        connect_clicked: clone!(@strong input, => move |_| {
+                            if let Some(name) = &input.name {
+                                SourceController::create()
+                                    .expect("failed to create input controller")
+                                    .set_default_device(name)
+                                    .expect("failed to set default device");
+                            }
+                        })
+                    }
+                }
+            }
+            widgets.inputs.container_add(&item);
+        }
+    }
+
+    pub fn update_outputs(&self, widgets: &AppWidgets) {
         let mut output_controller =
             SinkController::create().expect("failed to create output controller");
         let outputs = output_controller.list_devices().unwrap_or_default();
@@ -90,6 +128,7 @@ impl App {
                     }
                 }
             }
+            widgets.outputs.container_add(&item);
         }
     }
 }
@@ -120,7 +159,7 @@ impl SimpleComponent for App {
                         set_format_value_func: |_, value| {
                             format!("{:.0}%", value)
                         },
-                        set_value: model.default_output.as_ref().map(|info| dbg!((info.volume.avg().0 as f64 / Volume::NORMAL.0 as f64) * 100.)).unwrap_or(0.),
+                        set_value: model.default_output.as_ref().map(|info| (info.volume.avg().0 as f64 / Volume::NORMAL.0 as f64) * 100.).unwrap_or(0.),
                         set_value_pos: PositionType::Right,
                         set_hexpand: true
                     }
@@ -191,5 +230,30 @@ impl SimpleComponent for App {
             .set_visible_child(&widgets.open_inputs_button);
 
         ComponentParts { model, widgets }
+    }
+
+    fn update(
+        &mut self,
+        msg: Self::Input,
+        _input: &Sender<Self::Input>,
+        _ouput: &Sender<Self::Output>,
+    ) {
+        match msg {
+            Input::UpdateOutputs => {
+                self.outputs.clear();
+            }
+            Input::UpdateInputs => {
+                self.inputs.clear();
+            }
+        }
+    }
+
+    fn pre_view() {
+        if self.outputs.is_empty() {
+            model.update_outputs(widgets);
+        }
+        if self.inputs.is_empty() {
+            model.update_inputs(widgets);
+        }
     }
 }
