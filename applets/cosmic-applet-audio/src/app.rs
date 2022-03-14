@@ -7,7 +7,7 @@ use gtk4::{
 use libcosmic_widgets::LabeledItem;
 use libpulse_binding::volume::Volume;
 use pulsectl::controllers::{types::DeviceInfo, DeviceControl, SinkController, SourceController};
-use relm4::{Component, ComponentParts, Sender};
+use relm4::{component, Component, ComponentParts, Sender, SimpleComponent};
 use std::rc::Rc;
 
 pub struct App {
@@ -58,24 +58,10 @@ impl App {
     }
 }
 
-pub struct Widgets {
-    output_stack: Stack,
-    current_input: Label,
-    current_output: Label,
-    inputs: ListBox,
-    outputs: ListBox,
-}
-
 pub enum Input {}
 
-pub enum Output {}
-
-pub enum Command {}
-
-pub enum CmdOut {}
-
 impl App {
-    pub fn update_outputs(&self, widgets: &mut Widgets) {
+    pub fn update_outputs(&self, widgets: &mut AppWidgets) {
         let mut output_controller =
             SinkController::create().expect("failed to create output controller");
         let outputs = output_controller.list_devices().unwrap_or_default();
@@ -108,38 +94,26 @@ impl App {
     }
 }
 
-impl Component for App {
-    type Command = Command;
-    type CommandOutput = CmdOut;
-    type Input = Input;
-    type Output = Output;
+#[component(pub)]
+impl SimpleComponent for App {
+    type Widgets = AppWidgets;
     type InitParams = ();
-    type Root = Window;
-    type Widgets = Widgets;
+    type Input = Input;
+    type Output = ();
 
-    fn init_root() -> Self::Root {
-        Window::builder()
-            .title("COSMIC Network Applet")
-            .default_width(400)
-            .default_height(300)
-            .build()
-    }
+    view! {
+        Window {
+            set_title: Some("COSMIC Network Applet"),
+            set_default_width: 400,
+            set_default_height: 300,
 
-    fn init_parts(
-        _args: Self::InitParams,
-        root: &Self::Root,
-        _input: &Sender<Self::Input>,
-        _output: &Sender<Self::Output>,
-    ) -> ComponentParts<Self> {
-        let model = App::default();
-        view! {
-            container = GtkBox {
+            &GtkBox {
                 set_orientation: Orientation::Vertical,
                 set_spacing: 24,
-                append: output_box = &GtkBox {
+                &GtkBox {
                     set_orientation: Orientation::Horizontal,
                     set_spacing: 16,
-                    append: output_icon = &Image {
+                    &Image {
                         set_icon_name: Some("audio-speakers-symbolic"),
                     },
                     append: output_volume = &Scale::with_range(Orientation::Horizontal, 0., 100., 1.) {
@@ -151,10 +125,10 @@ impl Component for App {
                         set_hexpand: true
                     }
                 },
-                append: input_box = &GtkBox {
+                &GtkBox {
                     set_orientation: Orientation::Horizontal,
                     set_spacing: 16,
-                    append: input_icon = &Image {
+                    &Image {
                         set_icon_name: Some("audio-input-microphone-symbolic"),
                     },
                     append: input_volume = &Scale::with_range(Orientation::Horizontal, 0., 100., 1.) {
@@ -169,7 +143,7 @@ impl Component for App {
                         set_hexpand: true
                     }
                 },
-                append: _sep = &Separator {
+                &Separator {
                     set_orientation: Orientation::Horizontal,
                 },
                 append: output_stack = &Stack {
@@ -183,7 +157,7 @@ impl Component for App {
                         },
                     }
                 },
-                append: _sep = &Separator {
+                &Separator {
                     set_orientation: Orientation::Horizontal,
                 },
                 append: input_stack = &Stack {
@@ -199,18 +173,23 @@ impl Component for App {
                 }
             }
         }
-        output_stack.set_visible_child(&open_outputs_button);
-        input_stack.set_visible_child(&open_inputs_button);
-        root.set_child(Some(&container));
-        ComponentParts {
-            model,
-            widgets: Widgets {
-                output_stack,
-                inputs,
-                outputs,
-                current_input,
-                current_output,
-            },
-        }
+    }
+
+    fn init_parts(
+        _init_params: Self::InitParams,
+        root: &Self::Root,
+        _input: &Sender<Self::Input>,
+        _output: &Sender<Self::Output>,
+    ) -> ComponentParts<Self> {
+        let model = App::default();
+        let widgets = view_output!();
+        widgets
+            .output_stack
+            .set_visible_child(&widgets.open_outputs_button);
+        widgets
+            .input_stack
+            .set_visible_child(&widgets.open_inputs_button);
+
+        ComponentParts { model, widgets }
     }
 }
