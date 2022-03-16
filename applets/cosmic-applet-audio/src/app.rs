@@ -1,8 +1,6 @@
 use gtk4::{
-    glib::{self, clone},
-    prelude::*,
-    Box as GtkBox, Button, Image, Label, ListBox, Orientation, PositionType, Scale, Separator,
-    Stack, Window,
+    glib::clone, prelude::*, Box as GtkBox, Button, Image, Label, ListBox, Orientation,
+    PositionType, Revealer, RevealerTransitionType, Scale, Separator, Window,
 };
 use libcosmic_widgets::LabeledItem;
 use libpulse_binding::volume::Volume;
@@ -185,36 +183,44 @@ impl SimpleComponent for App {
                 &Separator {
                     set_orientation: Orientation::Horizontal,
                 },
-                append: output_stack = &Stack {
-                    add_child: outputs = &ListBox {
-                        set_selection_mode: gtk4::SelectionMode::None,
-                        set_activate_on_single_click: true
-                    },
-                    add_child: open_outputs_button = &Button {
+                &GtkBox {
+                    set_orientation: Orientation::Vertical,
+                    &Button {
                         set_child: current_output = Some(&Label) {
                             set_text: watch! { model.get_default_output_name() }
                         },
-                        connect_clicked(input, output_stack, outputs) => move |_| {
+                        connect_clicked(input, outputs_revealer) => move |_| {
                             send!(input, Input::UpdateOutputs);
-                            output_stack.set_visible_child(&outputs);
+                            outputs_revealer.set_reveal_child(!outputs_revealer.reveals_child());
+                        }
+                    },
+                    append: outputs_revealer = &Revealer {
+                        set_transition_type: RevealerTransitionType::SlideDown,
+                        set_child: outputs = Some(&ListBox) {
+                            set_selection_mode: gtk4::SelectionMode::None,
+                            set_activate_on_single_click: true
                         }
                     }
                 },
                 &Separator {
                     set_orientation: Orientation::Horizontal,
                 },
-                append: input_stack = &Stack {
-                    add_child: inputs = &ListBox {
-                        set_selection_mode: gtk4::SelectionMode::None,
-                        set_activate_on_single_click: true
-                    },
-                    add_child: open_inputs_button = &Button {
+                &GtkBox {
+                    set_orientation: Orientation::Vertical,
+                    &Button {
                         set_child: current_input = Some(&Label) {
                             set_text: watch! { model.get_default_input_name() }
                         },
-                        connect_clicked(input, input_stack, inputs) => move |_| {
+                        connect_clicked(input, inputs_revealer) => move |_| {
                             send!(input, Input::UpdateInputs);
-                            input_stack.set_visible_child(&inputs);
+                            inputs_revealer.set_reveal_child(!inputs_revealer.reveals_child());
+                        }
+                    },
+                    append: inputs_revealer = &Revealer {
+                        set_transition_type: RevealerTransitionType::SlideDown,
+                        set_child: inputs = Some(&ListBox) {
+                            set_selection_mode: gtk4::SelectionMode::None,
+                            set_activate_on_single_click: true
                         }
                     }
                 }
@@ -230,12 +236,6 @@ impl SimpleComponent for App {
     ) -> ComponentParts<Self> {
         let model = App::default();
         let widgets = view_output!();
-        widgets
-            .output_stack
-            .set_visible_child(&widgets.open_outputs_button);
-        widgets
-            .input_stack
-            .set_visible_child(&widgets.open_inputs_button);
 
         ComponentParts { model, widgets }
     }
