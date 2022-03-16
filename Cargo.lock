@@ -241,10 +241,8 @@ dependencies = [
  "gtk4",
  "libcosmic-widgets",
  "libpulse-binding",
- "once_cell",
  "pulsectl-rs",
  "relm4",
- "tokio",
 ]
 
 [[package]]

@@ -71,22 +71,22 @@ impl App {
         }
         for input in inputs {
             let input = Rc::new(input);
+            let name = match &input.name {
+                Some(name) => name.to_owned(),
+                None => continue, // Why doesn't this have a name? Whatever, it's invalid.
+            };
             view! {
                 item = LabeledItem {
                     set_title: input.description
                         .as_ref()
-                        .or_else(|| input.name.as_ref())
-                        .cloned()
-                        .unwrap_or_else(|| "Unknown".to_string()),
+                        .unwrap_or(&name),
                     set_child: set_current_input_device = &Button {
                         set_label: "Switch",
                         connect_clicked: clone!(@strong input, => move |_| {
-                            if let Some(name) = &input.name {
-                                SourceController::create()
-                                    .expect("failed to create input controller")
-                                    .set_default_device(name)
-                                    .expect("failed to set default device");
-                            }
+                            SourceController::create()
+                                .expect("failed to create input controller")
+                                .set_default_device(&name)
+                                .expect("failed to set default device");
                         })
                     }
                 }
@@ -104,22 +104,23 @@ impl App {
         }
         for output in outputs {
             let output = Rc::new(output);
+            let name = match &output.name {
+                Some(name) => name.to_owned(),
+                None => continue, // Why doesn't this have a name? Whatever, it's invalid.
+            };
             view! {
                 item = LabeledItem {
                     set_title: output.description
                         .as_ref()
-                        .or_else(|| output.name.as_ref())
-                        .cloned()
-                        .unwrap_or_else(|| "Unknown".to_string()),
+                        .unwrap_or(&name),
                     set_child: set_current_output_device = &Button {
                         set_label: "Switch",
                         connect_clicked: clone!(@strong output, => move |_| {
-                            if let Some(name) = &output.name {
-                                SinkController::create()
-                                    .expect("failed to create output controller")
-                                    .set_default_device(name)
-                                    .expect("failed to set default device");
-                            }
+                            SinkController::create()
+                                .expect("failed to create output controller")
+                                .set_default_device(&name)
+                                .expect("failed to set default device");
+
                         })
                     }
                 }
