@@ -70,7 +70,7 @@ impl App {
         let mut input_controller =
             SourceController::create().expect("failed to create input controller");
         let inputs = input_controller.list_devices().unwrap_or_default();
-        while let Some(row) = widgets.inputs.row_at_index(1) {
+        while let Some(row) = widgets.inputs.row_at_index(0) {
             widgets.inputs.remove(&row);
         }
         for input in inputs {
@@ -103,7 +103,7 @@ impl App {
         let mut output_controller =
             SinkController::create().expect("failed to create output controller");
         let outputs = output_controller.list_devices().unwrap_or_default();
-        while let Some(row) = widgets.outputs.row_at_index(1) {
+        while let Some(row) = widgets.outputs.row_at_index(0) {
             widgets.outputs.remove(&row);
         }
         for output in outputs {
@@ -194,6 +194,10 @@ impl SimpleComponent for App {
                         set_child: current_output = Some(&Label) {
                             set_text: watch! { model.get_default_output_name() }
                         },
+                        connect_clicked(input, output_stack, outputs) => move |_| {
+                            send!(input, Input::UpdateOutputs);
+                            output_stack.set_visible_child(&outputs);
+                        }
                     }
                 },
                 &Separator {
@@ -207,6 +211,10 @@ impl SimpleComponent for App {
                     add_child: open_inputs_button = &Button {
                         set_child: current_input = Some(&Label) {
                             set_text: watch! { model.get_default_input_name() }
+                        },
+                        connect_clicked(input, input_stack, inputs) => move |_| {
+                            send!(input, Input::UpdateInputs);
+                            input_stack.set_visible_child(&inputs);
                         }
                     }
                 }
@@ -217,7 +225,7 @@ impl SimpleComponent for App {
     fn init_parts(
         _init_params: Self::InitParams,
         root: &Self::Root,
-        _input: &Sender<Self::Input>,
+        input: &Sender<Self::Input>,
         _output: &Sender<Self::Output>,
     ) -> ComponentParts<Self> {
         let model = App::default();
