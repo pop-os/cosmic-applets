@@ -5,9 +5,7 @@ use gtk4::{
 use libcosmic_widgets::LabeledItem;
 use libpulse_binding::volume::Volume;
 use pulsectl::controllers::{types::DeviceInfo, DeviceControl, SinkController, SourceController};
-use relm4::{
-    component, view, Component, ComponentParts, RelmContainerExt, Sender, SimpleComponent,
-};
+use relm4::{component, view, ComponentParts, RelmContainerExt, Sender, SimpleComponent};
 use std::rc::Rc;
 
 pub struct App {
