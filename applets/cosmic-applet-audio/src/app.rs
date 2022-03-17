@@ -3,16 +3,30 @@ use gtk4::{
     RevealerTransitionType, Scale, Separator, Window,
 };
 use libcosmic_widgets::LabeledItem;
-use libpulse_binding::volume::Volume;
-use pulsectl::controllers::{types::DeviceInfo, DeviceControl, SinkController, SourceController};
+use libpulse_binding::{
+    context::subscribe::{Facility, InterestMaskSet, Operation},
+    volume::Volume,
+};
+use pulsectl::{
+    controllers::{types::DeviceInfo, DeviceControl, SinkController, SourceController},
+    Handler,
+};
 use relm4::{component, view, ComponentParts, RelmContainerExt, Sender, SimpleComponent};
 use std::rc::Rc;
+
+pub enum Input {
+    UpdateInputs,
+    UpdateOutputs,
+    UpdateInputVolume,
+    UpdateOutputVolume,
+}
 
 pub struct App {
     default_input: Option<DeviceInfo>,
     inputs: Vec<DeviceInfo>,
     default_output: Option<DeviceInfo>,
     outputs: Vec<DeviceInfo>,
+    handler: Handler,
 }
 
 impl Default for App {
@@ -25,17 +39,20 @@ impl Default for App {
             SinkController::create().expect("failed to create output controller");
         let default_output = output_controller.get_default_device().ok();
         let outputs = output_controller.list_devices().unwrap_or_default();
+        let handler = Handler::connect("com.system76.cosmic.applets.audio")
+            .expect("failed to connect to pulse");
         Self {
             default_input,
             inputs,
             default_output,
             outputs,
+            handler,
         }
     }
 }
 
 impl App {
-    pub fn get_default_input_name(&self) -> &str {
+    fn get_default_input_name(&self) -> &str {
         match &self.default_input {
             Some(input) => match &input.description {
                 Some(name) => name.as_str(),
@@ -45,7 +62,7 @@ impl App {
         }
     }
 
-    pub fn get_default_output_name(&self) -> &str {
+    fn get_default_output_name(&self) -> &str {
         match &self.default_output {
             Some(output) => match &output.description {
                 Some(name) => name.as_str(),
@@ -54,15 +71,55 @@ impl App {
             None => "No Output Device",
         }
     }
-}
 
-pub enum Input {
-    UpdateInputs,
-    UpdateOutputs,
-}
+    fn update_default_input(&mut self) {
+        let mut input_controller =
+            SourceController::create().expect("failed to create input controller");
+        self.default_input = match self.default_input.as_ref() {
+            Some(input) => match &input.name {
+                Some(name) => input_controller.get_device_by_name(name.as_str()).ok(),
+                None => input_controller.get_device_by_index(input.index).ok(),
+            },
+            None => return,
+        };
+    }
 
-impl App {
-    pub fn update_inputs(&self, widgets: &AppWidgets) {
+    fn update_default_output(&mut self) {
+        let mut output_controller =
+            SinkController::create().expect("failed to create output controller");
+        self.default_output = match self.default_output.as_ref() {
+            Some(output) => match &output.name {
+                Some(name) => output_controller.get_device_by_name(name.as_str()).ok(),
+                None => output_controller.get_device_by_index(output.index).ok(),
+            },
+            None => return,
+        };
+    }
+
+    fn subscribe_for_updates(&self, input: &Sender<Input>) {
+        let mut context = self.handler.context.borrow_mut();
+        let input = input.clone();
+        context.set_subscribe_callback(Some(Box::new(move |facility, operation, _idx| {
+            match dbg!(operation) {
+                Some(Operation::Changed) => {}
+                _ => return,
+            }
+            match dbg!(facility) {
+                Some(Facility::Sink | Facility::SinkInput) => {
+                    send!(input, Input::UpdateOutputVolume);
+                }
+                Some(Facility::Source | Facility::SourceOutput) => {
+                    send!(input, Input::UpdateInputVolume);
+                }
+                _ => {}
+            }
+        })));
+        context.subscribe(InterestMaskSet::all(), |success| {
+            println!("success: {}", success);
+        });
+    }
+
+    fn update_inputs(&self, widgets: &AppWidgets) {
         let mut input_controller =
             SourceController::create().expect("failed to create input controller");
         let inputs = input_controller.list_devices().unwrap_or_default();
@@ -95,7 +152,7 @@ impl App {
         }
     }
 
-    pub fn update_outputs(&self, widgets: &AppWidgets) {
+    fn update_outputs(&self, widgets: &AppWidgets) {
         let mut output_controller =
             SinkController::create().expect("failed to create output controller");
         let outputs = output_controller.list_devices().unwrap_or_default();
@@ -235,6 +292,7 @@ impl SimpleComponent for App {
     ) -> ComponentParts<Self> {
         let model = App::default();
         let widgets = view_output!();
+        model.subscribe_for_updates(input);
 
         ComponentParts { model, widgets }
     }
@@ -251,6 +309,12 @@ impl SimpleComponent for App {
             }
             Input::UpdateInputs => {
                 self.inputs.clear();
+            }
+            Input::UpdateInputVolume => {
+                self.update_default_input();
+            }
+            Input::UpdateOutputVolume => {
+                self.update_default_output();
             }
         }
     }
