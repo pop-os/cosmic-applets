@@ -1,6 +1,6 @@
 use gtk4::{
-    glib::clone, prelude::*, Box as GtkBox, Button, Image, Label, ListBox, Orientation,
-    PositionType, Revealer, RevealerTransitionType, Scale, Separator, Window,
+    prelude::*, Box as GtkBox, Button, Image, Label, ListBox, Orientation, PositionType, Revealer,
+    RevealerTransitionType, Scale, Separator, Window,
 };
 use libcosmic_widgets::LabeledItem;
 use libpulse_binding::volume::Volume;
@@ -82,12 +82,12 @@ impl App {
                         .unwrap_or(&name),
                     set_child: set_current_input_device = &Button {
                         set_label: "Switch",
-                        connect_clicked: clone!(@strong input, => move |_| {
+                        connect_clicked: move |_| {
                             SourceController::create()
                                 .expect("failed to create input controller")
                                 .set_default_device(&name)
                                 .expect("failed to set default device");
-                        })
+                        }
                     }
                 }
             }
@@ -115,13 +115,13 @@ impl App {
                         .unwrap_or(&name),
                     set_child: set_current_output_device = &Button {
                         set_label: "Switch",
-                        connect_clicked: clone!(@strong output, => move |_| {
+                        connect_clicked: move |_| {
                             SinkController::create()
                                 .expect("failed to create output controller")
                                 .set_default_device(&name)
                                 .expect("failed to set default device");
 
-                        })
+                        }
                     }
                 }
             }
