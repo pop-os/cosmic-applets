@@ -14,11 +14,11 @@ use pulsectl::{
 use relm4::{component, view, ComponentParts, RelmContainerExt, Sender, SimpleComponent};
 use std::rc::Rc;
 
-pub enum Input {
-    UpdateInputs,
-    UpdateOutputs,
-    UpdateInputVolume,
-    UpdateOutputVolume,
+pub enum AppInput {
+    Inputs,
+    Outputs,
+    InputVolume,
+    OutputVolume,
 }
 
 pub struct App {
@@ -96,7 +96,7 @@ impl App {
         };
     }
 
-    fn subscribe_for_updates(&self, input: &Sender<Input>) {
+    fn subscribe_for_updates(&self, input: &Sender<AppInput>) {
         let mut context = self.handler.context.borrow_mut();
         let input = input.clone();
         context.set_subscribe_callback(Some(Box::new(move |facility, operation, _idx| {
@@ -106,10 +106,10 @@ impl App {
             }
             match dbg!(facility) {
                 Some(Facility::Sink | Facility::SinkInput) => {
-                    send!(input, Input::UpdateOutputVolume);
+                    send!(input, AppInput::OutputVolume);
                 }
                 Some(Facility::Source | Facility::SourceOutput) => {
-                    send!(input, Input::UpdateInputVolume);
+                    send!(input, AppInput::InputVolume);
                 }
                 _ => {}
             }
@@ -191,7 +191,7 @@ impl App {
 impl SimpleComponent for App {
     type Widgets = AppWidgets;
     type InitParams = ();
-    type Input = Input;
+    type Input = AppInput;
     type Output = ();
 
     view! {
@@ -246,7 +246,7 @@ impl SimpleComponent for App {
                             set_text: watch! { model.get_default_output_name() }
                         },
                         connect_clicked(input, outputs_revealer) => move |_| {
-                            send!(input, Input::UpdateOutputs);
+                            send!(input, AppInput::Outputs);
                             outputs_revealer.set_reveal_child(!outputs_revealer.reveals_child());
                         }
                     },
@@ -268,7 +268,7 @@ impl SimpleComponent for App {
                             set_text: watch! { model.get_default_input_name() }
                         },
                         connect_clicked(input, inputs_revealer) => move |_| {
-                            send!(input, Input::UpdateInputs);
+                            send!(input, AppInput::Inputs);
                             inputs_revealer.set_reveal_child(!inputs_revealer.reveals_child());
                         }
                     },
@@ -304,16 +304,16 @@ impl SimpleComponent for App {
         _ouput: &Sender<Self::Output>,
     ) {
         match msg {
-            Input::UpdateOutputs => {
+            AppInput::Outputs => {
                 self.outputs.clear();
             }
-            Input::UpdateInputs => {
+            AppInput::Inputs => {
                 self.inputs.clear();
             }
-            Input::UpdateInputVolume => {
+            AppInput::InputVolume => {
                 self.update_default_input();
             }
-            Input::UpdateOutputVolume => {
+            AppInput::OutputVolume => {
                 self.update_default_output();
             }
         }
