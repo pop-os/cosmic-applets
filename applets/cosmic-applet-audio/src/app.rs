@@ -118,16 +118,16 @@ impl App {
                 return;
             }
             match facility {
-                Some(Facility::Sink | Facility::SinkInput) => {
+                Some(Facility::Sink) => {
                     send!(input, AppInput::OutputVolume);
                 }
-                Some(Facility::Source | Facility::SourceOutput) => {
+                Some(Facility::Source) => {
                     send!(input, AppInput::InputVolume);
                 }
                 _ => {}
             }
         })));
-        context.subscribe(InterestMaskSet::all(), |_| {});
+        context.subscribe(InterestMaskSet::SINK | InterestMaskSet::SOURCE, |_| {});
     }
 
     fn update_inputs(&self, widgets: &AppWidgets) {
