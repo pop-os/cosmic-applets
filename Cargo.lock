@@ -237,8 +237,8 @@ dependencies = [
 name = "cosmic-applet-audio"
 version = "0.1.0"
 dependencies = [
+ "async-io",
  "futures-util",
- "gtk4",
  "libcosmic-widgets",
  "libpulse-binding",
  "pulsectl-rs",
@@ -251,7 +251,7 @@ version = "0.1.0"
 dependencies = [
  "gtk4",
  "once_cell",
- "relm4-macros 0.4.2",
+ "relm4-macros 0.4.3",
  "tokio",
  "zbus",
 ]
@@ -266,7 +266,7 @@ dependencies = [
  "itertools",
  "libcosmic-widgets",
  "once_cell",
- "relm4-macros 0.4.2",
+ "relm4-macros 0.4.3",
  "slotmap",
  "tokio",
  "zbus",
@@ -281,7 +281,7 @@ dependencies = [
  "logind-zbus",
  "nix 0.23.1",
  "once_cell",
- "relm4-macros 0.4.2",
+ "relm4-macros 0.4.3",
  "tokio",
  "zbus",
 ]
@@ -1519,9 +1519,9 @@ dependencies = [
 
 [[package]]
 name = "relm4-macros"
-version = "0.4.2"
+version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d70f60fbeae94001a45d0a2f7ff66b4c18535cc00ebd746d2ced0be1916cf83f"
+checksum = "b0df3a77e22dee74ce668daa437252e02a19252ae0eda49ebebb20b365afc52a"
 dependencies = [
  "proc-macro2",
  "quote",

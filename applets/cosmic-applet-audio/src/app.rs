@@ -1,7 +1,4 @@
-use gtk4::{
-    prelude::*, Box as GtkBox, Button, Image, Label, ListBox, Orientation, PositionType, Revealer,
-    RevealerTransitionType, Scale, Separator, Window,
-};
+use futures_util::StreamExt;
 use libcosmic_widgets::LabeledItem;
 use libpulse_binding::{
     context::subscribe::{Facility, InterestMaskSet, Operation},
@@ -11,7 +8,17 @@ use pulsectl::{
     controllers::{types::DeviceInfo, DeviceControl, SinkController, SourceController},
     Handler,
 };
-use relm4::{component, view, ComponentParts, RelmContainerExt, Sender, SimpleComponent};
+use relm4::{
+    component,
+    gtk::{
+        self,
+        glib::{self, clone},
+        prelude::*,
+        Box as GtkBox, Button, Image, Label, ListBox, Orientation, PositionType, Revealer,
+        RevealerTransitionType, Scale, Separator, Window,
+    },
+    view, ComponentParts, RelmContainerExt, Sender, SimpleComponent,
+};
 use std::rc::Rc;
 
 pub enum AppInput {
@@ -41,6 +48,13 @@ impl Default for App {
         let outputs = output_controller.list_devices().unwrap_or_default();
         let handler = Handler::connect("com.system76.cosmic.applets.audio")
             .expect("failed to connect to pulse");
+        relm4::spawn_local(clone!(@weak handler.mainloop as main_loop => async move {
+            let mut timer = async_io::Timer::interval(std::time::Duration::from_millis(100));
+            loop {
+                main_loop.borrow_mut().iterate(false);
+                timer.next().await;
+            }
+        }));
         Self {
             default_input,
             inputs,
@@ -100,11 +114,10 @@ impl App {
         let mut context = self.handler.context.borrow_mut();
         let input = input.clone();
         context.set_subscribe_callback(Some(Box::new(move |facility, operation, _idx| {
-            match dbg!(operation) {
-                Some(Operation::Changed) => {}
-                _ => return,
+            if !matches!(operation, Some(Operation::Changed)) {
+                return;
             }
-            match dbg!(facility) {
+            match facility {
                 Some(Facility::Sink | Facility::SinkInput) => {
                     send!(input, AppInput::OutputVolume);
                 }
@@ -114,9 +127,7 @@ impl App {
                 _ => {}
             }
         })));
-        context.subscribe(InterestMaskSet::all(), |success| {
-            println!("success: {}", success);
-        });
+        context.subscribe(InterestMaskSet::all(), |_| {});
     }
 
     fn update_inputs(&self, widgets: &AppWidgets) {
@@ -213,7 +224,7 @@ impl SimpleComponent for App {
                         set_format_value_func: |_, value| {
                             format!("{:.0}%", value)
                         },
-                        set_value: model.default_output.as_ref().map(|info| (info.volume.avg().0 as f64 / Volume::NORMAL.0 as f64) * 100.).unwrap_or(0.),
+                        set_value: watch! { model.default_output.as_ref().map(|info| (info.volume.avg().0 as f64 / Volume::NORMAL.0 as f64) * 100.).unwrap_or(0.) },
                         set_value_pos: PositionType::Right,
                         set_hexpand: true
                     }
@@ -228,10 +239,12 @@ impl SimpleComponent for App {
                         set_format_value_func: |_, value| {
                             format!("{:.0}%", value)
                         },
-                        set_value: model.default_input
-                            .as_ref()
-                            .map(|info| (info.volume.avg().0 as f64 / Volume::NORMAL.0 as f64) * 100.)
-                            .unwrap_or(0.),
+                        set_value: watch! {
+                            model.default_input
+                                .as_ref()
+                                .map(|info| (info.volume.avg().0 as f64 / Volume::NORMAL.0 as f64) * 100.)
+                                .unwrap_or(0.)
+                        },
                         set_value_pos: PositionType::Right,
                         set_hexpand: true
                     }
@@ -253,7 +266,7 @@ impl SimpleComponent for App {
                     append: outputs_revealer = &Revealer {
                         set_transition_type: RevealerTransitionType::SlideDown,
                         set_child: outputs = Some(&ListBox) {
-                            set_selection_mode: gtk4::SelectionMode::None,
+                            set_selection_mode: gtk::SelectionMode::None,
                             set_activate_on_single_click: true
                         }
                     }
@@ -275,7 +288,7 @@ impl SimpleComponent for App {
                     append: inputs_revealer = &Revealer {
                         set_transition_type: RevealerTransitionType::SlideDown,
                         set_child: inputs = Some(&ListBox) {
-                            set_selection_mode: gtk4::SelectionMode::None,
+                            set_selection_mode: gtk::SelectionMode::None,
                             set_activate_on_single_click: true
                         }
                     }

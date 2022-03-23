@@ -5,9 +5,11 @@ edition = "2021"
 license = "LGPL-3.0-or-later"
 
 [dependencies]
+async-io = "1.6.0"
 futures-util = "0.3.21"
-gtk4 = "0.4.6"
 libcosmic-widgets = { git = "https://github.com/pop-os/libcosmic", branch = "lucy/widgets" }
 libpulse-binding = "2.26.0"
 pulsectl-rs = "0.3.2"
 relm4 = { git = "https://github.com/AaronErhardt/relm4", branch = "new-approach", features = ["macros"] }
+
+[features]
