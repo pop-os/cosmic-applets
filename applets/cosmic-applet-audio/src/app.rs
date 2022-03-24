@@ -5,7 +5,7 @@ use libpulse_binding::{
     volume::Volume,
 };
 use pulsectl::{
-    controllers::{types::DeviceInfo, DeviceControl, SinkController, SourceController},
+    controllers::{types::DeviceInfo, AppControl, DeviceControl, SinkController, SourceController},
     Handler,
 };
 use relm4::{
@@ -26,6 +26,7 @@ pub enum AppInput {
     Outputs,
     InputVolume,
     OutputVolume,
+    NowPlaying,
 }
 
 pub struct App {
@@ -34,6 +35,7 @@ pub struct App {
     default_output: Option<DeviceInfo>,
     outputs: Vec<DeviceInfo>,
     handler: Handler,
+    update_now_playing: bool,
 }
 
 impl Default for App {
@@ -61,6 +63,7 @@ impl Default for App {
             default_output,
             outputs,
             handler,
+            update_now_playing: false,
         }
     }
 }
@@ -196,6 +199,34 @@ impl App {
             widgets.outputs.container_add(&item);
         }
     }
+
+    fn update_now_playing(&self, widgets: &AppWidgets) {
+        let mut output_controller =
+            SinkController::create().expect("failed to create output controller");
+        let apps = output_controller.list_applications().unwrap_or_default();
+        while let Some(row) = widgets.playing_apps.row_at_index(0) {
+            widgets.playing_apps.remove(&row);
+        }
+        for app in apps {
+            let icon_name = app
+                .proplist
+                .get_str("application.icon_name")
+                .unwrap_or_default();
+            let name = app.name.unwrap_or_default();
+            view! {
+                GtkBox {
+                    set_orientation: Orientation::Horizontal,
+                    append: icon = &Image {
+                        set_icon_name: Some(&icon_name),
+                        set_pixel_size: 24,
+                    },
+                    append: title = &Label {
+                        set_label: &name,
+                    }
+                }
+            }
+        }
+    }
 }
 
 #[component(pub)]
@@ -292,6 +323,12 @@ impl SimpleComponent for App {
                             set_activate_on_single_click: true
                         }
                     }
+                },
+                &Separator {
+                    set_orientation: Orientation::Horizontal,
+                },
+                append: playing_apps = &ListBox {
+                    set_selection_mode: gtk::SelectionMode::None,
                 }
             }
         }
@@ -329,6 +366,9 @@ impl SimpleComponent for App {
             AppInput::OutputVolume => {
                 self.update_default_output();
             }
+            AppInput::NowPlaying => {
+                self.update_now_playing = true;
+            }
         }
     }
 
@@ -338,6 +378,10 @@ impl SimpleComponent for App {
         }
         if self.inputs.is_empty() {
             model.update_inputs(widgets);
+        }
+        if self.update_now_playing {
+            model.update_now_playing(widgets);
+            self.update_now_playing = false;
         }
     }
 }
