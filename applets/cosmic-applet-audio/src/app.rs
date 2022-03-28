@@ -1,3 +1,4 @@
+use crate::icons::{parse_desktop_icons, DesktopApplication};
 use futures_util::StreamExt;
 use libcosmic_widgets::LabeledItem;
 use libpulse_binding::{
@@ -22,7 +23,7 @@ use relm4::{
     },
     view, ComponentParts, RelmContainerExt, Sender, SimpleComponent,
 };
-use std::rc::Rc;
+use std::{collections::HashMap, rc::Rc};
 use tracker::track;
 
 pub enum AppInput {
@@ -46,6 +47,8 @@ pub struct App {
     #[no_eq]
     now_playing: Vec<ApplicationInfo>,
     #[do_not_track]
+    desktop_icons: HashMap<DesktopApplication, String>,
+    #[do_not_track]
     handler: Handler,
 }
 
@@ -60,6 +63,7 @@ impl Default for App {
         let default_output = output_controller.get_default_device().ok();
         let outputs = output_controller.list_devices().unwrap_or_default();
         let now_playing = output_controller.list_applications().unwrap_or_default();
+        let desktop_icons = parse_desktop_icons();
         let handler = Handler::connect("com.system76.cosmic.applets.audio")
             .expect("failed to connect to pulse");
         relm4::spawn_local(clone!(@weak handler.mainloop as main_loop => async move {
@@ -75,6 +79,7 @@ impl Default for App {
             default_output,
             outputs,
             now_playing,
+            desktop_icons,
             handler,
             tracker: 0,
         }
@@ -234,7 +239,20 @@ impl App {
             let icon_name = app
                 .proplist
                 .get_str("application.icon_name")
+                .or_else(|| {
+                    app.proplist
+                        .get_str("application.name")
+                        .and_then(|name| self.desktop_icons.get(&DesktopApplication::Name(name)))
+                        .cloned()
+                })
+                .or_else(|| {
+                    app.proplist
+                        .get_str("application.process.binary")
+                        .and_then(|name| self.desktop_icons.get(&DesktopApplication::Binary(name)))
+                        .cloned()
+                })
                 .unwrap_or_default();
+
             let name = app.name.clone().unwrap_or_default();
             view! {
                 item = GtkBox {
