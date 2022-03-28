@@ -136,6 +136,7 @@ impl App {
             match facility {
                 Some(Facility::Sink) => {
                     send!(input, AppInput::OutputVolume);
+                    send!(input, AppInput::NowPlaying);
                 }
                 Some(Facility::Source) => {
                     send!(input, AppInput::InputVolume);
