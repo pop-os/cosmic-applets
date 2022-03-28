@@ -5,7 +5,10 @@ use libpulse_binding::{
     volume::Volume,
 };
 use pulsectl::{
-    controllers::{types::DeviceInfo, AppControl, DeviceControl, SinkController, SourceController},
+    controllers::{
+        types::{ApplicationInfo, DeviceInfo},
+        AppControl, DeviceControl, SinkController, SourceController,
+    },
     Handler,
 };
 use relm4::{
@@ -20,6 +23,7 @@ use relm4::{
     view, ComponentParts, RelmContainerExt, Sender, SimpleComponent,
 };
 use std::rc::Rc;
+use tracker::track;
 
 pub enum AppInput {
     Inputs,
@@ -29,13 +33,20 @@ pub enum AppInput {
     NowPlaying,
 }
 
+#[track]
 pub struct App {
+    #[no_eq]
     default_input: Option<DeviceInfo>,
+    #[no_eq]
     inputs: Vec<DeviceInfo>,
+    #[no_eq]
     default_output: Option<DeviceInfo>,
+    #[no_eq]
     outputs: Vec<DeviceInfo>,
+    #[no_eq]
+    now_playing: Vec<ApplicationInfo>,
+    #[do_not_track]
     handler: Handler,
-    update_now_playing: bool,
 }
 
 impl Default for App {
@@ -48,6 +59,7 @@ impl Default for App {
             SinkController::create().expect("failed to create output controller");
         let default_output = output_controller.get_default_device().ok();
         let outputs = output_controller.list_devices().unwrap_or_default();
+        let now_playing = output_controller.list_applications().unwrap_or_default();
         let handler = Handler::connect("com.system76.cosmic.applets.audio")
             .expect("failed to connect to pulse");
         relm4::spawn_local(clone!(@weak handler.mainloop as main_loop => async move {
@@ -62,8 +74,9 @@ impl Default for App {
             inputs,
             default_output,
             outputs,
+            now_playing,
             handler,
-            update_now_playing: false,
+            tracker: 0,
         }
     }
 }
@@ -89,7 +102,7 @@ impl App {
         }
     }
 
-    fn update_default_input(&mut self) {
+    fn refresh_default_input(&mut self) {
         let mut input_controller =
             SourceController::create().expect("failed to create input controller");
         self.default_input = match self.default_input.as_ref() {
@@ -101,7 +114,7 @@ impl App {
         };
     }
 
-    fn update_default_output(&mut self) {
+    fn refresh_default_output(&mut self) {
         let mut output_controller =
             SinkController::create().expect("failed to create output controller");
         self.default_output = match self.default_output.as_ref() {
@@ -133,15 +146,18 @@ impl App {
         context.subscribe(InterestMaskSet::SINK | InterestMaskSet::SOURCE, |_| {});
     }
 
-    fn update_inputs(&self, widgets: &AppWidgets) {
+    fn refresh_input_list(&mut self) {
         let mut input_controller =
             SourceController::create().expect("failed to create input controller");
-        let inputs = input_controller.list_devices().unwrap_or_default();
+        self.set_inputs(input_controller.list_devices().unwrap_or_default());
+    }
+
+    fn refresh_input_widgets(&self, widgets: &AppWidgets) {
         while let Some(row) = widgets.inputs.row_at_index(0) {
             widgets.inputs.remove(&row);
         }
-        for input in inputs {
-            let input = Rc::new(input);
+        for input in self.get_inputs() {
+            let input = Rc::new(input.clone());
             let name = match &input.name {
                 Some(name) => name.to_owned(),
                 None => continue, // Why doesn't this have a name? Whatever, it's invalid.
@@ -166,15 +182,18 @@ impl App {
         }
     }
 
-    fn update_outputs(&self, widgets: &AppWidgets) {
+    fn refresh_output_list(&mut self) {
         let mut output_controller =
             SinkController::create().expect("failed to create output controller");
-        let outputs = output_controller.list_devices().unwrap_or_default();
+        self.set_outputs(output_controller.list_devices().unwrap_or_default());
+    }
+
+    fn refresh_output_widgets(&self, widgets: &AppWidgets) {
         while let Some(row) = widgets.outputs.row_at_index(0) {
             widgets.outputs.remove(&row);
         }
-        for output in outputs {
-            let output = Rc::new(output);
+        for output in self.get_outputs() {
+            let output = Rc::new(output.clone());
             let name = match &output.name {
                 Some(name) => name.to_owned(),
                 None => continue, // Why doesn't this have a name? Whatever, it's invalid.
@@ -200,21 +219,24 @@ impl App {
         }
     }
 
-    fn update_now_playing(&self, widgets: &AppWidgets) {
+    fn refresh_now_playing(&mut self) {
         let mut output_controller =
             SinkController::create().expect("failed to create output controller");
-        let apps = output_controller.list_applications().unwrap_or_default();
+        self.set_now_playing(output_controller.list_applications().unwrap_or_default());
+    }
+
+    fn refresh_now_playing_widgets(&self, widgets: &AppWidgets) {
         while let Some(row) = widgets.playing_apps.row_at_index(0) {
             widgets.playing_apps.remove(&row);
         }
-        for app in apps {
+        for app in self.get_now_playing() {
             let icon_name = app
                 .proplist
                 .get_str("application.icon_name")
                 .unwrap_or_default();
-            let name = app.name.unwrap_or_default();
+            let name = app.name.clone().unwrap_or_default();
             view! {
-                GtkBox {
+                item = GtkBox {
                     set_orientation: Orientation::Horizontal,
                     append: icon = &Image {
                         set_icon_name: Some(&icon_name),
@@ -225,6 +247,7 @@ impl App {
                     }
                 }
             }
+            widgets.playing_apps.container_add(&item);
         }
     }
 }
@@ -351,37 +374,37 @@ impl SimpleComponent for App {
         &mut self,
         msg: Self::Input,
         _input: &Sender<Self::Input>,
-        _ouput: &Sender<Self::Output>,
+        _output: &Sender<Self::Output>,
     ) {
+        self.reset();
         match msg {
             AppInput::Outputs => {
-                self.outputs.clear();
+                self.refresh_output_list();
             }
             AppInput::Inputs => {
-                self.inputs.clear();
+                self.refresh_input_list();
             }
             AppInput::InputVolume => {
-                self.update_default_input();
+                self.refresh_default_input();
             }
             AppInput::OutputVolume => {
-                self.update_default_output();
+                self.refresh_default_output();
             }
             AppInput::NowPlaying => {
-                self.update_now_playing = true;
+                self.refresh_now_playing();
             }
         }
     }
 
     fn pre_view() {
-        if self.outputs.is_empty() {
-            model.update_outputs(widgets);
+        if model.changed(App::outputs()) {
+            model.refresh_output_widgets(widgets);
         }
-        if self.inputs.is_empty() {
-            model.update_inputs(widgets);
+        if model.changed(App::inputs()) {
+            model.refresh_input_widgets(widgets);
         }
-        if self.update_now_playing {
-            model.update_now_playing(widgets);
-            self.update_now_playing = false;
+        if model.changed(App::now_playing()) {
+            model.refresh_now_playing_widgets(widgets);
         }
     }
 }

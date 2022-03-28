@@ -243,6 +243,7 @@ dependencies = [
  "libpulse-binding",
  "pulsectl-rs",
  "relm4",
+ "tracker",
 ]
 
 [[package]]

@@ -11,5 +11,6 @@ libcosmic-widgets = { git = "https://github.com/pop-os/libcosmic", branch = "luc
 libpulse-binding = "2.26.0"
 pulsectl-rs = "0.3.2"
 relm4 = { git = "https://github.com/AaronErhardt/relm4", branch = "new-approach", features = ["macros"] }
+tracker = "0.1.1"
 
 [features]
