@@ -18,7 +18,7 @@ use relm4::{
         self,
         glib::{self, clone},
         prelude::*,
-        Box as GtkBox, Button, Image, Label, ListBox, Orientation, PositionType, Revealer,
+        Align, Box as GtkBox, Button, Image, Label, ListBox, Orientation, PositionType, Revealer,
         RevealerTransitionType, Scale, Separator, Window,
     },
     view, ComponentParts, RelmContainerExt, Sender, SimpleComponent,
@@ -236,6 +236,8 @@ impl App {
             widgets.playing_apps.remove(&row);
         }
         for app in self.get_now_playing() {
+            let index = app.index;
+            let muted = app.mute;
             let icon_name = app
                 .proplist
                 .get_str("application.icon_name")
@@ -263,6 +265,21 @@ impl App {
                     },
                     append: title = &Label {
                         set_label: &name,
+                    },
+                    append: media_buttons = &GtkBox {
+                        set_halign: Align::End,
+                        append: pause_button = &Button {
+                            set_child: pause_button_img = Some(&Image) {
+                                set_icon_name: Some("media-playback-pause-symbolic"),
+                                set_pixel_size: 24,
+                            },
+                            connect_clicked: move |_| {
+                                SinkController::create()
+                                    .expect("failed to create output controller")
+                                    .set_app_mute(index, !muted)
+                                    .expect("failed to (un)mute application");
+                            }
+                        }
                     }
                 }
             }
