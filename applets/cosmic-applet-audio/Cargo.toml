@@ -16,5 +16,6 @@ relm4 = { git = "https://github.com/AaronErhardt/relm4", rev = "7404ad64ca8763f6
 tracker = "0.1.1"
 freedesktop-desktop-entry = "0.5.0"
 mpris2-zbus = { git = "https://github.com/pop-os/mpris2-zbus" }
+zbus = "2.1.1"
 
 [features]

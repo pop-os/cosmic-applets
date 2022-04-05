@@ -252,6 +252,7 @@ dependencies = [
  "pulsectl-rs",
  "relm4",
  "tracker",
+ "zbus",
 ]
 
 [[package]]

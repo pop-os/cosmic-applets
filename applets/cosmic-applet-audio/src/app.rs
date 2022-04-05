@@ -5,6 +5,7 @@ use libpulse_binding::{
     context::subscribe::{Facility, InterestMaskSet, Operation},
     volume::Volume,
 };
+use mpris2_zbus::media_player::MediaPlayer;
 use pulsectl::{
     controllers::{
         types::{ApplicationInfo, DeviceInfo},
@@ -25,6 +26,7 @@ use relm4::{
 };
 use std::{collections::HashMap, rc::Rc};
 use tracker::track;
+use zbus::Connection;
 
 pub enum AppInput {
     Inputs,
@@ -32,6 +34,14 @@ pub enum AppInput {
     InputVolume,
     OutputVolume,
     NowPlaying,
+}
+
+#[derive(Clone, PartialEq, Eq)]
+struct NowPlayingInfo {
+    title: String,
+    artist: String,
+    album: String,
+    art_url: String,
 }
 
 #[track]
@@ -45,7 +55,7 @@ pub struct App {
     #[no_eq]
     outputs: Vec<DeviceInfo>,
     #[no_eq]
-    now_playing: Vec<ApplicationInfo>,
+    now_playing: Vec<NowPlayingInfo>,
     #[do_not_track]
     desktop_icons: HashMap<DesktopApplication, String>,
     #[do_not_track]
@@ -62,7 +72,7 @@ impl Default for App {
             SinkController::create().expect("failed to create output controller");
         let default_output = output_controller.get_default_device().ok();
         let outputs = output_controller.list_devices().unwrap_or_default();
-        let now_playing = output_controller.list_applications().unwrap_or_default();
+        let now_playing = Vec::new();
         let desktop_icons = parse_desktop_icons();
         let handler = Handler::connect("com.system76.cosmic.applets.audio")
             .expect("failed to connect to pulse");
@@ -133,24 +143,22 @@ impl App {
 
     fn subscribe_for_updates(&self, input: &Sender<AppInput>) {
         let mut context = self.handler.context.borrow_mut();
-        let input = input.clone();
+        let input_clone = input.clone();
         context.set_subscribe_callback(Some(Box::new(move |facility, operation, _idx| {
             if !matches!(operation, Some(Operation::Changed)) {
                 return;
             }
             match facility {
                 Some(Facility::Sink) => {
-                    send!(input, AppInput::OutputVolume);
-                    send!(input, AppInput::NowPlaying);
+                    send!(input_clone, AppInput::OutputVolume);
                 }
                 Some(Facility::Source) => {
-                    send!(input, AppInput::InputVolume);
+                    send!(input_clone, AppInput::InputVolume);
                 }
                 _ => {}
             }
         })));
         context.subscribe(InterestMaskSet::SINK | InterestMaskSet::SOURCE, |_| {});
-    }
 
     fn refresh_input_list(&mut self) {
         let mut input_controller =
