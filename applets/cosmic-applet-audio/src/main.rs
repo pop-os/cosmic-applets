@@ -4,14 +4,22 @@
 extern crate relm4_macros;
 
 mod icons;
+mod input;
+mod output;
 mod pa;
 mod task;
+mod volume;
 
 use gtk4::{
-    glib::{self, clone},
+    gio::ApplicationFlags,
+    glib::{self, clone, MainContext, PRIORITY_DEFAULT},
     prelude::*,
-    Align, Box as GtkBox, Button, Image, Label, ListBox, Orientation, PositionType, Revealer,
-    RevealerTransitionType, Scale, SelectionMode, Separator, Window,
+    Align, Application, ApplicationWindow, Box as GtkBox, Button, Image, Label, ListBox,
+    Orientation, PositionType, Revealer, RevealerTransitionType, Scale, SelectionMode, Separator,
+};
+use libpulse_binding::{
+    context::subscribe::{Facility, InterestMaskSet, Operation},
+    volume::Volume,
 };
 use once_cell::sync::Lazy;
 use pulsectl::Handler;
@@ -20,13 +28,46 @@ use tokio::runtime::Runtime;
 static RT: Lazy<Runtime> = Lazy::new(|| Runtime::new().expect("failed to build tokio runtime"));
 
 fn main() {
+    let application = Application::new(
+        Some("com.system76.cosmic.applets.audio"),
+        ApplicationFlags::default(),
+    );
+    application.connect_activate(app);
+    application.run();
+}
+
+fn app(application: &Application) {
     let handler =
         Handler::connect("com.system76.cosmic.applets.audio").expect("failed to connect to pulse");
     task::spawn_local(clone!(@strong handler.mainloop as main_loop => async move {
         pa::drive_main_loop(main_loop).await
     }));
+    let (refresh_output_tx, refresh_output_rx) = MainContext::channel::<()>(PRIORITY_DEFAULT);
+    let (refresh_input_tx, refresh_input_rx) = MainContext::channel::<()>(PRIORITY_DEFAULT);
+    handler
+        .context
+        .borrow_mut()
+        .set_subscribe_callback(Some(Box::new(clone!(@strong refresh_output_tx, @strong refresh_input_tx => move |facility, operation, _idx| {
+            if !matches!(operation, Some(Operation::Changed)) {
+                return;
+            }
+            match facility {
+                Some(Facility::Sink) => {
+                    refresh_output_tx.send(()).expect("failed to send output refresh message");
+                }
+                Some(Facility::Source) => {
+                    refresh_input_tx.send(()).expect("failed to send output refresh message");
+                }
+                _ => {}
+            }
+        }))));
+    handler
+        .context
+        .borrow_mut()
+        .subscribe(InterestMaskSet::SINK | InterestMaskSet::SOURCE, |_| {});
     view! {
-        window = Window {
+        window = ApplicationWindow {
+            set_application: Some(application),
             set_title: Some("COSMIC Network Applet"),
             set_default_width: 400,
             set_default_height: 300,
@@ -116,4 +157,21 @@ fn main() {
             }
         }
     }
+    refresh_input_rx.attach(
+        None,
+        clone!(@weak inputs, @weak current_input => @default-return Continue(true), move |_| {
+            input::refresh_input_widgets(&inputs);
+            input::refresh_default_input(&current_input);
+            Continue(true)
+        }),
+    );
+    refresh_output_rx.attach(
+        None,
+        clone!(@weak outputs, @weak current_output => @default-return Continue(true), move |_| {
+            output::refresh_output_widgets(&outputs);
+            output::refresh_default_input(&current_output);
+            Continue(true)
+        }),
+    );
+    window.show();
 }
