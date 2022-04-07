@@ -85,7 +85,6 @@ fn app(application: &Application) {
                         set_format_value_func: |_, value| {
                             format!("{:.0}%", value)
                         },
-                        //set_value: watch! { model.default_output.as_ref().map(|info| (info.volume.avg().0 as f64 / Volume::NORMAL.0 as f64) * 100.).unwrap_or(0.) },
                         set_value_pos: PositionType::Right,
                         set_hexpand: true
                     }
@@ -100,12 +99,6 @@ fn app(application: &Application) {
                         set_format_value_func: |_, value| {
                             format!("{:.0}%", value)
                         },
-                        /*set_value: watch! {
-                            model.default_input
-                                .as_ref()
-                                .map(|info| (info.volume.avg().0 as f64 / Volume::NORMAL.0 as f64) * 100.)
-                                .unwrap_or(0.)
-                        },*/
                         set_value_pos: PositionType::Right,
                         set_hexpand: true
                     }
@@ -159,17 +152,19 @@ fn app(application: &Application) {
     }
     refresh_input_rx.attach(
         None,
-        clone!(@weak inputs, @weak current_input => @default-return Continue(true), move |_| {
+        clone!(@weak inputs, @weak current_input, @weak input_volume => @default-return Continue(true), move |_| {
             input::refresh_input_widgets(&inputs);
-            input::refresh_default_input(&current_input);
+            let default_input = input::refresh_default_input(&current_input);
+            volume::update_volume(&default_input, &input_volume);
             Continue(true)
         }),
     );
     refresh_output_rx.attach(
         None,
-        clone!(@weak outputs, @weak current_output => @default-return Continue(true), move |_| {
+        clone!(@weak outputs, @weak current_output, @weak output_volume => @default-return Continue(true), move |_| {
             output::refresh_output_widgets(&outputs);
-            output::refresh_default_input(&current_output);
+            let default_output = output::refresh_default_output(&current_output);
+            volume::update_volume(&default_output, &output_volume);
             Continue(true)
         }),
     );

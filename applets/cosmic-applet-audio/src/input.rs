@@ -10,7 +10,7 @@ fn get_inputs() -> Vec<DeviceInfo> {
         .expect("failed to list input devices")
 }
 
-pub fn refresh_default_input(label: &Label) {
+pub fn refresh_default_input(label: &Label) -> DeviceInfo {
     let default_input = SourceController::create()
         .expect("failed to create input controller")
         .get_default_device()
@@ -19,6 +19,7 @@ pub fn refresh_default_input(label: &Label) {
         Some(name) => name.as_str(),
         None => "Input Device",
     });
+    default_input
 }
 
 pub fn refresh_input_widgets(inputs: &ListBox) {

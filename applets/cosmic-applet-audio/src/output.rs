@@ -10,7 +10,7 @@ fn get_outputs() -> Vec<DeviceInfo> {
         .expect("failed to list output devices")
 }
 
-pub fn refresh_default_input(label: &Label) {
+pub fn refresh_default_output(label: &Label) -> DeviceInfo {
     let default_output = SinkController::create()
         .expect("failed to create output controller")
         .get_default_device()
@@ -19,6 +19,7 @@ pub fn refresh_default_input(label: &Label) {
         Some(name) => name.as_str(),
         None => "Output Device",
     });
+    default_output
 }
 
 pub fn refresh_output_widgets(outputs: &ListBox) {
