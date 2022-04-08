@@ -5,6 +5,7 @@ extern crate relm4_macros;
 
 mod icons;
 mod input;
+mod now_playing;
 mod output;
 mod pa;
 mod task;
@@ -21,6 +22,7 @@ use libpulse_binding::{
     context::subscribe::{Facility, InterestMaskSet, Operation},
     volume::Volume,
 };
+use mpris2_zbus::metadata::Metadata;
 use once_cell::sync::Lazy;
 use pulsectl::Handler;
 use tokio::runtime::Runtime;
@@ -44,6 +46,7 @@ fn app(application: &Application) {
     }));
     let (refresh_output_tx, refresh_output_rx) = MainContext::channel::<()>(PRIORITY_DEFAULT);
     let (refresh_input_tx, refresh_input_rx) = MainContext::channel::<()>(PRIORITY_DEFAULT);
+    let (now_playing_tx, now_playing_rx) = MainContext::channel::<Vec<Metadata>>(PRIORITY_DEFAULT);
     handler
         .context
         .borrow_mut()
@@ -165,6 +168,12 @@ fn app(application: &Application) {
             output::refresh_output_widgets(&outputs);
             let default_output = output::refresh_default_output(&current_output);
             volume::update_volume(&default_output, &output_volume);
+            Continue(true)
+        }),
+    );
+    now_playing_rx.attach(
+        None,
+        clone!(@weak playing_apps => @default-return Continue(true), move |all_metadata| {
             Continue(true)
         }),
     );
