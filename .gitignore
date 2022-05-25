@@ -1,1 +1,25 @@
+# Cargo
+.cargo.
 target/
+build/
+_build/
+builddir/
+vendor/
+vendor.tar
+
+build-aux/app
+build-aux/.flatpak-builder/
+.flatpak/
+flatpak_app
+.flatpak-builder
+
+.*
+debian/*
+!debian/*install
+!debian/*postinst
+!debian/changelog
+!debian/copyright
+!debian/control
+!debian/links
+!debian/rules
+!debian/source

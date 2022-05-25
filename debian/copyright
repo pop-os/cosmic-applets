@@ -1,0 +1,9 @@
+Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: cosmic-applets
+Source: https://github.com/pop-os/cosmic-applets
+
+Files: *
+Copyright: Copyright 2022 system76
+License: MPL-2.0
+ The complete text of the Mozilla Public License 2.0 can be found in
+ the file `/usr/share/common-licenses/MPL-2.0'.
