@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 use crate::RT;
 use gtk4::{prelude::*, Button, IconSize, Image, Label, Orientation};

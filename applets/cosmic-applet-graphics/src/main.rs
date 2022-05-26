@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 #![allow(unused_parens, clippy::double_parens)] // needed for a quirk in the view! macro
 
