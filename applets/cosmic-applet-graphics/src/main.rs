@@ -20,6 +20,7 @@ use gtk4::{
 };
 use once_cell::sync::Lazy;
 use tokio::runtime::Runtime;
+use cosmic_panel_config::config::CosmicPanelConfig;
 
 static RT: Lazy<Runtime> = Lazy::new(|| Runtime::new().expect("failed to build tokio runtime"));
 
@@ -64,13 +65,39 @@ fn build_ui(application: &gtk4::Application) {
     let window = gtk4::ApplicationWindow::builder()
         .application(application)
         .title("COSMIC Graphics Applet")
-        .default_width(400)
-        .default_height(300)
+        .default_width(1)
+        .default_height(1)
+        .decorated(false)
         .build();
-    let current_graphics = RT
+    let config = CosmicPanelConfig::load_from_env().unwrap_or_default();
+    let popover = gtk4::builders::PopoverBuilder::new()
+        .autohide(true)
+        .has_arrow(false)
+        .build();
+
+    let button = gtk4::Button::new();
+    button.add_css_class("panel_icon");
+    button.connect_clicked(glib::clone!(@weak popover => move |_| {
+        popover.show();
+    }));
+
+    // TODO cleanup
+    let image = gtk4::Image::from_icon_name("input-gaming");
+    image.add_css_class("panel_icon");
+    image.set_pixel_size(config.get_applet_icon_size().try_into().unwrap());
+    button.set_child(Some(&image));
+        let current_graphics = RT
         .block_on(get_current_graphics())
         .expect("failed to connect to system76-power");
+    view! {
+        icon_box = gtk4::Box {
+            set_orientation: Orientation::Vertical,
+            set_spacing: 0,
+        }
+    }
+
     let (tx, rx) = MainContext::channel::<bool>(PRIORITY_DEFAULT);
+
     view! {
         main_overlay = Overlay {
             add_overlay: loading_box = &gtk4::Box {
@@ -174,7 +201,11 @@ fn build_ui(application: &gtk4::Application) {
             Continue(true)
         }),
     );
-    window.set_child(Some(&main_overlay));
+    popover.set_child(Some(&main_overlay));
+
+    icon_box.append(&button);
+    icon_box.append(&popover);
+    window.set_child(Some(&icon_box));
 
     window.show();
 }
