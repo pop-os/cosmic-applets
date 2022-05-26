@@ -278,6 +278,7 @@ dependencies = [
 name = "cosmic-applet-graphics"
 version = "0.1.0"
 dependencies = [
+ "cosmic-panel-config",
  "gtk4",
  "once_cell",
  "relm4-macros 0.4.4",
@@ -306,6 +307,7 @@ dependencies = [
 name = "cosmic-applet-power"
 version = "0.1.0"
 dependencies = [
+ "cosmic-panel-config",
  "futures-util",
  "gtk4",
  "logind-zbus",

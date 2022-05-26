@@ -1,12 +1,12 @@
 [Desktop Entry]
-Name=Cosmic Dock App List
+Name=Cosmic Applet Power
 Comment=Write a GTK + Rust application
 Type=Application
-Exec=cosmic-dock-app-list
+Exec=cosmic-applet-power
 Terminal=false
 Categories=GNOME;GTK;
 Keywords=Gnome;GTK;
 # Translators: Do NOT translate or transliterate this text (this is an icon file name)!
-Icon=com.system76.CosmicDockAppList.svg
+Icon=com.system76.CosmicAppletPower.svg
 StartupNotify=true
 NoDisplay=true
