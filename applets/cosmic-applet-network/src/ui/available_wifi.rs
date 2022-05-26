@@ -23,6 +23,13 @@ pub fn add_available_wifi(target: &gtk4::Box, separator: Separator) {
             eprintln!("scan_for_wifi failed: {}", err);
         }
     });
+    
+    let scrolled_window = gtk4::ScrolledWindow::new();
+    scrolled_window.set_hscrollbar_policy(gtk4::PolicyType::Never);
+    scrolled_window.set_vscrollbar_policy(gtk4::PolicyType::Automatic);
+    scrolled_window.set_propagate_natural_height(true);
+    scrolled_window.set_max_content_height(300);
+
     let wifi_list = ListBox::new();
     rx.attach(
         None,
@@ -32,7 +39,8 @@ pub fn add_available_wifi(target: &gtk4::Box, separator: Separator) {
             Continue(true)
         }),
     );
-    target.append(&wifi_list);
+    scrolled_window.set_child(Some(&wifi_list));
+    target.append(&scrolled_window);
 }
 
 fn build_aps_list(
