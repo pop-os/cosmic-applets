@@ -15,3 +15,4 @@ slotmap = "1.0.6"
 tokio = { version = "1.15.0", features = ["full"] }
 zbus = "2.0.1"
 libcosmic-widgets = { git = "https://github.com/pop-os/libcosmic", branch = "lucy/widgets" }
+cosmic-panel-config = {git = "https://github.com/pop-os/cosmic-panel", features = ["gtk4"]}

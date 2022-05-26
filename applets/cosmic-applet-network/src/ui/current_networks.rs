@@ -18,16 +18,16 @@ use gtk4::{
 use std::{cell::RefCell, net::IpAddr, rc::Rc};
 use zbus::Connection;
 
-pub fn add_current_networks(target: &gtk4::Box) {
+pub fn add_current_networks(target: &gtk4::Box, icon_image: &gtk4::Image) {
     let networks_list = ListBox::builder().show_separators(true).build();
     let entries = Rc::<RefCell<Vec<ListBoxRow>>>::default();
     let (tx, rx) = MainContext::channel::<Vec<ActiveConnectionInfo>>(PRIORITY_DEFAULT);
     crate::task::spawn(handle_devices(tx));
     rx.attach(
         None,
-        clone!(@weak networks_list, @strong entries => @default-return Continue(true), move |connections| {
+        clone!(@weak networks_list, @weak icon_image, @strong entries => @default-return Continue(true), move |connections| {
             let mut entries = entries.borrow_mut();
-            display_active_connections(connections, &networks_list, &mut *entries);
+            display_active_connections(connections, &networks_list, &mut *entries, &icon_image);
             Continue(true)
         }),
     );
@@ -38,6 +38,7 @@ fn display_active_connections(
     connections: Vec<ActiveConnectionInfo>,
     target: &ListBox,
     entries: &mut Vec<ListBoxRow>,
+    icon_image: &gtk4::Image,
 ) {
     for old_entry in entries.drain(..) {
         target.remove(&old_entry);
@@ -49,7 +50,10 @@ fn display_active_connections(
                 hw_address,
                 speed,
                 ip_addresses,
-            } => render_wired_connection(name, speed, ip_addresses),
+            } => {
+                icon_image.set_icon_name(Some("network-wired-symbolic"));
+                render_wired_connection(name, speed, ip_addresses)
+            },
             ActiveConnectionInfo::WiFi {
                 name,
                 hw_address,
@@ -57,7 +61,10 @@ fn display_active_connections(
                 rsn_flags,
                 wpa_flags,
             } => continue,
-            ActiveConnectionInfo::Vpn { name, ip_addresses } => render_vpn(name, ip_addresses),
+            ActiveConnectionInfo::Vpn { name, ip_addresses } => {
+                icon_image.set_icon_name(Some("network-vpn-symbolic"));
+                render_vpn(name, ip_addresses)
+            },
         };
         let entry = ListBoxRow::builder().child(&entry).build();
         target.append(&entry);
