@@ -6,7 +6,6 @@ use std::cell::Cell;
 
 use crate::application::PanelApp;
 use crate::deref_cell::DerefCell;
-use crate::status_area::StatusArea;
 use crate::time_button::TimeButton;
 
 const BOTTOM: bool = false;
@@ -57,7 +56,6 @@ fn window_box(app: &PanelApp) -> gtk4::Widget {
             ..append(&button("Applications"));
         }));
         ..set_center_widget(Some(&TimeButton::new(app)));
-        ..set_end_widget(Some(&StatusArea::new()));
     };
     widget.upcast()
 }
@@ -101,7 +99,6 @@ impl ObjectImpl for PanelWindowInner {
                 ..append(&button("Workspaces"));
                 ..append(&button("Applications"));
             }));
-            ..set_end_widget(Some(&StatusArea::new()));
         };
 
         cascade! {

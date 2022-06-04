@@ -8,7 +8,6 @@ use std::cell::Cell;
 
 use crate::deref_cell::DerefCell;
 use crate::notifications::Notifications;
-use crate::status_notifier_watcher;
 use crate::window;
 
 #[derive(Default)]
@@ -30,7 +29,6 @@ impl ObjectImpl for PanelAppInner {
 
         self.parent_constructed(obj);
 
-        glib::MainContext::default().spawn_local(status_notifier_watcher::start());
         self.notifications.set(Notifications::new());
     }
 }

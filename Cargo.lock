@@ -319,6 +319,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "cosmic-applet-status-area"
+version = "0.1.0"
+dependencies = [
+ "cascade",
+ "cosmic-panel-config",
+ "futures",
+ "gtk4",
+ "once_cell",
+ "serde",
+ "zbus",
+ "zbus_names",
+ "zvariant",
+]
+
+[[package]]
 name = "cosmic-dbus-networkmanager"
 version = "0.1.0"
 source = "git+https://github.com/pop-os/dbus-settings-bindings#d3b16fda4deba1ed4b95ce77943fb4c0db7a5773"
@@ -1499,9 +1514,9 @@ dependencies = [
 
 [[package]]
 name = "once_cell"
-version = "1.10.0"
+version = "1.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "87f3e037eac156d1775da914196f0f37741a274155e34a0b7e427c35d2a2ecb9"
+checksum = "7709cef83f0c1f58f666e746a08b21e0085f7440fa6a29cc194d68aac97a4225"
 
 [[package]]
 name = "ordered-stream"

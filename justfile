@@ -17,6 +17,7 @@ audio_id := 'com.system76.CosmicAppletAudio'
 graphics_id := 'com.system76.CosmicAppletGraphics'
 network_id := 'com.system76.CosmicAppletNetwork'
 power_id := 'com.system76.CosmicAppletPower'
+status_area_id := 'com.system76.CosmicAppletStatusArea'
 
 all: _extract_vendor
     cargo build {{cargo_args}}
@@ -42,6 +43,11 @@ install:
     install -Dm0644 applets/cosmic-applet-power/data/icons/{{power_id}}.svg {{iconsdir}}/{{power_id}}.svg
     install -Dm0644 applets/cosmic-applet-power/data/{{power_id}}.desktop {{sharedir}}/applications/{{power_id}}.desktop
     install -Dm04755 target/release/cosmic-applet-power {{bindir}}/cosmic-applet-power
+
+    # status area
+    install -Dm0644 applets/cosmic-applet-status-area/data/icons/{{status_area_id}}.svg {{iconsdir}}/{{status_area_id}}.svg
+    install -Dm0644 applets/cosmic-applet-status-area/data/{{status_area_id}}.desktop {{sharedir}}/applications/{{status_area_id}}.desktop
+    install -Dm04755 target/release/cosmic-applet-status-area {{bindir}}/cosmic-applet-status-area
 
 # Extracts vendored dependencies if vendor=1
 _extract_vendor:
