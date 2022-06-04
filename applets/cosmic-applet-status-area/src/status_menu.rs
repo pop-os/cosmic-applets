@@ -11,7 +11,6 @@ use zbus::dbus_proxy;
 use zvariant::OwnedValue;
 
 use crate::deref_cell::DerefCell;
-use crate::popover_container::PopoverContainer;
 
 struct Menu {
     box_: gtk4::Box,
@@ -20,8 +19,7 @@ struct Menu {
 
 #[derive(Default)]
 pub struct StatusMenuInner {
-    button: DerefCell<gtk4::ToggleButton>,
-    popover_container: DerefCell<PopoverContainer>,
+    menu_button: DerefCell<gtk4::MenuButton>,
     vbox: DerefCell<gtk4::Box>,
     item: DerefCell<StatusNotifierItemProxy<'static>>,
     dbus_menu: DerefCell<DBusMenuProxy<'static>>,
@@ -45,25 +43,24 @@ impl ObjectImpl for StatusMenuInner {
             gtk4::Box::new(gtk4::Orientation::Vertical, 0);
         };
 
-        let button = cascade! {
-            gtk4::ToggleButton::new();
+        let popover = cascade! {
+            gtk4::Popover::new();
+            ..set_child(Some(&vbox));
+        };
+
+        let menu_button = cascade! {
+            gtk4::MenuButton::new();
             ..set_has_frame(false);
-        };
-
-        let popover_container = cascade! {
-            PopoverContainer::new(&button);
             ..set_parent(obj);
-            ..popover().set_child(Some(&vbox));
-            ..popover().bind_property("visible", &button, "active").flags(glib::BindingFlags::BIDIRECTIONAL).build();
+            ..set_popover(Some(&popover));
         };
 
-        self.button.set(button);
-        self.popover_container.set(popover_container);
+        self.menu_button.set(menu_button);
         self.vbox.set(vbox);
     }
 
     fn dispose(&self, _obj: &StatusMenu) {
-        self.button.unparent();
+        self.menu_button.unparent();
     }
 }
 
@@ -90,7 +87,7 @@ impl StatusMenu {
             .await?;
         let obj = glib::Object::new::<Self>(&[]).unwrap();
         let icon_name = item.icon_name().await?;
-        obj.inner().button.set_icon_name(&icon_name);
+        obj.inner().menu_button.set_icon_name(&icon_name);
 
         let menu = item.menu().await?;
         let menu = DBusMenuProxy::builder(&connection)
@@ -205,7 +202,7 @@ impl StatusMenu {
                     ..connect_clicked(clone!(@weak self as self_ => move |_| {
                             // XXX data, timestamp
                             if close_on_click {
-                                self_.inner().popover_container.popdown();
+                                self_.inner().menu_button.popdown();
                             }
                             glib::MainContext::default().spawn_local(clone!(@strong self_ => async move {
                                 let _ = self_.inner().dbus_menu.event(id, "clicked", &0.into(), 0).await;

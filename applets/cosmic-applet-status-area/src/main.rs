@@ -2,7 +2,6 @@ use gtk4::{glib, prelude::*};
 
 mod dbus_service;
 mod deref_cell;
-mod popover_container;
 mod status_area;
 mod status_menu;
 mod status_notifier_watcher;
