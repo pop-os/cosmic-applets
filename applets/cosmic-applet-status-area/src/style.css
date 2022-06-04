@@ -1,0 +1,33 @@
+.loading-overlay {
+	background-color: #2f2f2f;
+	opacity: 0.85;
+}
+
+image.panel_icon {
+    padding-left: 0px;
+    padding-right: 0px;
+    padding-top: 0px;
+    padding-bottom: 0px;
+}
+
+button.panel_icon {
+    border-radius: 12px;
+    transition: 100ms;
+    padding: 4px;
+    border-color: transparent;
+    background: transparent;
+    outline-color: transparent;
+}
+
+button.panel_icon:hover {
+    border-radius: 12px;
+    transition: 100ms;
+    padding: 4px;
+    border-color: rgba(255, 255, 255, 0.1);
+    outline-color: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+window.root_window {
+	background: transparent;
+}

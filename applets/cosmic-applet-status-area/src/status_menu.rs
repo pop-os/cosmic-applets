@@ -50,6 +50,7 @@ impl ObjectImpl for StatusMenuInner {
 
         let menu_button = cascade! {
             gtk4::MenuButton::new();
+            ..add_css_class("panel_icon");
             ..set_has_frame(false);
             ..set_parent(obj);
             ..set_popover(Some(&popover));
