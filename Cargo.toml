@@ -1,2 +1,11 @@
 [workspace]
-members = ["applets/cosmic-applet-audio", "applets/cosmic-applet-graphics", "applets/cosmic-applet-network", "applets/cosmic-applet-power", "applets/cosmic-applet-status-area", "old-panel"]
+members = [
+    "applets/cosmic-applet-audio", 
+    "applets/cosmic-applet-graphics",
+    "applets/cosmic-applet-network",
+    "applets/cosmic-applet-power",
+    "applets/cosmic-applet-status-area",
+    "applets/cosmic-app-list",
+    "applets/cosmic-panel-button",
+    "old-panel",
+    ]

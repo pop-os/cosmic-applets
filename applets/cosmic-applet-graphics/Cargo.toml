@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 gtk4 = { version = "0.4.6", features = ["v4_2"] }
 once_cell = "1.9.0"
-relm4-macros = "0.4.2"
+relm4-macros = "0.4.4"
 tokio = { version = "1.16.1", features = ["full"] }
 zbus = "2.1.1"
 cosmic-panel-config = {git = "https://github.com/pop-os/cosmic-panel", features = ["gtk4"]}

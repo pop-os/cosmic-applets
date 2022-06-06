@@ -1,0 +1,64 @@
+listview {
+    border-color: transparent;
+    background: transparent;
+    outline-color: transparent;
+}
+
+listview row {
+    padding-left: 0px;
+    padding-right: 0px;
+    padding-top: 0px;
+    padding-bottom: 0px;
+    background: transparent;
+    border-color: transparent;
+    outline-color: transparent;
+}
+
+listview row:hover {
+    padding-left: 0px;
+    padding-right: 0px;
+    padding-top: 0px;
+    padding-bottom: 0px;
+    background: transparent;
+    border-color: transparent;
+    outline-color: transparent;
+}
+
+list.popover_menu {
+    background: transparent;
+}
+
+box.apps {
+    background: transparent;
+}
+
+image {
+    padding-left: 0px;
+    padding-right: 0px;
+    padding-top: 0px;
+    padding-bottom: 0px;
+}
+
+button.dock_item {
+    border-radius: 12px;
+    transition: 100ms;
+    padding: 4px;
+    border-color: transparent;
+    background: transparent;
+    outline-color: transparent;
+}
+
+button.dock_item:hover {
+    border-radius: 12px;
+    transition: 100ms;
+    padding: 4px;
+    border-color: rgba(255, 255, 255, 0.1);
+    outline-color: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+*.transparent {
+    border-color: transparent;
+    background: transparent;
+    outline-color: transparent;
+}

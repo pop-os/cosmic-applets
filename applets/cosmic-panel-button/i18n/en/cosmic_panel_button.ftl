@@ -1,0 +1,1 @@
+cosmic-panel-button = Cosmic Panel Button

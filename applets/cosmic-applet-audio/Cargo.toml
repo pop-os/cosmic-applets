@@ -6,7 +6,7 @@ license = "GPL-3.0-or-later"
 
 [dependencies]
 futures-util = "0.3.21"
-libcosmic-widgets = { git = "https://github.com/pop-os/libcosmic", branch = "lucy/widgets" }
+libcosmic-widgets = { git = "https://github.com/pop-os/libcosmic" }
 libpulse-binding = "2.26.0"
 pulsectl-rs = "0.3.2"
 tracker = "0.1.1"
