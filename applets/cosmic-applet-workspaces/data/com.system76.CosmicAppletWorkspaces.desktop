@@ -10,3 +10,4 @@ Keywords=Gnome;GTK;
 Icon=com.system76.CosmicAppletPower.svg
 StartupNotify=true
 NoDisplay=true
+HostWaylandSocket=true
