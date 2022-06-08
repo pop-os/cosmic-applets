@@ -1,5 +1,5 @@
 use std::{rc::Rc, cell::RefCell};
-use gtk4::{Label, ToggleButton, glib, subclass::prelude::*};
+use gtk4::{ToggleButton, glib, subclass::prelude::*};
 use tokio::sync::mpsc;
 use once_cell::sync::OnceCell;
 use crate::Event;

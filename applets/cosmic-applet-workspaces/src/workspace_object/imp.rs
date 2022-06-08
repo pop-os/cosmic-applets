@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0-only
 
 use std::cell::Cell;
-use std::cell::RefCell;
 
 use glib::{ParamFlags, ParamSpec, Value};
 use gtk4::gdk::glib::ParamSpecBoolean;

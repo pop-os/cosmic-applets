@@ -1,14 +1,11 @@
 // SPDX-License-Identifier: MPL-2.0-only
 
-use cosmic_panel_config::config::{Anchor, CosmicPanelConfig};
-use glib::SignalHandlerId;
+use cosmic_panel_config::config::{CosmicPanelConfig};
 use gtk4::subclass::prelude::*;
 use gtk4::{gio, glib};
-use gtk4::{Box, DragSource, DropTarget, GestureClick, ListView};
-use once_cell::sync::OnceCell;
-use std::cell::{Cell, RefCell};
-use std::rc::Rc;
+use gtk4::{Box, ListView};
 use tokio::sync::mpsc;
+use once_cell::sync::OnceCell;
 
 use crate::utils::Event;
 
@@ -16,7 +13,6 @@ use crate::utils::Event;
 pub struct WorkspaceList {
     pub list_view: OnceCell<ListView>,
     pub model: OnceCell<gio::ListStore>,
-    pub click_controller: OnceCell<GestureClick>,
     pub tx: OnceCell<mpsc::Sender<Event>>,
     pub config: OnceCell<CosmicPanelConfig>
 }
