@@ -5,7 +5,7 @@ use crate::dock_object::DockObject;
 use crate::utils::data_path;
 use crate::utils::{BoxedWindowList, Event, Item};
 use cascade::cascade;
-use cosmic_panel_config::config::{Anchor, CosmicPanelConfig};
+use cosmic_panel_config::config::{CosmicPanelConfig, XdgWrapperConfig, Anchor};
 use gio::DesktopAppInfo;
 use gio::Icon;
 use glib::Object;

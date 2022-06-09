@@ -5,7 +5,7 @@ use crate::dock_popover::DockPopover;
 use crate::utils::BoxedWindowList;
 use crate::utils::Event;
 use cascade::cascade;
-use cosmic_panel_config::config::Anchor;
+use cosmic_panel_config::config::{Anchor, XdgWrapperConfig};
 use gtk4::glib;
 use gtk4::prelude::*;
 use gtk4::subclass::prelude::*;
@@ -165,6 +165,7 @@ impl DockItem {
                     dots.set_margin_end(4);
                     item_box.reorder_child_after(&dots.clone(), Some(&image.clone()));
                 }
+                Anchor::Center => unimplemented!(),
             };
         }
         let popover = imp.popover.borrow();
@@ -173,6 +174,7 @@ impl DockItem {
             Anchor::Right => PositionType::Left,
             Anchor::Top => PositionType::Bottom,
             Anchor::Bottom => PositionType::Top,
+            Anchor::Center => unimplemented!(),
         });
         
     }

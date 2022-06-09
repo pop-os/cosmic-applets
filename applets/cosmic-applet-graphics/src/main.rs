@@ -20,7 +20,7 @@ use gtk4::{
 };
 use once_cell::sync::Lazy;
 use tokio::runtime::Runtime;
-use cosmic_panel_config::config::CosmicPanelConfig;
+use cosmic_panel_config::config::{CosmicPanelConfig, XdgWrapperConfig};
 
 static RT: Lazy<Runtime> = Lazy::new(|| Runtime::new().expect("failed to build tokio runtime"));
 

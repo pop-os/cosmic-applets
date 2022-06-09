@@ -325,11 +325,13 @@ dependencies = [
  "gtk4",
  "libcosmic-widgets",
  "libpulse-binding",
+ "mpris2-zbus",
  "once_cell",
  "pulsectl-rs",
  "relm4-macros 0.4.4",
  "tokio",
  "tracker",
+ "zbus",
 ]
 
 [[package]]
@@ -443,7 +445,7 @@ dependencies = [
 [[package]]
 name = "cosmic-panel-config"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/cosmic-panel#d53d6a4d24347dd50068ac174861b1ee37395b10"
+source = "git+https://github.com/pop-os/cosmic-panel#8787823d807ea9a9d7b96ecacf017d695ba7b58a"
 dependencies = [
  "anyhow",
  "gtk4",
@@ -1648,6 +1650,18 @@ dependencies = [
  "log",
  "wasi 0.11.0+wasi-snapshot-preview1",
  "windows-sys",
+]
+
+[[package]]
+name = "mpris2-zbus"
+version = "0.1.0"
+source = "git+https://github.com/pop-os/mpris2-zbus#bcc8481ea7ccfc08aa870f28272d9093db3b1ba9"
+dependencies = [
+ "serde",
+ "thiserror",
+ "time 0.3.9",
+ "zbus",
+ "zvariant",
 ]
 
 [[package]]
