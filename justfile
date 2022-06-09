@@ -33,37 +33,37 @@ install:
     install -Dm0644 applets/cosmic-app-list/data/icons/{{app_list_id}}.Devel.svg {{iconsdir}}/{{app_list_id}}.Devel.svg
     install -Dm0644 applets/cosmic-app-list/data/icons/{{app_list_id}}.svg {{iconsdir}}/{{app_list_id}}.svg
     install -Dm0644 applets/cosmic-app-list/data/{{app_list_id}}.desktop {{sharedir}}/applications/{{app_list_id}}.desktop
-    install -Dm04755 target/release/cosmic-app-list {{bindir}}/cosmic-app-list
+    install -Dm0755 target/release/cosmic-app-list {{bindir}}/cosmic-app-list
 
     # audio
     install -Dm0644 applets/cosmic-applet-audio/data/icons/{{audio_id}}.svg {{iconsdir}}/{{audio_id}}.svg
     install -Dm0644 applets/cosmic-applet-audio/data/{{audio_id}}.desktop {{sharedir}}/applications/{{audio_id}}.desktop
-    install -Dm04755 target/release/cosmic-applet-audio {{bindir}}/cosmic-applet-audio
+    install -Dm0755 target/release/cosmic-applet-audio {{bindir}}/cosmic-applet-audio
 
     # graphics
     install -Dm0644 applets/cosmic-applet-graphics/data/icons/{{graphics_id}}.svg {{iconsdir}}/{{graphics_id}}.svg
     install -Dm0644 applets/cosmic-applet-graphics/data/{{graphics_id}}.desktop {{sharedir}}/applications/{{graphics_id}}.desktop
-    install -Dm04755 target/release/cosmic-applet-graphics {{bindir}}/cosmic-applet-graphics
+    install -Dm0755 target/release/cosmic-applet-graphics {{bindir}}/cosmic-applet-graphics
 
     # network
     install -Dm0644 applets/cosmic-applet-network/data/icons/{{network_id}}.svg {{iconsdir}}/{{network_id}}.svg
     install -Dm0644 applets/cosmic-applet-network/data/{{network_id}}.desktop {{sharedir}}/applications/{{network_id}}.desktop
-    install -Dm04755 target/release/cosmic-applet-network {{bindir}}/cosmic-applet-network
+    install -Dm0755 target/release/cosmic-applet-network {{bindir}}/cosmic-applet-network
 
     # power
     install -Dm0644 applets/cosmic-applet-power/data/icons/{{power_id}}.svg {{iconsdir}}/{{power_id}}.svg
     install -Dm0644 applets/cosmic-applet-power/data/{{power_id}}.desktop {{sharedir}}/applications/{{power_id}}.desktop
-    install -Dm04755 target/release/cosmic-applet-power {{bindir}}/cosmic-applet-power
+    install -Dm0755 target/release/cosmic-applet-power {{bindir}}/cosmic-applet-power
 
     # workspaces
     install -Dm0644 applets/cosmic-applet-workspaces/data/icons/{{workspaces_id}}.svg {{iconsdir}}/{{workspaces_id}}.svg
     install -Dm0644 applets/cosmic-applet-workspaces/data/{{workspaces_id}}.desktop {{sharedir}}/applications/{{workspaces_id}}.desktop
-    install -Dm04755 target/release/cosmic-applet-workspaces {{bindir}}/cosmic-applet-workspaces
+    install -Dm0755 target/release/cosmic-applet-workspaces {{bindir}}/cosmic-applet-workspaces
 
     # status area
     install -Dm0644 applets/cosmic-applet-status-area/data/icons/{{status_area_id}}.svg {{iconsdir}}/{{status_area_id}}.svg
     install -Dm0644 applets/cosmic-applet-status-area/data/{{status_area_id}}.desktop {{sharedir}}/applications/{{status_area_id}}.desktop
-    install -Dm04755 target/release/cosmic-applet-status-area {{bindir}}/cosmic-applet-status-area
+    install -Dm0755 target/release/cosmic-applet-status-area {{bindir}}/cosmic-applet-status-area
 
     # app library button
     install -Dm0644 applets/cosmic-panel-app-button/data/icons/{{app_button_id}}.svg {{iconsdir}}/{{app_button_id}}.svg
@@ -74,7 +74,7 @@ install:
     install -Dm0644 applets/cosmic-panel-workspaces-button/data/{{workspaces_button_id}}.desktop {{sharedir}}/applications/{{workspaces_button_id}}.desktop
 
     # panel button
-    install -Dm04755 target/release/cosmic-panel-button {{bindir}}/cosmic-panel-button
+    install -Dm0755 target/release/cosmic-panel-button {{bindir}}/cosmic-panel-button
 
 # Extracts vendored dependencies if vendor=1
 _extract_vendor:
