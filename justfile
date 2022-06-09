@@ -18,6 +18,7 @@ audio_id := 'com.system76.CosmicAppletAudio'
 graphics_id := 'com.system76.CosmicAppletGraphics'
 network_id := 'com.system76.CosmicAppletNetwork'
 power_id := 'com.system76.CosmicAppletPower'
+workspaces_id := 'com.system76.CosmicAppletWorkspaces'
 status_area_id := 'com.system76.CosmicAppletStatusArea'
 app_button_id := 'com.system76.CosmicPanelAppButton'
 workspaces_button_id := 'com.system76.CosmicPanelWorkspacesButton'
@@ -53,6 +54,11 @@ install:
     install -Dm0644 applets/cosmic-applet-power/data/icons/{{power_id}}.svg {{iconsdir}}/{{power_id}}.svg
     install -Dm0644 applets/cosmic-applet-power/data/{{power_id}}.desktop {{sharedir}}/applications/{{power_id}}.desktop
     install -Dm04755 target/release/cosmic-applet-power {{bindir}}/cosmic-applet-power
+
+    # workspaces
+    install -Dm0644 applets/cosmic-applet-workspaces/data/icons/{{workspaces_id}}.svg {{iconsdir}}/{{workspaces_id}}.svg
+    install -Dm0644 applets/cosmic-applet-workspaces/data/{{workspaces_id}}.desktop {{sharedir}}/applications/{{workspaces_id}}.desktop
+    install -Dm04755 target/release/cosmic-applet-workspaces {{bindir}}/cosmic-applet-workspaces
 
     # status area
     install -Dm0644 applets/cosmic-applet-status-area/data/icons/{{status_area_id}}.svg {{iconsdir}}/{{status_area_id}}.svg

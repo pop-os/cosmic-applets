@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0-only
 
-use crate::{fl, utils::Event, workspace_list::WorkspaceList};
+use crate::{fl, utils::Activate, workspace_list::WorkspaceList};
 use cascade::cascade;
 use cosmic_panel_config::config::CosmicPanelConfig;
 use gtk4::{
@@ -21,7 +21,7 @@ glib::wrapper! {
 }
 
 impl CosmicWorkspacesWindow {
-    pub fn new(app: &gtk4::Application, tx: mpsc::Sender<Event>) -> Self {
+    pub fn new(app: &gtk4::Application) -> Self {
         let self_: Self = Object::new(&[("application", app)])
             .expect("Failed to create `CosmicWorkspacesWindow`.");
         let imp = imp::CosmicWorkspacesWindow::from_instance(&self_);
@@ -37,7 +37,7 @@ impl CosmicWorkspacesWindow {
         };
         let config = CosmicPanelConfig::load_from_env().unwrap_or_default();
 
-        let app_list = WorkspaceList::new(tx, config);
+        let app_list = WorkspaceList::new(config);
         self_.set_child(Some(&app_list));
         imp.inner.set(app_list).unwrap();
 

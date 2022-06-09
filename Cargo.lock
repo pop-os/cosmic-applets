@@ -325,13 +325,11 @@ dependencies = [
  "gtk4",
  "libcosmic-widgets",
  "libpulse-binding",
- "mpris2-zbus",
  "once_cell",
  "pulsectl-rs",
  "relm4-macros 0.4.4",
  "tokio",
  "tracker",
- "zbus",
 ]
 
 [[package]]
@@ -391,6 +389,26 @@ dependencies = [
  "zbus",
  "zbus_names",
  "zvariant",
+]
+
+[[package]]
+name = "cosmic-applet-workspaces"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "cascade",
+ "cosmic-panel-config",
+ "gio",
+ "gtk4",
+ "i18n-embed",
+ "i18n-embed-fl",
+ "once_cell",
+ "pretty_env_logger",
+ "rust-embed",
+ "tokio",
+ "wayland-client",
+ "wayland-commons",
+ "wayland-scanner",
 ]
 
 [[package]]
@@ -1630,18 +1648,6 @@ dependencies = [
  "log",
  "wasi 0.11.0+wasi-snapshot-preview1",
  "windows-sys",
-]
-
-[[package]]
-name = "mpris2-zbus"
-version = "0.1.0"
-source = "git+https://github.com/pop-os/mpris2-zbus#bcc8481ea7ccfc08aa870f28272d9093db3b1ba9"
-dependencies = [
- "serde",
- "thiserror",
- "time 0.3.9",
- "zbus",
- "zvariant",
 ]
 
 [[package]]

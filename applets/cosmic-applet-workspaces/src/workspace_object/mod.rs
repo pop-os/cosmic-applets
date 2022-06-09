@@ -19,11 +19,11 @@ impl WorkspaceObject {
 
     pub fn id(&self) -> u32 {
         imp::WorkspaceObject::from_instance(&self).id.get()
-    } 
+    }
 
     pub fn active(&self) -> bool {
         imp::WorkspaceObject::from_instance(&self).active.get()
-    } 
+    }
 }
 
 #[derive(Clone, Debug, Default, glib::Boxed)]

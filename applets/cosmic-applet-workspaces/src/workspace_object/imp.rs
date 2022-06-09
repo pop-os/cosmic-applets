@@ -53,7 +53,6 @@ impl ObjectImpl for WorkspaceObject {
                     false,
                     ParamFlags::READWRITE,
                 ),
-                
             ]
         });
         PROPERTIES.as_ref()

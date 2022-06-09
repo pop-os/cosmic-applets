@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MPL-2.0-only
 
-use crate::utils::{Event, BoxedWorkspace};
+use crate::utils::Activate;
 use crate::workspace_button::WorkspaceButton;
 use crate::workspace_object::WorkspaceObject;
 use cascade::cascade;
-use cosmic_panel_config::config::{CosmicPanelConfig};
-use gtk4::{glib, gio, prelude::*, subclass::prelude::*};
+use cosmic_panel_config::config::CosmicPanelConfig;
 use gtk4::ListView;
 use gtk4::Orientation;
 use gtk4::SignalListItemFactory;
+use gtk4::{gio, glib, prelude::*, subclass::prelude::*};
 use tokio::sync::mpsc::Sender;
 
 mod imp;
@@ -20,10 +20,9 @@ glib::wrapper! {
 }
 
 impl WorkspaceList {
-    pub fn new(tx: Sender<Event>, config: CosmicPanelConfig) -> Self {
+    pub fn new(config: CosmicPanelConfig) -> Self {
         let self_: WorkspaceList = glib::Object::new(&[]).expect("Failed to create WorkspaceList");
         let imp = imp::WorkspaceList::from_instance(&self_);
-        imp.tx.set(tx).unwrap();
         imp.config.set(config).unwrap();
         self_.layout();
         //dnd behavior is different for each type, as well as the data in the model
@@ -51,7 +50,7 @@ impl WorkspaceList {
 
     fn setup_model(&self) {
         let imp = imp::WorkspaceList::from_instance(self);
-        let model = gio::ListStore::new(BoxedWorkspace::static_type());
+        let model = gio::ListStore::new(WorkspaceObject::static_type());
 
         let selection_model = gtk4::NoSelection::new(Some(&model));
 
@@ -65,28 +64,24 @@ impl WorkspaceList {
         let imp = imp::WorkspaceList::from_instance(self);
         let factory = SignalListItemFactory::new();
         let model = imp.model.get().expect("Failed to get saved app model.");
-        let tx = imp.tx.get().unwrap().clone();
         let icon_size = imp.config.get().unwrap().get_applet_icon_size();
-        factory.connect_setup(
-            glib::clone!(@weak model => move |_, list_item| {
-                let workspace_button = WorkspaceButton::new(tx.clone());
-                list_item.set_child(Some(&workspace_button));
-            }),
-        );
+        factory.connect_setup(glib::clone!(@weak model => move |_, list_item| {
+            let workspace_button = WorkspaceButton::new();
+            list_item.set_child(Some(&workspace_button));
+        }));
         factory.connect_bind(|_, list_item| {
-                let workspace_object = list_item
-                    .item()
-                    .expect("The item has to exist.")
-                    .downcast::<WorkspaceObject>()
-                    .expect("The item has to be a `DockObject`");
-                let workspace_button = list_item
-                    .child()
-                    .expect("The list item child needs to exist.")
-                    .downcast::<WorkspaceButton>()
-                    .expect("The list item type needs to be `DockItem`");
-                workspace_button.set_workspace_object(&workspace_object);
-            },
-        );
+            let workspace_object = list_item
+                .item()
+                .expect("The item has to exist.")
+                .downcast::<WorkspaceObject>()
+                .expect("The item has to be a `DockObject`");
+            let workspace_button = list_item
+                .child()
+                .expect("The list item child needs to exist.")
+                .downcast::<WorkspaceButton>()
+                .expect("The list item type needs to be `DockItem`");
+            workspace_button.set_workspace_object(&workspace_object);
+        });
         // Set the factory of the list view
         imp.list_view.get().unwrap().set_factory(Some(&factory));
     }

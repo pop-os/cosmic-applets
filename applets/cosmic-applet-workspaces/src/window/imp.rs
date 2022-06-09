@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MPL-2.0-only
 
+use crate::workspace_list::WorkspaceList;
 use gtk4::{glib, subclass::prelude::*};
 use once_cell::sync::OnceCell;
-use crate::{workspace_list::WorkspaceList};
 
 // Object holding the state
 #[derive(Default)]

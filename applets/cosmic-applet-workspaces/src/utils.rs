@@ -5,25 +5,12 @@ use std::path::PathBuf;
 use gtk4::glib;
 use std::future::Future;
 
-#[derive(Debug)]
-pub enum Event {
-    WorkspaceList,
-    Activate(u32),
-}
-
+pub type Activate = u32;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Workspace {
     pub(crate) id: u32,
     pub(crate) active: bool,
 }
-
-#[derive(Clone, Debug, Default, glib::Boxed)]
-#[boxed_type(name = "BoxedWorkspace")]
-pub struct BoxedWorkspace(pub Option<Workspace>);
-
-#[derive(Clone, Debug, Default, glib::Boxed)]
-#[boxed_type(name = "BoxedWorkspaceList")]
-pub struct BoxedWorkspaceList(pub Vec<Workspace>);
 
 pub fn data_path() -> PathBuf {
     let mut path = glib::user_data_dir();

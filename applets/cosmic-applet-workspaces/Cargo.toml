@@ -17,7 +17,9 @@ i18n-embed = { version = "0.13.4", features = ["fluent-system", "desktop-request
 i18n-embed-fl = "0.6.4"
 rust-embed = "6.3.0"
 tokio = { version = "1.16.1", features = ["sync"] }
-
+wayland-client = "0.29.4"
+wayland-commons = "0.29.4"
 
 [build-dependencies]
 gio = "0.15.10"
+wayland-scanner = "0.29"

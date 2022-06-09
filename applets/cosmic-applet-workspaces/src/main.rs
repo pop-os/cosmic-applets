@@ -1,22 +1,28 @@
 // SPDX-License-Identifier: MPL-2.0-only
 
-use gtk4::{gdk::Display, gio::{self, ApplicationFlags}, glib, prelude::*, CssProvider, StyleContext};
+use gtk4::{
+    gdk::Display,
+    gio::{self, ApplicationFlags},
+    glib,
+    prelude::*,
+    CssProvider, StyleContext,
+};
 use once_cell::sync::OnceCell;
-use window::CosmicWorkspacesWindow;
 use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc;
-use utils::{Event, BoxedWorkspaceList};
+use utils::{Activate, Workspace};
+use window::CosmicWorkspacesWindow;
 
+mod localize;
+mod utils;
+mod wayland;
 mod window;
 mod workspace_button;
 mod workspace_list;
-mod wayland;
-mod localize;
-mod utils;
 mod workspace_object;
 
 const ID: &str = "com.system76.CosmicAppletWorkspaces";
-static TX: OnceCell<mpsc::Sender<Event>> = OnceCell::new();
+static TX: OnceCell<mpsc::Sender<Activate>> = OnceCell::new();
 
 pub fn localize() {
     let localizer = crate::localize::localizer();
@@ -29,7 +35,7 @@ pub fn localize() {
 
 fn load_css() {
     let provider = CssProvider::new();
-    provider.load_from_resource("/com.system76.CosmicAppletWorkspaces/style.css");
+    provider.load_from_resource("/com/System76/CosmicAppletWorkspaces/style.css");
 
     StyleContext::add_provider_for_display(
         &Display::default().unwrap(),
@@ -50,24 +56,16 @@ fn main() {
 
     app.connect_activate(|app| {
         load_css();
-        let (tx, mut rx) = mpsc::channel(100);
+        let (tx, mut rx) = mpsc::channel::<Vec<Workspace>>(100);
 
-        let window = CosmicWorkspacesWindow::new(app, tx.clone());
+        let wayland_tx = wayland::spawn_workspaces(tx.clone());
+        let window = CosmicWorkspacesWindow::new(app);
 
-        let workspace_list = Arc::new(Mutex::new(Vec::<BoxedWorkspaceList>::new()));
-
-        TX.set(tx.clone()).unwrap();
+        TX.set(wayland_tx).unwrap();
 
         let _ = glib::MainContext::default().spawn_local(async move {
-            while let Some(event) = rx.recv().await {
-                match event {
-                    Event::Activate(_) => {
-                        // TODO activate the selected workspace
-                    }
-                    Event::WorkspaceList => {
-                        // TODO update the model with the new workspace list
-                    }
-                }
+            while let Some(workspace_list) = rx.recv().await {
+                // TODO update the model with the new workspace list
             }
         });
         window.show();

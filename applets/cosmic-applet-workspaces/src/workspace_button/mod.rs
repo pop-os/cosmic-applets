@@ -1,9 +1,8 @@
 mod imp;
 
+use crate::{workspace_object::WorkspaceObject, Activate, TX};
 use glib::Object;
 use gtk4::{glib, prelude::*, subclass::prelude::*, ToggleButton};
-use tokio::sync::mpsc;
-use crate::{Event, workspace_object::WorkspaceObject};
 
 glib::wrapper! {
     pub struct WorkspaceButton(ObjectSubclass<imp::WorkspaceButton>)
@@ -12,16 +11,15 @@ glib::wrapper! {
 }
 
 impl WorkspaceButton {
-    pub fn new(tx: mpsc::Sender<Event>) -> Self {
+    pub fn new() -> Self {
         let self_ = Object::new(&[]).expect("Failed to create `WorkspaceButton`.");
         let imp = imp::WorkspaceButton::from_instance(&self_);
-        imp.tx.set(tx).unwrap();
 
         let tb = ToggleButton::with_label("");
         self_.append(&tb);
 
         imp.button.replace(tb);
-        
+
         self_
     }
 
@@ -34,9 +32,9 @@ impl WorkspaceButton {
         let new_button = ToggleButton::with_label(&format!("{}", id));
         new_button.set_active(obj.active());
         self.append(&new_button);
-        new_button.connect_clicked(glib::clone!(@weak imp.tx as tx => move |_| {
-            let _ = tx.get().unwrap().send(Event::Activate(id));
-        }));
+        new_button.connect_clicked(move |_| {
+            let _ = TX.get().unwrap().send(id);
+        });
 
         imp.button.replace(new_button);
     }
