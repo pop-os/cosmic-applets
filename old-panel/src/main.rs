@@ -2,8 +2,6 @@ use gtk4::{glib, prelude::*};
 
 mod application;
 mod deref_cell;
-mod mpris;
-mod mpris_player;
 mod popover_container;
 mod time_button;
 mod window;

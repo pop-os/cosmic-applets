@@ -8,7 +8,6 @@ use gtk4::{
 
 use crate::application::PanelApp;
 use crate::deref_cell::DerefCell;
-use crate::mpris::MprisControls;
 use crate::popover_container::PopoverContainer;
 
 #[derive(Default)]
@@ -16,7 +15,6 @@ pub struct TimeButtonInner {
     calendar: DerefCell<gtk4::Calendar>,
     button: DerefCell<gtk4::ToggleButton>,
     label: DerefCell<gtk4::Label>,
-    left_box: DerefCell<gtk4::Box>,
 }
 
 #[glib::object_subclass]
@@ -50,17 +48,11 @@ impl ObjectImpl for TimeButtonInner {
             ..set_child(Some(&label));
         };
 
-        let left_box = cascade! {
-            gtk4::Box::new(gtk4::Orientation::Vertical, 0);
-            ..append(&MprisControls::new());
-        };
-
         cascade! {
             PopoverContainer::new(&button);
             ..set_parent(obj);
             ..popover().set_child(Some(&cascade! {
                 gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
-                ..append(&left_box);
                 ..append(&calendar);
             }));
             ..popover().connect_show(clone!(@strong obj => move |_| obj.opening()));
@@ -70,7 +62,6 @@ impl ObjectImpl for TimeButtonInner {
         self.calendar.set(calendar);
         self.button.set(button);
         self.label.set(label);
-        self.left_box.set(left_box);
 
         // TODO: better way to do this?
         glib::timeout_add_seconds_local(
