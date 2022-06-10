@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
 
+use futures::channel::mpsc;
 use futures::stream::StreamExt;
-use futures_channel::mpsc;
 use gtk4::{
     glib::{self, clone, subclass::Signal, SignalHandlerId},
     prelude::*,

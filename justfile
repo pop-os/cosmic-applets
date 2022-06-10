@@ -17,6 +17,7 @@ app_list_id := 'com.system76.CosmicAppList'
 audio_id := 'com.system76.CosmicAppletAudio'
 graphics_id := 'com.system76.CosmicAppletGraphics'
 network_id := 'com.system76.CosmicAppletNetwork'
+notifications_id := 'com.system76.CosmicAppletNotifications'
 power_id := 'com.system76.CosmicAppletPower'
 workspaces_id := 'com.system76.CosmicAppletWorkspaces'
 status_area_id := 'com.system76.CosmicAppletStatusArea'
@@ -49,6 +50,11 @@ install:
     install -Dm0644 applets/cosmic-applet-network/data/icons/{{network_id}}.svg {{iconsdir}}/{{network_id}}.svg
     install -Dm0644 applets/cosmic-applet-network/data/{{network_id}}.desktop {{sharedir}}/applications/{{network_id}}.desktop
     install -Dm0755 target/release/cosmic-applet-network {{bindir}}/cosmic-applet-network
+
+    # notifications
+    install -Dm0644 applets/cosmic-applet-notifications/data/icons/{{notifications_id}}.svg {{iconsdir}}/{{notifications_id}}.svg
+    install -Dm0644 applets/cosmic-applet-notifications/data/{{notifications_id}}.desktop {{sharedir}}/applications/{{notifications_id}}.desktop
+    install -Dm04755 target/release/cosmic-applet-notifications {{bindir}}/cosmic-applet-notifications
 
     # power
     install -Dm0644 applets/cosmic-applet-power/data/icons/{{power_id}}.svg {{iconsdir}}/{{power_id}}.svg

@@ -6,13 +6,10 @@ use gtk4::{
 };
 use std::cell::Cell;
 
-use crate::deref_cell::DerefCell;
-use crate::notifications::Notifications;
 use crate::window;
 
 #[derive(Default)]
 pub struct PanelAppInner {
-    notifications: DerefCell<Notifications>,
     activated: Cell<bool>,
 }
 
@@ -28,8 +25,6 @@ impl ObjectImpl for PanelAppInner {
         obj.set_application_id(Some("com.system76.cosmicpanel"));
 
         self.parent_constructed(obj);
-
-        self.notifications.set(Notifications::new());
     }
 }
 
@@ -82,9 +77,5 @@ impl PanelApp {
 
     fn add_window_for_monitor(&self, monitor: gdk::Monitor) {
         window::create(self, monitor);
-    }
-
-    pub fn notifications(&self) -> &Notifications {
-        &*self.inner().notifications
     }
 }

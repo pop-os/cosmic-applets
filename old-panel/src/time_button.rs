@@ -9,8 +9,6 @@ use gtk4::{
 use crate::application::PanelApp;
 use crate::deref_cell::DerefCell;
 use crate::mpris::MprisControls;
-use crate::notification_list::NotificationList;
-use crate::notification_popover::NotificationPopover;
 use crate::popover_container::PopoverContainer;
 
 #[derive(Default)]
@@ -18,7 +16,6 @@ pub struct TimeButtonInner {
     calendar: DerefCell<gtk4::Calendar>,
     button: DerefCell<gtk4::ToggleButton>,
     label: DerefCell<gtk4::Label>,
-    notification_popover: DerefCell<NotificationPopover>,
     left_box: DerefCell<gtk4::Box>,
 }
 
@@ -88,7 +85,6 @@ impl ObjectImpl for TimeButtonInner {
 
     fn dispose(&self, _obj: &TimeButton) {
         self.button.unparent();
-        self.notification_popover.unparent();
     }
 }
 
@@ -102,15 +98,6 @@ glib::wrapper! {
 impl TimeButton {
     pub fn new(app: &PanelApp) -> Self {
         let obj = glib::Object::new::<Self>(&[]).unwrap();
-
-        let notification_list = NotificationList::new(app.notifications());
-        obj.inner().left_box.prepend(&notification_list);
-
-        let notification_popover = cascade! {
-            NotificationPopover::new(app.notifications());
-            ..set_parent(&obj);
-        };
-        obj.inner().notification_popover.set(notification_popover);
 
         obj
     }

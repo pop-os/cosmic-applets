@@ -364,6 +364,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "cosmic-applet-notifications"
+version = "0.1.0"
+dependencies = [
+ "cascade",
+ "cosmic-panel-config",
+ "futures",
+ "gtk4",
+ "once_cell",
+ "serde",
+ "zbus",
+ "zbus_names",
+ "zvariant",
+]
+
+[[package]]
 name = "cosmic-applet-power"
 version = "0.1.0"
 dependencies = [

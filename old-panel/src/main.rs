@@ -1,14 +1,9 @@
 use gtk4::{glib, prelude::*};
 
 mod application;
-mod dbus_service;
 mod deref_cell;
 mod mpris;
 mod mpris_player;
-mod notification_list;
-mod notification_popover;
-mod notification_widget;
-mod notifications;
 mod popover_container;
 mod time_button;
 mod window;
