@@ -181,12 +181,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "37ccbd214614c6783386c1af30caf03192f17891059cecc394b4fb119e363de3"
 
 [[package]]
-name = "byte_string"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "11aade7a05aa8c3a351cedc44c3fc45806430543382fcc4743a9b757a2a0b4ed"
-
-[[package]]
 name = "byteorder"
 version = "1.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -398,6 +392,22 @@ name = "cosmic-applet-status-area"
 version = "0.1.0"
 dependencies = [
  "cascade",
+ "cosmic-panel-config",
+ "futures",
+ "gtk4",
+ "once_cell",
+ "serde",
+ "zbus",
+ "zbus_names",
+ "zvariant",
+]
+
+[[package]]
+name = "cosmic-applet-time"
+version = "0.1.0"
+dependencies = [
+ "cascade",
+ "chrono",
  "cosmic-panel-config",
  "futures",
  "gtk4",
@@ -999,31 +1009,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "gdk4-wayland"
-version = "0.4.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cf81f00824c5f9862764c18ef061efe12b9c4f10614f74d3eaf1f18852c335e2"
-dependencies = [
- "gdk4",
- "gdk4-wayland-sys",
- "gio",
- "glib",
- "libc",
- "wayland-client",
-]
-
-[[package]]
-name = "gdk4-wayland-sys"
-version = "0.4.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "41f2375ec73e2ec6815cdf1da330ff2e020b46fab9057d1e06f44909f1789898"
-dependencies = [
- "glib-sys",
- "libc",
- "system-deps",
-]
-
-[[package]]
 name = "gdk4-x11"
 version = "0.4.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1512,17 +1497,13 @@ version = "0.1.0"
 source = "git+https://github.com/pop-os/libcosmic#d004d686bd83e55f8f5058700941284ca84dc579"
 dependencies = [
  "cascade",
- "derivative",
  "gdk4",
- "gdk4-wayland",
  "gdk4-x11",
  "gio",
  "gobject-sys",
  "gtk4",
  "libcosmic-widgets",
  "once_cell",
- "wayland-client",
- "wayland-protocols",
  "x11",
 ]
 
@@ -1994,31 +1975,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pop-cosmic-panel"
-version = "0.1.0"
-dependencies = [
- "byte_string",
- "cascade",
- "chrono",
- "derivative",
- "enumflags2",
- "futures",
- "futures-channel",
- "gdk4-wayland",
- "gdk4-x11",
- "gobject-sys",
- "gtk4",
- "libcosmic",
- "once_cell",
- "serde",
- "toml",
- "x11",
- "zbus",
- "zbus_names",
- "zvariant",
-]
-
-[[package]]
 name = "ppv-lite86"
 version = "0.2.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2310,12 +2266,6 @@ checksum = "93fc1dc3aaa9bfed95e02e6eadabb4baf7e3078b0bd1b4d7b6b0b68378900502"
 dependencies = [
  "winapi-util",
 ]
-
-[[package]]
-name = "scoped-tls"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ea6a9290e3c9cf0f18145ef7ffa62d68ee0bf5fcd651017e586dc7fd5da448c2"
 
 [[package]]
 name = "scopeguard"
@@ -2828,7 +2778,6 @@ dependencies = [
  "downcast-rs",
  "libc",
  "nix 0.22.3",
- "scoped-tls",
  "wayland-commons",
  "wayland-scanner",
  "wayland-sys",
@@ -2886,7 +2835,6 @@ version = "0.29.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d9341df79a8975679188e37dab3889bfa57c44ac2cb6da166f519a81cbe452d4"
 dependencies = [
- "dlib",
  "pkg-config",
 ]
 

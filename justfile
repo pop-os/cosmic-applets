@@ -21,6 +21,7 @@ notifications_id := 'com.system76.CosmicAppletNotifications'
 power_id := 'com.system76.CosmicAppletPower'
 workspaces_id := 'com.system76.CosmicAppletWorkspaces'
 status_area_id := 'com.system76.CosmicAppletStatusArea'
+time_id := 'com.system76.CosmicAppletTime'
 app_button_id := 'com.system76.CosmicPanelAppButton'
 workspaces_button_id := 'com.system76.CosmicPanelWorkspacesButton'
 
@@ -70,6 +71,11 @@ install:
     install -Dm0644 applets/cosmic-applet-status-area/data/icons/{{status_area_id}}.svg {{iconsdir}}/{{status_area_id}}.svg
     install -Dm0644 applets/cosmic-applet-status-area/data/{{status_area_id}}.desktop {{sharedir}}/applications/{{status_area_id}}.desktop
     install -Dm0755 target/release/cosmic-applet-status-area {{bindir}}/cosmic-applet-status-area
+
+    # time
+    install -Dm0644 applets/cosmic-applet-time/data/icons/{{time_id}}.svg {{iconsdir}}/{{time_id}}.svg
+    install -Dm0644 applets/cosmic-applet-time/data/{{time_id}}.desktop {{sharedir}}/applications/{{time_id}}.desktop
+    install -Dm0755 target/release/cosmic-applet-time {{bindir}}/cosmic-applet-time
 
     # app library button
     install -Dm0644 applets/cosmic-panel-app-button/data/icons/{{app_button_id}}.svg {{iconsdir}}/{{app_button_id}}.svg

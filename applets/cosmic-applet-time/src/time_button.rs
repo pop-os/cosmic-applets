@@ -6,14 +6,12 @@ use gtk4::{
     subclass::prelude::*,
 };
 
-use crate::application::PanelApp;
 use crate::deref_cell::DerefCell;
-use crate::popover_container::PopoverContainer;
 
 #[derive(Default)]
 pub struct TimeButtonInner {
     calendar: DerefCell<gtk4::Calendar>,
-    button: DerefCell<gtk4::ToggleButton>,
+    button: DerefCell<gtk4::MenuButton>,
     label: DerefCell<gtk4::Label>,
 }
 
@@ -42,21 +40,21 @@ impl ObjectImpl for TimeButtonInner {
             }));
         };
 
-        let button = cascade! {
-            gtk4::ToggleButton::new();
-            ..set_has_frame(false);
-            ..set_child(Some(&label));
-        };
-
-        cascade! {
-            PopoverContainer::new(&button);
-            ..set_parent(obj);
-            ..popover().set_child(Some(&cascade! {
+        let popover = cascade! {
+            gtk4::Popover::new();
+            ..set_child(Some(&cascade! {
                 gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
                 ..append(&calendar);
             }));
-            ..popover().connect_show(clone!(@strong obj => move |_| obj.opening()));
-            ..popover().bind_property("visible", &button, "active").flags(glib::BindingFlags::BIDIRECTIONAL).build();
+            ..connect_show(clone!(@strong obj => move |_| obj.opening()));
+        };
+
+        let button = cascade! {
+            gtk4::MenuButton::new();
+            ..set_child(Some(&label));
+            ..set_has_frame(false);
+            ..set_parent(obj);
+            ..set_popover(Some(&popover));
         };
 
         self.calendar.set(calendar);
@@ -87,10 +85,8 @@ glib::wrapper! {
 }
 
 impl TimeButton {
-    pub fn new(app: &PanelApp) -> Self {
-        let obj = glib::Object::new::<Self>(&[]).unwrap();
-
-        obj
+    pub fn new() -> Self {
+        glib::Object::new::<Self>(&[]).unwrap()
     }
 
     fn inner(&self) -> &TimeButtonInner {

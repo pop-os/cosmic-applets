@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Cosmic Applet Time
+Type=Application
+Exec=cosmic-applet-time
+Terminal=false
+Categories=GNOME;GTK;
+Keywords=Gnome;GTK;
+# Translators: Do NOT translate or transliterate this text (this is an icon file name)!
+Icon=com.system76.CosmicAppletTime
+NoDisplay=true

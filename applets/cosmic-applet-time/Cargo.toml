@@ -1,0 +1,17 @@
+[package]
+name = "cosmic-applet-time"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0-or-later"
+
+[dependencies]
+cascade = "1"
+chrono = "0.4"
+futures = "0.3"
+gtk4 = { version = "0.4.6", features = [ "v4_6" ] }
+once_cell = "1.12"
+serde = "1"
+zbus = "2.0.1"
+zbus_names = "2"
+zvariant = "3"
+cosmic-panel-config = {git = "https://github.com/pop-os/cosmic-panel", features = ["gtk4"]}

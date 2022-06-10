@@ -7,7 +7,7 @@ members = [
     "applets/cosmic-applet-power",
     "applets/cosmic-applet-workspaces",
     "applets/cosmic-applet-status-area",
+    "applets/cosmic-applet-time",
     "applets/cosmic-app-list",
     "applets/cosmic-panel-button",
-    "old-panel",
-    ]
+]
