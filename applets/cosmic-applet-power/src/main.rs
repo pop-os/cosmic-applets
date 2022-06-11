@@ -6,10 +6,11 @@ extern crate relm4_macros;
 pub mod session_manager;
 pub mod ui;
 
-use gtk4::{glib, gio::ApplicationFlags, prelude::*, Orientation, Separator};
-use once_cell::sync::Lazy;
-use tokio::runtime::Runtime;
 use cosmic_panel_config::config::{CosmicPanelConfig, XdgWrapperConfig};
+use gtk4::{gio::ApplicationFlags, glib, prelude::*, Align, Button, Label, Orientation, Separator};
+use once_cell::sync::Lazy;
+use std::process::Command;
+use tokio::runtime::Runtime;
 
 static RT: Lazy<Runtime> = Lazy::new(|| Runtime::new().expect("failed to build tokio runtime"));
 
@@ -77,6 +78,17 @@ fn build_ui(application: &gtk4::Application) {
             set_margin_bottom: 20,
             set_margin_start: 24,
             set_margin_end: 24,
+            append: settings_button = &Button {
+                set_child = Some(&Label) {
+                    set_label: "Settings...",
+                    set_halign: Align::Start,
+                    set_hexpand: true
+                },
+                connect_clicked => move |_| {
+                    let _ = Command::new("cosmic-settings").spawn();
+                }
+            },
+            append = &Separator {},
             append: &session_section,
             append: second_separator = &Separator {},
             append: &system_section
