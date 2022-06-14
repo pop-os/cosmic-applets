@@ -1,19 +1,21 @@
 use gtk4::{prelude::*, Button, Label, ListBox};
 use libcosmic_widgets::{relm4::RelmContainerExt, LabeledItem};
-use pulsectl::controllers::{types::DeviceInfo, DeviceControl, SourceController};
 use std::rc::Rc;
 
-fn get_inputs() -> Vec<DeviceInfo> {
-    SourceController::create()
-        .expect("failed to create input controller")
-        .list_devices()
+use crate::pa::{Source, PA};
+
+pub async fn get_inputs(pa: &PA) -> Vec<Source> {
+    // XXX handle error
+    pa.get_source_info_list()
+        .await
         .expect("failed to list input devices")
 }
 
-pub fn refresh_default_input(label: &Label) -> DeviceInfo {
-    let default_input = SourceController::create()
-        .expect("failed to create input controller")
-        .get_default_device()
+pub async fn refresh_default_input(pa: &PA, label: &Label) -> Source {
+    // XXX handle error
+    let default_input = pa
+        .get_default_source()
+        .await
         .expect("failed to get default input");
     label.set_text(match &default_input.description {
         Some(name) => name.as_str(),
@@ -22,12 +24,11 @@ pub fn refresh_default_input(label: &Label) -> DeviceInfo {
     default_input
 }
 
-pub fn refresh_input_widgets(inputs: &ListBox) {
+pub async fn refresh_input_widgets(pa: &PA, inputs: &ListBox) {
     while let Some(row) = inputs.row_at_index(0) {
         inputs.remove(&row);
     }
-    for input in get_inputs() {
-        let input = Rc::new(input.clone());
+    for input in get_inputs(pa).await {
         let name = match &input.name {
             Some(name) => name.to_owned(),
             None => continue, // Why doesn't this have a name? Whatever, it's invalid.
@@ -40,10 +41,13 @@ pub fn refresh_input_widgets(inputs: &ListBox) {
                 set_child: set_current_input_device = &Button {
                     set_label: "Switch",
                     connect_clicked: move |_| {
+                        // XXX Need mutable borrow? Is this a problem for async?
+                        /*
                         SourceController::create()
                             .expect("failed to create input controller")
                             .set_default_device(&name)
                             .expect("failed to set default device");
+                        */
                     }
                 }
             }

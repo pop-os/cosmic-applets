@@ -315,13 +315,14 @@ version = "0.1.0"
 dependencies = [
  "async-io",
  "freedesktop-desktop-entry",
+ "futures",
  "futures-util",
  "gtk4",
  "libcosmic-widgets",
  "libpulse-binding",
+ "libpulse-glib-binding",
  "mpris2-zbus",
  "once_cell",
- "pulsectl-rs",
  "relm4-macros 0.4.4",
  "tokio",
  "tracker",
@@ -1542,6 +1543,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "libpulse-glib-binding"
+version = "2.25.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "df0e7a964c9f7e95d4f073affc19adfda009fa0d55e8831dbb66c78be1d0e6e5"
+dependencies = [
+ "glib",
+ "glib-sys",
+ "libpulse-binding",
+ "libpulse-mainloop-glib-sys",
+]
+
+[[package]]
+name = "libpulse-mainloop-glib-sys"
+version = "1.19.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "36f61c4064926cc77ea14bb206a21ce1d5a06e175e5c0ce078804bb6c4527b28"
+dependencies = [
+ "glib-sys",
+ "libpulse-sys",
+ "pkg-config",
+]
+
+[[package]]
 name = "libpulse-sys"
 version = "1.19.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2044,15 +2068,6 @@ dependencies = [
  "hex",
  "lazy_static",
  "libc",
-]
-
-[[package]]
-name = "pulsectl-rs"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "06a988bceed1981b2c5fc4a3da0e4e073fdaff8e6bd022b089f54bc573dc3cfc"
-dependencies = [
- "libpulse-binding",
 ]
 
 [[package]]

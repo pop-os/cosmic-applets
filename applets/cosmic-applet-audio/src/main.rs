@@ -8,9 +8,11 @@ mod input;
 mod now_playing;
 mod output;
 mod pa;
+use pa::PA;
 mod task;
 mod volume;
 
+use futures::{channel::mpsc, stream::StreamExt};
 use gtk4::{
     gio::ApplicationFlags,
     glib::{self, clone, MainContext, PRIORITY_DEFAULT},
@@ -24,7 +26,7 @@ use libpulse_binding::{
 };
 use mpris2_zbus::metadata::Metadata;
 use once_cell::sync::Lazy;
-use pulsectl::Handler;
+use std::rc::Rc;
 use tokio::runtime::Runtime;
 
 static RT: Lazy<Runtime> = Lazy::new(|| Runtime::new().expect("failed to build tokio runtime"));
@@ -39,35 +41,29 @@ fn main() {
 }
 
 fn app(application: &Application) {
-    let handler =
-        Handler::connect("com.system76.cosmic.applets.audio").expect("failed to connect to pulse");
-    task::spawn_local(clone!(@strong handler.mainloop as main_loop => async move {
-        pa::drive_main_loop(main_loop).await
-    }));
-    let (refresh_output_tx, refresh_output_rx) = MainContext::channel::<()>(PRIORITY_DEFAULT);
-    let (refresh_input_tx, refresh_input_rx) = MainContext::channel::<()>(PRIORITY_DEFAULT);
-    let (now_playing_tx, now_playing_rx) = MainContext::channel::<Vec<Metadata>>(PRIORITY_DEFAULT);
-    handler
-        .context
-        .borrow_mut()
+    // XXX handle no pulseaudio daemon?
+    let mut pa = PA::new().unwrap();
+    let (refresh_output_tx, mut refresh_output_rx) = mpsc::unbounded();
+    let (refresh_input_tx, mut refresh_input_rx) = mpsc::unbounded();
+    let (now_playing_tx, mut now_playing_rx) = mpsc::unbounded::<Vec<Metadata>>();
+    pa.context
         .set_subscribe_callback(Some(Box::new(clone!(@strong refresh_output_tx, @strong refresh_input_tx => move |facility, operation, _idx| {
             if !matches!(operation, Some(Operation::Changed)) {
                 return;
             }
             match facility {
                 Some(Facility::Sink) => {
-                    refresh_output_tx.send(()).expect("failed to send output refresh message");
+                    refresh_output_tx.unbounded_send(()).expect("failed to send output refresh message");
                 }
                 Some(Facility::Source) => {
-                    refresh_input_tx.send(()).expect("failed to send output refresh message");
+                    refresh_input_tx.unbounded_send(()).expect("failed to send output refresh message");
                 }
                 _ => {}
             }
         }))));
-    handler
-        .context
-        .borrow_mut()
+    pa.context
         .subscribe(InterestMaskSet::SINK | InterestMaskSet::SOURCE, |_| {});
+    let pa = Rc::new(pa);
     view! {
         window = ApplicationWindow {
             set_application: Some(application),
@@ -153,29 +149,27 @@ fn app(application: &Application) {
             }
         }
     }
-    refresh_input_rx.attach(
-        None,
-        clone!(@weak inputs, @weak current_input, @weak input_volume => @default-return Continue(true), move |_| {
-            input::refresh_input_widgets(&inputs);
-            let default_input = input::refresh_default_input(&current_input);
-            volume::update_volume(&default_input, &input_volume);
-            Continue(true)
+    glib::MainContext::default().spawn_local(
+        clone!(@weak inputs, @weak current_input, @weak input_volume, @strong pa => async move {
+            while let Some(()) = refresh_input_rx.next().await {
+                input::refresh_input_widgets(&pa, &inputs);
+                let default_input = input::refresh_default_input(&pa, &current_input);
+                // XXX volume::update_volume(&default_input, &input_volume);
+            }
         }),
     );
-    refresh_output_rx.attach(
-        None,
-        clone!(@weak outputs, @weak current_output, @weak output_volume => @default-return Continue(true), move |_| {
-            output::refresh_output_widgets(&outputs);
-            let default_output = output::refresh_default_output(&current_output);
-            volume::update_volume(&default_output, &output_volume);
-            Continue(true)
+    glib::MainContext::default().spawn_local(
+        clone!(@weak outputs, @weak current_output, @weak output_volume, @strong pa => async move {
+            while let Some(()) = refresh_output_rx.next().await {
+                output::refresh_output_widgets(&pa, &outputs);
+                let default_output = output::refresh_default_output(&pa, &current_output);
+                // XXX volume::update_volume(&default_output, &output_volume);
+            }
         }),
     );
-    now_playing_rx.attach(
-        None,
-        clone!(@weak playing_apps => @default-return Continue(true), move |all_metadata| {
-            Continue(true)
-        }),
-    );
+    glib::MainContext::default().spawn_local(clone!(@weak playing_apps => async move {
+        while let Some(all_metadata) = now_playing_rx.next().await {
+        }
+    }));
     window.show();
 }
