@@ -2,18 +2,15 @@ use futures::{channel::oneshot, future::poll_fn, task::Poll};
 use libpulse_binding::{
     callbacks::ListResult,
     context::{introspect::SinkInfo, Context},
+    volume::ChannelVolumes,
 };
 use libpulse_glib_binding::Mainloop;
 use std::rc::Rc;
 
-pub struct Sink {
+pub struct DeviceInfo {
     pub name: Option<String>,
     pub description: Option<String>,
-}
-
-pub struct Source {
-    pub name: Option<String>,
-    pub description: Option<String>,
+    pub volume: ChannelVolumes,
 }
 
 pub struct ServerInfo {
@@ -45,16 +42,17 @@ impl PA {
         receiver.await.unwrap()
     }
 
-    pub async fn get_sink_info_list(&self) -> Result<Vec<Sink>, ()> {
+    pub async fn get_sink_info_list(&self) -> Result<Vec<DeviceInfo>, ()> {
         let (sender, receiver) = oneshot::channel();
         let mut sender = Some(sender);
         let mut items = Some(Vec::new());
         self.context
             .introspect()
             .get_sink_info_list(move |result| match result {
-                ListResult::Item(item) => items.as_mut().unwrap().push(Sink {
+                ListResult::Item(item) => items.as_mut().unwrap().push(DeviceInfo {
                     name: item.name.clone().map(|x| x.into_owned()),
                     description: item.description.clone().map(|x| x.into_owned()),
+                    volume: item.volume,
                 }),
                 ListResult::End => {
                     sender.take().unwrap().send(Ok(items.take().unwrap()));
@@ -66,7 +64,7 @@ impl PA {
         receiver.await.unwrap()
     }
 
-    pub async fn get_default_sink(&self) -> Result<Sink, ()> {
+    pub async fn get_default_sink(&self) -> Result<DeviceInfo, ()> {
         let name = match self.get_server_info().await.default_sink_name {
             Some(name) => name,
             None => {
@@ -80,9 +78,10 @@ impl PA {
             .introspect()
             .get_sink_info_by_name(&name, move |result| match result {
                 ListResult::Item(item) => {
-                    sink = Some(Sink {
+                    sink = Some(DeviceInfo {
                         name: item.name.clone().map(|x| x.into_owned()),
                         description: item.description.clone().map(|x| x.into_owned()),
+                        volume: item.volume,
                     });
                 }
                 ListResult::End => {
@@ -102,16 +101,17 @@ impl PA {
     }
     */
 
-    pub async fn get_source_info_list(&self) -> Result<Vec<Source>, ()> {
+    pub async fn get_source_info_list(&self) -> Result<Vec<DeviceInfo>, ()> {
         let (sender, receiver) = oneshot::channel();
         let mut sender = Some(sender);
         let mut items = Some(Vec::new());
         self.context
             .introspect()
             .get_source_info_list(move |result| match result {
-                ListResult::Item(item) => items.as_mut().unwrap().push(Source {
+                ListResult::Item(item) => items.as_mut().unwrap().push(DeviceInfo {
                     name: item.name.clone().map(|x| x.into_owned()),
                     description: item.description.clone().map(|x| x.into_owned()),
+                    volume: item.volume,
                 }),
                 ListResult::End => {
                     sender.take().unwrap().send(Ok(items.take().unwrap()));
@@ -123,7 +123,7 @@ impl PA {
         receiver.await.unwrap()
     }
 
-    pub async fn get_default_source(&self) -> Result<Source, ()> {
+    pub async fn get_default_source(&self) -> Result<DeviceInfo, ()> {
         let name = match self.get_server_info().await.default_source_name {
             Some(name) => name,
             None => {
@@ -137,9 +137,10 @@ impl PA {
             .introspect()
             .get_source_info_by_name(&name, move |result| match result {
                 ListResult::Item(item) => {
-                    source = Some(Source {
+                    source = Some(DeviceInfo {
                         name: item.name.clone().map(|x| x.into_owned()),
                         description: item.description.clone().map(|x| x.into_owned()),
+                        volume: item.volume,
                     });
                 }
                 ListResult::End => {

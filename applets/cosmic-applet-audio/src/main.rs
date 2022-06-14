@@ -21,12 +21,15 @@ use gtk4::{
     Orientation, PositionType, Revealer, RevealerTransitionType, Scale, SelectionMode, Separator,
 };
 use libpulse_binding::{
-    context::subscribe::{Facility, InterestMaskSet, Operation},
+    context::{
+        subscribe::{Facility, InterestMaskSet, Operation},
+        FlagSet, State,
+    },
     volume::Volume,
 };
 use mpris2_zbus::metadata::Metadata;
 use once_cell::sync::Lazy;
-use std::rc::Rc;
+use std::{cell::RefCell, rc::Rc};
 use tokio::runtime::Runtime;
 
 static RT: Lazy<Runtime> = Lazy::new(|| Runtime::new().expect("failed to build tokio runtime"));
@@ -61,9 +64,20 @@ fn app(application: &Application) {
                 _ => {}
             }
         }))));
-    pa.context
-        .subscribe(InterestMaskSet::SINK | InterestMaskSet::SOURCE, |_| {});
-    let pa = Rc::new(pa);
+    let pa = Rc::new(RefCell::new(pa));
+    pa.borrow_mut()
+        .context
+        .set_state_callback(Some(Box::new(clone!(@strong pa => move || {
+            let mut pa = pa.borrow_mut();
+            if pa.context.get_state() == State::Ready {
+                pa.context
+                    .subscribe(InterestMaskSet::SINK | InterestMaskSet::SOURCE, |_| {});
+            }
+        }))));
+    pa.borrow_mut()
+        .context
+        .connect(None, FlagSet::empty(), None)
+        .unwrap();
     view! {
         window = ApplicationWindow {
             set_application: Some(application),
@@ -152,18 +166,20 @@ fn app(application: &Application) {
     glib::MainContext::default().spawn_local(
         clone!(@weak inputs, @weak current_input, @weak input_volume, @strong pa => async move {
             while let Some(()) = refresh_input_rx.next().await {
-                input::refresh_input_widgets(&pa, &inputs);
-                let default_input = input::refresh_default_input(&pa, &current_input);
-                // XXX volume::update_volume(&default_input, &input_volume);
+                let pa = pa.borrow();
+                input::refresh_input_widgets(&pa, &inputs).await;
+                let default_input = input::refresh_default_input(&pa, &current_input).await;
+                volume::update_volume(&default_input, &input_volume);
             }
         }),
     );
     glib::MainContext::default().spawn_local(
         clone!(@weak outputs, @weak current_output, @weak output_volume, @strong pa => async move {
             while let Some(()) = refresh_output_rx.next().await {
+                let pa = pa.borrow();
                 output::refresh_output_widgets(&pa, &outputs);
-                let default_output = output::refresh_default_output(&pa, &current_output);
-                // XXX volume::update_volume(&default_output, &output_volume);
+                let default_output = output::refresh_default_output(&pa, &current_output).await;
+                volume::update_volume(&default_output, &output_volume);
             }
         }),
     );

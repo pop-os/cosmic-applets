@@ -2,16 +2,16 @@ use gtk4::{prelude::*, Button, Label, ListBox};
 use libcosmic_widgets::{relm4::RelmContainerExt, LabeledItem};
 use std::rc::Rc;
 
-use crate::pa::{Sink, PA};
+use crate::pa::{DeviceInfo, PA};
 
-pub async fn get_outputs(pa: &PA) -> Vec<Sink> {
+pub async fn get_outputs(pa: &PA) -> Vec<DeviceInfo> {
     // XXX handle error
     pa.get_sink_info_list()
         .await
         .expect("failed to list output devices")
 }
 
-pub async fn refresh_default_output(pa: &PA, label: &Label) -> Sink {
+pub async fn refresh_default_output(pa: &PA, label: &Label) -> DeviceInfo {
     // XXX handle error
     let default_output = pa
         .get_default_sink()

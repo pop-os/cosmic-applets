@@ -2,16 +2,16 @@ use gtk4::{prelude::*, Button, Label, ListBox};
 use libcosmic_widgets::{relm4::RelmContainerExt, LabeledItem};
 use std::rc::Rc;
 
-use crate::pa::{Source, PA};
+use crate::pa::{DeviceInfo, PA};
 
-pub async fn get_inputs(pa: &PA) -> Vec<Source> {
+pub async fn get_inputs(pa: &PA) -> Vec<DeviceInfo> {
     // XXX handle error
     pa.get_source_info_list()
         .await
         .expect("failed to list input devices")
 }
 
-pub async fn refresh_default_input(pa: &PA, label: &Label) -> Source {
+pub async fn refresh_default_input(pa: &PA, label: &Label) -> DeviceInfo {
     // XXX handle error
     let default_input = pa
         .get_default_source()
