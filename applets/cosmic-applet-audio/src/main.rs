@@ -72,6 +72,8 @@ fn app(application: &Application) {
             if pa.context.get_state() == State::Ready {
                 pa.context
                     .subscribe(InterestMaskSet::SINK | InterestMaskSet::SOURCE, |_| {});
+                refresh_output_tx.unbounded_send(()).expect("failed to send output refresh message");
+                refresh_input_tx.unbounded_send(()).expect("failed to send output refresh message");
             }
         }))));
     pa.borrow_mut()
