@@ -19,6 +19,7 @@ rust-embed = "6.3.0"
 tokio = { version = "1.16.1", features = ["sync"] }
 wayland-client = "0.29.4"
 wayland-commons = "0.29.4"
+sctk = { package = "smithay-client-toolkit", git = "https://github.com/wash2/client-toolkit.git", default-features = false, features = ["calloop"] }
 
 [build-dependencies]
 gio = "0.15.10"

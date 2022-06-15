@@ -54,16 +54,16 @@ impl CosmicPanelAppButtonWindow {
             container.append(&image);
 
             app_button.set_child(Some(&container));
-            dbg!(apps_desktop_info.string("Exec").unwrap().as_str());
+            let app_id = app_desktop_file_name.to_string();
             app_button.connect_clicked(move |_| {
                 let _ = Command::new("xdg-shell-wrapper")
                     .env_remove("WAYLAND_SOCKET")
-                    .arg(apps_desktop_info.string("Exec").unwrap().as_str())
+                    .arg(&app_id)
                     .spawn();
             });
             self_.set_child(Some(&app_button));
         } else {
-            panic!("Requested application is not installed");
+            panic!("{} is not installed", app_desktop_file_name);
         }
 
         self_

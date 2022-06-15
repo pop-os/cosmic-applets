@@ -6,7 +6,9 @@ use std::{
 };
 use tokio::sync::mpsc;
 use wayland_client::{protocol::wl_registry, Display, GlobalManager};
-
+use generated::client::{zext_workspace_manager_v1, zext_workspace_group_handle_v1, zext_workspace_handle_v1};
+use sctk::environment::{SimpleGlobal, Environment};
+use sctk::environment;
 mod generated {
     // The generated code tends to trigger a lot of warnings
     // so we isolate it into a very permissive module
@@ -26,6 +28,18 @@ mod generated {
     }
 }
 
+#[derive(Debug)]
+struct State {
+    workspace_manager: SimpleGlobal<zext_workspace_manager_v1::ZextWorkspaceManagerV1>,
+}
+
+environment!(State,
+    singles = [
+        zext_workspace_manager_v1::ZextWorkspaceManagerV1 => workspace_manager,
+    ],
+    multis = []
+);
+
 pub fn spawn_workspaces(tx: mpsc::Sender<Vec<Workspace>>) -> mpsc::Sender<Activate> {
     let (workspaces_tx, mut workspaces_rx) = mpsc::channel(100);
     if let Ok(display) = std::env::var("HOST_WAYLAND_DISPLAY")
@@ -35,18 +49,30 @@ pub fn spawn_workspaces(tx: mpsc::Sender<Vec<Workspace>>) -> mpsc::Sender<Activa
         std::thread::spawn(move || {
             let mut event_queue = display.create_event_queue();
             let attached_display = display.attach(event_queue.token());
-            let globals = GlobalManager::new(&attached_display);
-            dbg!(event_queue.sync_roundtrip(&mut (), |_, _, _| unreachable!()));
+            let env = State {
+                workspace_manager: SimpleGlobal::new(),
+            };
+            let env = Environment::new(&attached_display, &mut event_queue, env).expect("Failed to create environment");
 
-            println!("Globals: ");
-            for (name, interface, version) in globals.list() {
-                println!("{}: {} (version {})", name, interface, version);
-            }
+            let workspace_manager = env.require_global::<zext_workspace_manager_v1::ZextWorkspaceManagerV1>();
+            dbg!(workspace_manager);
+            // let globals = GlobalManager::new(&attached_display);
+            // let _ = event_queue.sync_roundtrip(&mut (), |_, _, _| unreachable!());
+
+            // println!("Globals: ");
+            // for (name, interface, version) in globals.list() {
+            //     println!("{}: {} (version {})", name, interface, version);
+            // }
         });
     } else {
-        eprintln!("ENV variable HOST_WAYLAND_SOCKET is missing. Exiting...");
+        eprintln!("ENV variable HOST_WAYLAND_DISPLAY is missing. Exiting...");
         std::process::exit(1);
     }
 
     workspaces_tx
 }
+
+
+
+
+

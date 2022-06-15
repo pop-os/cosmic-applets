@@ -1,5 +1,3 @@
-use std::env;
-
 // SPDX-License-Identifier: MPL-2.0-only
 use crate::dock_list::DockList;
 use crate::dock_list::DockListType;

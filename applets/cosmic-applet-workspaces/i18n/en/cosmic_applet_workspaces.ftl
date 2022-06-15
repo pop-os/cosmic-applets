@@ -1,1 +1,1 @@
-cosmic-app-list = Cosmic Dock App List
+cosmic-applet-workspaces = Cosmic Workspaces

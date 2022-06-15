@@ -32,7 +32,7 @@ impl CosmicWorkspacesWindow {
             ..set_height_request(1);
             ..set_decorated(false);
             ..set_resizable(false);
-            ..set_title(Some(&fl!("cosmic-app-list")));
+            ..set_title(Some(&fl!("cosmic-applet-workspaces")));
             ..add_css_class("transparent");
         };
         let config = CosmicPanelConfig::load_from_env().unwrap_or_default();

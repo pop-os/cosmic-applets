@@ -82,8 +82,6 @@ fn main() {
                         //     .expect("Failed to close selected window");
                     }
                     Event::Favorite((name, should_favorite)) => {
-                        dbg!(&name);
-                        dbg!(should_favorite);
                         let saved_app_model = apps_container.model(DockListType::Saved);
                         let active_app_model = apps_container.model(DockListType::Active);
                         if should_favorite {
