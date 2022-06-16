@@ -86,6 +86,12 @@ pub struct State {
     workspace_groups: Vec<WorkspaceGroup>,
 }
 
+impl State {
+    pub fn workspace_list(&self) -> impl Iterator<Item=(String, bool)> + '_ {
+        self.workspace_groups.iter().map(|g| g.workspaces.iter().map(|w| (w.name.clone(), false))).flatten()
+    }
+}
+
 #[derive(Debug, Clone)]
 struct WorkspaceGroup {
     workspace_group_handle: ZextWorkspaceGroupHandleV1,

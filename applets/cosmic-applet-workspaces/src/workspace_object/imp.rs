@@ -5,7 +5,6 @@ use std::cell::{RefCell, Cell};
 use glib::{ParamFlags, ParamSpec, Value};
 use gtk4::gdk::glib::ParamSpecBoolean;
 use gtk4::glib::{self, ParamSpecString};
-use gtk4::glib::ParamSpecUInt;
 use gtk4::prelude::*;
 use gtk4::subclass::prelude::*;
 use once_cell::sync::Lazy;

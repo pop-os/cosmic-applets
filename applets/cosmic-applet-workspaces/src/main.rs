@@ -57,17 +57,18 @@ fn main() {
 
     app.connect_activate(|app| {
         load_css();
-        let (tx, mut rx) = MainContext::channel(Priority::default());
+        let (tx, rx) = MainContext::channel(Priority::default());
 
         let wayland_tx = wayland::spawn_workspaces(tx.clone());
         let window = CosmicWorkspacesWindow::new(app);
 
         TX.set(wayland_tx).unwrap();
 
-        rx.attach(None, |workspace_event| {
-            dbg!(workspace_event);
+        rx.attach(None, glib::clone!(@weak window => @default-return glib::prelude::Continue(true), move |workspace_event| {
+            dbg!(&workspace_event);
+            window.set_workspaces(workspace_event);
             glib::prelude::Continue(true)
-        });
+        }));
 
         window.show();
     });

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0-only
 
 use crate::utils::Activate;
+use crate::wayland::State;
 use crate::workspace_button::WorkspaceButton;
 use crate::workspace_object::WorkspaceObject;
 use cascade::cascade;
@@ -47,6 +48,17 @@ impl WorkspaceList {
         self.append(&list_view);
         imp.list_view.set(list_view).unwrap();
     }
+
+    pub fn set_workspaces(&self, workspaces: State) {
+        let imp = imp::WorkspaceList::from_instance(&self);
+        let model = imp.model.get().unwrap();
+
+        let model_len = model.n_items();
+        let new_results: Vec<glib::Object> = workspaces.workspace_list()
+            .into_iter()
+            .map(|w| WorkspaceObject::from_id_active(w.0, w.1).upcast())
+            .collect();
+        model.splice(0, model_len, &new_results[..]);    }
 
     fn setup_model(&self) {
         let imp = imp::WorkspaceList::from_instance(self);
