@@ -1,5 +1,5 @@
 use crate::{utils::{Activate}, wayland::generated::client::zext_workspace_manager_v1::ZextWorkspaceManagerV1};
-use std::{env, os::unix::net::UnixStream, path::PathBuf, sync::Arc};
+use std::{env, os::unix::net::UnixStream, path::PathBuf, sync::Arc, mem};
 use gtk4::glib;
 use tokio::sync::mpsc;
 use wayland_backend::client::ObjectData;
@@ -9,6 +9,11 @@ use wayland_client::{
 };
 
 use wayland_client::{Connection, Dispatch, QueueHandle};
+
+pub enum WorkspaceState {
+
+}
+
 
 /// Generated protocol definitions
 mod generated {
@@ -67,7 +72,19 @@ pub fn spawn_workspaces(tx: glib::Sender<State>) -> mpsc::Sender<Activate> {
             };
 
             while state.running {
-                event_queue.blocking_dispatch(&mut state).unwrap();
+                while let Ok(request) = workspaces_rx.try_recv() {
+                    dbg!(&request);
+                    if let Some(w) = state.workspace_groups.iter().find_map(|g| {
+                        g.workspaces
+                            .iter()
+                            .find(|w| w.name == request)
+                    }) {
+                        println!("sending request");
+                        w.workspace_handle.activate();
+                    }
+                }
+                event_queue.sync_roundtrip(&mut state).unwrap();
+
             }
         });
     } else {
@@ -87,8 +104,9 @@ pub struct State {
 }
 
 impl State {
-    pub fn workspace_list(&self) -> impl Iterator<Item=(String, bool)> + '_ {
-        self.workspace_groups.iter().map(|g| g.workspaces.iter().map(|w| (w.name.clone(), false))).flatten()
+    // XXX
+    pub fn workspace_list(&self) -> impl Iterator<Item=(String, u32)> + '_ {
+        self.workspace_groups.iter().map(|g| g.workspaces.iter().map(|w| (w.name.clone(), w.state))).flatten()
     }
 }
 
@@ -104,7 +122,7 @@ struct Workspace {
     workspace_handle: ZextWorkspaceHandleV1,
     name: String,
     coordinates: Vec<u8>,
-    state: Vec<u8>,
+    state: u32,
 }
 
 impl Dispatch<wl_registry::WlRegistry, ()> for State {
@@ -216,7 +234,7 @@ impl Dispatch<ZextWorkspaceGroupHandleV1, ()> for State {
                         workspace_handle: workspace,
                         name: String::new(),
                         coordinates: Vec::new(),
-                        state: Vec::new(),
+                        state: 4,
                     })
                 }
             }
@@ -271,7 +289,11 @@ impl Dispatch<ZextWorkspaceHandleV1, ()> for State {
                         .iter_mut()
                         .find(|w| &w.workspace_handle == workspace)
                 }) {
-                    w.state = state;
+                    dbg!(&state);
+                    if state.len() == 4 {
+                        // XXX is it little endian??
+                        w.state = u32::from_le_bytes(state.try_into().unwrap());
+                    }
                 }
             }
             zext_workspace_handle_v1::Event::Remove => {

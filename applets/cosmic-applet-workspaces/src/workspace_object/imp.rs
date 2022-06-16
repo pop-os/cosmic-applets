@@ -4,7 +4,7 @@ use std::cell::{RefCell, Cell};
 
 use glib::{ParamFlags, ParamSpec, Value};
 use gtk4::gdk::glib::ParamSpecBoolean;
-use gtk4::glib::{self, ParamSpecString};
+use gtk4::glib::{self, ParamSpecString, ParamSpecUInt};
 use gtk4::prelude::*;
 use gtk4::subclass::prelude::*;
 use once_cell::sync::Lazy;
@@ -13,7 +13,7 @@ use once_cell::sync::Lazy;
 #[derive(Default)]
 pub struct WorkspaceObject {
     pub(crate) id: RefCell<String>,
-    pub(crate) active: Cell<bool>,
+    pub(crate) active: Cell<u32>,
 }
 
 // The central trait for subclassing a GObject
@@ -41,11 +41,13 @@ impl ObjectImpl for WorkspaceObject {
                     // The property can be read and written to
                     ParamFlags::READWRITE,
                 ),
-                ParamSpecBoolean::new(
+                ParamSpecUInt::new(
                     "active",
                     "active",
                     "Indicates whether workspace is active",
-                    false,
+                    0,
+                    4,
+                    0,
                     ParamFlags::READWRITE,
                 ),
             ]

@@ -30,10 +30,16 @@ impl WorkspaceButton {
 
         let id = obj.id();
         let new_button = ToggleButton::with_label(&id);
-        new_button.set_active(obj.active());
+        new_button.set_active(obj.active() == 0);
+        if obj.active() == 1 {
+            new_button.add_css_class("alert");
+        }
         self.append(&new_button);
         new_button.connect_clicked(move |_| {
-            let _ = TX.get().unwrap().send(id.clone());
+            let id_clone = id.clone();
+            glib::MainContext::default().spawn_local(async move {
+                TX.get().unwrap().send(id_clone).await.unwrap();
+            });
         });
 
         imp.button.replace(new_button);

@@ -65,7 +65,6 @@ fn main() {
         TX.set(wayland_tx).unwrap();
 
         rx.attach(None, glib::clone!(@weak window => @default-return glib::prelude::Continue(true), move |workspace_event| {
-            dbg!(&workspace_event);
             window.set_workspaces(workspace_event);
             glib::prelude::Continue(true)
         }));
