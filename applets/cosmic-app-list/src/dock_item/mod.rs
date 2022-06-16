@@ -176,7 +176,6 @@ impl DockItem {
             Anchor::Bottom => PositionType::Top,
             Anchor::Center => unimplemented!(),
         });
-        
     }
 
     pub fn add_popover(&self, obj: &DockObject) {

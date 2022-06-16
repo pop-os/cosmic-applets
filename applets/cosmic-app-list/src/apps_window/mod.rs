@@ -21,8 +21,8 @@ glib::wrapper! {
 
 impl CosmicAppListWindow {
     pub fn new(app: &gtk4::Application, tx: mpsc::Sender<Event>) -> Self {
-        let self_: Self = Object::new(&[("application", app)])
-            .expect("Failed to create `CosmicAppListWindow`.");
+        let self_: Self =
+            Object::new(&[("application", app)]).expect("Failed to create `CosmicAppListWindow`.");
         let imp = imp::CosmicAppListWindow::from_instance(&self_);
 
         cascade! {

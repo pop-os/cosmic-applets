@@ -10,7 +10,7 @@ use gtk4::{
 use once_cell::sync::OnceCell;
 use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc;
-use utils::{Activate, Workspace};
+use utils::{Activate, WorkspaceEvent};
 use window::CosmicWorkspacesWindow;
 
 mod localize;
@@ -56,7 +56,7 @@ fn main() {
 
     app.connect_activate(|app| {
         load_css();
-        let (tx, mut rx) = mpsc::channel::<Vec<Workspace>>(100);
+        let (tx, mut rx) = mpsc::channel::<Vec<WorkspaceEvent>>(100);
 
         let wayland_tx = wayland::spawn_workspaces(tx.clone());
         let window = CosmicWorkspacesWindow::new(app);

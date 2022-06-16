@@ -34,7 +34,9 @@ impl CosmicPanelAppButtonWindow {
             ..add_css_class("root_window");
         };
 
-        if let Some(apps_desktop_info) = DesktopAppInfo::new(&format!("{}.desktop", app_desktop_file_name)) {
+        if let Some(apps_desktop_info) =
+            DesktopAppInfo::new(&format!("{}.desktop", app_desktop_file_name))
+        {
             let app_button = cascade! {
                 Button::new();
                 ..add_css_class("apps");

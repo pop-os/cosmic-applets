@@ -126,7 +126,7 @@ fn main() {
                         let cached_results = cached_results.as_ref().lock().unwrap();
                         let stack_active = cached_results.iter().fold(
                             BTreeMap::new(),
-                            |mut acc: BTreeMap<String, BoxedWindowList>, elem:&Item| {
+                            |mut acc: BTreeMap<String, BoxedWindowList>, elem: &Item| {
                                 if let Some(v) = acc.get_mut(&elem.description) {
                                     v.0.push(elem.clone());
                                 } else {
@@ -162,11 +162,7 @@ fn main() {
                                         // );
                                         let active = stack_active.remove(i);
                                         dock_obj.set_property("active", active.to_value());
-                                        saved_app_model.items_changed(
-                                            saved_i,
-                                            0,
-                                            0,
-                                        );
+                                        saved_app_model.items_changed(saved_i, 0, 0);
                                     } else if cached_results
                                         .iter()
                                         .any(|s| s.description == cur_app_info.name())
@@ -175,11 +171,7 @@ fn main() {
                                             "active",
                                             BoxedWindowList(Vec::new()).to_value(),
                                         );
-                                        saved_app_model.items_changed(
-                                            saved_i,
-                                            0,
-                                            0,
-                                        );
+                                        saved_app_model.items_changed(saved_i, 0, 0);
                                     }
                                 }
                             }
@@ -234,11 +226,7 @@ fn main() {
                                         // println!("found active saved app {} at {}", s.0[0].name, i);
                                         let active = stack_active.remove(i);
                                         dock_obj.set_property("active", active.to_value());
-                                        saved_app_model.items_changed(
-                                            saved_i,
-                                            0,
-                                            0,
-                                        );
+                                        saved_app_model.items_changed(saved_i, 0, 0);
                                     } else if results
                                         .iter()
                                         .any(|s| s.description == cur_app_info.name())
@@ -247,11 +235,7 @@ fn main() {
                                             "active",
                                             BoxedWindowList(Vec::new()).to_value(),
                                         );
-                                        saved_app_model.items_changed(
-                                            saved_i,
-                                            0,
-                                            0,
-                                        );
+                                        saved_app_model.items_changed(saved_i, 0, 0);
                                     }
                                 }
                             }

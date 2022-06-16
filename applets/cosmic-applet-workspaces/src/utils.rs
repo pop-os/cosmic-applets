@@ -7,7 +7,7 @@ use std::future::Future;
 
 pub type Activate = u32;
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Workspace {
+pub struct WorkspaceEvent {
     pub(crate) id: u32,
     pub(crate) active: bool,
 }

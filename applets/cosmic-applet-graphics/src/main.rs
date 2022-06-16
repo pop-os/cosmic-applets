@@ -10,6 +10,7 @@ pub mod graphics;
 pub mod mode_box;
 
 use self::{dbus::PowerDaemonProxy, graphics::Graphics, mode_box::ModeSelection};
+use cosmic_panel_config::config::{CosmicPanelConfig, XdgWrapperConfig};
 use gtk4::{
     gdk::Display,
     gio::ApplicationFlags,
@@ -20,7 +21,6 @@ use gtk4::{
 };
 use once_cell::sync::Lazy;
 use tokio::runtime::Runtime;
-use cosmic_panel_config::config::{CosmicPanelConfig, XdgWrapperConfig};
 
 static RT: Lazy<Runtime> = Lazy::new(|| Runtime::new().expect("failed to build tokio runtime"));
 
@@ -88,7 +88,7 @@ fn build_ui(application: &gtk4::Application) {
     image.add_css_class("panel_icon");
     image.set_pixel_size(config.get_applet_icon_size().try_into().unwrap());
     button.set_child(Some(&image));
-        let current_graphics = RT
+    let current_graphics = RT
         .block_on(get_current_graphics())
         .expect("failed to connect to system76-power");
     view! {

@@ -25,7 +25,7 @@ pub struct DockList {
     pub popover_menu_index: Rc<Cell<Option<u32>>>,
     pub position: Rc<Cell<Anchor>>,
     pub tx: OnceCell<mpsc::Sender<Event>>,
-    pub config: OnceCell<CosmicPanelConfig>
+    pub config: OnceCell<CosmicPanelConfig>,
 }
 
 #[glib::object_subclass]

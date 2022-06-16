@@ -44,7 +44,14 @@ fn main() {
     localize();
     gio::resources_register_include!("compiled.gresource").unwrap();
     let app = gtk4::Application::new(None, ApplicationFlags::default());
-    app.add_main_option("id", glib::Char::from(b'i'), glib::OptionFlags::NONE, glib::OptionArg::String, "id of the launched application", None);
+    app.add_main_option(
+        "id",
+        glib::Char::from(b'i'),
+        glib::OptionFlags::NONE,
+        glib::OptionArg::String,
+        "id of the launched application",
+        None,
+    );
     app.connect_handle_local_options(|_app, args| {
         if let Ok(Some(id)) = args.lookup::<String>("id") {
             ID.set(id).unwrap();

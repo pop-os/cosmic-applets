@@ -66,13 +66,12 @@ impl AppsContainer {
         // Setup
         self_.setup_callbacks();
         self_.set_position(config.anchor);
-        
 
         Self::setup_callbacks(&self_);
 
         self_
     }
-    
+
     pub fn model(&self, type_: DockListType) -> &gio::ListStore {
         // Get state
         let imp = imp::AppsContainer::from_instance(self);
