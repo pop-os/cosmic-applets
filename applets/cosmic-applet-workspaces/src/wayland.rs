@@ -1,5 +1,6 @@
 use crate::{utils::{Activate}, wayland::generated::client::zext_workspace_manager_v1::ZextWorkspaceManagerV1};
 use std::{env, os::unix::net::UnixStream, path::PathBuf, sync::Arc};
+use gtk4::glib;
 use tokio::sync::mpsc;
 use wayland_backend::client::ObjectData;
 use wayland_client::{
@@ -37,7 +38,7 @@ use self::generated::client::{
     zext_workspace_handle_v1::{self, ZextWorkspaceHandleV1},
 };
 
-pub fn spawn_workspaces(tx: mpsc::Sender<State>) -> mpsc::Sender<Activate> {
+pub fn spawn_workspaces(tx: glib::Sender<State>) -> mpsc::Sender<Activate> {
     let (workspaces_tx, mut workspaces_rx) = mpsc::channel(100);
     if let Ok(Ok(conn)) = std::env::var("HOST_WAYLAND_DISPLAY")
         .map_err(anyhow::Error::msg)
@@ -80,7 +81,7 @@ pub fn spawn_workspaces(tx: mpsc::Sender<State>) -> mpsc::Sender<Activate> {
 #[derive(Debug, Clone)]
 pub struct State {
     running: bool,
-    tx: mpsc::Sender<State>,
+    tx: glib::Sender<State>,
     workspace_manager: Option<zext_workspace_manager_v1::ZextWorkspaceManagerV1>,
     workspace_groups: Vec<WorkspaceGroup>,
 }

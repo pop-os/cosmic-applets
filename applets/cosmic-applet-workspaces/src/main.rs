@@ -3,7 +3,7 @@
 use gtk4::{
     gdk::Display,
     gio::{self, ApplicationFlags},
-    glib,
+    glib::{self, MainContext, Priority},
     prelude::*,
     CssProvider, StyleContext,
 };
@@ -57,18 +57,18 @@ fn main() {
 
     app.connect_activate(|app| {
         load_css();
-        let (tx, mut rx) = mpsc::channel::<State>(100);
+        let (tx, mut rx) = MainContext::channel(Priority::default());
 
         let wayland_tx = wayland::spawn_workspaces(tx.clone());
         let window = CosmicWorkspacesWindow::new(app);
 
         TX.set(wayland_tx).unwrap();
 
-        let _ = glib::MainContext::default().spawn_local(async move {
-            while let Some(workspace_list) = rx.recv().await {
-                // TODO update the model with the new workspace list
-            }
+        rx.attach(None, |workspace_event| {
+            dbg!(workspace_event);
+            glib::prelude::Continue(true)
         });
+
         window.show();
     });
     app.run();
