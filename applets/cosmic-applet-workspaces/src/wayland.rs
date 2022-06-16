@@ -1,68 +1,67 @@
 use crate::utils::{Activate, Workspace};
 use std::{
-    num::ParseIntError,
-    os::unix::prelude::RawFd,
-    sync::{Arc, Mutex},
+    os::unix::{net::UnixStream}, env, path::PathBuf,
 };
+use wayland_client::{ConnectError, DelegateDispatch, protocol::wl_registry};
 use tokio::sync::mpsc;
-use wayland_client::{protocol::wl_registry, Display, GlobalManager};
-use generated::client::{zext_workspace_manager_v1, zext_workspace_group_handle_v1, zext_workspace_handle_v1};
-use sctk::environment::{SimpleGlobal, Environment};
-use sctk::environment;
+
+use wayland_client::{
+    Connection, Dispatch, QueueHandle,
+};
+
+/// Generated protocol definitions
 mod generated {
-    // The generated code tends to trigger a lot of warnings
-    // so we isolate it into a very permissive module
-    #![allow(dead_code, non_camel_case_types, unused_unsafe, unused_variables)]
-    #![allow(non_upper_case_globals, non_snake_case, unused_imports)]
+    #![allow(dead_code,non_camel_case_types,unused_unsafe,unused_variables)]
+    #![allow(non_upper_case_globals,non_snake_case,unused_imports)]
+    #![allow(missing_docs, clippy::all)]
 
     pub mod client {
-        // These imports are used by the generated code
-        pub(crate) use wayland_commons::map::{Object, ObjectMetadata};
-        pub(crate) use wayland_commons::smallvec;
-        pub(crate) use wayland_commons::wire::{Argument, ArgumentType, Message, MessageDesc};
-        pub(crate) use wayland_commons::{Interface, MessageGroup};
-        pub(crate) use wayland_client::protocol::wl_output;
-        pub(crate) use wayland_client::sys;
-        pub(crate) use wayland_client::{AnonymousObject, Main, Proxy, ProxyMap};
-        include!(concat!(env!("OUT_DIR"), "/ext_workspace.rs"));
+        //! Client-side API of this protocol
+        use wayland_client;
+        use wayland_client::protocol::*;
+
+        pub mod __interfaces {
+            use wayland_client::protocol::__interfaces::*;
+            wayland_scanner::generate_interfaces!("src/ext-workspace-unstable-v1.xml");
+        }
+        use self::__interfaces::*;
+
+        wayland_scanner::generate_client_code!("src/ext-workspace-unstable-v1.xml");
     }
 }
 
-#[derive(Debug)]
-struct State {
-    workspace_manager: SimpleGlobal<zext_workspace_manager_v1::ZextWorkspaceManagerV1>,
-}
-
-environment!(State,
-    singles = [
-        zext_workspace_manager_v1::ZextWorkspaceManagerV1 => workspace_manager,
-    ],
-    multis = []
-);
+use generated::client::zext_workspace_manager_v1;
 
 pub fn spawn_workspaces(tx: mpsc::Sender<Vec<Workspace>>) -> mpsc::Sender<Activate> {
     let (workspaces_tx, mut workspaces_rx) = mpsc::channel(100);
-    if let Ok(display) = std::env::var("HOST_WAYLAND_DISPLAY")
+    if let Ok(Ok(conn)) = std::env::var("HOST_WAYLAND_DISPLAY")
         .map_err(anyhow::Error::msg)
-        .and_then(|fd| Display::connect_to_name(fd).map_err(anyhow::Error::msg))
+        .map(|fd| {
+            let mut socket_path = env::var_os("XDG_RUNTIME_DIR")
+                .map(Into::<PathBuf>::into)
+                .ok_or(ConnectError::NoCompositor)?;
+            socket_path.push(env::var_os("WAYLAND_DISPLAY").ok_or(ConnectError::NoCompositor)?);
+
+            Ok(UnixStream::connect(socket_path).map_err(|_| ConnectError::NoCompositor)?)
+        })
+        .and_then(|s| s.map(|s| Connection::from_socket(s).map_err(anyhow::Error::msg)))
     {
         std::thread::spawn(move || {
-            let mut event_queue = display.create_event_queue();
-            let attached_display = display.attach(event_queue.token());
-            let env = State {
-                workspace_manager: SimpleGlobal::new(),
+            let mut event_queue= conn.new_event_queue::<State>();
+            let qhandle = event_queue.handle();
+
+            let display = conn.display();
+            display.get_registry(&qhandle, ()).unwrap();
+        
+            let mut state = State {
+                workspace_manager: None,
+                tx,
+                running: true,
             };
-            let env = Environment::new(&attached_display, &mut event_queue, env).expect("Failed to create environment");
-
-            let workspace_manager = env.require_global::<zext_workspace_manager_v1::ZextWorkspaceManagerV1>();
-            dbg!(workspace_manager);
-            // let globals = GlobalManager::new(&attached_display);
-            // let _ = event_queue.sync_roundtrip(&mut (), |_, _, _| unreachable!());
-
-            // println!("Globals: ");
-            // for (name, interface, version) in globals.list() {
-            //     println!("{}: {} (version {})", name, interface, version);
-            // }
+                
+            while state.running {
+                event_queue.blocking_dispatch(&mut state).unwrap();
+            }
         });
     } else {
         eprintln!("ENV variable HOST_WAYLAND_DISPLAY is missing. Exiting...");
@@ -74,5 +73,44 @@ pub fn spawn_workspaces(tx: mpsc::Sender<Vec<Workspace>>) -> mpsc::Sender<Activa
 
 
 
+struct State {
+    running: bool,
+    tx: mpsc::Sender<Vec<Workspace>>,
+    workspace_manager: Option<zext_workspace_manager_v1::ZextWorkspaceManagerV1>,
+}
 
+impl Dispatch<wl_registry::WlRegistry, ()> for State {
+    fn event(
+        &mut self,
+        registry: &wl_registry::WlRegistry,
+        event: wl_registry::Event,
+        _: &(),
+        _: &Connection,
+        qh: &QueueHandle<Self>,
+    ) {
+        if let wl_registry::Event::Global { name, interface, version } = event {
+            println!("[{}] {} (v{})", name, interface, version);
+            match &interface[..] {
+                "zext_workspace_manager_v1" => {
+                    println!("binding to workspace manager");
+                    registry.bind::<zext_workspace_manager_v1::ZextWorkspaceManagerV1, _, _>(name, 1, qh, ()).unwrap();
+                },
+                _ => {}
+            }
+        }
+    }
+}
 
+impl Dispatch<zext_workspace_manager_v1::ZextWorkspaceManagerV1, ()> for State {
+    fn event(
+        &mut self,
+        _: &zext_workspace_manager_v1::ZextWorkspaceManagerV1,
+        _: zext_workspace_manager_v1::Event,
+        _: &(),
+        _: &Connection,
+        _: &QueueHandle<Self>,
+    ) {
+        todo!()
+        // wl_compositor has no event
+    }
+}

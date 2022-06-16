@@ -1,7 +1,5 @@
-extern crate wayland_scanner;
-
 use std::{env, path::PathBuf, process::Command};
-use wayland_scanner::{generate_code, Side};
+// use wayland_scanner::{generate_client_code};
 
 fn main() {
     if let Some(output) = Command::new("git")
@@ -17,13 +15,12 @@ fn main() {
         "data/resources/resources.gresource.xml",
         "compiled.gresource",
     );
-    let dest = PathBuf::from(&env::var("OUT_DIR").unwrap());
-    // Location of the xml file, relative to the `Cargo.toml`
-    let ext_workspace_protocol_file = "data/resources/ext-workspace-unstable-v1.xml";
-    // Target directory for the generate files
-    generate_code(
-        ext_workspace_protocol_file,
-        &dest.join("ext_workspace.rs"),
-        Side::Client,
-    );
+    // let dest = PathBuf::from(&env::var("OUT_DIR").unwrap());
+    // // Location of the xml file, relative to the `Cargo.toml`
+    // let ext_workspace_protocol_file = "data/resources/ext-workspace-unstable-v1.xml";
+    // // Target directory for the generate files
+    // generate_client_code!(
+    //     ext_workspace_protocol_file,
+    //     &dest.join("ext_workspace.rs"),
+    // );
 }

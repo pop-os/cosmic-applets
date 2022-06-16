@@ -17,10 +17,10 @@ i18n-embed = { version = "0.13.4", features = ["fluent-system", "desktop-request
 i18n-embed-fl = "0.6.4"
 rust-embed = "6.3.0"
 tokio = { version = "1.16.1", features = ["sync"] }
-wayland-client = "0.29.4"
 wayland-commons = "0.29.4"
-sctk = { package = "smithay-client-toolkit", git = "https://github.com/wash2/client-toolkit.git", default-features = false, features = ["calloop"] }
+wayland-scanner = { git = "https://github.com/smithay/wayland-rs.git", version = "0.30.0-beta.4"}
+wayland-backend = { version = "0.1.0-beta.4", git = "https://github.com/smithay/wayland-rs.git" }
+wayland-client = { version = "0.30.0-beta.4", git = "https://github.com/smithay/wayland-rs.git" }
 
 [build-dependencies]
 gio = "0.15.10"
-wayland-scanner = "0.29"
