@@ -1,9 +1,10 @@
-use crate::utils::{Activate};
-use std::{env, os::unix::net::UnixStream, path::PathBuf};
+use crate::{utils::{Activate}, wayland::generated::client::zext_workspace_manager_v1::ZextWorkspaceManagerV1};
+use std::{env, os::unix::net::UnixStream, path::PathBuf, sync::Arc};
 use tokio::sync::mpsc;
+use wayland_backend::client::ObjectData;
 use wayland_client::{
     protocol::{wl_output::{WlOutput, self}, wl_registry},
-    ConnectError,
+    ConnectError, Proxy, event_created_child,
 };
 
 use wayland_client::{Connection, Dispatch, QueueHandle};
@@ -166,6 +167,10 @@ impl Dispatch<zext_workspace_manager_v1::ZextWorkspaceManagerV1, ()> for State {
         }
         // wl_compositor has no event
     }
+
+    event_created_child!(State, ZextWorkspaceManagerV1, [
+        0 => (ZextWorkspaceGroupHandleV1, ())
+    ]);
 }
 
 impl Dispatch<ZextWorkspaceGroupHandleV1, ()> for State {
@@ -219,6 +224,10 @@ impl Dispatch<ZextWorkspaceGroupHandleV1, ()> for State {
             }
         }
     }
+
+    event_created_child!(State, ZextWorkspaceGroupHandleV1, [
+        2 => (ZextWorkspaceHandleV1, ())
+    ]);
 }
 
 impl Dispatch<ZextWorkspaceHandleV1, ()> for State {
