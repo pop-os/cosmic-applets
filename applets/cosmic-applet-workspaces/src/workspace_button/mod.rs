@@ -29,11 +29,11 @@ impl WorkspaceButton {
         self.remove(&old_button);
 
         let id = obj.id();
-        let new_button = ToggleButton::with_label(&format!("{}", id));
+        let new_button = ToggleButton::with_label(&id);
         new_button.set_active(obj.active());
         self.append(&new_button);
         new_button.connect_clicked(move |_| {
-            let _ = TX.get().unwrap().send(id);
+            let _ = TX.get().unwrap().send(id.clone());
         });
 
         imp.button.replace(new_button);

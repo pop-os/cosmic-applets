@@ -13,12 +13,12 @@ impl WorkspaceObject {
         glib::Object::new(&[]).unwrap()
     }
 
-    pub fn from_id_active(id: u32, active: bool) -> Self {
+    pub fn from_id_active(id: String, active: bool) -> Self {
         glib::Object::new(&[("id", &id), ("active", &active)]).unwrap()
     }
 
-    pub fn id(&self) -> u32 {
-        imp::WorkspaceObject::from_instance(&self).id.get()
+    pub fn id(&self) -> String {
+        imp::WorkspaceObject::from_instance(&self).id.borrow().clone()
     }
 
     pub fn active(&self) -> bool {

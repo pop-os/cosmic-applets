@@ -2,7 +2,7 @@ use crate::utils::{Activate};
 use std::{env, os::unix::net::UnixStream, path::PathBuf};
 use tokio::sync::mpsc;
 use wayland_client::{
-    protocol::{wl_output::WlOutput, wl_registry},
+    protocol::{wl_output::{WlOutput, self}, wl_registry},
     ConnectError,
 };
 
@@ -40,11 +40,11 @@ pub fn spawn_workspaces(tx: mpsc::Sender<State>) -> mpsc::Sender<Activate> {
     let (workspaces_tx, mut workspaces_rx) = mpsc::channel(100);
     if let Ok(Ok(conn)) = std::env::var("HOST_WAYLAND_DISPLAY")
         .map_err(anyhow::Error::msg)
-        .map(|fd| {
+        .map(|display_str| {
             let mut socket_path = env::var_os("XDG_RUNTIME_DIR")
                 .map(Into::<PathBuf>::into)
                 .ok_or(ConnectError::NoCompositor)?;
-            socket_path.push(env::var_os("WAYLAND_DISPLAY").ok_or(ConnectError::NoCompositor)?);
+            socket_path.push(display_str);
 
             Ok(UnixStream::connect(socket_path).map_err(|_| ConnectError::NoCompositor)?)
         })
@@ -127,6 +127,10 @@ impl Dispatch<wl_registry::WlRegistry, ()> for State {
                         )
                         .unwrap();
                     self.workspace_manager = Some(workspace_manager);
+                }
+                "wl_output" => {
+                    println!("binding to output");
+                    registry.bind::<WlOutput, _, _>(name, 1, qh, ()).unwrap();
                 }
                 _ => {}
             }
@@ -266,4 +270,15 @@ impl Dispatch<ZextWorkspaceHandleV1, ()> for State {
             }
         }
     }
+}
+
+impl Dispatch<WlOutput, ()> for State {
+    fn event(
+        &mut self,
+        _: &WlOutput,
+        _: wl_output::Event,
+        _: &(),
+        _: &Connection,
+        _: &QueueHandle<Self>,
+    ) {}
 }

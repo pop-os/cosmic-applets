@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use gtk4::glib;
 use std::future::Future;
 
-pub type Activate = u32;
+pub type Activate = String;
 
 pub fn data_path() -> PathBuf {
     let mut path = glib::user_data_dir();
