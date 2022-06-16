@@ -1,4 +1,4 @@
-use crate::utils::{Activate, WorkspaceEvent};
+use crate::utils::{Activate};
 use std::{env, os::unix::net::UnixStream, path::PathBuf};
 use tokio::sync::mpsc;
 use wayland_client::{
@@ -36,7 +36,7 @@ use self::generated::client::{
     zext_workspace_handle_v1::{self, ZextWorkspaceHandleV1},
 };
 
-pub fn spawn_workspaces(tx: mpsc::Sender<Vec<WorkspaceEvent>>) -> mpsc::Sender<Activate> {
+pub fn spawn_workspaces(tx: mpsc::Sender<State>) -> mpsc::Sender<Activate> {
     let (workspaces_tx, mut workspaces_rx) = mpsc::channel(100);
     if let Ok(Ok(conn)) = std::env::var("HOST_WAYLAND_DISPLAY")
         .map_err(anyhow::Error::msg)
@@ -76,19 +76,22 @@ pub fn spawn_workspaces(tx: mpsc::Sender<Vec<WorkspaceEvent>>) -> mpsc::Sender<A
     workspaces_tx
 }
 
-struct State {
+#[derive(Debug, Clone)]
+pub struct State {
     running: bool,
-    tx: mpsc::Sender<Vec<WorkspaceEvent>>,
+    tx: mpsc::Sender<State>,
     workspace_manager: Option<zext_workspace_manager_v1::ZextWorkspaceManagerV1>,
     workspace_groups: Vec<WorkspaceGroup>,
 }
 
+#[derive(Debug, Clone)]
 struct WorkspaceGroup {
     workspace_group_handle: ZextWorkspaceGroupHandleV1,
     output: Option<WlOutput>,
     workspaces: Vec<Workspace>,
 }
 
+#[derive(Debug, Clone)]
 struct Workspace {
     workspace_handle: ZextWorkspaceHandleV1,
     name: String,
@@ -151,7 +154,7 @@ impl Dispatch<zext_workspace_manager_v1::ZextWorkspaceManagerV1, ()> for State {
             zext_workspace_manager_v1::Event::Done => {
                 // TODO
                 println!("sending event with workspace list state");
-                let _ = self.tx.send(Vec::new());
+                let _ = self.tx.send(self.clone());
             }
             zext_workspace_manager_v1::Event::Finished => {
                 self.workspace_manager.take();

@@ -6,11 +6,6 @@ use gtk4::glib;
 use std::future::Future;
 
 pub type Activate = u32;
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct WorkspaceEvent {
-    pub(crate) id: u32,
-    pub(crate) active: bool,
-}
 
 pub fn data_path() -> PathBuf {
     let mut path = glib::user_data_dir();
