@@ -28,18 +28,25 @@ impl WorkspaceButton {
         let old_button = imp.button.take();
         self.remove(&old_button);
 
+        let is_active = obj.active() == 0;
         let id = obj.id();
         let new_button = ToggleButton::with_label(&id);
-        new_button.set_active(obj.active() == 0);
-        if obj.active() == 1 {
+        new_button.set_sensitive(!is_active);
+        if obj.active() == 0 {
+            new_button.add_css_class("active");
+        } else if obj.active() == 1 {
             new_button.add_css_class("alert");
+        } else {
+            new_button.add_css_class("inactive");
         }
         self.append(&new_button);
         new_button.connect_clicked(move |_| {
             let id_clone = id.clone();
-            glib::MainContext::default().spawn_local(async move {
-                TX.get().unwrap().send(id_clone).await.unwrap();
-            });
+            if !is_active {
+                glib::MainContext::default().spawn_local(async move {
+                    TX.get().unwrap().send(id_clone).await.unwrap();
+                });
+            }
         });
 
         imp.button.replace(new_button);

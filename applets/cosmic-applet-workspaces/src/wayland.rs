@@ -10,11 +10,6 @@ use wayland_client::{
 
 use wayland_client::{Connection, Dispatch, QueueHandle};
 
-pub enum WorkspaceState {
-
-}
-
-
 /// Generated protocol definitions
 mod generated {
     #![allow(dead_code, non_camel_case_types, unused_unsafe, unused_variables)]
@@ -72,6 +67,7 @@ pub fn spawn_workspaces(tx: glib::Sender<State>) -> mpsc::Sender<Activate> {
             };
 
             while state.running {
+                let mut changed = false;
                 while let Ok(request) = workspaces_rx.try_recv() {
                     dbg!(&request);
                     if let Some(w) = state.workspace_groups.iter().find_map(|g| {
@@ -79,9 +75,12 @@ pub fn spawn_workspaces(tx: glib::Sender<State>) -> mpsc::Sender<Activate> {
                             .iter()
                             .find(|w| w.name == request)
                     }) {
-                        println!("sending request");
                         w.workspace_handle.activate();
                     }
+                    changed = true;
+                }
+                if changed {
+                    state.workspace_manager.as_ref().unwrap().commit();
                 }
                 event_queue.sync_roundtrip(&mut state).unwrap();
 
@@ -140,10 +139,8 @@ impl Dispatch<wl_registry::WlRegistry, ()> for State {
             version,
         } = event
         {
-            println!("[{}] {} (v{})", name, interface, version);
             match &interface[..] {
                 "zext_workspace_manager_v1" => {
-                    println!("binding to workspace manager");
                     let workspace_manager = registry
                         .bind::<zext_workspace_manager_v1::ZextWorkspaceManagerV1, _, _>(
                             name,
@@ -155,7 +152,6 @@ impl Dispatch<wl_registry::WlRegistry, ()> for State {
                     self.workspace_manager = Some(workspace_manager);
                 }
                 "wl_output" => {
-                    println!("binding to output");
                     registry.bind::<WlOutput, _, _>(name, 1, qh, ()).unwrap();
                 }
                 _ => {}
@@ -183,7 +179,6 @@ impl Dispatch<zext_workspace_manager_v1::ZextWorkspaceManagerV1, ()> for State {
             }
             zext_workspace_manager_v1::Event::Done => {
                 // TODO
-                println!("sending event with workspace list state");
                 let _ = self.tx.send(self.clone());
             }
             zext_workspace_manager_v1::Event::Finished => {
@@ -293,6 +288,8 @@ impl Dispatch<ZextWorkspaceHandleV1, ()> for State {
                     if state.len() == 4 {
                         // XXX is it little endian??
                         w.state = u32::from_le_bytes(state.try_into().unwrap());
+                    } else {
+                        w.state = 3;
                     }
                 }
             }
