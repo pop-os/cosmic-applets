@@ -11,3 +11,7 @@ members = [
     "applets/cosmic-app-list",
     "applets/cosmic-panel-button",
 ]
+
+exclude = [
+    "applets/cosmic-applet-power-battery",
+]
