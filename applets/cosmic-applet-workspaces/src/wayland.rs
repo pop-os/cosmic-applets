@@ -1,5 +1,5 @@
 use crate::{utils::{Activate}, wayland::generated::client::zext_workspace_manager_v1::ZextWorkspaceManagerV1};
-use std::{env, os::unix::net::UnixStream, path::PathBuf, sync::Arc, mem};
+use std::{env, os::unix::net::UnixStream, path::PathBuf, sync::Arc, mem, time::Duration};
 use gtk4::glib;
 use tokio::sync::mpsc;
 use wayland_backend::client::ObjectData;
@@ -69,7 +69,6 @@ pub fn spawn_workspaces(tx: glib::Sender<State>) -> mpsc::Sender<Activate> {
             while state.running {
                 let mut changed = false;
                 while let Ok(request) = workspaces_rx.try_recv() {
-                    dbg!(&request);
                     if let Some(w) = state.workspace_groups.iter().find_map(|g| {
                         g.workspaces
                             .iter()
@@ -83,7 +82,7 @@ pub fn spawn_workspaces(tx: glib::Sender<State>) -> mpsc::Sender<Activate> {
                     state.workspace_manager.as_ref().unwrap().commit();
                 }
                 event_queue.sync_roundtrip(&mut state).unwrap();
-
+                std::thread::sleep(Duration::from_millis(16));
             }
         });
     } else {
