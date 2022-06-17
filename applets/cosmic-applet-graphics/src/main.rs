@@ -10,7 +10,7 @@ pub mod graphics;
 pub mod mode_box;
 
 use self::{dbus::PowerDaemonProxy, graphics::Graphics, mode_box::ModeSelection};
-use cosmic_panel_config::config::{CosmicPanelConfig, XdgWrapperConfig};
+use cosmic_panel_config::config::{CosmicPanelConfig};
 use gtk4::{
     gdk::Display,
     gio::ApplicationFlags,

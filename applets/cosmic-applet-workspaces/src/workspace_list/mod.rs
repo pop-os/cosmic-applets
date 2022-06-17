@@ -5,7 +5,7 @@ use crate::wayland::State;
 use crate::workspace_button::WorkspaceButton;
 use crate::workspace_object::WorkspaceObject;
 use cascade::cascade;
-use cosmic_panel_config::config::{CosmicPanelConfig, XdgWrapperConfig};
+use cosmic_panel_config::config::{CosmicPanelConfig};
 use gtk4::ListView;
 use gtk4::Orientation;
 use gtk4::SignalListItemFactory;
@@ -40,9 +40,11 @@ impl WorkspaceList {
 
     fn layout(&self) {
         let imp = imp::WorkspaceList::from_instance(self);
+        let anchor = imp.config.get().unwrap().anchor;
+
         let list_view = cascade! {
             ListView::default();
-            ..set_orientation(Orientation::Horizontal);
+            ..set_orientation(anchor.into());
             ..add_css_class("transparent");
         };
         self.append(&list_view);
@@ -86,7 +88,7 @@ impl WorkspaceList {
                 .item()
                 .expect("The item has to exist.")
                 .downcast::<WorkspaceObject>()
-                .expect("The item has to be a `DockObject`");
+                .expect("The item has to be a `WorkspaceObject`");
             let workspace_button = list_item
                 .child()
                 .expect("The list item child needs to exist.")

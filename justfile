@@ -38,9 +38,9 @@ install:
     install -Dm0755 target/release/cosmic-app-list {{bindir}}/cosmic-app-list
 
     # audio
-    install -Dm0644 applets/cosmic-applet-audio/data/icons/{{audio_id}}.svg {{iconsdir}}/{{audio_id}}.svg
-    install -Dm0644 applets/cosmic-applet-audio/data/{{audio_id}}.desktop {{sharedir}}/applications/{{audio_id}}.desktop
-    install -Dm0755 target/release/cosmic-applet-audio {{bindir}}/cosmic-applet-audio
+    # install -Dm0644 applets/cosmic-applet-audio/data/icons/{{audio_id}}.svg {{iconsdir}}/{{audio_id}}.svg
+    # install -Dm0644 applets/cosmic-applet-audio/data/{{audio_id}}.desktop {{sharedir}}/applications/{{audio_id}}.desktop
+    # install -Dm0755 target/release/cosmic-applet-audio {{bindir}}/cosmic-applet-audio
 
     # graphics
     install -Dm0644 applets/cosmic-applet-graphics/data/icons/{{graphics_id}}.svg {{iconsdir}}/{{graphics_id}}.svg
@@ -48,9 +48,9 @@ install:
     install -Dm0755 target/release/cosmic-applet-graphics {{bindir}}/cosmic-applet-graphics
 
     # network
-    install -Dm0644 applets/cosmic-applet-network/data/icons/{{network_id}}.svg {{iconsdir}}/{{network_id}}.svg
-    install -Dm0644 applets/cosmic-applet-network/data/{{network_id}}.desktop {{sharedir}}/applications/{{network_id}}.desktop
-    install -Dm0755 target/release/cosmic-applet-network {{bindir}}/cosmic-applet-network
+    # install -Dm0644 applets/cosmic-applet-network/data/icons/{{network_id}}.svg {{iconsdir}}/{{network_id}}.svg
+    # install -Dm0644 applets/cosmic-applet-network/data/{{network_id}}.desktop {{sharedir}}/applications/{{network_id}}.desktop
+    # install -Dm0755 target/release/cosmic-applet-network {{bindir}}/cosmic-applet-network
 
     # notifications
     install -Dm0644 applets/cosmic-applet-notifications/data/icons/{{notifications_id}}.svg {{iconsdir}}/{{notifications_id}}.svg
