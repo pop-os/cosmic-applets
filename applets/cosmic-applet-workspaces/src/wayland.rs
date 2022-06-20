@@ -1,11 +1,19 @@
-use crate::{utils::{Activate, WorkspaceEvent}, wayland::generated::client::zext_workspace_manager_v1::ZextWorkspaceManagerV1, wayland_source::WaylandSource};
-use std::{env, os::unix::net::UnixStream, path::PathBuf, sync::Arc, mem, time::Duration};
+use crate::{
+    utils::{Activate, WorkspaceEvent},
+    wayland::generated::client::zext_workspace_manager_v1::ZextWorkspaceManagerV1,
+    wayland_source::WaylandSource,
+};
 use gtk4::glib;
+use std::{env, mem, os::unix::net::UnixStream, path::PathBuf, sync::Arc, time::Duration};
 use tokio::sync::mpsc;
 use wayland_backend::client::ObjectData;
 use wayland_client::{
-    protocol::{wl_output::{WlOutput, self}, wl_registry},
-    ConnectError, Proxy, event_created_child,
+    event_created_child,
+    protocol::{
+        wl_output::{self, WlOutput},
+        wl_registry,
+    },
+    ConnectError, Proxy,
 };
 
 use wayland_client::{Connection, Dispatch, QueueHandle};
@@ -60,9 +68,10 @@ pub fn spawn_workspaces(tx: glib::Sender<State>) -> mpsc::Sender<WorkspaceEvent>
             let event_queue = conn.new_event_queue::<State>();
             let qhandle = event_queue.handle();
 
-            WaylandSource::new(event_queue).expect("Failed to create wayland source")
-            .insert(loop_handle)
-            .unwrap();
+            WaylandSource::new(event_queue)
+                .expect("Failed to create wayland source")
+                .insert(loop_handle)
+                .unwrap();
 
             let display = conn.display();
             display.get_registry(&qhandle, ()).unwrap();
@@ -79,36 +88,42 @@ pub fn spawn_workspaces(tx: glib::Sender<State>) -> mpsc::Sender<WorkspaceEvent>
                 while let Ok(request) = workspaces_rx.try_recv() {
                     match request {
                         WorkspaceEvent::Activate(id) => {
-                            if let Some(w) = state.workspace_groups.iter().find_map(|g| {
-                                g.workspaces
-                                    .iter()
-                                    .find(|w| w.name == id)
-                            }) {
+                            if let Some(w) = state
+                                .workspace_groups
+                                .iter()
+                                .find_map(|g| g.workspaces.iter().find(|w| w.name == id))
+                            {
                                 w.workspace_handle.activate();
                                 changed = true;
                             }
                         }
                         WorkspaceEvent::Scroll(v) => {
                             dbg!(v);
-                            if let Some((w_g, w_i)) = state.workspace_groups.iter().enumerate().find_map(|(g_i, g)| {
-                                g.workspaces
-                                    .iter()
-                                    .position(|w| w.state == 0)
-                                    .map(|w_i| (g, w_i))
-                            }) {
-                                let max_w =  w_g.workspaces.len().wrapping_sub(1);
-                                let d_i = if v > 0.0 { 
+                            if let Some((w_g, w_i)) = state
+                                .workspace_groups
+                                .iter()
+                                .enumerate()
+                                .find_map(|(g_i, g)| {
+                                    g.workspaces
+                                        .iter()
+                                        .position(|w| w.state == 0)
+                                        .map(|w_i| (g, w_i))
+                                })
+                            {
+                                let max_w = w_g.workspaces.len().wrapping_sub(1);
+                                let d_i = if v > 0.0 {
                                     if w_i == max_w {
                                         0
                                     } else {
-                                        w_i.wrapping_add(1) 
+                                        w_i.wrapping_add(1)
                                     }
-                                } else { 
+                                } else {
                                     if w_i == 0 {
                                         max_w
                                     } else {
-                                        w_i.wrapping_sub(1) 
-                                    }                                };
+                                        w_i.wrapping_sub(1)
+                                    }
+                                };
                                 if let Some(w) = w_g.workspaces.get(d_i) {
                                     w.workspace_handle.activate();
                                     changed = true;
@@ -116,12 +131,13 @@ pub fn spawn_workspaces(tx: glib::Sender<State>) -> mpsc::Sender<WorkspaceEvent>
                             }
                         }
                     }
-
                 }
                 if changed {
                     state.workspace_manager.as_ref().unwrap().commit();
                 }
-                event_loop.dispatch(Duration::from_millis(16), &mut state).unwrap();
+                event_loop
+                    .dispatch(Duration::from_millis(16), &mut state)
+                    .unwrap();
                 std::thread::sleep(Duration::from_millis(16));
             }
         });
@@ -143,8 +159,11 @@ pub struct State {
 
 impl State {
     // XXX
-    pub fn workspace_list(&self) -> impl Iterator<Item=(String, u32)> + '_ {
-        self.workspace_groups.iter().map(|g| g.workspaces.iter().map(|w| (w.name.clone(), w.state))).flatten()
+    pub fn workspace_list(&self) -> impl Iterator<Item = (String, u32)> + '_ {
+        self.workspace_groups
+            .iter()
+            .map(|g| g.workspaces.iter().map(|w| (w.name.clone(), w.state)))
+            .flatten()
     }
 }
 
@@ -354,5 +373,6 @@ impl Dispatch<WlOutput, ()> for State {
         _: &(),
         _: &Connection,
         _: &QueueHandle<Self>,
-    ) {}
+    ) {
+    }
 }

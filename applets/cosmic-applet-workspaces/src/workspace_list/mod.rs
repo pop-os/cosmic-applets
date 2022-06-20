@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: MPL-2.0-only
 
-use crate::TX;
 use crate::utils::Activate;
 use crate::utils::WorkspaceEvent;
 use crate::wayland::State;
 use crate::workspace_button::WorkspaceButton;
 use crate::workspace_object::WorkspaceObject;
+use crate::TX;
 use cascade::cascade;
-use cosmic_panel_config::config::{CosmicPanelConfig};
+use cosmic_panel_config::config::CosmicPanelConfig;
+use gtk4::builders::EventControllerScrollBuilder;
 use gtk4::EventControllerScrollFlags;
 use gtk4::Inhibit;
 use gtk4::ListView;
 use gtk4::Orientation;
 use gtk4::SignalListItemFactory;
-use gtk4::builders::EventControllerScrollBuilder;
 use gtk4::{gio, glib, prelude::*, subclass::prelude::*};
 use tokio::sync::mpsc::Sender;
 
@@ -55,14 +55,18 @@ impl WorkspaceList {
         self.append(&list_view);
 
         let flags = EventControllerScrollFlags::BOTH_AXES;
-        
-        let scroll_controller = EventControllerScrollBuilder::new()
-        .flags(flags.union(EventControllerScrollFlags::DISCRETE))
-        .build();
 
-        scroll_controller.connect_scroll( |_, dx, dy| {
+        let scroll_controller = EventControllerScrollBuilder::new()
+            .flags(flags.union(EventControllerScrollFlags::DISCRETE))
+            .build();
+
+        scroll_controller.connect_scroll(|_, dx, dy| {
             glib::MainContext::default().spawn_local(async move {
-                TX.get().unwrap().send(WorkspaceEvent::Scroll(dx + dy)).await.unwrap();
+                TX.get()
+                    .unwrap()
+                    .send(WorkspaceEvent::Scroll(dx + dy))
+                    .await
+                    .unwrap();
             });
             Inhibit::default()
         });
@@ -76,11 +80,20 @@ impl WorkspaceList {
         let model = imp.model.get().unwrap();
 
         let model_len = model.n_items();
-        let new_results: Vec<glib::Object> = workspaces.workspace_list()
+        let new_results: Vec<glib::Object> = workspaces
+            .workspace_list()
             .into_iter()
-            .map(|w| WorkspaceObject::from_id_active(w.0, w.1).upcast())
+            .filter_map(|w| {
+                // don't include hidden workspaces
+                if w.1 != 2 {
+                    Some(WorkspaceObject::from_id_active(w.0, w.1).upcast())
+                } else {
+                    None
+                }
+            })
             .collect();
-        model.splice(0, model_len, &new_results[..]);    }
+        model.splice(0, model_len, &new_results[..]);
+    }
 
     fn setup_model(&self) {
         let imp = imp::WorkspaceList::from_instance(self);

@@ -18,7 +18,10 @@ impl WorkspaceObject {
     }
 
     pub fn id(&self) -> String {
-        imp::WorkspaceObject::from_instance(&self).id.borrow().clone()
+        imp::WorkspaceObject::from_instance(&self)
+            .id
+            .borrow()
+            .clone()
     }
 
     pub fn active(&self) -> u32 {

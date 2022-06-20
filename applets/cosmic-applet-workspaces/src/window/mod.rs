@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0-only
 
-use crate::{fl, utils::Activate, workspace_list::WorkspaceList, wayland::State};
+use crate::{fl, utils::Activate, wayland::State, workspace_list::WorkspaceList};
 use cascade::cascade;
 use cosmic_panel_config::config::CosmicPanelConfig;
 use gtk4::{
@@ -9,7 +9,6 @@ use gtk4::{
     prelude::*,
     subclass::prelude::*,
 };
-use tokio::sync::mpsc;
 
 mod imp;
 

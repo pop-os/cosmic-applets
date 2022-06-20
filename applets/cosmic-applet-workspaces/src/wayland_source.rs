@@ -33,7 +33,11 @@ impl<D> WaylandSource<D> {
         let fd = Generic::new(guard.connection_fd(), Interest::READ, Mode::Level);
         drop(guard);
 
-        Ok(WaylandSource { queue, fd, read_guard: None })
+        Ok(WaylandSource {
+            queue,
+            fd,
+            read_guard: None,
+        })
     }
 
     /// Access the underlying event queue

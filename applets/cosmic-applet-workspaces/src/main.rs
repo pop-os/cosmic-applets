@@ -8,10 +8,10 @@ use gtk4::{
     CssProvider, StyleContext,
 };
 use once_cell::sync::OnceCell;
-use wayland::State;
 use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc;
 use utils::{Activate, WorkspaceEvent};
+use wayland::State;
 use window::CosmicWorkspacesWindow;
 
 mod localize;

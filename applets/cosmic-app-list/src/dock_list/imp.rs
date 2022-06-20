@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0-only
 
-use cosmic_panel_config::config::{PanelAnchor, CosmicPanelConfig};
+use cosmic_panel_config::config::{CosmicPanelConfig, PanelAnchor};
 use glib::SignalHandlerId;
 use gtk4::subclass::prelude::*;
 use gtk4::{gio, glib};
