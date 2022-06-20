@@ -35,7 +35,7 @@ impl CosmicWorkspacesWindow {
             ..set_title(Some(&fl!("cosmic-applet-workspaces")));
             ..add_css_class("transparent");
         };
-        let config = CosmicPanelConfig::load_from_env().unwrap();
+        let config = CosmicPanelConfig::load_from_env().unwrap_or_default();
 
         let app_list = WorkspaceList::new(config);
         self_.set_child(Some(&app_list));

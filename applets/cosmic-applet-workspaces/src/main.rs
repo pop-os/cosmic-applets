@@ -17,6 +17,7 @@ use window::CosmicWorkspacesWindow;
 mod localize;
 mod utils;
 mod wayland;
+mod wayland_source;
 mod window;
 mod workspace_button;
 mod workspace_list;

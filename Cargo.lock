@@ -390,20 +390,23 @@ name = "cosmic-applet-workspaces"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "calloop",
  "cascade",
  "cosmic-panel-config",
  "gio",
  "gtk4",
  "i18n-embed",
  "i18n-embed-fl",
+ "log",
+ "nix 0.22.3",
  "once_cell",
  "pretty_env_logger",
  "rust-embed",
  "tokio",
  "wayland-backend",
- "wayland-client 0.30.0-beta.4",
+ "wayland-client 0.30.0-beta.5",
  "wayland-commons",
- "wayland-scanner 0.30.0-beta.4",
+ "wayland-scanner 0.30.0-beta.5",
 ]
 
 [[package]]
@@ -425,7 +428,7 @@ dependencies = [
 [[package]]
 name = "cosmic-panel-config"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/cosmic-panel/#231dc1ec0656840458d9f0d3468d9c7ea5c2a98c"
+source = "git+https://github.com/pop-os/cosmic-panel#231dc1ec0656840458d9f0d3468d9c7ea5c2a98c"
 dependencies = [
  "anyhow",
  "gtk4",
@@ -2317,8 +2320,8 @@ checksum = "9c8d87e72b64a3b4db28d11ce29237c246188f4f51057d65a7eab63b7987e423"
 
 [[package]]
 name = "wayland-backend"
-version = "0.1.0-beta.4"
-source = "git+https://github.com/smithay/wayland-rs.git#797f697a66f8541327cbaac319692ec8d2395a38"
+version = "0.1.0-beta.5"
+source = "git+https://github.com/smithay/wayland-rs.git#70b0389becc49edde19ec16779eec3c5b0ad0a5f"
 dependencies = [
  "cc",
  "downcast-rs",
@@ -2326,7 +2329,7 @@ dependencies = [
  "nix 0.24.1",
  "scoped-tls",
  "smallvec",
- "wayland-sys 0.30.0-beta.4",
+ "wayland-sys 0.30.0-beta.5",
 ]
 
 [[package]]
@@ -2347,8 +2350,8 @@ dependencies = [
 
 [[package]]
 name = "wayland-client"
-version = "0.30.0-beta.4"
-source = "git+https://github.com/smithay/wayland-rs.git#797f697a66f8541327cbaac319692ec8d2395a38"
+version = "0.30.0-beta.5"
+source = "git+https://github.com/smithay/wayland-rs.git#70b0389becc49edde19ec16779eec3c5b0ad0a5f"
 dependencies = [
  "bitflags",
  "futures-channel",
@@ -2357,7 +2360,7 @@ dependencies = [
  "nix 0.24.1",
  "thiserror",
  "wayland-backend",
- "wayland-scanner 0.30.0-beta.4",
+ "wayland-scanner 0.30.0-beta.5",
 ]
 
 [[package]]
@@ -2419,8 +2422,8 @@ dependencies = [
 
 [[package]]
 name = "wayland-scanner"
-version = "0.30.0-beta.4"
-source = "git+https://github.com/smithay/wayland-rs.git#797f697a66f8541327cbaac319692ec8d2395a38"
+version = "0.30.0-beta.5"
+source = "git+https://github.com/smithay/wayland-rs.git#70b0389becc49edde19ec16779eec3c5b0ad0a5f"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2460,8 +2463,8 @@ dependencies = [
 
 [[package]]
 name = "wayland-sys"
-version = "0.30.0-beta.4"
-source = "git+https://github.com/smithay/wayland-rs.git#797f697a66f8541327cbaac319692ec8d2395a38"
+version = "0.30.0-beta.5"
+source = "git+https://github.com/smithay/wayland-rs.git#70b0389becc49edde19ec16779eec3c5b0ad0a5f"
 dependencies = [
  "dlib",
  "log",

@@ -1,4 +1,4 @@
-use crate::{utils::{Activate}, wayland::generated::client::zext_workspace_manager_v1::ZextWorkspaceManagerV1};
+use crate::{utils::{Activate}, wayland::generated::client::zext_workspace_manager_v1::ZextWorkspaceManagerV1, wayland_source::WaylandSource};
 use std::{env, os::unix::net::UnixStream, path::PathBuf, sync::Arc, mem, time::Duration};
 use gtk4::glib;
 use tokio::sync::mpsc;
@@ -53,8 +53,14 @@ pub fn spawn_workspaces(tx: glib::Sender<State>) -> mpsc::Sender<Activate> {
         .and_then(|s| s.map(|s| Connection::from_socket(s).map_err(anyhow::Error::msg)))
     {
         std::thread::spawn(move || {
-            let mut event_queue = conn.new_event_queue::<State>();
+            let mut event_loop = calloop::EventLoop::<State>::try_new().unwrap();
+            let loop_handle = event_loop.handle();
+            let event_queue = conn.new_event_queue::<State>();
             let qhandle = event_queue.handle();
+
+            WaylandSource::new(event_queue).expect("Failed to create wayland source")
+            .insert(loop_handle)
+            .unwrap();
 
             let display = conn.display();
             display.get_registry(&qhandle, ()).unwrap();
@@ -81,7 +87,7 @@ pub fn spawn_workspaces(tx: glib::Sender<State>) -> mpsc::Sender<Activate> {
                 if changed {
                     state.workspace_manager.as_ref().unwrap().commit();
                 }
-                event_queue.sync_roundtrip(&mut state).unwrap();
+                event_loop.dispatch(Duration::from_millis(16), &mut state).unwrap();
                 std::thread::sleep(Duration::from_millis(16));
             }
         });
