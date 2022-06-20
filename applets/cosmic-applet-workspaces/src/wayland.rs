@@ -38,6 +38,8 @@ use self::generated::client::{
     zext_workspace_handle_v1::{self, ZextWorkspaceHandleV1},
 };
 
+// TODO check panel config to find which output we are on and ignore outputs which are different
+
 pub fn spawn_workspaces(tx: glib::Sender<State>) -> mpsc::Sender<WorkspaceEvent> {
     let (workspaces_tx, mut workspaces_rx) = mpsc::channel(100);
     if let Ok(Ok(conn)) = std::env::var("HOST_WAYLAND_DISPLAY")
