@@ -5,7 +5,10 @@ use crate::{
 };
 use cosmic_panel_config::config::CosmicPanelConfig;
 use gtk4::glib;
-use std::{env, mem, os::unix::net::UnixStream, path::PathBuf, sync::Arc, time::Duration, collections::HashMap, hash::Hash};
+use std::{
+    collections::HashMap, env, hash::Hash, mem, os::unix::net::UnixStream, path::PathBuf,
+    sync::Arc, time::Duration,
+};
 use tokio::sync::mpsc;
 use wayland_backend::client::ObjectData;
 use wayland_client::{
@@ -47,11 +50,9 @@ use self::generated::client::{
     zext_workspace_handle_v1::{self, ZextWorkspaceHandleV1},
 };
 
-// TODO check panel config to find which output we are on and ignore outputs which are different
-
 pub fn spawn_workspaces(tx: glib::Sender<State>) -> mpsc::Sender<WorkspaceEvent> {
     let (workspaces_tx, mut workspaces_rx) = mpsc::channel(100);
-    
+
     if let Ok(Ok(conn)) = std::env::var("HOST_WAYLAND_DISPLAY")
         .map_err(anyhow::Error::msg)
         .map(|display_str| {
@@ -65,7 +66,9 @@ pub fn spawn_workspaces(tx: glib::Sender<State>) -> mpsc::Sender<WorkspaceEvent>
         .and_then(|s| s.map(|s| Connection::from_socket(s).map_err(anyhow::Error::msg)))
     {
         std::thread::spawn(move || {
-            let output = CosmicPanelConfig::load_from_env().unwrap_or_default().output;
+            let output = CosmicPanelConfig::load_from_env()
+                .unwrap_or_default()
+                .output;
             let mut event_loop = calloop::EventLoop::<State>::try_new().unwrap();
             let loop_handle = event_loop.handle();
             let event_queue = conn.new_event_queue::<State>();
@@ -275,7 +278,6 @@ impl Dispatch<ZextWorkspaceGroupHandleV1, ()> for State {
     ) {
         match event {
             zext_workspace_group_handle_v1::Event::OutputEnter { output } => {
-
                 if let Some(group) = self
                     .workspace_groups
                     .iter_mut()
