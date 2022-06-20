@@ -1,14 +1,19 @@
 // SPDX-License-Identifier: MPL-2.0-only
 
+use crate::TX;
 use crate::utils::Activate;
+use crate::utils::WorkspaceEvent;
 use crate::wayland::State;
 use crate::workspace_button::WorkspaceButton;
 use crate::workspace_object::WorkspaceObject;
 use cascade::cascade;
 use cosmic_panel_config::config::{CosmicPanelConfig};
+use gtk4::EventControllerScrollFlags;
+use gtk4::Inhibit;
 use gtk4::ListView;
 use gtk4::Orientation;
 use gtk4::SignalListItemFactory;
+use gtk4::builders::EventControllerScrollBuilder;
 use gtk4::{gio, glib, prelude::*, subclass::prelude::*};
 use tokio::sync::mpsc::Sender;
 
@@ -48,6 +53,21 @@ impl WorkspaceList {
             ..add_css_class("transparent");
         };
         self.append(&list_view);
+
+        let flags = EventControllerScrollFlags::BOTH_AXES;
+        
+        let scroll_controller = EventControllerScrollBuilder::new()
+        .flags(flags.union(EventControllerScrollFlags::DISCRETE))
+        .build();
+
+        scroll_controller.connect_scroll( |_, dx, dy| {
+            glib::MainContext::default().spawn_local(async move {
+                TX.get().unwrap().send(WorkspaceEvent::Scroll(dx + dy)).await.unwrap();
+            });
+            Inhibit::default()
+        });
+
+        list_view.add_controller(&scroll_controller);
         imp.list_view.set(list_view).unwrap();
     }
 

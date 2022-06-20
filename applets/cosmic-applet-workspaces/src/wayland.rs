@@ -1,4 +1,4 @@
-use crate::{utils::{Activate}, wayland::generated::client::zext_workspace_manager_v1::ZextWorkspaceManagerV1, wayland_source::WaylandSource};
+use crate::{utils::{Activate, WorkspaceEvent}, wayland::generated::client::zext_workspace_manager_v1::ZextWorkspaceManagerV1, wayland_source::WaylandSource};
 use std::{env, os::unix::net::UnixStream, path::PathBuf, sync::Arc, mem, time::Duration};
 use gtk4::glib;
 use tokio::sync::mpsc;
@@ -38,7 +38,7 @@ use self::generated::client::{
     zext_workspace_handle_v1::{self, ZextWorkspaceHandleV1},
 };
 
-pub fn spawn_workspaces(tx: glib::Sender<State>) -> mpsc::Sender<Activate> {
+pub fn spawn_workspaces(tx: glib::Sender<State>) -> mpsc::Sender<WorkspaceEvent> {
     let (workspaces_tx, mut workspaces_rx) = mpsc::channel(100);
     if let Ok(Ok(conn)) = std::env::var("HOST_WAYLAND_DISPLAY")
         .map_err(anyhow::Error::msg)
@@ -75,14 +75,46 @@ pub fn spawn_workspaces(tx: glib::Sender<State>) -> mpsc::Sender<Activate> {
             while state.running {
                 let mut changed = false;
                 while let Ok(request) = workspaces_rx.try_recv() {
-                    if let Some(w) = state.workspace_groups.iter().find_map(|g| {
-                        g.workspaces
-                            .iter()
-                            .find(|w| w.name == request)
-                    }) {
-                        w.workspace_handle.activate();
+                    match request {
+                        WorkspaceEvent::Activate(id) => {
+                            if let Some(w) = state.workspace_groups.iter().find_map(|g| {
+                                g.workspaces
+                                    .iter()
+                                    .find(|w| w.name == id)
+                            }) {
+                                w.workspace_handle.activate();
+                                changed = true;
+                            }
+                        }
+                        WorkspaceEvent::Scroll(v) => {
+                            dbg!(v);
+                            if let Some((w_g, w_i)) = state.workspace_groups.iter().enumerate().find_map(|(g_i, g)| {
+                                g.workspaces
+                                    .iter()
+                                    .position(|w| w.state == 0)
+                                    .map(|w_i| (g, w_i))
+                            }) {
+                                let max_w =  w_g.workspaces.len().wrapping_sub(1);
+                                let d_i = if v > 0.0 { 
+                                    if w_i == max_w {
+                                        0
+                                    } else {
+                                        w_i.wrapping_add(1) 
+                                    }
+                                } else { 
+                                    if w_i == 0 {
+                                        max_w
+                                    } else {
+                                        w_i.wrapping_sub(1) 
+                                    }                                };
+                                if let Some(w) = w_g.workspaces.get(d_i) {
+                                    w.workspace_handle.activate();
+                                    changed = true;
+                                }
+                            }
+                        }
                     }
-                    changed = true;
+
                 }
                 if changed {
                     state.workspace_manager.as_ref().unwrap().commit();

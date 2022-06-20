@@ -11,7 +11,7 @@ use once_cell::sync::OnceCell;
 use wayland::State;
 use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc;
-use utils::{Activate};
+use utils::{Activate, WorkspaceEvent};
 use window::CosmicWorkspacesWindow;
 
 mod localize;
@@ -24,7 +24,7 @@ mod workspace_list;
 mod workspace_object;
 
 const ID: &str = "com.system76.CosmicAppletWorkspaces";
-static TX: OnceCell<mpsc::Sender<Activate>> = OnceCell::new();
+static TX: OnceCell<mpsc::Sender<WorkspaceEvent>> = OnceCell::new();
 
 pub fn localize() {
     let localizer = crate::localize::localizer();

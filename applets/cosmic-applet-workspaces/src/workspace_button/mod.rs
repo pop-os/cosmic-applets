@@ -1,6 +1,6 @@
 mod imp;
 
-use crate::{workspace_object::WorkspaceObject, Activate, TX};
+use crate::{workspace_object::WorkspaceObject, Activate, TX, utils::WorkspaceEvent};
 use glib::Object;
 use gtk4::{glib, prelude::*, subclass::prelude::*, ToggleButton};
 
@@ -44,7 +44,7 @@ impl WorkspaceButton {
             let id_clone = id.clone();
             if !is_active {
                 glib::MainContext::default().spawn_local(async move {
-                    TX.get().unwrap().send(id_clone).await.unwrap();
+                    TX.get().unwrap().send(WorkspaceEvent::Activate(id_clone)).await.unwrap();
                 });
             }
         });

@@ -7,6 +7,12 @@ use std::future::Future;
 
 pub type Activate = String;
 
+#[derive(Debug, Clone)]
+pub enum WorkspaceEvent {
+    Activate(String),
+    Scroll(f64),
+}
+
 pub fn data_path() -> PathBuf {
     let mut path = glib::user_data_dir();
     path.push(crate::ID);
