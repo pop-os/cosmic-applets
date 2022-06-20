@@ -3,8 +3,9 @@ use crate::{
     wayland::generated::client::zext_workspace_manager_v1::ZextWorkspaceManagerV1,
     wayland_source::WaylandSource,
 };
+use cosmic_panel_config::config::CosmicPanelConfig;
 use gtk4::glib;
-use std::{env, mem, os::unix::net::UnixStream, path::PathBuf, sync::Arc, time::Duration};
+use std::{env, mem, os::unix::net::UnixStream, path::PathBuf, sync::Arc, time::Duration, collections::HashMap, hash::Hash};
 use tokio::sync::mpsc;
 use wayland_backend::client::ObjectData;
 use wayland_client::{
@@ -50,6 +51,7 @@ use self::generated::client::{
 
 pub fn spawn_workspaces(tx: glib::Sender<State>) -> mpsc::Sender<WorkspaceEvent> {
     let (workspaces_tx, mut workspaces_rx) = mpsc::channel(100);
+    
     if let Ok(Ok(conn)) = std::env::var("HOST_WAYLAND_DISPLAY")
         .map_err(anyhow::Error::msg)
         .map(|display_str| {
@@ -63,6 +65,7 @@ pub fn spawn_workspaces(tx: glib::Sender<State>) -> mpsc::Sender<WorkspaceEvent>
         .and_then(|s| s.map(|s| Connection::from_socket(s).map_err(anyhow::Error::msg)))
     {
         std::thread::spawn(move || {
+            let output = CosmicPanelConfig::load_from_env().unwrap_or_default().output;
             let mut event_loop = calloop::EventLoop::<State>::try_new().unwrap();
             let loop_handle = event_loop.handle();
             let event_queue = conn.new_event_queue::<State>();
@@ -79,6 +82,8 @@ pub fn spawn_workspaces(tx: glib::Sender<State>) -> mpsc::Sender<WorkspaceEvent>
             let mut state = State {
                 workspace_manager: None,
                 workspace_groups: Vec::new(),
+                configured_output: output,
+                expected_output: None,
                 tx,
                 running: true,
             };
@@ -153,6 +158,8 @@ pub fn spawn_workspaces(tx: glib::Sender<State>) -> mpsc::Sender<WorkspaceEvent>
 pub struct State {
     running: bool,
     tx: glib::Sender<State>,
+    configured_output: String,
+    expected_output: Option<WlOutput>,
     workspace_manager: Option<zext_workspace_manager_v1::ZextWorkspaceManagerV1>,
     workspace_groups: Vec<WorkspaceGroup>,
 }
@@ -162,7 +169,13 @@ impl State {
     pub fn workspace_list(&self) -> impl Iterator<Item = (String, u32)> + '_ {
         self.workspace_groups
             .iter()
-            .map(|g| g.workspaces.iter().map(|w| (w.name.clone(), w.state)))
+            .filter_map(|g| {
+                if g.output == self.expected_output {
+                    Some(g.workspaces.iter().map(|w| (w.name.clone(), w.state)))
+                } else {
+                    None
+                }
+            })
             .flatten()
     }
 }
@@ -262,6 +275,7 @@ impl Dispatch<ZextWorkspaceGroupHandleV1, ()> for State {
     ) {
         match event {
             zext_workspace_group_handle_v1::Event::OutputEnter { output } => {
+
                 if let Some(group) = self
                     .workspace_groups
                     .iter_mut()
@@ -368,11 +382,17 @@ impl Dispatch<ZextWorkspaceHandleV1, ()> for State {
 impl Dispatch<WlOutput, ()> for State {
     fn event(
         &mut self,
-        _: &WlOutput,
-        _: wl_output::Event,
+        o: &WlOutput,
+        e: wl_output::Event,
         _: &(),
         _: &Connection,
         _: &QueueHandle<Self>,
     ) {
+        match e {
+            wl_output::Event::Name { name } if name == self.configured_output => {
+                self.expected_output.replace(o.clone());
+            }
+            _ => {} // ignored
+        }
     }
 }
