@@ -1,7 +1,7 @@
 use futures::prelude::*;
 use gtk4::{glib, prelude::*};
 use relm4::{ComponentParts, ComponentSender, RelmApp, SimpleComponent, WidgetPlus};
-use std::time::Duration;
+use std::{process::Command, time::Duration};
 
 mod backlight;
 mod upower;
@@ -164,6 +164,11 @@ impl SimpleComponent for AppModel {
 
                         gtk4::Button {
                             set_label: "Power Settings...",
+                            connect_clicked => move |_| {
+                                // XXX open subpanel
+                                let _ = Command::new("cosmic-settings").spawn();
+                                // TODO hide
+                            }
                         }
                     }
                 }

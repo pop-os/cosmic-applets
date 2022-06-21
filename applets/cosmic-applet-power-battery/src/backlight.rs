@@ -1,3 +1,6 @@
+// TODO: use udev to monitor for brightness changes?
+// How should key bindings be handled? Need something like gnome-settings-daemon?
+
 use std::{
     fs::{self, File},
     io::{self, Read},
@@ -5,15 +8,31 @@ use std::{
     str::FromStr,
 };
 
+#[zbus::dbus_proxy(
+    default_service = "org.freedesktop.login1",
+    interface = "org.freedesktop.login1.Session"
+)]
+trait LogindSession {
+    fn set_brightness(&self, subsystem: &str, name: &str, brightness: u32) -> zbus::Result<()>;
+}
+
 struct Backlight(PathBuf);
 
 impl Backlight {
-    fn brightness(&self) -> Option<i64> {
+    fn brightness(&self) -> Option<u32> {
         self.prop("brightness")
     }
 
-    fn max_brightness(&self) -> Option<i64> {
+    fn max_brightness(&self) -> Option<u32> {
         self.prop("max_brightness")
+    }
+
+    async fn set_brightness(
+        &self,
+        session: &LogindSessionProxy<'_>,
+        value: u32,
+    ) -> zbus::Result<()> {
+        session.set_brightness("backlight", "", value).await // XXX
     }
 
     fn prop<T: FromStr>(&self, name: &str) -> Option<T> {
@@ -39,3 +58,5 @@ fn backlight() -> io::Result<Option<Backlight>> {
     }
     Ok(best_backlight)
 }
+
+// TODO: keyboard backlight
