@@ -1,6 +1,34 @@
-use gtk4::prelude::*;
+use futures::prelude::*;
+use gtk4::{glib, prelude::*};
 use relm4::{ComponentParts, ComponentSender, RelmApp, SimpleComponent, WidgetPlus};
 use std::time::Duration;
+
+mod backlight;
+mod upower;
+use upower::UPowerProxy;
+mod upower_device;
+use upower_device::DeviceProxy;
+
+async fn display_device() -> zbus::Result<DeviceProxy<'static>> {
+    let connection = zbus::Connection::system().await?;
+    let upower = UPowerProxy::new(&connection).await?;
+    let device_path = upower.get_display_device().await?;
+    DeviceProxy::builder(&connection)
+        .path(device_path)?
+        .build()
+        .await
+}
+
+async fn foo(device: &DeviceProxy<'static>) {
+    let mut icon_name_stream = device.receive_icon_name_changed().await;
+    let mut battery_level_stream = device.receive_battery_level_changed().await;
+
+    glib::MainContext::default()
+        .spawn(async move { while let Some(evt) = icon_name_stream.next().await {} });
+
+    glib::MainContext::default()
+        .spawn(async move { while let Some(evt) = battery_level_stream.next().await {} });
+}
 
 #[derive(Default)]
 struct AppModel {
@@ -171,6 +199,6 @@ impl SimpleComponent for AppModel {
 }
 
 fn main() {
-    let app: RelmApp<AppModel> = RelmApp::new("relm4.test.simple");
+    let app: RelmApp<AppModel> = RelmApp::new("com.system76.CosmicAppletBattery");
     app.run(());
 }
