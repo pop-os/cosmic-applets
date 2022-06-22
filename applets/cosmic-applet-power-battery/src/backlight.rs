@@ -59,4 +59,17 @@ fn backlight() -> io::Result<Option<Backlight>> {
     Ok(best_backlight)
 }
 
+// TODO: Cache device, max_brightness, etc.
+async fn set_display_brightness(brightness: f64) -> io::Result<()> {
+    if let Some(backlight) = backlight()? {
+        if let Some(max_brightness) = backlight.max_brightness() {
+            let value = brightness.clamp(0., 1.) * (max_brightness as f64);
+            let value = value.round() as u32;
+            // XXX TODO
+            backlight.set_brightness(todo!(), value).await;
+        }
+    }
+    Ok(())
+}
+
 // TODO: keyboard backlight

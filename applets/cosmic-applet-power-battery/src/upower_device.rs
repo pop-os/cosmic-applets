@@ -5,7 +5,10 @@
 
 use zbus::dbus_proxy;
 
-#[dbus_proxy(interface = "org.freedesktop.UPower.Device")]
+#[dbus_proxy(
+    default_service = "org.freedesktop.UPower",
+    interface = "org.freedesktop.UPower.Device"
+)]
 trait Device {
     /// GetHistory method
     fn get_history(

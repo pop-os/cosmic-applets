@@ -15,33 +15,26 @@ async fn display_device() -> zbus::Result<DeviceProxy<'static>> {
     let device_path = upower.get_display_device().await?;
     DeviceProxy::builder(&connection)
         .path(device_path)?
+        .cache_properties(zbus::CacheProperties::Yes)
         .build()
         .await
-}
-
-async fn foo(device: &DeviceProxy<'static>) {
-    let mut icon_name_stream = device.receive_icon_name_changed().await;
-    let mut battery_level_stream = device.receive_battery_level_changed().await;
-
-    glib::MainContext::default()
-        .spawn(async move { while let Some(evt) = icon_name_stream.next().await {} });
-
-    glib::MainContext::default()
-        .spawn(async move { while let Some(evt) = battery_level_stream.next().await {} });
 }
 
 #[derive(Default)]
 struct AppModel {
     icon_name: String,
-    battery_percent: u8,
+    battery_percent: f64,
     time_remaining: Duration,
     display_brightness: f64,
     keyboard_brightness: f64,
+    device: Option<DeviceProxy<'static>>,
 }
 
 enum AppMsg {
     SetDisplayBrightness(f64),
     SetKeyboardBrightness(f64),
+    SetDevice(DeviceProxy<'static>),
+    UpdateProperties,
 }
 
 #[relm4::component]
@@ -81,8 +74,9 @@ impl SimpleComponent for AppModel {
                                 gtk4::Label {
                                     set_halign: gtk4::Align::Start,
                                     // XXX duration formatting
+                                    // XXX time to full, fully changed, etc.
                                     #[watch]
-                                    set_label: &format!("{:?} until empty ({}%)", model.time_remaining, model.battery_percent),
+                                    set_label: &format!("{:?} until empty ({:.0}%)", model.time_remaining, model.battery_percent),
                                 },
                             },
                         },
@@ -188,16 +182,56 @@ impl SimpleComponent for AppModel {
 
         let widgets = view_output!();
 
+        let sender = sender.clone();
+        glib::MainContext::default().spawn(async move {
+            match display_device().await {
+                Ok(device) => sender.input(AppMsg::SetDevice(device)),
+                Err(err) => eprintln!("Failed to open UPower display device: {}", err),
+            }
+        });
+
         ComponentParts { model, widgets }
     }
 
-    fn update(&mut self, msg: Self::Input, _sender: &ComponentSender<Self>) {
+    fn update(&mut self, msg: Self::Input, sender: &ComponentSender<Self>) {
         match msg {
             AppMsg::SetDisplayBrightness(value) => {
                 self.display_brightness = value;
+                // XXX set brightness
             }
             AppMsg::SetKeyboardBrightness(value) => {
                 self.keyboard_brightness = value;
+                // XXX set brightness
+            }
+            AppMsg::SetDevice(device) => {
+                self.device = Some(device.clone());
+
+                let sender = sender.clone();
+                glib::MainContext::default().spawn(async move {
+                    let mut stream = futures::stream_select!(
+                        device.receive_icon_name_changed().await.map(|_| ()),
+                        device.receive_percentage_changed().await.map(|_| ()),
+                        device.receive_time_to_empty_changed().await.map(|_| ()),
+                    );
+
+                    sender.input(AppMsg::UpdateProperties);
+                    while let Some(()) = stream.next().await {
+                        sender.input(AppMsg::UpdateProperties);
+                    }
+                });
+            }
+            AppMsg::UpdateProperties => {
+                if let Some(device) = self.device.as_ref() {
+                    if let Ok(Some(percentage)) = device.cached_percentage() {
+                        self.battery_percent = percentage;
+                    }
+                    if let Ok(Some(icon_name)) = device.cached_icon_name() {
+                        self.icon_name = icon_name;
+                    }
+                    if let Ok(Some(secs)) = device.cached_time_to_empty() {
+                        self.time_remaining = Duration::from_secs(secs as u64);
+                    }
+                }
             }
         }
     }
