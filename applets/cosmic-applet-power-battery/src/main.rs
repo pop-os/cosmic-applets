@@ -20,6 +20,22 @@ async fn display_device() -> zbus::Result<DeviceProxy<'static>> {
         .await
 }
 
+// XXX improve
+// TODO: time to empty varies? needs averaging?
+fn format_duration(duration: Duration) -> String {
+    let secs = duration.as_secs();
+    if secs > 60 {
+        let min = secs / 60;
+        if min > 60 {
+            format!("{}:{}", min / 60, min % 60)
+        } else {
+            format!("{}m", min)
+        }
+    } else {
+        format!("{}s", secs)
+    }
+}
+
 #[derive(Default)]
 struct AppModel {
     icon_name: String,
@@ -73,10 +89,9 @@ impl SimpleComponent for AppModel {
                                 },
                                 gtk4::Label {
                                     set_halign: gtk4::Align::Start,
-                                    // XXX duration formatting
                                     // XXX time to full, fully changed, etc.
                                     #[watch]
-                                    set_label: &format!("{:?} until empty ({:.0}%)", model.time_remaining, model.battery_percent),
+                                    set_label: &format!("{} until empty ({:.0}%)", format_duration(model.time_remaining), model.battery_percent),
                                 },
                             },
                         },
