@@ -1,3 +1,5 @@
+// TODO: don't allow brightness 0?
+
 use futures::prelude::*;
 use gtk4::{glib, prelude::*};
 use relm4::{ComponentParts, ComponentSender, RelmApp, SimpleComponent, WidgetPlus};
@@ -9,6 +11,8 @@ mod upower;
 use upower::UPowerProxy;
 mod upower_device;
 use upower_device::DeviceProxy;
+mod upower_kbdbacklight;
+use upower_kbdbacklight::KbdBacklightProxy;
 
 async fn display_device() -> zbus::Result<DeviceProxy<'static>> {
     let connection = zbus::Connection::system().await?;
@@ -47,6 +51,7 @@ struct AppModel {
     device: Option<DeviceProxy<'static>>,
     session: Option<LogindSessionProxy<'static>>,
     backlight: Option<Backlight>,
+    kbd_backlight: Option<KbdBacklightProxy<'static>>,
 }
 
 enum AppMsg {
@@ -54,7 +59,9 @@ enum AppMsg {
     SetKeyboardBrightness(f64),
     SetDevice(DeviceProxy<'static>),
     SetSession(LogindSessionProxy<'static>),
+    SetKbdBacklight(KbdBacklightProxy<'static>),
     UpdateProperties,
+    UpdateKbdBrightness(f64),
 }
 
 #[relm4::component]
@@ -132,6 +139,8 @@ impl SimpleComponent for AppModel {
 
                         // Brightness
                         gtk4::Box {
+                            #[watch]
+                            set_visible: model.backlight.is_some(),
                             set_orientation: gtk4::Orientation::Horizontal,
                             gtk4::Image {
                                 set_icon_name: Some("display-brightness-symbolic"),
@@ -152,6 +161,8 @@ impl SimpleComponent for AppModel {
                             },
                         },
                         gtk4::Box {
+                            #[watch]
+                            set_visible: model.kbd_backlight.is_some(),
                             set_orientation: gtk4::Orientation::Horizontal,
                             gtk4::Image {
                                 set_icon_name: Some("keyboard-brightness-symbolic"),
@@ -233,6 +244,18 @@ impl SimpleComponent for AppModel {
             }
         }));
 
+        glib::MainContext::default().spawn(glib::clone!(@strong sender => async move {
+            let proxy = async {
+                let connection = zbus::Connection::system().await?;
+                KbdBacklightProxy::builder(&connection).build().await
+            }.await;
+            match proxy {
+                Ok(kbd_backlight) => sender.input(AppMsg::SetKbdBacklight(kbd_backlight)),
+                Err(err) => eprintln!("Failed to open kbdbacklight: {}", err),
+            }
+
+        }));
+
         ComponentParts { model, widgets }
     }
 
@@ -243,6 +266,7 @@ impl SimpleComponent for AppModel {
                 // XXX clone
                 if let Some(backlight) = self.backlight.clone() {
                     if let Some(session) = self.session.clone() {
+                        // XXX cache max brightness
                         if let Some(max_brightness) = backlight.max_brightness() {
                             let value = value.clamp(0., 1.) * (max_brightness as f64);
                             let value = value.round() as u32;
@@ -258,7 +282,22 @@ impl SimpleComponent for AppModel {
             }
             AppMsg::SetKeyboardBrightness(value) => {
                 self.keyboard_brightness = value;
-                // XXX set brightness
+
+                if let Some(kbd_backlight) = self.kbd_backlight.clone() {
+                    glib::MainContext::default().spawn(async move {
+                        let res = async {
+                            // XXX cache
+                            let max_brightness = kbd_backlight.get_max_brightness().await?;
+                            let value = value.clamp(0., 1.) * (max_brightness as f64);
+                            let value = value.round() as i32;
+                            kbd_backlight.set_brightness(value).await
+                        }
+                        .await;
+                        if let Err(err) = res {
+                            eprintln!("Failed to set keyboard backlight: {}", err);
+                        }
+                    });
+                }
             }
             AppMsg::SetDevice(device) => {
                 self.device = Some(device.clone());
@@ -279,7 +318,29 @@ impl SimpleComponent for AppModel {
             }
             AppMsg::SetSession(session) => {
                 self.session = Some(session);
-                // TODO
+            }
+            AppMsg::SetKbdBacklight(kbd_backlight) => {
+                self.kbd_backlight = Some(kbd_backlight.clone());
+
+                glib::MainContext::default().spawn(glib::clone!(@strong sender => async move {
+                    let res = async {
+                        let stream = kbd_backlight.receive_brightness_changed().await?;
+                        let brightness = kbd_backlight.get_brightness().await?;
+                        let max_brightness = kbd_backlight.get_max_brightness().await?;
+                        zbus::Result::Ok((brightness, max_brightness, stream))
+                    }.await;
+                    match res {
+                        Ok((brightness, max_brightness, mut stream)) => {
+                            let value = (brightness as f64) / (max_brightness as f64);
+                            sender.input(AppMsg::UpdateKbdBrightness(value));
+                            while let Some(evt) = stream.next().await {
+                                // TODO
+                            }
+                        }
+                        Err(err) => {
+                        }
+                    }
+                }));
             }
             AppMsg::UpdateProperties => {
                 if let Some(device) = self.device.as_ref() {
@@ -293,6 +354,9 @@ impl SimpleComponent for AppModel {
                         self.time_remaining = Duration::from_secs(secs as u64);
                     }
                 }
+            }
+            AppMsg::UpdateKbdBrightness(value) => {
+                self.keyboard_brightness = value;
             }
         }
     }
