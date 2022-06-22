@@ -4,6 +4,7 @@ use relm4::{ComponentParts, ComponentSender, RelmApp, SimpleComponent, WidgetPlu
 use std::{process::Command, time::Duration};
 
 mod backlight;
+use backlight::{backlight, Backlight, LogindSessionProxy};
 mod upower;
 use upower::UPowerProxy;
 mod upower_device;
@@ -27,7 +28,7 @@ fn format_duration(duration: Duration) -> String {
     if secs > 60 {
         let min = secs / 60;
         if min > 60 {
-            format!("{}:{}", min / 60, min % 60)
+            format!("{}:{:02}", min / 60, min % 60)
         } else {
             format!("{}m", min)
         }
@@ -44,12 +45,15 @@ struct AppModel {
     display_brightness: f64,
     keyboard_brightness: f64,
     device: Option<DeviceProxy<'static>>,
+    session: Option<LogindSessionProxy<'static>>,
+    backlight: Option<Backlight>,
 }
 
 enum AppMsg {
     SetDisplayBrightness(f64),
     SetKeyboardBrightness(f64),
     SetDevice(DeviceProxy<'static>),
+    SetSession(LogindSessionProxy<'static>),
     UpdateProperties,
 }
 
@@ -134,7 +138,7 @@ impl SimpleComponent for AppModel {
                             },
                             gtk4::Scale {
                                 set_hexpand: true,
-                                set_adjustment: &gtk4::Adjustment::new(0., 0., 100., 1., 1., 0.),
+                                set_adjustment: &gtk4::Adjustment::new(0., 0., 1., 1., 1., 0.),
                                 #[watch]
                                 set_value: model.display_brightness,
                                 connect_change_value[sender] => move |_, _, value| {
@@ -144,7 +148,7 @@ impl SimpleComponent for AppModel {
                             },
                             gtk4::Label {
                                 #[watch]
-                                set_label: &format!("{:.0}%", model.display_brightness),
+                                set_label: &format!("{:.0}%", model.display_brightness * 100.),
                             },
                         },
                         gtk4::Box {
@@ -154,7 +158,7 @@ impl SimpleComponent for AppModel {
                             },
                             gtk4::Scale {
                                 set_hexpand: true,
-                                set_adjustment: &gtk4::Adjustment::new(0., 0., 100., 1., 1., 0.),
+                                set_adjustment: &gtk4::Adjustment::new(0., 0., 1., 1., 1., 0.),
                                 #[watch]
                                 set_value: model.keyboard_brightness,
                                 connect_change_value[sender] => move |_, _, value| {
@@ -164,7 +168,7 @@ impl SimpleComponent for AppModel {
                             },
                             gtk4::Label {
                                 #[watch]
-                                set_label: &format!("{:.0}%", model.keyboard_brightness),
+                                set_label: &format!("{:.0}%", model.keyboard_brightness * 100.),
                             },
                         },
 
@@ -190,20 +194,44 @@ impl SimpleComponent for AppModel {
         root: &Self::Root,
         sender: &ComponentSender<Self>,
     ) -> ComponentParts<Self> {
-        let model = AppModel {
+        let mut model = AppModel {
             icon_name: "battery-symbolic".to_string(),
             ..Default::default()
         };
 
         let widgets = view_output!();
 
-        let sender = sender.clone();
-        glib::MainContext::default().spawn(async move {
+        match backlight() {
+            Ok(Some(backlight)) => {
+                if let (Some(brightness), Some(max_brightness)) =
+                    (backlight.brightness(), backlight.max_brightness())
+                {
+                    model.display_brightness = brightness as f64 / max_brightness as f64;
+                }
+                model.backlight = Some(backlight);
+            }
+            Ok(None) => {}
+            Err(err) => eprintln!("Error finding backlight: {}", err),
+        };
+
+        glib::MainContext::default().spawn(glib::clone!(@strong sender => async move {
             match display_device().await {
                 Ok(device) => sender.input(AppMsg::SetDevice(device)),
                 Err(err) => eprintln!("Failed to open UPower display device: {}", err),
             }
-        });
+        }));
+
+        glib::MainContext::default().spawn(glib::clone!(@strong sender => async move {
+            // XXX avoid multiple connections?
+            let proxy = async {
+                let connection = zbus::Connection::system().await?;
+                LogindSessionProxy::builder(&connection).build().await
+            }.await;
+            match proxy {
+                Ok(session) => sender.input(AppMsg::SetSession(session)),
+                Err(err) => eprintln!("Failed to open logind session: {}", err),
+            }
+        }));
 
         ComponentParts { model, widgets }
     }
@@ -212,7 +240,21 @@ impl SimpleComponent for AppModel {
         match msg {
             AppMsg::SetDisplayBrightness(value) => {
                 self.display_brightness = value;
-                // XXX set brightness
+                // XXX clone
+                if let Some(backlight) = self.backlight.clone() {
+                    if let Some(session) = self.session.clone() {
+                        if let Some(max_brightness) = backlight.max_brightness() {
+                            let value = value.clamp(0., 1.) * (max_brightness as f64);
+                            let value = value.round() as u32;
+                            // XXX limit queueing?
+                            glib::MainContext::default().spawn(async move {
+                                if let Err(err) = backlight.set_brightness(&session, value).await {
+                                    eprintln!("Failed to set backlight: {}", err);
+                                }
+                            });
+                        }
+                    }
+                }
             }
             AppMsg::SetKeyboardBrightness(value) => {
                 self.keyboard_brightness = value;
@@ -234,6 +276,10 @@ impl SimpleComponent for AppModel {
                         sender.input(AppMsg::UpdateProperties);
                     }
                 });
+            }
+            AppMsg::SetSession(session) => {
+                self.session = Some(session);
+                // TODO
             }
             AppMsg::UpdateProperties => {
                 if let Some(device) = self.device.as_ref() {
