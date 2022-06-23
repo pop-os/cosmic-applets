@@ -1,4 +1,4 @@
-use gtk4::{prelude::*, Button, Label, ListBox};
+use gtk4::{glib::clone, prelude::*, Button, Label, ListBox};
 use libcosmic_widgets::{relm4::RelmContainerExt, LabeledItem};
 use std::rc::Rc;
 
@@ -40,15 +40,9 @@ pub async fn refresh_output_widgets(pa: &PA, outputs: &ListBox) {
                     .unwrap_or(&name),
                 set_child: set_current_input_device = &Button {
                     set_label: "Switch",
-                    connect_clicked: move |_| {
-                        // XXX Need mutable borrow? Is this a problem for async?
-                        /*
-                        SinkController::create()
-                            .expect("failed to create output controller")
-                            .set_default_device(&name)
-                            .expect("failed to set default device");
-                        */
-                    }
+                    connect_clicked: clone!(@strong pa => move |_| {
+                        pa.set_default_sink(&name);
+                    })
                 }
             }
         }
