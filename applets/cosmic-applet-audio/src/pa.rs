@@ -144,12 +144,14 @@ impl PA {
         receiver.await.unwrap()
     }
 
-    /*
     // XXX async wait and handle error
-    pub fn set_default_sink(&mut self, name: &str) {
-        self.0.context.set_default_sink(name, |_| {});
+    pub fn set_default_sink(&self, name: &str) {
+        self.0.context.borrow_mut().set_default_sink(name, |_| {});
     }
-    */
+
+    pub fn set_default_source(&self, name: &str) {
+        self.0.context.borrow_mut().set_default_source(name, |_| {});
+    }
 
     pub async fn get_source_info_list(&self) -> Result<Vec<DeviceInfo>, ()> {
         let (sender, receiver) = oneshot::channel();
