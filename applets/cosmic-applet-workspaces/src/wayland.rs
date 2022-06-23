@@ -49,9 +49,10 @@ use self::generated::client::{
     zext_workspace_group_handle_v1::{self, ZextWorkspaceGroupHandleV1},
     zext_workspace_handle_v1::{self, ZextWorkspaceHandleV1},
 };
+use calloop::channel::*;
 
-pub fn spawn_workspaces(tx: glib::Sender<State>) -> mpsc::Sender<WorkspaceEvent> {
-    let (workspaces_tx, mut workspaces_rx) = mpsc::channel(100);
+pub fn spawn_workspaces(tx: glib::Sender<State>) -> SyncSender<WorkspaceEvent> {
+    let (workspaces_tx, mut workspaces_rx) = calloop::channel::sync_channel(100);
 
     if let Ok(Ok(conn)) = std::env::var("HOST_WAYLAND_DISPLAY")
         .map_err(anyhow::Error::msg)
@@ -90,59 +91,62 @@ pub fn spawn_workspaces(tx: glib::Sender<State>) -> mpsc::Sender<WorkspaceEvent>
                 tx,
                 running: true,
             };
-
-            while state.running {
-                let mut changed = false;
-                while let Ok(request) = workspaces_rx.try_recv() {
-                    match request {
-                        WorkspaceEvent::Activate(id) => {
-                            if let Some(w) = state
-                                .workspace_groups
-                                .iter()
-                                .find_map(|g| g.workspaces.iter().find(|w| w.name == id))
-                            {
-                                w.workspace_handle.activate();
-                                changed = true;
-                            }
+            let loop_handle = event_loop.handle();
+            loop_handle.insert_source(workspaces_rx, |e, _, state| {
+                match e {
+                    Event::Msg(WorkspaceEvent::Activate(id)) => {
+                        if let Some(w) = state
+                            .workspace_groups
+                            .iter()
+                            .find_map(|g| g.workspaces.iter().find(|w| w.name == id))
+                        {
+                            w.workspace_handle.activate();
+                            state.workspace_manager.as_ref().unwrap().commit();
                         }
-                        WorkspaceEvent::Scroll(v) => {
-                            dbg!(v);
-                            if let Some((w_g, w_i)) = state
-                                .workspace_groups
-                                .iter()
-                                .enumerate()
-                                .find_map(|(g_i, g)| {
-                                    g.workspaces
-                                        .iter()
-                                        .position(|w| w.state == 0)
-                                        .map(|w_i| (g, w_i))
-                                })
-                            {
-                                let max_w = w_g.workspaces.len().wrapping_sub(1);
-                                let d_i = if v > 0.0 {
-                                    if w_i == max_w {
-                                        0
-                                    } else {
-                                        w_i.wrapping_add(1)
-                                    }
+                    }
+                    Event::Msg(WorkspaceEvent::Scroll(v)) => {
+                        dbg!(v);
+                        if let Some((w_g, w_i)) = state
+                            .workspace_groups
+                            .iter()
+                            .enumerate()
+                            .find_map(|(g_i, g)| {
+                                g.workspaces
+                                    .iter()
+                                    .position(|w| w.state == 0)
+                                    .map(|w_i| (g, w_i))
+                            })
+                        {
+                            let max_w = w_g.workspaces.len().wrapping_sub(1);
+                            let d_i = if v > 0.0 {
+                                if w_i == max_w {
+                                    0
                                 } else {
-                                    if w_i == 0 {
-                                        max_w
-                                    } else {
-                                        w_i.wrapping_sub(1)
-                                    }
-                                };
-                                if let Some(w) = w_g.workspaces.get(d_i) {
-                                    w.workspace_handle.activate();
-                                    changed = true;
+                                    w_i.wrapping_add(1)
                                 }
+                            } else {
+                                if w_i == 0 {
+                                    max_w
+                                } else {
+                                    w_i.wrapping_sub(1)
+                                }
+                            };
+                            if let Some(w) = w_g.workspaces.get(d_i) {
+                                w.workspace_handle.activate();
+                                state.workspace_manager.as_ref().unwrap().commit();
                             }
                         }
                     }
+                    Event::Closed => if let Some(workspace_manager) = &mut state.workspace_manager {
+                        for g in &mut state.workspace_groups {
+                            g.workspace_group_handle.destroy();
+                        }
+                        workspace_manager.stop();
+                    },
                 }
-                if changed {
-                    state.workspace_manager.as_ref().unwrap().commit();
-                }
+
+            }).unwrap();
+            while state.running {
                 event_loop
                     .dispatch(Duration::from_millis(16), &mut state)
                     .unwrap();

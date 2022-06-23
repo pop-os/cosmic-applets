@@ -61,13 +61,9 @@ impl WorkspaceList {
             .build();
 
         scroll_controller.connect_scroll(|_, dx, dy| {
-            glib::MainContext::default().spawn_local(async move {
-                TX.get()
+                let _ = TX.get()
                     .unwrap()
-                    .send(WorkspaceEvent::Scroll(dx + dy))
-                    .await
-                    .unwrap();
-            });
+                    .send(WorkspaceEvent::Scroll(dx + dy));
             Inhibit::default()
         });
 

@@ -43,13 +43,9 @@ impl WorkspaceButton {
         new_button.connect_clicked(move |_| {
             let id_clone = id.clone();
             if !is_active {
-                glib::MainContext::default().spawn_local(async move {
-                    TX.get()
-                        .unwrap()
-                        .send(WorkspaceEvent::Activate(id_clone))
-                        .await
-                        .unwrap();
-                });
+                let _ = TX.get()
+                    .unwrap()
+                    .send(WorkspaceEvent::Activate(id_clone));
             }
         });
 

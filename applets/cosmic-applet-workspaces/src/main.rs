@@ -13,6 +13,7 @@ use tokio::sync::mpsc;
 use utils::{Activate, WorkspaceEvent};
 use wayland::State;
 use window::CosmicWorkspacesWindow;
+use calloop::channel::SyncSender;
 
 mod localize;
 mod utils;
@@ -24,7 +25,7 @@ mod workspace_list;
 mod workspace_object;
 
 const ID: &str = "com.system76.CosmicAppletWorkspaces";
-static TX: OnceCell<mpsc::Sender<WorkspaceEvent>> = OnceCell::new();
+static TX: OnceCell<SyncSender<WorkspaceEvent>> = OnceCell::new();
 
 pub fn localize() {
     let localizer = crate::localize::localizer();
