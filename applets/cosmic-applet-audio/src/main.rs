@@ -29,7 +29,6 @@ use libpulse_binding::{
 };
 use mpris2_zbus::metadata::Metadata;
 use once_cell::sync::Lazy;
-use std::{cell::RefCell, rc::Rc};
 use tokio::runtime::Runtime;
 
 static RT: Lazy<Runtime> = Lazy::new(|| Runtime::new().expect("failed to build tokio runtime"));
@@ -45,12 +44,12 @@ fn main() {
 
 fn app(application: &Application) {
     // XXX handle no pulseaudio daemon?
-    let mut pa = PA::new().unwrap();
+    let pa = PA::new().unwrap();
     let (refresh_output_tx, mut refresh_output_rx) = mpsc::unbounded();
     let (refresh_input_tx, mut refresh_input_rx) = mpsc::unbounded();
     let (now_playing_tx, mut now_playing_rx) = mpsc::unbounded::<Vec<Metadata>>();
-    pa.context
-        .set_subscribe_callback(Some(Box::new(clone!(@strong refresh_output_tx, @strong refresh_input_tx => move |facility, operation, _idx| {
+    pa
+        .set_subscribe_callback(clone!(@strong refresh_output_tx, @strong refresh_input_tx => move |facility, operation, _idx| {
             if !matches!(operation, Some(Operation::Changed)) {
                 return;
             }
@@ -63,23 +62,19 @@ fn app(application: &Application) {
                 }
                 _ => {}
             }
-        }))));
-    let pa = Rc::new(RefCell::new(pa));
-    pa.borrow_mut()
-        .context
-        .set_state_callback(Some(Box::new(clone!(@strong pa => move || {
-            let mut pa = pa.borrow_mut();
-            if pa.context.get_state() == State::Ready {
-                pa.context
-                    .subscribe(InterestMaskSet::SINK | InterestMaskSet::SOURCE, |_| {});
-                refresh_output_tx.unbounded_send(()).expect("failed to send output refresh message");
-                refresh_input_tx.unbounded_send(()).expect("failed to send output refresh message");
-            }
-        }))));
-    pa.borrow_mut()
-        .context
-        .connect(None, FlagSet::empty(), None)
-        .unwrap();
+        }));
+    pa.set_state_callback(move |pa, state| {
+        if state == State::Ready {
+            pa.subscribe(InterestMaskSet::SINK | InterestMaskSet::SOURCE);
+            refresh_output_tx
+                .unbounded_send(())
+                .expect("failed to send output refresh message");
+            refresh_input_tx
+                .unbounded_send(())
+                .expect("failed to send output refresh message");
+        }
+    });
+    pa.connect().unwrap(); // XXX unwrap
     view! {
         window = ApplicationWindow {
             set_application: Some(application),
@@ -168,7 +163,6 @@ fn app(application: &Application) {
     glib::MainContext::default().spawn_local(
         clone!(@weak inputs, @weak current_input, @weak input_volume, @strong pa => async move {
             while let Some(()) = refresh_input_rx.next().await {
-                let pa = pa.borrow();
                 input::refresh_input_widgets(&pa, &inputs).await;
                 let default_input = input::refresh_default_input(&pa, &current_input).await;
                 volume::update_volume(&default_input, &input_volume);
@@ -178,7 +172,6 @@ fn app(application: &Application) {
     glib::MainContext::default().spawn_local(
         clone!(@weak outputs, @weak current_output, @weak output_volume, @strong pa => async move {
             while let Some(()) = refresh_output_rx.next().await {
-                let pa = pa.borrow();
                 output::refresh_output_widgets(&pa, &outputs);
                 let default_output = output::refresh_default_output(&pa, &current_output).await;
                 volume::update_volume(&default_output, &output_volume);
