@@ -105,7 +105,6 @@ pub fn spawn_workspaces(tx: glib::Sender<State>) -> SyncSender<WorkspaceEvent> {
                         }
                     }
                     Event::Msg(WorkspaceEvent::Scroll(v)) => {
-                        dbg!(v);
                         if let Some((w_g, w_i)) = state
                             .workspace_groups
                             .iter()
@@ -361,7 +360,6 @@ impl Dispatch<ZextWorkspaceHandleV1, ()> for State {
                         .iter_mut()
                         .find(|w| &w.workspace_handle == workspace)
                 }) {
-                    dbg!(&state);
                     if state.len() == 4 {
                         // XXX is it little endian??
                         w.state = u32::from_le_bytes(state.try_into().unwrap());
