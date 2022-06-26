@@ -109,6 +109,10 @@ impl SimpleComponent for AppModel {
 
     view! {
         gtk4::Window {
+            set_decorated: false,
+            set_resizable: false,
+            set_width_request: 1,
+            set_height_request: 1,
             gtk4::MenuButton {
                 set_has_frame: false,
                 #[watch]

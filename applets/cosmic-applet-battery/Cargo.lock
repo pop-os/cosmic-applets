@@ -203,7 +203,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "cosmic-applet-power-battery"
+name = "cosmic-applet-battery"
 version = "0.1.0"
 dependencies = [
  "futures",

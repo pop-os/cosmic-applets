@@ -15,6 +15,7 @@ bindir := rootdir + prefix + '/bin'
 
 app_list_id := 'com.system76.CosmicAppList'
 audio_id := 'com.system76.CosmicAppletAudio'
+battery_id := 'com.system76.CosmicAppletBattery'
 graphics_id := 'com.system76.CosmicAppletGraphics'
 network_id := 'com.system76.CosmicAppletNetwork'
 notifications_id := 'com.system76.CosmicAppletNotifications'
@@ -27,6 +28,7 @@ workspaces_button_id := 'com.system76.CosmicPanelWorkspacesButton'
 
 all: _extract_vendor
     cargo build {{cargo_args}}
+    cargo build --manifest-path applets/cosmic-applet-battery/Cargo.toml {{cargo_args}}
 
 # Installs files into the system
 install:
@@ -41,6 +43,11 @@ install:
     install -Dm0644 applets/cosmic-applet-audio/data/icons/{{audio_id}}.svg {{iconsdir}}/{{audio_id}}.svg
     install -Dm0644 applets/cosmic-applet-audio/data/{{audio_id}}.desktop {{sharedir}}/applications/{{audio_id}}.desktop
     install -Dm0755 target/release/cosmic-applet-audio {{bindir}}/cosmic-applet-audio
+
+    # battery
+    install -Dm0644 applets/cosmic-applet-battery/data/icons/{{battery_id}}.svg {{iconsdir}}/{{battery_id}}.svg
+    install -Dm0644 applets/cosmic-applet-battery/data/{{battery_id}}.desktop {{sharedir}}/applications/{{battery_id}}.desktop
+    install -Dm0755 applets/cosmic-applet-battery/target/release/cosmic-applet-battery {{bindir}}/cosmic-applet-battery
 
     # graphics
     install -Dm0644 applets/cosmic-applet-graphics/data/icons/{{graphics_id}}.svg {{iconsdir}}/{{graphics_id}}.svg
