@@ -19,6 +19,7 @@ pub struct DeviceInfo {
     pub name: Option<String>,
     pub description: Option<String>,
     pub volume: ChannelVolumes,
+    pub index: u32,
 }
 
 pub struct ServerInfo {
@@ -104,6 +105,7 @@ impl PA {
                     name: item.name.clone().map(|x| x.into_owned()),
                     description: item.description.clone().map(|x| x.into_owned()),
                     volume: item.volume,
+                    index: item.index,
                 }),
                 ListResult::End => {
                     sender.take().unwrap().send(Ok(items.take().unwrap()));
@@ -132,6 +134,7 @@ impl PA {
                         name: item.name.clone().map(|x| x.into_owned()),
                         description: item.description.clone().map(|x| x.into_owned()),
                         volume: item.volume,
+                        index: item.index,
                     });
                 }
                 ListResult::End => {
@@ -163,6 +166,7 @@ impl PA {
                     name: item.name.clone().map(|x| x.into_owned()),
                     description: item.description.clone().map(|x| x.into_owned()),
                     volume: item.volume,
+                    index: item.index,
                 }),
                 ListResult::End => {
                     sender.take().unwrap().send(Ok(items.take().unwrap()));
@@ -191,6 +195,7 @@ impl PA {
                         name: item.name.clone().map(|x| x.into_owned()),
                         description: item.description.clone().map(|x| x.into_owned()),
                         volume: item.volume,
+                        index: item.index,
                     });
                 }
                 ListResult::End => {

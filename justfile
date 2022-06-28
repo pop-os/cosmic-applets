@@ -28,6 +28,7 @@ workspaces_button_id := 'com.system76.CosmicPanelWorkspacesButton'
 
 all: _extract_vendor
     cargo build {{cargo_args}}
+    cargo build --manifest-path applets/cosmic-applet-audio/Cargo.toml {{cargo_args}}
     cargo build --manifest-path applets/cosmic-applet-battery/Cargo.toml {{cargo_args}}
 
 # Installs files into the system
@@ -42,7 +43,7 @@ install:
     # audio
     install -Dm0644 applets/cosmic-applet-audio/data/icons/{{audio_id}}.svg {{iconsdir}}/{{audio_id}}.svg
     install -Dm0644 applets/cosmic-applet-audio/data/{{audio_id}}.desktop {{sharedir}}/applications/{{audio_id}}.desktop
-    install -Dm0755 target/release/cosmic-applet-audio {{bindir}}/cosmic-applet-audio
+    install -Dm0755 applets/cosmic-applet-audio/target/release/cosmic-applet-audio {{bindir}}/cosmic-applet-audio
 
     # battery
     install -Dm0644 applets/cosmic-applet-battery/data/icons/{{battery_id}}.svg {{iconsdir}}/{{battery_id}}.svg
