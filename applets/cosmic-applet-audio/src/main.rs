@@ -82,7 +82,8 @@ fn app(application: &Application) {
             set_default_width: 400,
             set_default_height: 300,
 
-            set_child: window_box = Some(&GtkBox) {
+            #[wrap(Some)]
+            set_child: window_box = &GtkBox {
                 set_orientation: Orientation::Vertical,
                 set_spacing: 24,
                 append: output_box = &GtkBox {
@@ -119,14 +120,16 @@ fn app(application: &Application) {
                 append: output_list_box = &GtkBox {
                     set_orientation: Orientation::Vertical,
                     append: current_output_button = &Button {
-                        set_child: current_output = Some(&Label) {},
-                        connect_clicked(outputs_revealer) => move |_| {
+                        #[wrap(Some)]
+                        set_child: current_output = &Label {},
+                        connect_clicked[outputs_revealer] => move |_| {
                             outputs_revealer.set_reveal_child(!outputs_revealer.reveals_child());
                         }
                     },
                     append: outputs_revealer = &Revealer {
                         set_transition_type: RevealerTransitionType::SlideDown,
-                        set_child: outputs = Some(&ListBox) {
+                        #[wrap(Some)]
+                        set_child: outputs = &ListBox {
                             set_selection_mode: SelectionMode::None,
                             set_activate_on_single_click: true
                         }
@@ -138,14 +141,16 @@ fn app(application: &Application) {
                 append: input_list_box = &GtkBox {
                     set_orientation: Orientation::Vertical,
                     append: current_input_button = &Button {
-                        set_child: current_input = Some(&Label) {},
-                        connect_clicked(inputs_revealer) => move |_| {
+                        #[wrap(Some)]
+                        set_child: current_input = &Label {},
+                        connect_clicked[inputs_revealer] => move |_| {
                             inputs_revealer.set_reveal_child(!inputs_revealer.reveals_child());
                         }
                     },
                     append: inputs_revealer = &Revealer {
                         set_transition_type: RevealerTransitionType::SlideDown,
-                        set_child: inputs = Some(&ListBox) {
+                        #[wrap(Some)]
+                        set_child: inputs = &ListBox {
                             set_selection_mode: SelectionMode::None,
                             set_activate_on_single_click: true
                         }

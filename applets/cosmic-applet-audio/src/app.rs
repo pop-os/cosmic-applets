@@ -2,17 +2,10 @@ use crate::icons::{parse_desktop_icons, DesktopApplication};
 use futures_util::StreamExt;
 use libcosmic_widgets::LabeledItem;
 use libpulse_binding::{
-    context::subscribe::{Facility, InterestMaskSet, Operation},
+    context::{subscribe::{Facility, InterestMaskSet, Operation}, State},
     volume::Volume,
 };
 use mpris2_zbus::media_player::MediaPlayer;
-use pulsectl::{
-    controllers::{
-        types::{ApplicationInfo, DeviceInfo},
-        AppControl, DeviceControl, SinkController, SourceController,
-    },
-    Handler,
-};
 use relm4::{
     component,
     gtk::{
@@ -22,11 +15,13 @@ use relm4::{
         Align, Box as GtkBox, Button, Image, Label, ListBox, Orientation, PositionType, Revealer,
         RevealerTransitionType, Scale, Separator, Window,
     },
-    view, ComponentParts, RelmContainerExt, Sender, SimpleComponent,
+    view, ComponentParts, ComponentSender, RelmContainerExt, Sender, SimpleComponent, send,
 };
 use std::{collections::HashMap, rc::Rc};
 use tracker::track;
 use zbus::Connection;
+
+use crate::pa::{DeviceInfo, PA};
 
 pub enum AppInput {
     Inputs,
@@ -59,7 +54,7 @@ pub struct App {
     #[do_not_track]
     desktop_icons: HashMap<DesktopApplication, String>,
     #[do_not_track]
-    handler: Handler,
+    pa: PA,
 }
 
 impl Default for App {
@@ -74,15 +69,8 @@ impl Default for App {
         let outputs = output_controller.list_devices().unwrap_or_default();
         let now_playing = Vec::new();
         let desktop_icons = parse_desktop_icons();
-        let handler = Handler::connect("com.system76.cosmic.applets.audio")
-            .expect("failed to connect to pulse");
-        relm4::spawn_local(clone!(@weak handler.mainloop as main_loop => async move {
-            let mut timer = async_io::Timer::interval(std::time::Duration::from_millis(100));
-            loop {
-                main_loop.borrow_mut().iterate(false);
-                timer.next().await;
-            }
-        }));
+        // XXX handle no pulseaudio daemon?
+        let pa = PA::new().unwrap();
         Self {
             default_input,
             inputs,
@@ -90,7 +78,7 @@ impl Default for App {
             outputs,
             now_playing,
             desktop_icons,
-            handler,
+            pa,
             tracker: 0,
         }
     }
@@ -142,23 +130,27 @@ impl App {
     }
 
     fn subscribe_for_updates(&self, input: &Sender<AppInput>) {
-        let mut context = self.handler.context.borrow_mut();
         let input_clone = input.clone();
-        context.set_subscribe_callback(Some(Box::new(move |facility, operation, _idx| {
+        self.pa.set_subscribe_callback(move |facility, operation, _idx| {
             if !matches!(operation, Some(Operation::Changed)) {
                 return;
             }
             match facility {
                 Some(Facility::Sink) => {
-                    send!(input_clone, AppInput::OutputVolume);
+                    input_clone.send(AppInput::OutputVolume);
                 }
                 Some(Facility::Source) => {
-                    send!(input_clone, AppInput::InputVolume);
+                    input_clone.send(AppInput::InputVolume);
                 }
                 _ => {}
             }
-        })));
-        context.subscribe(InterestMaskSet::SINK | InterestMaskSet::SOURCE, |_| {});
+        });
+        self.pa.set_state_callback(move |pa, state| {
+            if state == State::Ready {
+                pa.subscribe(InterestMaskSet::SINK | InterestMaskSet::SOURCE);
+            }
+        });
+    }
 
     fn refresh_input_list(&mut self) {
         let mut input_controller =
@@ -277,7 +269,8 @@ impl App {
                     append: media_buttons = &GtkBox {
                         set_halign: Align::End,
                         append: pause_button = &Button {
-                            set_child: pause_button_img = Some(&Image) {
+                            #[wrap(Some)]
+                            set_child: pause_button_img = &Image {
                                 set_icon_name: Some("media-playback-pause-symbolic"),
                                 set_pixel_size: 24,
                             },
@@ -309,89 +302,95 @@ impl SimpleComponent for App {
             set_default_width: 400,
             set_default_height: 300,
 
-            &GtkBox {
+            GtkBox {
                 set_orientation: Orientation::Vertical,
                 set_spacing: 24,
-                &GtkBox {
+                GtkBox {
                     set_orientation: Orientation::Horizontal,
                     set_spacing: 16,
-                    &Image {
+                    Image {
                         set_icon_name: Some("audio-speakers-symbolic"),
                     },
                     append: output_volume = &Scale::with_range(Orientation::Horizontal, 0., 100., 1.) {
                         set_format_value_func: |_, value| {
                             format!("{:.0}%", value)
                         },
-                        set_value: watch! { model.default_output.as_ref().map(|info| (info.volume.avg().0 as f64 / Volume::NORMAL.0 as f64) * 100.).unwrap_or(0.) },
+                        #[watch]
+                        set_value: model.default_output.as_ref().map(|info| (info.volume.avg().0 as f64 / Volume::NORMAL.0 as f64) * 100.).unwrap_or(0.),
                         set_value_pos: PositionType::Right,
                         set_hexpand: true
                     }
                 },
-                &GtkBox {
+                GtkBox {
                     set_orientation: Orientation::Horizontal,
                     set_spacing: 16,
-                    &Image {
+                    Image {
                         set_icon_name: Some("audio-input-microphone-symbolic"),
                     },
                     append: input_volume = &Scale::with_range(Orientation::Horizontal, 0., 100., 1.) {
                         set_format_value_func: |_, value| {
                             format!("{:.0}%", value)
                         },
-                        set_value: watch! {
-                            model.default_input
-                                .as_ref()
-                                .map(|info| (info.volume.avg().0 as f64 / Volume::NORMAL.0 as f64) * 100.)
-                                .unwrap_or(0.)
-                        },
+                        #[watch]
+                        set_value: model.default_input
+                            .as_ref()
+                            .map(|info| (info.volume.avg().0 as f64 / Volume::NORMAL.0 as f64) * 100.)
+                            .unwrap_or(0.),
                         set_value_pos: PositionType::Right,
                         set_hexpand: true
                     }
                 },
-                &Separator {
+                Separator {
                     set_orientation: Orientation::Horizontal,
                 },
-                &GtkBox {
+                GtkBox {
                     set_orientation: Orientation::Vertical,
-                    &Button {
-                        set_child: current_output = Some(&Label) {
-                            set_text: watch! { model.get_default_output_name() }
+                    Button {
+                        #[wrap(Some)]
+                        set_child: current_output = &Label {
+                            #[watch]
+                            set_text: model.get_default_output_name()
                         },
-                        connect_clicked(input, outputs_revealer) => move |_| {
-                            send!(input, AppInput::Outputs);
+                        connect_clicked[sender, outputs_revealer] => move |_| {
+                            sender.input(AppInput::Outputs);
                             outputs_revealer.set_reveal_child(!outputs_revealer.reveals_child());
                         }
                     },
                     append: outputs_revealer = &Revealer {
                         set_transition_type: RevealerTransitionType::SlideDown,
-                        set_child: outputs = Some(&ListBox) {
+                        #[wrap(Some)]
+                        set_child: outputs = &ListBox {
                             set_selection_mode: gtk::SelectionMode::None,
                             set_activate_on_single_click: true
                         }
                     }
                 },
-                &Separator {
+                Separator {
                     set_orientation: Orientation::Horizontal,
                 },
-                &GtkBox {
+                GtkBox {
                     set_orientation: Orientation::Vertical,
-                    &Button {
-                        set_child: current_input = Some(&Label) {
-                            set_text: watch! { model.get_default_input_name() }
+                    Button {
+                        #[wrap(Some)]
+                        set_child: current_input = &Label {
+                            #[watch]
+                            set_text: model.get_default_input_name()
                         },
-                        connect_clicked(input, inputs_revealer) => move |_| {
-                            send!(input, AppInput::Inputs);
+                        connect_clicked[sender, inputs_revealer] => move |_| {
+                            sender.input(AppInput::Inputs);
                             inputs_revealer.set_reveal_child(!inputs_revealer.reveals_child());
                         }
                     },
                     append: inputs_revealer = &Revealer {
                         set_transition_type: RevealerTransitionType::SlideDown,
-                        set_child: inputs = Some(&ListBox) {
+                        #[wrap(Some)]
+                        set_child: inputs = &ListBox {
                             set_selection_mode: gtk::SelectionMode::None,
                             set_activate_on_single_click: true
                         }
                     }
                 },
-                &Separator {
+                Separator {
                     set_orientation: Orientation::Horizontal,
                 },
                 append: playing_apps = &ListBox {
@@ -401,15 +400,14 @@ impl SimpleComponent for App {
         }
     }
 
-    fn init_parts(
+    fn init(
         _init_params: Self::InitParams,
         root: &Self::Root,
-        input: &Sender<Self::Input>,
-        _output: &Sender<Self::Output>,
+        sender: &ComponentSender<Self>,
     ) -> ComponentParts<Self> {
         let model = App::default();
         let widgets = view_output!();
-        model.subscribe_for_updates(input);
+        model.subscribe_for_updates(&sender.input);
 
         ComponentParts { model, widgets }
     }
@@ -417,8 +415,7 @@ impl SimpleComponent for App {
     fn update(
         &mut self,
         msg: Self::Input,
-        _input: &Sender<Self::Input>,
-        _output: &Sender<Self::Output>,
+        _sender: &ComponentSender<Self>,
     ) {
         self.reset();
         match msg {
