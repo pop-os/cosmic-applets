@@ -53,7 +53,7 @@ fn display_active_connections(
             } => {
                 icon_image.set_icon_name(Some("network-wired-symbolic"));
                 render_wired_connection(name, speed, ip_addresses)
-            },
+            }
             ActiveConnectionInfo::WiFi {
                 name,
                 hw_address,
@@ -64,7 +64,7 @@ fn display_active_connections(
             ActiveConnectionInfo::Vpn { name, ip_addresses } => {
                 icon_image.set_icon_name(Some("network-vpn-symbolic"));
                 render_vpn(name, ip_addresses)
-            },
+            }
         };
         let entry = ListBoxRow::builder().child(&entry).build();
         target.append(&entry);

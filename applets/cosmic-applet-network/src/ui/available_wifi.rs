@@ -12,7 +12,11 @@ use gtk4::{
     Image, ListBox, ListBoxRow, Separator,
 };
 use libcosmic_widgets::{relm4::RelmContainerExt, LabeledItem};
-use std::{cell::RefCell, rc::Rc};
+use std::{
+    cell::RefCell,
+    collections::{BTreeMap, HashMap},
+    rc::Rc,
+};
 use zbus::Connection;
 
 pub fn add_available_wifi(target: &gtk4::Box, separator: Separator) {
@@ -23,7 +27,7 @@ pub fn add_available_wifi(target: &gtk4::Box, separator: Separator) {
             eprintln!("scan_for_wifi failed: {}", err);
         }
     });
-    
+
     let scrolled_window = gtk4::ScrolledWindow::new();
     scrolled_window.set_hscrollbar_policy(gtk4::PolicyType::Never);
     scrolled_window.set_vscrollbar_policy(gtk4::PolicyType::Automatic);
@@ -90,9 +94,7 @@ async fn handle_wireless_device(
     device: WirelessDevice<'_>,
     tx: Sender<Vec<AccessPoint>>,
 ) -> zbus::Result<()> {
-    device
-        .request_scan(std::collections::HashMap::new())
-        .await?;
+    device.request_scan(HashMap::new()).await?;
     let mut scan_changed = device.receive_last_scan_changed().await;
     if let Some(t) = scan_changed.next().await {
         if let Ok(-1) = t.get().await {
@@ -101,13 +103,19 @@ async fn handle_wireless_device(
         }
     }
     let access_points = device.get_access_points().await?;
-    let mut aps = Vec::with_capacity(access_points.len());
+    // Sort by SSID and remove duplicates
+    let mut aps = BTreeMap::<String, AccessPoint>::new();
     for ap in access_points {
-        aps.push(AccessPoint {
-            ssid: String::from_utf8_lossy(&ap.ssid().await?.clone()).into_owned(),
-            strength: ap.strength().await?,
-        });
+        let ssid = String::from_utf8_lossy(&ap.ssid().await?.clone()).into_owned();
+        let strength = ap.strength().await?;
+        if let Some(access_point) = aps.get(&ssid) {
+            if access_point.strength > strength {
+                continue;
+            }
+        }
+        aps.insert(ssid.clone(), AccessPoint { ssid, strength });
     }
+    let aps = aps.into_iter().map(|(_, x)| x).collect();
     tx.send(aps).expect("failed to send back to main thread");
     Ok(())
 }
