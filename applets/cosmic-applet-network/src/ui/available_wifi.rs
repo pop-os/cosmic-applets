@@ -59,7 +59,8 @@ fn build_aps_list(
     for ap in aps {
         view! {
             entry = ListBoxRow {
-                set_child: entry_box = Some(&gtk4::Box) {
+                #[wrap(Some)]
+                set_child: entry_box = &gtk4::Box {
                     container_add: labeled_item = &LabeledItem {
                         set_title: &ap.ssid,
                         set_child: icon = &Image {

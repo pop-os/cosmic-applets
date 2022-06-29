@@ -301,7 +301,7 @@ dependencies = [
  "libcosmic",
  "once_cell",
  "pretty_env_logger",
- "relm4-macros 0.4.4",
+ "relm4-macros 0.5.0-beta.1",
  "rust-embed",
  "serde",
  "serde_json",
@@ -335,7 +335,7 @@ dependencies = [
  "cosmic-panel-config",
  "gtk4",
  "once_cell",
- "relm4-macros 0.4.4",
+ "relm4-macros 0.5.0-beta.1",
  "tokio",
  "zbus",
 ]
@@ -351,7 +351,7 @@ dependencies = [
  "itertools",
  "libcosmic-widgets",
  "once_cell",
- "relm4-macros 0.4.4",
+ "relm4-macros 0.5.0-beta.1",
  "slotmap",
  "tokio",
  "zbus",
@@ -382,7 +382,7 @@ dependencies = [
  "logind-zbus",
  "nix 0.24.1",
  "once_cell",
- "relm4-macros 0.4.4",
+ "relm4-macros 0.5.0-beta.1",
  "tokio",
  "zbus",
 ]
@@ -2177,6 +2177,16 @@ name = "relm4-macros"
 version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7136d9b9b97dc87198c619587de7bd61aca5ec4bec58a7167404c1edf750a490"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "relm4-macros"
+version = "0.5.0-beta.1"
+source = "git+https://github.com/Relm4/Relm4.git?branch=next#d85111b03ba80e5132f79e2fa21b69899aab4c46"
 dependencies = [
  "proc-macro2",
  "quote",

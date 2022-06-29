@@ -57,7 +57,8 @@ pub fn build() -> gtk4::Box {
 pub fn create_button(name: &str, icon_name: &str) -> Button {
     view! {
         button = Button {
-            set_child: inner_box = Some(&gtk4::Box) {
+            #[wrap(Some)]
+            set_child: inner_box = &gtk4::Box {
                 set_orientation: Orientation::Vertical,
                 set_spacing: 8,
                 set_margin_start: 8,

@@ -123,7 +123,8 @@ fn build_ui(application: &gtk4::Application) {
                 set_visible: false,
                 add_css_class: "loading-overlay",
             },
-            set_child: main_box = Some(&gtk4::Box) {
+            #[wrap(Some)]
+            set_child: main_box = &gtk4::Box {
                 set_orientation: Orientation::Vertical,
                 set_spacing: 10,
                 set_margin_top: 20,

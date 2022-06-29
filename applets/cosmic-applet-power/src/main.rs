@@ -79,7 +79,8 @@ fn build_ui(application: &gtk4::Application) {
             set_margin_start: 24,
             set_margin_end: 24,
             append: settings_button = &Button {
-                set_child = Some(&Label) {
+                #[wrap(Some)]
+                set_child = &Label {
                     set_label: "Settings...",
                     set_halign: Align::Start,
                     set_hexpand: true

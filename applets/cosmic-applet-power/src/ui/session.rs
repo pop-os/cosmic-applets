@@ -46,7 +46,8 @@ pub fn build() -> gtk4::Box {
             set_orientation: Orientation::Vertical,
             set_spacing: 5,
             append: lock_screen_button = &Button {
-                set_child: lock_screen_box = Some(&gtk4::Box) {
+                #[wrap(Some)]
+                set_child: lock_screen_box = &gtk4::Box {
                     set_orientation: Orientation::Horizontal,
                     set_spacing: 10,
                     append: lock_screen_icon = &Image {
@@ -64,7 +65,8 @@ pub fn build() -> gtk4::Box {
                 }
             },
             append: log_out_button = &Button {
-                set_child: log_out_box = Some(&gtk4::Box) {
+                #[wrap(Some)]
+                set_child: log_out_box = &gtk4::Box {
                     set_orientation: Orientation::Horizontal,
                     set_spacing: 10,
                     append: log_out_icon = &Image {
