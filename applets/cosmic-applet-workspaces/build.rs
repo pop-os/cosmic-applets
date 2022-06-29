@@ -12,7 +12,7 @@ fn main() {
     let git_hash = String::from_utf8(output.stdout).unwrap();
     println!("cargo:rustc-env=GIT_HASH={}", git_hash);
 }
-    gio::compile_resources(
+    glib_build_tools::compile_resources(
         "data/resources",
         "data/resources/resources.gresource.xml",
         "compiled.gresource",
