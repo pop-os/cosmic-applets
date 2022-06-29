@@ -4,7 +4,7 @@ use crate::utils::Activate;
 use crate::workspace_button::WorkspaceButton;
 use crate::workspace_object::WorkspaceObject;
 use cascade::cascade;
-use cosmic_panel_config::config::{CosmicPanelConfig, XdgWrapperConfig};
+use cosmic_panel_config::config::CosmicPanelConfig;
 use gtk4::ListView;
 use gtk4::Orientation;
 use gtk4::SignalListItemFactory;

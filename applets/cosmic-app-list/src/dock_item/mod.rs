@@ -5,7 +5,7 @@ use crate::dock_popover::DockPopover;
 use crate::utils::BoxedWindowList;
 use crate::utils::Event;
 use cascade::cascade;
-use cosmic_panel_config::config::{Anchor, XdgWrapperConfig};
+use cosmic_panel_config::config::PanelAnchor;
 use gtk4::glib;
 use gtk4::prelude::*;
 use gtk4::subclass::prelude::*;
@@ -131,50 +131,48 @@ impl DockItem {
         }
     }
 
-    pub fn set_position(&self, position: Anchor) {
+    pub fn set_position(&self, position: PanelAnchor) {
         let imp = imp::DockItem::from_instance(self);
         let item_box = imp.item_box.borrow();
         let dots = imp.dots.borrow();
         if let Some(image) = imp.image.borrow().as_ref() {
             match position {
-                Anchor::Left => {
+                PanelAnchor::Left => {
                     item_box.set_orientation(Orientation::Horizontal);
                     dots.set_orientation(Orientation::Vertical);
                     dots.set_margin_bottom(4);
                     dots.set_margin_top(4);
                     item_box.reorder_child_after(&image.clone(), Some(&dots.clone()));
                 }
-                Anchor::Right => {
+                PanelAnchor::Right => {
                     item_box.set_orientation(Orientation::Horizontal);
                     dots.set_orientation(Orientation::Vertical);
                     dots.set_margin_bottom(4);
                     dots.set_margin_top(4);
                     item_box.reorder_child_after(&dots.clone(), Some(&image.clone()));
                 }
-                Anchor::Top => {
+                PanelAnchor::Top => {
                     item_box.set_orientation(Orientation::Vertical);
                     dots.set_orientation(Orientation::Horizontal);
                     dots.set_margin_start(4);
                     dots.set_margin_end(4);
                     item_box.reorder_child_after(&image.clone(), Some(&dots.clone()));
                 }
-                Anchor::Bottom => {
+                PanelAnchor::Bottom => {
                     item_box.set_orientation(Orientation::Vertical);
                     dots.set_orientation(Orientation::Horizontal);
                     dots.set_margin_start(4);
                     dots.set_margin_end(4);
                     item_box.reorder_child_after(&dots.clone(), Some(&image.clone()));
                 }
-                Anchor::Center => unimplemented!(),
             };
         }
         let popover = imp.popover.borrow();
         popover.set_position(match position {
-            Anchor::Left => PositionType::Right,
-            Anchor::Right => PositionType::Left,
-            Anchor::Top => PositionType::Bottom,
-            Anchor::Bottom => PositionType::Top,
-            Anchor::Center => unimplemented!(),
+            PanelAnchor::Left => PositionType::Right,
+            PanelAnchor::Right => PositionType::Left,
+            PanelAnchor::Top => PositionType::Bottom,
+            PanelAnchor::Bottom => PositionType::Top,
         });
         
     }

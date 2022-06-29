@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0-only
 
-use cosmic_panel_config::config::{Anchor, CosmicPanelConfig};
+use cosmic_panel_config::config::{PanelAnchor, CosmicPanelConfig};
 use glib::SignalHandlerId;
 use gtk4::subclass::prelude::*;
 use gtk4::{gio, glib};
@@ -23,7 +23,7 @@ pub struct DockList {
     pub drag_end_signal: Rc<RefCell<Option<SignalHandlerId>>>,
     pub drag_cancel_signal: Rc<RefCell<Option<SignalHandlerId>>>,
     pub popover_menu_index: Rc<Cell<Option<u32>>>,
-    pub position: Rc<Cell<Anchor>>,
+    pub position: Rc<Cell<PanelAnchor>>,
     pub tx: OnceCell<mpsc::Sender<Event>>,
     pub config: OnceCell<CosmicPanelConfig>
 }

@@ -6,7 +6,7 @@ extern crate relm4_macros;
 pub mod session_manager;
 pub mod ui;
 
-use cosmic_panel_config::config::{CosmicPanelConfig, XdgWrapperConfig};
+use cosmic_panel_config::config::CosmicPanelConfig;
 use gtk4::{gio::ApplicationFlags, glib, prelude::*, Align, Button, Label, Orientation, Separator};
 use once_cell::sync::Lazy;
 use std::process::Command;

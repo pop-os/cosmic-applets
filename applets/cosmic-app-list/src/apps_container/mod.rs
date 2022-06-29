@@ -5,7 +5,7 @@ use crate::dock_list::DockList;
 use crate::dock_list::DockListType;
 use crate::utils::Event;
 use cascade::cascade;
-use cosmic_panel_config::config::Anchor;
+use cosmic_panel_config::config::PanelAnchor;
 use cosmic_panel_config::config::CosmicPanelConfig;
 use gtk4::prelude::*;
 use gtk4::subclass::prelude::*;
@@ -84,7 +84,7 @@ impl AppsContainer {
         }
     }
 
-    pub fn set_position(&self, position: Anchor) {
+    pub fn set_position(&self, position: PanelAnchor) {
         self.set_orientation(position.into());
         let imp = imp::AppsContainer::from_instance(self);
         imp.saved_list.get().unwrap().set_position(position);

@@ -7,7 +7,7 @@ pub mod task;
 pub mod ui;
 pub mod widgets;
 
-use cosmic_panel_config::config::{CosmicPanelConfig, XdgWrapperConfig};
+use cosmic_panel_config::config::CosmicPanelConfig;
 use gtk4::{gio::ApplicationFlags, glib, prelude::*, Orientation, Separator};
 use once_cell::sync::Lazy;
 use tokio::runtime::Runtime;
