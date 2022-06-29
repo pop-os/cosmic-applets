@@ -8,6 +8,7 @@ Build-Depends:
   rustc (>=1.57),
   cargo,
   libgtk-4-dev,
+  libpulse-dev,
   just,
   pkg-config,
 Standards-Version: 4.3.0
