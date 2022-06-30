@@ -502,7 +502,7 @@ dependencies = [
 [[package]]
 name = "cosmic-panel-config"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/cosmic-panel?branch=gtk-rs-git_nobuild#49b8d8c84f9db93c72ef06778b76ccb38329a8c4"
+source = "git+https://github.com/pop-os/cosmic-panel#49b8d8c84f9db93c72ef06778b76ccb38329a8c4"
 dependencies = [
  "anyhow",
  "gtk4",
