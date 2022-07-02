@@ -1,3 +1,4 @@
+use cosmic_panel_config::config::CosmicPanelConfig;
 use gtk4::{glib, prelude::*, subclass::prelude::*};
 use relm4_macros::view;
 
@@ -28,6 +29,7 @@ button.cosmic_applet_button {
 
 #[derive(Default)]
 pub struct AppletInner {
+    panel_config: DerefCell<CosmicPanelConfig>,
     menu_button: DerefCell<gtk4::MenuButton>,
     popover: DerefCell<gtk4::Popover>,
 }
@@ -64,10 +66,13 @@ impl ObjectImpl for AppletInner {
 
         let provider = gtk4::CssProvider::new();
         provider.load_from_data(STYLE.as_bytes());
-        obj.style_context().add_provider(&provider, gtk4::STYLE_PROVIDER_PRIORITY_APPLICATION);
+        obj.style_context()
+            .add_provider(&provider, gtk4::STYLE_PROVIDER_PRIORITY_APPLICATION);
 
         self.menu_button.set(menu_button);
         self.popover.set(popover);
+        self.panel_config
+            .set(CosmicPanelConfig::load_from_env().unwrap_or_default());
     }
 }
 
@@ -94,12 +99,23 @@ impl Applet {
         AppletInner::from_instance(self)
     }
 
+    pub fn panel_config(&self) -> &CosmicPanelConfig {
+        &*self.inner().panel_config
+    }
+
     pub fn set_button_child(&self, child: Option<&impl IsA<gtk4::Widget>>) {
         self.inner().menu_button.set_child(child);
     }
 
     pub fn set_button_icon_name(&self, name: &str) {
-        self.inner().menu_button.set_icon_name(name);
+        let image = gtk4::Image::from_icon_name(name);
+        image.set_pixel_size(
+            self.panel_config()
+                .get_applet_icon_size()
+                .try_into()
+                .unwrap(),
+        ); // XXX unwrap
+        self.set_button_child(Some(&image));
     }
 
     pub fn set_button_label(&self, label: &str) {
