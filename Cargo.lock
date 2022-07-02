@@ -411,9 +411,9 @@ dependencies = [
 name = "cosmic-applet-power"
 version = "0.1.0"
 dependencies = [
- "cosmic-panel-config",
  "futures-util",
  "gtk4",
+ "libcosmic-applet",
  "logind-zbus",
  "nix 0.24.1",
  "once_cell",
