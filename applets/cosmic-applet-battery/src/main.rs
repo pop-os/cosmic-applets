@@ -44,35 +44,6 @@ fn format_duration(duration: Duration) -> String {
     }
 }
 
-#[derive(Copy, Clone)]
-enum Graphics {
-    Compute,
-    Hybrid,
-    Integrated,
-    Nvidia,
-}
-
-impl Graphics {
-    fn from_str(s: &str) -> Option<Self> {
-        match s {
-            "compute" => Some(Self::Compute),
-            "hybrid" => Some(Self::Hybrid),
-            "integrated" => Some(Self::Integrated),
-            "nvidia" => Some(Self::Nvidia),
-            _ => None,
-        }
-    }
-
-    fn to_str(self) -> &'static str {
-        match self {
-            Self::Compute => "compute",
-            Self::Hybrid => "hybrid",
-            Self::Integrated => "integrated",
-            Self::Nvidia => "nvidia",
-        }
-    }
-}
-
 #[derive(Default)]
 struct AppModel {
     icon_name: String,
@@ -84,7 +55,6 @@ struct AppModel {
     session: Option<LogindSessionProxy<'static>>,
     backlight: Option<Backlight>,
     kbd_backlight: Option<KbdBacklightProxy<'static>>,
-    power_daemon: Option<PowerDaemonProxy<'static>>,
 }
 
 enum AppMsg {
@@ -93,7 +63,6 @@ enum AppMsg {
     SetDevice(DeviceProxy<'static>),
     SetSession(LogindSessionProxy<'static>),
     SetKbdBacklight(KbdBacklightProxy<'static>),
-    SetPowerDaemon(PowerDaemonProxy<'static>),
     UpdateProperties,
     UpdateKbdBrightness(f64),
 }
@@ -144,11 +113,6 @@ impl SimpleComponent for AppModel {
                                 },
                             },
                         },
-
-                        gtk4::Separator {
-                        },
-
-                        // Profiles
 
                         gtk4::Separator {
                         },
@@ -293,18 +257,6 @@ impl SimpleComponent for AppModel {
             }
         }));
 
-        glib::MainContext::default().spawn(glib::clone!(@strong sender => async move {
-            let proxy = async {
-                let connection = zbus::Connection::system().await?;
-                PowerDaemonProxy::builder(&connection).build().await
-            }.await;
-            match proxy {
-                Ok(power_daemon) => sender.input(AppMsg::SetPowerDaemon(power_daemon)),
-                Err(err) => eprintln!("Failed to open power daemon: {}", err),
-            }
-
-        }));
-
         ComponentParts { model, widgets }
     }
 
@@ -390,21 +342,6 @@ impl SimpleComponent for AppModel {
                         }
                     }
                 }));
-            }
-            AppMsg::SetPowerDaemon(power_daemon) => {
-                self.power_daemon = Some(power_daemon.clone());
-
-                // XXX detect change?
-                glib::MainContext::default().spawn(glib::clone!(@strong sender => async move {
-                    async {
-                        zbus::Result::Ok(if power_daemon.get_switchable().await? {
-                            Some(power_daemon.get_graphics().await?)
-                        } else {
-                            None
-                        })
-                    };
-                }));
-                // XXX
             }
             AppMsg::UpdateProperties => {
                 if let Some(device) = self.device.as_ref() {
