@@ -6,5 +6,6 @@ edition = "2021"
 [dependencies]
 futures = "0.3"
 gtk4 = { git = "https://github.com/gtk-rs/gtk4-rs" }
+libcosmic-applet = { path = "../../libcosmic-applet" }
 relm4 = { git = "https://github.com/relm4/relm4", branch = "next", features = ["macros"] }
 zbus = { version = "2", no-default-features = true }

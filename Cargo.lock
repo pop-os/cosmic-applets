@@ -356,6 +356,7 @@ version = "0.1.0"
 dependencies = [
  "futures",
  "gtk4",
+ "libcosmic-applet",
  "relm4",
  "zbus",
 ]
@@ -502,7 +503,7 @@ dependencies = [
 [[package]]
 name = "cosmic-panel-config"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/cosmic-panel#49b8d8c84f9db93c72ef06778b76ccb38329a8c4"
+source = "git+https://github.com/pop-os/cosmic-panel/#49b8d8c84f9db93c72ef06778b76ccb38329a8c4"
 dependencies = [
  "anyhow",
  "gtk4",
@@ -1558,6 +1559,16 @@ dependencies = [
  "libcosmic-widgets",
  "once_cell",
  "x11",
+]
+
+[[package]]
+name = "libcosmic-applet"
+version = "0.1.0"
+dependencies = [
+ "cosmic-panel-config",
+ "gtk4",
+ "once_cell",
+ "relm4-macros",
 ]
 
 [[package]]

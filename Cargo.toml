@@ -11,4 +11,5 @@ members = [
     "applets/cosmic-applet-time",
     "applets/cosmic-app-list",
     "applets/cosmic-panel-button",
+    "libcosmic-applet",
 ]
