@@ -56,7 +56,7 @@ fn build_ui(application: &gtk4::Application) {
 
     // TODO cleanup
     // TODO adjust battery icon based on charge
-    let image = gtk4::Image::from_icon_name("battery-full-symbolic");
+    let image = gtk4::Image::from_icon_name("system-shutdown-symbolic");
     image.add_css_class("panel_icon");
     image.set_pixel_size(config.get_applet_icon_size().try_into().unwrap());
     view! {

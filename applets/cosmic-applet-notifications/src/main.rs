@@ -34,6 +34,7 @@ fn main() {
 
     let menu_button = cascade! {
         gtk4::MenuButton::new();
+        ..set_icon_name("user-invisible-symbolic"); // TODO
         ..set_popover(Some(&popover));
     };
 
