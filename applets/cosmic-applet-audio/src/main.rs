@@ -76,101 +76,90 @@ fn app(application: &Application) {
     });
     pa.connect().unwrap(); // XXX unwrap
     view! {
-        window = ApplicationWindow {
+        window = libcosmic_applet::Applet {
             set_application: Some(application),
             set_title: Some("COSMIC Network Applet"),
-            set_decorated: false,
-            set_resizable: false,
-            set_width_request: 1,
-            set_height_request: 1,
-
+            // TODO: adjust based on volume, mute
+            set_button_icon_name: "multimedia-volume-control-symbolic",
             #[wrap(Some)]
-            set_child = &gtk4::MenuButton {
-                // TODO: adjust based on volume, mute
-                set_icon_name: "multimedia-volume-control-symbolic",
-                #[wrap(Some)]
-                set_popover = &gtk4::Popover {
-                    #[wrap(Some)]
-                    set_child: window_box = &GtkBox {
-                        set_orientation: Orientation::Vertical,
-                        set_spacing: 24,
-                        append: output_box = &GtkBox {
-                            set_orientation: Orientation::Horizontal,
-                            set_spacing: 16,
-                            append: output_icon = &Image {
-                                set_icon_name: Some("audio-speakers-symbolic"),
-                            },
-                            append: output_volume = &Scale::with_range(Orientation::Horizontal, 0., 100., 1.) {
-                                set_format_value_func: |_, value| {
-                                    format!("{:.0}%", value)
-                                },
-                                set_value_pos: PositionType::Right,
-                                set_hexpand: true
-                            }
+            set_popover_child: window_box = &GtkBox {
+                set_orientation: Orientation::Vertical,
+                set_spacing: 24,
+                append: output_box = &GtkBox {
+                    set_orientation: Orientation::Horizontal,
+                    set_spacing: 16,
+                    append: output_icon = &Image {
+                        set_icon_name: Some("audio-speakers-symbolic"),
+                    },
+                    append: output_volume = &Scale::with_range(Orientation::Horizontal, 0., 100., 1.) {
+                        set_format_value_func: |_, value| {
+                            format!("{:.0}%", value)
                         },
-                        append: input_box = &GtkBox {
-                            set_orientation: Orientation::Horizontal,
-                            set_spacing: 16,
-                            append: input_icon = &Image {
-                                set_icon_name: Some("audio-input-microphone-symbolic"),
-                            },
-                            append: input_volume = &Scale::with_range(Orientation::Horizontal, 0., 100., 1.) {
-                                set_format_value_func: |_, value| {
-                                    format!("{:.0}%", value)
-                                },
-                                set_value_pos: PositionType::Right,
-                                set_hexpand: true
-                            }
+                        set_value_pos: PositionType::Right,
+                        set_hexpand: true
+                    }
+                },
+                append: input_box = &GtkBox {
+                    set_orientation: Orientation::Horizontal,
+                    set_spacing: 16,
+                    append: input_icon = &Image {
+                        set_icon_name: Some("audio-input-microphone-symbolic"),
+                    },
+                    append: input_volume = &Scale::with_range(Orientation::Horizontal, 0., 100., 1.) {
+                        set_format_value_func: |_, value| {
+                            format!("{:.0}%", value)
                         },
-                        append: _sep = &Separator {
-                            set_orientation: Orientation::Horizontal,
-                        },
-                        append: output_list_box = &GtkBox {
-                            set_orientation: Orientation::Vertical,
-                            append: current_output_button = &Button {
-                                #[wrap(Some)]
-                                set_child: current_output = &Label {},
-                                connect_clicked[outputs_revealer] => move |_| {
-                                    outputs_revealer.set_reveal_child(!outputs_revealer.reveals_child());
-                                }
-                            },
-                            append: outputs_revealer = &Revealer {
-                                set_transition_type: RevealerTransitionType::SlideDown,
-                                #[wrap(Some)]
-                                set_child: outputs = &ListBox {
-                                    set_selection_mode: SelectionMode::None,
-                                    set_activate_on_single_click: true
-                                }
-                            }
-                        },
-                        append: _sep = &Separator {
-                            set_orientation: Orientation::Horizontal,
-                        },
-                        append: input_list_box = &GtkBox {
-                            set_orientation: Orientation::Vertical,
-                            append: current_input_button = &Button {
-                                #[wrap(Some)]
-                                set_child: current_input = &Label {},
-                                connect_clicked[inputs_revealer] => move |_| {
-                                    inputs_revealer.set_reveal_child(!inputs_revealer.reveals_child());
-                                }
-                            },
-                            append: inputs_revealer = &Revealer {
-                                set_transition_type: RevealerTransitionType::SlideDown,
-                                #[wrap(Some)]
-                                set_child: inputs = &ListBox {
-                                    set_selection_mode: SelectionMode::None,
-                                    set_activate_on_single_click: true
-                                }
-                            }
-                        },
-                        append: _sep = &Separator {
-                            set_orientation: Orientation::Horizontal,
-                        },
-                        append: playing_apps = &ListBox {
+                        set_value_pos: PositionType::Right,
+                        set_hexpand: true
+                    }
+                },
+                append: _sep = &Separator {
+                    set_orientation: Orientation::Horizontal,
+                },
+                append: output_list_box = &GtkBox {
+                    set_orientation: Orientation::Vertical,
+                    append: current_output_button = &Button {
+                        #[wrap(Some)]
+                        set_child: current_output = &Label {},
+                        connect_clicked[outputs_revealer] => move |_| {
+                            outputs_revealer.set_reveal_child(!outputs_revealer.reveals_child());
+                        }
+                    },
+                    append: outputs_revealer = &Revealer {
+                        set_transition_type: RevealerTransitionType::SlideDown,
+                        #[wrap(Some)]
+                        set_child: outputs = &ListBox {
                             set_selection_mode: SelectionMode::None,
+                            set_activate_on_single_click: true
                         }
                     }
+                },
+                append: _sep = &Separator {
+                    set_orientation: Orientation::Horizontal,
+                },
+                append: input_list_box = &GtkBox {
+                    set_orientation: Orientation::Vertical,
+                    append: current_input_button = &Button {
+                        #[wrap(Some)]
+                        set_child: current_input = &Label {},
+                        connect_clicked[inputs_revealer] => move |_| {
+                            inputs_revealer.set_reveal_child(!inputs_revealer.reveals_child());
+                        }
+                    },
+                    append: inputs_revealer = &Revealer {
+                        set_transition_type: RevealerTransitionType::SlideDown,
+                        #[wrap(Some)]
+                        set_child: inputs = &ListBox {
+                            set_selection_mode: SelectionMode::None,
+                            set_activate_on_single_click: true
+                        }
+                    }
+                },
+                append: _sep = &Separator {
+                    set_orientation: Orientation::Horizontal,
+                },
+                append: playing_apps = &ListBox {
+                    set_selection_mode: SelectionMode::None,
                 }
             }
         }

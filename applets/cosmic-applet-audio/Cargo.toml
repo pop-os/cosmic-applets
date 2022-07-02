@@ -7,6 +7,7 @@ license = "GPL-3.0-or-later"
 [dependencies]
 futures = "0.3.21"
 futures-util = "0.3.21"
+libcosmic-applet = { path = "../../libcosmic-applet" }
 libcosmic-widgets = { git = "https://github.com/pop-os/libcosmic", branch = "relm4-next" }
 libpulse-binding = "2.26.0"
 libpulse-glib-binding = "2.25.0"

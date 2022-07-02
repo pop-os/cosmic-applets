@@ -9,6 +9,7 @@ use deref_cell::DerefCell;
 // TODO gir bindings
 // TODO orientation, etc.
 // TODO make image size dependent on CosmicPanelConfig?
+// TODO way to have multiple applets with this style, for system tray.
 
 static STYLE: &str = "
 window.cosmic_applet_window {
