@@ -401,6 +401,7 @@ dependencies = [
  "gtk4",
  "libcosmic-applet",
  "once_cell",
+ "relm4-macros",
  "serde",
  "zbus",
  "zbus_names",

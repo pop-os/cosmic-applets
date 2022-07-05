@@ -1,5 +1,5 @@
-use cascade::cascade;
 use gtk4::{glib, prelude::*};
+use relm4_macros::view;
 
 mod dbus_service;
 mod deref_cell;
@@ -19,18 +19,20 @@ fn main() {
 
     let notification_list = NotificationList::new(&notifications);
 
-    let window = cascade! {
-        libcosmic_applet::Applet::new();
-        ..set_button_icon_name("user-invisible-symbolic"); // TODO
-        ..set_popover_child(Some(&notification_list));
-        ..show();
-    };
+    view! {
+        window = libcosmic_applet::AppletWindow {
+            #[wrap(Some)]
+            set_child: applet_button = &libcosmic_applet::AppletButton {
+                set_button_icon_name: "user-invisible-symbolic", // TODO
+                set_popover_child: Some(&notification_list)
+            }
+        }
+    }
+    window.show();
 
     // XXX show in correct place
-    cascade! {
-        NotificationPopover::new(&notifications);
-        ..set_parent(&window.child().unwrap()); // XXX better way?
-    };
+    let notification_popover = NotificationPopover::new(&notifications);
+    notification_popover.set_parent(&applet_button);
 
     let main_loop = glib::MainLoop::new(None, false);
     main_loop.run();

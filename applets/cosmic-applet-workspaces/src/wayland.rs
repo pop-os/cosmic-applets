@@ -92,8 +92,8 @@ pub fn spawn_workspaces(tx: glib::Sender<State>) -> SyncSender<WorkspaceEvent> {
                 running: true,
             };
             let loop_handle = event_loop.handle();
-            loop_handle.insert_source(workspaces_rx, |e, _, state| {
-                match e {
+            loop_handle
+                .insert_source(workspaces_rx, |e, _, state| match e {
                     Event::Msg(WorkspaceEvent::Activate(id)) => {
                         if let Some(w) = state
                             .workspace_groups
@@ -136,15 +136,16 @@ pub fn spawn_workspaces(tx: glib::Sender<State>) -> SyncSender<WorkspaceEvent> {
                             }
                         }
                     }
-                    Event::Closed => if let Some(workspace_manager) = &mut state.workspace_manager {
-                        for g in &mut state.workspace_groups {
-                            g.workspace_group_handle.destroy();
+                    Event::Closed => {
+                        if let Some(workspace_manager) = &mut state.workspace_manager {
+                            for g in &mut state.workspace_groups {
+                                g.workspace_group_handle.destroy();
+                            }
+                            workspace_manager.stop();
                         }
-                        workspace_manager.stop();
-                    },
-                }
-
-            }).unwrap();
+                    }
+                })
+                .unwrap();
             while state.running {
                 event_loop
                     .dispatch(Duration::from_millis(16), &mut state)

@@ -77,115 +77,118 @@ impl SimpleComponent for AppModel {
     type Output = ();
 
     view! {
-        libcosmic_applet::Applet {
-            #[watch]
-            set_button_icon_name: &model.icon_name,
+        libcosmic_applet::AppletWindow {
             #[wrap(Some)]
-            set_popover_child = &gtk4::Box {
-                set_orientation: gtk4::Orientation::Vertical,
+            set_child = &libcosmic_applet::AppletButton {
+                #[watch]
+                set_button_icon_name: &model.icon_name,
+                #[wrap(Some)]
+                set_popover_child = &gtk4::Box {
+                    set_orientation: gtk4::Orientation::Vertical,
 
-                // Battery
-                gtk4::Box {
-                    set_orientation: gtk4::Orientation::Horizontal,
-                    gtk4::Image {
-                        #[watch]
-                        set_icon_name: Some(&model.icon_name),
-                    },
+                    // Battery
                     gtk4::Box {
-                        set_orientation: gtk4::Orientation::Vertical,
-                        gtk4::Label {
-                            set_halign: gtk4::Align::Start,
-                            set_label: "Battery",
-                        },
-                        gtk4::Label {
-                            set_halign: gtk4::Align::Start,
-                            // XXX time to full, fully changed, etc.
+                        set_orientation: gtk4::Orientation::Horizontal,
+                        gtk4::Image {
                             #[watch]
-                            set_label: &format!("{} until empty ({:.0}%)", format_duration(model.time_remaining), model.battery_percent),
+                            set_icon_name: Some(&model.icon_name),
+                        },
+                        gtk4::Box {
+                            set_orientation: gtk4::Orientation::Vertical,
+                            gtk4::Label {
+                                set_halign: gtk4::Align::Start,
+                                set_label: "Battery",
+                            },
+                            gtk4::Label {
+                                set_halign: gtk4::Align::Start,
+                                // XXX time to full, fully changed, etc.
+                                #[watch]
+                                set_label: &format!("{} until empty ({:.0}%)", format_duration(model.time_remaining), model.battery_percent),
+                            },
                         },
                     },
-                },
 
-                gtk4::Separator {
-                },
+                    gtk4::Separator {
+                    },
 
-                // Limit charging
-                gtk4::Box {
-                    set_orientation: gtk4::Orientation::Horizontal,
+                    // Limit charging
                     gtk4::Box {
-                        set_orientation: gtk4::Orientation::Vertical,
-                        gtk4::Label {
-                            set_halign: gtk4::Align::Start,
-                            set_label: "Limit Battery Charging",
+                        set_orientation: gtk4::Orientation::Horizontal,
+                        gtk4::Box {
+                            set_orientation: gtk4::Orientation::Vertical,
+                            gtk4::Label {
+                                set_halign: gtk4::Align::Start,
+                                set_label: "Limit Battery Charging",
+                            },
+                            gtk4::Label {
+                                set_halign: gtk4::Align::Start,
+                                set_label: "Increase the lifespan of your battery by setting a maximum charge value of 80%."
+                            },
+                        },
+                        gtk4::Switch {
+                            set_valign: gtk4::Align::Center,
+                        },
+                    },
+
+                    gtk4::Separator {
+                    },
+
+                    // Brightness
+                    gtk4::Box {
+                        #[watch]
+                        set_visible: model.backlight.is_some(),
+                        set_orientation: gtk4::Orientation::Horizontal,
+                        gtk4::Image {
+                            set_icon_name: Some("display-brightness-symbolic"),
+                        },
+                        gtk4::Scale {
+                            set_hexpand: true,
+                            set_adjustment: &gtk4::Adjustment::new(0., 0., 1., 1., 1., 0.),
+                            #[watch]
+                            set_value: model.display_brightness,
+                            connect_change_value[sender] => move |_, _, value| {
+                                sender.input(AppMsg::SetDisplayBrightness(value));
+                                gtk4::Inhibit(false)
+                            },
                         },
                         gtk4::Label {
-                            set_halign: gtk4::Align::Start,
-                            set_label: "Increase the lifespan of your battery by setting a maximum charge value of 80%."
+                            #[watch]
+                            set_label: &format!("{:.0}%", model.display_brightness * 100.),
                         },
                     },
-                    gtk4::Switch {
-                        set_valign: gtk4::Align::Center,
-                    },
-                },
-
-                gtk4::Separator {
-                },
-
-                // Brightness
-                gtk4::Box {
-                    #[watch]
-                    set_visible: model.backlight.is_some(),
-                    set_orientation: gtk4::Orientation::Horizontal,
-                    gtk4::Image {
-                        set_icon_name: Some("display-brightness-symbolic"),
-                    },
-                    gtk4::Scale {
-                        set_hexpand: true,
-                        set_adjustment: &gtk4::Adjustment::new(0., 0., 1., 1., 1., 0.),
+                    gtk4::Box {
                         #[watch]
-                        set_value: model.display_brightness,
-                        connect_change_value[sender] => move |_, _, value| {
-                            sender.input(AppMsg::SetDisplayBrightness(value));
-                            gtk4::Inhibit(false)
+                        set_visible: model.kbd_backlight.is_some(),
+                        set_orientation: gtk4::Orientation::Horizontal,
+                        gtk4::Image {
+                            set_icon_name: Some("keyboard-brightness-symbolic"),
+                        },
+                        gtk4::Scale {
+                            set_hexpand: true,
+                            set_adjustment: &gtk4::Adjustment::new(0., 0., 1., 1., 1., 0.),
+                            #[watch]
+                            set_value: model.keyboard_brightness,
+                            connect_change_value[sender] => move |_, _, value| {
+                                sender.input(AppMsg::SetKeyboardBrightness(value));
+                                gtk4::Inhibit(false)
+                            },
+                        },
+                        gtk4::Label {
+                            #[watch]
+                            set_label: &format!("{:.0}%", model.keyboard_brightness * 100.),
                         },
                     },
-                    gtk4::Label {
-                        #[watch]
-                        set_label: &format!("{:.0}%", model.display_brightness * 100.),
-                    },
-                },
-                gtk4::Box {
-                    #[watch]
-                    set_visible: model.kbd_backlight.is_some(),
-                    set_orientation: gtk4::Orientation::Horizontal,
-                    gtk4::Image {
-                        set_icon_name: Some("keyboard-brightness-symbolic"),
-                    },
-                    gtk4::Scale {
-                        set_hexpand: true,
-                        set_adjustment: &gtk4::Adjustment::new(0., 0., 1., 1., 1., 0.),
-                        #[watch]
-                        set_value: model.keyboard_brightness,
-                        connect_change_value[sender] => move |_, _, value| {
-                            sender.input(AppMsg::SetKeyboardBrightness(value));
-                            gtk4::Inhibit(false)
-                        },
-                    },
-                    gtk4::Label {
-                        #[watch]
-                        set_label: &format!("{:.0}%", model.keyboard_brightness * 100.),
-                    },
-                },
 
-                gtk4::Separator {
-                },
+                    gtk4::Separator {
+                    },
 
-                gtk4::Button {
-                    set_label: "Power Settings...",
-                    connect_clicked => move |_| {
-                        // XXX open subpanel
-                        let _ = Command::new("cosmic-settings").spawn();
-                        // TODO hide
+                    gtk4::Button {
+                        set_label: "Power Settings...",
+                        connect_clicked => move |_| {
+                            // XXX open subpanel
+                            let _ = Command::new("cosmic-settings").spawn();
+                            // TODO hide
+                        }
                     }
                 }
             }
