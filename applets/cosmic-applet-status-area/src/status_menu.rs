@@ -19,7 +19,7 @@ struct Menu {
 
 #[derive(Default)]
 pub struct StatusMenuInner {
-    menu_button: DerefCell<gtk4::MenuButton>,
+    menu_button: DerefCell<libcosmic_applet::AppletButton>,
     vbox: DerefCell<gtk4::Box>,
     item: DerefCell<StatusNotifierItemProxy<'static>>,
     dbus_menu: DerefCell<DBusMenuProxy<'static>>,
@@ -43,17 +43,10 @@ impl ObjectImpl for StatusMenuInner {
             gtk4::Box::new(gtk4::Orientation::Vertical, 0);
         };
 
-        let popover = cascade! {
-            gtk4::Popover::new();
-            ..set_child(Some(&vbox));
-        };
-
         let menu_button = cascade! {
-            gtk4::MenuButton::new();
-            ..add_css_class("panel_icon");
-            ..set_has_frame(false);
+            libcosmic_applet::AppletButton::new();
             ..set_parent(obj);
-            ..set_popover(Some(&popover));
+            ..set_popover_child(Some(&vbox));
         };
 
         self.menu_button.set(menu_button);
@@ -88,7 +81,7 @@ impl StatusMenu {
             .await?;
         let obj = glib::Object::new::<Self>(&[]).unwrap();
         let icon_name = item.icon_name().await?;
-        obj.inner().menu_button.set_icon_name(&icon_name);
+        obj.inner().menu_button.set_button_icon_name(&icon_name);
 
         let menu = item.menu().await?;
         let menu = DBusMenuProxy::builder(&connection)

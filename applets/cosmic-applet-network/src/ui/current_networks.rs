@@ -18,7 +18,7 @@ use gtk4::{
 use std::{cell::RefCell, net::IpAddr, rc::Rc};
 use zbus::Connection;
 
-pub fn add_current_networks(target: &gtk4::Box, icon_image: &gtk4::Image) {
+pub fn add_current_networks(target: &gtk4::Box, icon_image: &libcosmic_applet::AppletButton) {
     let networks_list = ListBox::builder().show_separators(true).build();
     let entries = Rc::<RefCell<Vec<ListBoxRow>>>::default();
     let (tx, rx) = MainContext::channel::<Vec<ActiveConnectionInfo>>(PRIORITY_DEFAULT);
@@ -38,7 +38,7 @@ fn display_active_connections(
     connections: Vec<ActiveConnectionInfo>,
     target: &ListBox,
     entries: &mut Vec<ListBoxRow>,
-    icon_image: &gtk4::Image,
+    icon_image: &libcosmic_applet::AppletButton,
 ) {
     for old_entry in entries.drain(..) {
         target.remove(&old_entry);
@@ -51,7 +51,7 @@ fn display_active_connections(
                 speed,
                 ip_addresses,
             } => {
-                icon_image.set_icon_name(Some("network-wired-symbolic"));
+                icon_image.set_button_icon_name("network-wired-symbolic");
                 render_wired_connection(name, speed, ip_addresses)
             }
             ActiveConnectionInfo::WiFi {
@@ -62,7 +62,7 @@ fn display_active_connections(
                 wpa_flags,
             } => continue,
             ActiveConnectionInfo::Vpn { name, ip_addresses } => {
-                icon_image.set_icon_name(Some("network-vpn-symbolic"));
+                icon_image.set_button_icon_name("network-vpn-symbolic");
                 render_vpn(name, ip_addresses)
             }
         };

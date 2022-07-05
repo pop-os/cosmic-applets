@@ -123,4 +123,12 @@ impl AppletButton {
     pub fn set_popover_child(&self, child: Option<&impl IsA<gtk4::Widget>>) {
         self.inner().popover.set_child(child);
     }
+
+    pub fn popdown(&self) {
+        self.inner().popover.popdown();
+    }
+
+    pub fn popup(&self) {
+        self.inner().popover.popup();
+    }
 }

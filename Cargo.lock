@@ -368,6 +368,7 @@ version = "0.1.0"
 dependencies = [
  "cosmic-panel-config",
  "gtk4",
+ "libcosmic-applet",
  "once_cell",
  "relm4-macros",
  "tokio",
@@ -383,6 +384,7 @@ dependencies = [
  "futures-util",
  "gtk4",
  "itertools",
+ "libcosmic-applet",
  "libcosmic-widgets",
  "once_cell",
  "relm4-macros",
@@ -431,6 +433,7 @@ dependencies = [
  "cosmic-panel-config",
  "futures",
  "gtk4",
+ "libcosmic-applet",
  "once_cell",
  "serde",
  "zbus",
