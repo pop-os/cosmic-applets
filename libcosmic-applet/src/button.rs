@@ -131,4 +131,13 @@ impl AppletButton {
     pub fn popup(&self) {
         self.inner().popover.popup();
     }
+
+    // XXX better API? Actual signal
+    pub fn connect_activate<F: Fn(&Self) + 'static>(&self, f: F) -> glib::SignalHandlerId {
+        self.inner()
+            .menu_button
+            .connect_activate(glib::clone!(@weak self as _self => move |_| {
+                f(&_self)
+            }))
+    }
 }

@@ -11,7 +11,7 @@ use crate::deref_cell::DerefCell;
 #[derive(Default)]
 pub struct TimeButtonInner {
     calendar: DerefCell<gtk4::Calendar>,
-    button: DerefCell<gtk4::MenuButton>,
+    button: DerefCell<libcosmic_applet::AppletButton>,
     label: DerefCell<gtk4::Label>,
 }
 
@@ -40,21 +40,15 @@ impl ObjectImpl for TimeButtonInner {
             }));
         };
 
-        let popover = cascade! {
-            gtk4::Popover::new();
-            ..set_child(Some(&cascade! {
+        let button = cascade! {
+            libcosmic_applet::AppletButton::new();
+            ..set_parent(obj);
+            ..connect_activate(clone!(@strong obj => move |_| obj.opening()));
+            ..set_button_child(Some(&label));
+            ..set_popover_child(Some(&cascade! {
                 gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
                 ..append(&calendar);
             }));
-            ..connect_show(clone!(@strong obj => move |_| obj.opening()));
-        };
-
-        let button = cascade! {
-            gtk4::MenuButton::new();
-            ..set_child(Some(&label));
-            ..set_has_frame(false);
-            ..set_parent(obj);
-            ..set_popover(Some(&popover));
         };
 
         self.calendar.set(calendar);

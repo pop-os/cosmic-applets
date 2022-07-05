@@ -366,7 +366,6 @@ dependencies = [
 name = "cosmic-applet-graphics"
 version = "0.1.0"
 dependencies = [
- "cosmic-panel-config",
  "gtk4",
  "libcosmic-applet",
  "once_cell",
@@ -380,7 +379,6 @@ name = "cosmic-applet-network"
 version = "0.1.0"
 dependencies = [
  "cosmic-dbus-networkmanager",
- "cosmic-panel-config",
  "futures-util",
  "gtk4",
  "itertools",
@@ -398,7 +396,6 @@ name = "cosmic-applet-notifications"
 version = "0.1.0"
 dependencies = [
  "cascade",
- "cosmic-panel-config",
  "futures",
  "gtk4",
  "libcosmic-applet",
@@ -430,7 +427,6 @@ name = "cosmic-applet-status-area"
 version = "0.1.0"
 dependencies = [
  "cascade",
- "cosmic-panel-config",
  "futures",
  "gtk4",
  "libcosmic-applet",
@@ -447,9 +443,9 @@ version = "0.1.0"
 dependencies = [
  "cascade",
  "chrono",
- "cosmic-panel-config",
  "futures",
  "gtk4",
+ "libcosmic-applet",
  "once_cell",
  "serde",
  "zbus",

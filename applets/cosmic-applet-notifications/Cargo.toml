@@ -15,4 +15,3 @@ serde = "1"
 zbus = "2.0.1"
 zbus_names = "2"
 zvariant = "3"
-cosmic-panel-config = {git = "https://github.com/pop-os/cosmic-panel", features = ["gtk4"]}

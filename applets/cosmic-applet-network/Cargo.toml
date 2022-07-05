@@ -16,4 +16,3 @@ tokio = { version = "1.15.0", features = ["full"] }
 zbus = "2.0.1"
 libcosmic-applet = { path = "../../libcosmic-applet" }
 libcosmic-widgets = { git = "https://github.com/pop-os/libcosmic", branch = "relm4-next" }
-cosmic-panel-config = {git = "https://github.com/pop-os/cosmic-panel", features = ["gtk4"]}
