@@ -174,7 +174,6 @@ impl DockItem {
             PanelAnchor::Top => PositionType::Bottom,
             PanelAnchor::Bottom => PositionType::Top,
         });
-        
     }
 
     pub fn add_popover(&self, obj: &DockObject) {

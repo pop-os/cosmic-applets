@@ -1,6 +1,6 @@
 mod imp;
 
-use crate::{workspace_object::WorkspaceObject, Activate, TX};
+use crate::{utils::WorkspaceEvent, workspace_object::WorkspaceObject, Activate, TX};
 use glib::Object;
 use gtk4::{glib, prelude::*, subclass::prelude::*, ToggleButton};
 
@@ -28,12 +28,25 @@ impl WorkspaceButton {
         let old_button = imp.button.take();
         self.remove(&old_button);
 
+        let is_active = obj.active() == 0;
         let id = obj.id();
-        let new_button = ToggleButton::with_label(&format!("{}", id));
-        new_button.set_active(obj.active());
+        let new_button = ToggleButton::with_label(&id);
+        new_button.set_sensitive(!is_active);
+        if obj.active() == 0 {
+            new_button.add_css_class("active");
+        } else if obj.active() == 1 {
+            new_button.add_css_class("alert");
+        } else {
+            new_button.add_css_class("inactive");
+        }
         self.append(&new_button);
         new_button.connect_clicked(move |_| {
-            let _ = TX.get().unwrap().send(id);
+            let id_clone = id.clone();
+            if !is_active {
+                let _ = TX.get()
+                    .unwrap()
+                    .send(WorkspaceEvent::Activate(id_clone));
+            }
         });
 
         imp.button.replace(new_button);

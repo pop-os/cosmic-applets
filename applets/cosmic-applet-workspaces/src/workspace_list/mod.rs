@@ -1,10 +1,16 @@
 // SPDX-License-Identifier: MPL-2.0-only
 
 use crate::utils::Activate;
+use crate::utils::WorkspaceEvent;
+use crate::wayland::State;
 use crate::workspace_button::WorkspaceButton;
 use crate::workspace_object::WorkspaceObject;
+use crate::TX;
 use cascade::cascade;
 use cosmic_panel_config::config::CosmicPanelConfig;
+use gtk4::builders::EventControllerScrollBuilder;
+use gtk4::EventControllerScrollFlags;
+use gtk4::Inhibit;
 use gtk4::ListView;
 use gtk4::Orientation;
 use gtk4::SignalListItemFactory;
@@ -39,13 +45,50 @@ impl WorkspaceList {
 
     fn layout(&self) {
         let imp = imp::WorkspaceList::from_instance(self);
+        let anchor = imp.config.get().unwrap().anchor;
+
         let list_view = cascade! {
             ListView::default();
-            ..set_orientation(Orientation::Horizontal);
+            ..set_orientation(anchor.into());
             ..add_css_class("transparent");
         };
         self.append(&list_view);
+
+        let flags = EventControllerScrollFlags::BOTH_AXES;
+
+        let scroll_controller = EventControllerScrollBuilder::new()
+            .flags(flags.union(EventControllerScrollFlags::DISCRETE))
+            .build();
+
+        scroll_controller.connect_scroll(|_, dx, dy| {
+                let _ = TX.get()
+                    .unwrap()
+                    .send(WorkspaceEvent::Scroll(dx + dy));
+            Inhibit::default()
+        });
+
+        list_view.add_controller(&scroll_controller);
         imp.list_view.set(list_view).unwrap();
+    }
+
+    pub fn set_workspaces(&self, workspaces: State) {
+        let imp = imp::WorkspaceList::from_instance(&self);
+        let model = imp.model.get().unwrap();
+
+        let model_len = model.n_items();
+        let new_results: Vec<glib::Object> = workspaces
+            .workspace_list()
+            .into_iter()
+            .filter_map(|w| {
+                // don't include hidden workspaces
+                if w.1 != 2 {
+                    Some(WorkspaceObject::from_id_active(w.0, w.1).upcast())
+                } else {
+                    None
+                }
+            })
+            .collect();
+        model.splice(0, model_len, &new_results[..]);
     }
 
     fn setup_model(&self) {
@@ -74,7 +117,7 @@ impl WorkspaceList {
                 .item()
                 .expect("The item has to exist.")
                 .downcast::<WorkspaceObject>()
-                .expect("The item has to be a `DockObject`");
+                .expect("The item has to be a `WorkspaceObject`");
             let workspace_button = list_item
                 .child()
                 .expect("The list item child needs to exist.")

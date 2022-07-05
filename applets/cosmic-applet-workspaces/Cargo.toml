@@ -17,9 +17,13 @@ i18n-embed = { version = "0.13.4", features = ["fluent-system", "desktop-request
 i18n-embed-fl = "0.6.4"
 rust-embed = "6.3.0"
 tokio = { version = "1.16.1", features = ["sync"] }
-wayland-client = "0.29.4"
 wayland-commons = "0.29.4"
+wayland-scanner = { git = "https://github.com/smithay/wayland-rs.git", version = "0.30.0-beta.4"}
+wayland-backend = { version = "0.1.0-beta.4", git = "https://github.com/smithay/wayland-rs.git" }
+wayland-client = { version = "0.30.0-beta.4", git = "https://github.com/smithay/wayland-rs.git" }
+calloop = "*"
+nix = "*"
+log = "0.4"
 
 [build-dependencies]
-glib-build-tools = { git = "https://github.com/gtk-rs/gtk-rs-core" }
-wayland-scanner = "0.29"
+gio = "0.15.10"

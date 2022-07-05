@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0-only
 
-use crate::{fl, utils::Activate, workspace_list::WorkspaceList};
+use crate::{fl, utils::Activate, wayland::State, workspace_list::WorkspaceList};
 use cascade::cascade;
 use cosmic_panel_config::config::CosmicPanelConfig;
 use gtk4::{
@@ -9,7 +9,6 @@ use gtk4::{
     prelude::*,
     subclass::prelude::*,
 };
-use tokio::sync::mpsc;
 
 mod imp;
 
@@ -32,7 +31,7 @@ impl CosmicWorkspacesWindow {
             ..set_height_request(1);
             ..set_decorated(false);
             ..set_resizable(false);
-            ..set_title(Some(&fl!("cosmic-app-list")));
+            ..set_title(Some(&fl!("cosmic-applet-workspaces")));
             ..add_css_class("transparent");
         };
         let config = CosmicPanelConfig::load_from_env().unwrap_or_default();
@@ -42,5 +41,10 @@ impl CosmicWorkspacesWindow {
         imp.inner.set(app_list).unwrap();
 
         self_
+    }
+
+    pub fn set_workspaces(&self, workspaces: State) {
+        let imp = imp::CosmicWorkspacesWindow::from_instance(&self);
+        imp.inner.get().unwrap().set_workspaces(workspaces);
     }
 }

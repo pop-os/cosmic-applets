@@ -49,16 +49,19 @@ impl DockObject {
 
     pub fn get_name(&self) -> Option<String> {
         let imp = imp::DockObject::from_instance(self);
-        imp.appinfo.borrow().as_ref().map(|app_info| app_info.name().to_string())
+        imp.appinfo
+            .borrow()
+            .as_ref()
+            .map(|app_info| app_info.name().to_string())
     }
 
     pub fn get_image(&self) -> gtk4::Image {
         let imp = imp::DockObject::from_instance(self);
         if let Some(app_info) = imp.appinfo.borrow().as_ref() {
             let image = Image::new();
-            let icon = app_info
-                .icon()
-                .unwrap_or_else(|| Icon::for_string("image-missing").expect("Failed to set default icon"));
+            let icon = app_info.icon().unwrap_or_else(|| {
+                Icon::for_string("image-missing").expect("Failed to set default icon")
+            });
             image.set_from_gicon(&icon);
             image.set_tooltip_text(None);
             image

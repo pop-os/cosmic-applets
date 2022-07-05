@@ -2,7 +2,7 @@
 
 use cosmic_panel_config::config::CosmicPanelConfig;
 use gtk4::subclass::prelude::*;
-use gtk4::{gio, glib};
+use gtk4::{gio, glib, EventControllerScroll};
 use gtk4::{Box, ListView};
 use once_cell::sync::OnceCell;
 use tokio::sync::mpsc;

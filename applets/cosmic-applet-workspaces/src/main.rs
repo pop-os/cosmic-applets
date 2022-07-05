@@ -3,26 +3,29 @@
 use gtk4::{
     gdk::Display,
     gio::{self, ApplicationFlags},
-    glib,
+    glib::{self, MainContext, Priority},
     prelude::*,
     CssProvider, StyleContext,
 };
 use once_cell::sync::OnceCell;
 use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc;
-use utils::{Activate, Workspace};
+use utils::{Activate, WorkspaceEvent};
+use wayland::State;
 use window::CosmicWorkspacesWindow;
+use calloop::channel::SyncSender;
 
 mod localize;
 mod utils;
 mod wayland;
+mod wayland_source;
 mod window;
 mod workspace_button;
 mod workspace_list;
 mod workspace_object;
 
 const ID: &str = "com.system76.CosmicAppletWorkspaces";
-static TX: OnceCell<mpsc::Sender<Activate>> = OnceCell::new();
+static TX: OnceCell<SyncSender<WorkspaceEvent>> = OnceCell::new();
 
 pub fn localize() {
     let localizer = crate::localize::localizer();
@@ -56,18 +59,18 @@ fn main() {
 
     app.connect_activate(|app| {
         load_css();
-        let (tx, mut rx) = mpsc::channel::<Vec<Workspace>>(100);
+        let (tx, rx) = MainContext::channel(Priority::default());
 
         let wayland_tx = wayland::spawn_workspaces(tx.clone());
         let window = CosmicWorkspacesWindow::new(app);
 
         TX.set(wayland_tx).unwrap();
 
-        let _ = glib::MainContext::default().spawn_local(async move {
-            while let Some(workspace_list) = rx.recv().await {
-                // TODO update the model with the new workspace list
-            }
-        });
+        rx.attach(None, glib::clone!(@weak window => @default-return glib::prelude::Continue(true), move |workspace_event| {
+            window.set_workspaces(workspace_event);
+            glib::prelude::Continue(true)
+        }));
+
         window.show();
     });
     app.run();

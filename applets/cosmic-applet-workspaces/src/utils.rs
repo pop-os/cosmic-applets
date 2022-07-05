@@ -5,11 +5,12 @@ use std::path::PathBuf;
 use gtk4::glib;
 use std::future::Future;
 
-pub type Activate = u32;
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Workspace {
-    pub(crate) id: u32,
-    pub(crate) active: bool,
+pub type Activate = String;
+
+#[derive(Debug, Clone)]
+pub enum WorkspaceEvent {
+    Activate(String),
+    Scroll(f64),
 }
 
 pub fn data_path() -> PathBuf {
