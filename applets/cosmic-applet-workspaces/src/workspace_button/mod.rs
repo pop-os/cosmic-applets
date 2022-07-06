@@ -43,9 +43,7 @@ impl WorkspaceButton {
         new_button.connect_clicked(move |_| {
             let id_clone = id.clone();
             if !is_active {
-                let _ = TX.get()
-                    .unwrap()
-                    .send(WorkspaceEvent::Activate(id_clone));
+                let _ = TX.get().unwrap().send(WorkspaceEvent::Activate(id_clone));
             }
         });
 

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0-only
 
+use calloop::channel::SyncSender;
 use gtk4::{
     gdk::Display,
     gio::{self, ApplicationFlags},
@@ -13,7 +14,6 @@ use tokio::sync::mpsc;
 use utils::{Activate, WorkspaceEvent};
 use wayland::State;
 use window::CosmicWorkspacesWindow;
-use calloop::channel::SyncSender;
 
 mod localize;
 mod utils;

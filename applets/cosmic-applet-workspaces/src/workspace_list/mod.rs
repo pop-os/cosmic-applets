@@ -61,9 +61,7 @@ impl WorkspaceList {
             .build();
 
         scroll_controller.connect_scroll(|_, dx, dy| {
-                let _ = TX.get()
-                    .unwrap()
-                    .send(WorkspaceEvent::Scroll(dx + dy));
+            let _ = TX.get().unwrap().send(WorkspaceEvent::Scroll(dx + dy));
             Inhibit::default()
         });
 

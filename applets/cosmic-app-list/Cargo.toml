@@ -5,7 +5,7 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
-cosmic-panel-config = {git = "https://github.com/pop-os/cosmic-panel", features = ["gtk4"], branch = "rework_0.30"}
+cosmic-panel-config = {git = "https://github.com/pop-os/cosmic-panel", features = ["gtk4"] }
 cascade = "1.0.0"
 gtk4 = { git = "https://github.com/gtk-rs/gtk4-rs", features = ["v4_4"] }
 gio = { git = "https://github.com/gtk-rs/gtk-rs-core" }

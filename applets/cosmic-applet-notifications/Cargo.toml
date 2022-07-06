@@ -10,8 +10,8 @@ futures = "0.3"
 gtk4 = { git = "https://github.com/gtk-rs/gtk4-rs" }
 libcosmic-applet = { path = "../../libcosmic-applet" }
 once_cell = "1.12"
+relm4-macros = { git = "https://github.com/Relm4/Relm4.git", branch = "next" }
 serde = "1"
 zbus = "2.0.1"
 zbus_names = "2"
 zvariant = "3"
-cosmic-panel-config = {git = "https://github.com/pop-os/cosmic-panel", features = ["gtk4"], branch = "rework_0.30"}
