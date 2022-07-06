@@ -2,7 +2,7 @@
 
 use crate::{fl, utils::Activate, wayland::State, workspace_list::WorkspaceList};
 use cascade::cascade;
-use cosmic_panel_config::config::CosmicPanelConfig;
+use cosmic_panel_config::CosmicPanelConfig;
 use gtk4::{
     gio,
     glib::{self, Object},

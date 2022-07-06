@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0-only
 
-use cosmic_panel_config::config::CosmicPanelConfig;
+use cosmic_panel_config::CosmicPanelConfig;
 use gtk4::subclass::prelude::*;
 use gtk4::{gio, glib, EventControllerScroll};
 use gtk4::{Box, ListView};

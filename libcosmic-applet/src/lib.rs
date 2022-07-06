@@ -1,4 +1,4 @@
-use cosmic_panel_config::config::CosmicPanelConfig;
+use cosmic_panel_config::CosmicPanelConfig;
 use gtk4::{glib, prelude::*, subclass::prelude::*};
 use relm4_macros::view;
 

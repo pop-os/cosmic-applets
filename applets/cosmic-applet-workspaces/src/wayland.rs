@@ -3,7 +3,7 @@ use crate::{
     wayland::generated::client::zext_workspace_manager_v1::ZextWorkspaceManagerV1,
     wayland_source::WaylandSource,
 };
-use cosmic_panel_config::config::CosmicPanelConfig;
+use cosmic_panel_config::CosmicPanelConfig;
 use gtk4::glib;
 use std::{
     collections::HashMap, env, hash::Hash, mem, os::unix::net::UnixStream, path::PathBuf,

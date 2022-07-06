@@ -7,7 +7,7 @@ use crate::workspace_button::WorkspaceButton;
 use crate::workspace_object::WorkspaceObject;
 use crate::TX;
 use cascade::cascade;
-use cosmic_panel_config::config::CosmicPanelConfig;
+use cosmic_panel_config::CosmicPanelConfig;
 use gtk4::builders::EventControllerScrollBuilder;
 use gtk4::EventControllerScrollFlags;
 use gtk4::Inhibit;

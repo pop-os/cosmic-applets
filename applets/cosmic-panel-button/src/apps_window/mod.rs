@@ -2,7 +2,7 @@
 
 use crate::fl;
 use cascade::cascade;
-use cosmic_panel_config::config::CosmicPanelConfig;
+use cosmic_panel_config::CosmicPanelConfig;
 use gtk4::{
     gio::{self, DesktopAppInfo, Icon},
     glib::{self, Object},

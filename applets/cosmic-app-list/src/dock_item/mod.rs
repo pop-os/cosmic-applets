@@ -5,7 +5,7 @@ use crate::dock_popover::DockPopover;
 use crate::utils::BoxedWindowList;
 use crate::utils::Event;
 use cascade::cascade;
-use cosmic_panel_config::config::PanelAnchor;
+use cosmic_panel_config::PanelAnchor;
 use gtk4::glib;
 use gtk4::prelude::*;
 use gtk4::subclass::prelude::*;
