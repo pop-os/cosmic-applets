@@ -1,6 +1,5 @@
 use crate::{
     utils::{Activate, WorkspaceEvent},
-    wayland::generated::client::zext_workspace_manager_v1::ZextWorkspaceManagerV1,
     wayland_source::WaylandSource,
 };
 use cosmic_panel_config::CosmicPanelConfig;
@@ -19,36 +18,12 @@ use wayland_client::{
     },
     ConnectError, Proxy,
 };
-
-use wayland_client::{Connection, Dispatch, QueueHandle};
-
-/// Generated protocol definitions
-mod generated {
-    #![allow(dead_code, non_camel_case_types, unused_unsafe, unused_variables)]
-    #![allow(non_upper_case_globals, non_snake_case, unused_imports)]
-    #![allow(missing_docs, clippy::all)]
-
-    pub mod client {
-        //! Client-side API of this protocol
-        use wayland_client;
-        use wayland_client::protocol::*;
-
-        pub mod __interfaces {
-            use wayland_client::protocol::__interfaces::*;
-            wayland_scanner::generate_interfaces!("src/ext-workspace-unstable-v1.xml");
-        }
-        use self::__interfaces::*;
-
-        wayland_scanner::generate_client_code!("src/ext-workspace-unstable-v1.xml");
-    }
-}
-
-use generated::client::zext_workspace_manager_v1;
-
-use self::generated::client::{
-    zext_workspace_group_handle_v1::{self, ZextWorkspaceGroupHandleV1},
-    zext_workspace_handle_v1::{self, ZextWorkspaceHandleV1},
+use cosmic_protocols::workspace::v1::client::{
+    zcosmic_workspace_manager_v1::{self, ZcosmicWorkspaceManagerV1},
+    zcosmic_workspace_group_handle_v1::{self, ZcosmicWorkspaceGroupHandleV1},
+    zcosmic_workspace_handle_v1::{self, ZcosmicWorkspaceHandleV1},
 };
+use wayland_client::{Connection, Dispatch, QueueHandle};
 use calloop::channel::*;
 
 pub fn spawn_workspaces(tx: glib::Sender<State>) -> SyncSender<WorkspaceEvent> {
@@ -166,7 +141,7 @@ pub struct State {
     tx: glib::Sender<State>,
     configured_output: String,
     expected_output: Option<WlOutput>,
-    workspace_manager: Option<zext_workspace_manager_v1::ZextWorkspaceManagerV1>,
+    workspace_manager: Option<ZcosmicWorkspaceManagerV1>,
     workspace_groups: Vec<WorkspaceGroup>,
 }
 
@@ -188,14 +163,14 @@ impl State {
 
 #[derive(Debug, Clone)]
 struct WorkspaceGroup {
-    workspace_group_handle: ZextWorkspaceGroupHandleV1,
+    workspace_group_handle: ZcosmicWorkspaceGroupHandleV1,
     output: Option<WlOutput>,
     workspaces: Vec<Workspace>,
 }
 
 #[derive(Debug, Clone)]
 struct Workspace {
-    workspace_handle: ZextWorkspaceHandleV1,
+    workspace_handle: ZcosmicWorkspaceHandleV1,
     name: String,
     coordinates: Vec<u8>,
     state: u32,
@@ -217,9 +192,9 @@ impl Dispatch<wl_registry::WlRegistry, ()> for State {
         } = event
         {
             match &interface[..] {
-                "zext_workspace_manager_v1" => {
+                "zcosmic_workspace_manager_v1" => {
                     let workspace_manager = registry
-                        .bind::<zext_workspace_manager_v1::ZextWorkspaceManagerV1, _, _>(
+                        .bind::<ZcosmicWorkspaceManagerV1, _, _>(
                             name,
                             1,
                             qh,
@@ -237,49 +212,49 @@ impl Dispatch<wl_registry::WlRegistry, ()> for State {
     }
 }
 
-impl Dispatch<zext_workspace_manager_v1::ZextWorkspaceManagerV1, ()> for State {
+impl Dispatch<ZcosmicWorkspaceManagerV1, ()> for State {
     fn event(
         &mut self,
-        _: &zext_workspace_manager_v1::ZextWorkspaceManagerV1,
-        event: zext_workspace_manager_v1::Event,
+        _: &ZcosmicWorkspaceManagerV1,
+        event: zcosmic_workspace_manager_v1::Event,
         _: &(),
         _: &Connection,
         _: &QueueHandle<Self>,
     ) {
         match event {
-            zext_workspace_manager_v1::Event::WorkspaceGroup { workspace_group } => {
+            zcosmic_workspace_manager_v1::Event::WorkspaceGroup { workspace_group } => {
                 self.workspace_groups.push(WorkspaceGroup {
                     workspace_group_handle: workspace_group,
                     output: None,
                     workspaces: Vec::new(),
                 });
             }
-            zext_workspace_manager_v1::Event::Done => {
+            zcosmic_workspace_manager_v1::Event::Done => {
                 let _ = self.tx.send(self.clone());
             }
-            zext_workspace_manager_v1::Event::Finished => {
+            zcosmic_workspace_manager_v1::Event::Finished => {
                 self.workspace_manager.take();
             }
+            _ => {}
         }
-        // wl_compositor has no event
     }
 
-    event_created_child!(State, ZextWorkspaceManagerV1, [
-        0 => (ZextWorkspaceGroupHandleV1, ())
+    event_created_child!(State, ZcosmicWorkspaceManagerV1, [
+        0 => (ZcosmicWorkspaceGroupHandleV1, ())
     ]);
 }
 
-impl Dispatch<ZextWorkspaceGroupHandleV1, ()> for State {
+impl Dispatch<ZcosmicWorkspaceGroupHandleV1, ()> for State {
     fn event(
         &mut self,
-        group: &ZextWorkspaceGroupHandleV1,
-        event: zext_workspace_group_handle_v1::Event,
+        group: &ZcosmicWorkspaceGroupHandleV1,
+        event: zcosmic_workspace_group_handle_v1::Event,
         _: &(),
         _: &Connection,
         _: &QueueHandle<Self>,
     ) {
         match event {
-            zext_workspace_group_handle_v1::Event::OutputEnter { output } => {
+            zcosmic_workspace_group_handle_v1::Event::OutputEnter { output } => {
                 if let Some(group) = self
                     .workspace_groups
                     .iter_mut()
@@ -288,14 +263,14 @@ impl Dispatch<ZextWorkspaceGroupHandleV1, ()> for State {
                     group.output = Some(output);
                 }
             }
-            zext_workspace_group_handle_v1::Event::OutputLeave { output } => {
+            zcosmic_workspace_group_handle_v1::Event::OutputLeave { output } => {
                 if let Some(group) = self.workspace_groups.iter_mut().find(|g| {
                     &g.workspace_group_handle == group && g.output.as_ref() == Some(&output)
                 }) {
                     group.output = None;
                 }
             }
-            zext_workspace_group_handle_v1::Event::Workspace { workspace } => {
+            zcosmic_workspace_group_handle_v1::Event::Workspace { workspace } => {
                 if let Some(group) = self
                     .workspace_groups
                     .iter_mut()
@@ -309,7 +284,7 @@ impl Dispatch<ZextWorkspaceGroupHandleV1, ()> for State {
                     })
                 }
             }
-            zext_workspace_group_handle_v1::Event::Remove => {
+            zcosmic_workspace_group_handle_v1::Event::Remove => {
                 if let Some(group) = self
                     .workspace_groups
                     .iter()
@@ -318,25 +293,26 @@ impl Dispatch<ZextWorkspaceGroupHandleV1, ()> for State {
                     self.workspace_groups.remove(group);
                 }
             }
+            _ => {}
         }
     }
 
-    event_created_child!(State, ZextWorkspaceGroupHandleV1, [
-        2 => (ZextWorkspaceHandleV1, ())
+    event_created_child!(State, ZcosmicWorkspaceGroupHandleV1, [
+        3 => (ZcosmicWorkspaceHandleV1, ())
     ]);
 }
 
-impl Dispatch<ZextWorkspaceHandleV1, ()> for State {
+impl Dispatch<ZcosmicWorkspaceHandleV1, ()> for State {
     fn event(
         &mut self,
-        workspace: &ZextWorkspaceHandleV1,
-        event: zext_workspace_handle_v1::Event,
+        workspace: &ZcosmicWorkspaceHandleV1,
+        event: zcosmic_workspace_handle_v1::Event,
         _: &(),
         _: &Connection,
         _: &QueueHandle<Self>,
     ) {
         match event {
-            zext_workspace_handle_v1::Event::Name { name } => {
+            zcosmic_workspace_handle_v1::Event::Name { name } => {
                 if let Some(w) = self.workspace_groups.iter_mut().find_map(|g| {
                     g.workspaces
                         .iter_mut()
@@ -345,7 +321,7 @@ impl Dispatch<ZextWorkspaceHandleV1, ()> for State {
                     w.name = name;
                 }
             }
-            zext_workspace_handle_v1::Event::Coordinates { coordinates } => {
+            zcosmic_workspace_handle_v1::Event::Coordinates { coordinates } => {
                 if let Some(w) = self.workspace_groups.iter_mut().find_map(|g| {
                     g.workspaces
                         .iter_mut()
@@ -354,7 +330,7 @@ impl Dispatch<ZextWorkspaceHandleV1, ()> for State {
                     w.coordinates = coordinates;
                 }
             }
-            zext_workspace_handle_v1::Event::State { state } => {
+            zcosmic_workspace_handle_v1::Event::State { state } => {
                 if let Some(w) = self.workspace_groups.iter_mut().find_map(|g| {
                     g.workspaces
                         .iter_mut()
@@ -368,7 +344,7 @@ impl Dispatch<ZextWorkspaceHandleV1, ()> for State {
                     }
                 }
             }
-            zext_workspace_handle_v1::Event::Remove => {
+            zcosmic_workspace_handle_v1::Event::Remove => {
                 if let Some((g, w_i)) = self.workspace_groups.iter_mut().find_map(|g| {
                     g.workspaces
                         .iter_mut()
@@ -378,6 +354,7 @@ impl Dispatch<ZextWorkspaceHandleV1, ()> for State {
                     g.workspaces.remove(w_i);
                 }
             }
+            _ => {}
         }
     }
 }
