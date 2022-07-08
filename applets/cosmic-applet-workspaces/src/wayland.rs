@@ -177,7 +177,7 @@ struct WorkspaceGroup {
 struct Workspace {
     workspace_handle: ZcosmicWorkspaceHandleV1,
     name: String,
-    coordinates: Vec<u8>,
+    coordinates: Vec<u32>,
     states: Vec<zcosmic_workspace_handle_v1::State>,
 }
 
@@ -235,6 +235,15 @@ impl Dispatch<ZcosmicWorkspaceManagerV1, ()> for State {
                 });
             }
             zcosmic_workspace_manager_v1::Event::Done => {
+                for group in &mut self.workspace_groups {
+                    group.workspaces.sort_by(|w1, w2| {
+                        w1.coordinates.iter().zip(w2.coordinates.iter())
+                            .skip_while(|(coord1, coord2)| coord1 == coord2)
+                            .next()
+                            .map(|(coord1, coord2)| coord1.cmp(coord2))
+                            .unwrap_or(std::cmp::Ordering::Equal)
+                    });
+                }
                 let _ = self.tx.send(self.clone());
             }
             zcosmic_workspace_manager_v1::Event::Finished => {
@@ -332,7 +341,8 @@ impl Dispatch<ZcosmicWorkspaceHandleV1, ()> for State {
                         .iter_mut()
                         .find(|w| &w.workspace_handle == workspace)
                 }) {
-                    w.coordinates = coordinates;
+                    // wayland is host byte order
+                    w.coordinates = coordinates.chunks(4).map(|chunk| u32::from_ne_bytes(chunk.try_into().unwrap())).collect();
                 }
             }
             zcosmic_workspace_handle_v1::Event::State { state } => {
