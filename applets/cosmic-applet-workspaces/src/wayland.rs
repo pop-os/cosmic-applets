@@ -83,8 +83,10 @@ pub fn spawn_workspaces(tx: glib::Sender<State>) -> SyncSender<WorkspaceEvent> {
                         if let Some((w_g, w_i)) = state
                             .workspace_groups
                             .iter()
-                            .enumerate()
-                            .find_map(|(g_i, g)| {
+                            .find_map(|g| {
+                                if g.output != state.expected_output {
+                                    return None;
+                                }
                                 g.workspaces
                                     .iter()
                                     .position(|w| w.states.contains(&zcosmic_workspace_handle_v1::State::Active))
