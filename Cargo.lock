@@ -430,6 +430,7 @@ dependencies = [
  "calloop",
  "cascade",
  "cosmic-panel-config",
+ "cosmic-protocols",
  "gio 0.15.12",
  "gtk4",
  "i18n-embed",
@@ -441,9 +442,8 @@ dependencies = [
  "rust-embed",
  "tokio",
  "wayland-backend",
- "wayland-client 0.30.0-beta.5",
+ "wayland-client 0.30.0-beta.7",
  "wayland-commons",
- "wayland-scanner 0.30.0-beta.5",
 ]
 
 [[package]]
@@ -478,16 +478,28 @@ dependencies = [
 [[package]]
 name = "cosmic-panel-config"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/cosmic-panel#791937b3515534f4df9bb47c1a6bd5189ff00644"
+source = "git+https://github.com/pop-os/cosmic-panel#c0b4c8b42616dfc8c49f96f0c7adcab364287925"
 dependencies = [
  "anyhow",
  "gtk4",
  "ron",
  "serde",
  "slog",
- "wayland-protocols",
+ "wayland-protocols 0.29.4",
  "xdg",
  "xdg-shell-wrapper-config",
+]
+
+[[package]]
+name = "cosmic-protocols"
+version = "0.1.0"
+source = "git+https://github.com/pop-os/cosmic-protocols#1962ffdca3d9c914929eea358ebeab61ff2217a8"
+dependencies = [
+ "bitflags",
+ "wayland-backend",
+ "wayland-client 0.30.0-beta.7",
+ "wayland-protocols 0.30.0-beta.7",
+ "wayland-scanner 0.30.0-beta.7",
 ]
 
 [[package]]
@@ -2756,9 +2768,9 @@ checksum = "6a89911bd99e5f3659ec4acf9c4d93b0a90fe4a2a11f15328472058edc5261be"
 
 [[package]]
 name = "wayland-backend"
-version = "0.1.0-beta.5"
+version = "0.1.0-beta.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "96e1d0d399007c9f43d313eff1120caa96c8cbb92470f8bf645e9af08368589c"
+checksum = "a861eb7cd51f67de60f228a570f142396d94759babcb427f861071ffb0757c9e"
 dependencies = [
  "cc",
  "downcast-rs",
@@ -2786,9 +2798,9 @@ dependencies = [
 
 [[package]]
 name = "wayland-client"
-version = "0.30.0-beta.5"
+version = "0.30.0-beta.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b415e9f804abeb39d800f5cc2dfec90bfd19822acfcabdae490b1fcdfaf9e5d0"
+checksum = "2dca5290499da69c21fcf64b4021886963511b888af056dbfb6bebfb7e1587e6"
 dependencies = [
  "bitflags",
  "futures-channel",
@@ -2797,7 +2809,7 @@ dependencies = [
  "nix 0.24.1",
  "thiserror",
  "wayland-backend",
- "wayland-scanner 0.30.0-beta.5",
+ "wayland-scanner 0.30.0-beta.7",
 ]
 
 [[package]]
@@ -2825,6 +2837,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "wayland-protocols"
+version = "0.30.0-beta.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d64adbf2e145b9da69ff0e9bb72fc513182978c826fc6f704c05f0f80b663a6d"
+dependencies = [
+ "bitflags",
+ "wayland-backend",
+ "wayland-client 0.30.0-beta.7",
+ "wayland-scanner 0.30.0-beta.7",
+]
+
+[[package]]
 name = "wayland-scanner"
 version = "0.29.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2837,9 +2861,9 @@ dependencies = [
 
 [[package]]
 name = "wayland-scanner"
-version = "0.30.0-beta.5"
+version = "0.30.0-beta.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a3db6ef8dd5a77ff178149e071269de02594de0abd2595190ac3f2f91f25aacd"
+checksum = "e3baff545c2f5a0c32d796595d0b3c8fafccf29e72e557ff1969fe552ff093d6"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2972,10 +2996,10 @@ dependencies = [
 [[package]]
 name = "xdg-shell-wrapper-config"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/xdg-shell-wrapper#e523530fd900ae1985e664cce84c4066b23afea1"
+source = "git+https://github.com/pop-os/xdg-shell-wrapper#f93027e8e52106852bff5b38e8676b9ca465b725"
 dependencies = [
  "serde",
- "wayland-protocols",
+ "wayland-protocols 0.29.4",
 ]
 
 [[package]]
