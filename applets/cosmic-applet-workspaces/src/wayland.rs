@@ -154,12 +154,12 @@ impl State {
             .iter()
             .filter_map(|g| {
                 if g.output == self.expected_output {
-                    Some(g.workspaces.iter().map(|w| dbg!((w.name.clone(), match &w.states {
+                    Some(g.workspaces.iter().map(|w| (w.name.clone(), match &w.states {
                         x if x.contains(&zcosmic_workspace_handle_v1::State::Active) => 0,
                         x if x.contains(&zcosmic_workspace_handle_v1::State::Urgent) => 1,
                         x if x.contains(&zcosmic_workspace_handle_v1::State::Hidden) => 2,
                         _ => 3,
-                    }))))
+                    })))
                 } else {
                     None
                 }
