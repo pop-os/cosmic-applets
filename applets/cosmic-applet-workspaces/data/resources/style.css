@@ -38,7 +38,7 @@ button.inactive {
 button.alert:hover {
     border-radius: 0;
     padding: 0px;
-    background-color: darken(@destructive_color);
+    background-color: darker(@destructive_color);
     background-image: none;
     color: @destructive_fg_color;
     border-color: transparent;
@@ -48,7 +48,7 @@ button.alert:hover {
 button.active:hover {
     border-radius: 0;
     padding: 0px;
-    background-color: darken(@accent_color);
+    background-color: darker(@accent_color);
     background-image: none;
     color: @accent_fg_color;
     border-color: transparent;
@@ -58,7 +58,7 @@ button.active:hover {
 button.inactive:hover {
     border-radius: 0;
     padding: 0px;
-    background-color: darken(@view_bg_color);
+    background-color: darker(@view_bg_color);
     background-image: none;
     color: @view_bg_color;
     border-color: transparent;
