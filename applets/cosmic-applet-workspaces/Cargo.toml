@@ -7,7 +7,8 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
-cosmic-panel-config = {git = "https://github.com/pop-os/cosmic-panel", features = ["gtk4"] }
+cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols", default-features = false, features = ["client"] }
+cosmic-panel-config = { git = "https://github.com/pop-os/cosmic-panel", features = ["gtk4"] }
 cascade = "1.0.0"
 gtk4 = { git = "https://github.com/gtk-rs/gtk4-rs", features = ["v4_4"] }
 once_cell = "1.9.0"
@@ -18,9 +19,8 @@ i18n-embed-fl = "0.6.4"
 rust-embed = "6.3.0"
 tokio = { version = "1.16.1", features = ["sync"] }
 wayland-commons = "0.29.4"
-wayland-backend = { version = "=0.1.0-beta.5" }
-wayland-scanner = { version = "=0.30.0-beta.5" }
-wayland-client = { version = "0.30.0-beta.5" }
+wayland-backend = { version = "0.1.0-beta.7" }
+wayland-client = { version = "0.30.0-beta.7" }
 calloop = "*"
 nix = "*"
 log = "0.4"
