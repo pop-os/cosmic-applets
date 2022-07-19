@@ -2,7 +2,6 @@ use crate::{
     wayland_source::WaylandSource, config::TopLevelFilter, TX, utils::AppListEvent,
 };
 use cosmic_panel_config::CosmicPanelConfig;
-use gtk4::glib;
 use std::{
 env,  os::unix::net::UnixStream, path::PathBuf,time::Duration,
 };
@@ -249,19 +248,15 @@ impl Dispatch<ZcosmicToplevelInfoV1, ()> for State {
                 state.toplevels.push(Toplevel { name: "".into(), app_id: "".into(), toplevel_handle: toplevel, states: vec![], output: None, workspace: None });
             },
             zcosmic_toplevel_info_v1::Event::Finished => {
-                dbg!(&state.toplevels);
-                let tx = TX.get().unwrap().clone();
-
-                let _ = tx.send(AppListEvent::WindowList(state.toplevels.iter().filter(|t| {
-                    match state.config.filter_top_levels {
-                        Some(TopLevelFilter::ActiveWorkspace) => true,
-                        _ => false,
-                    }
-                }).cloned().collect()));
+                todo!()
             },
             _ => {},
         }
     }
+
+    event_created_child!(State, ZcosmicWorkspaceManagerV1, [
+        0 => (ZcosmicToplevelHandleV1, ())
+    ]);
 }
 
 
@@ -274,7 +269,6 @@ impl Dispatch<ZcosmicToplevelManagerV1, ()> for State {
         _: &Connection,
         _: &QueueHandle<Self>,
     ) {
-        dbg!(&event);
         match event {
             zcosmic_toplevel_manager_v1::Event::Capabilities { .. } => {
                 // TODO capabilities affect what is shown to user in applet
@@ -293,14 +287,42 @@ impl Dispatch<ZcosmicToplevelHandleV1, ()> for State {
         _: &Connection,
         _: &QueueHandle<Self>,
     ) {
-        dbg!(&event);
         match event {
             zcosmic_toplevel_handle_v1::Event::Closed => {
                 if let Some(i) = state.toplevels.iter().position(|t| &t.toplevel_handle == p) {
                     state.toplevels.remove(i);
                 }
             },
-            zcosmic_toplevel_handle_v1::Event::Done => {},
+            zcosmic_toplevel_handle_v1::Event::Done => {
+                let to_send = match state.config.filter_top_levels {
+                    Some(TopLevelFilter::ActiveWorkspace) => {
+                        state.toplevels.iter_mut().find(|t| {
+                            if &t.toplevel_handle == p {
+                                state
+                                .workspace_groups
+                                .iter()
+                                .find(|g| {
+                                    g.workspaces
+                                        .iter()
+                                        .find(|w| w.states.contains(&zcosmic_workspace_handle_v1::State::Active) && Some(&w.workspace_handle) == t.workspace.as_ref()).is_some()
+                                }).is_some()
+                            } else {
+                                false
+                            }
+                        })
+                    },
+                    Some(TopLevelFilter::ConfiguredOutput) =>
+                        state.toplevels.iter_mut().find(|t| &t.toplevel_handle == p && state.expected_output == t.output),
+                    _ => state.toplevels.iter_mut().find(|t| &t.toplevel_handle == p),
+                };
+
+                if let Some(toplevel) = to_send.cloned() {
+                    let tx = TX.get().unwrap().clone();
+
+                    let _ = tx.send(AppListEvent::Add(toplevel));
+                }
+
+            },
             zcosmic_toplevel_handle_v1::Event::Title { title } => {
                 if let Some(i) = state.toplevels.iter_mut().find(|t| &t.toplevel_handle == p) {
                     i.name = title;
@@ -477,6 +499,8 @@ impl Dispatch<ZcosmicWorkspaceHandleV1, ()> for State {
                 }) {
                     // wayland is host byte order
                     w.states = workspace_state.chunks(4).map(|chunk| zcosmic_workspace_handle_v1::State::try_from(u32::from_ne_bytes(chunk.try_into().unwrap())).unwrap()).collect();
+                    // TODO if workspace active status changes while configured to only show active workspace, clear the list
+
                 }
             }
             zcosmic_workspace_handle_v1::Event::Remove => {

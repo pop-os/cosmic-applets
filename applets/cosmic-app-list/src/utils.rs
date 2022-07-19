@@ -13,8 +13,8 @@ pub const PATH: &str = "/com/System76/PopShell";
 #[derive(Debug)]
 pub enum AppListEvent {
     WindowList(Vec<Toplevel>),
-    Activate((u32, u32)),
-    Close((u32, u32)),
+    Add(Toplevel),
+    Remove(Toplevel),
     Favorite((String, bool)),
     Refresh,
 }

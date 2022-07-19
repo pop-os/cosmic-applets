@@ -78,19 +78,7 @@ fn main() {
         TX.set(tx.clone()).unwrap();
 
         rx.attach(None, glib::clone!(@weak window => @default-return glib::prelude::Continue(true), move |event| {
-            match event {
-                AppListEvent::Activate(_) => {
-                    // let _activate_window = zbus_conn
-                    //     .call_method(Some(DEST), PATH, Some(DEST), "WindowFocus", &((e,)))
-                    //     .await
-                    //     .expect("Failed to focus selected window");
-                }
-                AppListEvent::Close(_) => {
-                    // let _activate_window = zbus_conn
-                    //     .call_method(Some(DEST), PATH, Some(DEST), "WindowQuit", &((e,)))
-                    //     .await
-                    //     .expect("Failed to close selected window");
-                }
+            let should_apply_changes = match event {
                 AppListEvent::Favorite((name, should_favorite)) => {
                     let saved_app_model = apps_container.model(DockListType::Saved);
                     let active_app_model = apps_container.model(DockListType::Active);
@@ -130,6 +118,7 @@ fn main() {
                         }
                     }
                     let _ = tx.send(AppListEvent::Refresh);
+                    false
                 }
                 AppListEvent::Refresh => {
                     // println!("refreshing model from cache");
@@ -194,13 +183,28 @@ fn main() {
                         .map(|v| DockObject::from_search_results(v).upcast())
                         .collect();
                     active_app_model.splice(0, model_len, &new_results[..]);
+                    true
                 }
-                AppListEvent::WindowList(results) => {
+                AppListEvent::WindowList(toplevels) => {
+                    cached_results = toplevels;
+                    true
+                }
+                AppListEvent::Remove(top_level) => {
+                    if let Some(i) = cached_results.iter().position(|t| t.toplevel_handle == top_level.toplevel_handle) {
+                        cached_results.swap_remove(i);
+                    }
+                    true
+                }
+                AppListEvent::Add(top_level) => {
                     // sort to make comparison with cache easier
-                    cached_results = results.clone();
-
+                    cached_results.push(top_level);
+                    true              
+                }
+            };
+            if should_apply_changes {
+                    dbg!(&cached_results);
                     // build active app stacks for each app
-                    let stack_active = results.iter().fold(
+                    let stack_active = cached_results.iter().fold(
                         BTreeMap::new(),
                         |mut acc: BTreeMap<String, BoxedWindowList>, elem| {
                             if let Some(v) = acc.get_mut(&elem.name) {
@@ -230,15 +234,15 @@ fn main() {
                                 if let Some((i, _s)) = stack_active
                                     .iter()
                                     .enumerate()
-                                    .find(|(_i, s)| s.0[0].name == cur_app_info.name())
+                                    .find(|(_i, s)| s.0[0].app_id == cur_app_info.name())
                                 {
                                     // println!("found active saved app {} at {}", s.0[0].name, i);
                                     let active = stack_active.remove(i);
                                     dock_obj.set_property("active", active.to_value());
                                     saved_app_model.items_changed(saved_i, 0, 0);
-                                } else if results
+                                } else if cached_results
                                     .iter()
-                                    .any(|s| s.name == cur_app_info.name())
+                                    .any(|s| s.app_id == cur_app_info.name())
                                 {
                                     dock_obj.set_property(
                                         "active",
@@ -257,8 +261,7 @@ fn main() {
                         .into_iter()
                         .map(|v| DockObject::from_search_results(v).upcast())
                         .collect();
-                    active_app_model.splice(0, model_len, &new_results[..]);                    
-                }
+                    active_app_model.splice(0, model_len, &new_results[..]);
             }
             glib::prelude::Continue(true)
         }));
