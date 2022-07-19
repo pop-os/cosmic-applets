@@ -192,7 +192,7 @@ impl Dispatch<wl_registry::WlRegistry, ()> for State {
         } = event
         {
             match &interface[..] {
-                "zcosmic_workspace_info_v1" => {
+                "zcosmic_toplevel_info_v1" => {
                     let ti = registry
                         .bind::<ZcosmicToplevelInfoV1, _, _>(
                             name,
@@ -274,7 +274,7 @@ impl Dispatch<ZcosmicToplevelManagerV1, ()> for State {
         _: &Connection,
         _: &QueueHandle<Self>,
     ) {
-
+        dbg!(&event);
         match event {
             zcosmic_toplevel_manager_v1::Event::Capabilities { .. } => {
                 // TODO capabilities affect what is shown to user in applet
