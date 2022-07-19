@@ -11,7 +11,7 @@ use std::rc::Rc;
 use tokio::sync::mpsc::Sender;
 
 use crate::dock_popover::DockPopover;
-use crate::utils::Event;
+use crate::utils::AppListEvent;
 
 #[derive(Debug, Default)]
 pub struct DockItem {
@@ -20,7 +20,7 @@ pub struct DockItem {
     pub item_box: Rc<RefCell<gtk4::Box>>,
     pub popover: Rc<RefCell<gtk4::Popover>>,
     pub popover_menu: Rc<RefCell<Option<DockPopover>>>,
-    pub tx: OnceCell<Sender<Event>>,
+    pub tx: OnceCell<Sender<AppListEvent>>,
     pub icon_size: Rc<Cell<u32>>,
 }
 

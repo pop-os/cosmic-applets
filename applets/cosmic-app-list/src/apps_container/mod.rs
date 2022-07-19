@@ -1,9 +1,10 @@
 use std::env;
 
+use crate::TX;
 // SPDX-License-Identifier: MPL-2.0-only
 use crate::dock_list::DockList;
 use crate::dock_list::DockListType;
-use crate::utils::Event;
+use crate::utils::AppListEvent;
 use cascade::cascade;
 use cosmic_panel_config::{PanelAnchor, CosmicPanelConfig};
 use gtk4::prelude::*;
@@ -21,7 +22,7 @@ glib::wrapper! {
 }
 
 impl AppsContainer {
-    pub fn new(tx: Sender<Event>) -> Self {
+    pub fn new() -> Self {
         let self_: Self = glib::Object::new(&[]).expect("Failed to create AppsContainer");
         let imp = imp::AppsContainer::from_instance(&self_);
 
@@ -34,7 +35,7 @@ impl AppsContainer {
 
         let config = CosmicPanelConfig::load_from_env().unwrap_or_default();
 
-        let saved_app_list_view = DockList::new(DockListType::Saved, tx.clone(), config.clone());
+        let saved_app_list_view = DockList::new(DockListType::Saved, config.clone());
         self_.append(&saved_app_list_view);
 
         // let separator_container = cascade! {
@@ -52,7 +53,7 @@ impl AppsContainer {
         //     ..add_css_class("dock_separator");
         // };
         // separator_container.append(&separator);
-        let active_app_list_view = DockList::new(DockListType::Active, tx, config.clone());
+        let active_app_list_view = DockList::new(DockListType::Active, config.clone());
         self_.append(&active_app_list_view);
         // self_.connect_orientation_notify(glib::clone!(@weak separator => move |c| {
         //     dbg!(c.orientation());

@@ -3,7 +3,7 @@
 use crate::dock_object::DockObject;
 use crate::dock_popover::DockPopover;
 use crate::utils::BoxedWindowList;
-use crate::utils::Event;
+use crate::utils::AppListEvent;
 use cascade::cascade;
 use cosmic_panel_config::PanelAnchor;
 use gtk4::glib;
@@ -25,7 +25,7 @@ glib::wrapper! {
 }
 
 impl DockItem {
-    pub fn new(tx: Sender<Event>, icon_size: u32) -> Self {
+    pub fn new(icon_size: u32) -> Self {
         let self_: DockItem = glib::Object::new(&[]).expect("Failed to create DockItem");
 
         let item_box = Box::new(Orientation::Vertical, 0);
@@ -66,7 +66,7 @@ impl DockItem {
         });
 
         let popover_menu = cascade! {
-            DockPopover::new(tx.clone());
+            DockPopover::new();
             ..add_css_class("popover_menu");
         };
         popover.set_child(Some(&popover_menu));
@@ -87,7 +87,6 @@ impl DockItem {
         imp.item_box.replace(item_box);
         imp.popover.replace(popover);
         imp.popover_menu.replace(Some(popover_menu));
-        imp.tx.set(tx).unwrap();
         self_
     }
 

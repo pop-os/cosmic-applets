@@ -10,7 +10,7 @@ use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use tokio::sync::mpsc;
 
-use crate::utils::Event;
+use crate::utils::AppListEvent;
 
 #[derive(Debug, Default)]
 pub struct DockList {
@@ -24,7 +24,7 @@ pub struct DockList {
     pub drag_cancel_signal: Rc<RefCell<Option<SignalHandlerId>>>,
     pub popover_menu_index: Rc<Cell<Option<u32>>>,
     pub position: Rc<Cell<PanelAnchor>>,
-    pub tx: OnceCell<mpsc::Sender<Event>>,
+    pub tx: OnceCell<mpsc::Sender<AppListEvent>>,
     pub config: OnceCell<CosmicPanelConfig>
 }
 

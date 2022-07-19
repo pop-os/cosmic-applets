@@ -13,7 +13,7 @@ use once_cell::sync::OnceCell;
 use tokio::sync::mpsc::Sender;
 
 use crate::dock_object::DockObject;
-use crate::utils::Event;
+use crate::utils::AppListEvent;
 
 #[derive(Debug, Default)]
 pub struct DockPopover {
@@ -26,7 +26,7 @@ pub struct DockPopover {
     pub quit_all_item: Rc<RefCell<Button>>,
     //TODO figure out how to use lifetimes with glib::wrapper! macro
     pub dock_object: Rc<RefCell<Option<DockObject>>>,
-    pub tx: OnceCell<Sender<Event>>,
+    pub tx: OnceCell<Sender<AppListEvent>>,
 }
 
 #[glib::object_subclass]

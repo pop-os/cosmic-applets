@@ -1,15 +1,11 @@
 use crate::{
-    utils::{Activate, WorkspaceEvent},
-    wayland_source::WaylandSource,
+    wayland_source::WaylandSource, config::TopLevelFilter, TX, utils::AppListEvent,
 };
 use cosmic_panel_config::CosmicPanelConfig;
 use gtk4::glib;
 use std::{
-    collections::HashMap, env, hash::Hash, mem, os::unix::net::UnixStream, path::PathBuf,
-    sync::Arc, time::Duration,
+env,  os::unix::net::UnixStream, path::PathBuf,time::Duration,
 };
-use tokio::sync::mpsc;
-use wayland_backend::client::ObjectData;
 use wayland_client::{
     event_created_child,
     protocol::{
@@ -18,15 +14,24 @@ use wayland_client::{
     },
     ConnectError, Proxy,
 };
-use cosmic_protocols::workspace::v1::client::{
+use cosmic_protocols::{workspace::v1::client::{
     zcosmic_workspace_manager_v1::{self, ZcosmicWorkspaceManagerV1},
     zcosmic_workspace_group_handle_v1::{self, ZcosmicWorkspaceGroupHandleV1},
     zcosmic_workspace_handle_v1::{self, ZcosmicWorkspaceHandleV1},
-};
+}, toplevel_info::v1::client::{zcosmic_toplevel_info_v1::{ZcosmicToplevelInfoV1, self}, zcosmic_toplevel_handle_v1::{ZcosmicToplevelHandleV1, self}}, toplevel_management::v1::client::zcosmic_toplevel_manager_v1::{self, ZcosmicToplevelManagerV1}};
 use wayland_client::{Connection, Dispatch, QueueHandle};
 use calloop::channel::*;
+use crate::config::AppListConfig;
 
-pub fn spawn_workspaces(tx: glib::Sender<State>) -> SyncSender<WorkspaceEvent> {
+#[derive(Debug, Clone)]
+pub enum ToplevelEvent {
+    Activate(ZcosmicToplevelHandleV1),
+    Close(ZcosmicToplevelHandleV1),
+}
+
+pub fn spawn_toplevels() -> SyncSender<ToplevelEvent> {
+    let config = AppListConfig::load().unwrap_or_default();
+
     let (workspaces_tx, workspaces_rx) = calloop::channel::sync_channel(100);
 
     if let Ok(Ok(conn)) = std::env::var("WAYLAND_DISPLAY")
@@ -42,9 +47,11 @@ pub fn spawn_workspaces(tx: glib::Sender<State>) -> SyncSender<WorkspaceEvent> {
         .and_then(|s| s.map(|s| Connection::from_socket(s).map_err(anyhow::Error::msg)))
     {
         std::thread::spawn(move || {
-            let output = CosmicPanelConfig::load_from_env()
-                .unwrap_or_default()
-                .output;
+            let output = match config.filter_top_levels {
+                Some(TopLevelFilter::ConfiguredOutput) =>  CosmicPanelConfig::load_from_env()
+                .ok().map(|c| c.output),
+                _ => None,
+            };
             let mut event_loop = calloop::EventLoop::<State>::try_new().unwrap();
             let loop_handle = event_loop.handle();
             let event_queue = conn.new_event_queue::<State>();
@@ -61,57 +68,22 @@ pub fn spawn_workspaces(tx: glib::Sender<State>) -> SyncSender<WorkspaceEvent> {
             let mut state = State {
                 workspace_manager: None,
                 workspace_groups: Vec::new(),
+                toplevel_info: None,
+                toplevel_manager: None,
+                config,
                 configured_output: output,
                 expected_output: None,
-                tx,
                 running: true,
+                toplevels: vec![]
             };
             let loop_handle = event_loop.handle();
             loop_handle
                 .insert_source(workspaces_rx, |e, _, state| match e {
-                    Event::Msg(WorkspaceEvent::Activate(id)) => {
-                        if let Some(w) = state
-                            .workspace_groups
-                            .iter()
-                            .find_map(|g| g.workspaces.iter().find(|w| w.name == id))
-                        {
-                            w.workspace_handle.activate();
-                            state.workspace_manager.as_ref().unwrap().commit();
-                        }
-                    }
-                    Event::Msg(WorkspaceEvent::Scroll(v)) => {
-                        if let Some((w_g, w_i)) = state
-                            .workspace_groups
-                            .iter()
-                            .find_map(|g| {
-                                if g.output != state.expected_output {
-                                    return None;
-                                }
-                                g.workspaces
-                                    .iter()
-                                    .position(|w| w.states.contains(&zcosmic_workspace_handle_v1::State::Active))
-                                    .map(|w_i| (g, w_i))
-                            })
-                        {
-                            let max_w = w_g.workspaces.len().wrapping_sub(1);
-                            let d_i = if v > 0.0 {
-                                if w_i == max_w {
-                                    0
-                                } else {
-                                    w_i.wrapping_add(1)
-                                }
-                            } else {
-                                if w_i == 0 {
-                                    max_w
-                                } else {
-                                    w_i.wrapping_sub(1)
-                                }
-                            };
-                            if let Some(w) = w_g.workspaces.get(d_i) {
-                                w.workspace_handle.activate();
-                                state.workspace_manager.as_ref().unwrap().commit();
-                            }
-                        }
+                    Event::Msg(ToplevelEvent::Activate(_t)) => {
+                        todo!()
+                   }
+                    Event::Msg(ToplevelEvent::Close(_t)) => {
+                        todo!()
                     }
                     Event::Closed => {
                         if let Some(workspace_manager) = &mut state.workspace_manager {
@@ -119,6 +91,15 @@ pub fn spawn_workspaces(tx: glib::Sender<State>) -> SyncSender<WorkspaceEvent> {
                                 g.workspace_group_handle.destroy();
                             }
                             workspace_manager.stop();
+                        }
+                        if let Some(toplevel_manager) = &mut state.toplevel_manager {
+                            toplevel_manager.destroy();
+                        }
+                        if let Some(toplevel_info) = &mut state.toplevel_info {
+                            for toplevel in &state.toplevels {
+                                toplevel.toplevel_handle.destroy();
+                            }
+                            toplevel_info.stop();
                         }
                     }
                 })
@@ -140,15 +121,17 @@ pub fn spawn_workspaces(tx: glib::Sender<State>) -> SyncSender<WorkspaceEvent> {
 #[derive(Debug, Clone)]
 pub struct State {
     running: bool,
-    tx: glib::Sender<State>,
-    configured_output: String,
+    config: AppListConfig,
+    configured_output: Option<String>,
     expected_output: Option<WlOutput>,
     workspace_manager: Option<ZcosmicWorkspaceManagerV1>,
     workspace_groups: Vec<WorkspaceGroup>,
+    toplevel_info: Option<ZcosmicToplevelInfoV1>,
+    toplevel_manager: Option<ZcosmicToplevelManagerV1>,
+    toplevels: Vec<Toplevel>,
 }
 
 impl State {
-    // XXX
     pub fn workspace_list(&self) -> impl Iterator<Item = (String, u32)> + '_ {
         self.workspace_groups
             .iter()
@@ -166,6 +149,16 @@ impl State {
             })
             .flatten()
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct Toplevel {
+    pub name: String,
+    pub app_id: String,
+    pub toplevel_handle: ZcosmicToplevelHandleV1,
+    pub states: Vec<zcosmic_toplevel_handle_v1::State>,
+    pub output: Option<WlOutput>,
+    pub workspace: Option<ZcosmicWorkspaceHandleV1>,
 }
 
 #[derive(Debug, Clone)]
@@ -199,7 +192,29 @@ impl Dispatch<wl_registry::WlRegistry, ()> for State {
         } = event
         {
             match &interface[..] {
-                "zcosmic_workspace_manager_v1" => {
+                "zcosmic_workspace_info_v1" => {
+                    let ti = registry
+                        .bind::<ZcosmicToplevelInfoV1, _, _>(
+                            name,
+                            1,
+                            qh,
+                            (),
+                        )
+                        .unwrap();
+                    state.toplevel_info = Some(ti);
+                }
+                "zcosmic_toplevel_manager_v1" => {
+                    let tm = registry
+                        .bind::<ZcosmicToplevelManagerV1, _, _>(
+                            name,
+                            1,
+                            qh,
+                            (),
+                        )
+                        .unwrap();
+                    state.toplevel_manager = Some(tm);
+                }
+                "zcosmic_toplevel_manager_v1" => {
                     let workspace_manager = registry
                         .bind::<ZcosmicWorkspaceManagerV1, _, _>(
                             name,
@@ -218,6 +233,113 @@ impl Dispatch<wl_registry::WlRegistry, ()> for State {
         }
     }
 }
+
+impl Dispatch<ZcosmicToplevelInfoV1, ()> for State {
+    fn event(
+        state: &mut Self,
+        _: &ZcosmicToplevelInfoV1,
+        event: <ZcosmicToplevelInfoV1 as Proxy>::Event,
+        _: &(),
+        _: &Connection,
+        _: &QueueHandle<Self>,
+    ) {
+        dbg!(&event);
+        match event {
+            zcosmic_toplevel_info_v1::Event::Toplevel { toplevel } => {
+                state.toplevels.push(Toplevel { name: "".into(), app_id: "".into(), toplevel_handle: toplevel, states: vec![], output: None, workspace: None });
+            },
+            zcosmic_toplevel_info_v1::Event::Finished => {
+                dbg!(&state.toplevels);
+                let tx = TX.get().unwrap().clone();
+
+                let _ = tx.send(AppListEvent::WindowList(state.toplevels.iter().filter(|t| {
+                    match state.config.filter_top_levels {
+                        Some(TopLevelFilter::ActiveWorkspace) => true,
+                        _ => false,
+                    }
+                }).cloned().collect()));
+            },
+            _ => {},
+        }
+    }
+}
+
+
+impl Dispatch<ZcosmicToplevelManagerV1, ()> for State {
+    fn event(
+        _: &mut Self,
+        _: &ZcosmicToplevelManagerV1,
+        event: <ZcosmicToplevelManagerV1 as Proxy>::Event,
+        _: &(),
+        _: &Connection,
+        _: &QueueHandle<Self>,
+    ) {
+        match event {
+            zcosmic_toplevel_manager_v1::Event::Capabilities { .. } => {
+                // TODO capabilities affect what is shown to user in applet
+            },
+            _ => {},
+        }
+    }
+}
+
+impl Dispatch<ZcosmicToplevelHandleV1, ()> for State {
+    fn event(
+        state: &mut Self,
+        p: &ZcosmicToplevelHandleV1,
+        event: <ZcosmicToplevelHandleV1 as Proxy>::Event,
+        _: &(),
+        _: &Connection,
+        _: &QueueHandle<Self>,
+    ) {
+        dbg!(&event);
+        match event {
+            zcosmic_toplevel_handle_v1::Event::Closed => {
+                if let Some(i) = state.toplevels.iter().position(|t| &t.toplevel_handle == p) {
+                    state.toplevels.remove(i);
+                }
+            },
+            zcosmic_toplevel_handle_v1::Event::Done => {},
+            zcosmic_toplevel_handle_v1::Event::Title { title } => {
+                if let Some(i) = state.toplevels.iter_mut().find(|t| &t.toplevel_handle == p) {
+                    i.name = title;
+                }
+            },
+            zcosmic_toplevel_handle_v1::Event::AppId { app_id } => {
+                if let Some(i) = state.toplevels.iter_mut().find(|t| &t.toplevel_handle == p) {
+                    i.app_id = app_id;
+                }
+            },
+            zcosmic_toplevel_handle_v1::Event::OutputEnter { output } => {
+                if let Some(i) = state.toplevels.iter_mut().find(|t| &t.toplevel_handle == p) {
+                    i.output.replace(output);
+                }
+            },
+            zcosmic_toplevel_handle_v1::Event::OutputLeave { output } => {
+                if let Some(i) = state.toplevels.iter_mut().find(|t| &t.toplevel_handle == p && t.output.as_ref() == Some(&output)) {
+                    i.output.take();
+                }
+            },
+            zcosmic_toplevel_handle_v1::Event::WorkspaceEnter { workspace } => {
+                if let Some(i) = state.toplevels.iter_mut().find(|t| &t.toplevel_handle == p) {
+                    i.workspace.replace(workspace);
+                }
+            },
+            zcosmic_toplevel_handle_v1::Event::WorkspaceLeave { workspace } => {
+                if let Some(i) = state.toplevels.iter_mut().find(|t| &t.toplevel_handle == p && t.workspace.as_ref() == Some(&workspace)) {
+                    i.workspace.take();
+                }
+            },
+            zcosmic_toplevel_handle_v1::Event::State { state: t_state } => {
+                if let Some(i) = state.toplevels.iter_mut().find(|t| &t.toplevel_handle == p) {
+                    i.states = t_state.chunks(4).map(|chunk| zcosmic_toplevel_handle_v1::State::try_from(u32::from_ne_bytes(chunk.try_into().unwrap())).unwrap()).collect();
+                }
+            },
+            _ => todo!(),
+        }
+    }
+}
+
 
 impl Dispatch<ZcosmicWorkspaceManagerV1, ()> for State {
     fn event(
@@ -246,7 +368,6 @@ impl Dispatch<ZcosmicWorkspaceManagerV1, ()> for State {
                             .unwrap_or(std::cmp::Ordering::Equal)
                     });
                 }
-                let _ = state.tx.send(state.clone());
             }
             zcosmic_workspace_manager_v1::Event::Finished => {
                 state.workspace_manager.take();
@@ -382,7 +503,7 @@ impl Dispatch<WlOutput, ()> for State {
         _: &QueueHandle<Self>,
     ) {
         match e {
-            wl_output::Event::Name { name } if name == state.configured_output => {
+            wl_output::Event::Name { name } if Some(&name) == state.configured_output.as_ref() => {
                 state.expected_output.replace(o.clone());
             }
             _ => {} // ignored

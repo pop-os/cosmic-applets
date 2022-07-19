@@ -95,7 +95,7 @@ impl DockObject {
                             if let Some(path) = path.to_str() {
                                 if let Some(app_info) = gio::DesktopAppInfo::new(path) {
                                     if app_info.should_show()
-                                        && first.description.as_str() == app_info.name().as_str()
+                                        && first.name.as_str() == app_info.name().as_str()
                                     {
                                         return Some(app_info);
                                     }
