@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0-only
 
-use cosmic_panel_config::{PanelAnchor, CosmicPanelConfig};
+use cosmic_panel_config::{CosmicPanelConfig, PanelAnchor};
 use glib::SignalHandlerId;
 use gtk4::subclass::prelude::*;
 use gtk4::{gio, glib};
@@ -25,7 +25,7 @@ pub struct DockList {
     pub popover_menu_index: Rc<Cell<Option<u32>>>,
     pub position: Rc<Cell<PanelAnchor>>,
     pub tx: OnceCell<mpsc::Sender<AppListEvent>>,
-    pub config: OnceCell<CosmicPanelConfig>
+    pub config: OnceCell<CosmicPanelConfig>,
 }
 
 #[glib::object_subclass]

@@ -1,10 +1,22 @@
-use crate::{
-    wayland_source::WaylandSource, config::TopLevelFilter, TX, utils::AppListEvent,
-};
+use crate::config::AppListConfig;
+use crate::{config::TopLevelFilter, utils::AppListEvent, wayland_source::WaylandSource, TX};
+use calloop::channel::*;
 use cosmic_panel_config::CosmicPanelConfig;
-use std::{
-env,  os::unix::net::UnixStream, path::PathBuf,time::Duration,
+use cosmic_protocols::{
+    toplevel_info::v1::client::{
+        zcosmic_toplevel_handle_v1::{self, ZcosmicToplevelHandleV1},
+        zcosmic_toplevel_info_v1::{self, ZcosmicToplevelInfoV1},
+    },
+    toplevel_management::v1::client::zcosmic_toplevel_manager_v1::{
+        self, ZcosmicToplevelManagerV1,
+    },
+    workspace::v1::client::{
+        zcosmic_workspace_group_handle_v1::{self, ZcosmicWorkspaceGroupHandleV1},
+        zcosmic_workspace_handle_v1::{self, ZcosmicWorkspaceHandleV1},
+        zcosmic_workspace_manager_v1::{self, ZcosmicWorkspaceManagerV1},
+    },
 };
+use std::{env, os::unix::net::UnixStream, path::PathBuf, time::Duration};
 use wayland_client::{
     event_created_child,
     protocol::{
@@ -13,14 +25,7 @@ use wayland_client::{
     },
     ConnectError, Proxy,
 };
-use cosmic_protocols::{workspace::v1::client::{
-    zcosmic_workspace_manager_v1::{self, ZcosmicWorkspaceManagerV1},
-    zcosmic_workspace_group_handle_v1::{self, ZcosmicWorkspaceGroupHandleV1},
-    zcosmic_workspace_handle_v1::{self, ZcosmicWorkspaceHandleV1},
-}, toplevel_info::v1::client::{zcosmic_toplevel_info_v1::{ZcosmicToplevelInfoV1, self}, zcosmic_toplevel_handle_v1::{ZcosmicToplevelHandleV1, self}}, toplevel_management::v1::client::zcosmic_toplevel_manager_v1::{self, ZcosmicToplevelManagerV1}};
 use wayland_client::{Connection, Dispatch, QueueHandle};
-use calloop::channel::*;
-use crate::config::AppListConfig;
 
 #[derive(Debug, Clone)]
 pub enum ToplevelEvent {
@@ -47,8 +52,9 @@ pub fn spawn_toplevels() -> SyncSender<ToplevelEvent> {
     {
         std::thread::spawn(move || {
             let output = match config.filter_top_levels {
-                Some(TopLevelFilter::ConfiguredOutput) =>  CosmicPanelConfig::load_from_env()
-                .ok().map(|c| c.output),
+                Some(TopLevelFilter::ConfiguredOutput) => {
+                    CosmicPanelConfig::load_from_env().ok().map(|c| c.output)
+                }
                 _ => None,
             };
             let mut event_loop = calloop::EventLoop::<State>::try_new().unwrap();
@@ -73,14 +79,14 @@ pub fn spawn_toplevels() -> SyncSender<ToplevelEvent> {
                 configured_output: output,
                 expected_output: None,
                 running: true,
-                toplevels: vec![]
+                toplevels: vec![],
             };
             let loop_handle = event_loop.handle();
             loop_handle
                 .insert_source(workspaces_rx, |e, _, state| match e {
                     Event::Msg(ToplevelEvent::Activate(_t)) => {
                         todo!()
-                   }
+                    }
                     Event::Msg(ToplevelEvent::Close(_t)) => {
                         todo!()
                     }
@@ -136,12 +142,17 @@ impl State {
             .iter()
             .filter_map(|g| {
                 if g.output == self.expected_output {
-                    Some(g.workspaces.iter().map(|w| (w.name.clone(), match &w.states {
-                        x if x.contains(&zcosmic_workspace_handle_v1::State::Active) => 0,
-                        x if x.contains(&zcosmic_workspace_handle_v1::State::Urgent) => 1,
-                        x if x.contains(&zcosmic_workspace_handle_v1::State::Hidden) => 2,
-                        _ => 3,
-                    })))
+                    Some(g.workspaces.iter().map(|w| {
+                        (
+                            w.name.clone(),
+                            match &w.states {
+                                x if x.contains(&zcosmic_workspace_handle_v1::State::Active) => 0,
+                                x if x.contains(&zcosmic_workspace_handle_v1::State::Urgent) => 1,
+                                x if x.contains(&zcosmic_workspace_handle_v1::State::Hidden) => 2,
+                                _ => 3,
+                            },
+                        )
+                    }))
                 } else {
                     None
                 }
@@ -193,34 +204,19 @@ impl Dispatch<wl_registry::WlRegistry, ()> for State {
             match &interface[..] {
                 "zcosmic_toplevel_info_v1" => {
                     let ti = registry
-                        .bind::<ZcosmicToplevelInfoV1, _, _>(
-                            name,
-                            1,
-                            qh,
-                            (),
-                        )
+                        .bind::<ZcosmicToplevelInfoV1, _, _>(name, 1, qh, ())
                         .unwrap();
                     state.toplevel_info = Some(ti);
                 }
                 "zcosmic_toplevel_manager_v1" => {
                     let tm = registry
-                        .bind::<ZcosmicToplevelManagerV1, _, _>(
-                            name,
-                            1,
-                            qh,
-                            (),
-                        )
+                        .bind::<ZcosmicToplevelManagerV1, _, _>(name, 1, qh, ())
                         .unwrap();
                     state.toplevel_manager = Some(tm);
                 }
                 "zcosmic_workspace_manager_v1" => {
                     let workspace_manager = registry
-                        .bind::<ZcosmicWorkspaceManagerV1, _, _>(
-                            name,
-                            1,
-                            qh,
-                            (),
-                        )
+                        .bind::<ZcosmicWorkspaceManagerV1, _, _>(name, 1, qh, ())
                         .unwrap();
                     state.workspace_manager = Some(workspace_manager);
                 }
@@ -245,12 +241,19 @@ impl Dispatch<ZcosmicToplevelInfoV1, ()> for State {
         dbg!(&event);
         match event {
             zcosmic_toplevel_info_v1::Event::Toplevel { toplevel } => {
-                state.toplevels.push(Toplevel { name: "".into(), app_id: "".into(), toplevel_handle: toplevel, states: vec![], output: None, workspace: None });
-            },
+                state.toplevels.push(Toplevel {
+                    name: "".into(),
+                    app_id: "".into(),
+                    toplevel_handle: toplevel,
+                    states: vec![],
+                    output: None,
+                    workspace: None,
+                });
+            }
             zcosmic_toplevel_info_v1::Event::Finished => {
                 todo!()
-            },
-            _ => {},
+            }
+            _ => {}
         }
     }
 
@@ -258,7 +261,6 @@ impl Dispatch<ZcosmicToplevelInfoV1, ()> for State {
         0 => (ZcosmicToplevelHandleV1, ())
     ]);
 }
-
 
 impl Dispatch<ZcosmicToplevelManagerV1, ()> for State {
     fn event(
@@ -272,8 +274,8 @@ impl Dispatch<ZcosmicToplevelManagerV1, ()> for State {
         match event {
             zcosmic_toplevel_manager_v1::Event::Capabilities { .. } => {
                 // TODO capabilities affect what is shown to user in applet
-            },
-            _ => {},
+            }
+            _ => {}
         }
     }
 }
@@ -292,27 +294,33 @@ impl Dispatch<ZcosmicToplevelHandleV1, ()> for State {
                 if let Some(i) = state.toplevels.iter().position(|t| &t.toplevel_handle == p) {
                     state.toplevels.remove(i);
                 }
-            },
+            }
             zcosmic_toplevel_handle_v1::Event::Done => {
                 let to_send = match state.config.filter_top_levels {
-                    Some(TopLevelFilter::ActiveWorkspace) => {
-                        state.toplevels.iter_mut().find(|t| {
-                            if &t.toplevel_handle == p {
-                                state
+                    Some(TopLevelFilter::ActiveWorkspace) => state.toplevels.iter_mut().find(|t| {
+                        if &t.toplevel_handle == p {
+                            state
                                 .workspace_groups
                                 .iter()
                                 .find(|g| {
                                     g.workspaces
                                         .iter()
-                                        .find(|w| w.states.contains(&zcosmic_workspace_handle_v1::State::Active) && Some(&w.workspace_handle) == t.workspace.as_ref()).is_some()
-                                }).is_some()
-                            } else {
-                                false
-                            }
-                        })
-                    },
-                    Some(TopLevelFilter::ConfiguredOutput) =>
-                        state.toplevels.iter_mut().find(|t| &t.toplevel_handle == p && state.expected_output == t.output),
+                                        .find(|w| {
+                                            w.states.contains(
+                                                &zcosmic_workspace_handle_v1::State::Active,
+                                            ) && Some(&w.workspace_handle) == t.workspace.as_ref()
+                                        })
+                                        .is_some()
+                                })
+                                .is_some()
+                        } else {
+                            false
+                        }
+                    }),
+                    Some(TopLevelFilter::ConfiguredOutput) => state
+                        .toplevels
+                        .iter_mut()
+                        .find(|t| &t.toplevel_handle == p && state.expected_output == t.output),
                     _ => state.toplevels.iter_mut().find(|t| &t.toplevel_handle == p),
                 };
 
@@ -321,48 +329,62 @@ impl Dispatch<ZcosmicToplevelHandleV1, ()> for State {
 
                     let _ = tx.send(AppListEvent::Add(toplevel));
                 }
-
-            },
+            }
             zcosmic_toplevel_handle_v1::Event::Title { title } => {
                 if let Some(i) = state.toplevels.iter_mut().find(|t| &t.toplevel_handle == p) {
                     i.name = title;
                 }
-            },
+            }
             zcosmic_toplevel_handle_v1::Event::AppId { app_id } => {
                 if let Some(i) = state.toplevels.iter_mut().find(|t| &t.toplevel_handle == p) {
                     i.app_id = app_id;
                 }
-            },
+            }
             zcosmic_toplevel_handle_v1::Event::OutputEnter { output } => {
                 if let Some(i) = state.toplevels.iter_mut().find(|t| &t.toplevel_handle == p) {
                     i.output.replace(output);
                 }
-            },
+            }
             zcosmic_toplevel_handle_v1::Event::OutputLeave { output } => {
-                if let Some(i) = state.toplevels.iter_mut().find(|t| &t.toplevel_handle == p && t.output.as_ref() == Some(&output)) {
+                if let Some(i) = state
+                    .toplevels
+                    .iter_mut()
+                    .find(|t| &t.toplevel_handle == p && t.output.as_ref() == Some(&output))
+                {
                     i.output.take();
                 }
-            },
+            }
             zcosmic_toplevel_handle_v1::Event::WorkspaceEnter { workspace } => {
                 if let Some(i) = state.toplevels.iter_mut().find(|t| &t.toplevel_handle == p) {
                     i.workspace.replace(workspace);
                 }
-            },
+            }
             zcosmic_toplevel_handle_v1::Event::WorkspaceLeave { workspace } => {
-                if let Some(i) = state.toplevels.iter_mut().find(|t| &t.toplevel_handle == p && t.workspace.as_ref() == Some(&workspace)) {
+                if let Some(i) = state
+                    .toplevels
+                    .iter_mut()
+                    .find(|t| &t.toplevel_handle == p && t.workspace.as_ref() == Some(&workspace))
+                {
                     i.workspace.take();
                 }
-            },
+            }
             zcosmic_toplevel_handle_v1::Event::State { state: t_state } => {
                 if let Some(i) = state.toplevels.iter_mut().find(|t| &t.toplevel_handle == p) {
-                    i.states = t_state.chunks(4).map(|chunk| zcosmic_toplevel_handle_v1::State::try_from(u32::from_ne_bytes(chunk.try_into().unwrap())).unwrap()).collect();
+                    i.states = t_state
+                        .chunks(4)
+                        .map(|chunk| {
+                            zcosmic_toplevel_handle_v1::State::try_from(u32::from_ne_bytes(
+                                chunk.try_into().unwrap(),
+                            ))
+                            .unwrap()
+                        })
+                        .collect();
                 }
-            },
+            }
             _ => todo!(),
         }
     }
 }
-
 
 impl Dispatch<ZcosmicWorkspaceManagerV1, ()> for State {
     fn event(
@@ -384,7 +406,9 @@ impl Dispatch<ZcosmicWorkspaceManagerV1, ()> for State {
             zcosmic_workspace_manager_v1::Event::Done => {
                 for group in &mut state.workspace_groups {
                     group.workspaces.sort_by(|w1, w2| {
-                        w1.coordinates.iter().zip(w2.coordinates.iter())
+                        w1.coordinates
+                            .iter()
+                            .zip(w2.coordinates.iter())
                             .skip_while(|(coord1, coord2)| coord1 == coord2)
                             .next()
                             .map(|(coord1, coord2)| coord1.cmp(coord2))
@@ -488,19 +512,31 @@ impl Dispatch<ZcosmicWorkspaceHandleV1, ()> for State {
                         .find(|w| &w.workspace_handle == workspace)
                 }) {
                     // wayland is host byte order
-                    w.coordinates = coordinates.chunks(4).map(|chunk| u32::from_ne_bytes(chunk.try_into().unwrap())).collect();
+                    w.coordinates = coordinates
+                        .chunks(4)
+                        .map(|chunk| u32::from_ne_bytes(chunk.try_into().unwrap()))
+                        .collect();
                 }
             }
-            zcosmic_workspace_handle_v1::Event::State { state: workspace_state } => {
+            zcosmic_workspace_handle_v1::Event::State {
+                state: workspace_state,
+            } => {
                 if let Some(w) = state.workspace_groups.iter_mut().find_map(|g| {
                     g.workspaces
                         .iter_mut()
                         .find(|w| &w.workspace_handle == workspace)
                 }) {
                     // wayland is host byte order
-                    w.states = workspace_state.chunks(4).map(|chunk| zcosmic_workspace_handle_v1::State::try_from(u32::from_ne_bytes(chunk.try_into().unwrap())).unwrap()).collect();
+                    w.states = workspace_state
+                        .chunks(4)
+                        .map(|chunk| {
+                            zcosmic_workspace_handle_v1::State::try_from(u32::from_ne_bytes(
+                                chunk.try_into().unwrap(),
+                            ))
+                            .unwrap()
+                        })
+                        .collect();
                     // TODO if workspace active status changes while configured to only show active workspace, clear the list
-
                 }
             }
             zcosmic_workspace_handle_v1::Event::Remove => {

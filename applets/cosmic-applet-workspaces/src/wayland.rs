@@ -2,7 +2,13 @@ use crate::{
     utils::{Activate, WorkspaceEvent},
     wayland_source::WaylandSource,
 };
+use calloop::channel::*;
 use cosmic_panel_config::CosmicPanelConfig;
+use cosmic_protocols::workspace::v1::client::{
+    zcosmic_workspace_group_handle_v1::{self, ZcosmicWorkspaceGroupHandleV1},
+    zcosmic_workspace_handle_v1::{self, ZcosmicWorkspaceHandleV1},
+    zcosmic_workspace_manager_v1::{self, ZcosmicWorkspaceManagerV1},
+};
 use gtk4::glib;
 use std::{
     collections::HashMap, env, hash::Hash, mem, os::unix::net::UnixStream, path::PathBuf,
@@ -18,13 +24,7 @@ use wayland_client::{
     },
     ConnectError, Proxy,
 };
-use cosmic_protocols::workspace::v1::client::{
-    zcosmic_workspace_manager_v1::{self, ZcosmicWorkspaceManagerV1},
-    zcosmic_workspace_group_handle_v1::{self, ZcosmicWorkspaceGroupHandleV1},
-    zcosmic_workspace_handle_v1::{self, ZcosmicWorkspaceHandleV1},
-};
 use wayland_client::{Connection, Dispatch, QueueHandle};
-use calloop::channel::*;
 
 pub fn spawn_workspaces(tx: glib::Sender<State>) -> SyncSender<WorkspaceEvent> {
     let (workspaces_tx, workspaces_rx) = calloop::channel::sync_channel(100);
@@ -80,19 +80,18 @@ pub fn spawn_workspaces(tx: glib::Sender<State>) -> SyncSender<WorkspaceEvent> {
                         }
                     }
                     Event::Msg(WorkspaceEvent::Scroll(v)) => {
-                        if let Some((w_g, w_i)) = state
-                            .workspace_groups
-                            .iter()
-                            .find_map(|g| {
-                                if g.output != state.expected_output {
-                                    return None;
-                                }
-                                g.workspaces
-                                    .iter()
-                                    .position(|w| w.states.contains(&zcosmic_workspace_handle_v1::State::Active))
-                                    .map(|w_i| (g, w_i))
-                            })
-                        {
+                        if let Some((w_g, w_i)) = state.workspace_groups.iter().find_map(|g| {
+                            if g.output != state.expected_output {
+                                return None;
+                            }
+                            g.workspaces
+                                .iter()
+                                .position(|w| {
+                                    w.states
+                                        .contains(&zcosmic_workspace_handle_v1::State::Active)
+                                })
+                                .map(|w_i| (g, w_i))
+                        }) {
                             let max_w = w_g.workspaces.len().wrapping_sub(1);
                             let d_i = if v > 0.0 {
                                 if w_i == max_w {
@@ -154,12 +153,17 @@ impl State {
             .iter()
             .filter_map(|g| {
                 if g.output == self.expected_output {
-                    Some(g.workspaces.iter().map(|w| (w.name.clone(), match &w.states {
-                        x if x.contains(&zcosmic_workspace_handle_v1::State::Active) => 0,
-                        x if x.contains(&zcosmic_workspace_handle_v1::State::Urgent) => 1,
-                        x if x.contains(&zcosmic_workspace_handle_v1::State::Hidden) => 2,
-                        _ => 3,
-                    })))
+                    Some(g.workspaces.iter().map(|w| {
+                        (
+                            w.name.clone(),
+                            match &w.states {
+                                x if x.contains(&zcosmic_workspace_handle_v1::State::Active) => 0,
+                                x if x.contains(&zcosmic_workspace_handle_v1::State::Urgent) => 1,
+                                x if x.contains(&zcosmic_workspace_handle_v1::State::Hidden) => 2,
+                                _ => 3,
+                            },
+                        )
+                    }))
                 } else {
                     None
                 }
@@ -201,12 +205,7 @@ impl Dispatch<wl_registry::WlRegistry, ()> for State {
             match &interface[..] {
                 "zcosmic_workspace_manager_v1" => {
                     let workspace_manager = registry
-                        .bind::<ZcosmicWorkspaceManagerV1, _, _>(
-                            name,
-                            1,
-                            qh,
-                            (),
-                        )
+                        .bind::<ZcosmicWorkspaceManagerV1, _, _>(name, 1, qh, ())
                         .unwrap();
                     state.workspace_manager = Some(workspace_manager);
                 }
@@ -239,7 +238,9 @@ impl Dispatch<ZcosmicWorkspaceManagerV1, ()> for State {
             zcosmic_workspace_manager_v1::Event::Done => {
                 for group in &mut state.workspace_groups {
                     group.workspaces.sort_by(|w1, w2| {
-                        w1.coordinates.iter().zip(w2.coordinates.iter())
+                        w1.coordinates
+                            .iter()
+                            .zip(w2.coordinates.iter())
                             .skip_while(|(coord1, coord2)| coord1 == coord2)
                             .next()
                             .map(|(coord1, coord2)| coord1.cmp(coord2))
@@ -344,17 +345,30 @@ impl Dispatch<ZcosmicWorkspaceHandleV1, ()> for State {
                         .find(|w| &w.workspace_handle == workspace)
                 }) {
                     // wayland is host byte order
-                    w.coordinates = coordinates.chunks(4).map(|chunk| u32::from_ne_bytes(chunk.try_into().unwrap())).collect();
+                    w.coordinates = coordinates
+                        .chunks(4)
+                        .map(|chunk| u32::from_ne_bytes(chunk.try_into().unwrap()))
+                        .collect();
                 }
             }
-            zcosmic_workspace_handle_v1::Event::State { state: workspace_state } => {
+            zcosmic_workspace_handle_v1::Event::State {
+                state: workspace_state,
+            } => {
                 if let Some(w) = state.workspace_groups.iter_mut().find_map(|g| {
                     g.workspaces
                         .iter_mut()
                         .find(|w| &w.workspace_handle == workspace)
                 }) {
                     // wayland is host byte order
-                    w.states = workspace_state.chunks(4).map(|chunk| zcosmic_workspace_handle_v1::State::try_from(u32::from_ne_bytes(chunk.try_into().unwrap())).unwrap()).collect();
+                    w.states = workspace_state
+                        .chunks(4)
+                        .map(|chunk| {
+                            zcosmic_workspace_handle_v1::State::try_from(u32::from_ne_bytes(
+                                chunk.try_into().unwrap(),
+                            ))
+                            .unwrap()
+                        })
+                        .collect();
                 }
             }
             zcosmic_workspace_handle_v1::Event::Remove => {

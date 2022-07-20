@@ -8,15 +8,16 @@ use gio::{ApplicationFlags, DesktopAppInfo};
 use gtk4::gdk::Display;
 use gtk4::{glib, prelude::*, CssProvider, StyleContext};
 use once_cell::sync::OnceCell;
-use wayland::{ToplevelEvent, Toplevel};
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::sync::mpsc;
-use utils::{block_on, BoxedWindowList, AppListEvent, DEST, PATH};
+use utils::{block_on, AppListEvent, BoxedWindowList, DEST, PATH};
+use wayland::{Toplevel, ToplevelEvent};
 
 mod apps_container;
 mod apps_window;
+mod config;
 mod dock_item;
 mod dock_list;
 mod dock_object;
@@ -25,7 +26,6 @@ mod localize;
 mod utils;
 mod wayland;
 mod wayland_source;
-mod config;
 
 const ID: &str = "com.system76.CosmicAppList";
 static TX: OnceCell<glib::Sender<AppListEvent>> = OnceCell::new();
@@ -152,7 +152,9 @@ fn main() {
                                 if let Some((i, _s)) = stack_active
                                     .iter()
                                     .enumerate()
-                                    .find(|(_i, s)| Some(&s.0[0].app_id) == cur_app_info.id().map(|s| s.to_string()).as_ref())
+                                    .find(|(_i, s)| Some(&s.0[0].app_id) == cur_app_info.filename().and_then(|p| p
+                                            .file_stem()
+                                            .and_then(|s| s.to_str().map(|s| s.to_string()))).as_ref())
                                 {
                                     // println!(
                                     //     "found active saved app {} at {}",
@@ -163,7 +165,9 @@ fn main() {
                                     saved_app_model.items_changed(saved_i, 0, 0);
                                 } else if cached_results
                                     .iter()
-                                    .any(|s| Some(&s.app_id) == cur_app_info.id().map(|s| s.to_string()).as_ref())
+                                    .any(|s| Some(&s.app_id) == cur_app_info.filename().and_then(|p| p
+                                            .file_stem()
+                                            .and_then(|s| s.to_str().map(|s| s.to_string()))).as_ref())
                                 {
                                     dock_obj.set_property(
                                         "active",
@@ -238,7 +242,9 @@ fn main() {
                                 if let Some((i, _s)) = stack_active
                                     .iter()
                                     .enumerate()
-                                    .find(|(_i, s)| Some(&s.0[0].app_id) == cur_app_info.id().map(|s| s.to_string()).as_ref())
+                                    .find(|(_i, s)| Some(&s.0[0].app_id) == cur_app_info.filename().and_then(|p| p
+                                            .file_stem()
+                                            .and_then(|s| s.to_str().map(|s| s.to_string()))).as_ref())
                                 {
                                     // println!("found active saved app {} at {}", s.0[0].name, i);
                                     let active = stack_active.remove(i);
@@ -246,7 +252,9 @@ fn main() {
                                     saved_app_model.items_changed(saved_i, 0, 0);
                                 } else if cached_results
                                     .iter()
-                                    .any(|s| Some(&s.app_id) == cur_app_info.id().map(|s| s.to_string()).as_ref())
+                                    .any(|s| Some(&s.app_id) == cur_app_info.filename().and_then(|p| p
+                                            .file_stem()
+                                            .and_then(|s| s.to_str().map(|s| s.to_string()))).as_ref())
                                 {
                                     dock_obj.set_property(
                                         "active",

@@ -51,8 +51,6 @@ fn main() {
         gtk4::STYLE_PROVIDER_PRIORITY_APPLICATION,
     );
 
-
-
     let current_graphics = RT
         .block_on(get_current_graphics())
         .expect("failed to connect to system76-power");

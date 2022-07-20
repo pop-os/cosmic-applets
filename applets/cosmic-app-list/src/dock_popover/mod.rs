@@ -9,11 +9,11 @@ use gtk4::{prelude::*, Label};
 use gtk4::{Box, Button, Image, ListBox, Orientation};
 use tokio::sync::mpsc::Sender;
 
+use crate::dock_object::DockObject;
+use crate::utils::AppListEvent;
+use crate::utils::BoxedWindowList;
 use crate::wayland::ToplevelEvent;
 use crate::{TX, WAYLAND_TX};
-use crate::dock_object::DockObject;
-use crate::utils::BoxedWindowList;
-use crate::utils::AppListEvent;
 
 mod imp;
 

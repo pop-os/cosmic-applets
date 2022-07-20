@@ -6,11 +6,11 @@ use crate::dock_list::DockList;
 use crate::dock_list::DockListType;
 use crate::utils::AppListEvent;
 use cascade::cascade;
-use cosmic_panel_config::{PanelAnchor, CosmicPanelConfig};
-use gtk4::Separator;
+use cosmic_panel_config::{CosmicPanelConfig, PanelAnchor};
 use gtk4::prelude::*;
 use gtk4::subclass::prelude::*;
 use gtk4::Orientation;
+use gtk4::Separator;
 use gtk4::{gio, glib};
 use tokio::sync::mpsc::Sender;
 
@@ -69,13 +69,12 @@ impl AppsContainer {
         // Setup
         self_.setup_callbacks();
         self_.set_position(config.anchor);
-        
 
         Self::setup_callbacks(&self_);
 
         self_
     }
-    
+
     pub fn model(&self, type_: DockListType) -> &gio::ListStore {
         // Get state
         let imp = imp::AppsContainer::from_instance(self);
