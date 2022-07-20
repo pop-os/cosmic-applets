@@ -2141,7 +2141,7 @@ checksum = "a3f87b73ce11b1619a3c6332f45341e0047173771e8b8b73f87bfeefb7b56244"
 [[package]]
 name = "relm4"
 version = "0.5.0-beta.1"
-source = "git+https://github.com/relm4/relm4?branch=next#746d244004e23764294b23519f6f8be1002c1ceb"
+source = "git+https://github.com/Relm4/Relm4.git?branch=next#746d244004e23764294b23519f6f8be1002c1ceb"
 dependencies = [
  "async-broadcast",
  "async-oneshot",
@@ -2158,7 +2158,7 @@ dependencies = [
 [[package]]
 name = "relm4-macros"
 version = "0.5.0-beta.1"
-source = "git+https://github.com/relm4/relm4?branch=next#746d244004e23764294b23519f6f8be1002c1ceb"
+source = "git+https://github.com/Relm4/Relm4.git?branch=next#746d244004e23764294b23519f6f8be1002c1ceb"
 dependencies = [
  "proc-macro2",
  "quote",

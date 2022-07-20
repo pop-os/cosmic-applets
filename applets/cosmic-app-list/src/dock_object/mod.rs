@@ -78,7 +78,7 @@ impl DockObject {
         imp.saved.replace(is_saved);
     }
 
-    pub fn from_search_results(results: BoxedWindowList) -> Self {
+    pub fn from_window_list(results: BoxedWindowList) -> Self {
         let appinfo = if let Some(first) = results.0.get(0) {
             xdg::BaseDirectories::new()
                 .expect("could not access XDG Base directory")
@@ -95,7 +95,7 @@ impl DockObject {
                             if let Some(path) = path.to_str() {
                                 if let Some(app_info) = gio::DesktopAppInfo::new(path) {
                                     if app_info.should_show()
-                                        && first.name.as_str() == app_info.name().as_str()
+                                        && Some(&first.app_id) == app_info.id().map(|s| s.to_string()).as_ref()
                                     {
                                         return Some(app_info);
                                     }

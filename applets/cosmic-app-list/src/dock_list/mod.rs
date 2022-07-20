@@ -85,6 +85,7 @@ impl DockList {
     }
 
     fn restore_data(&self) {
+        // TODO use IDs instead of names
         if let Ok(file) = File::open(data_path()) {
             if let Ok(data) = serde_json::from_reader::<_, Vec<String>>(file) {
                 // dbg!(&data);

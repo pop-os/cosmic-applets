@@ -125,11 +125,11 @@ fn main() {
                     let stack_active = cached_results.iter().fold(
                         BTreeMap::new(),
                         |mut acc: BTreeMap<String, BoxedWindowList>, elem: &Toplevel| {
-                            if let Some(v) = acc.get_mut(&elem.name) {
+                            if let Some(v) = acc.get_mut(&elem.app_id) {
                                 v.0.push(elem.clone());
                             } else {
                                 acc.insert(
-                                    elem.name.clone(),
+                                    elem.app_id.clone(),
                                     BoxedWindowList(vec![elem.clone()]),
                                 );
                             }
@@ -152,7 +152,7 @@ fn main() {
                                 if let Some((i, _s)) = stack_active
                                     .iter()
                                     .enumerate()
-                                    .find(|(_i, s)| s.0[0].name == cur_app_info.name())
+                                    .find(|(_i, s)| Some(&s.0[0].app_id) == cur_app_info.id().map(|s| s.to_string()).as_ref())
                                 {
                                     // println!(
                                     //     "found active saved app {} at {}",
@@ -163,7 +163,7 @@ fn main() {
                                     saved_app_model.items_changed(saved_i, 0, 0);
                                 } else if cached_results
                                     .iter()
-                                    .any(|s| s.name == cur_app_info.name())
+                                    .any(|s| Some(&s.app_id) == cur_app_info.id().map(|s| s.to_string()).as_ref())
                                 {
                                     dock_obj.set_property(
                                         "active",
@@ -180,7 +180,7 @@ fn main() {
                     let model_len = active_app_model.n_items();
                     let new_results: Vec<glib::Object> = stack_active
                         .into_iter()
-                        .map(|v| DockObject::from_search_results(v).upcast())
+                        .map(|v| DockObject::from_window_list(v).upcast())
                         .collect();
                     active_app_model.splice(0, model_len, &new_results[..]);
                     true
@@ -197,7 +197,11 @@ fn main() {
                 }
                 AppListEvent::Add(top_level) => {
                     // sort to make comparison with cache easier
-                    cached_results.push(top_level);
+                    if let Some(i) = cached_results.iter().position(|t| t.toplevel_handle == top_level.toplevel_handle) {
+                        cached_results[i] = top_level;
+                    } else {
+                        cached_results.push(top_level);
+                    }
                     true              
                 }
             };
@@ -207,11 +211,11 @@ fn main() {
                     let stack_active = cached_results.iter().fold(
                         BTreeMap::new(),
                         |mut acc: BTreeMap<String, BoxedWindowList>, elem| {
-                            if let Some(v) = acc.get_mut(&elem.name) {
+                            if let Some(v) = acc.get_mut(&elem.app_id) {
                                 v.0.push(elem.clone());
                             } else {
                                 acc.insert(
-                                    elem.name.clone(),
+                                    elem.app_id.clone(),
                                     BoxedWindowList(vec![elem.clone()]),
                                 );
                             }
@@ -234,7 +238,7 @@ fn main() {
                                 if let Some((i, _s)) = stack_active
                                     .iter()
                                     .enumerate()
-                                    .find(|(_i, s)| s.0[0].app_id == cur_app_info.name())
+                                    .find(|(_i, s)| Some(&s.0[0].app_id) == cur_app_info.id().map(|s| s.to_string()).as_ref())
                                 {
                                     // println!("found active saved app {} at {}", s.0[0].name, i);
                                     let active = stack_active.remove(i);
@@ -242,7 +246,7 @@ fn main() {
                                     saved_app_model.items_changed(saved_i, 0, 0);
                                 } else if cached_results
                                     .iter()
-                                    .any(|s| s.app_id == cur_app_info.name())
+                                    .any(|s| Some(&s.app_id) == cur_app_info.id().map(|s| s.to_string()).as_ref())
                                 {
                                     dock_obj.set_property(
                                         "active",
@@ -259,8 +263,10 @@ fn main() {
                     let model_len = active_app_model.n_items();
                     let new_results: Vec<glib::Object> = stack_active
                         .into_iter()
-                        .map(|v| DockObject::from_search_results(v).upcast())
+                        .map(|v| DockObject::from_window_list(v).upcast())
                         .collect();
+                    dbg!(&new_results);
+
                     active_app_model.splice(0, model_len, &new_results[..]);
             }
             glib::prelude::Continue(true)
