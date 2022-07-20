@@ -238,7 +238,6 @@ impl Dispatch<ZcosmicToplevelInfoV1, ()> for State {
         _: &Connection,
         _: &QueueHandle<Self>,
     ) {
-        dbg!(&event);
         match event {
             zcosmic_toplevel_info_v1::Event::Toplevel { toplevel } => {
                 state.toplevels.push(Toplevel {

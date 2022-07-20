@@ -8,7 +8,6 @@ use gtk4::{
     prelude::*,
     subclass::prelude::*,
 };
-use tokio::sync::mpsc;
 
 mod imp;
 
@@ -41,6 +40,10 @@ impl CosmicAppListWindow {
         self_.setup_shortcuts();
 
         self_
+    }
+
+    pub fn apps_container(&self) -> &AppsContainer {
+        imp::CosmicAppListWindow::from_instance(&self).inner.get().unwrap()
     }
 
     fn setup_shortcuts(&self) {

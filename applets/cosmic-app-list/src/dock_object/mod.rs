@@ -78,9 +78,9 @@ impl DockObject {
         imp.saved.replace(is_saved);
     }
 
-    pub fn from_window_list(results: BoxedWindowList) -> Self {
-        let appinfo = if let Some(first) = results.0.get(0) {
-            xdg::BaseDirectories::new()
+    pub fn from_window_list(results: BoxedWindowList) -> Option<Self> {
+        if let Some(first) = results.0.get(0) {
+            return xdg::BaseDirectories::new()
                 .expect("could not access XDG Base directory")
                 .get_data_dirs()
                 .iter_mut()
@@ -100,7 +100,8 @@ impl DockObject {
                                                 .file_stem()
                                                 .and_then(|s| s.to_str().map(|s| s.to_string()))).as_ref()
                                     {
-                                        return Some(app_info);
+                                        return Some(Object::new(&[("appinfo", &app_info), ("active", &results)])
+                                        .expect("Failed to create `DockObject`."));
                                     }
                                 }
                             }
@@ -108,13 +109,9 @@ impl DockObject {
                     }
                     None
                 })
-                .next()
-        } else {
-            None
-        };
-
-        Object::new(&[("appinfo", &appinfo), ("active", &results)])
-            .expect("Failed to create `DockObject`.")
+                .next();
+        }
+        None
     }
 
     pub fn set_popover(&self, b: bool) {

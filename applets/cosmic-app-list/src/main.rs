@@ -66,7 +66,6 @@ fn main() {
         let (tx, rx) = glib::MainContext::channel(glib::Priority::default());
 
         let window = CosmicAppListWindow::new(app);
-        let apps_container = apps_container::AppsContainer::new();
         let wayland_tx = wayland::spawn_toplevels();
 
         WAYLAND_TX.set(wayland_tx).unwrap();
@@ -78,6 +77,7 @@ fn main() {
         TX.set(tx.clone()).unwrap();
 
         rx.attach(None, glib::clone!(@weak window => @default-return glib::prelude::Continue(true), move |event| {
+            let apps_container = window.apps_container();
             let should_apply_changes = match event {
                 AppListEvent::Favorite((name, should_favorite)) => {
                     let saved_app_model = apps_container.model(DockListType::Saved);
@@ -184,7 +184,7 @@ fn main() {
                     let model_len = active_app_model.n_items();
                     let new_results: Vec<glib::Object> = stack_active
                         .into_iter()
-                        .map(|v| DockObject::from_window_list(v).upcast())
+                        .filter_map(|v| DockObject::from_window_list(v).map(|o| o.upcast()))
                         .collect();
                     active_app_model.splice(0, model_len, &new_results[..]);
                     true
@@ -210,7 +210,7 @@ fn main() {
                 }
             };
             if should_apply_changes {
-                    dbg!(&cached_results);
+                    // dbg!(&cached_results);
                     // build active app stacks for each app
                     let stack_active = cached_results.iter().fold(
                         BTreeMap::new(),
@@ -271,9 +271,8 @@ fn main() {
                     let model_len = active_app_model.n_items();
                     let new_results: Vec<glib::Object> = stack_active
                         .into_iter()
-                        .map(|v| DockObject::from_window_list(v).upcast())
+                        .filter_map(|v| DockObject::from_window_list(v).map(|o| o.upcast()))
                         .collect();
-                    dbg!(&new_results);
 
                     active_app_model.splice(0, model_len, &new_results[..]);
             }
