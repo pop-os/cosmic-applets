@@ -1,4 +1,5 @@
 use futures::{channel::oneshot, future::poll_fn, task::Poll};
+use gtk4::glib;
 use libpulse_binding::{
     callbacks::ListResult,
     context::{
@@ -47,12 +48,17 @@ impl PA {
 
     pub fn set_state_callback<F: Fn(&Self, State) + 'static>(&self, cb: F) {
         let pa = self.clone(); // TODO: weak ref?
+        let cb = Rc::new(cb);
         self.0
             .context
             .borrow_mut()
             .set_state_callback(Some(Box::new(move || {
-                let state = pa.0.context.borrow().get_state();
-                cb(&pa, state);
+                let pa = pa.clone();
+                let cb = cb.clone();
+                glib::source::idle_add_local_once(move || {
+                    let state = pa.0.context.borrow().get_state();
+                    cb(&pa, state);
+                });
             })));
     }
 
