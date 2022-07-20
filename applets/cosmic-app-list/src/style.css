@@ -48,6 +48,10 @@ button.dock_item {
     outline-color: transparent;
 }
 
+label.dock_popover_title {
+    color: black;
+}
+
 button.dock_item:hover {
     border-radius: 12px;
     transition: 100ms;

@@ -86,12 +86,11 @@ impl DockPopover {
                         ..add_css_class("title-4");
                         ..add_css_class("dock_popover_title");
                     };
-
-                    let window_image = cascade! {
-                        //TODO fill with image of window
-                        Image::from_pixbuf(None);
-                    };
-                    window_box.append(&window_image);
+                    //TODO fill with image of window
+                    // let window_image = cascade! {
+                    //     Image::from_pixbuf(None);
+                    // };
+                    // window_box.append(&window_image);
                     window_box.append(&window_title);
                 }
                 // imp.all_windows_item_revealer.replace(window_list_revealer);
