@@ -1,17 +1,15 @@
 // SPDX-License-Identifier: MPL-2.0-only
 
-use glib::subclass::Signal;
-use gtk4::glib;
-use gtk4::prelude::*;
-use gtk4::subclass::prelude::*;
+use gtk4::{
+    glib::{self, subclass::Signal},
+    prelude::*,
+    subclass::prelude::*,
+};
 use once_cell::sync::Lazy;
-use once_cell::sync::OnceCell;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
-use tokio::sync::mpsc::Sender;
 
 use crate::dock_popover::DockPopover;
-use crate::utils::Event;
 
 #[derive(Debug, Default)]
 pub struct DockItem {
@@ -20,7 +18,6 @@ pub struct DockItem {
     pub item_box: Rc<RefCell<gtk4::Box>>,
     pub popover: Rc<RefCell<gtk4::Popover>>,
     pub popover_menu: Rc<RefCell<Option<DockPopover>>>,
-    pub tx: OnceCell<Sender<Event>>,
     pub icon_size: Rc<Cell<u32>>,
 }
 

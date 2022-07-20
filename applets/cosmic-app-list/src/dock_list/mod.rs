@@ -1,32 +1,26 @@
 // SPDX-License-Identifier: MPL-2.0-only
 
-use crate::dock_item::DockItem;
-use crate::dock_object::DockObject;
-use crate::utils::data_path;
-use crate::utils::{BoxedWindowList, Event, Item};
+use crate::{
+    dock_item::DockItem,
+    utils::{AppListEvent, BoxedWindowList, data_path},
+    wayland::{Toplevel, ToplevelEvent},
+    {TX, WAYLAND_TX}, dock_object::DockObject,
+};
 use cascade::cascade;
-use gio::DesktopAppInfo;
-use gio::Icon;
-use glib::Object;
-use glib::Type;
-use gtk4::gdk;
-use gtk4::gdk::ContentProvider;
-use gtk4::gdk::Display;
-use gtk4::gdk::ModifierType;
-use gtk4::glib;
-use gtk4::prelude::ListModelExt;
-use gtk4::prelude::*;
-use gtk4::subclass::prelude::*;
-use gtk4::DropTarget;
-use gtk4::IconTheme;
-use gtk4::ListView;
-use gtk4::Orientation;
-use gtk4::SignalListItemFactory;
-use gtk4::{DragSource, GestureClick};
-use std::fs::File;
-use std::path::Path;
 use cosmic_panel_config::{CosmicPanelConfig, PanelAnchor};
-use tokio::sync::mpsc::Sender;
+
+use gio::traits::AppLaunchContextExt;
+use gtk4::{
+    gdk::{self, ContentProvider, Display, ModifierType},
+    gio::{self, DesktopAppInfo, Icon},
+    glib::{self, Object, Type},
+    prelude::ListModelExt,
+    prelude::*,
+    subclass::prelude::*,
+    DropTarget, IconTheme, ListView, Orientation, SignalListItemFactory,
+    {DragSource, GestureClick},
+};
+use std::{fs::File, path::Path};
 
 mod imp;
 
@@ -49,11 +43,10 @@ impl Default for DockListType {
 }
 
 impl DockList {
-    pub fn new(type_: DockListType, tx: Sender<Event>, config: CosmicPanelConfig) -> Self {
+    pub fn new(type_: DockListType, config: CosmicPanelConfig) -> Self {
         let self_: DockList = glib::Object::new(&[]).expect("Failed to create DockList");
         let imp = imp::DockList::from_instance(&self_);
         imp.type_.set(type_).unwrap();
-        imp.tx.set(tx).unwrap();
         imp.config.set(config).unwrap();
         self_.layout();
         //dnd behavior is different for each type, as well as the data in the model
@@ -84,6 +77,7 @@ impl DockList {
     }
 
     fn restore_data(&self) {
+        // TODO use IDs instead of names
         if let Ok(file) = File::open(data_path()) {
             if let Ok(data) = serde_json::from_reader::<_, Vec<String>>(file) {
                 // dbg!(&data);
@@ -219,7 +213,6 @@ impl DockList {
         let model = self.model();
         let list_view = &imp.list_view.get().unwrap();
         let popover_menu_index = &imp.popover_menu_index;
-        let tx = imp.tx.get().unwrap().clone();
         controller.connect_released(glib::clone!(@weak model, @weak list_view, @weak popover_menu_index => move |self_, _, x, y| {
             let max_x = list_view.allocated_width();
             let max_y = list_view.allocated_height();
@@ -238,14 +231,14 @@ impl DockList {
             // dbg!(click_modifier);
             // Launch the application when an item of the list is activated
 
-            let tx = tx.clone();
-            let focus_window = move |first_focused_item: &Item| {
-                let entity = first_focused_item.entity;
-                let tx = tx.clone();
-                glib::MainContext::default().spawn_local(async move {
-                   let _ = tx.clone().send(Event::Activate(entity)).await;
-                });
+            // TODO use seat eventually
+            // let wl_seat = self_.device().map(|d| d.seat().downcast::<WaylandSeat>().unwrap().wl_seat()).unwrap();
+            let focus_window = move |first_focused_item: &Toplevel| {
+                let toplevel_handle = first_focused_item.toplevel_handle.clone();
+                let tx = WAYLAND_TX.get().unwrap().clone();
+                let _ = tx.clone().send(ToplevelEvent::Activate(toplevel_handle));
             };
+
             let old_index = popover_menu_index.get();
             if let Some(old_index) = old_index  {
                 if let Some(old_item) = model.item(old_index) {
@@ -322,7 +315,6 @@ impl DockList {
         let list_view = &imp.list_view.get().unwrap();
         let drag_end = &imp.drag_end_signal;
         let drag_source = &imp.drag_source.get().unwrap();
-        let tx = imp.tx.get().unwrap().clone();
         drop_controller.connect_drop(
             glib::clone!(@weak model, @weak list_view, @weak drag_end, @weak drag_source => @default-return true, move |_self, drop_value, x, y| {
                 //calculate insertion location
@@ -388,10 +380,8 @@ impl DockList {
                     // dbg!("rejecting drop");
                     _self.reject();
                 }
-                let tx = tx.clone();
-                glib::MainContext::default().spawn_local(async move {
-                   let _ = tx.send(Event::RefreshFromCache).await;
-                });
+                let tx = TX.get().unwrap().clone();
+                let _ = tx.send(AppListEvent::Refresh);
                 true
             }),
         );
@@ -419,7 +409,6 @@ impl DockList {
         let drag_end = &imp.drag_end_signal;
         let drag_cancel = &imp.drag_cancel_signal;
         let type_ = *type_;
-        let tx = imp.tx.get().unwrap().clone();
         list_view.add_controller(&drag_source);
         drag_source.connect_prepare(glib::clone!(@weak model, @weak list_view, @weak drag_end, @weak drag_cancel => @default-return None, move |self_, x, _y| {
             let max_x = list_view.allocated_width();
@@ -430,30 +419,25 @@ impl DockList {
             let index = (x * n_buckets as f64 / (max_x as f64 + 0.1)) as u32;
             if let Some(item) = model.item(index) {
                 if type_ == DockListType::Saved {
-                    let tx1 = tx.clone();
                     if let Some(old_handle) = drag_end.replace(Some(self_.connect_drag_end(
                         glib::clone!(@weak model => move |_self, _drag, _delete_data| {
                             if _delete_data {
                                 model.remove(index);
-                                let tx = tx1.clone();
-                                glib::MainContext::default().spawn_local(async move {
-                                    let _ = tx.send(Event::RefreshFromCache).await;
-                                });
+                                let tx = TX.get().unwrap().clone();
+                                let _ = tx.send(AppListEvent::Refresh);
+
                             };
                         }),
                     ))) {
                         glib::signal_handler_disconnect(self_, old_handle);
                     }
 
-                    let tx = tx.clone();
                     if let Some(old_handle) = drag_cancel.replace(Some(self_.connect_drag_cancel(
                         glib::clone!(@weak model => @default-return false, move |_self, _drag, cancel_reason| {
                             if cancel_reason != gdk::DragCancelReason::UserCancelled {
                                 model.remove(index);
-                                let tx = tx.clone();
-                                glib::MainContext::default().spawn_local(async move {
-                                    let _ = tx.send(Event::RefreshFromCache).await;
-                                });
+                                let tx = TX.get().unwrap().clone();
+                                let _ = tx.send(AppListEvent::Refresh);
                                 true
                             } else  {
                                 false
@@ -515,11 +499,10 @@ impl DockList {
         let popover_menu_index = &imp.popover_menu_index;
         let factory = SignalListItemFactory::new();
         let model = imp.model.get().expect("Failed to get saved app model.");
-        let tx = imp.tx.get().unwrap().clone();
         let icon_size = imp.config.get().unwrap().get_applet_icon_size();
         factory.connect_setup(
             glib::clone!(@weak popover_menu_index, @weak model => move |_, list_item| {
-                let dock_item = DockItem::new(tx.clone(), icon_size);
+                let dock_item = DockItem::new(icon_size);
                 dock_item
                     .connect_local("popover-closed", false, move |_| {
                         if let Some(old_index) = popover_menu_index.replace(None) {

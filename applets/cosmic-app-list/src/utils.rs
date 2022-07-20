@@ -3,32 +3,25 @@
 use std::path::PathBuf;
 
 use gtk4::glib;
-use serde::{Deserialize, Serialize};
 use std::future::Future;
+
+use crate::wayland::Toplevel;
 
 pub const DEST: &str = "com.System76.PopShell";
 pub const PATH: &str = "/com/System76/PopShell";
 
 #[derive(Debug)]
-pub enum Event {
-    WindowList,
-    Activate((u32, u32)),
-    Close((u32, u32)),
+pub enum AppListEvent {
+    WindowList(Vec<Toplevel>),
+    Add(Toplevel),
+    Remove(Toplevel),
     Favorite((String, bool)),
-    RefreshFromCache,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Item {
-    pub(crate) entity: (u32, u32),
-    pub(crate) name: String,
-    pub(crate) description: String,
-    pub(crate) desktop_entry: String,
+    Refresh,
 }
 
 #[derive(Clone, Debug, Default, glib::Boxed)]
 #[boxed_type(name = "BoxedWindowList")]
-pub struct BoxedWindowList(pub Vec<Item>);
+pub struct BoxedWindowList(pub Vec<Toplevel>);
 
 pub fn data_path() -> PathBuf {
     let mut path = glib::user_data_dir();

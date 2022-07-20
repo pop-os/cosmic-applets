@@ -1,16 +1,13 @@
-use std::env;
-
 // SPDX-License-Identifier: MPL-2.0-only
 use crate::dock_list::DockList;
 use crate::dock_list::DockListType;
-use crate::utils::Event;
 use cascade::cascade;
-use cosmic_panel_config::{PanelAnchor, CosmicPanelConfig};
+use cosmic_panel_config::{CosmicPanelConfig, PanelAnchor};
 use gtk4::prelude::*;
 use gtk4::subclass::prelude::*;
 use gtk4::Orientation;
+use gtk4::Separator;
 use gtk4::{gio, glib};
-use tokio::sync::mpsc::Sender;
 
 mod imp;
 
@@ -21,7 +18,7 @@ glib::wrapper! {
 }
 
 impl AppsContainer {
-    pub fn new(tx: Sender<Event>) -> Self {
+    pub fn new() -> Self {
         let self_: Self = glib::Object::new(&[]).expect("Failed to create AppsContainer");
         let imp = imp::AppsContainer::from_instance(&self_);
 
@@ -34,25 +31,25 @@ impl AppsContainer {
 
         let config = CosmicPanelConfig::load_from_env().unwrap_or_default();
 
-        let saved_app_list_view = DockList::new(DockListType::Saved, tx.clone(), config.clone());
+        let saved_app_list_view = DockList::new(DockListType::Saved, config.clone());
         self_.append(&saved_app_list_view);
 
-        // let separator_container = cascade! {
-        //     gtk4::Box::new(Orientation::Vertical, 0);
-        //     ..set_margin_top(8);
-        //     ..set_margin_bottom(8);
-        //     ..set_vexpand(true);
-        // };
-        // self_.append(&separator_container);
-        // let separator = cascade! {
-        //     Separator::new(Orientation::Vertical);
-        //     ..set_margin_start(8);
-        //     ..set_margin_end(8);
-        //     ..set_vexpand(true);
-        //     ..add_css_class("dock_separator");
-        // };
-        // separator_container.append(&separator);
-        let active_app_list_view = DockList::new(DockListType::Active, tx, config.clone());
+        let separator_container = cascade! {
+            gtk4::Box::new(Orientation::Vertical, 0);
+            ..set_margin_top(8);
+            ..set_margin_bottom(8);
+            ..set_vexpand(true);
+        };
+        self_.append(&separator_container);
+        let separator = cascade! {
+            Separator::new(Orientation::Vertical);
+            ..set_margin_start(8);
+            ..set_margin_end(8);
+            ..set_vexpand(true);
+            ..add_css_class("dock_separator");
+        };
+        separator_container.append(&separator);
+        let active_app_list_view = DockList::new(DockListType::Active, config.clone());
         self_.append(&active_app_list_view);
         // self_.connect_orientation_notify(glib::clone!(@weak separator => move |c| {
         //     dbg!(c.orientation());
@@ -67,13 +64,12 @@ impl AppsContainer {
         // Setup
         self_.setup_callbacks();
         self_.set_position(config.anchor);
-        
 
         Self::setup_callbacks(&self_);
 
         self_
     }
-    
+
     pub fn model(&self, type_: DockListType) -> &gio::ListStore {
         // Get state
         let imp = imp::AppsContainer::from_instance(self);

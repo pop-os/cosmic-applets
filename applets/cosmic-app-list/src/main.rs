@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0-only
 
 use apps_window::CosmicAppListWindow;
+use calloop::channel::SyncSender;
 use dock_list::DockListType;
 use dock_object::DockObject;
 use gio::{ApplicationFlags, DesktopAppInfo};
@@ -8,22 +9,24 @@ use gtk4::gdk::Display;
 use gtk4::{glib, prelude::*, CssProvider, StyleContext};
 use once_cell::sync::OnceCell;
 use std::collections::BTreeMap;
-use std::sync::{Arc, Mutex};
-use std::time::Duration;
-use tokio::sync::mpsc;
-use utils::{block_on, BoxedWindowList, Event, Item, DEST, PATH};
+use utils::{block_on, AppListEvent, BoxedWindowList, DEST, PATH};
+use wayland::{Toplevel, ToplevelEvent};
 
 mod apps_container;
 mod apps_window;
+mod config;
 mod dock_item;
 mod dock_list;
 mod dock_object;
 mod dock_popover;
 mod localize;
 mod utils;
+mod wayland;
+mod wayland_source;
 
 const ID: &str = "com.system76.CosmicAppList";
-static TX: OnceCell<mpsc::Sender<Event>> = OnceCell::new();
+static TX: OnceCell<glib::Sender<AppListEvent>> = OnceCell::new();
+static WAYLAND_TX: OnceCell<SyncSender<ToplevelEvent>> = OnceCell::new();
 
 pub fn localize() {
     let localizer = crate::localize::localizer();
@@ -57,202 +60,222 @@ fn main() {
 
     app.connect_activate(|app| {
         load_css();
-        let (tx, mut rx) = mpsc::channel(100);
+        let (tx, rx) = glib::MainContext::channel(glib::Priority::default());
 
-        let window = CosmicAppListWindow::new(app, tx.clone());
+        let window = CosmicAppListWindow::new(app);
+        let wayland_tx = wayland::spawn_toplevels();
 
-        let apps_container = apps_container::AppsContainer::new(tx.clone());
-        let cached_results = Arc::new(Mutex::new(Vec::new()));
+        WAYLAND_TX.set(wayland_tx).unwrap();
+
+
+
+        let mut cached_results = Vec::new();
         // let zbus_conn = spawn_zbus(tx.clone(), Arc::clone(&cached_results));
         TX.set(tx.clone()).unwrap();
 
-        let _ = glib::MainContext::default().spawn_local(async move {
-            while let Some(event) = rx.recv().await {
-                match event {
-                    Event::Activate(_) => {
-                        // let _activate_window = zbus_conn
-                        //     .call_method(Some(DEST), PATH, Some(DEST), "WindowFocus", &((e,)))
-                        //     .await
-                        //     .expect("Failed to focus selected window");
-                    }
-                    Event::Close(_) => {
-                        // let _activate_window = zbus_conn
-                        //     .call_method(Some(DEST), PATH, Some(DEST), "WindowQuit", &((e,)))
-                        //     .await
-                        //     .expect("Failed to close selected window");
-                    }
-                    Event::Favorite((name, should_favorite)) => {
-                        let saved_app_model = apps_container.model(DockListType::Saved);
-                        let active_app_model = apps_container.model(DockListType::Active);
-                        if should_favorite {
-                            let mut cur: u32 = 0;
-                            let mut index: Option<u32> = None;
-                            while let Some(item) = active_app_model.item(cur) {
-                                if let Ok(cur_dock_object) = item.downcast::<DockObject>() {
-                                    if cur_dock_object.get_path() == Some(name.clone()) {
-                                        cur_dock_object.set_saved(true);
-                                        index = Some(cur);
-                                    }
+        rx.attach(None, glib::clone!(@weak window => @default-return glib::prelude::Continue(true), move |event| {
+            let apps_container = window.apps_container();
+            let should_apply_changes = match event {
+                AppListEvent::Favorite((name, should_favorite)) => {
+                    let saved_app_model = apps_container.model(DockListType::Saved);
+                    let active_app_model = apps_container.model(DockListType::Active);
+                    if should_favorite {
+                        let mut cur: u32 = 0;
+                        let mut index: Option<u32> = None;
+                        while let Some(item) = active_app_model.item(cur) {
+                            if let Ok(cur_dock_object) = item.downcast::<DockObject>() {
+                                if cur_dock_object.get_name() == Some(name.clone()) {
+                                    cur_dock_object.set_saved(true);
+                                    index = Some(cur);
                                 }
-                                cur += 1;
                             }
-                            if let Some(index) = index {
-                                let object = active_app_model.item(index).unwrap();
-                                active_app_model.remove(index);
-                                saved_app_model.append(&object);
-                            }
-                        } else {
-                            let mut cur: u32 = 0;
-                            let mut index: Option<u32> = None;
-                            while let Some(item) = saved_app_model.item(cur) {
-                                if let Ok(cur_dock_object) = item.downcast::<DockObject>() {
-                                    if cur_dock_object.get_path() == Some(name.clone()) {
-                                        cur_dock_object.set_saved(false);
-                                        index = Some(cur);
-                                    }
-                                }
-                                cur += 1;
-                            }
-                            if let Some(index) = index {
-                                let object = saved_app_model.item(index).unwrap();
-                                saved_app_model.remove(index);
-                                active_app_model.append(&object);
-                            }
+                            cur += 1;
                         }
-                        let _ = tx.send(Event::RefreshFromCache).await;
-                    }
-                    Event::RefreshFromCache => {
-                        // println!("refreshing model from cache");
-                        let cached_results = cached_results.as_ref().lock().unwrap();
-                        let stack_active = cached_results.iter().fold(
-                            BTreeMap::new(),
-                            |mut acc: BTreeMap<String, BoxedWindowList>, elem: &Item| {
-                                if let Some(v) = acc.get_mut(&elem.description) {
-                                    v.0.push(elem.clone());
-                                } else {
-                                    acc.insert(
-                                        elem.description.clone(),
-                                        BoxedWindowList(vec![elem.clone()]),
-                                    );
-                                }
-                                acc
-                            },
-                        );
-                        let mut stack_active: Vec<BoxedWindowList> =
-                            stack_active.into_values().collect();
-
-                        // update active app stacks for saved apps into the saved app model
-                        // then put the rest in the active app model (which doesn't include saved apps)
-                        let saved_app_model = apps_container.model(DockListType::Saved);
-
-                        let mut saved_i: u32 = 0;
-                        while let Some(item) = saved_app_model.item(saved_i) {
-                            if let Ok(dock_obj) = item.downcast::<DockObject>() {
-                                if let Some(cur_app_info) =
-                                    dock_obj.property::<Option<DesktopAppInfo>>("appinfo")
-                                {
-                                    if let Some((i, _s)) = stack_active
-                                        .iter()
-                                        .enumerate()
-                                        .find(|(_i, s)| s.0[0].description == cur_app_info.name())
-                                    {
-                                        // println!(
-                                        //     "found active saved app {} at {}",
-                                        //     _s.0[0].name, i
-                                        // );
-                                        let active = stack_active.remove(i);
-                                        dock_obj.set_property("active", active.to_value());
-                                        saved_app_model.items_changed(saved_i, 0, 0);
-                                    } else if cached_results
-                                        .iter()
-                                        .any(|s| s.description == cur_app_info.name())
-                                    {
-                                        dock_obj.set_property(
-                                            "active",
-                                            BoxedWindowList(Vec::new()).to_value(),
-                                        );
-                                        saved_app_model.items_changed(saved_i, 0, 0);
-                                    }
+                        if let Some(index) = index {
+                            let object = active_app_model.item(index).unwrap();
+                            active_app_model.remove(index);
+                            saved_app_model.append(&object);
+                        }
+                    } else {
+                        let mut cur: u32 = 0;
+                        let mut index: Option<u32> = None;
+                        while let Some(item) = saved_app_model.item(cur) {
+                            if let Ok(cur_dock_object) = item.downcast::<DockObject>() {
+                                if cur_dock_object.get_name() == Some(name.clone()) {
+                                    cur_dock_object.set_saved(false);
+                                    index = Some(cur);
                                 }
                             }
-                            saved_i += 1;
+                            cur += 1;
                         }
-
-                        let active_app_model = apps_container.model(DockListType::Active);
-                        let model_len = active_app_model.n_items();
-                        let new_results: Vec<glib::Object> = stack_active
-                            .into_iter()
-                            .map(|v| DockObject::from_search_results(v).upcast())
-                            .collect();
-                        active_app_model.splice(0, model_len, &new_results[..]);
-                    }
-                    Event::WindowList => {
-                        // sort to make comparison with cache easier
-                        let results = cached_results.as_ref().lock().unwrap();
-
-                        // build active app stacks for each app
-                        let stack_active = results.iter().fold(
-                            BTreeMap::new(),
-                            |mut acc: BTreeMap<String, BoxedWindowList>, elem| {
-                                if let Some(v) = acc.get_mut(&elem.description) {
-                                    v.0.push(elem.clone());
-                                } else {
-                                    acc.insert(
-                                        elem.description.clone(),
-                                        BoxedWindowList(vec![elem.clone()]),
-                                    );
-                                }
-                                acc
-                            },
-                        );
-                        let mut stack_active: Vec<BoxedWindowList> =
-                            stack_active.into_values().collect();
-
-                        // update active app stacks for saved apps into the saved app model
-                        // then put the rest in the active app model (which doesn't include saved apps)
-                        let saved_app_model = apps_container.model(DockListType::Saved);
-
-                        let mut saved_i: u32 = 0;
-                        while let Some(item) = saved_app_model.item(saved_i) {
-                            if let Ok(dock_obj) = item.downcast::<DockObject>() {
-                                if let Some(cur_app_info) =
-                                    dock_obj.property::<Option<DesktopAppInfo>>("appinfo")
-                                {
-                                    if let Some((i, _s)) = stack_active
-                                        .iter()
-                                        .enumerate()
-                                        .find(|(_i, s)| s.0[0].description == cur_app_info.name())
-                                    {
-                                        // println!("found active saved app {} at {}", s.0[0].name, i);
-                                        let active = stack_active.remove(i);
-                                        dock_obj.set_property("active", active.to_value());
-                                        saved_app_model.items_changed(saved_i, 0, 0);
-                                    } else if results
-                                        .iter()
-                                        .any(|s| s.description == cur_app_info.name())
-                                    {
-                                        dock_obj.set_property(
-                                            "active",
-                                            BoxedWindowList(Vec::new()).to_value(),
-                                        );
-                                        saved_app_model.items_changed(saved_i, 0, 0);
-                                    }
-                                }
-                            }
-                            saved_i += 1;
+                        if let Some(index) = index {
+                            let object = saved_app_model.item(index).unwrap();
+                            saved_app_model.remove(index);
+                            active_app_model.append(&object);
                         }
-
-                        let active_app_model = apps_container.model(DockListType::Active);
-                        let model_len = active_app_model.n_items();
-                        let new_results: Vec<glib::Object> = stack_active
-                            .into_iter()
-                            .map(|v| DockObject::from_search_results(v).upcast())
-                            .collect();
-                        active_app_model.splice(0, model_len, &new_results[..]);
                     }
+                    let _ = tx.send(AppListEvent::Refresh);
+                    false
                 }
+                AppListEvent::Refresh => {
+                    // println!("refreshing model from cache");
+                    let stack_active = cached_results.iter().fold(
+                        BTreeMap::new(),
+                        |mut acc: BTreeMap<String, BoxedWindowList>, elem: &Toplevel| {
+                            if let Some(v) = acc.get_mut(&elem.app_id) {
+                                v.0.push(elem.clone());
+                            } else {
+                                acc.insert(
+                                    elem.app_id.clone(),
+                                    BoxedWindowList(vec![elem.clone()]),
+                                );
+                            }
+                            acc
+                        },
+                    );
+                    let mut stack_active: Vec<BoxedWindowList> =
+                        stack_active.into_values().collect();
+
+                    // update active app stacks for saved apps into the saved app model
+                    // then put the rest in the active app model (which doesn't include saved apps)
+                    let saved_app_model = apps_container.model(DockListType::Saved);
+
+                    let mut saved_i: u32 = 0;
+                    while let Some(item) = saved_app_model.item(saved_i) {
+                        if let Ok(dock_obj) = item.downcast::<DockObject>() {
+                            if let Some(cur_app_info) =
+                                dock_obj.property::<Option<DesktopAppInfo>>("appinfo")
+                            {
+                                if let Some((i, _s)) = stack_active
+                                    .iter()
+                                    .enumerate()
+                                    .find(|(_i, s)| Some(&s.0[0].app_id) == cur_app_info.filename().and_then(|p| p
+                                            .file_stem()
+                                            .and_then(|s| s.to_str().map(|s| s.to_string()))).as_ref())
+                                {
+                                    // println!(
+                                    //     "found active saved app {} at {}",
+                                    //     _s.0[0].name, i
+                                    // );
+                                    let active = stack_active.remove(i);
+                                    dock_obj.set_property("active", active.to_value());
+                                    saved_app_model.items_changed(saved_i, 0, 0);
+                                } else if cached_results
+                                    .iter()
+                                    .any(|s| Some(&s.app_id) == cur_app_info.filename().and_then(|p| p
+                                            .file_stem()
+                                            .and_then(|s| s.to_str().map(|s| s.to_string()))).as_ref())
+                                {
+                                    dock_obj.set_property(
+                                        "active",
+                                        BoxedWindowList(Vec::new()).to_value(),
+                                    );
+                                    saved_app_model.items_changed(saved_i, 0, 0);
+                                }
+                            }
+                        }
+                        saved_i += 1;
+                    }
+
+                    let active_app_model = apps_container.model(DockListType::Active);
+                    let model_len = active_app_model.n_items();
+                    let new_results: Vec<glib::Object> = stack_active
+                        .into_iter()
+                        .filter_map(|v| DockObject::from_window_list(v).map(|o| o.upcast()))
+                        .collect();
+                    active_app_model.splice(0, model_len, &new_results[..]);
+                    true
+                }
+                AppListEvent::WindowList(toplevels) => {
+                    cached_results = toplevels;
+                    true
+                }
+                AppListEvent::Remove(top_level) => {
+                    if let Some(i) = cached_results.iter().position(|t| t.toplevel_handle == top_level.toplevel_handle) {
+                        cached_results.swap_remove(i);
+                    }
+                    true
+                }
+                AppListEvent::Add(top_level) => {
+                    // sort to make comparison with cache easier
+                    if let Some(i) = cached_results.iter().position(|t| t.toplevel_handle == top_level.toplevel_handle) {
+                        cached_results[i] = top_level;
+                    } else {
+                        cached_results.push(top_level);
+                    }
+                    true              
+                }
+            };
+            if should_apply_changes {
+                    // dbg!(&cached_results);
+                    // build active app stacks for each app
+                    let stack_active = cached_results.iter().fold(
+                        BTreeMap::new(),
+                        |mut acc: BTreeMap<String, BoxedWindowList>, elem| {
+                            if let Some(v) = acc.get_mut(&elem.app_id) {
+                                v.0.push(elem.clone());
+                            } else {
+                                acc.insert(
+                                    elem.app_id.clone(),
+                                    BoxedWindowList(vec![elem.clone()]),
+                                );
+                            }
+                            acc
+                        },
+                    );
+                    let mut stack_active: Vec<BoxedWindowList> =
+                        stack_active.into_values().collect();
+
+                    // update active app stacks for saved apps into the saved app model
+                    // then put the rest in the active app model (which doesn't include saved apps)
+                    let saved_app_model = apps_container.model(DockListType::Saved);
+
+                    let mut saved_i: u32 = 0;
+                    while let Some(item) = saved_app_model.item(saved_i) {
+                        if let Ok(dock_obj) = item.downcast::<DockObject>() {
+                            if let Some(cur_app_info) =
+                                dock_obj.property::<Option<DesktopAppInfo>>("appinfo")
+                            {
+                                if let Some((i, _s)) = stack_active
+                                    .iter()
+                                    .enumerate()
+                                    .find(|(_i, s)| Some(&s.0[0].app_id) == cur_app_info.filename().and_then(|p| p
+                                            .file_stem()
+                                            .and_then(|s| s.to_str().map(|s| s.to_string()))).as_ref())
+                                {
+                                    // println!("found active saved app {} at {}", s.0[0].name, i);
+                                    let active = stack_active.remove(i);
+                                    dock_obj.set_property("active", active.to_value());
+                                    saved_app_model.items_changed(saved_i, 0, 0);
+                                } else if cached_results
+                                    .iter()
+                                    .any(|s| Some(&s.app_id) == cur_app_info.filename().and_then(|p| p
+                                            .file_stem()
+                                            .and_then(|s| s.to_str().map(|s| s.to_string()))).as_ref())
+                                {
+                                    dock_obj.set_property(
+                                        "active",
+                                        BoxedWindowList(Vec::new()).to_value(),
+                                    );
+                                    saved_app_model.items_changed(saved_i, 0, 0);
+                                }
+                            }
+                        }
+                        saved_i += 1;
+                    }
+
+                    let active_app_model = apps_container.model(DockListType::Active);
+                    let model_len = active_app_model.n_items();
+                    let new_results: Vec<glib::Object> = stack_active
+                        .into_iter()
+                        .filter_map(|v| DockObject::from_window_list(v).map(|o| o.upcast()))
+                        .collect();
+
+                    active_app_model.splice(0, model_len, &new_results[..]);
             }
-        });
+            glib::prelude::Continue(true)
+        }));
+
         window.show();
     });
     app.run();

@@ -48,6 +48,10 @@ button.dock_item {
     outline-color: transparent;
 }
 
+label.dock_popover_title {
+    color: black;
+}
+
 button.dock_item:hover {
     border-radius: 12px;
     transition: 100ms;
@@ -55,6 +59,12 @@ button.dock_item:hover {
     border-color: rgba(255, 255, 255, 0.1);
     outline-color: rgba(255, 255, 255, 0.1);
     background: rgba(255, 255, 255, 0.1);
+}
+
+box.dock_dots {
+    background: white;
+    padding: 2px;
+    border-radius: 4px;
 }
 
 *.transparent {

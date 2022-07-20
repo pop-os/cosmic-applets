@@ -2,8 +2,8 @@
 
 use crate::dock_object::DockObject;
 use crate::dock_popover::DockPopover;
+use crate::utils::AppListEvent;
 use crate::utils::BoxedWindowList;
-use crate::utils::Event;
 use cascade::cascade;
 use cosmic_panel_config::PanelAnchor;
 use gtk4::glib;
@@ -14,7 +14,6 @@ use gtk4::Image;
 use gtk4::Orientation;
 use gtk4::Popover;
 use gtk4::{Align, PositionType};
-use tokio::sync::mpsc::Sender;
 
 mod imp;
 
@@ -25,7 +24,7 @@ glib::wrapper! {
 }
 
 impl DockItem {
-    pub fn new(tx: Sender<Event>, icon_size: u32) -> Self {
+    pub fn new(icon_size: u32) -> Self {
         let self_: DockItem = glib::Object::new(&[]).expect("Failed to create DockItem");
 
         let item_box = Box::new(Orientation::Vertical, 0);
@@ -50,7 +49,7 @@ impl DockItem {
             ..set_valign(Align::Center);
             ..add_css_class("transparent");
         };
-        // TODO dots inverse color of parent with gsk blend modes?
+
         item_box.append(&image);
         item_box.append(&dots);
         let popover = cascade! {
@@ -66,7 +65,7 @@ impl DockItem {
         });
 
         let popover_menu = cascade! {
-            DockPopover::new(tx.clone());
+            DockPopover::new();
             ..add_css_class("popover_menu");
         };
         popover.set_child(Some(&popover_menu));
@@ -87,7 +86,6 @@ impl DockItem {
         imp.item_box.replace(item_box);
         imp.popover.replace(popover);
         imp.popover_menu.replace(Some(popover_menu));
-        imp.tx.set(tx).unwrap();
         self_
     }
 
@@ -112,6 +110,7 @@ impl DockItem {
         while let Some(c) = dots.first_child() {
             dots.remove(&c);
         }
+
         for _ in active.0 {
             dots.append(&cascade! {
                 Box::new(Orientation::Horizontal, 0);

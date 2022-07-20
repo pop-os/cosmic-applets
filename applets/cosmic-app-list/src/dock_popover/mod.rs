@@ -7,11 +7,12 @@ use gtk4::subclass::prelude::*;
 use gtk4::{gdk, gio, glib};
 use gtk4::{prelude::*, Label};
 use gtk4::{Box, Button, Image, ListBox, Orientation};
-use tokio::sync::mpsc::Sender;
 
 use crate::dock_object::DockObject;
+use crate::utils::AppListEvent;
 use crate::utils::BoxedWindowList;
-use crate::utils::Event;
+use crate::wayland::ToplevelEvent;
+use crate::{TX, WAYLAND_TX};
 
 mod imp;
 
@@ -22,10 +23,9 @@ glib::wrapper! {
 }
 
 impl DockPopover {
-    pub fn new(tx: Sender<Event>) -> Self {
+    pub fn new() -> Self {
         let self_: DockPopover = glib::Object::new(&[]).expect("Failed to create DockList");
         let imp = imp::DockPopover::from_instance(&self_);
-        imp.tx.set(tx).unwrap();
         self_.layout();
         //dnd behavior is different for each type, as well as the data in the model
         self_
@@ -85,12 +85,11 @@ impl DockPopover {
                         ..add_css_class("title-4");
                         ..add_css_class("dock_popover_title");
                     };
-
-                    let window_image = cascade! {
-                        //TODO fill with image of window
-                        Image::from_pixbuf(None);
-                    };
-                    window_box.append(&window_image);
+                    //TODO fill with image of window
+                    // let window_image = cascade! {
+                    //     Image::from_pixbuf(None);
+                    // };
+                    // window_box.append(&window_image);
                     window_box.append(&window_title);
                 }
                 // imp.all_windows_item_revealer.replace(window_list_revealer);
@@ -192,30 +191,24 @@ impl DockPopover {
                 self_.emit_hide();
             }));
 
-            let tx = imp.tx.get().unwrap().clone();
             let self_ = self.clone();
             quit_all_item.connect_clicked(glib::clone!(@weak dock_object => move |_| {
                 let active = dock_object.property::<BoxedWindowList>("active").0;
                 for w in active {
-                    let entity = w.entity;
-                    let tx = tx.clone();
-                    glib::MainContext::default().spawn_local(async move {
-                        let _ = tx.clone().send(Event::Close(entity)).await;
-                    });
+                    let t = w.toplevel_handle.clone();
+                    let tx = WAYLAND_TX.get().unwrap().clone();
+                    let _ = tx.clone().send(ToplevelEvent::Close(t));
                 }
                 self_.emit_hide();
             }));
 
-            let tx = imp.tx.get().unwrap().clone();
             let self_ = self.clone();
             favorite_item.connect_clicked(glib::clone!(@weak dock_object => move |_| {
                 let saved = dock_object.property::<bool>("saved");
-                let tx = tx.clone();
-                glib::MainContext::default().spawn_local(async move {
-                    if let Some(name) = dock_object.get_name() {
-                        let _ = tx.clone().send(Event::Favorite((name, !saved))).await;
-                    }
-                });
+                if let Some(name) = dock_object.get_name() {
+                    let tx = TX.get().unwrap().clone();
+                    let _ = tx.clone().send(AppListEvent::Favorite((name, !saved)));
+                }
                 self_.emit_hide();
             }));
 
@@ -227,16 +220,13 @@ impl DockPopover {
             //     }),
             // );
 
-            let tx = imp.tx.get().unwrap().clone();
             let self_ = self.clone();
             window_listbox.connect_row_activated(
                 glib::clone!(@weak dock_object => move |_, item| {
                     let active = dock_object.property::<BoxedWindowList>("active").0;
-                    let entity = active[usize::try_from(item.index()).unwrap()].entity;
-                    let tx = tx.clone();
-                    glib::MainContext::default().spawn_local(async move {
-                        let _ = tx.send(Event::Activate(entity)).await;
-                    });
+                    let t = active[usize::try_from(item.index()).unwrap()].toplevel_handle.clone();
+                    let tx = WAYLAND_TX.get().unwrap().clone();
+                    let _ = tx.send(ToplevelEvent::Activate(t));
                     self_.emit_hide();
                 }),
             );

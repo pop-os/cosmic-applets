@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0-only
 
-use crate::{apps_container::AppsContainer, fl, Event};
+use crate::{apps_container::AppsContainer, fl, AppListEvent};
 use cascade::cascade;
 use gtk4::{
     gio,
@@ -8,7 +8,6 @@ use gtk4::{
     prelude::*,
     subclass::prelude::*,
 };
-use tokio::sync::mpsc;
 
 mod imp;
 
@@ -20,7 +19,7 @@ glib::wrapper! {
 }
 
 impl CosmicAppListWindow {
-    pub fn new(app: &gtk4::Application, tx: mpsc::Sender<Event>) -> Self {
+    pub fn new(app: &gtk4::Application) -> Self {
         let self_: Self =
             Object::new(&[("application", app)]).expect("Failed to create `CosmicAppListWindow`.");
         let imp = imp::CosmicAppListWindow::from_instance(&self_);
@@ -34,13 +33,20 @@ impl CosmicAppListWindow {
             ..set_title(Some(&fl!("cosmic-app-list")));
             ..add_css_class("transparent");
         };
-        let app_list = AppsContainer::new(tx);
+        let app_list = AppsContainer::new();
         self_.set_child(Some(&app_list));
         imp.inner.set(app_list).unwrap();
 
         self_.setup_shortcuts();
 
         self_
+    }
+
+    pub fn apps_container(&self) -> &AppsContainer {
+        imp::CosmicAppListWindow::from_instance(&self)
+            .inner
+            .get()
+            .unwrap()
     }
 
     fn setup_shortcuts(&self) {

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0-only
 
-use cosmic_panel_config::{PanelAnchor, CosmicPanelConfig};
+use cosmic_panel_config::{CosmicPanelConfig, PanelAnchor};
 use glib::SignalHandlerId;
 use gtk4::subclass::prelude::*;
 use gtk4::{gio, glib};
@@ -8,9 +8,8 @@ use gtk4::{Box, DragSource, DropTarget, GestureClick, ListView};
 use once_cell::sync::OnceCell;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
-use tokio::sync::mpsc;
 
-use crate::utils::Event;
+use crate::utils::AppListEvent;
 
 #[derive(Debug, Default)]
 pub struct DockList {
@@ -24,8 +23,7 @@ pub struct DockList {
     pub drag_cancel_signal: Rc<RefCell<Option<SignalHandlerId>>>,
     pub popover_menu_index: Rc<Cell<Option<u32>>>,
     pub position: Rc<Cell<PanelAnchor>>,
-    pub tx: OnceCell<mpsc::Sender<Event>>,
-    pub config: OnceCell<CosmicPanelConfig>
+    pub config: OnceCell<CosmicPanelConfig>,
 }
 
 #[glib::object_subclass]
