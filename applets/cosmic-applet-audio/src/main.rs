@@ -115,7 +115,7 @@ fn app(application: &Application) {
                             set_hexpand: true
                         }
                     },
-                    append: _sep = &Separator {
+                    append = &Separator {
                         set_orientation: Orientation::Horizontal,
                     },
                     append: output_list_box = &GtkBox {
@@ -136,7 +136,7 @@ fn app(application: &Application) {
                             }
                         }
                     },
-                    append: _sep = &Separator {
+                    append = &Separator {
                         set_orientation: Orientation::Horizontal,
                     },
                     append: input_list_box = &GtkBox {
@@ -157,7 +157,7 @@ fn app(application: &Application) {
                             }
                         }
                     },
-                    append: _sep = &Separator {
+                    append = &Separator {
                         set_orientation: Orientation::Horizontal,
                     },
                     append: playing_apps = &ListBox {
