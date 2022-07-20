@@ -16,6 +16,7 @@ use cosmic_protocols::{
         zcosmic_workspace_manager_v1::{self, ZcosmicWorkspaceManagerV1},
     },
 };
+use wayland_client::protocol::wl_seat::{WlSeat, self};
 use std::{env, os::unix::net::UnixStream, path::PathBuf, time::Duration};
 use wayland_client::{
     event_created_child,
@@ -80,15 +81,21 @@ pub fn spawn_toplevels() -> SyncSender<ToplevelEvent> {
                 expected_output: None,
                 running: true,
                 toplevels: vec![],
+                seats: vec![],
             };
             let loop_handle = event_loop.handle();
             loop_handle
                 .insert_source(workspaces_rx, |e, _, state| match e {
-                    Event::Msg(ToplevelEvent::Activate(_t)) => {
-                        todo!()
+                    Event::Msg(ToplevelEvent::Activate(toplevel)) => {
+                        if let Some(manager) = &state.toplevel_manager {
+                            for seat in &state.seats {
+                                manager.activate(&toplevel,seat)
+                            }                        }
                     }
-                    Event::Msg(ToplevelEvent::Close(_t)) => {
-                        todo!()
+                    Event::Msg(ToplevelEvent::Close(t)) => {
+                        if let Some(manager) = &state.toplevel_manager {
+                            manager.close(&t);
+                        }
                     }
                     Event::Closed => {
                         if let Some(workspace_manager) = &mut state.workspace_manager {
@@ -134,6 +141,7 @@ pub struct State {
     toplevel_info: Option<ZcosmicToplevelInfoV1>,
     toplevel_manager: Option<ZcosmicToplevelManagerV1>,
     toplevels: Vec<Toplevel>,
+    seats: Vec<WlSeat>,
 }
 
 impl State {
@@ -219,6 +227,9 @@ impl Dispatch<wl_registry::WlRegistry, ()> for State {
                         .bind::<ZcosmicWorkspaceManagerV1, _, _>(name, 1, qh, ())
                         .unwrap();
                     state.workspace_manager = Some(workspace_manager);
+                }
+                "wl_seat" => {
+                    registry.bind::<WlSeat, _, _>(name, 1, qh, ()).unwrap();
                 }
                 "wl_output" => {
                     registry.bind::<WlOutput, _, _>(name, 1, qh, ()).unwrap();
@@ -567,6 +578,22 @@ impl Dispatch<WlOutput, ()> for State {
                 state.expected_output.replace(o.clone());
             }
             _ => {} // ignored
+        }
+    }
+}
+
+
+impl Dispatch<WlSeat, ()> for State {
+    fn event(
+        state: &mut Self,
+        seat: &WlSeat,
+        _: wl_seat::Event,
+        _: &(),
+        _: &Connection,
+        _: &QueueHandle<Self>,
+    ) {
+        if state.seats.iter().find(|s| s == &seat).is_none() {
+            state.seats.push(seat.clone());
         }
     }
 }

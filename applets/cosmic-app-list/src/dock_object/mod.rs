@@ -96,12 +96,22 @@ impl DockObject {
                                 if let Some(app_info) = gio::DesktopAppInfo::new(path) {
                                     if app_info.should_show()
                                         && Some(&first.app_id)
-                                            == app_info.filename().and_then(|p| p
-                                                .file_stem()
-                                                .and_then(|s| s.to_str().map(|s| s.to_string()))).as_ref()
+                                            == app_info
+                                                .filename()
+                                                .and_then(|p| {
+                                                    p.file_stem().and_then(|s| {
+                                                        s.to_str().map(|s| s.to_string())
+                                                    })
+                                                })
+                                                .as_ref()
                                     {
-                                        return Some(Object::new(&[("appinfo", &app_info), ("active", &results)])
-                                        .expect("Failed to create `DockObject`."));
+                                        return Some(
+                                            Object::new(&[
+                                                ("appinfo", &app_info),
+                                                ("active", &results),
+                                            ])
+                                            .expect("Failed to create `DockObject`."),
+                                        );
                                     }
                                 }
                             }

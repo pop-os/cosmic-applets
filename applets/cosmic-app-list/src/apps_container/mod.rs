@@ -1,10 +1,6 @@
-use std::env;
-
-use crate::TX;
 // SPDX-License-Identifier: MPL-2.0-only
 use crate::dock_list::DockList;
 use crate::dock_list::DockListType;
-use crate::utils::AppListEvent;
 use cascade::cascade;
 use cosmic_panel_config::{CosmicPanelConfig, PanelAnchor};
 use gtk4::prelude::*;
@@ -12,7 +8,6 @@ use gtk4::subclass::prelude::*;
 use gtk4::Orientation;
 use gtk4::Separator;
 use gtk4::{gio, glib};
-use tokio::sync::mpsc::Sender;
 
 mod imp;
 

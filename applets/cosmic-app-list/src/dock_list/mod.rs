@@ -1,34 +1,26 @@
 // SPDX-License-Identifier: MPL-2.0-only
 
-use crate::dock_item::DockItem;
-use crate::dock_object::DockObject;
-use crate::utils::data_path;
-use crate::utils::{AppListEvent, BoxedWindowList};
-use crate::wayland::{Toplevel, ToplevelEvent};
-use crate::{TX, WAYLAND_TX};
+use crate::{
+    dock_item::DockItem,
+    utils::{AppListEvent, BoxedWindowList, data_path},
+    wayland::{Toplevel, ToplevelEvent},
+    {TX, WAYLAND_TX}, dock_object::DockObject,
+};
 use cascade::cascade;
 use cosmic_panel_config::{CosmicPanelConfig, PanelAnchor};
-use gio::DesktopAppInfo;
-use gio::Icon;
-use glib::Object;
-use glib::Type;
-use gtk4::gdk;
-use gtk4::gdk::ContentProvider;
-use gtk4::gdk::Display;
-use gtk4::gdk::ModifierType;
-use gtk4::glib;
-use gtk4::prelude::ListModelExt;
-use gtk4::prelude::*;
-use gtk4::subclass::prelude::*;
-use gtk4::DropTarget;
-use gtk4::IconTheme;
-use gtk4::ListView;
-use gtk4::Orientation;
-use gtk4::SignalListItemFactory;
-use gtk4::{DragSource, GestureClick};
-use std::fs::File;
-use std::path::Path;
-use tokio::sync::mpsc::Sender;
+
+use gio::traits::AppLaunchContextExt;
+use gtk4::{
+    gdk::{self, ContentProvider, Display, ModifierType},
+    gio::{self, DesktopAppInfo, Icon},
+    glib::{self, Object, Type},
+    prelude::ListModelExt,
+    prelude::*,
+    subclass::prelude::*,
+    DropTarget, IconTheme, ListView, Orientation, SignalListItemFactory,
+    {DragSource, GestureClick},
+};
+use std::{fs::File, path::Path};
 
 mod imp;
 
@@ -239,11 +231,14 @@ impl DockList {
             // dbg!(click_modifier);
             // Launch the application when an item of the list is activated
 
+            // TODO use seat eventually
+            // let wl_seat = self_.device().map(|d| d.seat().downcast::<WaylandSeat>().unwrap().wl_seat()).unwrap();
             let focus_window = move |first_focused_item: &Toplevel| {
                 let toplevel_handle = first_focused_item.toplevel_handle.clone();
                 let tx = WAYLAND_TX.get().unwrap().clone();
                 let _ = tx.clone().send(ToplevelEvent::Activate(toplevel_handle));
             };
+
             let old_index = popover_menu_index.get();
             if let Some(old_index) = old_index  {
                 if let Some(old_item) = model.item(old_index) {

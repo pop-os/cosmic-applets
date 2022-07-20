@@ -43,7 +43,10 @@ impl CosmicAppListWindow {
     }
 
     pub fn apps_container(&self) -> &AppsContainer {
-        imp::CosmicAppListWindow::from_instance(&self).inner.get().unwrap()
+        imp::CosmicAppListWindow::from_instance(&self)
+            .inner
+            .get()
+            .unwrap()
     }
 
     fn setup_shortcuts(&self) {

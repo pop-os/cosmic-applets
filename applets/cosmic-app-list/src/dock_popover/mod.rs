@@ -7,7 +7,6 @@ use gtk4::subclass::prelude::*;
 use gtk4::{gdk, gio, glib};
 use gtk4::{prelude::*, Label};
 use gtk4::{Box, Button, Image, ListBox, Orientation};
-use tokio::sync::mpsc::Sender;
 
 use crate::dock_object::DockObject;
 use crate::utils::AppListEvent;

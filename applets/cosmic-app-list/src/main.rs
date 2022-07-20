@@ -9,9 +9,6 @@ use gtk4::gdk::Display;
 use gtk4::{glib, prelude::*, CssProvider, StyleContext};
 use once_cell::sync::OnceCell;
 use std::collections::BTreeMap;
-use std::sync::{Arc, Mutex};
-use std::time::Duration;
-use tokio::sync::mpsc;
 use utils::{block_on, AppListEvent, BoxedWindowList, DEST, PATH};
 use wayland::{Toplevel, ToplevelEvent};
 
@@ -87,7 +84,7 @@ fn main() {
                         let mut index: Option<u32> = None;
                         while let Some(item) = active_app_model.item(cur) {
                             if let Ok(cur_dock_object) = item.downcast::<DockObject>() {
-                                if cur_dock_object.get_path() == Some(name.clone()) {
+                                if cur_dock_object.get_name() == Some(name.clone()) {
                                     cur_dock_object.set_saved(true);
                                     index = Some(cur);
                                 }
@@ -104,7 +101,7 @@ fn main() {
                         let mut index: Option<u32> = None;
                         while let Some(item) = saved_app_model.item(cur) {
                             if let Ok(cur_dock_object) = item.downcast::<DockObject>() {
-                                if cur_dock_object.get_path() == Some(name.clone()) {
+                                if cur_dock_object.get_name() == Some(name.clone()) {
                                     cur_dock_object.set_saved(false);
                                     index = Some(cur);
                                 }

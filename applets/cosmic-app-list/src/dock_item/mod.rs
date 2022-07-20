@@ -14,7 +14,6 @@ use gtk4::Image;
 use gtk4::Orientation;
 use gtk4::Popover;
 use gtk4::{Align, PositionType};
-use tokio::sync::mpsc::Sender;
 
 mod imp;
 
