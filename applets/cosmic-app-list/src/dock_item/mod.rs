@@ -50,7 +50,7 @@ impl DockItem {
             ..set_valign(Align::Center);
             ..add_css_class("transparent");
         };
-        // TODO dots inverse color of parent with gsk blend modes?
+
         item_box.append(&image);
         item_box.append(&dots);
         let popover = cascade! {
@@ -111,6 +111,7 @@ impl DockItem {
         while let Some(c) = dots.first_child() {
             dots.remove(&c);
         }
+
         for _ in active.0 {
             dots.append(&cascade! {
                 Box::new(Orientation::Horizontal, 0);
