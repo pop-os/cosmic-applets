@@ -2,9 +2,10 @@
 
 use crate::{
     dock_item::DockItem,
-    utils::{AppListEvent, BoxedWindowList, data_path},
+    dock_object::DockObject,
+    utils::{data_path, AppListEvent, BoxedWindowList},
     wayland::{Toplevel, ToplevelEvent},
-    {TX, WAYLAND_TX}, dock_object::DockObject,
+    {TX, WAYLAND_TX},
 };
 use cascade::cascade;
 use cosmic_panel_config::{CosmicPanelConfig, PanelAnchor};

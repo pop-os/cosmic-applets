@@ -59,5 +59,3 @@ impl<T, F: ?Sized> Drop for PAFut<T, F> {
         self.operation.cancel();
     }
 }
-
-

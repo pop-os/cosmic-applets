@@ -30,17 +30,8 @@ impl ObjectSubclass for DockItem {
 
 impl ObjectImpl for DockItem {
     fn signals() -> &'static [Signal] {
-        static SIGNALS: Lazy<Vec<Signal>> = Lazy::new(|| {
-            vec![Signal::builder(
-                // Signal name
-                "popover-closed",
-                // Types of the values which will be sent to the signal handler
-                &[],
-                // Type of the value the signal handler sends back
-                <()>::static_type().into(),
-            )
-            .build()]
-        });
+        static SIGNALS: Lazy<Vec<Signal>> =
+            Lazy::new(|| vec![Signal::builder("popover-closed").build()]);
         SIGNALS.as_ref()
     }
 }

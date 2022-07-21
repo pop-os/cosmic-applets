@@ -34,17 +34,8 @@ impl ObjectSubclass for DockPopover {
 
 impl ObjectImpl for DockPopover {
     fn signals() -> &'static [Signal] {
-        static SIGNALS: Lazy<Vec<Signal>> = Lazy::new(|| {
-            vec![Signal::builder(
-                // Signal name
-                "menu-hide",
-                // Types of the values which will be sent to the signal handler
-                &[],
-                // Type of the value the signal handler sends back
-                <()>::static_type().into(),
-            )
-            .build()]
-        });
+        static SIGNALS: Lazy<Vec<Signal>> =
+            Lazy::new(|| vec![Signal::builder("menu-hide").build()]);
         SIGNALS.as_ref()
     }
 }

@@ -10,10 +10,7 @@ use libpulse_binding::{
     volume::ChannelVolumes,
 };
 use libpulse_glib_binding::Mainloop;
-use std::{
-    cell::RefCell,
-    rc::Rc,
-};
+use std::{cell::RefCell, rc::Rc};
 
 mod future;
 use future::{PAFut, PAFutWaker};

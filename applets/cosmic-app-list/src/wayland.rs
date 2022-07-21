@@ -16,8 +16,8 @@ use cosmic_protocols::{
         zcosmic_workspace_manager_v1::{self, ZcosmicWorkspaceManagerV1},
     },
 };
-use wayland_client::protocol::wl_seat::{WlSeat, self};
 use std::{env, os::unix::net::UnixStream, path::PathBuf, time::Duration};
+use wayland_client::protocol::wl_seat::{self, WlSeat};
 use wayland_client::{
     event_created_child,
     protocol::{
@@ -89,8 +89,9 @@ pub fn spawn_toplevels() -> SyncSender<ToplevelEvent> {
                     Event::Msg(ToplevelEvent::Activate(toplevel)) => {
                         if let Some(manager) = &state.toplevel_manager {
                             for seat in &state.seats {
-                                manager.activate(&toplevel,seat)
-                            }                        }
+                                manager.activate(&toplevel, seat)
+                            }
+                        }
                     }
                     Event::Msg(ToplevelEvent::Close(t)) => {
                         if let Some(manager) = &state.toplevel_manager {
@@ -581,7 +582,6 @@ impl Dispatch<WlOutput, ()> for State {
         }
     }
 }
-
 
 impl Dispatch<WlSeat, ()> for State {
     fn event(

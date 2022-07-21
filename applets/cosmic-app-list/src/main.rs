@@ -203,7 +203,7 @@ fn main() {
                     } else {
                         cached_results.push(top_level);
                     }
-                    true              
+                    true
                 }
             };
             if should_apply_changes {

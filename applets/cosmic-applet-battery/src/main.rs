@@ -358,6 +358,6 @@ impl SimpleComponent for AppModel {
 }
 
 fn main() {
-    let app: RelmApp<AppModel> = RelmApp::new("com.system76.CosmicAppletBattery");
-    app.run(());
+    let app = RelmApp::new("com.system76.CosmicAppletBattery");
+    app.run::<AppModel>(());
 }
