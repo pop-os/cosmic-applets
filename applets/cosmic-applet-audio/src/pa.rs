@@ -213,4 +213,30 @@ impl PA {
             });
         receiver.await.unwrap()
     }
+
+    pub async fn set_sink_volume_by_name(&self, name: &str, volume: &ChannelVolumes) -> bool {
+        let (sender, receiver) = oneshot::channel();
+        let mut sender = Some(sender);
+        self.introspect().set_sink_volume_by_name(
+            name,
+            volume,
+            Some(Box::new(move |success| {
+                sender.take().unwrap().send(success);
+            })),
+        );
+        receiver.await.unwrap()
+    }
+
+    pub async fn set_source_volume_by_name(&self, name: &str, volume: &ChannelVolumes) -> bool {
+        let (sender, receiver) = oneshot::channel();
+        let mut sender = Some(sender);
+        self.introspect().set_source_volume_by_name(
+            name,
+            volume,
+            Some(Box::new(move |success| {
+                sender.take().unwrap().send(success);
+            })),
+        );
+        receiver.await.unwrap()
+    }
 }
