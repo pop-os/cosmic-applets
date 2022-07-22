@@ -75,9 +75,6 @@ impl ObjectSubclass for ModeSelectionImp {
     const NAME: &'static str = "ModeSelection";
     type Type = ModeSelection;
     type ParentType = gtk4::Widget;
-    type Interfaces = ();
-    type Instance = glib::subclass::basic::InstanceStruct<Self>;
-    type Class = glib::subclass::basic::ClassStruct<Self>;
 
     fn class_init(klass: &mut Self::Class) {
         klass.set_layout_manager_type::<gtk4::BinLayout>();

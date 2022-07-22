@@ -161,9 +161,6 @@ impl ObjectSubclass for SettingsEntryImp {
     const NAME: &'static str = "SettingsEntry";
     type Type = SettingsEntry;
     type ParentType = gtk4::Widget;
-    type Interfaces = ();
-    type Instance = glib::subclass::basic::InstanceStruct<Self>;
-    type Class = glib::subclass::basic::ClassStruct<Self>;
 
     fn class_init(klass: &mut Self::Class) {
         // The layout manager determines how child widgets are laid out.
