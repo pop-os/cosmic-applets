@@ -11,6 +11,7 @@ mod pa;
 use pa::PA;
 mod task;
 mod volume;
+mod volume_scale;
 
 use futures::{channel::mpsc, stream::StreamExt};
 use gtk4::{

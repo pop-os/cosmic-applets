@@ -197,7 +197,11 @@ impl PA {
         .await
     }
 
-    pub async fn set_sink_volume_by_name(&self, name: &str, volume: &ChannelVolumes) -> bool {
+    pub fn set_sink_volume_by_name(
+        &self,
+        name: &str,
+        volume: &ChannelVolumes,
+    ) -> PAFut<bool, impl ?Sized> {
         PAFut::new(|waker| {
             self.introspect().set_sink_volume_by_name(
                 name,
@@ -205,10 +209,13 @@ impl PA {
                 Some(Box::new(move |success| waker.wake(success))),
             )
         })
-        .await
     }
 
-    pub async fn set_source_volume_by_name(&self, name: &str, volume: &ChannelVolumes) -> bool {
+    pub fn set_source_volume_by_name(
+        &self,
+        name: &str,
+        volume: &ChannelVolumes,
+    ) -> PAFut<bool, impl ?Sized> {
         PAFut::new(|waker| {
             self.introspect().set_source_volume_by_name(
                 name,
@@ -216,6 +223,5 @@ impl PA {
                 Some(Box::new(move |success| waker.wake(success))),
             )
         })
-        .await
     }
 }
