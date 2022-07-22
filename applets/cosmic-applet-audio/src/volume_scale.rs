@@ -1,3 +1,6 @@
+// TODO: Use `Volume::ui_max()`?
+// * Make sure volumes greater than this are handled properly.
+
 use gtk4::{glib, prelude::*, subclass::prelude::*};
 use libpulse_binding::volume::{ChannelVolumes, Volume};
 use std::{

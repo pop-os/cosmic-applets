@@ -82,9 +82,8 @@ fn app(application: &Application) {
             set_application: Some(application),
             set_title: Some("COSMIC Network Applet"),
             #[wrap(Some)]
-            set_child = &libcosmic_applet::AppletButton {
-                // TODO: adjust based on volume, mute
-                set_button_icon_name: "multimedia-volume-control-symbolic",
+            set_child: button = &libcosmic_applet::AppletButton {
+                set_button_icon_name: "audio-volume-medium-symbolic",
                 #[wrap(Some)]
                 set_popover_child: window_box = &GtkBox {
                     set_orientation: Orientation::Vertical,
@@ -180,11 +179,26 @@ fn app(application: &Application) {
         }),
     );
     glib::MainContext::default().spawn_local(
-        clone!(@weak outputs, @weak current_output, @weak output_volume, @strong pa => async move {
+        clone!(@weak outputs, @weak current_output, @weak output_volume, @strong pa, @strong button, => async move {
             while let Some(()) = refresh_output_rx.next().await {
                 output::refresh_output_widgets(&pa, &outputs);
                 let default_output = output::refresh_default_output(&pa, &current_output).await;
                 volume::update_volume(&default_output, &output_volume);
+                button.set_button_icon_name({
+                    let volume = default_output.volume.avg().0 as f64 / Volume::NORMAL.0 as f64;
+                    // XXX correct cutoffs?
+                    if default_output.mute {
+                        "audio-volume-muted"
+                    } else if volume > 1.0 {
+                        "audio-volume-overamplified-symbolic"
+                    } else if volume > 0.66 {
+                        "audio-volume-high-symbolic"
+                    } else if volume > 0.33 {
+                        "audio-volume-medium-symbolic"
+                    } else {
+                        "audio-volume-low-symbolic"
+                    }
+                });
             }
         }),
     );

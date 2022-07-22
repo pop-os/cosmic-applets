@@ -2,7 +2,7 @@ use gtk4::glib;
 use libpulse_binding::{
     callbacks::ListResult,
     context::{
-        introspect::{Introspector, SinkInfo},
+        introspect::{Introspector, SinkInfo, SourceInfo},
         subscribe::{Facility, InterestMaskSet, Operation},
         Context, FlagSet, State,
     },
@@ -19,7 +19,32 @@ pub struct DeviceInfo {
     pub name: Option<String>,
     pub description: Option<String>,
     pub volume: ChannelVolumes,
+    pub mute: bool,
     pub index: u32,
+}
+
+impl<'a> From<&SinkInfo<'a>> for DeviceInfo {
+    fn from(info: &SinkInfo<'a>) -> Self {
+        Self {
+            name: info.name.clone().map(|x| x.into_owned()),
+            description: info.description.clone().map(|x| x.into_owned()),
+            volume: info.volume,
+            mute: info.mute,
+            index: info.index,
+        }
+    }
+}
+
+impl<'a> From<&SourceInfo<'a>> for DeviceInfo {
+    fn from(info: &SourceInfo<'a>) -> Self {
+        Self {
+            name: info.name.clone().map(|x| x.into_owned()),
+            description: info.description.clone().map(|x| x.into_owned()),
+            volume: info.volume,
+            mute: info.mute,
+            index: info.index,
+        }
+    }
 }
 
 pub struct ServerInfo {
@@ -105,12 +130,7 @@ impl PA {
         PAFut::new(|waker| {
             self.introspect()
                 .get_sink_info_list(move |result| match result {
-                    ListResult::Item(item) => items.as_mut().unwrap().push(DeviceInfo {
-                        name: item.name.clone().map(|x| x.into_owned()),
-                        description: item.description.clone().map(|x| x.into_owned()),
-                        volume: item.volume,
-                        index: item.index,
-                    }),
+                    ListResult::Item(item) => items.as_mut().unwrap().push(DeviceInfo::from(item)),
                     ListResult::End => waker.wake(Ok(items.take().unwrap())),
                     ListResult::Error => waker.wake(Err(())),
                 })
@@ -130,12 +150,7 @@ impl PA {
             self.introspect()
                 .get_sink_info_by_name(&name, move |result| match result {
                     ListResult::Item(item) => {
-                        sink = Some(DeviceInfo {
-                            name: item.name.clone().map(|x| x.into_owned()),
-                            description: item.description.clone().map(|x| x.into_owned()),
-                            volume: item.volume,
-                            index: item.index,
-                        });
+                        sink = Some(DeviceInfo::from(item));
                     }
                     ListResult::End => waker.wake(sink.take().ok_or(())),
                     ListResult::Error => waker.wake(Err(())),
@@ -158,12 +173,7 @@ impl PA {
         PAFut::new(|waker| {
             self.introspect()
                 .get_source_info_list(move |result| match result {
-                    ListResult::Item(item) => items.as_mut().unwrap().push(DeviceInfo {
-                        name: item.name.clone().map(|x| x.into_owned()),
-                        description: item.description.clone().map(|x| x.into_owned()),
-                        volume: item.volume,
-                        index: item.index,
-                    }),
+                    ListResult::Item(item) => items.as_mut().unwrap().push(DeviceInfo::from(item)),
                     ListResult::End => waker.wake(Ok(items.take().unwrap())),
                     ListResult::Error => waker.wake(Err(())),
                 })
@@ -183,12 +193,7 @@ impl PA {
             self.introspect()
                 .get_source_info_by_name(&name, move |result| match result {
                     ListResult::Item(item) => {
-                        source = Some(DeviceInfo {
-                            name: item.name.clone().map(|x| x.into_owned()),
-                            description: item.description.clone().map(|x| x.into_owned()),
-                            volume: item.volume,
-                            index: item.index,
-                        });
+                        source = Some(DeviceInfo::from(item));
                     }
                     ListResult::End => waker.wake(source.take().ok_or(())),
                     ListResult::Error => waker.wake(Err(())),
