@@ -12,6 +12,7 @@ use pa::PA;
 mod task;
 mod volume;
 mod volume_scale;
+use volume_scale::VolumeScale;
 
 use futures::{channel::mpsc, stream::StreamExt};
 use gtk4::{
@@ -94,7 +95,7 @@ fn app(application: &Application) {
                         append: output_icon = &Image {
                             set_icon_name: Some("audio-speakers-symbolic"),
                         },
-                        append: output_volume = &Scale::with_range(Orientation::Horizontal, 0., 100., 1.) {
+                        append: output_volume = &VolumeScale::new(pa.clone(), true) {
                             set_format_value_func: |_, value| {
                                 format!("{:.0}%", value)
                             },
@@ -108,7 +109,7 @@ fn app(application: &Application) {
                         append: input_icon = &Image {
                             set_icon_name: Some("audio-input-microphone-symbolic"),
                         },
-                        append: input_volume = &Scale::with_range(Orientation::Horizontal, 0., 100., 1.) {
+                        append: input_volume = &VolumeScale::new(pa.clone(), false) {
                             set_format_value_func: |_, value| {
                                 format!("{:.0}%", value)
                             },

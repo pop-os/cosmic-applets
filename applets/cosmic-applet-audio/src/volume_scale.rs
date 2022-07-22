@@ -1,4 +1,4 @@
-use gtk4::{glib, prelude::*};
+use gtk4::{glib, prelude::*, subclass::prelude::*};
 use libpulse_binding::volume::{ChannelVolumes, Volume};
 use std::{
     cell::{Cell, RefCell},
@@ -11,21 +11,41 @@ use crate::PA;
 
 // Component
 
-struct VolumeScale {
-    scale: gtk4::Scale,
+#[derive(Default)]
+pub struct VolumeScaleImp {
     name: Rc<RefCell<Option<String>>>,
 }
 
+#[glib::object_subclass]
+impl ObjectSubclass for VolumeScaleImp {
+    const NAME: &'static str = "VolumeScale";
+    type Type = VolumeScale;
+    type ParentType = gtk4::Scale;
+}
+
+impl ObjectImpl for VolumeScaleImp {}
+impl WidgetImpl for VolumeScaleImp {}
+impl RangeImpl for VolumeScaleImp {}
+impl ScaleImpl for VolumeScaleImp {}
+
+glib::wrapper! {
+    pub struct VolumeScale(ObjectSubclass<VolumeScaleImp>)
+        @extends gtk4::Scale, gtk4::Range, gtk4::Widget,
+        @implements gtk4::Accessible, gtk4::Orientable;
+}
+
 impl VolumeScale {
-    fn new(pa: PA, sink: bool) {
-        let name: Rc<RefCell<Option<String>>> = Rc::new(RefCell::new(None));
-        let scale = gtk4::Scale::with_range(gtk4::Orientation::Horizontal, 0., 100., 1.);
+    pub fn new(pa: PA, sink: bool) -> Self {
+        let scale: VolumeScale = glib::Object::new(&[]).unwrap();
+        scale.set_range(0., 100.);
+        let name = scale.imp().name.clone();
         let updater = Updater::new(move |value: f64| {
             let name = name.clone();
             let pa = pa.clone();
             async move {
                 let mut volumes = ChannelVolumes::default();
-                volumes.set(0, Volume((value * 100.) as _)); // XXX ?
+                let volume = value * (Volume::NORMAL.0 as f64) / 100.;
+                volumes.set(1, Volume(volume as _)); // XXX ?
 
                 let name_ref = name.borrow();
                 if let Some(name) = name_ref.as_deref() {
@@ -45,14 +65,16 @@ impl VolumeScale {
             updater.update(value);
             gtk4::Inhibit(false)
         });
+        scale
     }
 
-    fn set_value(&self, value: f64) {
-        self.scale.set_value(value);
+    pub fn set_volume(&self, volume: &ChannelVolumes) {
+        let value = volume.avg().0 as f64 / (Volume::NORMAL.0 as f64) * 100.;
+        self.set_value(value);
     }
 
-    fn set_name(&self, name: Option<String>) {
-        *self.name.borrow_mut() = name;
+    pub fn set_name(&self, name: Option<String>) {
+        *self.imp().name.borrow_mut() = name;
     }
 }
 

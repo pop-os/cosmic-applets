@@ -1,8 +1,9 @@
-use gtk4::{prelude::*, Scale};
+use gtk4::prelude::*;
 use libpulse_binding::volume::Volume;
 
-use crate::pa::DeviceInfo;
+use crate::{pa::DeviceInfo, volume_scale::VolumeScale};
 
-pub fn update_volume(device: &DeviceInfo, scale: &Scale) {
-    scale.set_value((device.volume.avg().0 as f64 / Volume::NORMAL.0 as f64) * 100.);
+pub fn update_volume(device: &DeviceInfo, scale: &VolumeScale) {
+    scale.set_name(device.name.clone());
+    scale.set_volume(&device.volume);
 }
