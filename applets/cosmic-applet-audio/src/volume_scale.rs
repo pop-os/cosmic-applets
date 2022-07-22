@@ -9,11 +9,11 @@ use std::{
 
 use crate::PA;
 
-// Component
-
 #[derive(Default)]
 pub struct VolumeScaleImp {
     name: Rc<RefCell<Option<String>>>,
+    in_drag: Cell<bool>,
+    volume_to_set: Cell<Option<f64>>,
 }
 
 #[glib::object_subclass]
@@ -23,7 +23,24 @@ impl ObjectSubclass for VolumeScaleImp {
     type ParentType = gtk4::Scale;
 }
 
-impl ObjectImpl for VolumeScaleImp {}
+impl ObjectImpl for VolumeScaleImp {
+    fn constructed(&self, obj: &Self::Type) {
+        obj.set_range(0., 100.);
+
+        let gesture_drag = gtk4::GestureDrag::new();
+        gesture_drag.connect_drag_begin(glib::clone!(@weak obj => move |_, _, _| {
+            obj.imp().in_drag.set(true);
+        }));
+        gesture_drag.connect_drag_end(glib::clone!(@weak obj => move |_, _, _| {
+            obj.imp().in_drag.set(false);
+            if let Some(volume) = obj.imp().volume_to_set.take() {
+                obj.set_value(volume);
+            }
+        }));
+        obj.add_controller(&gesture_drag);
+    }
+}
+
 impl WidgetImpl for VolumeScaleImp {}
 impl RangeImpl for VolumeScaleImp {}
 impl ScaleImpl for VolumeScaleImp {}
@@ -37,7 +54,6 @@ glib::wrapper! {
 impl VolumeScale {
     pub fn new(pa: PA, sink: bool) -> Self {
         let scale: VolumeScale = glib::Object::new(&[]).unwrap();
-        scale.set_range(0., 100.);
         let name = scale.imp().name.clone();
         let updater = Updater::new(move |value: f64| {
             let name = name.clone();
@@ -70,7 +86,12 @@ impl VolumeScale {
 
     pub fn set_volume(&self, volume: &ChannelVolumes) {
         let value = volume.avg().0 as f64 / (Volume::NORMAL.0 as f64) * 100.;
-        self.set_value(value);
+        if self.imp().in_drag.get() {
+            // Don't set value of scale while it is being moved
+            self.imp().volume_to_set.set(Some(value));
+        } else {
+            self.set_value(value);
+        }
     }
 
     pub fn set_name(&self, name: Option<String>) {
