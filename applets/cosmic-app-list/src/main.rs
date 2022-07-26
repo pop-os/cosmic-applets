@@ -191,11 +191,9 @@ fn main() {
                     true
                 }
                 AppListEvent::Remove(top_level) => {
-                    dbg!(cached_results.len());
                     if let Some(i) = cached_results.iter().position(|t| t.toplevel_handle == top_level.toplevel_handle) {
                         cached_results.swap_remove(i);
                     }
-                    dbg!(cached_results.len());
 
                     true
                 }
