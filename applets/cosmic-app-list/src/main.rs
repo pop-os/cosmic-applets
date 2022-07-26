@@ -191,9 +191,12 @@ fn main() {
                     true
                 }
                 AppListEvent::Remove(top_level) => {
+                    dbg!(cached_results.len());
                     if let Some(i) = cached_results.iter().position(|t| t.toplevel_handle == top_level.toplevel_handle) {
                         cached_results.swap_remove(i);
                     }
+                    dbg!(cached_results.len());
+
                     true
                 }
                 AppListEvent::Add(top_level) => {
@@ -233,6 +236,13 @@ fn main() {
                     let mut saved_i: u32 = 0;
                     while let Some(item) = saved_app_model.item(saved_i) {
                         if let Ok(dock_obj) = item.downcast::<DockObject>() {
+                            // clear active if it has some, they will be updated back if they still exist
+                            let prev_active: BoxedWindowList = dock_obj.property("active");
+                            if !prev_active.0.is_empty() {
+                                dock_obj.set_property("active", BoxedWindowList::default().to_value());
+                                saved_app_model.items_changed(saved_i, 0, 0);
+                            }
+                        
                             if let Some(cur_app_info) =
                                 dock_obj.property::<Option<DesktopAppInfo>>("appinfo")
                             {

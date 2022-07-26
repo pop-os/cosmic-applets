@@ -303,7 +303,32 @@ impl Dispatch<ZcosmicToplevelHandleV1, ()> for State {
         match event {
             zcosmic_toplevel_handle_v1::Event::Closed => {
                 if let Some(i) = state.toplevels.iter().position(|t| &t.toplevel_handle == p) {
-                    state.toplevels.remove(i);
+                    let removed_toplevel = state.toplevels.remove(i);
+                    if match state.config.filter_top_levels {
+                        Some(TopLevelFilter::ActiveWorkspace) => {
+                            state
+                                .workspace_groups
+                                .iter()
+                                .find(|g| {
+                                    g.workspaces
+                                        .iter()
+                                        .find(|w| {
+                                            w.states.contains(
+                                                &zcosmic_workspace_handle_v1::State::Active,
+                                            ) && Some(&w.workspace_handle) == removed_toplevel.workspace.as_ref()
+                                        })
+                                        .is_some()
+                                })
+                                .is_some()
+                        }, 
+                        Some(TopLevelFilter::ConfiguredOutput) => {
+                            state.expected_output == removed_toplevel.output
+                        }
+                        _ => true
+                    } {
+                        let tx = TX.get().unwrap().clone();
+                        let _ = tx.send(AppListEvent::Remove(removed_toplevel));
+                    }
                 }
             }
             zcosmic_toplevel_handle_v1::Event::Done => {
