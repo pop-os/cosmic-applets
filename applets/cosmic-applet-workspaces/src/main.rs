@@ -55,7 +55,7 @@ fn main() {
     localize();
     gio::resources_register_include!("compiled.gresource").unwrap();
 
-    let app = gtk4::Application::new(Some(ID), ApplicationFlags::default());
+    let app = gtk4::Application::new(None, ApplicationFlags::default());
 
     app.connect_activate(|app| {
         load_css();

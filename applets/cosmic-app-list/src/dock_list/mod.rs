@@ -8,7 +8,7 @@ use crate::{
     {TX, WAYLAND_TX},
 };
 use cascade::cascade;
-use cosmic_panel_config::{CosmicPanelConfig, PanelAnchor};
+use cosmic_panel_config::{CosmicPanelConfig, PanelAnchor, PanelSize};
 
 use gio::traits::AppLaunchContextExt;
 use gtk4::{
@@ -44,11 +44,10 @@ impl Default for DockListType {
 }
 
 impl DockList {
-    pub fn new(type_: DockListType, config: CosmicPanelConfig) -> Self {
+    pub fn new(type_: DockListType) -> Self {
         let self_: DockList = glib::Object::new(&[]).expect("Failed to create DockList");
         let imp = imp::DockList::from_instance(&self_);
         imp.type_.set(type_).unwrap();
-        imp.config.set(config).unwrap();
         self_.layout();
         //dnd behavior is different for each type, as well as the data in the model
         self_.setup_model();
@@ -500,7 +499,16 @@ impl DockList {
         let popover_menu_index = &imp.popover_menu_index;
         let factory = SignalListItemFactory::new();
         let model = imp.model.get().expect("Failed to get saved app model.");
-        let icon_size = imp.config.get().unwrap().get_applet_icon_size();
+
+        let icon_size = std::env::var("COSMIC_PANEL_SIZE").ok().and_then(|size| match size.parse::<PanelSize>() {
+            Ok(PanelSize::XL) => Some(64),
+            Ok(PanelSize::L) => Some(48),
+            Ok(PanelSize::M) => Some(36),
+            Ok(PanelSize::S) => Some(24),
+            Ok(PanelSize::XS) => Some(18),
+            Err(_) => Some(36),
+        }).unwrap_or(36);
+        
         factory.connect_setup(
             glib::clone!(@weak popover_menu_index, @weak model => move |_, list_item| {
                 let dock_item = DockItem::new(icon_size);

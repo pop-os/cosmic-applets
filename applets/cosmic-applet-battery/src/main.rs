@@ -2,14 +2,13 @@
 // TODO: handle dbus service start/stop?
 
 use futures::prelude::*;
-use gtk4::{glib, prelude::*};
-use relm4::{ComponentParts, ComponentSender, RelmApp, SimpleComponent, WidgetPlus};
+use gtk4::{glib, prelude::*, gio::ApplicationFlags, Application};
+use relm4::{ComponentParts, ComponentSender, RelmApp, SimpleComponent};
 use std::{process::Command, time::Duration};
 
 mod backlight;
 use backlight::{backlight, Backlight, LogindSessionProxy};
 mod power_daemon;
-use power_daemon::PowerDaemonProxy;
 mod upower;
 use upower::UPowerProxy;
 mod upower_device;
@@ -358,6 +357,9 @@ impl SimpleComponent for AppModel {
 }
 
 fn main() {
-    let app = RelmApp::new("com.system76.CosmicAppletBattery");
+    let app = RelmApp::with_app(Application::new(
+        None,
+        ApplicationFlags::default(),
+    ));
     app.run::<AppModel>(());
 }

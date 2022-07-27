@@ -9,7 +9,7 @@ use gtk4::gdk::Display;
 use gtk4::{glib, prelude::*, CssProvider, StyleContext};
 use once_cell::sync::OnceCell;
 use std::collections::BTreeMap;
-use utils::{block_on, AppListEvent, BoxedWindowList, DEST, PATH};
+use utils::{AppListEvent, BoxedWindowList};
 use wayland::{Toplevel, ToplevelEvent};
 
 mod apps_container;
@@ -56,7 +56,7 @@ fn main() {
     localize();
 
     gio::resources_register_include!("compiled.gresource").unwrap();
-    let app = gtk4::Application::new(Some(ID), ApplicationFlags::default());
+    let app = gtk4::Application::new(None, ApplicationFlags::default());
 
     app.connect_activate(|app| {
         load_css();

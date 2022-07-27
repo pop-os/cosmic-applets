@@ -37,7 +37,7 @@ static RT: Lazy<Runtime> = Lazy::new(|| Runtime::new().expect("failed to build t
 
 fn main() {
     let application = Application::new(
-        Some("com.system76.cosmic.applets.audio"),
+        None,
         ApplicationFlags::default(),
     );
     application.connect_activate(app);
