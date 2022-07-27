@@ -15,7 +15,7 @@ static RT: Lazy<Runtime> = Lazy::new(|| Runtime::new().expect("failed to build t
 
 fn main() {
     let application = gtk4::Application::new(
-        Some("com.system76.cosmic.applets.power"),
+        None,
         ApplicationFlags::default(),
     );
     application.connect_activate(build_ui);
