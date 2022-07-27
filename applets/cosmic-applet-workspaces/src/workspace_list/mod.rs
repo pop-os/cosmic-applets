@@ -7,15 +7,14 @@ use crate::workspace_button::WorkspaceButton;
 use crate::workspace_object::WorkspaceObject;
 use crate::TX;
 use cascade::cascade;
-use cosmic_panel_config::CosmicPanelConfig;
+use cosmic_panel_config::PanelAnchor;
+use cosmic_panel_config::PanelSize;
 use gtk4::builders::EventControllerScrollBuilder;
 use gtk4::EventControllerScrollFlags;
 use gtk4::Inhibit;
 use gtk4::ListView;
-use gtk4::Orientation;
 use gtk4::SignalListItemFactory;
 use gtk4::{gio, glib, prelude::*, subclass::prelude::*};
-use tokio::sync::mpsc::Sender;
 
 mod imp;
 
@@ -26,10 +25,9 @@ glib::wrapper! {
 }
 
 impl WorkspaceList {
-    pub fn new(config: CosmicPanelConfig) -> Self {
+    pub fn new() -> Self {
         let self_: WorkspaceList = glib::Object::new(&[]).expect("Failed to create WorkspaceList");
         let imp = imp::WorkspaceList::from_instance(&self_);
-        imp.config.set(config).unwrap();
         self_.layout();
         //dnd behavior is different for each type, as well as the data in the model
         self_.setup_model();
@@ -45,7 +43,7 @@ impl WorkspaceList {
 
     fn layout(&self) {
         let imp = imp::WorkspaceList::from_instance(self);
-        let anchor = imp.config.get().unwrap().anchor;
+        let anchor = std::env::var("COSMIC_PANEL_ANCHOR").ok().and_then(|anchor| anchor.parse::<PanelAnchor>().ok()).unwrap_or_default();
 
         let list_view = cascade! {
             ListView::default();
@@ -105,7 +103,7 @@ impl WorkspaceList {
         let imp = imp::WorkspaceList::from_instance(self);
         let factory = SignalListItemFactory::new();
         let model = imp.model.get().expect("Failed to get saved app model.");
-        let icon_size = imp.config.get().unwrap().get_applet_icon_size();
+
         factory.connect_setup(glib::clone!(@weak model => move |_, list_item| {
             let workspace_button = WorkspaceButton::new();
             list_item.set_child(Some(&workspace_button));

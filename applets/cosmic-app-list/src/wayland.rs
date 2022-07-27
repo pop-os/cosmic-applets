@@ -1,7 +1,7 @@
 use crate::config::AppListConfig;
 use crate::{config::TopLevelFilter, utils::AppListEvent, wayland_source::WaylandSource, TX};
 use calloop::channel::*;
-use cosmic_panel_config::CosmicPanelConfig;
+use cosmic_panel_config::{CosmicPanelOuput};
 use cosmic_protocols::{
     toplevel_info::v1::client::{
         zcosmic_toplevel_handle_v1::{self, ZcosmicToplevelHandleV1},
@@ -52,12 +52,12 @@ pub fn spawn_toplevels() -> SyncSender<ToplevelEvent> {
         .and_then(|s| s.map(|s| Connection::from_socket(s).map_err(anyhow::Error::msg)))
     {
         std::thread::spawn(move || {
-            let output = match config.filter_top_levels {
-                Some(TopLevelFilter::ConfiguredOutput) => {
-                    CosmicPanelConfig::load_from_env().ok().map(|c| c.output)
-                }
+            let output = std::env::var("COSMIC_PANEL_OUTPUT").ok().and_then(|size| match size.parse::<CosmicPanelOuput>() {
+                Ok(CosmicPanelOuput::Name(n)) => Some(n),
+                // TODO handle Active & panic if the space is still configured for All instead of being assigned a named output
                 _ => None,
-            };
+            });
+
             let mut event_loop = calloop::EventLoop::<State>::try_new().unwrap();
             let loop_handle = event_loop.handle();
             let event_queue = conn.new_event_queue::<State>();

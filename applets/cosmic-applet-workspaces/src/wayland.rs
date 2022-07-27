@@ -1,9 +1,9 @@
 use crate::{
-    utils::{Activate, WorkspaceEvent},
+    utils::WorkspaceEvent,
     wayland_source::WaylandSource,
 };
 use calloop::channel::*;
-use cosmic_panel_config::CosmicPanelConfig;
+use cosmic_panel_config::CosmicPanelOuput;
 use cosmic_protocols::workspace::v1::client::{
     zcosmic_workspace_group_handle_v1::{self, ZcosmicWorkspaceGroupHandleV1},
     zcosmic_workspace_handle_v1::{self, ZcosmicWorkspaceHandleV1},
@@ -11,18 +11,15 @@ use cosmic_protocols::workspace::v1::client::{
 };
 use gtk4::glib;
 use std::{
-    collections::HashMap, env, hash::Hash, mem, os::unix::net::UnixStream, path::PathBuf,
-    sync::Arc, time::Duration,
+    env, os::unix::net::UnixStream, path::PathBuf, time::Duration,
 };
-use tokio::sync::mpsc;
-use wayland_backend::client::ObjectData;
 use wayland_client::{
     event_created_child,
     protocol::{
         wl_output::{self, WlOutput},
         wl_registry,
     },
-    ConnectError, Proxy,
+    ConnectError,
 };
 use wayland_client::{Connection, Dispatch, QueueHandle};
 
@@ -42,9 +39,12 @@ pub fn spawn_workspaces(tx: glib::Sender<State>) -> SyncSender<WorkspaceEvent> {
         .and_then(|s| s.map(|s| Connection::from_socket(s).map_err(anyhow::Error::msg)))
     {
         std::thread::spawn(move || {
-            let output = CosmicPanelConfig::load_from_env()
-                .unwrap_or_default()
-                .output;
+            let output = std::env::var("COSMIC_PANEL_OUTPUT").ok().and_then(|size| match size.parse::<CosmicPanelOuput>() {
+                Ok(CosmicPanelOuput::Name(n)) => Some(n),
+                // TODO handle Active & panic if the space is still configured for All instead of being assigned a named output
+                _ => Some("".to_string()),
+            }).unwrap_or_default();
+
             let mut event_loop = calloop::EventLoop::<State>::try_new().unwrap();
             let loop_handle = event_loop.handle();
             let event_queue = conn.new_event_queue::<State>();

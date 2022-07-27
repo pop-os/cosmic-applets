@@ -6,7 +6,7 @@ use gtk4::gdk::pango::EllipsizeMode;
 use gtk4::subclass::prelude::*;
 use gtk4::{gdk, gio, glib};
 use gtk4::{prelude::*, Label};
-use gtk4::{Box, Button, Image, ListBox, Orientation};
+use gtk4::{Box, Button, ListBox, Orientation};
 
 use crate::dock_object::DockObject;
 use crate::utils::AppListEvent;
@@ -25,7 +25,6 @@ glib::wrapper! {
 impl DockPopover {
     pub fn new() -> Self {
         let self_: DockPopover = glib::Object::new(&[]).expect("Failed to create DockList");
-        let imp = imp::DockPopover::from_instance(&self_);
         self_.layout();
         //dnd behavior is different for each type, as well as the data in the model
         self_

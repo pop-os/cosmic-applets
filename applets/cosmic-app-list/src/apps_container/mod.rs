@@ -29,9 +29,7 @@ impl AppsContainer {
             // ..add_css_class("dock_container");
         };
 
-        let config = CosmicPanelConfig::load_from_env().unwrap_or_default();
-
-        let saved_app_list_view = DockList::new(DockListType::Saved, config.clone());
+        let saved_app_list_view = DockList::new(DockListType::Saved);
         self_.append(&saved_app_list_view);
 
         let separator_container = cascade! {
@@ -49,21 +47,15 @@ impl AppsContainer {
             ..add_css_class("dock_separator");
         };
         separator_container.append(&separator);
-        let active_app_list_view = DockList::new(DockListType::Active, config.clone());
+        let active_app_list_view = DockList::new(DockListType::Active);
         self_.append(&active_app_list_view);
-        // self_.connect_orientation_notify(glib::clone!(@weak separator => move |c| {
-        //     dbg!(c.orientation());
-        //     separator.set_orientation(match c.orientation() {
-        //         Orientation::Horizontal => Orientation::Vertical,
-        //         _ => Orientation::Horizontal,
-        //     });
-        // }));
 
         imp.saved_list.set(saved_app_list_view).unwrap();
         imp.active_list.set(active_app_list_view).unwrap();
         // Setup
         self_.setup_callbacks();
-        self_.set_position(config.anchor);
+        let anchor = std::env::var("COSMIC_PANEL_ANCHOR").ok().and_then(|anchor| anchor.parse::<PanelAnchor>().ok()).unwrap_or_default();
+        self_.set_position(anchor);
 
         Self::setup_callbacks(&self_);
 

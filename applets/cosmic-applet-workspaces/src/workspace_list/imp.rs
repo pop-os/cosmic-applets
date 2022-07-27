@@ -13,7 +13,6 @@ use crate::utils::Activate;
 pub struct WorkspaceList {
     pub list_view: OnceCell<ListView>,
     pub model: OnceCell<gio::ListStore>,
-    pub config: OnceCell<CosmicPanelConfig>,
 }
 
 #[glib::object_subclass]
