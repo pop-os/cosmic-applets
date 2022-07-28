@@ -322,7 +322,7 @@ impl Notifications {
             };
             let _ = notifications.inner().connection.set(connection.clone());
 
-            if let Some(event) = receiver.next().await {
+            while let Some(event) = receiver.next().await {
                 match event {
                     Event::NotificationReceived(id) => {
                         notifications.emit_by_name::<()>("notification-received", &[&id]);
