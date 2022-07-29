@@ -18,7 +18,11 @@ impl StatusNotifierWatcher {
         #[zbus(header)] hdr: MessageHeader<'_>,
         #[zbus(signal_context)] ctxt: SignalContext<'_>,
     ) {
-        let service = format!("{}{}", hdr.sender().unwrap().unwrap(), service);
+        let service = if service.starts_with('/') {
+            format!("{}{}", hdr.sender().unwrap().unwrap(), service)
+        } else {
+            service.to_string()
+        };
         Self::StatusNotifierItemRegistered(&ctxt, &service)
             .await
             .unwrap();
