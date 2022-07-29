@@ -31,20 +31,19 @@ impl WorkspaceButton {
         let is_active = obj.active() == 0;
         let id = obj.id();
         let new_button = ToggleButton::with_label(&id);
-        new_button.set_sensitive(!is_active);
-        if obj.active() == 0 {
-            new_button.add_css_class("active");
-        } else if obj.active() == 1 {
+
+        if obj.active() == 1 {
             new_button.add_css_class("alert");
+        } else if obj.active() == 0 {
+            new_button.add_css_class("active");
         } else {
             new_button.add_css_class("inactive");
         }
+
         self.append(&new_button);
         new_button.connect_clicked(move |_| {
             let id_clone = id.clone();
-            if !is_active {
-                let _ = TX.get().unwrap().send(WorkspaceEvent::Activate(id_clone));
-            }
+            let _ = TX.get().unwrap().send(WorkspaceEvent::Activate(id_clone));
         });
 
         imp.button.replace(new_button);

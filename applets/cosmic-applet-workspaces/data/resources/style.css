@@ -60,7 +60,7 @@ button.inactive:hover {
     padding: 0px;
     background-color: darker(@view_bg_color);
     background-image: none;
-    color: @view_bg_color;
+    color: @view_fg_color;
     border-color: transparent;
     outline-color: transparent;
 }
