@@ -445,7 +445,6 @@ dependencies = [
  "once_cell",
  "pretty_env_logger",
  "rust-embed",
- "tokio",
  "wayland-backend",
  "wayland-client 0.30.0-beta.8",
 ]

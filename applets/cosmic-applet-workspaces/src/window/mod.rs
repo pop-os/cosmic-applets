@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0-only
 
-use crate::{fl, utils::Activate, wayland::State, workspace_list::WorkspaceList};
+use crate::{fl, wayland::State, workspace_list::WorkspaceList};
 use cascade::cascade;
-use cosmic_panel_config::CosmicPanelConfig;
 use gtk4::{
     gio,
     glib::{self, Object},

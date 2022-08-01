@@ -1,6 +1,6 @@
 mod imp;
 
-use crate::{utils::WorkspaceEvent, workspace_object::WorkspaceObject, Activate, TX};
+use crate::{utils::WorkspaceEvent, workspace_object::WorkspaceObject, TX};
 use glib::Object;
 use gtk4::{glib, prelude::*, subclass::prelude::*, ToggleButton};
 

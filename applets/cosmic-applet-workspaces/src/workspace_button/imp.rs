@@ -1,8 +1,5 @@
-use crate::Activate;
 use gtk4::{glib, subclass::prelude::*, ToggleButton};
-use once_cell::sync::OnceCell;
 use std::{cell::RefCell, rc::Rc};
-use tokio::sync::mpsc;
 
 // Object holding the state
 #[derive(Default)]

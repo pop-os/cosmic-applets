@@ -1,4 +1,4 @@
-use std::{env, path::PathBuf, process::Command};
+use std::{process::Command};
 
 fn main() {
     if let Some(output) = Command::new("git")

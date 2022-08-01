@@ -5,7 +5,6 @@ use std::path::PathBuf;
 use gtk4::glib;
 use std::future::Future;
 
-pub type Activate = String;
 
 #[derive(Debug, Clone)]
 pub enum WorkspaceEvent {

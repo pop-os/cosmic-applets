@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0-only
 
-use crate::utils::Activate;
 use crate::utils::WorkspaceEvent;
 use crate::wayland::State;
 use crate::workspace_button::WorkspaceButton;
@@ -8,7 +7,6 @@ use crate::workspace_object::WorkspaceObject;
 use crate::TX;
 use cascade::cascade;
 use cosmic_panel_config::PanelAnchor;
-use cosmic_panel_config::PanelSize;
 use gtk4::builders::EventControllerScrollBuilder;
 use gtk4::EventControllerScrollFlags;
 use gtk4::Inhibit;

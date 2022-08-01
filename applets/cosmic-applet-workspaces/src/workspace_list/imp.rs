@@ -1,13 +1,9 @@
 // SPDX-License-Identifier: MPL-2.0-only
 
-use cosmic_panel_config::CosmicPanelConfig;
 use gtk4::subclass::prelude::*;
-use gtk4::{gio, glib, EventControllerScroll};
+use gtk4::{gio, glib};
 use gtk4::{Box, ListView};
 use once_cell::sync::OnceCell;
-use tokio::sync::mpsc;
-
-use crate::utils::Activate;
 
 #[derive(Debug, Default)]
 pub struct WorkspaceList {
