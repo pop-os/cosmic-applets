@@ -5,6 +5,7 @@ extern crate relm4_macros;
 
 pub mod session_manager;
 pub mod ui;
+pub mod cosmic_session;
 
 use gtk4::{gio::ApplicationFlags, prelude::*, Align, Button, Label, Orientation, Separator};
 use once_cell::sync::Lazy;

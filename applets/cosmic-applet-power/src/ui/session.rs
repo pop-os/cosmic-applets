@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use crate::{session_manager::SessionManagerProxy, RT};
+use crate::{cosmic_session::CosmicSessionProxy, session_manager::SessionManagerProxy, RT};
 use gtk4::{prelude::*, Align, Button, Image, Label, Orientation};
 use logind_zbus::{
     manager::ManagerProxy,
@@ -35,9 +35,23 @@ async fn lock_screen() -> zbus::Result<()> {
 }
 
 async fn log_out() -> zbus::Result<()> {
+    let session_type = std::env::var("XDG_CURRENT_DESKTOP").ok();
     let connection = Connection::session().await?;
-    let manager_proxy = SessionManagerProxy::new(&connection).await?;
-    manager_proxy.logout(0).await
+    match session_type.as_ref().map(|s| s.trim()) {
+        Some("pop:COSMIC") => {
+            let cosmic_session = CosmicSessionProxy::new(&connection).await?;
+            cosmic_session.exit().await?;
+        }
+        Some("pop:GNOME") => {
+            let manager_proxy = SessionManagerProxy::new(&connection).await?;
+            manager_proxy.logout(0).await?;
+        }
+        Some(desktop) => {
+            eprintln!("unknown XDG_CURRENT_DESKTOP: {desktop}")
+        }
+        None => {}
+    }
+    Ok(())
 }
 
 pub fn build() -> gtk4::Box {
