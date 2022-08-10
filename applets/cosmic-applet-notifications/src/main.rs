@@ -12,8 +12,9 @@ mod notifications;
 use notifications::Notifications;
 
 fn main() {
-    gtk4::init().unwrap();
-
+    let _ = gtk4::init();
+    adw::init();
+    
     // XXX Implement DBus service somewhere other than applet?
     let notifications = Notifications::new();
 

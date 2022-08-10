@@ -7,6 +7,7 @@ license = "GPL-3.0-or-later"
 [dependencies]
 futures-util = "0.3.21"
 gtk4 = { git = "https://github.com/gtk-rs/gtk4-rs" }
+adw = { git = "https://gitlab.gnome.org/World/Rust/libadwaita-rs", package = "libadwaita"}
 libcosmic-applet = { path = "../../libcosmic-applet" }
 logind-zbus = "3.0.1"
 nix = "0.24.1"

@@ -9,6 +9,7 @@ cosmic-panel-config = {git = "https://github.com/pop-os/cosmic-panel", features 
 cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols", default-features = false, features = ["client"] }
 cascade = "1.0.0"
 gtk4 = { git = "https://github.com/gtk-rs/gtk4-rs", features = ["v4_4"] }
+adw = { git = "https://gitlab.gnome.org/World/Rust/libadwaita-rs", package = "libadwaita"}
 gio = { git = "https://github.com/gtk-rs/gtk-rs-core" }
 libcosmic = { git = "https://github.com/pop-os/libcosmic", branch = "relm4-next" }
 relm4-macros = { git = "https://github.com/Relm4/Relm4.git", branch = "next" }

@@ -288,6 +288,7 @@ dependencies = [
  "gtk4",
  "i18n-embed",
  "i18n-embed-fl",
+ "libadwaita",
  "libcosmic",
  "log",
  "nix 0.24.2",
@@ -312,6 +313,7 @@ dependencies = [
  "futures",
  "futures-util",
  "gtk4",
+ "libadwaita",
  "libcosmic-applet",
  "libcosmic-widgets",
  "libpulse-binding",
@@ -331,6 +333,7 @@ version = "0.1.0"
 dependencies = [
  "futures",
  "gtk4",
+ "libadwaita",
  "libcosmic-applet",
  "relm4",
  "zbus",
@@ -341,6 +344,7 @@ name = "cosmic-applet-graphics"
 version = "0.1.0"
 dependencies = [
  "gtk4",
+ "libadwaita",
  "libcosmic-applet",
  "once_cell",
  "relm4-macros",
@@ -356,6 +360,7 @@ dependencies = [
  "futures-util",
  "gtk4",
  "itertools",
+ "libadwaita",
  "libcosmic-applet",
  "libcosmic-widgets",
  "once_cell",
@@ -372,6 +377,7 @@ dependencies = [
  "cascade",
  "futures",
  "gtk4",
+ "libadwaita",
  "libcosmic-applet",
  "once_cell",
  "relm4-macros",
@@ -387,6 +393,7 @@ version = "0.1.0"
 dependencies = [
  "futures-util",
  "gtk4",
+ "libadwaita",
  "libcosmic-applet",
  "logind-zbus",
  "nix 0.24.2",
@@ -403,6 +410,7 @@ dependencies = [
  "cascade",
  "futures",
  "gtk4",
+ "libadwaita",
  "libcosmic-applet",
  "once_cell",
  "serde",
@@ -419,6 +427,7 @@ dependencies = [
  "chrono",
  "futures",
  "gtk4",
+ "libadwaita",
  "libcosmic-applet",
  "once_cell",
  "serde",
@@ -440,6 +449,7 @@ dependencies = [
  "gtk4",
  "i18n-embed",
  "i18n-embed-fl",
+ "libadwaita",
  "log",
  "nix 0.24.2",
  "once_cell",
@@ -473,6 +483,7 @@ dependencies = [
  "gtk4",
  "i18n-embed",
  "i18n-embed-fl",
+ "libadwaita",
  "once_cell",
  "pretty_env_logger",
  "rust-embed",
@@ -1489,6 +1500,37 @@ name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
+
+[[package]]
+name = "libadwaita"
+version = "0.2.0"
+source = "git+https://gitlab.gnome.org/World/Rust/libadwaita-rs#01881b0c9f67ed5a351b78fcd9b172fee246fdd4"
+dependencies = [
+ "futures-channel",
+ "gdk-pixbuf",
+ "gdk4",
+ "gio 0.16.0",
+ "glib 0.16.0",
+ "gtk4",
+ "libadwaita-sys",
+ "libc",
+ "once_cell",
+ "pango",
+]
+
+[[package]]
+name = "libadwaita-sys"
+version = "0.2.0"
+source = "git+https://gitlab.gnome.org/World/Rust/libadwaita-rs#01881b0c9f67ed5a351b78fcd9b172fee246fdd4"
+dependencies = [
+ "gdk4-sys",
+ "gio-sys 0.16.0",
+ "glib-sys 0.16.0",
+ "gobject-sys 0.16.0",
+ "gtk4-sys",
+ "libc",
+ "system-deps",
+]
 
 [[package]]
 name = "libc"
