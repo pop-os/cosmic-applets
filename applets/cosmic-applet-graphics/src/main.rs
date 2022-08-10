@@ -41,8 +41,9 @@ fn row_clicked(_: &ListBox, row: &ListBoxRow) {
 }
 
 fn main() {
-    gtk4::init().unwrap();
-
+    let _ = gtk4::init();
+    adw::init();
+    
     let provider = gtk4::CssProvider::new();
     provider.load_from_data(include_bytes!("style.css"));
     gtk4::StyleContext::add_provider_for_display(

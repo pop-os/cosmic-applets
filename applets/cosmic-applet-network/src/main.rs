@@ -14,8 +14,9 @@ use tokio::runtime::Runtime;
 static RT: Lazy<Runtime> = Lazy::new(|| Runtime::new().expect("failed to build tokio runtime"));
 
 fn main() {
-    gtk4::init().unwrap();
-
+    let _ = gtk4::init();
+    adw::init();
+    
     view! {
         window = libcosmic_applet::AppletWindow {
             set_title: Some("COSMIC Network Applet"),

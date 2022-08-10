@@ -357,6 +357,9 @@ impl SimpleComponent for AppModel {
 }
 
 fn main() {
+    let _ = gtk4::init();
+    adw::init();
+    
     let app = RelmApp::with_app(Application::new(
         None,
         ApplicationFlags::default(),

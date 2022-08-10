@@ -45,6 +45,9 @@ fn load_css() {
 }
 
 fn main() {
+    let _ = gtk4::init();
+    adw::init();
+    
     // Initialize logger
     pretty_env_logger::init();
     glib::set_application_name(ID);

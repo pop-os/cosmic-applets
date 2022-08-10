@@ -10,8 +10,9 @@ mod status_notifier_watcher;
 use status_area::StatusArea;
 
 fn main() {
-    gtk4::init().unwrap();
-
+    let _ = gtk4::init();
+    adw::init();
+    
     // XXX Implement DBus service somewhere other than applet?
     glib::MainContext::default().spawn_local(status_notifier_watcher::start());
 

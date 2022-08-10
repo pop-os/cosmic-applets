@@ -36,6 +36,8 @@ use tokio::runtime::Runtime;
 static RT: Lazy<Runtime> = Lazy::new(|| Runtime::new().expect("failed to build tokio runtime"));
 
 fn main() {
+    let _ = gtk4::init();
+    adw::init();
     let application = Application::new(
         None,
         ApplicationFlags::default(),
