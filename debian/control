@@ -8,6 +8,7 @@ Build-Depends:
   rustc (>=1.57),
   cargo,
   libgtk-4-dev,
+  libadwaita-1-dev,
   libpulse-dev,
   just,
   pkg-config,
