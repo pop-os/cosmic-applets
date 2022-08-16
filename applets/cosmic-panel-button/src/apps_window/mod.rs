@@ -41,14 +41,17 @@ impl CosmicPanelAppButtonWindow {
                 Button::new();
                 ..add_css_class("apps");
             };
-            let pixels = std::env::var("COSMIC_PANEL_SIZE").ok().and_then(|size| match size.parse::<PanelSize>() {
-                Ok(PanelSize::XL) => Some(64),
-                Ok(PanelSize::L) => Some(48),
-                Ok(PanelSize::M) => Some(36),
-                Ok(PanelSize::S) => Some(24),
-                Ok(PanelSize::XS) => Some(18),
-                Err(_) => Some(36),
-            }).unwrap_or(36);
+            let pixels = std::env::var("COSMIC_PANEL_SIZE")
+                .ok()
+                .and_then(|size| match size.parse::<PanelSize>() {
+                    Ok(PanelSize::XL) => Some(64),
+                    Ok(PanelSize::L) => Some(48),
+                    Ok(PanelSize::M) => Some(36),
+                    Ok(PanelSize::S) => Some(24),
+                    Ok(PanelSize::XS) => Some(18),
+                    Err(_) => Some(36),
+                })
+                .unwrap_or(36);
             let icon = apps_desktop_info.icon().unwrap_or_else(|| {
                 Icon::for_string("image-missing").expect("Failed to set default icon")
             });

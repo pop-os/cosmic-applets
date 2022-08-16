@@ -14,15 +14,14 @@ use tokio::runtime::Runtime;
 static RT: Lazy<Runtime> = Lazy::new(|| Runtime::new().expect("failed to build tokio runtime"));
 
 fn main() {
-    let _ = gtk4::init();
-    adw::init();
-    
+    let _ = libcosmic::init();
+
     view! {
         window = libcosmic_applet::AppletWindow {
             set_title: Some("COSMIC Network Applet"),
             #[wrap(Some)]
             set_child: button = &libcosmic_applet::AppletButton {
-                set_button_icon_name: "preferences-system-network",
+                set_button_icon_name: "network-workgroup-symbolic",
                 #[wrap(Some)]
                 set_popover_child: main_box = &gtk4::Box {
                     set_orientation: Orientation::Vertical,

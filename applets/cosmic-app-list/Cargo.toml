@@ -10,8 +10,8 @@ cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols", default
 cascade = "1.0.0"
 gtk4 = { git = "https://github.com/gtk-rs/gtk4-rs", features = ["v4_4"] }
 adw = { git = "https://gitlab.gnome.org/World/Rust/libadwaita-rs", package = "libadwaita"}
+libcosmic = { git = "https://github.com/pop-os/libcosmic", default-features = false }
 gio = { git = "https://github.com/gtk-rs/gtk-rs-core" }
-libcosmic = { git = "https://github.com/pop-os/libcosmic", branch = "relm4-next" }
 relm4-macros = { git = "https://github.com/Relm4/Relm4.git", branch = "next" }
 serde_json = "1.0.78"
 futures = "0.3.19"
