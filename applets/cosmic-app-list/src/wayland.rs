@@ -1,7 +1,7 @@
 use crate::config::AppListConfig;
 use crate::{config::TopLevelFilter, utils::AppListEvent, wayland_source::WaylandSource, TX};
 use calloop::channel::*;
-use cosmic_panel_config::{CosmicPanelOuput};
+use cosmic_panel_config::CosmicPanelOuput;
 use cosmic_protocols::{
     toplevel_info::v1::client::{
         zcosmic_toplevel_handle_v1::{self, ZcosmicToplevelHandleV1},
@@ -52,10 +52,12 @@ pub fn spawn_toplevels() -> SyncSender<ToplevelEvent> {
         .and_then(|s| s.map(|s| Connection::from_socket(s).map_err(anyhow::Error::msg)))
     {
         std::thread::spawn(move || {
-            let output = std::env::var("COSMIC_PANEL_OUTPUT").ok().and_then(|size| match size.parse::<CosmicPanelOuput>() {
-                Ok(CosmicPanelOuput::Name(n)) => Some(n),
-                // TODO handle Active & panic if the space is still configured for All instead of being assigned a named output
-                _ => None,
+            let output = std::env::var("COSMIC_PANEL_OUTPUT").ok().and_then(|size| {
+                match size.parse::<CosmicPanelOuput>() {
+                    Ok(CosmicPanelOuput::Name(n)) => Some(n),
+                    // TODO handle Active & panic if the space is still configured for All instead of being assigned a named output
+                    _ => None,
+                }
             });
 
             let mut event_loop = calloop::EventLoop::<State>::try_new().unwrap();
@@ -305,26 +307,25 @@ impl Dispatch<ZcosmicToplevelHandleV1, ()> for State {
                 if let Some(i) = state.toplevels.iter().position(|t| &t.toplevel_handle == p) {
                     let removed_toplevel = state.toplevels.remove(i);
                     if match state.config.filter_top_levels {
-                        Some(TopLevelFilter::ActiveWorkspace) => {
-                            state
-                                .workspace_groups
-                                .iter()
-                                .find(|g| {
-                                    g.workspaces
-                                        .iter()
-                                        .find(|w| {
-                                            w.states.contains(
-                                                &zcosmic_workspace_handle_v1::State::Active,
-                                            ) && Some(&w.workspace_handle) == removed_toplevel.workspace.as_ref()
-                                        })
-                                        .is_some()
-                                })
-                                .is_some()
-                        }, 
+                        Some(TopLevelFilter::ActiveWorkspace) => state
+                            .workspace_groups
+                            .iter()
+                            .find(|g| {
+                                g.workspaces
+                                    .iter()
+                                    .find(|w| {
+                                        w.states
+                                            .contains(&zcosmic_workspace_handle_v1::State::Active)
+                                            && Some(&w.workspace_handle)
+                                                == removed_toplevel.workspace.as_ref()
+                                    })
+                                    .is_some()
+                            })
+                            .is_some(),
                         Some(TopLevelFilter::ConfiguredOutput) => {
                             state.expected_output == removed_toplevel.output
                         }
-                        _ => true
+                        _ => true,
                     } {
                         let tx = TX.get().unwrap().clone();
                         let _ = tx.send(AppListEvent::Remove(removed_toplevel));

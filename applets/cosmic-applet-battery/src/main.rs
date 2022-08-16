@@ -2,9 +2,11 @@
 // TODO: handle dbus service start/stop?
 
 use futures::prelude::*;
-use gtk4::{glib, prelude::*, gio::ApplicationFlags, Application};
-use relm4::{ComponentParts, ComponentSender, RelmApp, SimpleComponent};
-use std::{process::Command, time::Duration};
+use gtk4::{gio::ApplicationFlags, glib, prelude::*, Application};
+use relm4::{
+    component::ComponentSenderInner, ComponentParts, ComponentSender, RelmApp, SimpleComponent,
+};
+use std::{process::Command, sync::Arc, time::Duration};
 
 mod backlight;
 use backlight::{backlight, Backlight, LogindSessionProxy};
@@ -198,7 +200,7 @@ impl SimpleComponent for AppModel {
     fn init(
         _params: Self::InitParams,
         root: &Self::Root,
-        sender: &ComponentSender<Self>,
+        sender: Arc<ComponentSenderInner<AppMsg, (), ()>>,
     ) -> ComponentParts<Self> {
         let mut model = AppModel {
             icon_name: "battery-symbolic".to_string(),
@@ -253,7 +255,7 @@ impl SimpleComponent for AppModel {
         ComponentParts { model, widgets }
     }
 
-    fn update(&mut self, msg: Self::Input, sender: &ComponentSender<Self>) {
+    fn update(&mut self, msg: Self::Input, sender: Arc<ComponentSenderInner<AppMsg, (), ()>>) {
         match msg {
             AppMsg::SetDisplayBrightness(value) => {
                 self.display_brightness = value;
@@ -357,12 +359,8 @@ impl SimpleComponent for AppModel {
 }
 
 fn main() {
-    let _ = gtk4::init();
-    adw::init();
-    
-    let app = RelmApp::with_app(Application::new(
-        None,
-        ApplicationFlags::default(),
-    ));
+    let _ = libcosmic::init();
+
+    let app = RelmApp::with_app(Application::new(None, ApplicationFlags::default()));
     app.run::<AppModel>(());
 }

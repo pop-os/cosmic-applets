@@ -11,7 +11,7 @@ use gtk4::{
     prelude::*,
     Image, ListBox, ListBoxRow, Separator,
 };
-use libcosmic_widgets::{relm4::RelmContainerExt, LabeledItem};
+use libcosmic::widgets::{relm4::RelmContainerExt, LabeledItem};
 use std::{
     cell::RefCell,
     collections::{BTreeMap, HashMap},

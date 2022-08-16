@@ -1,7 +1,4 @@
-use crate::{
-    utils::WorkspaceEvent,
-    wayland_source::WaylandSource,
-};
+use crate::{utils::WorkspaceEvent, wayland_source::WaylandSource};
 use calloop::channel::*;
 use cosmic_panel_config::CosmicPanelOuput;
 use cosmic_protocols::workspace::v1::client::{
@@ -10,9 +7,7 @@ use cosmic_protocols::workspace::v1::client::{
     zcosmic_workspace_manager_v1::{self, ZcosmicWorkspaceManagerV1},
 };
 use gtk4::glib;
-use std::{
-    env, os::unix::net::UnixStream, path::PathBuf, time::Duration,
-};
+use std::{env, os::unix::net::UnixStream, path::PathBuf, time::Duration};
 use wayland_client::{
     event_created_child,
     protocol::{
@@ -39,11 +34,14 @@ pub fn spawn_workspaces(tx: glib::Sender<State>) -> SyncSender<WorkspaceEvent> {
         .and_then(|s| s.map(|s| Connection::from_socket(s).map_err(anyhow::Error::msg)))
     {
         std::thread::spawn(move || {
-            let output = std::env::var("COSMIC_PANEL_OUTPUT").ok().and_then(|size| match size.parse::<CosmicPanelOuput>() {
-                Ok(CosmicPanelOuput::Name(n)) => Some(n),
-                // TODO handle Active & panic if the space is still configured for All instead of being assigned a named output
-                _ => Some("".to_string()),
-            }).unwrap_or_default();
+            let output = std::env::var("COSMIC_PANEL_OUTPUT")
+                .ok()
+                .and_then(|size| match size.parse::<CosmicPanelOuput>() {
+                    Ok(CosmicPanelOuput::Name(n)) => Some(n),
+                    // TODO handle Active & panic if the space is still configured for All instead of being assigned a named output
+                    _ => Some("".to_string()),
+                })
+                .unwrap_or_default();
 
             let mut event_loop = calloop::EventLoop::<State>::try_new().unwrap();
             let loop_handle = event_loop.handle();

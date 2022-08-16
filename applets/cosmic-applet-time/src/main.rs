@@ -6,9 +6,8 @@ mod time_button;
 use time_button::TimeButton;
 
 fn main() {
-    let _ = gtk4::init();
-    adw::init();
-    
+    let _ = libcosmic::init();
+
     cascade! {
         libcosmic_applet::AppletWindow::new();
         ..set_child(Some(&TimeButton::new()));

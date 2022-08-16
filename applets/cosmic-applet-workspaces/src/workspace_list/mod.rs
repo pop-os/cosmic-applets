@@ -41,7 +41,10 @@ impl WorkspaceList {
 
     fn layout(&self) {
         let imp = imp::WorkspaceList::from_instance(self);
-        let anchor = std::env::var("COSMIC_PANEL_ANCHOR").ok().and_then(|anchor| anchor.parse::<PanelAnchor>().ok()).unwrap_or_default();
+        let anchor = std::env::var("COSMIC_PANEL_ANCHOR")
+            .ok()
+            .and_then(|anchor| anchor.parse::<PanelAnchor>().ok())
+            .unwrap_or_default();
 
         let list_view = cascade! {
             ListView::default();

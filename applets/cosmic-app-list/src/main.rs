@@ -49,9 +49,8 @@ fn load_css() {
 }
 
 fn main() {
-    let _ = gtk4::init();
-    adw::init();
-    
+    let _ = libcosmic::init();
+
     // Initialize logger
     pretty_env_logger::init();
     glib::set_application_name("Cosmic Dock App List");
@@ -243,7 +242,7 @@ fn main() {
                                 dock_obj.set_property("active", BoxedWindowList::default().to_value());
                                 saved_app_model.items_changed(saved_i, 0, 0);
                             }
-                        
+
                             if let Some(cur_app_info) =
                                 dock_obj.property::<Option<DesktopAppInfo>>("appinfo")
                             {

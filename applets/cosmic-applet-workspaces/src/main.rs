@@ -9,7 +9,7 @@ use gtk4::{
     CssProvider, StyleContext,
 };
 use once_cell::sync::OnceCell;
-use utils::{WorkspaceEvent};
+use utils::WorkspaceEvent;
 use window::CosmicWorkspacesWindow;
 
 mod localize;
@@ -45,9 +45,8 @@ fn load_css() {
 }
 
 fn main() {
-    let _ = gtk4::init();
-    adw::init();
-    
+    let _ = libcosmic::init();
+
     // Initialize logger
     pretty_env_logger::init();
     glib::set_application_name(ID);

@@ -54,7 +54,10 @@ impl AppsContainer {
         imp.active_list.set(active_app_list_view).unwrap();
         // Setup
         self_.setup_callbacks();
-        let anchor = std::env::var("COSMIC_PANEL_ANCHOR").ok().and_then(|anchor| anchor.parse::<PanelAnchor>().ok()).unwrap_or_default();
+        let anchor = std::env::var("COSMIC_PANEL_ANCHOR")
+            .ok()
+            .and_then(|anchor| anchor.parse::<PanelAnchor>().ok())
+            .unwrap_or_default();
         self_.set_position(anchor);
 
         Self::setup_callbacks(&self_);

@@ -3,9 +3,9 @@
 #[macro_use]
 extern crate relm4_macros;
 
+pub mod cosmic_session;
 pub mod session_manager;
 pub mod ui;
-pub mod cosmic_session;
 
 use gtk4::{gio::ApplicationFlags, prelude::*, Align, Button, Label, Orientation, Separator};
 use once_cell::sync::Lazy;
@@ -15,13 +15,9 @@ use tokio::runtime::Runtime;
 static RT: Lazy<Runtime> = Lazy::new(|| Runtime::new().expect("failed to build tokio runtime"));
 
 fn main() {
-    let _ = gtk4::init();
-    adw::init();
-    
-    let application = gtk4::Application::new(
-        None,
-        ApplicationFlags::default(),
-    );
+    let _ = libcosmic::init();
+
+    let application = gtk4::Application::new(None, ApplicationFlags::default());
     application.connect_activate(build_ui);
     application.run();
 }

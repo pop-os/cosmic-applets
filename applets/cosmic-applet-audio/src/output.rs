@@ -1,6 +1,5 @@
 use gtk4::{glib::clone, prelude::*, Button, Label, ListBox};
-use libcosmic_widgets::{relm4::RelmContainerExt, LabeledItem};
-use std::rc::Rc;
+use libcosmic::widgets::{relm4::RelmContainerExt, LabeledItem};
 
 use crate::pa::{DeviceInfo, PA};
 

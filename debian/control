@@ -12,6 +12,7 @@ Build-Depends:
   libpulse-dev,
   just,
   pkg-config,
+  desktop-file-utils,
 Standards-Version: 4.3.0
 Homepage: https://github.com/pop-os/cosmic-applets
 
@@ -20,4 +21,4 @@ Architecture: amd64 arm64
 Depends:
   ${misc:Depends},
   ${shlibs:Depends}
-Description: XDG Shell Wrapper
+Description: Cosmic Applets

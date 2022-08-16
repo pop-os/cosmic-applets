@@ -41,9 +41,8 @@ fn row_clicked(_: &ListBox, row: &ListBoxRow) {
 }
 
 fn main() {
-    let _ = gtk4::init();
-    adw::init();
-    
+    let _ = libcosmic::init();
+
     let provider = gtk4::CssProvider::new();
     provider.load_from_data(include_bytes!("style.css"));
     gtk4::StyleContext::add_provider_for_display(
@@ -63,7 +62,7 @@ fn main() {
             set_title: Some("COSMIC Graphics Applet"),
             #[wrap(Some)]
             set_child = &libcosmic_applet::AppletButton {
-                set_button_icon_name: "input-gaming",
+                set_button_icon_name: "input-gaming-symbolic",
                 #[wrap(Some)]
                 set_popover_child: main_overlay = &Overlay {
                     add_overlay: loading_box = &gtk4::Box {
