@@ -5,7 +5,7 @@ version = 3
 [[package]]
 name = "adw-user-colors-lib"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/user-color-editor#14c84d67820c6cf2b05395cfc1736e620104ec5d"
+source = "git+https://github.com/pop-os/user-color-editor#364202614ae48ad8277871177689b266187d60d7"
 dependencies = [
  "anyhow",
  "futures",
@@ -16,7 +16,6 @@ dependencies = [
  "pretty_env_logger",
  "ron",
  "serde",
- "toml",
  "xdg",
 ]
 
@@ -40,9 +39,9 @@ dependencies = [
 
 [[package]]
 name = "anyhow"
-version = "1.0.61"
+version = "1.0.62"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "508b352bb5c066aac251f6daf6b36eccd03e8a88e8081cd44959ea277a3af9a8"
+checksum = "1485d4d2cc45e7b201ee3767015c96faa5904387c9d87c6efdd0fb511f12d305"
 
 [[package]]
 name = "approx"
@@ -91,10 +90,11 @@ dependencies = [
 
 [[package]]
 name = "async-io"
-version = "1.7.0"
+version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e5e18f61464ae81cde0a23e713ae8fd299580c54d697a35820cfd0625b8b0e07"
+checksum = "0ab006897723d9352f63e2b13047177c3982d8d79709d713ce7747a8f19fd1b0"
 dependencies = [
+ "autocfg",
  "concurrent-queue",
  "futures-lite",
  "libc",
@@ -200,9 +200,9 @@ dependencies = [
 
 [[package]]
 name = "bumpalo"
-version = "3.10.0"
+version = "3.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "37ccbd214614c6783386c1af30caf03192f17891059cecc394b4fb119e363de3"
+checksum = "c1ad822118d20d2c234f427000d5acc36eabe1e29a348c89b63dd60b13f28e5d"
 
 [[package]]
 name = "byteorder"
@@ -225,7 +225,7 @@ checksum = "c1db59621ec70f09c5e9b597b220c7a2b43611f4710dc03ceb8748637775692c"
 [[package]]
 name = "cairo-rs"
 version = "0.16.0"
-source = "git+https://github.com/gtk-rs/gtk-rs-core#c53cec7cd2b9235e818680391d8613c3e4bc5504"
+source = "git+https://github.com/gtk-rs/gtk-rs-core#4ca23ca05bd95655717605eaee349bbb5abc29b7"
 dependencies = [
  "bitflags",
  "cairo-sys-rs",
@@ -238,7 +238,7 @@ dependencies = [
 [[package]]
 name = "cairo-sys-rs"
 version = "0.16.0"
-source = "git+https://github.com/gtk-rs/gtk-rs-core#c53cec7cd2b9235e818680391d8613c3e4bc5504"
+source = "git+https://github.com/gtk-rs/gtk-rs-core#4ca23ca05bd95655717605eaee349bbb5abc29b7"
 dependencies = [
  "glib-sys 0.16.0",
  "libc",
@@ -722,9 +722,9 @@ checksum = "9ea835d29036a4087793836fa931b08837ad5e957da9e23886b29586fb9b6650"
 
 [[package]]
 name = "either"
-version = "1.7.0"
+version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3f107b87b6afc2a64fd13cac55fe06d6c8859f12d4b14cbcdd2c67d0976781be"
+checksum = "90e5c1c8368803113bf0c9584fc495a58b86dc8a29edbf8fe877d21d9507e797"
 
 [[package]]
 name = "enumflags2"
@@ -986,7 +986,7 @@ dependencies = [
 [[package]]
 name = "gdk-pixbuf"
 version = "0.16.0"
-source = "git+https://github.com/gtk-rs/gtk-rs-core#c53cec7cd2b9235e818680391d8613c3e4bc5504"
+source = "git+https://github.com/gtk-rs/gtk-rs-core#4ca23ca05bd95655717605eaee349bbb5abc29b7"
 dependencies = [
  "bitflags",
  "gdk-pixbuf-sys",
@@ -998,7 +998,7 @@ dependencies = [
 [[package]]
 name = "gdk-pixbuf-sys"
 version = "0.16.0"
-source = "git+https://github.com/gtk-rs/gtk-rs-core#c53cec7cd2b9235e818680391d8613c3e4bc5504"
+source = "git+https://github.com/gtk-rs/gtk-rs-core#4ca23ca05bd95655717605eaee349bbb5abc29b7"
 dependencies = [
  "gio-sys 0.16.0",
  "glib-sys 0.16.0",
@@ -1010,7 +1010,7 @@ dependencies = [
 [[package]]
 name = "gdk4"
 version = "0.5.0"
-source = "git+https://github.com/gtk-rs/gtk4-rs#0d74059562f80ca364f8885271f772d42a9ce697"
+source = "git+https://github.com/gtk-rs/gtk4-rs#fcf8682ba32ffb9465257c4d7d1ab1f56fb322ca"
 dependencies = [
  "bitflags",
  "cairo-rs",
@@ -1025,7 +1025,7 @@ dependencies = [
 [[package]]
 name = "gdk4-sys"
 version = "0.5.0"
-source = "git+https://github.com/gtk-rs/gtk4-rs#0d74059562f80ca364f8885271f772d42a9ce697"
+source = "git+https://github.com/gtk-rs/gtk4-rs#fcf8682ba32ffb9465257c4d7d1ab1f56fb322ca"
 dependencies = [
  "cairo-sys-rs",
  "gdk-pixbuf-sys",
@@ -1101,7 +1101,7 @@ dependencies = [
 [[package]]
 name = "gio"
 version = "0.16.0"
-source = "git+https://github.com/gtk-rs/gtk-rs-core#c53cec7cd2b9235e818680391d8613c3e4bc5504"
+source = "git+https://github.com/gtk-rs/gtk-rs-core#4ca23ca05bd95655717605eaee349bbb5abc29b7"
 dependencies = [
  "bitflags",
  "futures-channel",
@@ -1131,7 +1131,7 @@ dependencies = [
 [[package]]
 name = "gio-sys"
 version = "0.16.0"
-source = "git+https://github.com/gtk-rs/gtk-rs-core#c53cec7cd2b9235e818680391d8613c3e4bc5504"
+source = "git+https://github.com/gtk-rs/gtk-rs-core#4ca23ca05bd95655717605eaee349bbb5abc29b7"
 dependencies = [
  "glib-sys 0.16.0",
  "gobject-sys 0.16.0",
@@ -1163,7 +1163,7 @@ dependencies = [
 [[package]]
 name = "glib"
 version = "0.16.0"
-source = "git+https://github.com/gtk-rs/gtk-rs-core#c53cec7cd2b9235e818680391d8613c3e4bc5504"
+source = "git+https://github.com/gtk-rs/gtk-rs-core#4ca23ca05bd95655717605eaee349bbb5abc29b7"
 dependencies = [
  "bitflags",
  "futures-channel",
@@ -1183,7 +1183,7 @@ dependencies = [
 [[package]]
 name = "glib-build-tools"
 version = "0.1.0"
-source = "git+https://github.com/gtk-rs/gtk-rs-core#c53cec7cd2b9235e818680391d8613c3e4bc5504"
+source = "git+https://github.com/gtk-rs/gtk-rs-core#4ca23ca05bd95655717605eaee349bbb5abc29b7"
 
 [[package]]
 name = "glib-macros"
@@ -1203,7 +1203,7 @@ dependencies = [
 [[package]]
 name = "glib-macros"
 version = "0.16.0"
-source = "git+https://github.com/gtk-rs/gtk-rs-core#c53cec7cd2b9235e818680391d8613c3e4bc5504"
+source = "git+https://github.com/gtk-rs/gtk-rs-core#4ca23ca05bd95655717605eaee349bbb5abc29b7"
 dependencies = [
  "anyhow",
  "heck",
@@ -1227,7 +1227,7 @@ dependencies = [
 [[package]]
 name = "glib-sys"
 version = "0.16.0"
-source = "git+https://github.com/gtk-rs/gtk-rs-core#c53cec7cd2b9235e818680391d8613c3e4bc5504"
+source = "git+https://github.com/gtk-rs/gtk-rs-core#4ca23ca05bd95655717605eaee349bbb5abc29b7"
 dependencies = [
  "libc",
  "system-deps",
@@ -1247,7 +1247,7 @@ dependencies = [
 [[package]]
 name = "gobject-sys"
 version = "0.16.0"
-source = "git+https://github.com/gtk-rs/gtk-rs-core#c53cec7cd2b9235e818680391d8613c3e4bc5504"
+source = "git+https://github.com/gtk-rs/gtk-rs-core#4ca23ca05bd95655717605eaee349bbb5abc29b7"
 dependencies = [
  "glib-sys 0.16.0",
  "libc",
@@ -1257,7 +1257,7 @@ dependencies = [
 [[package]]
 name = "graphene-rs"
 version = "0.16.0"
-source = "git+https://github.com/gtk-rs/gtk-rs-core#c53cec7cd2b9235e818680391d8613c3e4bc5504"
+source = "git+https://github.com/gtk-rs/gtk-rs-core#4ca23ca05bd95655717605eaee349bbb5abc29b7"
 dependencies = [
  "glib 0.16.0",
  "graphene-sys",
@@ -1267,7 +1267,7 @@ dependencies = [
 [[package]]
 name = "graphene-sys"
 version = "0.16.0"
-source = "git+https://github.com/gtk-rs/gtk-rs-core#c53cec7cd2b9235e818680391d8613c3e4bc5504"
+source = "git+https://github.com/gtk-rs/gtk-rs-core#4ca23ca05bd95655717605eaee349bbb5abc29b7"
 dependencies = [
  "glib-sys 0.16.0",
  "libc",
@@ -1278,7 +1278,7 @@ dependencies = [
 [[package]]
 name = "gsk4"
 version = "0.5.0"
-source = "git+https://github.com/gtk-rs/gtk4-rs#0d74059562f80ca364f8885271f772d42a9ce697"
+source = "git+https://github.com/gtk-rs/gtk4-rs#fcf8682ba32ffb9465257c4d7d1ab1f56fb322ca"
 dependencies = [
  "bitflags",
  "cairo-rs",
@@ -1293,7 +1293,7 @@ dependencies = [
 [[package]]
 name = "gsk4-sys"
 version = "0.5.0"
-source = "git+https://github.com/gtk-rs/gtk4-rs#0d74059562f80ca364f8885271f772d42a9ce697"
+source = "git+https://github.com/gtk-rs/gtk4-rs#fcf8682ba32ffb9465257c4d7d1ab1f56fb322ca"
 dependencies = [
  "cairo-sys-rs",
  "gdk4-sys",
@@ -1308,7 +1308,7 @@ dependencies = [
 [[package]]
 name = "gtk4"
 version = "0.5.0"
-source = "git+https://github.com/gtk-rs/gtk4-rs#0d74059562f80ca364f8885271f772d42a9ce697"
+source = "git+https://github.com/gtk-rs/gtk4-rs#fcf8682ba32ffb9465257c4d7d1ab1f56fb322ca"
 dependencies = [
  "bitflags",
  "cairo-rs",
@@ -1330,7 +1330,7 @@ dependencies = [
 [[package]]
 name = "gtk4-macros"
 version = "0.5.0"
-source = "git+https://github.com/gtk-rs/gtk4-rs#0d74059562f80ca364f8885271f772d42a9ce697"
+source = "git+https://github.com/gtk-rs/gtk4-rs#fcf8682ba32ffb9465257c4d7d1ab1f56fb322ca"
 dependencies = [
  "anyhow",
  "proc-macro-crate",
@@ -1343,7 +1343,7 @@ dependencies = [
 [[package]]
 name = "gtk4-sys"
 version = "0.5.0"
-source = "git+https://github.com/gtk-rs/gtk4-rs#0d74059562f80ca364f8885271f772d42a9ce697"
+source = "git+https://github.com/gtk-rs/gtk4-rs#fcf8682ba32ffb9465257c4d7d1ab1f56fb322ca"
 dependencies = [
  "cairo-sys-rs",
  "gdk-pixbuf-sys",
@@ -1581,7 +1581,7 @@ checksum = "8371e4e5341c3a96db127eb2465ac681ced4c433e01dd0e938adbef26ba93ba5"
 [[package]]
 name = "libcosmic"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic#8485b82e9ec74b5d51ca83625e786f9c34b60a4b"
+source = "git+https://github.com/pop-os/libcosmic#aaffa76b982c1c92c79317a6813bfe45bc9c885d"
 dependencies = [
  "adw-user-colors-lib",
  "cascade",
@@ -1605,7 +1605,7 @@ dependencies = [
 [[package]]
 name = "libcosmic-widgets"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic#8485b82e9ec74b5d51ca83625e786f9c34b60a4b"
+source = "git+https://github.com/pop-os/libcosmic#aaffa76b982c1c92c79317a6813bfe45bc9c885d"
 dependencies = [
  "relm4",
  "relm4-macros",
@@ -1952,7 +1952,7 @@ dependencies = [
 [[package]]
 name = "pango"
 version = "0.16.0"
-source = "git+https://github.com/gtk-rs/gtk-rs-core#c53cec7cd2b9235e818680391d8613c3e4bc5504"
+source = "git+https://github.com/gtk-rs/gtk-rs-core#4ca23ca05bd95655717605eaee349bbb5abc29b7"
 dependencies = [
  "bitflags",
  "gio 0.16.0",
@@ -1965,7 +1965,7 @@ dependencies = [
 [[package]]
 name = "pango-sys"
 version = "0.16.0"
-source = "git+https://github.com/gtk-rs/gtk-rs-core#c53cec7cd2b9235e818680391d8613c3e4bc5504"
+source = "git+https://github.com/gtk-rs/gtk-rs-core#4ca23ca05bd95655717605eaee349bbb5abc29b7"
 dependencies = [
  "glib-sys 0.16.0",
  "gobject-sys 0.16.0",

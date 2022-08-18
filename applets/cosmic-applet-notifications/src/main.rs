@@ -12,7 +12,7 @@ mod notifications;
 use notifications::Notifications;
 
 fn main() {
-    let _ = libcosmic::init();
+    let _monitors = libcosmic::init();
 
     // XXX Implement DBus service somewhere other than applet?
     let notifications = Notifications::new();

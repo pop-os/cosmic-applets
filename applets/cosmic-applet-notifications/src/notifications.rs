@@ -170,10 +170,10 @@ impl ObjectImpl for NotificationsInner {
         static SIGNALS: Lazy<Vec<Signal>> = Lazy::new(|| {
             vec![
                 Signal::builder("notification-received")
-                    .param_types(&[NotificationId::static_type().into()])
+                    .param_types(Some(NotificationId::static_type()))
                     .build(),
                 Signal::builder("notification-closed")
-                    .param_types(&[NotificationId::static_type().into()])
+                    .param_types(Some(NotificationId::static_type()))
                     .build(),
             ]
         });

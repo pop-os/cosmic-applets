@@ -359,7 +359,7 @@ impl SimpleComponent for AppModel {
 }
 
 fn main() {
-    let _ = libcosmic::init();
+    let _monitors = libcosmic::init();
 
     let app = RelmApp::with_app(Application::new(None, ApplicationFlags::default()));
     app.run::<AppModel>(());

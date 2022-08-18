@@ -14,7 +14,7 @@ use tokio::runtime::Runtime;
 static RT: Lazy<Runtime> = Lazy::new(|| Runtime::new().expect("failed to build tokio runtime"));
 
 fn main() {
-    let _ = libcosmic::init();
+    let _monitors = libcosmic::init();
 
     view! {
         window = libcosmic_applet::AppletWindow {

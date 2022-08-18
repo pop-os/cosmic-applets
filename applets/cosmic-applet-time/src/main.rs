@@ -6,7 +6,7 @@ mod time_button;
 use time_button::TimeButton;
 
 fn main() {
-    let _ = libcosmic::init();
+    let _monitors = libcosmic::init();
 
     cascade! {
         libcosmic_applet::AppletWindow::new();

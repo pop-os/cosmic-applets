@@ -41,7 +41,7 @@ fn row_clicked(_: &ListBox, row: &ListBoxRow) {
 }
 
 fn main() {
-    let _ = libcosmic::init();
+    let _monitors = libcosmic::init();
 
     let provider = gtk4::CssProvider::new();
     provider.load_from_data(include_bytes!("style.css"));

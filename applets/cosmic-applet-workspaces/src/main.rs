@@ -45,7 +45,7 @@ fn load_css() {
 }
 
 fn main() {
-    let _ = libcosmic::init();
+    let _monitors = libcosmic::init();
 
     // Initialize logger
     pretty_env_logger::init();

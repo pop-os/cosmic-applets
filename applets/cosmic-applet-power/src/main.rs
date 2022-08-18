@@ -15,7 +15,7 @@ use tokio::runtime::Runtime;
 static RT: Lazy<Runtime> = Lazy::new(|| Runtime::new().expect("failed to build tokio runtime"));
 
 fn main() {
-    let _ = libcosmic::init();
+    let _monitors = libcosmic::init();
 
     let application = gtk4::Application::new(None, ApplicationFlags::default());
     application.connect_activate(build_ui);

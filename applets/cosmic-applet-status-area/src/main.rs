@@ -10,7 +10,7 @@ mod status_notifier_watcher;
 use status_area::StatusArea;
 
 fn main() {
-    let _ = libcosmic::init();
+    let _monitors = libcosmic::init();
 
     // XXX Implement DBus service somewhere other than applet?
     glib::MainContext::default().spawn_local(status_notifier_watcher::start());
