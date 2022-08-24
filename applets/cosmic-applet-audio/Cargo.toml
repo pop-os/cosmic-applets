@@ -2,25 +2,7 @@
 name = "cosmic-applet-audio"
 version = "0.1.0"
 edition = "2021"
-license = "GPL-3.0-or-later"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-futures = "0.3.21"
-futures-util = "0.3.21"
-libcosmic-applet = { path = "../../libcosmic-applet" }
-libpulse-binding = "2.26.0"
-libpulse-glib-binding = "2.25.0"
-tracker = "0.1.1"
-freedesktop-desktop-entry = "0.5.0"
-mpris2-zbus = { git = "https://github.com/pop-os/mpris2-zbus" }
-zbus = "2.1.1"
-tokio = { version = "1.17.0", features = ["full"] }
-relm4 = { git = "https://github.com/relm4/relm4", branch = "next", features = ["macros"] }
-relm4-macros = { git = "https://github.com/relm4/relm4", branch = "next" }
-once_cell = "1.10.0"
-gtk4 = { git = "https://github.com/gtk-rs/gtk4-rs", features = ["v4_2"] }
-adw = { git = "https://gitlab.gnome.org/World/Rust/libadwaita-rs", package = "libadwaita"}
-libcosmic = { git = "https://github.com/pop-os/libcosmic", default-features = false, features = ["widgets"] }
-async-io = "1.6.0"
-
-[features]
