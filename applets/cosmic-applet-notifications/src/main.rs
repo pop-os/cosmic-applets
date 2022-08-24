@@ -1,5 +1,6 @@
-use gtk4::{glib, prelude::*};
+use gtk4::{glib, prelude::*, PositionType};
 use relm4_macros::view;
+use cosmic_panel_config::PanelAnchor;
 
 mod dbus_service;
 mod deref_cell;
@@ -31,7 +32,16 @@ fn main() {
     window.show();
 
     // XXX show in correct place
-    let notification_popover = NotificationPopover::new(&notifications);
+    let position = std::env::var("COSMIC_PANEL_ANCHOR")
+    .ok()
+    .and_then(|anchor| anchor.parse::<PanelAnchor>().ok())
+    .map(|anchor| match anchor {
+        PanelAnchor::Left => PositionType::Right,
+        PanelAnchor::Right => PositionType::Left,
+        PanelAnchor::Top => PositionType::Bottom,
+        PanelAnchor::Bottom => PositionType::Top,
+    });
+    let notification_popover = NotificationPopover::new(&notifications, position);
     notification_popover.set_parent(&applet_button);
 
     let main_loop = glib::MainLoop::new(None, false);

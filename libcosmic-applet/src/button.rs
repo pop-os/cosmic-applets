@@ -1,5 +1,5 @@
-use cosmic_panel_config::{CosmicPanelConfig, PanelSize};
-use gtk4::{glib, prelude::*, subclass::prelude::*};
+use cosmic_panel_config::{PanelSize, PanelAnchor};
+use gtk4::{glib, prelude::*, subclass::prelude::*, PositionType};
 use relm4_macros::view;
 
 use crate::deref_cell::DerefCell;
@@ -18,7 +18,6 @@ button.cosmic_applet_button {
 #[derive(Default)]
 pub struct AppletButtonInner {
     menu_button: DerefCell<gtk4::MenuButton>,
-    panel_config: DerefCell<CosmicPanelConfig>,
     popover: DerefCell<gtk4::Popover>,
 }
 
@@ -31,6 +30,15 @@ impl ObjectSubclass for AppletButtonInner {
 
 impl ObjectImpl for AppletButtonInner {
     fn constructed(&self, obj: &AppletButton) {
+        let position = std::env::var("COSMIC_PANEL_ANCHOR")
+        .ok()
+        .and_then(|anchor| anchor.parse::<PanelAnchor>().ok())
+        .map(|anchor| match anchor {
+            PanelAnchor::Left => PositionType::Right,
+            PanelAnchor::Right => PositionType::Left,
+            PanelAnchor::Top => PositionType::Bottom,
+            PanelAnchor::Bottom => PositionType::Top,
+        });
         view! {
             menu_button = gtk4::MenuButton {
                 set_parent: obj,
@@ -38,13 +46,15 @@ impl ObjectImpl for AppletButtonInner {
                 set_has_frame: false,
                 #[wrap(Some)]
                 set_popover: popover = &gtk4::Popover {
-                    // TODO: change if it can be positioned correctly?
                     set_has_arrow: false,
                 }
             },
             provider = gtk4::CssProvider {
                 load_from_data: STYLE.as_bytes(),
             }
+        }
+        if let Some(position) = position {
+            popover.set_position(position);
         }
         obj.set_layout_manager(Some(&gtk4::BinLayout::new()));
         obj.style_context()

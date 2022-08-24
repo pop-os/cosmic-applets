@@ -421,6 +421,7 @@ name = "cosmic-applet-notifications"
 version = "0.1.0"
 dependencies = [
  "cascade",
+ "cosmic-panel-config",
  "futures",
  "gtk4",
  "libadwaita",

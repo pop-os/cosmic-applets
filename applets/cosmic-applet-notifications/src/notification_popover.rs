@@ -2,7 +2,7 @@ use cascade::cascade;
 use gtk4::{
     glib::{self, clone},
     prelude::*,
-    subclass::prelude::*,
+    subclass::prelude::*, PositionType,
 };
 use std::cell::RefCell;
 
@@ -75,9 +75,11 @@ glib::wrapper! {
 }
 
 impl NotificationPopover {
-    pub fn new(notifications: &Notifications) -> Self {
+    pub fn new(notifications: &Notifications,  position: Option<PositionType>) -> Self {
         let obj = glib::Object::new::<Self>(&[]).unwrap();
-
+        if let Some(position) = position {
+            obj.set_position(position);
+        }
         let notification_widget = cascade! {
             NotificationWidget::new(notifications);
         };

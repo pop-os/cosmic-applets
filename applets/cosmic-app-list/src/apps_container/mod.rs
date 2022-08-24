@@ -2,7 +2,7 @@
 use crate::dock_list::DockList;
 use crate::dock_list::DockListType;
 use cascade::cascade;
-use cosmic_panel_config::{CosmicPanelConfig, PanelAnchor};
+use cosmic_panel_config::{PanelAnchor};
 use gtk4::prelude::*;
 use gtk4::subclass::prelude::*;
 use gtk4::Orientation;
