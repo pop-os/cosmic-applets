@@ -6,3 +6,12 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+iced = { path = "../../../iced", features = ["svg", "debug"] }
+iced_native = { path = "../../../iced/native" }
+iced_futures = { path = "../../../iced/futures" }
+icon-loader = { version = "0.3.6", features = ["gtk"] }
+libpulse-binding = "2.26.0"
+libpulse-glib-binding = "2.25.0"
+
+[workspace]
+resolved = "2"
