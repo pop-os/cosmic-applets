@@ -3,6 +3,7 @@ use iced::widget::{button, column, container, row, svg, text, Column, Slider, Sp
 use iced::{Alignment, Application, Command, Element, Length, Settings, Subscription, Theme};
 
 mod pulse;
+mod future;
 
 pub fn main() -> iced::Result {
     Audio::run(Settings {

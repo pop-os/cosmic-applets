@@ -1,6 +1,10 @@
+use crate::future::PAFut;
+use iced::futures::FutureExt;
+
 use iced_futures::futures;
 use iced_native::subscription::{self, Subscription};
-use std::sync::RwLock;
+use std::sync::{Arc, RwLock};
+use iced::futures::StreamExt;
 use std::thread;
 
 extern crate libpulse_binding as pulse;
@@ -14,7 +18,7 @@ use libpulse_binding::{
     error::PAErr,
     volume::ChannelVolumes,
 };
-use std::sync::mpsc;
+use futures::channel::mpsc;
 pub fn connect() -> Subscription<Event> {
     struct Connect;
 
@@ -24,59 +28,41 @@ pub fn connect() -> Subscription<Event> {
         |state| async move {
             match state {
                 State::Disconnected => {
-                    let mut from_pulse = RwLock::new(vec![]);
-                    let (to_pulse, pulse_receiver) = mpsc::channel();
-                    thread::spawn(move || {
-                        let mainloop = pulse::mainloop::standard::Mainloop::new().unwrap();
-                        let context = Context::new(&mainloop, "com.system76.cosmic.applets.audio").unwrap();
-                        println!("mainloop created");
-                        loop {
-                            if let Ok(msg) = pulse_receiver.try_recv() {
-                                match msg {
-                                    Message::GetSinks => {
-                                        println!("get get sinks");
-                                        let mut items = vec![];
-                                        let from_puse2 = from_pulse.clone()
-                                        context.introspect().get_sink_info_list(move |result| match result {
-                                            ListResult::Item(item) => {
-                                                if let Some(name) = &item.name {
-                                                    items.push(name.clone().into_owned())
-                                                }
-                                            },
-                                            ListResult::End => {
-                                                let mut lock = from_pulse2.write().unwrap();
-                                                lock.push(Message::UpdateSinks(items.clone()))
-                                            },
-                                            _ => {} //TODO: Match properly
-                                        });
-                                    },
-                                    Message::GetSources => {},
-                                    Message::Disconnected => break,
-                                }
-                            }
-                        }
-                    });
+                    let pulse = PulseServer::new("com.system76.cosmic.applets.audio").unwrap();
+                    let (sender, receiver) = mpsc::channel(100);
                     (
-                        Some(Event::Connected(Connection(to_pulse))),
-                        State::Connected(from_pulse),
+                        Some(Event::Connected(Connection(sender))),
+                        State::Connected(pulse, receiver),
                     )
                 }
-                State::Connected(from_pulse) => {
-                    if 0 == (*from_pulse.read().unwrap()).len() {
-                        return (None, State::Connected(from_pulse))
+                State::Connected(pulse, mut receiver) => {
+                    futures::select! {
+                        message = receiver.select_next_some() => { match message {
+                            Message::GetSinks => {
+                                if let Ok(sinks) = pulse.get_sinks().await {
+                                    (
+                                        Some(Event::MessageReceived(Message::SetSinks(sinks))),
+                                        State::Connected(pulse, receiver),
+                                    )
+                                } else {
+                                    (None, State::Connected(pulse, receiver))
+                                }
+                            },
+                            _ => (None, State::Connected(pulse, receiver)),
+                        }}
                     }
-                    return (None, State::Connected(from_pulse))
                 }
             }
         },
     )
 }
 
-#[derive(Debug)]
+// #[derive(Debug)]
 enum State {
     Disconnected,
     Connected(
-        RwLock<Vec<Message>>,
+        PulseServer,
+        mpsc::Receiver<Message>,
     ),
 }
 
@@ -94,7 +80,7 @@ impl Connection {
     pub fn send(&mut self, message: Message) {
         let _ = self
             .0
-            .send(message)
+            .try_send(message)
             .expect("Send message to PulseAudio server");
     }
 }
@@ -105,5 +91,56 @@ pub enum Message {
     Disconnected,
     GetSinks,
     GetSources,
-    UpdateSinks(Vec<String>),
+    SetSinks(Vec<DeviceInfo>),
 }
+
+struct PulseServer {
+    context: Context,
+}
+
+impl PulseServer {
+    pub fn new(context: &str) -> Result<PulseServer, PAErr> {
+        let mut mainloop = pulse::mainloop::threaded::Mainloop::new().unwrap();
+        mainloop.start()?;
+        Ok(PulseServer {
+            context: Context::new(&mainloop, context).unwrap(),
+        })
+    }
+
+    fn introspect(&self) -> Introspector {
+        self.context.introspect()
+    }
+
+    pub async fn get_sinks(&self) -> Result<Vec<DeviceInfo>, ()> {
+        let mut items = Some(Vec::new());
+        self.introspect()
+            .get_sink_info_list(move |result| match result {
+                ListResult::Item(item) => items.as_mut().unwrap().push(DeviceInfo::from(item)),
+                ListResult::End => waker.wake(Ok(items.take().unwrap())),
+                ListResult::Error => waker.wake(Err(())),
+            })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct DeviceInfo {
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub volume: ChannelVolumes,
+    pub mute: bool,
+    pub index: u32,
+}
+
+impl<'a> From<&SinkInfo<'a>> for DeviceInfo {
+    fn from(info: &SinkInfo<'a>) -> Self {
+        Self {
+            name: info.name.clone().map(|x| x.into_owned()),
+            description: info.description.clone().map(|x| x.into_owned()),
+            volume: info.volume,
+            mute: info.mute,
+            index: info.index,
+        }
+    }
+}
+
+impl Eq for DeviceInfo {}
