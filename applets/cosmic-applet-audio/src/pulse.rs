@@ -3,9 +3,10 @@ use iced::futures::FutureExt;
 
 use iced_futures::futures;
 use iced_native::subscription::{self, Subscription};
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, RwLock, Mutex};
 use iced::futures::StreamExt;
 use std::thread;
+use tokio::runtime::Builder;
 
 extern crate libpulse_binding as pulse;
 use libpulse_binding::{
@@ -28,7 +29,7 @@ pub fn connect() -> Subscription<Event> {
         |state| async move {
             match state {
                 State::Disconnected => {
-                    let pulse = PulseServer::new("com.system76.cosmic.applets.audio").unwrap();
+                    let pulse = PulseServer::new().unwrap();
                     let (sender, receiver) = mpsc::channel(100);
                     (
                         Some(Event::Connected(Connection(sender))),
@@ -38,16 +39,7 @@ pub fn connect() -> Subscription<Event> {
                 State::Connected(pulse, mut receiver) => {
                     futures::select! {
                         message = receiver.select_next_some() => { match message {
-                            Message::GetSinks => {
-                                if let Ok(sinks) = pulse.get_sinks().await {
-                                    (
-                                        Some(Event::MessageReceived(Message::SetSinks(sinks))),
-                                        State::Connected(pulse, receiver),
-                                    )
-                                } else {
-                                    (None, State::Connected(pulse, receiver))
-                                }
-                            },
+                            Message::GetSinks => (None, State::Connected(pulse, receiver)),
                             _ => (None, State::Connected(pulse, receiver)),
                         }}
                     }
@@ -95,30 +87,39 @@ pub enum Message {
 }
 
 struct PulseServer {
-    context: Context,
+    to_pulse: Arc<Mutex<Vec<Message>>>,
+    from_pulse: Arc<Mutex<Vec<Message>>>,
 }
 
 impl PulseServer {
-    pub fn new(context: &str) -> Result<PulseServer, PAErr> {
-        let mut mainloop = pulse::mainloop::threaded::Mainloop::new().unwrap();
-        mainloop.start()?;
+    pub fn new() -> Result<PulseServer, PAErr> {
+        let to_pulse = Arc::new(Mutex::new(vec![]));
+        let from_pulse = Arc::new(Mutex::new(vec![]));
+        thread::spawn(move || {
+            let mainloop = pulse::mainloop::standard::Mainloop::new().unwrap();
+            let context = Context::new(&mainloop, "com.system76.cosmic.applets.audio").unwrap();
+
+            tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .unwrap()
+                .block_on(async {
+
+                    let mut items = Some(Vec::new());
+                    let sinks = PAFut::new(|waker| {
+                        context.introspect()
+                            .get_sink_info_list(move |result| match result {
+                                ListResult::Item(item) => items.as_mut().unwrap().push(DeviceInfo::from(item)),
+                                ListResult::End => waker.wake(Ok(items.take().unwrap())),
+                                ListResult::Error => waker.wake(Err(())),
+                            })
+                    }).await;
+                });
+        });
         Ok(PulseServer {
-            context: Context::new(&mainloop, context).unwrap(),
+            to_pulse,
+            from_pulse,
         })
-    }
-
-    fn introspect(&self) -> Introspector {
-        self.context.introspect()
-    }
-
-    pub async fn get_sinks(&self) -> Result<Vec<DeviceInfo>, ()> {
-        let mut items = Some(Vec::new());
-        self.introspect()
-            .get_sink_info_list(move |result| match result {
-                ListResult::Item(item) => items.as_mut().unwrap().push(DeviceInfo::from(item)),
-                ListResult::End => waker.wake(Ok(items.take().unwrap())),
-                ListResult::Error => waker.wake(Err(())),
-            })
     }
 }
 

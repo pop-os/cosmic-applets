@@ -12,6 +12,7 @@ iced_futures = { path = "../../../iced/futures" }
 icon-loader = { version = "0.3.6", features = ["gtk"] }
 libpulse-binding = "2.26.0"
 libpulse-glib-binding = "2.25.0"
+tokio = { version = "1.20.1", features=["full"] }
 
 [workspace]
 resolved = "2"
