@@ -2,8 +2,8 @@ use iced::executor;
 use iced::widget::{button, column, container, row, svg, text, Column, Slider, Space};
 use iced::{Alignment, Application, Command, Element, Length, Settings, Subscription, Theme};
 
-mod pulse;
 mod future;
+mod pulse;
 
 pub fn main() -> iced::Result {
     Audio::run(Settings {
@@ -105,9 +105,7 @@ impl Application for Audio {
                     self.pulse_state = PulseState::Connected(connection);
                 }
                 pulse::Event::MessageReceived(_) => {}
-                pulse::Event::Disconnected => {
-                    self.pulse_state = PulseState::Disconnected
-                }
+                pulse::Event::Disconnected => self.pulse_state = PulseState::Disconnected,
             },
         };
 

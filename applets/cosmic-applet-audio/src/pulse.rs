@@ -1,14 +1,16 @@
 use crate::future::PAFut;
 use iced::futures::FutureExt;
 
+use iced::futures::StreamExt;
 use iced_futures::futures;
 use iced_native::subscription::{self, Subscription};
-use std::sync::{Arc, RwLock, Mutex};
-use iced::futures::StreamExt;
-use std::thread;
+use std::cell::RefCell;
+use std::sync::{Arc, Mutex, RwLock};
+use std::{rc::Rc, thread};
 use tokio::runtime::Builder;
 
 extern crate libpulse_binding as pulse;
+use futures::channel::mpsc;
 use libpulse_binding::{
     callbacks::ListResult,
     context::{
@@ -17,9 +19,11 @@ use libpulse_binding::{
         Context, FlagSet,
     },
     error::PAErr,
+    mainloop::standard::{IterateResult, Mainloop},
+    operation,
+    proplist::Proplist,
     volume::ChannelVolumes,
 };
-use futures::channel::mpsc;
 pub fn connect() -> Subscription<Event> {
     struct Connect;
 
@@ -29,7 +33,7 @@ pub fn connect() -> Subscription<Event> {
         |state| async move {
             match state {
                 State::Disconnected => {
-                    let pulse = PulseServer::new().unwrap();
+                    let pulse = PulseHandle::create().unwrap();
                     let (sender, receiver) = mpsc::channel(100);
                     (
                         Some(Event::Connected(Connection(sender))),
@@ -52,10 +56,7 @@ pub fn connect() -> Subscription<Event> {
 // #[derive(Debug)]
 enum State {
     Disconnected,
-    Connected(
-        PulseServer,
-        mpsc::Receiver<Message>,
-    ),
+    Connected(PulseHandle, mpsc::Receiver<Message>),
 }
 
 #[derive(Debug, Clone)]
@@ -86,40 +87,168 @@ pub enum Message {
     SetSinks(Vec<DeviceInfo>),
 }
 
-struct PulseServer {
+struct PulseHandle {
+    // TODO: One of these should become a mpsc
     to_pulse: Arc<Mutex<Vec<Message>>>,
     from_pulse: Arc<Mutex<Vec<Message>>>,
 }
 
-impl PulseServer {
-    pub fn new() -> Result<PulseServer, PAErr> {
+impl PulseHandle {
+    // Create pulse server thread, and bidirectional comms
+    pub fn create() -> Result<PulseHandle, PAErr> {
         let to_pulse = Arc::new(Mutex::new(vec![]));
         let from_pulse = Arc::new(Mutex::new(vec![]));
+        let thread_from_pulse = from_pulse.clone();
+        // this thread should complete by pushing a completed message,
+        // or fail message. This should never complete/fail without pushing
+        // a message. This lets the iced subscription go to sleep while init
+        // finishes. TLDR: be very careful with error handling
         thread::spawn(move || {
-            let mainloop = pulse::mainloop::standard::Mainloop::new().unwrap();
-            let context = Context::new(&mainloop, "com.system76.cosmic.applets.audio").unwrap();
-
-            tokio::runtime::Builder::new_current_thread()
-                .enable_all()
-                .build()
-                .unwrap()
-                .block_on(async {
-
-                    let mut items = Some(Vec::new());
-                    let sinks = PAFut::new(|waker| {
-                        context.introspect()
-                            .get_sink_info_list(move |result| match result {
-                                ListResult::Item(item) => items.as_mut().unwrap().push(DeviceInfo::from(item)),
-                                ListResult::End => waker.wake(Ok(items.take().unwrap())),
-                                ListResult::Error => waker.wake(Err(())),
-                            })
-                    }).await;
-                });
+            let mut pulse_server: Option<PulseServer> = None;
+            match PulseServer::connect().and_then(|server| server.init()) {
+                Ok(server) => {
+                    pulse_server = Some(server);
+                    let mut from_channel = thread_from_pulse.lock().unwrap();
+                    from_channel.push(Message::Connected);
+                }
+                Err(_) => {
+                    let mut from_channel = thread_from_pulse.lock().unwrap();
+                    from_channel.push(Message::Disconnected)
+                }
+            }
+            {
+                let mut from_channel = thread_from_pulse.lock().unwrap();
+                from_channel.push(Message::Connected)
+            }
+            loop {}
         });
-        Ok(PulseServer {
+        Ok(PulseHandle {
             to_pulse,
             from_pulse,
         })
+    }
+}
+
+struct PulseServer {
+    mainloop: Rc<RefCell<Mainloop>>,
+    context: Rc<RefCell<Context>>,
+    introspector: Introspector,
+}
+
+enum PulseServerError {
+    IterateErr(IterateResult),
+    ContextErr(pulse::context::State),
+    OperationErr(pulse::operation::State),
+    PAErr(PAErr),
+    Connect,
+    Misc,
+}
+
+impl PulseServer {
+    // connect() requires init() to be run after
+    pub fn connect() -> Result<PulseServer, PulseServerError> {
+        // TODO: fix app name, should be variable
+        let mut proplist = Proplist::new().unwrap();
+        proplist
+            .set_str(
+                pulse::proplist::properties::APPLICATION_NAME,
+                "com.system76",
+            )
+            .or(Err(PulseServerError::Connect))?;
+
+        let mainloop = Rc::new(RefCell::new(
+            pulse::mainloop::standard::Mainloop::new().ok_or(PulseServerError::Connect)?,
+        ));
+
+        let context = Rc::new(RefCell::new(
+            Context::new_with_proplist(&*mainloop.borrow(), "MainConn", &proplist)
+                .ok_or(PulseServerError::Connect)?,
+        ));
+
+        let introspector = context.borrow_mut().introspect();
+
+        context
+            .borrow_mut()
+            .connect(None, pulse::context::FlagSet::NOFLAGS, None)
+            .map_err(|e| PulseServerError::PAErr(e))?;
+
+        Ok(PulseServer {
+            mainloop,
+            context,
+            introspector,
+        })
+    }
+
+    pub fn init(self) -> Result<Self, PulseServerError> {
+        loop {
+            match self.mainloop.borrow_mut().iterate(false) {
+                IterateResult::Success(_) => {}
+                IterateResult::Err(e) => {
+                    return Err(PulseServerError::IterateErr(IterateResult::Err(e)))
+                }
+                IterateResult::Quit(e) => {
+                    return Err(PulseServerError::IterateErr(IterateResult::Quit(e)))
+                }
+            }
+
+            match self.context.borrow().get_state() {
+                pulse::context::State::Ready => break,
+                pulse::context::State::Failed => {
+                    return Err(PulseServerError::ContextErr(pulse::context::State::Failed))
+                }
+                pulse::context::State::Terminated => {
+                    return Err(PulseServerError::ContextErr(
+                        pulse::context::State::Terminated,
+                    ))
+                }
+                _ => {}
+            }
+        }
+        Ok(self)
+    }
+
+    pub fn get_devices(&self) -> Result<Vec<DeviceInfo>, PulseServerError> {
+        let list: Rc<RefCell<Option<Vec<DeviceInfo>>>> = Rc::new(RefCell::new(Some(Vec::new())));
+        let list_ref = list.clone();
+
+        let operation = self.introspector.get_sink_info_list(
+            move |sink_list: ListResult<&pulse::context::introspect::SinkInfo>| {
+                if let ListResult::Item(item) = sink_list {
+                    list_ref.borrow_mut().as_mut().unwrap().push(item.into());
+                }
+            },
+        );
+        //let mut result = list.borrow_mut();
+        //println!("result {:?} ", result.take().unwrap());
+        self.wait_for_result(operation)
+            .and_then(|_| list.borrow_mut().take().ok_or(PulseServerError::Misc))
+            .and_then(|result| Ok(result))
+    }
+
+    fn wait_for_result<G: ?Sized>(
+        &self,
+        operation: pulse::operation::Operation<G>,
+    ) -> Result<(), PulseServerError> {
+        loop {
+            match self.mainloop.borrow_mut().iterate(false) {
+                IterateResult::Err(e) => {
+                    return Err(PulseServerError::IterateErr(IterateResult::Err(e)))
+                }
+                IterateResult::Quit(e) => {
+                    return Err(PulseServerError::IterateErr(IterateResult::Quit(e)))
+                }
+                IterateResult::Success(_) => {}
+            }
+            match operation.get_state() {
+                pulse::operation::State::Done => return Ok(()),
+                pulse::operation::State::Running => {}
+                pulse::operation::State::Cancelled => {
+                    return Err(PulseServerError::OperationErr(
+                        pulse::operation::State::Cancelled,
+                    ))
+                }
+            }
+        }
     }
 }
 
