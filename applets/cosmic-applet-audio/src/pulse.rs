@@ -1,16 +1,13 @@
-use crate::future::PAFut;
-use iced::futures::FutureExt;
-
-use iced::futures::StreamExt;
-use iced_futures::futures;
+//use futures::{FutureExt, select};
+//use iced_futures::futures;
 use iced_native::subscription::{self, Subscription};
 use std::cell::RefCell;
 use std::sync::{Arc, Mutex, RwLock};
 use std::{rc::Rc, thread};
-use tokio::runtime::Builder;
+//use tokio::sync::oneshot;
 
 extern crate libpulse_binding as pulse;
-use futures::channel::mpsc;
+//use futures::channel::mpsc;
 use libpulse_binding::{
     callbacks::ListResult,
     context::{
@@ -38,17 +35,17 @@ pub fn connect() -> Subscription<Event> {
                 // by the `State::Connecting` message below
                 State::Disconnected => {
                     let pulse_handle = PulseHandle::create().unwrap();
-                    let (sender, recv) = mpsc::channel(100);
                     (
-                        Some(Event::Connected(Connection(sender))),
-                        State::Connected(pulse_handle, recv),
+                        Some(Event::Connected(Connection(pulse_handle.to_pulse))),
+                        State::Connected(pulse_handle.from_pulse),
                     )
                 }
-                State::Connected(pulse_handle, mut recv) => {
-                    futures::select! {
-                        message = recv.select_next_some() => { match message {
-                            Message::GetSinks => (None, State::Connected(pulse_handle, recv)),
-                            _ => (None, State::Connected(pulse_handle, recv)),
+                State::Connected(mut from_pulse) => {
+                    //let pulse_msg = from_pulse.recv().fuse();
+                    tokio::select! {
+                        msg = from_pulse.recv() => { match msg {
+                            Some(Message::GetSinks) => (None, State::Connected(from_pulse)),
+                            _ => (None, State::Connected(from_pulse)),
                         }}
                     }
                 }
@@ -60,7 +57,7 @@ pub fn connect() -> Subscription<Event> {
 // #[derive(Debug)]
 enum State {
     Disconnected,
-    Connected(PulseHandle, mpsc::Receiver<Message>),
+    Connected(tokio::sync::mpsc::Receiver<Message>),
 }
 
 #[derive(Debug, Clone)]
@@ -71,7 +68,7 @@ pub enum Event {
 }
 
 #[derive(Debug, Clone)]
-pub struct Connection(mpsc::Sender<Message>);
+pub struct Connection(tokio::sync::mpsc::Sender<Message>);
 
 impl Connection {
     pub fn send(&mut self, message: Message) {
@@ -93,22 +90,23 @@ pub enum Message {
 
 struct PulseHandle {
     to_pulse: tokio::sync::mpsc::Sender<Message>,
-    from_pulse: Arc<Mutex<Vec<Message>>>,
+    from_pulse: tokio::sync::mpsc::Receiver<Message>,
 }
 
 impl PulseHandle {
     // Create pulse server thread, and bidirectional comms
     pub fn create() -> Result<PulseHandle, PAErr> {
         let (to_pulse, mut to_pulse_recv) = tokio::sync::mpsc::channel(10);
-        let from_pulse = Arc::new(Mutex::new(vec![]));
-        let mut from_pulse2 = from_pulse.clone();
+        let (mut from_pulse_send, from_pulse) = tokio::sync::mpsc::channel(10);
+        //let from_pulse = Arc::new(Mutex::new(vec![]));
+        //let mut from_pulse2 = from_pulse.clone();
         // this thread should complete by pushing a completed message,
         // or fail message. This should never complete/fail without pushing
         // a message. This lets the iced subscription go to sleep while init
         // finishes. TLDR: be very careful with error handling
         thread::spawn(move || {
             if let Ok(server) = PulseServer::connect().and_then(|server| server.init()) {
-                PulseHandle::send_connected(&mut from_pulse2);
+                PulseHandle::send_connected(&mut from_pulse_send);
 
                 // take `PulseServer` and handle reciver into async context
                 // to listen for messages that need to be passed to the pulseserver
@@ -128,7 +126,7 @@ impl PulseHandle {
                 });
             }
             // Always report that server is disconnected
-            PulseHandle::send_disconnected(&mut from_pulse2);
+            PulseHandle::send_disconnected(&mut from_pulse_send);
         });
         Ok(PulseHandle {
             to_pulse,
@@ -136,14 +134,12 @@ impl PulseHandle {
         })
     }
 
-    fn send_disconnected(sender: &mut Arc<Mutex<Vec<Message>>>) {
-        let mut from_channel = sender.lock().unwrap();
-        from_channel.push(Message::Disconnected)
+    fn send_disconnected(sender: &mut tokio::sync::mpsc::Sender<Message>) {
+        sender.blocking_send(Message::Disconnected).unwrap()
     }
 
-    fn send_connected(sender: &mut Arc<Mutex<Vec<Message>>>) {
-        let mut from_channel = sender.lock().unwrap();
-        from_channel.push(Message::Connected)
+    fn send_connected(sender: &mut tokio::sync::mpsc::Sender<Message>) {
+        sender.blocking_send(Message::Connected).unwrap()
     }
 }
 

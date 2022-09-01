@@ -2,7 +2,6 @@ use iced::executor;
 use iced::widget::{button, column, container, row, svg, text, Column, Slider, Space};
 use iced::{Alignment, Application, Command, Element, Length, Settings, Subscription, Theme};
 
-mod future;
 mod pulse;
 
 pub fn main() -> iced::Result {
