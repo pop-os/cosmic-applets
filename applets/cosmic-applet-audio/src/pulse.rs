@@ -43,7 +43,7 @@ pub fn connect() -> Subscription<Event> {
                         Some(Event::Connected(Connection(sender))),
                         State::Connected(pulse_handle, recv),
                     )
-                },
+                }
                 State::Connected(pulse_handle, mut recv) => {
                     futures::select! {
                         message = recv.select_next_some() => { match message {
@@ -116,7 +116,8 @@ impl PulseHandle {
                 // thread, because pulse audio's API is not multithreaded... at all
                 let rt = tokio::runtime::Builder::new_current_thread()
                     .enable_all()
-                    .build().unwrap();
+                    .build()
+                    .unwrap();
 
                 rt.block_on(async {
                     loop {
