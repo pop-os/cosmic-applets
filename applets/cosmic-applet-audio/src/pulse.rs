@@ -32,19 +32,23 @@ pub fn connect() -> Subscription<Event> {
         State::Disconnected,
         |state| async move {
             match state {
+                // if app just started, or we are re-trying match here. Returns coenncting
+                // message. We should store this in our app's state, but it isn't safe to
+                // send messages until we get a conencted message. Which will be received
+                // by the `State::Connecting` message below
                 State::Disconnected => {
-                    let pulse = PulseHandle::create().unwrap();
-                    let (sender, receiver) = mpsc::channel(100);
+                    let pulse_handle = PulseHandle::create().unwrap();
+                    let (sender, recv) = mpsc::channel(100);
                     (
                         Some(Event::Connected(Connection(sender))),
-                        State::Connected(pulse, receiver),
+                        State::Connected(pulse_handle, recv),
                     )
-                }
-                State::Connected(pulse, mut receiver) => {
+                },
+                State::Connected(pulse_handle, mut recv) => {
                     futures::select! {
-                        message = receiver.select_next_some() => { match message {
-                            Message::GetSinks => (None, State::Connected(pulse, receiver)),
-                            _ => (None, State::Connected(pulse, receiver)),
+                        message = recv.select_next_some() => { match message {
+                            Message::GetSinks => (None, State::Connected(pulse_handle, recv)),
+                            _ => (None, State::Connected(pulse_handle, recv)),
                         }}
                     }
                 }
@@ -88,44 +92,57 @@ pub enum Message {
 }
 
 struct PulseHandle {
-    // TODO: One of these should become a mpsc
-    to_pulse: Arc<Mutex<Vec<Message>>>,
+    to_pulse: tokio::sync::mpsc::Sender<Message>,
     from_pulse: Arc<Mutex<Vec<Message>>>,
 }
 
 impl PulseHandle {
     // Create pulse server thread, and bidirectional comms
     pub fn create() -> Result<PulseHandle, PAErr> {
-        let to_pulse = Arc::new(Mutex::new(vec![]));
+        let (to_pulse, mut to_pulse_recv) = tokio::sync::mpsc::channel(10);
         let from_pulse = Arc::new(Mutex::new(vec![]));
-        let thread_from_pulse = from_pulse.clone();
+        let mut from_pulse2 = from_pulse.clone();
         // this thread should complete by pushing a completed message,
         // or fail message. This should never complete/fail without pushing
         // a message. This lets the iced subscription go to sleep while init
         // finishes. TLDR: be very careful with error handling
         thread::spawn(move || {
-            let mut pulse_server: Option<PulseServer> = None;
-            match PulseServer::connect().and_then(|server| server.init()) {
-                Ok(server) => {
-                    pulse_server = Some(server);
-                    let mut from_channel = thread_from_pulse.lock().unwrap();
-                    from_channel.push(Message::Connected);
-                }
-                Err(_) => {
-                    let mut from_channel = thread_from_pulse.lock().unwrap();
-                    from_channel.push(Message::Disconnected)
-                }
+            if let Ok(server) = PulseServer::connect().and_then(|server| server.init()) {
+                PulseHandle::send_connected(&mut from_pulse2);
+
+                // take `PulseServer` and handle reciver into async context
+                // to listen for messages that need to be passed to the pulseserver
+                // this lets us put the thread to sleep, but keep hold a single
+                // thread, because pulse audio's API is not multithreaded... at all
+                let rt = tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build().unwrap();
+
+                rt.block_on(async {
+                    loop {
+                        if let Some(msg) = to_pulse_recv.recv().await {
+                            println!("got message")
+                        }
+                    }
+                });
             }
-            {
-                let mut from_channel = thread_from_pulse.lock().unwrap();
-                from_channel.push(Message::Connected)
-            }
-            loop {}
+            // Always report that server is disconnected
+            PulseHandle::send_disconnected(&mut from_pulse2);
         });
         Ok(PulseHandle {
             to_pulse,
             from_pulse,
         })
+    }
+
+    fn send_disconnected(sender: &mut Arc<Mutex<Vec<Message>>>) {
+        let mut from_channel = sender.lock().unwrap();
+        from_channel.push(Message::Disconnected)
+    }
+
+    fn send_connected(sender: &mut Arc<Mutex<Vec<Message>>>) {
+        let mut from_channel = sender.lock().unwrap();
+        from_channel.push(Message::Connected)
     }
 }
 
@@ -144,6 +161,8 @@ enum PulseServerError {
     Misc,
 }
 
+// `PulseServer` code is heavily inspired by Dave Patrick Caberto's pulsectl-rs (SeaDve)
+// https://crates.io/crates/pulsectl-rs
 impl PulseServer {
     // connect() requires init() to be run after
     pub fn connect() -> Result<PulseServer, PulseServerError> {
@@ -179,6 +198,7 @@ impl PulseServer {
         })
     }
 
+    // Wait for pulse audio connection to complete
     pub fn init(self) -> Result<Self, PulseServerError> {
         loop {
             match self.mainloop.borrow_mut().iterate(false) {
@@ -207,6 +227,7 @@ impl PulseServer {
         Ok(self)
     }
 
+    // Get a list of output devices
     pub fn get_devices(&self) -> Result<Vec<DeviceInfo>, PulseServerError> {
         let list: Rc<RefCell<Option<Vec<DeviceInfo>>>> = Rc::new(RefCell::new(Some(Vec::new())));
         let list_ref = list.clone();
@@ -218,13 +239,13 @@ impl PulseServer {
                 }
             },
         );
-        //let mut result = list.borrow_mut();
-        //println!("result {:?} ", result.take().unwrap());
         self.wait_for_result(operation)
             .and_then(|_| list.borrow_mut().take().ok_or(PulseServerError::Misc))
             .and_then(|result| Ok(result))
     }
 
+    // after building an operation such as get_devices() we need to keep polling
+    // the pulse audio server to "wait" for the operation to complete
     fn wait_for_result<G: ?Sized>(
         &self,
         operation: pulse::operation::Operation<G>,
