@@ -9,4 +9,4 @@ Keywords=Gnome;GTK;
 Icon=com.system76.CosmicAppletWorkspaces.svg
 StartupNotify=true
 NoDisplay=true
-HostWaylandDisplay=true
+X-HostWaylandDisplay=true
