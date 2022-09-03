@@ -76,12 +76,28 @@ impl Application for Audio {
                     o.volume
                         .set(o.volume.len(), VolumeLinear(vol / 100.0).into())
                 });
+                if let PulseState::Connected(connection) = &mut self.pulse_state {
+                    if let Some(device) = &self.current_output {
+                        if let Some(name) = &device.name {
+                            connection.send(pulse::Message::SetDeviceVolumeByName(name.clone().to_string(), device.volume))
+                        }
+                    }
+                }
             }
             Message::SetInputVolume(vol) => {
                 self.current_input.as_mut().map(|i| {
                     i.volume
                         .set(i.volume.len(), VolumeLinear(vol / 100.0).into())
                 });
+                println!("{:?}", self.current_input);
+                if let PulseState::Connected(connection) = &mut self.pulse_state {
+                    if let Some(device) = &self.current_input {
+                        if let Some(name) = &device.name {
+                            println!("increasing volume of {}", name);
+                            connection.send(pulse::Message::SetDeviceVolumeByName(name.clone().to_string(), device.volume))
+                        }
+                    }
+                }
             }
             Message::OutputChanged(val) => println!("changed output {}", val),
             Message::InputChanged(val) => println!("changed input {}", val),

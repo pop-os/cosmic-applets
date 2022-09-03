@@ -11,10 +11,10 @@ use libpulse_binding::{
         subscribe::{Facility, InterestMaskSet, Operation},
         Context,
     },
-    error::PAErr,
+    volume::ChannelVolumes,
     mainloop::standard::{IterateResult, Mainloop},
     proplist::Proplist,
-    volume::ChannelVolumes,
+    error::PAErr,
 };
 pub fn connect() -> Subscription<Event> {
     struct Connect;
@@ -87,7 +87,7 @@ impl Connection {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Message {
     Connected,
     Disconnected,
@@ -99,6 +99,7 @@ pub enum Message {
     GetDefaultSource,
     SetDefaultSink(DeviceInfo),
     SetDefaultSource(DeviceInfo),
+    SetDeviceVolumeByName(String, ChannelVolumes)
 }
 
 struct PulseHandle {
@@ -171,6 +172,9 @@ impl PulseHandle {
                                     Err(_) => {
                                         PulseHandle::send_disconnected(&mut from_pulse_send).await
                                     }
+                                },
+                                Message::SetDeviceVolumeByName(name, channel_volumes) => {
+                                    server.set_device_volume_by_name(&name, &channel_volumes)
                                 },
                                 _ => {
                                     println!("message doesn't match")
@@ -391,6 +395,13 @@ impl PulseServer {
             }
             Err(_) => Err(PulseServerError::Misc("get_default_source() failed")),
         }
+    }
+
+    fn set_device_volume_by_name(&mut self, name: &str, volume: &ChannelVolumes) {
+        let op = self
+            .introspector
+            .set_sink_volume_by_name(name, volume, None);
+        self.wait_for_result(op).ok();
     }
 
     // after building an operation such as get_devices() we need to keep polling
