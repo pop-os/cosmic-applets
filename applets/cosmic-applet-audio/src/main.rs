@@ -3,6 +3,8 @@ use iced::widget::{button, column, container, row, svg, text, Column, Slider, Sp
 use iced::{Alignment, Application, Command, Element, Length, Settings, Subscription, Theme};
 
 mod pulse;
+use crate::pulse::DeviceInfo;
+use libpulse_binding::volume::{ChannelVolumes, Volume, VolumeLinear};
 
 pub fn main() -> iced::Result {
     Audio::run(Settings {
@@ -17,11 +19,13 @@ pub fn main() -> iced::Result {
 
 #[derive(Default)]
 struct Audio {
-    sink_vol: f32,
-    source_vol: f32,
+    output_vol: ChannelVolumes,
+    input_vol: ChannelVolumes,
     is_open: IsOpen,
-    outputs: Vec<String>,
-    inputs: Vec<String>,
+    current_output: Option<DeviceInfo>,
+    current_input: Option<DeviceInfo>,
+    outputs: Vec<DeviceInfo>,
+    inputs: Vec<DeviceInfo>,
     pulse_state: PulseState,
 }
 
@@ -34,13 +38,12 @@ enum IsOpen {
 
 #[derive(Debug, Clone)]
 enum Message {
-    SinkChanged(f32),
-    SourceChanged(f32),
+    SetOutputVolume(f64),
+    SetInputVolume(f64),
     OutputToggle,
     InputToggle,
     OutputChanged(String),
     InputChanged(String),
-    Send(pulse::Message),
     Pulse(pulse::Event),
 }
 
@@ -52,13 +55,14 @@ impl Application for Audio {
 
     fn new(_flags: ()) -> (Audio, Command<Message>) {
         (
-            // TODO unwrap bad. Fix later
             Audio {
-                sink_vol: 50.0,
-                source_vol: 50.0,
+                output_vol: ChannelVolumes::default(),
+                input_vol: ChannelVolumes::default(),
                 is_open: IsOpen::None,
-                outputs: vec!["1".to_string(), "2".to_string(), "3".to_string()],
-                inputs: vec!["1".to_string(), "2".to_string(), "3".to_string()],
+                current_output: None,
+                current_input: None,
+                outputs: vec![],
+                inputs: vec![],
                 pulse_state: PulseState::Disconnected,
             },
             Command::none(),
@@ -71,11 +75,17 @@ impl Application for Audio {
 
     fn update(&mut self, message: Message) -> Command<Message> {
         match message {
-            Message::SourceChanged(vol) => {
-                self.source_vol = vol;
+            Message::SetOutputVolume(vol) => {
+                self.current_output.as_mut().map(|o| {
+                    o.volume
+                        .set(o.volume.len(), VolumeLinear(vol / 100.0).into())
+                });
             }
-            Message::SinkChanged(vol) => {
-                self.sink_vol = vol;
+            Message::SetInputVolume(vol) => {
+                self.current_input.as_mut().map(|i| {
+                    i.volume
+                        .set(i.volume.len(), VolumeLinear(vol / 100.0).into())
+                });
             }
             Message::OutputChanged(val) => println!("changed output {}", val),
             Message::InputChanged(val) => println!("changed input {}", val),
@@ -93,18 +103,50 @@ impl Application for Audio {
                     IsOpen::Input
                 }
             }
-            Message::Send(message) => match &mut self.pulse_state {
-                PulseState::Connected(connection) => {}
-                PulseState::Disconnected => {} // do nothing
-            },
             Message::Pulse(event) => match event {
                 pulse::Event::Connected(mut connection) => {
                     connection.send(pulse::Message::GetSinks);
                     connection.send(pulse::Message::GetSources);
+                    connection.send(pulse::Message::GetDefaultSink);
+                    connection.send(pulse::Message::GetDefaultSource);
                     self.pulse_state = PulseState::Connected(connection);
                 }
-                pulse::Event::MessageReceived(_) => {}
-                pulse::Event::Disconnected => self.pulse_state = PulseState::Disconnected,
+                pulse::Event::MessageReceived(msg) => {
+                    match msg {
+                        // This is where we match messages from the subscription to app state
+                        pulse::Message::SetSinks(sinks) => self.outputs = sinks,
+                        pulse::Message::SetSources(sources) => {
+                            self.inputs = sources
+                                .into_iter()
+                                .filter(|source| {
+                                    !source
+                                        .name
+                                        .as_ref()
+                                        .unwrap_or(&String::from("Generic"))
+                                        .contains("monitor")
+                                })
+                                .collect()
+                        }
+                        pulse::Message::SetDefaultSink(sink) => {
+                            println!("{}", sink.volume.print());
+                            self.current_output = Some(sink);
+                        }
+                        pulse::Message::SetDefaultSource(source) => {
+                            self.current_input = Some(source)
+                        }
+                        pulse::Message::Disconnected => {
+                            panic!("Subscriton error handling is bad. This should never happen.")
+                        }
+                        _ => {
+                            println!("Received misc message")
+                        }
+                    }
+                }
+                // TODO: view() should gray out buttons/slider when state is disconnected
+                pulse::Event::Disconnected => {
+                    println!("setting state to disconnected");
+                    self.pulse_state = PulseState::Disconnected
+                }
             },
         };
 
@@ -116,17 +158,32 @@ impl Application for Audio {
     }
 
     fn view(&self) -> Element<Message> {
+        let out_f64 = VolumeLinear::from(
+            self.current_output
+                .as_ref()
+                .map(|o| o.volume.avg())
+                .unwrap_or(Volume::default()),
+        )
+        .0 * 100.0;
+        let in_f64 = VolumeLinear::from(
+            self.current_input
+                .as_ref()
+                .map(|o| o.volume.avg())
+                .unwrap_or(Volume::default()),
+        )
+        .0 * 100.0;
+
         let sink = row![
             icon("status/audio-volume-high-symbolic"),
-            Slider::new(1.0..=100.0, self.sink_vol, Message::SinkChanged),
-            text(format!("{}%", self.sink_vol.round()))
+            Slider::new(0.0..=100.0, out_f64, Message::SetOutputVolume),
+            text(format!("{}%", out_f64.round()))
         ]
         .spacing(10)
         .padding(10);
         let source = row![
             icon("devices/audio-input-microphone-symbolic"),
-            Slider::new(1.0..=100.0, self.source_vol, Message::SourceChanged).width(Length::Fill),
-            text(format!("{}%", self.source_vol.round()))
+            Slider::new(0.0..=100.0, in_f64, Message::SetInputVolume),
+            text(format!("{}%", in_f64.round()))
         ]
         .spacing(10)
         .padding(10);
@@ -135,16 +192,30 @@ impl Application for Audio {
         let output_drop = revealer(
             self.is_open == IsOpen::Output,
             "Output",
-            "Speakers - Built-In Audio",
-            self.outputs.clone(),
+            match &self.current_output {
+                Some(output) => pretty_name(output.description.clone()),
+                None => String::from("No device selected"),
+            },
+            self.outputs
+                .clone()
+                .into_iter()
+                .map(|output| pretty_name(output.description))
+                .collect(),
             Message::OutputToggle,
             Message::OutputChanged(String::from("test")),
         );
         let input_drop = revealer(
             self.is_open == IsOpen::Input,
             "Input",
-            "Internal Microphone - Built-In Audio",
-            self.inputs.clone(),
+            match &self.current_input {
+                Some(input) => pretty_name(input.description.clone()),
+                None => String::from("No device selected"),
+            },
+            self.inputs
+                .clone()
+                .into_iter()
+                .map(|input| pretty_name(input.description))
+                .collect(),
             Message::InputToggle,
             Message::InputChanged(String::from("test")),
         );
@@ -182,7 +253,7 @@ fn spacer() -> iced::widget::Space {
 fn revealer<'a>(
     open: bool,
     title: &'a str,
-    selected: &'a str,
+    selected: String,
     options: Vec<String>,
     toggle: Message,
     _change: Message,
@@ -200,12 +271,19 @@ fn revealer<'a>(
 fn revealer_head<'a>(
     _open: bool,
     title: &'a str,
-    selected: &'a str,
+    selected: String,
     toggle: Message,
 ) -> iced::widget::Button<'a, Message> {
-    button(row![row![title].width(Length::Fill), selected])
+    button(row![row![title].width(Length::Fill), text(selected)])
         .width(Length::Fill)
         .on_press(toggle)
+}
+
+fn pretty_name(name: Option<String>) -> String {
+    match name {
+        Some(n) => n,
+        None => String::from("Generic"),
+    }
 }
 
 enum PulseState {
