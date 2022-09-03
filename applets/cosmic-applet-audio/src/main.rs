@@ -4,7 +4,7 @@ use iced::{Alignment, Application, Command, Element, Length, Settings, Subscript
 
 mod pulse;
 use crate::pulse::DeviceInfo;
-use libpulse_binding::volume::{ChannelVolumes, Volume, VolumeLinear};
+use libpulse_binding::volume::{Volume, VolumeLinear};
 
 pub fn main() -> iced::Result {
     Audio::run(Settings {
@@ -79,7 +79,10 @@ impl Application for Audio {
                 if let PulseState::Connected(connection) = &mut self.pulse_state {
                     if let Some(device) = &self.current_output {
                         if let Some(name) = &device.name {
-                            connection.send(pulse::Message::SetDeviceVolumeByName(name.clone().to_string(), device.volume))
+                            connection.send(pulse::Message::SetSinkVolumeByName(
+                                name.clone().to_string(),
+                                device.volume,
+                            ))
                         }
                     }
                 }
@@ -94,7 +97,10 @@ impl Application for Audio {
                     if let Some(device) = &self.current_input {
                         if let Some(name) = &device.name {
                             println!("increasing volume of {}", name);
-                            connection.send(pulse::Message::SetDeviceVolumeByName(name.clone().to_string(), device.volume))
+                            connection.send(pulse::Message::SetSourceVolumeByName(
+                                name.clone().to_string(),
+                                device.volume,
+                            ))
                         }
                     }
                 }

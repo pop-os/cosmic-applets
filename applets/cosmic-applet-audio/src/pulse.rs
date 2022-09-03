@@ -11,10 +11,10 @@ use libpulse_binding::{
         subscribe::{Facility, InterestMaskSet, Operation},
         Context,
     },
-    volume::ChannelVolumes,
+    error::PAErr,
     mainloop::standard::{IterateResult, Mainloop},
     proplist::Proplist,
-    error::PAErr,
+    volume::ChannelVolumes,
 };
 pub fn connect() -> Subscription<Event> {
     struct Connect;
@@ -99,7 +99,8 @@ pub enum Message {
     GetDefaultSource,
     SetDefaultSink(DeviceInfo),
     SetDefaultSource(DeviceInfo),
-    SetDeviceVolumeByName(String, ChannelVolumes)
+    SetSinkVolumeByName(String, ChannelVolumes),
+    SetSourceVolumeByName(String, ChannelVolumes),
 }
 
 struct PulseHandle {
@@ -173,9 +174,12 @@ impl PulseHandle {
                                         PulseHandle::send_disconnected(&mut from_pulse_send).await
                                     }
                                 },
-                                Message::SetDeviceVolumeByName(name, channel_volumes) => {
-                                    server.set_device_volume_by_name(&name, &channel_volumes)
-                                },
+                                Message::SetSinkVolumeByName(name, channel_volumes) => {
+                                    server.set_sink_volume_by_name(&name, &channel_volumes)
+                                }
+                                Message::SetSourceVolumeByName(name, channel_volumes) => {
+                                    server.set_source_volume_by_name(&name, &channel_volumes)
+                                }
                                 _ => {
                                     println!("message doesn't match")
                                 }
@@ -397,10 +401,17 @@ impl PulseServer {
         }
     }
 
-    fn set_device_volume_by_name(&mut self, name: &str, volume: &ChannelVolumes) {
+    fn set_sink_volume_by_name(&mut self, name: &str, volume: &ChannelVolumes) {
         let op = self
             .introspector
             .set_sink_volume_by_name(name, volume, None);
+        self.wait_for_result(op).ok();
+    }
+
+    fn set_source_volume_by_name(&mut self, name: &str, volume: &ChannelVolumes) {
+        let op = self
+            .introspector
+            .set_source_volume_by_name(name, volume, None);
         self.wait_for_result(op).ok();
     }
 
