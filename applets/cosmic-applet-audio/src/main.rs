@@ -19,8 +19,6 @@ pub fn main() -> iced::Result {
 
 #[derive(Default)]
 struct Audio {
-    output_vol: ChannelVolumes,
-    input_vol: ChannelVolumes,
     is_open: IsOpen,
     current_output: Option<DeviceInfo>,
     current_input: Option<DeviceInfo>,
@@ -56,8 +54,6 @@ impl Application for Audio {
     fn new(_flags: ()) -> (Audio, Command<Message>) {
         (
             Audio {
-                output_vol: ChannelVolumes::default(),
-                input_vol: ChannelVolumes::default(),
                 is_open: IsOpen::None,
                 current_output: None,
                 current_input: None,
@@ -128,7 +124,6 @@ impl Application for Audio {
                                 .collect()
                         }
                         pulse::Message::SetDefaultSink(sink) => {
-                            println!("{}", sink.volume.print());
                             self.current_output = Some(sink);
                         }
                         pulse::Message::SetDefaultSource(source) => {
