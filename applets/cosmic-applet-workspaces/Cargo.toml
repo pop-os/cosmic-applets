@@ -24,6 +24,7 @@ wayland-client = { version = "0.30.0-beta.8" }
 calloop = "*"
 nix = "*"
 log = "0.4"
+itertools = "0.10"
 
 [build-dependencies]
 gio = "0.15.10"

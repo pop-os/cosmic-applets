@@ -13,6 +13,7 @@ use gtk4::Inhibit;
 use gtk4::ListView;
 use gtk4::SignalListItemFactory;
 use gtk4::{gio, glib, prelude::*, subclass::prelude::*};
+use itertools::Itertools;
 
 mod imp;
 
@@ -75,7 +76,9 @@ impl WorkspaceList {
         let model_len = model.n_items();
         let new_results: Vec<glib::Object> = workspaces
             .workspace_list()
-            .into_iter()
+            .sorted_by(|a, b| {
+                a.0.cmp(&b.0)
+            })
             .filter_map(|w| {
                 // don't include hidden workspaces
                 if w.1 != 2 {

@@ -500,6 +500,7 @@ dependencies = [
  "gtk4",
  "i18n-embed",
  "i18n-embed-fl",
+ "itertools",
  "libadwaita",
  "libcosmic",
  "log",
