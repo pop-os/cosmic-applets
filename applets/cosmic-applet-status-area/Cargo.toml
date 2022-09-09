@@ -13,6 +13,5 @@ libcosmic = { git = "https://github.com/pop-os/libcosmic", default-features = fa
 libcosmic-applet = { path = "../../libcosmic-applet" }
 once_cell = "1.12"
 serde = "1"
-zbus = "2.0.1"
-zbus_names = "2"
+zbus = "3"
 zvariant = "3"
