@@ -24,12 +24,12 @@ i18n-embed = { version = "0.13.4", features = ["fluent-system", "desktop-request
 i18n-embed-fl = "0.6.4"
 rust-embed = "6.3.0"
 calloop = "0.10.1"
-wayland-backend = { version = "0.1.0-beta.7" }
-wayland-client = { version = "0.30.0-beta.7" }
-nix = "0.24.1"
+wayland-backend = { git = "https://github.com/Smithay/wayland-rs", version = "0.1.0-beta.9"}
+wayland-client = { git = "https://github.com/Smithay/wayland-rs", version = "0.30.0-beta.9"}
+nix = "0.25"
 # config
 anyhow = "1.0.53"
-ron = "0.7.0"
+ron = "0.8.0"
 serde = { version = "1.0.136", features = ["derive"] }
 log = "0.4"
 

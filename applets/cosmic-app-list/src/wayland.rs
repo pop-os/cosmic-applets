@@ -71,7 +71,7 @@ pub fn spawn_toplevels() -> SyncSender<ToplevelEvent> {
                 .unwrap();
 
             let display = conn.display();
-            display.get_registry(&qhandle, ()).unwrap();
+            display.get_registry(&qhandle, ());
 
             let mut state = State {
                 workspace_manager: None,
@@ -147,31 +147,6 @@ pub struct State {
     seats: Vec<WlSeat>,
 }
 
-impl State {
-    pub fn workspace_list(&self) -> impl Iterator<Item = (String, u32)> + '_ {
-        self.workspace_groups
-            .iter()
-            .filter_map(|g| {
-                if g.output == self.expected_output {
-                    Some(g.workspaces.iter().map(|w| {
-                        (
-                            w.name.clone(),
-                            match &w.states {
-                                x if x.contains(&zcosmic_workspace_handle_v1::State::Active) => 0,
-                                x if x.contains(&zcosmic_workspace_handle_v1::State::Urgent) => 1,
-                                x if x.contains(&zcosmic_workspace_handle_v1::State::Hidden) => 2,
-                                _ => 3,
-                            },
-                        )
-                    }))
-                } else {
-                    None
-                }
-            })
-            .flatten()
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct Toplevel {
     pub name: String,
@@ -215,27 +190,24 @@ impl Dispatch<wl_registry::WlRegistry, ()> for State {
             match &interface[..] {
                 "zcosmic_toplevel_info_v1" => {
                     let ti = registry
-                        .bind::<ZcosmicToplevelInfoV1, _, _>(name, 1, qh, ())
-                        .unwrap();
+                        .bind::<ZcosmicToplevelInfoV1, _, _>(name, 1, qh, ());
                     state.toplevel_info = Some(ti);
                 }
                 "zcosmic_toplevel_manager_v1" => {
                     let tm = registry
-                        .bind::<ZcosmicToplevelManagerV1, _, _>(name, 1, qh, ())
-                        .unwrap();
+                        .bind::<ZcosmicToplevelManagerV1, _, _>(name, 1, qh, ());
                     state.toplevel_manager = Some(tm);
                 }
                 "zcosmic_workspace_manager_v1" => {
                     let workspace_manager = registry
-                        .bind::<ZcosmicWorkspaceManagerV1, _, _>(name, 1, qh, ())
-                        .unwrap();
+                        .bind::<ZcosmicWorkspaceManagerV1, _, _>(name, 1, qh, ());
                     state.workspace_manager = Some(workspace_manager);
                 }
                 "wl_seat" => {
-                    registry.bind::<WlSeat, _, _>(name, 1, qh, ()).unwrap();
+                    registry.bind::<WlSeat, _, _>(name, 1, qh, ());
                 }
                 "wl_output" => {
-                    registry.bind::<WlOutput, _, _>(name, 1, qh, ()).unwrap();
+                    registry.bind::<WlOutput, _, _>(name, 1, qh, ());
                 }
                 _ => {}
             }

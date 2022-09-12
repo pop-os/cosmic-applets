@@ -19,8 +19,8 @@ anyhow = "1.0.50"
 i18n-embed = { version = "0.13.4", features = ["fluent-system", "desktop-requester"] }
 i18n-embed-fl = "0.6.4"
 rust-embed = "6.3.0"
-wayland-backend = { version = "0.1.0-beta.8" }
-wayland-client = { version = "0.30.0-beta.8" }
+wayland-backend = { git = "https://github.com/Smithay/wayland-rs", version = "0.1.0-beta.9"}
+wayland-client = { git = "https://github.com/Smithay/wayland-rs", version = "0.30.0-beta.9"}
 calloop = "*"
 nix = "*"
 log = "0.4"

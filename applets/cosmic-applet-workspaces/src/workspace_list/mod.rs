@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0-only
 
+use std::cmp::Ordering;
+
 use crate::utils::WorkspaceEvent;
 use crate::wayland::State;
 use crate::workspace_button::WorkspaceButton;
@@ -77,7 +79,11 @@ impl WorkspaceList {
         let new_results: Vec<glib::Object> = workspaces
             .workspace_list()
             .sorted_by(|a, b| {
-                a.0.cmp(&b.0)
+                match a.0.len().cmp(&b.0.len()) {
+                    Ordering::Less => Ordering::Less,
+                    Ordering::Equal => a.0.cmp(&b.0),
+                    Ordering::Greater => Ordering::Greater,
+                }
             })
             .filter_map(|w| {
                 // don't include hidden workspaces
