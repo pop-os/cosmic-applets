@@ -368,7 +368,7 @@ dependencies = [
  "relm4-macros",
  "tokio",
  "tracker",
- "zbus",
+ "zbus 2.3.2",
 ]
 
 [[package]]
@@ -381,7 +381,7 @@ dependencies = [
  "libcosmic",
  "libcosmic-applet",
  "relm4",
- "zbus",
+ "zbus 2.3.2",
 ]
 
 [[package]]
@@ -395,7 +395,7 @@ dependencies = [
  "once_cell",
  "relm4-macros",
  "tokio",
- "zbus",
+ "zbus 2.3.2",
 ]
 
 [[package]]
@@ -413,7 +413,7 @@ dependencies = [
  "relm4-macros",
  "slotmap",
  "tokio",
- "zbus",
+ "zbus 2.3.2",
 ]
 
 [[package]]
@@ -430,7 +430,7 @@ dependencies = [
  "once_cell",
  "relm4-macros",
  "serde",
- "zbus",
+ "zbus 2.3.2",
  "zbus_names",
  "zvariant",
 ]
@@ -449,7 +449,7 @@ dependencies = [
  "once_cell",
  "relm4-macros",
  "tokio",
- "zbus",
+ "zbus 2.3.2",
 ]
 
 [[package]]
@@ -464,8 +464,7 @@ dependencies = [
  "libcosmic-applet",
  "once_cell",
  "serde",
- "zbus",
- "zbus_names",
+ "zbus 3.1.0",
  "zvariant",
 ]
 
@@ -482,7 +481,7 @@ dependencies = [
  "libcosmic-applet",
  "once_cell",
  "serde",
- "zbus",
+ "zbus 2.3.2",
  "zbus_names",
  "zvariant",
 ]
@@ -521,7 +520,7 @@ dependencies = [
  "derive_builder",
  "procfs",
  "time 0.3.13",
- "zbus",
+ "zbus 2.3.2",
  "zvariant",
 ]
 
@@ -1713,7 +1712,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c03958f20018a20963daf0c16ada4f271ae2da3e0017fb40caa8b0e3dc5b0226"
 dependencies = [
  "serde",
- "zbus",
+ "zbus 2.3.2",
  "zvariant",
 ]
 
@@ -1761,7 +1760,7 @@ dependencies = [
  "serde",
  "thiserror",
  "time 0.3.13",
- "zbus",
+ "zbus 2.3.2",
  "zvariant",
 ]
 
@@ -3179,7 +3178,46 @@ dependencies = [
  "tracing",
  "uds_windows",
  "winapi",
- "zbus_macros",
+ "zbus_macros 2.3.2",
+ "zbus_names",
+ "zvariant",
+]
+
+[[package]]
+name = "zbus"
+version = "3.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d37e0d34b881934b987b72a91fdc1daba9ebc90c1f91b7944c680991c4443fc6"
+dependencies = [
+ "async-broadcast",
+ "async-channel",
+ "async-executor",
+ "async-io",
+ "async-lock",
+ "async-recursion",
+ "async-task",
+ "async-trait",
+ "byteorder",
+ "derivative",
+ "dirs 4.0.0",
+ "enumflags2",
+ "event-listener",
+ "futures-core",
+ "futures-sink",
+ "futures-util",
+ "hex",
+ "nix 0.24.2",
+ "once_cell",
+ "ordered-stream",
+ "rand",
+ "serde",
+ "serde_repr",
+ "sha1",
+ "static_assertions",
+ "tracing",
+ "uds_windows",
+ "winapi",
+ "zbus_macros 3.1.0",
  "zbus_names",
  "zvariant",
 ]
@@ -3189,6 +3227,19 @@ name = "zbus_macros"
 version = "2.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f8fb5186d1c87ae88cf234974c240671238b4a679158ad3b94ec465237349a6"
+dependencies = [
+ "proc-macro-crate",
+ "proc-macro2",
+ "quote",
+ "regex",
+ "syn",
+]
+
+[[package]]
+name = "zbus_macros"
+version = "3.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ba7905f7c665ea41828bd69112902daa131191a85131fef0f60f7cc3bc2fbec4"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",

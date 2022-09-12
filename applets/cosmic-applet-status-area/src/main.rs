@@ -1,7 +1,6 @@
 use cascade::cascade;
 use gtk4::{glib, prelude::*};
 
-mod dbus_service;
 mod deref_cell;
 mod status_area;
 mod status_menu;
