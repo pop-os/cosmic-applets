@@ -3225,8 +3225,3 @@ dependencies = [
  "quote",
  "syn",
 ]
-
-[[patch.unused]]
-name = "xkbcommon"
-version = "0.5.0"
-source = "git+https://github.com/rust-x-bindings/xkbcommon-rs#4e491bee1b850625ae077134901f89836edb6e81"
