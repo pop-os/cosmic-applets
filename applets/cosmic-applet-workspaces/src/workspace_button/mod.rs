@@ -2,7 +2,7 @@ mod imp;
 
 use crate::{utils::WorkspaceEvent, workspace_object::WorkspaceObject, TX};
 use glib::Object;
-use gtk4::{glib, prelude::*, subclass::prelude::*, ToggleButton};
+use gtk4::{glib, prelude::*, subclass::prelude::*, ToggleButton, Label, Align};
 
 glib::wrapper! {
     pub struct WorkspaceButton(ObjectSubclass<imp::WorkspaceButton>)
@@ -17,8 +17,14 @@ impl WorkspaceButton {
 
         let tb = ToggleButton::with_label("");
         self_.append(&tb);
-
+        self_.set_hexpand(true);
         imp.button.replace(tb);
+
+        self_.connect_parent_notify(|self_| {
+            if let Some(parent) = self_.parent() {
+                parent.set_hexpand(true);
+            }
+        });
 
         self_
     }
@@ -28,10 +34,14 @@ impl WorkspaceButton {
         let old_button = imp.button.take();
         self.remove(&old_button);
 
-        let is_active = obj.active() == 0;
         let id = obj.id();
-        let new_button = ToggleButton::with_label(&id);
+        let new_button = ToggleButton::new();
+        new_button.set_hexpand(true);
 
+        let label = Label::new(Some(&id));
+        label.set_halign(Align::Center);
+        new_button.set_child(Some(&label));
+        
         if obj.active() == 1 {
             new_button.add_css_class("alert");
         } else if obj.active() == 0 {
