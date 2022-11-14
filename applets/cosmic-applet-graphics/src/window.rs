@@ -3,8 +3,6 @@ use crate::graphics::{get_current_graphics, set_graphics, Graphics};
 use cosmic::applet::{get_popup_settings, icon_button, popup_container};
 use cosmic::iced_style::application::{self, Appearance};
 use cosmic::separator;
-use cosmic::theme::Container;
-use cosmic::widget::widget::container;
 use cosmic::{
     iced::widget::{column, radio, text},
     iced::{self, Application, Command, Length},
@@ -13,7 +11,7 @@ use cosmic::{
     Element,
 };
 use cosmic_panel_config::{PanelAnchor, PanelSize};
-use iced_sctk::alignment::{Horizontal, Vertical};
+use iced_sctk::alignment::Horizontal;
 use iced_sctk::commands::popup::{destroy_popup, get_popup};
 use iced_sctk::Color;
 use zbus::Connection;
@@ -22,6 +20,21 @@ use zbus::Connection;
 enum State {
     SelectGraphicsMode(bool),
     SettingGraphicsMode(Graphics),
+}
+
+#[derive(Clone, Copy)]
+enum GraphicsMode {
+    SelectedGraphicsMode(Graphics),
+    CurrentGraphicsMode(Graphics),
+}
+
+impl GraphicsMode {
+    fn inner(&self) -> Graphics {
+        match self {
+            GraphicsMode::SelectedGraphicsMode(g) => *g,
+            GraphicsMode::CurrentGraphicsMode(g) => *g,
+        }
+    }
 }
 
 impl Default for State {
@@ -33,7 +46,7 @@ impl Default for State {
 #[derive(Default)]
 pub struct Window {
     popup: Option<window::Id>,
-    graphics_mode: Option<Graphics>,
+    graphics_mode: Option<GraphicsMode>,
     id_ctr: u32,
     icon_size: u16,
     anchor: PanelAnchor,
@@ -46,7 +59,7 @@ pub struct Window {
 #[derive(Clone, Debug)]
 pub enum Message {
     CurrentGraphics(Option<Graphics>),
-    AppliedGraphicsMode(Option<Graphics>),
+    SelectedGraphicsMode(Option<Graphics>),
     DBusInit(Option<(Connection, PowerDaemonProxy<'static>)>),
     SelectGraphicsMode(Graphics),
     TogglePopup,
@@ -97,14 +110,15 @@ impl Application for Window {
                     return Command::perform(
                         set_graphics(proxy.clone(), new_graphics_mode),
                         move |success| {
-                            Message::AppliedGraphicsMode(success.ok().map(|_| new_graphics_mode))
+                            Message::SelectedGraphicsMode(success.ok().map(|_| new_graphics_mode))
                         },
                     );
                 }
             }
-            Message::AppliedGraphicsMode(g) => {
+            Message::SelectedGraphicsMode(g) => {
                 if let Some(g) = g {
-                    self.graphics_mode.replace(g);
+                    self.graphics_mode
+                        .replace(GraphicsMode::SelectedGraphicsMode(g));
                     self.state = State::SelectGraphicsMode(true);
                 }
             }
@@ -146,7 +160,12 @@ impl Application for Window {
             }
             Message::CurrentGraphics(g) => {
                 if let Some(g) = g {
-                    self.graphics_mode.replace(g);
+                    self.graphics_mode = Some(match self.graphics_mode.take() {
+                        Some(GraphicsMode::CurrentGraphicsMode(_)) | None => {
+                            GraphicsMode::CurrentGraphicsMode(g)
+                        }
+                        Some(g) => g,
+                    });
                 }
             }
         }
@@ -160,28 +179,28 @@ impl Application for Window {
                     radio(
                         "Integrated Graphics",
                         Graphics::Integrated,
-                        self.graphics_mode,
+                        self.graphics_mode.map(|g| g.inner()),
                         |g| Message::SelectGraphicsMode(g),
                     )
                     .into(),
                     radio(
                         "Nvidia Graphics",
                         Graphics::Nvidia,
-                        self.graphics_mode,
+                        self.graphics_mode.map(|g| g.inner()),
                         |g| Message::SelectGraphicsMode(g),
                     )
                     .into(),
                     radio(
                         "Hybrid Graphics",
                         Graphics::Hybrid,
-                        self.graphics_mode,
+                        self.graphics_mode.map(|g| g.inner()),
                         |g| Message::SelectGraphicsMode(g),
                     )
                     .into(),
                     radio(
                         "Compute Graphics",
                         Graphics::Compute,
-                        self.graphics_mode,
+                        self.graphics_mode.map(|g| g.inner()),
                         |g| Message::SelectGraphicsMode(g),
                     )
                     .into(),
