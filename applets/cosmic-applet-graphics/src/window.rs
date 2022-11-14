@@ -1,7 +1,10 @@
 use crate::dbus::{self, PowerDaemonProxy};
 use crate::graphics::{get_current_graphics, set_graphics, Graphics};
 use cosmic::applet::{get_popup_settings, icon_button};
+use cosmic::iced_style::application::{self, Appearance};
 use cosmic::separator;
+use cosmic::theme::Container;
+use cosmic::widget::widget::container;
 use cosmic::{
     iced::widget::{column, radio, text},
     iced::{self, Application, Command, Length},
@@ -10,6 +13,7 @@ use cosmic::{
     Element,
 };
 use cosmic_panel_config::{PanelAnchor, PanelSize};
+use iced_sctk::Color;
 use iced_sctk::alignment::Horizontal;
 use iced_sctk::commands::popup::{destroy_popup, get_popup};
 use zbus::Connection;
@@ -210,7 +214,7 @@ impl Application for Window {
                 .into()
             }
         };
-        column(vec![
+        container(column(vec![
             text("Graphics Mode")
                 .width(Length::Fill)
                 .horizontal_alignment(Horizontal::Center)
@@ -218,9 +222,16 @@ impl Application for Window {
                 .into(),
             separator!(1).into(),
             content,
-        ])
-        .padding(4)
-        .spacing(4)
+            ])
+            .padding(4)
+            .spacing(4))
+        .style(Container::Custom(|theme| container::Appearance {
+            text_color: Some(theme.cosmic().on_bg_color().into()),
+            background: Some(theme.extended_palette().background.base.color.into()),
+            border_radius: 12.0,
+            border_width: 0.0,
+            border_color: Color::TRANSPARENT,
+        }))
         .into()
     }
 
@@ -238,6 +249,10 @@ impl Application for Window {
     }
     fn layer_surface_done(&self, _: cosmic::iced_native::window::Id) -> Self::Message {
         unimplemented!()
+    }
+
+    fn style(&self) -> <Self::Theme as application::StyleSheet>::Style {
+        <Self::Theme as application::StyleSheet>::Style::Custom(|theme| Appearance { background_color: Color::from_rgba(0.0, 0.0, 0.0, 0.0), text_color: theme.cosmic().on_bg_color().into() }) 
     }
 
     fn view_window(&self, _: window::Id) -> Element<Message> {
