@@ -14,11 +14,16 @@ use iced_sctk::alignment::Horizontal;
 use iced_sctk::commands::popup::{destroy_popup, get_popup};
 use zbus::Connection;
 
-#[derive(Default, Clone, Copy)]
+#[derive(Clone, Copy)]
 enum State {
-    #[default]
-    SelectGraphicsMode,
+    SelectGraphicsMode(bool),
     SettingGraphicsMode(Graphics),
+}
+
+impl Default for State {
+    fn default() -> Self {
+        Self::SelectGraphicsMode(false)
+    }
 }
 
 #[derive(Default)]
@@ -96,7 +101,7 @@ impl Application for Window {
             Message::AppliedGraphicsMode(g) => {
                 if let Some(g) = g {
                     self.graphics_mode.replace(g);
-                    self.state = State::SelectGraphicsMode;
+                    self.state = State::SelectGraphicsMode(true);
                 }
             }
             Message::TogglePopup => {
@@ -113,7 +118,9 @@ impl Application for Window {
                             |cur_graphics| Message::CurrentGraphics(cur_graphics.ok()),
                         ));
                     }
-                    let popup_settings = get_popup_settings(window::Id::new(0), new_id, None, None);
+                    let mut popup_settings =
+                        get_popup_settings(window::Id::new(0), new_id, None, None);
+                    popup_settings.positioner.size = (200, 240);
                     commands.push(get_popup(popup_settings));
                     return Command::batch(commands);
                 }
@@ -134,7 +141,6 @@ impl Application for Window {
                 );
             }
             Message::CurrentGraphics(g) => {
-                dbg!(g);
                 if let Some(g) = g {
                     self.graphics_mode.replace(g);
                 }
@@ -145,39 +151,49 @@ impl Application for Window {
 
     fn view_popup(&self, _: window::Id) -> Element<Message> {
         let content = match self.state {
-            State::SelectGraphicsMode => column(vec![
-                radio(
-                    "Integrated Graphics",
-                    Graphics::Integrated,
-                    self.graphics_mode,
-                    |g| Message::SelectGraphicsMode(g),
-                )
-                .into(),
-                radio(
-                    "Nvidia Graphics",
-                    Graphics::Nvidia,
-                    self.graphics_mode,
-                    |g| Message::SelectGraphicsMode(g),
-                )
-                .into(),
-                radio(
-                    "Hybrid Graphics",
-                    Graphics::Hybrid,
-                    self.graphics_mode,
-                    |g| Message::SelectGraphicsMode(g),
-                )
-                .into(),
-                radio(
-                    "Compute Graphics",
-                    Graphics::Compute,
-                    self.graphics_mode,
-                    |g| Message::SelectGraphicsMode(g),
-                )
-                .into(),
-            ])
-            .padding([8, 0])
-            .spacing(8)
-            .into(),
+            State::SelectGraphicsMode(pending_restart) => {
+                let mut content_list = vec![
+                    radio(
+                        "Integrated Graphics",
+                        Graphics::Integrated,
+                        self.graphics_mode,
+                        |g| Message::SelectGraphicsMode(g),
+                    )
+                    .into(),
+                    radio(
+                        "Nvidia Graphics",
+                        Graphics::Nvidia,
+                        self.graphics_mode,
+                        |g| Message::SelectGraphicsMode(g),
+                    )
+                    .into(),
+                    radio(
+                        "Hybrid Graphics",
+                        Graphics::Hybrid,
+                        self.graphics_mode,
+                        |g| Message::SelectGraphicsMode(g),
+                    )
+                    .into(),
+                    radio(
+                        "Compute Graphics",
+                        Graphics::Compute,
+                        self.graphics_mode,
+                        |g| Message::SelectGraphicsMode(g),
+                    )
+                    .into(),
+                ];
+                if pending_restart {
+                    content_list.insert(
+                        0,
+                        text("Restart to apply changes")
+                            .width(Length::Fill)
+                            .horizontal_alignment(Horizontal::Center)
+                            .size(16)
+                            .into(),
+                    )
+                }
+                column(content_list).padding([8, 0]).spacing(8).into()
+            }
             State::SettingGraphicsMode(graphics) => {
                 let graphics_str = match graphics {
                     Graphics::Integrated => "integrated",
