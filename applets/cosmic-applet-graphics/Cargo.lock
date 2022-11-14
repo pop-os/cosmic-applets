@@ -1546,7 +1546,7 @@ checksum = "fc7fcc620a3bff7cdd7a365be3376c97191aeaccc2a603e600951e452615bf89"
 [[package]]
 name = "libcosmic"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic/?branch=sctk-cosmic-design-system#49f0f34270fb1cf4eba21ea4f45180dc37f224f9"
+source = "git+https://github.com/pop-os/libcosmic/?branch=sctk-cosmic-design-system#9174e4209964f3d924fb280c89301e8fba4967fb"
 dependencies = [
  "apply",
  "cosmic-panel-config",
