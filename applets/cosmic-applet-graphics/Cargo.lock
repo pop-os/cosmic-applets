@@ -1271,7 +1271,7 @@ checksum = "dfa686283ad6dd069f105e5ab091b04c62850d3e4cf5d67debad1933f55023df"
 [[package]]
 name = "iced"
 version = "0.5.1"
-source = "git+https://github.com/pop-os/iced?branch=sctk-cosmic#cf6f07474e840b1b5dbeaa8376650759e46ccce4"
+source = "git+https://github.com/pop-os/iced?branch=sctk-cosmic#21f8ec347081b262e22ddc7ec8377cc97df005a2"
 dependencies = [
  "iced_core",
  "iced_futures",
@@ -1287,7 +1287,7 @@ dependencies = [
 [[package]]
 name = "iced_core"
 version = "0.6.0"
-source = "git+https://github.com/pop-os/iced?branch=sctk-cosmic#cf6f07474e840b1b5dbeaa8376650759e46ccce4"
+source = "git+https://github.com/pop-os/iced?branch=sctk-cosmic#21f8ec347081b262e22ddc7ec8377cc97df005a2"
 dependencies = [
  "bitflags",
  "palette",
@@ -1297,7 +1297,7 @@ dependencies = [
 [[package]]
 name = "iced_futures"
 version = "0.5.0"
-source = "git+https://github.com/pop-os/iced?branch=sctk-cosmic#cf6f07474e840b1b5dbeaa8376650759e46ccce4"
+source = "git+https://github.com/pop-os/iced?branch=sctk-cosmic#21f8ec347081b262e22ddc7ec8377cc97df005a2"
 dependencies = [
  "futures",
  "log",
@@ -1308,7 +1308,7 @@ dependencies = [
 [[package]]
 name = "iced_glow"
 version = "0.4.0"
-source = "git+https://github.com/pop-os/iced?branch=sctk-cosmic#cf6f07474e840b1b5dbeaa8376650759e46ccce4"
+source = "git+https://github.com/pop-os/iced?branch=sctk-cosmic#21f8ec347081b262e22ddc7ec8377cc97df005a2"
 dependencies = [
  "bytemuck",
  "euclid",
@@ -1323,7 +1323,7 @@ dependencies = [
 [[package]]
 name = "iced_graphics"
 version = "0.4.0"
-source = "git+https://github.com/pop-os/iced?branch=sctk-cosmic#cf6f07474e840b1b5dbeaa8376650759e46ccce4"
+source = "git+https://github.com/pop-os/iced?branch=sctk-cosmic#21f8ec347081b262e22ddc7ec8377cc97df005a2"
 dependencies = [
  "bitflags",
  "bytemuck",
@@ -1343,7 +1343,7 @@ dependencies = [
 [[package]]
 name = "iced_lazy"
 version = "0.2.0"
-source = "git+https://github.com/pop-os/iced?branch=sctk-cosmic#cf6f07474e840b1b5dbeaa8376650759e46ccce4"
+source = "git+https://github.com/pop-os/iced?branch=sctk-cosmic#21f8ec347081b262e22ddc7ec8377cc97df005a2"
 dependencies = [
  "iced_native",
  "ouroboros",
@@ -1352,7 +1352,7 @@ dependencies = [
 [[package]]
 name = "iced_native"
 version = "0.6.0"
-source = "git+https://github.com/pop-os/iced?branch=sctk-cosmic#cf6f07474e840b1b5dbeaa8376650759e46ccce4"
+source = "git+https://github.com/pop-os/iced?branch=sctk-cosmic#21f8ec347081b262e22ddc7ec8377cc97df005a2"
 dependencies = [
  "iced_core",
  "iced_futures",
@@ -1366,7 +1366,7 @@ dependencies = [
 [[package]]
 name = "iced_sctk"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/iced-sctk#2052e632045cc359c225c73d9b289d4afd629dd0"
+source = "git+https://github.com/pop-os/iced-sctk#b3c070635c6023602f6c66d4a99802b7f610e5cb"
 dependencies = [
  "enum-repr",
  "futures",
@@ -1385,7 +1385,7 @@ dependencies = [
 [[package]]
 name = "iced_style"
 version = "0.5.0"
-source = "git+https://github.com/pop-os/iced?branch=sctk-cosmic#cf6f07474e840b1b5dbeaa8376650759e46ccce4"
+source = "git+https://github.com/pop-os/iced?branch=sctk-cosmic#21f8ec347081b262e22ddc7ec8377cc97df005a2"
 dependencies = [
  "iced_core",
  "once_cell",
@@ -1395,7 +1395,7 @@ dependencies = [
 [[package]]
 name = "iced_wgpu"
 version = "0.6.0"
-source = "git+https://github.com/pop-os/iced?branch=sctk-cosmic#cf6f07474e840b1b5dbeaa8376650759e46ccce4"
+source = "git+https://github.com/pop-os/iced?branch=sctk-cosmic#21f8ec347081b262e22ddc7ec8377cc97df005a2"
 dependencies = [
  "bitflags",
  "bytemuck",
