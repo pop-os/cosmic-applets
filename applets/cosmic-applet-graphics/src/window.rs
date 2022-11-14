@@ -83,7 +83,6 @@ impl Application for Window {
     fn update(&mut self, message: Message) -> iced::Command<Self::Message> {
         match message {
             Message::SelectGraphicsMode(new_graphics_mode) => {
-                dbg!(new_graphics_mode);
                 if let Some((_, proxy)) = self.dbus.as_ref() {
                     self.state = State::SettingGraphicsMode(new_graphics_mode);
                     return Command::perform(
@@ -96,7 +95,6 @@ impl Application for Window {
             }
             Message::AppliedGraphicsMode(g) => {
                 if let Some(g) = g {
-                    dbg!(g);
                     self.graphics_mode.replace(g);
                     self.state = State::SelectGraphicsMode;
                 }

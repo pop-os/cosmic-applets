@@ -1366,7 +1366,7 @@ dependencies = [
 [[package]]
 name = "iced_sctk"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/iced-sctk#a02b99b3ba0bd17452a04324d52eee2a36adbf24"
+source = "git+https://github.com/pop-os/iced-sctk#2052e632045cc359c225c73d9b289d4afd629dd0"
 dependencies = [
  "enum-repr",
  "futures",
