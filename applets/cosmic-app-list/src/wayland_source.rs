@@ -1,7 +1,7 @@
 //! Utilities for using an [`EventQueue`] from wayland-client with an event loop that performs polling with
 //! [`calloop`](https://crates.io/crates/calloop).
 
-use std::{io, os::unix::prelude::RawFd};
+use std::{io, os::unix::prelude::{RawFd, AsRawFd}};
 
 use calloop::{
     generic::Generic, EventSource, InsertError, Interest, LoopHandle, Mode, Poll, PostAction,
@@ -30,7 +30,7 @@ impl<D> WaylandSource<D> {
     /// Wrap an [`EventQueue`] as a [`WaylandSource`].
     pub fn new(queue: EventQueue<D>) -> Result<WaylandSource<D>, WaylandError> {
         let guard = queue.prepare_read()?;
-        let fd = Generic::new(guard.connection_fd(), Interest::READ, Mode::Level);
+        let fd = Generic::new(guard.connection_fd().as_raw_fd(), Interest::READ, Mode::Level);
         drop(guard);
 
         Ok(WaylandSource {
@@ -192,12 +192,12 @@ impl<D> WaylandSource<D> {
                     break Err(Errno::EPROTO.into());
                 }
 
-                Err(DispatchError::BadMessage { msg, interface }) => {
+                Err(DispatchError::BadMessage { sender_id, interface, opcode }) => {
                     log::error!(
-                        "Bad message on interface \"{}\": (opcode: {}, args: {:?})",
+                        "Bad message on interface \"{}\": (opcode: {}, sender_id: {:?})",
                         interface,
-                        msg.opcode,
-                        msg.args,
+                        opcode,
+                        sender_id,
                     );
 
                     break Err(Errno::EPROTO.into());
