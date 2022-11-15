@@ -12,6 +12,7 @@ use cosmic::{
 };
 use cosmic_panel_config::{PanelAnchor, PanelSize};
 use iced_sctk::alignment::Horizontal;
+use iced_sctk::application::SurfaceIdWrapper;
 use iced_sctk::commands::popup::{destroy_popup, get_popup};
 use iced_sctk::Color;
 use zbus::Connection;
@@ -63,6 +64,7 @@ pub enum Message {
     DBusInit(Option<(Connection, PowerDaemonProxy<'static>)>),
     SelectGraphicsMode(Graphics),
     TogglePopup,
+    PopupClosed(window::Id),
 }
 
 impl Application for Window {
@@ -136,9 +138,8 @@ impl Application for Window {
                             |cur_graphics| Message::CurrentGraphics(cur_graphics.ok()),
                         ));
                     }
-                    let mut popup_settings =
-                        get_popup_settings(window::Id::new(0), new_id, None, None);
-                    popup_settings.positioner.size = (200, 240);
+                    let popup_settings =
+                        get_popup_settings(window::Id::new(0), new_id, (200, 240), None, None);
                     commands.push(get_popup(popup_settings));
                     return Command::batch(commands);
                 }
@@ -168,101 +169,105 @@ impl Application for Window {
                     });
                 }
             }
+            Message::PopupClosed(id) => {
+                if self.popup.as_ref() == Some(&id) {
+                    self.popup = None;
+                }
+            },
         }
         Command::none()
     }
 
-    fn view_popup(&self, _: window::Id) -> Element<Message> {
-        let content = match self.state {
-            State::SelectGraphicsMode(pending_restart) => {
-                let mut content_list = vec![
-                    radio(
-                        "Integrated Graphics",
-                        Graphics::Integrated,
-                        self.graphics_mode.map(|g| g.inner()),
-                        |g| Message::SelectGraphicsMode(g),
-                    )
-                    .into(),
-                    radio(
-                        "Nvidia Graphics",
-                        Graphics::Nvidia,
-                        self.graphics_mode.map(|g| g.inner()),
-                        |g| Message::SelectGraphicsMode(g),
-                    )
-                    .into(),
-                    radio(
-                        "Hybrid Graphics",
-                        Graphics::Hybrid,
-                        self.graphics_mode.map(|g| g.inner()),
-                        |g| Message::SelectGraphicsMode(g),
-                    )
-                    .into(),
-                    radio(
-                        "Compute Graphics",
-                        Graphics::Compute,
-                        self.graphics_mode.map(|g| g.inner()),
-                        |g| Message::SelectGraphicsMode(g),
-                    )
-                    .into(),
-                ];
-                if pending_restart {
-                    content_list.insert(
-                        0,
-                        text("Restart to apply changes")
+    fn view(&self, id: SurfaceIdWrapper) -> Element<Message> {
+        match id {
+            SurfaceIdWrapper::LayerSurface(_) => unimplemented!(),
+            SurfaceIdWrapper::Window(_) => icon_button().on_press(Message::TogglePopup).into(),
+            SurfaceIdWrapper::Popup(_) => {
+                let content = match self.state {
+                    State::SelectGraphicsMode(pending_restart) => {
+                        let mut content_list = vec![
+                            radio(
+                                "Integrated Graphics",
+                                Graphics::Integrated,
+                                self.graphics_mode.map(|g| g.inner()),
+                                |g| Message::SelectGraphicsMode(g),
+                            )
+                            .into(),
+                            radio(
+                                "Nvidia Graphics",
+                                Graphics::Nvidia,
+                                self.graphics_mode.map(|g| g.inner()),
+                                |g| Message::SelectGraphicsMode(g),
+                            )
+                            .into(),
+                            radio(
+                                "Hybrid Graphics",
+                                Graphics::Hybrid,
+                                self.graphics_mode.map(|g| g.inner()),
+                                |g| Message::SelectGraphicsMode(g),
+                            )
+                            .into(),
+                            radio(
+                                "Compute Graphics",
+                                Graphics::Compute,
+                                self.graphics_mode.map(|g| g.inner()),
+                                |g| Message::SelectGraphicsMode(g),
+                            )
+                            .into(),
+                        ];
+                        if pending_restart {
+                            content_list.insert(
+                                0,
+                                text("Restart to apply changes")
+                                    .width(Length::Fill)
+                                    .horizontal_alignment(Horizontal::Center)
+                                    .size(16)
+                                    .into(),
+                            )
+                        }
+                        column(content_list).padding([8, 0]).spacing(8).into()
+                    }
+                    State::SettingGraphicsMode(graphics) => {
+                        let graphics_str = match graphics {
+                            Graphics::Integrated => "integrated",
+                            Graphics::Hybrid => "hybrid",
+                            Graphics::Nvidia => "nvidia",
+                            Graphics::Compute => "compute",
+                        };
+                        column(vec![text(format!(
+                            "Setting graphics mode to {graphics_str}..."
+                        ))
+                        .width(Length::Fill)
+                        .horizontal_alignment(Horizontal::Center)
+                        .into()])
+                        .into()
+                    }
+                };
+                popup_container(
+                    column(vec![
+                        text("Graphics Mode")
                             .width(Length::Fill)
                             .horizontal_alignment(Horizontal::Center)
-                            .size(16)
+                            .size(24)
                             .into(),
-                    )
-                }
-                column(content_list).padding([8, 0]).spacing(8).into()
-            }
-            State::SettingGraphicsMode(graphics) => {
-                let graphics_str = match graphics {
-                    Graphics::Integrated => "integrated",
-                    Graphics::Hybrid => "hybrid",
-                    Graphics::Nvidia => "nvidia",
-                    Graphics::Compute => "compute",
-                };
-                column(vec![text(format!(
-                    "Setting graphics mode to {graphics_str}..."
-                ))
-                .width(Length::Fill)
-                .horizontal_alignment(Horizontal::Center)
-                .into()])
+                        separator!(1).into(),
+                        content,
+                    ])
+                    .padding(4)
+                    .spacing(4),
+                )
                 .into()
-            }
-        };
-        popup_container(
-            column(vec![
-                text("Graphics Mode")
-                    .width(Length::Fill)
-                    .horizontal_alignment(Horizontal::Center)
-                    .size(24)
-                    .into(),
-                separator!(1).into(),
-                content,
-            ])
-            .padding(4)
-            .spacing(4),
-        )
-        .into()
+            },
+        }
     }
 
-    fn view_layer_surface(
-        &self,
-        _: cosmic::iced_native::window::Id,
-    ) -> iced::Element<'_, Self::Message, iced::Renderer<Self::Theme>> {
-        unimplemented!()
-    }
-    fn close_window_requested(&self, _: cosmic::iced_native::window::Id) -> Self::Message {
-        unimplemented!()
-    }
-    fn popup_done(&self, _: cosmic::iced_native::window::Id) -> Self::Message {
-        unimplemented!()
-    }
-    fn layer_surface_done(&self, _: cosmic::iced_native::window::Id) -> Self::Message {
-        unimplemented!()
+    fn close_requested(&self, id: SurfaceIdWrapper) -> Self::Message {
+        match id {
+            SurfaceIdWrapper::LayerSurface(_) | SurfaceIdWrapper::Window(_) => unimplemented!(),
+            SurfaceIdWrapper::Popup(id) => {
+                Message::PopupClosed(id)
+            },
+        }
     }
 
     fn style(&self) -> <Self::Theme as application::StyleSheet>::Style {
@@ -270,13 +275,6 @@ impl Application for Window {
             background_color: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
             text_color: theme.cosmic().on_bg_color().into(),
         })
-    }
-
-    fn view_window(&self, _: window::Id) -> Element<Message> {
-        // TODO use panel config crate after resolving version mismatch
-
-        let btn = icon_button().on_press(Message::TogglePopup);
-        btn.into()
     }
 
     fn should_exit(&self) -> bool {
