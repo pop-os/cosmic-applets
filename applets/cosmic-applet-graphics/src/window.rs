@@ -3,6 +3,7 @@ use crate::graphics::{get_current_graphics, set_graphics, Graphics};
 use cosmic::applet::{get_popup_settings, icon_button, popup_container};
 use cosmic::iced_style::application::{self, Appearance};
 use cosmic::separator;
+use cosmic::theme::{Button, Svg};
 use cosmic::{
     iced::widget::{column, radio, text},
     iced::{self, Application, Command, Length},
@@ -173,7 +174,7 @@ impl Application for Window {
                 if self.popup.as_ref() == Some(&id) {
                     self.popup = None;
                 }
-            },
+            }
         }
         Command::none()
     }
@@ -181,7 +182,10 @@ impl Application for Window {
     fn view(&self, id: SurfaceIdWrapper) -> Element<Message> {
         match id {
             SurfaceIdWrapper::LayerSurface(_) => unimplemented!(),
-            SurfaceIdWrapper::Window(_) => icon_button().on_press(Message::TogglePopup).into(),
+            SurfaceIdWrapper::Window(_) => icon_button("input-gaming-symbolic", Svg::Accent)
+                .on_press(Message::TogglePopup)
+                .style(Button::Text)
+                .into(),
             SurfaceIdWrapper::Popup(_) => {
                 let content = match self.state {
                     State::SelectGraphicsMode(pending_restart) => {
@@ -257,16 +261,14 @@ impl Application for Window {
                     .spacing(4),
                 )
                 .into()
-            },
+            }
         }
     }
 
     fn close_requested(&self, id: SurfaceIdWrapper) -> Self::Message {
         match id {
             SurfaceIdWrapper::LayerSurface(_) | SurfaceIdWrapper::Window(_) => unimplemented!(),
-            SurfaceIdWrapper::Popup(id) => {
-                Message::PopupClosed(id)
-            },
+            SurfaceIdWrapper::Popup(id) => Message::PopupClosed(id),
         }
     }
 

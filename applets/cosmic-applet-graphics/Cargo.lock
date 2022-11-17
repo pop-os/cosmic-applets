@@ -301,12 +301,12 @@ checksum = "c1db59621ec70f09c5e9b597b220c7a2b43611f4710dc03ceb8748637775692c"
 
 [[package]]
 name = "calloop"
-version = "0.10.2"
+version = "0.10.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "595eb0438b3c6d262395fe30e6de9a61beb57ea56290b00a07f227fe6e20cbf2"
+checksum = "5bcf530afb40e45e14440701e5e996d7fd139e84a912a4d83a8d6a0fb3e58663"
 dependencies = [
  "log",
- "nix 0.24.2",
+ "nix 0.25.0",
  "slotmap",
  "thiserror",
  "vec_map",
@@ -661,9 +661,9 @@ dependencies = [
 
 [[package]]
 name = "digest"
-version = "0.10.5"
+version = "0.10.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "adfbc57365a37acbd2ebf2b64d7e69bb766e2fea813521ed536f5d0520dcf86c"
+checksum = "8168378f4e5023e7218c89c891c0fd8ecdb5e5e4f18cb78f38cf245dd021e76f"
 dependencies = [
  "block-buffer",
  "crypto-common",
@@ -1270,8 +1270,8 @@ checksum = "dfa686283ad6dd069f105e5ab091b04c62850d3e4cf5d67debad1933f55023df"
 
 [[package]]
 name = "iced"
-version = "0.5.1"
-source = "git+https://github.com/pop-os/iced?branch=sctk-cosmic#e5d0240fab766a308916af0899a01e95daf2edf2"
+version = "0.5.2"
+source = "git+https://github.com/pop-os/iced?branch=sctk-cosmic#6c51969025a8e6f49a7b9f0cb55871ae041aa449"
 dependencies = [
  "iced_core",
  "iced_futures",
@@ -1286,8 +1286,8 @@ dependencies = [
 
 [[package]]
 name = "iced_core"
-version = "0.6.0"
-source = "git+https://github.com/pop-os/iced?branch=sctk-cosmic#e5d0240fab766a308916af0899a01e95daf2edf2"
+version = "0.6.1"
+source = "git+https://github.com/pop-os/iced?branch=sctk-cosmic#6c51969025a8e6f49a7b9f0cb55871ae041aa449"
 dependencies = [
  "bitflags",
  "palette",
@@ -1296,8 +1296,8 @@ dependencies = [
 
 [[package]]
 name = "iced_futures"
-version = "0.5.0"
-source = "git+https://github.com/pop-os/iced?branch=sctk-cosmic#e5d0240fab766a308916af0899a01e95daf2edf2"
+version = "0.5.1"
+source = "git+https://github.com/pop-os/iced?branch=sctk-cosmic#6c51969025a8e6f49a7b9f0cb55871ae041aa449"
 dependencies = [
  "futures",
  "log",
@@ -1307,8 +1307,8 @@ dependencies = [
 
 [[package]]
 name = "iced_glow"
-version = "0.4.0"
-source = "git+https://github.com/pop-os/iced?branch=sctk-cosmic#e5d0240fab766a308916af0899a01e95daf2edf2"
+version = "0.4.1"
+source = "git+https://github.com/pop-os/iced?branch=sctk-cosmic#6c51969025a8e6f49a7b9f0cb55871ae041aa449"
 dependencies = [
  "bytemuck",
  "euclid",
@@ -1323,7 +1323,7 @@ dependencies = [
 [[package]]
 name = "iced_graphics"
 version = "0.4.0"
-source = "git+https://github.com/pop-os/iced?branch=sctk-cosmic#e5d0240fab766a308916af0899a01e95daf2edf2"
+source = "git+https://github.com/pop-os/iced?branch=sctk-cosmic#6c51969025a8e6f49a7b9f0cb55871ae041aa449"
 dependencies = [
  "bitflags",
  "bytemuck",
@@ -1343,7 +1343,7 @@ dependencies = [
 [[package]]
 name = "iced_lazy"
 version = "0.2.0"
-source = "git+https://github.com/pop-os/iced?branch=sctk-cosmic#e5d0240fab766a308916af0899a01e95daf2edf2"
+source = "git+https://github.com/pop-os/iced?branch=sctk-cosmic#6c51969025a8e6f49a7b9f0cb55871ae041aa449"
 dependencies = [
  "iced_native",
  "ouroboros",
@@ -1351,8 +1351,8 @@ dependencies = [
 
 [[package]]
 name = "iced_native"
-version = "0.6.0"
-source = "git+https://github.com/pop-os/iced?branch=sctk-cosmic#e5d0240fab766a308916af0899a01e95daf2edf2"
+version = "0.6.1"
+source = "git+https://github.com/pop-os/iced?branch=sctk-cosmic#6c51969025a8e6f49a7b9f0cb55871ae041aa449"
 dependencies = [
  "iced_core",
  "iced_futures",
@@ -1366,7 +1366,7 @@ dependencies = [
 [[package]]
 name = "iced_sctk"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/iced-sctk#f3d278aef51e237e3da02fafb309d7afd73d3548"
+source = "git+https://github.com/pop-os/iced-sctk#c2095c8a434f921903f9801d6df11020466d32e5"
 dependencies = [
  "enum-repr",
  "futures",
@@ -1385,7 +1385,7 @@ dependencies = [
 [[package]]
 name = "iced_style"
 version = "0.5.0"
-source = "git+https://github.com/pop-os/iced?branch=sctk-cosmic#e5d0240fab766a308916af0899a01e95daf2edf2"
+source = "git+https://github.com/pop-os/iced?branch=sctk-cosmic#6c51969025a8e6f49a7b9f0cb55871ae041aa449"
 dependencies = [
  "iced_core",
  "once_cell",
@@ -1394,8 +1394,8 @@ dependencies = [
 
 [[package]]
 name = "iced_wgpu"
-version = "0.6.0"
-source = "git+https://github.com/pop-os/iced?branch=sctk-cosmic#e5d0240fab766a308916af0899a01e95daf2edf2"
+version = "0.6.1"
+source = "git+https://github.com/pop-os/iced?branch=sctk-cosmic#6c51969025a8e6f49a7b9f0cb55871ae041aa449"
 dependencies = [
  "bitflags",
  "bytemuck",
@@ -1439,9 +1439,9 @@ dependencies = [
 
 [[package]]
 name = "indexmap"
-version = "1.9.1"
+version = "1.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "10a35a97730320ffe8e2d410b5d3b69279b98d2c14bdb8b70ea89ecf7888d41e"
+checksum = "1885e79c1fc4b10f0e172c475f458b7f7b93061064d98c3293e98c5ba0c8b399"
 dependencies = [
  "autocfg",
  "hashbrown",
@@ -1546,7 +1546,7 @@ checksum = "fc7fcc620a3bff7cdd7a365be3376c97191aeaccc2a603e600951e452615bf89"
 [[package]]
 name = "libcosmic"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic/?branch=sctk-cosmic-design-system#c48fca40fe2c9068b5fec95605ad1f11bf3415bf"
+source = "git+https://github.com/pop-os/libcosmic/?branch=sctk-cosmic-design-system#6f17328eb167f6fab130449295d1292c9e53e797"
 dependencies = [
  "apply",
  "cosmic-panel-config",
@@ -1729,7 +1729,6 @@ dependencies = [
  "bitflags",
  "cfg-if",
  "libc",
- "memoffset",
 ]
 
 [[package]]
@@ -2469,7 +2468,7 @@ checksum = "a507befe795404456341dfab10cef66ead4c041f62b8b11bbb92bffe5d0953e0"
 [[package]]
 name = "smithay-client-toolkit"
 version = "0.16.0"
-source = "git+https://github.com/Smithay/client-toolkit#45a2ea56ed17883fa6f99df4d87fbc3fc8d8170a"
+source = "git+https://github.com/Smithay/client-toolkit#a143329fc7ec1c132c19696cbe1ecaad0503cb61"
 dependencies = [
  "bitflags",
  "calloop",
@@ -3338,9 +3337,9 @@ checksum = "ec7a2a501ed189703dba8b08142f057e887dfc4b2cc4db2d343ac6376ba3e0b9"
 
 [[package]]
 name = "zbus"
-version = "3.4.0"
+version = "3.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "78a0b85c5608c27d2306d67e955b9c6e23a42d824205c85038a7afbe19c0ae22"
+checksum = "a25ae891bd547674b368906552115143031c16c23a0f2f4b2f5f5436ab2e6a9f"
 dependencies = [
  "async-broadcast",
  "async-channel",
@@ -3377,9 +3376,9 @@ dependencies = [
 
 [[package]]
 name = "zbus_macros"
-version = "3.4.0"
+version = "3.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b18018648e7e10ed856809befe7309002b87b2b12d5b282cb5040d7974b58677"
+checksum = "8aa37701ce7b3a43632d2b0ad9d4aef602b46be6bdd7fba3b7c5007f9f6eb2c2"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -3390,9 +3389,9 @@ dependencies = [
 
 [[package]]
 name = "zbus_names"
-version = "2.2.0"
+version = "2.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "41a408fd8a352695690f53906dc7fd036be924ec51ea5e05666ff42685ed0af5"
+checksum = "d69bb79b44e1901ed8b217e485d0f01991aec574479b68cb03415f142bc7ae67"
 dependencies = [
  "serde",
  "static_assertions",
