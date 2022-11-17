@@ -27,6 +27,10 @@ app_button_id := 'com.system76.CosmicPanelAppButton'
 workspaces_button_id := 'com.system76.CosmicPanelWorkspacesButton'
 
 all: _extract_vendor
+    #!/usr/bin/env bash
+    pushd applets/cosmic-applet-graphics/
+    cargo build {{cargo_args}}
+    popd
     cargo build {{cargo_args}}
 
 # Installs files into the system
@@ -47,12 +51,6 @@ install:
     install -Dm0644 applets/cosmic-applet-battery/data/icons/{{battery_id}}.svg {{iconsdir}}/{{battery_id}}.svg
     install -Dm0644 applets/cosmic-applet-battery/data/{{battery_id}}.desktop {{sharedir}}/applications/{{battery_id}}.desktop
     install -Dm0755 target/release/cosmic-applet-battery {{bindir}}/cosmic-applet-battery
-
-    # graphics
-    install -Dm0644 applets/cosmic-applet-graphics/data/icons/{{graphics_id}}.svg {{iconsdir}}/{{graphics_id}}.svg
-    install -Dm0644 applets/cosmic-applet-graphics/data/{{graphics_id}}.desktop {{sharedir}}/applications/{{graphics_id}}.desktop
-    install -Dm0755 target/release/cosmic-applet-graphics {{bindir}}/cosmic-applet-graphics
-
     # network
     install -Dm0644 applets/cosmic-applet-network/data/icons/{{network_id}}.svg {{iconsdir}}/{{network_id}}.svg
     install -Dm0644 applets/cosmic-applet-network/data/{{network_id}}.desktop {{sharedir}}/applications/{{network_id}}.desktop
@@ -94,9 +92,16 @@ install:
     # panel button
     install -Dm0755 target/release/cosmic-panel-button {{bindir}}/cosmic-panel-button
 
+    # graphics
+    install -Dm0644 applets/cosmic-applet-graphics/data/icons/{{graphics_id}}.svg {{iconsdir}}/{{graphics_id}}.svg
+    install -Dm0644 applets/cosmic-applet-graphics/data/{{graphics_id}}.desktop {{sharedir}}/applications/{{graphics_id}}.desktop
+    install -Dm0755 applets/cosmic-applet-graphics/target/release/cosmic-applet-graphics {{bindir}}/cosmic-applet-graphics
+
+
 # Extracts vendored dependencies if vendor=1
 _extract_vendor:
     #!/usr/bin/env sh
     if test {{vendor}} = 1; then
         rm -rf vendor; tar pxf vendor.tar
+        rm -rf applets/cosmic-applet-graphics/vendor; tar xf applets/cosmic-applet-graphics/vendor.tar --directory applets/cosmic-applet-graphics
     fi
