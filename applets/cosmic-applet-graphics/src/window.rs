@@ -2,6 +2,7 @@ use crate::dbus::{self, PowerDaemonProxy};
 use crate::graphics::{get_current_graphics, set_graphics, Graphics};
 use cosmic::applet::{get_popup_settings, icon_button, popup_container};
 use cosmic::iced_style::application::{self, Appearance};
+use cosmic::iced_style::svg;
 use cosmic::separator;
 use cosmic::theme::{Button, Svg};
 use cosmic::{
@@ -182,7 +183,11 @@ impl Application for Window {
     fn view(&self, id: SurfaceIdWrapper) -> Element<Message> {
         match id {
             SurfaceIdWrapper::LayerSurface(_) => unimplemented!(),
-            SurfaceIdWrapper::Window(_) => icon_button("input-gaming-symbolic", Svg::Accent)
+            SurfaceIdWrapper::Window(_) => icon_button("input-gaming-symbolic", Svg::Custom(|theme| {
+                svg::Appearance {
+                    fill: Some(theme.palette().text),
+                }
+            }))
                 .on_press(Message::TogglePopup)
                 .style(Button::Text)
                 .into(),
