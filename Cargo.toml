@@ -5,7 +5,6 @@ members = [
     "applets/cosmic-applet-network",
     "applets/cosmic-applet-notifications",
     "applets/cosmic-applet-power",
-    "applets/cosmic-applet-workspaces",
     "applets/cosmic-applet-status-area",
     "applets/cosmic-applet-time",
     "applets/cosmic-app-list",
@@ -14,10 +13,11 @@ members = [
 ]
 exclude = [
     "applets/cosmic-applet-graphics",
+    "applets/cosmic-applet-workspaces",
 ]
 
 [patch.crates-io]
-wayland-protocols = { git = "https://github.com/smithay/wayland-rs", version = "0.30.0-beta.13"}
+wayland-protocols = { git = "https://github.com/smithay/wayland-rs", version = "0.30.0-beta.9"}
 wayland-protocols-wlr = { git = "https://github.com/smithay/wayland-rs", version = "0.1.0-beta.9"}
 wayland-sys = { git = "https://github.com/smithay/wayland-rs", version = "0.30.0-beta.13"}
 wayland-backend = { git = "https://github.com/smithay/wayland-rs", version = "0.1.0-beta.13"}

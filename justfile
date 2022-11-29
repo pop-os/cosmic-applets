@@ -26,9 +26,12 @@ time_id := 'com.system76.CosmicAppletTime'
 app_button_id := 'com.system76.CosmicPanelAppButton'
 workspaces_button_id := 'com.system76.CosmicPanelWorkspacesButton'
 
-all: _extract_vendor
+build: _extract_vendor
     #!/usr/bin/env bash
     pushd applets/cosmic-applet-graphics/
+    cargo build {{cargo_args}}
+    popd
+    pushd applets/cosmic-applet-workspaces/
     cargo build {{cargo_args}}
     popd
     cargo build {{cargo_args}}
@@ -51,6 +54,7 @@ install:
     install -Dm0644 applets/cosmic-applet-battery/data/icons/{{battery_id}}.svg {{iconsdir}}/{{battery_id}}.svg
     install -Dm0644 applets/cosmic-applet-battery/data/{{battery_id}}.desktop {{sharedir}}/applications/{{battery_id}}.desktop
     install -Dm0755 target/release/cosmic-applet-battery {{bindir}}/cosmic-applet-battery
+
     # network
     install -Dm0644 applets/cosmic-applet-network/data/icons/{{network_id}}.svg {{iconsdir}}/{{network_id}}.svg
     install -Dm0644 applets/cosmic-applet-network/data/{{network_id}}.desktop {{sharedir}}/applications/{{network_id}}.desktop
@@ -65,11 +69,6 @@ install:
     install -Dm0644 applets/cosmic-applet-power/data/icons/{{power_id}}.svg {{iconsdir}}/{{power_id}}.svg
     install -Dm0644 applets/cosmic-applet-power/data/{{power_id}}.desktop {{sharedir}}/applications/{{power_id}}.desktop
     install -Dm0755 target/release/cosmic-applet-power {{bindir}}/cosmic-applet-power
-
-    # workspaces
-    install -Dm0644 applets/cosmic-applet-workspaces/data/icons/{{workspaces_id}}.svg {{iconsdir}}/{{workspaces_id}}.svg
-    install -Dm0644 applets/cosmic-applet-workspaces/data/{{workspaces_id}}.desktop {{sharedir}}/applications/{{workspaces_id}}.desktop
-    install -Dm0755 target/release/cosmic-applet-workspaces {{bindir}}/cosmic-applet-workspaces
 
     # status area
     install -Dm0644 applets/cosmic-applet-status-area/data/icons/{{status_area_id}}.svg {{iconsdir}}/{{status_area_id}}.svg
@@ -97,6 +96,10 @@ install:
     install -Dm0644 applets/cosmic-applet-graphics/data/{{graphics_id}}.desktop {{sharedir}}/applications/{{graphics_id}}.desktop
     install -Dm0755 applets/cosmic-applet-graphics/target/release/cosmic-applet-graphics {{bindir}}/cosmic-applet-graphics
 
+    # workspaces
+    install -Dm0644 applets/cosmic-applet-workspaces/data/icons/{{workspaces_id}}.svg {{iconsdir}}/{{workspaces_id}}.svg
+    install -Dm0644 applets/cosmic-applet-workspaces/data/{{workspaces_id}}.desktop {{sharedir}}/applications/{{workspaces_id}}.desktop
+    install -Dm0755 applets/cosmic-applet-workspaces/target/release/cosmic-applet-workspaces {{bindir}}/cosmic-applet-workspaces
 
 # Extracts vendored dependencies if vendor=1
 _extract_vendor:
@@ -104,4 +107,5 @@ _extract_vendor:
     if test {{vendor}} = 1; then
         rm -rf vendor; tar pxf vendor.tar
         rm -rf applets/cosmic-applet-graphics/vendor; tar xf applets/cosmic-applet-graphics/vendor.tar --directory applets/cosmic-applet-graphics
+        rm -rf applets/cosmic-applet-workspaces/vendor; tar xf applets/cosmic-applet-workspaces/vendor.tar --directory applets/cosmic-applet-workspaces
     fi

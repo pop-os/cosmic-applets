@@ -14,6 +14,7 @@ override_dh_auto_clean:
 	if test "${CLEAN}" = "1"; then \
 		cargo clean; \
 		cargo clean --manifest-path applets/cosmic-applet-graphics/Cargo.toml; \
+		cargo clean --manifest-path applets/cosmic-applet-workspaces/Cargo.toml; \
 	fi
 
 	if ! ischroot && test "${VENDOR}" = "1"; then \
@@ -28,10 +29,17 @@ override_dh_auto_clean:
 		echo 'directory = "vendor"' >> .cargo/config; \
 		tar pcf vendor.tar vendor; \
 		rm -rf vendor; \
+		cd ../..; \
+		cd applets/cosmic-applet-workspaces/; \
+		mkdir -p .cargo; \
+		cargo vendor --sync Cargo.toml | head -n -1 > .cargo/config; \
+		echo 'directory = "vendor"' >> .cargo/config; \
+		tar pcf vendor.tar vendor; \
+		rm -rf vendor; \
 	fi
 
 override_dh_auto_build:
-	just rootdir=$(DESTDIR) debug=$(DEBUG) vendor=$(VENDOR) all
+	just rootdir=$(DESTDIR) debug=$(DEBUG) vendor=$(VENDOR) build
 
 override_dh_auto_install:
 	just rootdir=$(DESTDIR) install

@@ -326,7 +326,7 @@ dependencies = [
  "cosmic-protocols",
  "futures",
  "futures-util",
- "gio 0.16.0",
+ "gio",
  "glib-build-tools",
  "gsk4",
  "gtk4",
@@ -470,31 +470,6 @@ dependencies = [
  "zbus 2.3.2",
  "zbus_names",
  "zvariant",
-]
-
-[[package]]
-name = "cosmic-applet-workspaces"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "calloop",
- "cascade",
- "cosmic-panel-config",
- "cosmic-protocols",
- "gio 0.15.12",
- "gtk4",
- "i18n-embed",
- "i18n-embed-fl",
- "itertools",
- "libadwaita",
- "libcosmic",
- "log",
- "nix 0.25.0",
- "once_cell",
- "pretty_env_logger",
- "rust-embed",
- "wayland-backend",
- "wayland-client",
 ]
 
 [[package]]
@@ -977,7 +952,7 @@ source = "git+https://github.com/gtk-rs/gtk-rs-core#49d9100919c51b248bc176763b20
 dependencies = [
  "bitflags",
  "gdk-pixbuf-sys",
- "gio 0.16.0",
+ "gio",
  "glib 0.16.0",
  "libc",
 ]
@@ -987,7 +962,7 @@ name = "gdk-pixbuf-sys"
 version = "0.16.0"
 source = "git+https://github.com/gtk-rs/gtk-rs-core#49d9100919c51b248bc176763b203bce23efe0ee"
 dependencies = [
- "gio-sys 0.16.0",
+ "gio-sys",
  "glib-sys 0.16.0",
  "gobject-sys 0.16.0",
  "libc",
@@ -1003,7 +978,7 @@ dependencies = [
  "cairo-rs",
  "gdk-pixbuf",
  "gdk4-sys",
- "gio 0.16.0",
+ "gio",
  "glib 0.16.0",
  "libc",
  "pango",
@@ -1016,7 +991,7 @@ source = "git+https://github.com/gtk-rs/gtk4-rs#e4178e68237503c93ca98193e7832b7e
 dependencies = [
  "cairo-sys-rs",
  "gdk-pixbuf-sys",
- "gio-sys 0.16.0",
+ "gio-sys",
  "glib-sys 0.16.0",
  "gobject-sys 0.16.0",
  "libc",
@@ -1070,23 +1045,6 @@ dependencies = [
 
 [[package]]
 name = "gio"
-version = "0.15.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "68fdbc90312d462781a395f7a16d96a2b379bb6ef8cd6310a2df272771c4283b"
-dependencies = [
- "bitflags",
- "futures-channel",
- "futures-core",
- "futures-io",
- "gio-sys 0.15.10",
- "glib 0.15.12",
- "libc",
- "once_cell",
- "thiserror",
-]
-
-[[package]]
-name = "gio"
 version = "0.16.0"
 source = "git+https://github.com/gtk-rs/gtk-rs-core#49d9100919c51b248bc176763b203bce23efe0ee"
 dependencies = [
@@ -1095,24 +1053,11 @@ dependencies = [
  "futures-core",
  "futures-io",
  "futures-util",
- "gio-sys 0.16.0",
+ "gio-sys",
  "glib 0.16.0",
  "libc",
  "once_cell",
  "thiserror",
-]
-
-[[package]]
-name = "gio-sys"
-version = "0.15.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "32157a475271e2c4a023382e9cab31c4584ee30a97da41d3c4e9fdd605abcf8d"
-dependencies = [
- "glib-sys 0.15.10",
- "gobject-sys 0.15.10",
- "libc",
- "system-deps",
- "winapi",
 ]
 
 [[package]]
@@ -1303,7 +1248,7 @@ dependencies = [
  "futures-channel",
  "gdk-pixbuf",
  "gdk4",
- "gio 0.16.0",
+ "gio",
  "glib 0.16.0",
  "graphene-rs",
  "gsk4",
@@ -1335,7 +1280,7 @@ dependencies = [
  "cairo-sys-rs",
  "gdk-pixbuf-sys",
  "gdk4-sys",
- "gio-sys 0.16.0",
+ "gio-sys",
  "glib-sys 0.16.0",
  "gobject-sys 0.16.0",
  "graphene-sys",
@@ -1546,7 +1491,7 @@ dependencies = [
  "futures-channel",
  "gdk-pixbuf",
  "gdk4",
- "gio 0.16.0",
+ "gio",
  "glib 0.16.0",
  "gtk4",
  "libadwaita-sys",
@@ -1561,7 +1506,7 @@ version = "0.2.0"
 source = "git+https://gitlab.gnome.org/World/Rust/libadwaita-rs#01881b0c9f67ed5a351b78fcd9b172fee246fdd4"
 dependencies = [
  "gdk4-sys",
- "gio-sys 0.16.0",
+ "gio-sys",
  "glib-sys 0.16.0",
  "gobject-sys 0.16.0",
  "gtk4-sys",
@@ -1939,7 +1884,7 @@ version = "0.16.0"
 source = "git+https://github.com/gtk-rs/gtk-rs-core#49d9100919c51b248bc176763b203bce23efe0ee"
 dependencies = [
  "bitflags",
- "gio 0.16.0",
+ "gio",
  "glib 0.16.0",
  "libc",
  "once_cell",

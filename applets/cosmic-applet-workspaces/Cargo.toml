@@ -1,30 +1,33 @@
 [package]
 name = "cosmic-applet-workspaces"
 version = "0.1.0"
+authors = ["Ashley Wulber <ashley@system76.com>"]
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
+libcosmic = { git = "https://github.com/pop-os/libcosmic/", branch = "sctk-cosmic-design-system", default-features = false, features = ["wayland", "applet"] }
+cosmic-panel-config = {git = "https://github.com/pop-os/cosmic-panel", default-features = false }
+iced_sctk = { git = "https://github.com/pop-os/iced-sctk" }
+sctk = { package = "smithay-client-toolkit", git = "https://github.com/Smithay/client-toolkit",  ersion = "0.1.0-beta.13" }
 cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols", default-features = false, features = ["client"] }
-cosmic-panel-config = { git = "https://github.com/pop-os/cosmic-panel", features = ["gtk4"] }
-cascade = "1.0.0"
-gtk4 = { git = "https://github.com/gtk-rs/gtk4-rs", features = ["v4_4"] }
-adw = { git = "https://gitlab.gnome.org/World/Rust/libadwaita-rs", package = "libadwaita"}
-libcosmic = { git = "https://github.com/pop-os/libcosmic", default-features = false }
-once_cell = "1.9.0"
+wayland-backend = {version = "0.1.0-beta.13", features = ["client_system"]}
+wayland-client = {version = "0.30.0-beta.13"}
+calloop = "0.10.1"
+nix = "0.26.1"
+log = "0.4"
 pretty_env_logger = "0.4"
-anyhow = "1.0.50"
+once_cell = "1.9"
+futures = "0.3.21"
+xdg = "2.4.0"
+anyhow = "1.0"
+# Application i18n
 i18n-embed = { version = "0.13.4", features = ["fluent-system", "desktop-requester"] }
 i18n-embed-fl = "0.6.4"
 rust-embed = "6.3.0"
-wayland-backend = { git = "https://github.com/Smithay/wayland-rs", version = "0.1.0-beta.9"}
-wayland-client = { git = "https://github.com/Smithay/wayland-rs", version = "0.30.0-beta.9"}
-calloop = "*"
-nix = "*"
-log = "0.4"
-itertools = "0.10"
 
-[build-dependencies]
-gio = "0.15.10"
+[patch.crates-io]
+wayland-protocols = { git = "https://github.com/smithay/wayland-rs", version = "0.30.0-beta.13"}
+wayland-sys = { git = "https://github.com/smithay/wayland-rs", version = "0.30.0-beta.13"}
+wayland-backend = { git = "https://github.com/smithay/wayland-rs", version = "0.1.0-beta.13"}
+wayland-scanner = { git = "https://github.com/smithay/wayland-rs", version = "0.30.0-beta.13"}
+wayland-client = { git = "https://github.com/smithay/wayland-rs", version = "0.30.0-beta.13"}
