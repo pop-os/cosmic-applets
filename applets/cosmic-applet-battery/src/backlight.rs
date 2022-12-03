@@ -2,12 +2,18 @@
 // How should key bindings be handled? Need something like gnome-settings-daemon?
 
 use std::{
-    fs::{self, File},
+    fs::File,
     io::{self, Read},
     os::unix::ffi::OsStrExt,
     path::Path,
     str::{self, FromStr},
+    hash::Hash,
+    fmt::Debug
 };
+
+use cosmic::iced;
+use iced_sctk::subscription;
+use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel};
 
 const BACKLIGHT_SYSDIR: &str = "/sys/class/backlight";
 
@@ -24,13 +30,13 @@ trait LogindSession {
 pub struct Backlight(String);
 
 impl Backlight {
-    pub fn brightness(&self) -> Option<u32> {
-        self.prop("brightness")
+    pub async fn brightness(&self) -> Option<u32> {
+        self.prop("brightness").await
     }
 
     // XXX cache value. Async?
-    pub fn max_brightness(&self) -> Option<u32> {
-        self.prop("max_brightness")
+    pub async fn max_brightness(&self) -> Option<u32> {
+        self.prop("max_brightness").await
     }
 
     pub async fn set_brightness(
@@ -41,7 +47,7 @@ impl Backlight {
         session.set_brightness("backlight", &self.0, value).await
     }
 
-    fn prop<T: FromStr>(&self, name: &str) -> Option<T> {
+    async fn prop<T: FromStr>(&self, name: &str) -> Option<T> {
         let path = Path::new(BACKLIGHT_SYSDIR).join(&self.0).join(name);
         let mut file = File::open(path).ok()?;
         let mut s = String::new();
@@ -51,13 +57,14 @@ impl Backlight {
 }
 
 // Choose backlight with most "precision". This is what `light` does.
-pub fn backlight() -> io::Result<Option<Backlight>> {
+pub async fn backlight() -> io::Result<Option<Backlight>> {
     let mut best_backlight = None;
     let mut best_max_brightness = 0;
-    for i in fs::read_dir(BACKLIGHT_SYSDIR)? {
-        if let Ok(filename) = str::from_utf8(i?.file_name().as_bytes()) {
+    let mut dir_stream = tokio::fs::read_dir(BACKLIGHT_SYSDIR).await?;
+    while let Ok(Some(entry)) = dir_stream.next_entry().await  {
+        if let Ok(filename) = str::from_utf8(entry.file_name().as_bytes()) {
             let backlight = Backlight(filename.to_string());
-            if let Some(max_brightness) = backlight.max_brightness() {
+            if let Some(max_brightness) = backlight.max_brightness().await {
                 if max_brightness > best_max_brightness {
                     best_backlight = Some(backlight);
                     best_max_brightness = max_brightness;
@@ -67,6 +74,87 @@ pub fn backlight() -> io::Result<Option<Backlight>> {
     }
     Ok(best_backlight)
 }
+
+
+pub fn screen_backlight_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
+    id: I,
+) -> iced::Subscription<(I, ScreenBacklightUpdate)> {
+    subscription::unfold(id, State::Ready, move |state| start_listening(id, state))
+}
+
+pub enum State {
+    Ready,
+    Waiting(Backlight, LogindSessionProxy<'static>, UnboundedReceiver<ScreenBacklightRequest>),
+    Finished,
+}
+
+async fn start_listening<I: Copy>(id: I, state: State) -> (Option<(I, ScreenBacklightUpdate)>, State) {
+    match state {
+        State::Ready => {
+            let conn = match zbus::Connection::system().await {
+                Ok(conn) => conn,
+                Err(_) => return (None, State::Finished),
+            };
+            let screen_proxy = match LogindSessionProxy::builder(&conn).build().await {
+                Ok(p) => p,
+                Err(_) => return (None, State::Finished),
+            };
+            let backlight = match backlight().await {
+                Ok(Some(b)) => b,
+                _ => return (None, State::Finished),
+            };
+            let (tx, rx) = unbounded_channel();
+
+            return (
+                Some((
+                    id,
+                    ScreenBacklightUpdate::Init(tx, backlight.brightness().await.unwrap_or_default() as f64)
+                )),
+                State::Waiting(backlight, screen_proxy, rx),
+            );
+
+        }
+        State::Waiting(backlight, proxy, mut rx) => {
+            match rx.recv().await {
+                Some(req) => match req {
+                    ScreenBacklightRequest::Get => (
+                        Some((
+                            id,
+                            ScreenBacklightUpdate::Update(backlight.brightness().await.unwrap_or_default() as f64)
+                        )),
+                        State::Waiting(backlight, proxy, rx),
+                    ),
+                    ScreenBacklightRequest::Set(value) => {
+                        if let Some(max_brightness) = backlight.max_brightness().await {
+                            let value = value.clamp(0., 1.) * (max_brightness as f64);
+                            let value = value.round() as u32;
+                            let _ = backlight.set_brightness(&proxy, value).await;
+                        }
+                        (
+                            None,
+                            State::Waiting(backlight, proxy, rx),
+                        )
+                    },
+                },
+                None => (None, State::Finished),
+            }
+        }
+        State::Finished => iced::futures::future::pending().await,
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum ScreenBacklightUpdate {
+    Update(f64),
+    Init(UnboundedSender<ScreenBacklightRequest>, f64)
+}
+
+#[derive(Debug, Clone)]
+pub enum ScreenBacklightRequest {
+    Get,
+    Set(f64),
+}
+
 
 /*
 // TODO: Cache device, max_brightness, etc.

@@ -4,10 +4,24 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+once_cell = "1.16.0"
+libcosmic = { git = "https://github.com/pop-os/libcosmic/", branch = "sctk-cosmic-design-system", default-features = false, features = ["wayland", "applet"] }
+cosmic-panel-config = {git = "https://github.com/pop-os/cosmic-panel", default-features = false }
+iced_sctk = { git = "https://github.com/pop-os/iced-sctk" }
+sctk = { package = "smithay-client-toolkit", git = "https://github.com/Smithay/client-toolkit", version = "0.16" }
 futures = "0.3"
-gtk4 = { git = "https://github.com/gtk-rs/gtk4-rs" }
-adw = { git = "https://gitlab.gnome.org/World/Rust/libadwaita-rs", package = "libadwaita"}
-libcosmic = { git = "https://github.com/pop-os/libcosmic", default-features = false }
-libcosmic-applet = { path = "../../libcosmic-applet" }
-relm4 = { git = "https://github.com/relm4/relm4", branch = "next", features = ["macros"] }
-zbus = { version = "2", no-default-features = true }
+zbus = { version = "3.5", no-default-features = true }
+log = "0.4"
+pretty_env_logger = "0.4"
+# Application i18n
+i18n-embed = { version = "0.13.4", features = ["fluent-system", "desktop-requester"] }
+i18n-embed-fl = "0.6.4"
+rust-embed = "6.3.0"
+tokio = { version = "1.17.0", features = ["sync", "rt", "rt-multi-thread", "fs"] }
+
+[dependencies.iced]
+git = "https://github.com/pop-os/iced.git"
+branch = "sctk-cosmic"
+# path = "../iced"
+default-features = false
+features = ["image", "svg", "tokio", "wayland"]

@@ -1,0 +1,326 @@
+use cosmic::applet::{get_popup_settings, icon_button, popup_container};
+use cosmic::iced::alignment::Horizontal;
+use cosmic::iced::{
+    executor,
+    widget::{button, column, row, text},
+    window, Alignment, Application, Command, Length, Subscription,
+};
+use cosmic::iced_native::window::Settings;
+use cosmic::iced_style::application::{self, Appearance};
+use cosmic::iced_style::svg;
+use cosmic::separator;
+use cosmic::theme::{self, Button, Svg};
+use cosmic::widget::{icon, widget};
+use cosmic::{iced_style, settings, Element, Theme};
+use cosmic_panel_config::{PanelAnchor, PanelSize};
+use iced_sctk::application::SurfaceIdWrapper;
+use iced_sctk::command::platform_specific::wayland::window::SctkWindowSettings;
+use iced_sctk::commands::popup::{destroy_popup, get_popup};
+use iced_sctk::settings::InitialSurface;
+use iced_sctk::{Color};
+use std::time::Duration;
+use tokio::sync::mpsc::UnboundedSender;
+use crate::backlight::{ScreenBacklightRequest, screen_backlight_subscription, ScreenBacklightUpdate};
+use crate::config;
+use crate::upower_device::{device_subscription, DeviceDbusEvent};
+use crate::upower_kbdbacklight::{KeyboardBacklightRequest, kbd_backlight_subscription, KeyboardBacklightUpdate};
+
+// XXX improve
+// TODO: time to empty varies? needs averaging?
+fn format_duration(duration: Duration) -> String {
+    let secs = duration.as_secs();
+    if secs > 60 {
+        let min = secs / 60;
+        if min > 60 {
+            format!("{}:{:02}", min / 60, min % 60)
+        } else {
+            format!("{}m", min)
+        }
+    } else {
+        format!("{}s", secs)
+    }
+}
+
+pub fn run() -> cosmic::iced::Result {
+    let mut settings = settings();
+    let pixels = std::env::var("COSMIC_PANEL_SIZE")
+        .ok()
+        .and_then(|size| match size.parse::<PanelSize>() {
+            Ok(PanelSize::XL) => Some(64),
+            Ok(PanelSize::L) => Some(48),
+            Ok(PanelSize::M) => Some(36),
+            Ok(PanelSize::S) => Some(24),
+            Ok(PanelSize::XS) => Some(18),
+            Err(_) => Some(36),
+        })
+        .unwrap_or(36);
+    settings.initial_surface = InitialSurface::XdgWindow(SctkWindowSettings {
+        iced_settings: Settings {
+            size: (pixels + 32, pixels + 16),
+            min_size: Some((pixels + 32, pixels + 16)),
+            max_size: Some((pixels + 32, pixels + 16)),
+            ..Default::default()
+        },
+        ..Default::default()
+    });
+    CosmicBatteryApplet::run(settings)
+}
+
+#[derive(Clone, Default)]
+struct CosmicBatteryApplet {
+    icon_name: String,
+    theme: Theme,
+    charging_limit: bool,
+    battery_percent: f64,
+    time_remaining: Duration,
+    kbd_brightness: f64,
+    screen_brightness: f64,
+    popup: Option<window::Id>,
+    id_ctr: u32,
+    anchor: PanelAnchor,
+    screen_sender: Option<UnboundedSender<ScreenBacklightRequest>>,
+    kbd_sender: Option<UnboundedSender<KeyboardBacklightRequest>>,
+}
+
+#[derive(Debug, Clone)]
+enum Message {
+    TogglePopup,
+    Update {
+        icon_name: String,
+        percent: f64,
+        time_to_empty: i64,
+    },
+    SetKbdBrightness(i32),
+    SetScreenBrightness(i32),
+    SetChargingLimit(bool),
+    UpdateKbdBrightness(f64),
+    UpdateScreenBrightness(f64),
+    OpenBatterySettings,
+    InitKbdBacklight(UnboundedSender<KeyboardBacklightRequest>, f64),
+    InitScreenBacklight(UnboundedSender<ScreenBacklightRequest>, f64),
+    Errored(String),
+    Ignore,
+}
+
+impl Application for CosmicBatteryApplet {
+    type Message = Message;
+    type Theme = Theme;
+    type Executor = executor::Default;
+    type Flags = ();
+
+    fn new(_flags: ()) -> (Self, Command<Message>) {
+        (
+            CosmicBatteryApplet {
+                icon_name: "battery-symbolic".to_string(),
+                anchor: std::env::var("COSMIC_PANEL_ANCHOR")
+                    .ok()
+                    .map(|size| match size.parse::<PanelAnchor>() {
+                        Ok(p) => p,
+                        Err(_) => PanelAnchor::Top,
+                    })
+                    .unwrap_or(PanelAnchor::Top),
+                ..Default::default()
+            },
+            Command::none(),
+        )
+    }
+
+    fn title(&self) -> String {
+        config::APP_ID.to_string()
+    }
+
+    fn update(&mut self, message: Message) -> Command<Message> {
+        match message {
+            Message::SetKbdBrightness(brightness) => {
+                self.kbd_brightness = (brightness as f64 / 100.0).clamp(0., 1.);
+                if let Some(tx) = &self.kbd_sender {
+                    let _ = tx.send(KeyboardBacklightRequest::Set(self.kbd_brightness));
+                }
+            }
+            Message::SetScreenBrightness(brightness) => {
+                self.screen_brightness = brightness as f64 / 100.0;
+                if let Some(tx) = &self.screen_sender {
+                    let _ = tx.send(ScreenBacklightRequest::Set(self.screen_brightness));
+                }
+            }
+            Message::SetChargingLimit(enable_charging_limit) => {
+                self.charging_limit = enable_charging_limit;
+            }
+            Message::OpenBatterySettings => {
+                // TODO Ashley
+            }
+            Message::Errored(_) => {
+                // TODO log errors
+            }
+            Message::TogglePopup => {
+                if let Some(p) = self.popup.take() {
+                    return destroy_popup(p);
+                } else {
+                    if let Some(tx) = &self.kbd_sender {
+                        let _ = tx.send(KeyboardBacklightRequest::Get);
+                    }
+                    if let Some(tx) = &self.screen_sender {
+                        let _ = tx.send(ScreenBacklightRequest::Get);
+                    }
+
+                    self.id_ctr += 1;
+                    let new_id = window::Id::new(self.id_ctr);
+                    self.popup.replace(new_id);
+
+                    let mut popup_settings =
+                        get_popup_settings(window::Id::new(0), new_id, (400, 240), None, None);
+                    // popup_settings.positioner.anchor_rect.x = 200;
+                    return get_popup(popup_settings);
+                }
+            }
+            Message::Update {
+                icon_name,
+                percent,
+                time_to_empty,
+            } => {
+                self.icon_name = icon_name;
+                self.battery_percent = percent;
+                self.time_remaining = Duration::from_secs(time_to_empty as u64);
+            }
+            Message::UpdateKbdBrightness(b) => {
+                self.kbd_brightness = b;
+            },
+            Message::Ignore => {},
+            Message::InitKbdBacklight(tx, brightness) => {
+                let _ = tx.send(KeyboardBacklightRequest::Get);
+                self.kbd_sender = Some(tx);
+                self.kbd_brightness = brightness;
+            },
+            Message::InitScreenBacklight(tx, brightness) => {
+                let _ = tx.send(ScreenBacklightRequest::Get);
+                self.screen_sender = Some(tx);
+                self.screen_brightness = brightness;
+                
+            },
+            Message::UpdateScreenBrightness(b) => {
+                self.screen_brightness = b;
+            },
+        }
+        Command::none()
+    }
+    fn view(&self, id: SurfaceIdWrapper) -> Element<Message> {
+        match id {
+            SurfaceIdWrapper::LayerSurface(_) => unimplemented!(),
+            SurfaceIdWrapper::Window(_) => icon_button(
+                &self.icon_name,
+                Svg::Custom(|theme| svg::Appearance {
+                    fill: Some(theme.palette().text),
+                }),
+            )
+            .on_press(Message::TogglePopup)
+            .style(Button::Text)
+            .into(),
+            SurfaceIdWrapper::Popup(_) => {
+                let name = text("Battery").size(18);
+                let description = text(if "battery-full-charged-symbolic" == self.icon_name {
+                    "Charging".to_string()
+                } else {
+                    format!(
+                        "{} until empty ({:.0}%)",
+                        format_duration(self.time_remaining),
+                        self.battery_percent
+                    )
+                })
+                .size(12);
+                popup_container(
+                    column![
+                        row![
+                                icon(&self.icon_name, 24)
+                                    .style(Svg::Custom(|theme| {
+                                        svg::Appearance {
+                                            fill: Some(theme.palette().text),
+                                        }
+                                    }))
+                                    .width(Length::Units(24))
+                                    .height(Length::Units(24)),
+                                column![name, description]
+                            ]
+                            .align_items(Alignment::Center),
+                        separator!(1),
+                        // text{"Limit Battery Charging"},
+                        widget::Toggler::new(self.charging_limit, String::from("Increase the lifespan of your battery by settings a maximum charger valur of 80%"), |_| Message::SetChargingLimit(!self.charging_limit)),
+                        separator!(1),
+                        row![icon("display-brightness-symbolic", 24)
+                        .style(
+                            Svg::Custom(|theme| {
+                                svg::Appearance {
+                                    fill: Some(theme.palette().text),
+                                }
+                            }))
+                            .width(Length::Units(24))
+                            .height(Length::Units(24)),
+                            widget::slider(0..=100, (self.screen_brightness * 100.0) as i32, Message::SetScreenBrightness),
+                            text(format!("{:.0}%", self.screen_brightness * 100.0)).width(Length::Units(40)).horizontal_alignment(Horizontal::Right)
+                        ].spacing(12),
+                        row![
+                            icon("keyboard-brightness-symbolic", 24)
+                            .style(Svg::Custom(|theme| {
+                                svg::Appearance {
+                                    fill: Some(theme.palette().text),
+                                }
+                            }))
+                            .width(Length::Units(24))
+                            .height(Length::Units(24)),
+                            widget::slider(0..=100, (self.kbd_brightness * 100.0) as i32, Message::SetKbdBrightness),
+                            text(format!("{:.0}%", self.kbd_brightness * 100.0)).width(Length::Units(40)).horizontal_alignment(Horizontal::Right)
+                        ].spacing(12),
+                        button(text("Power Settings...").horizontal_alignment(Horizontal::Center).width(Length::Fill).style(theme::Text::Custom(|theme| {
+                            let cosmic = theme.cosmic();
+                            iced_style::text::Appearance {
+                                color: Some(cosmic.accent.on.into())
+                            }
+                        }))).width(Length::Fill)
+                    ]
+                    .spacing(4)
+                    .padding(8),
+                )
+                .into()
+            }
+        }
+    }
+
+    fn subscription(&self) -> Subscription<Message> {
+        Subscription::batch(vec![
+            device_subscription(0).map(|(_, event)| match event {
+                DeviceDbusEvent::Update {
+                    icon_name,
+                    percent,
+                    time_to_empty,
+                } => Message::Update {
+                    icon_name,
+                    percent,
+                    time_to_empty,
+                },
+            }),
+            kbd_backlight_subscription(0).map(|(_, event)| match event {
+                KeyboardBacklightUpdate::Update(b) => Message::UpdateKbdBrightness(b),
+                KeyboardBacklightUpdate::Init(tx, b) => Message::InitKbdBacklight(tx, b),
+            }),
+            screen_backlight_subscription(0).map(|(_, event)| match event {
+                ScreenBacklightUpdate::Update(b) => Message::UpdateScreenBrightness(b),
+                ScreenBacklightUpdate::Init(tx, b) => Message::InitScreenBacklight(tx, b),
+            })
+        ])
+        
+    }
+
+    fn theme(&self) -> Theme {
+        self.theme
+    }
+
+    fn close_requested(&self, _id: iced_sctk::application::SurfaceIdWrapper) -> Self::Message {
+        Message::Ignore
+    }
+
+    fn style(&self) -> <Self::Theme as application::StyleSheet>::Style {
+        <Self::Theme as application::StyleSheet>::Style::Custom(|theme| Appearance {
+            background_color: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            text_color: theme.cosmic().on_bg_color().into(),
+        })
+    }
+}

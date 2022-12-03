@@ -1,7 +1,6 @@
 [workspace]
 members = [
     "applets/cosmic-applet-audio",
-    "applets/cosmic-applet-battery",
     "applets/cosmic-applet-network",
     "applets/cosmic-applet-notifications",
     "applets/cosmic-applet-power",
@@ -14,6 +13,8 @@ members = [
 exclude = [
     "applets/cosmic-applet-graphics",
     "applets/cosmic-applet-workspaces",
+    "applets/cosmic-applet-battery",
+
 ]
 
 [patch.crates-io]

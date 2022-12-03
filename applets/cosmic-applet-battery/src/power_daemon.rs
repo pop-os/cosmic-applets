@@ -63,3 +63,5 @@ trait PowerDaemon {
     #[dbus_proxy(signal)]
     fn power_profile_switch(&self, profile: &str) -> zbus::Result<()>;
 }
+
+// TODO power subscription
