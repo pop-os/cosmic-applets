@@ -24,6 +24,7 @@ use crate::backlight::{ScreenBacklightRequest, screen_backlight_subscription, Sc
 use crate::config;
 use crate::upower_device::{device_subscription, DeviceDbusEvent};
 use crate::upower_kbdbacklight::{KeyboardBacklightRequest, kbd_backlight_subscription, KeyboardBacklightUpdate};
+use crate::fl;
 
 // XXX improve
 // TODO: time to empty varies? needs averaging?
@@ -34,10 +35,10 @@ fn format_duration(duration: Duration) -> String {
         if min > 60 {
             format!("{}:{:02}", min / 60, min % 60)
         } else {
-            format!("{}m", min)
+            format!("{}{}", min, fl!("minutes"))
         }
     } else {
-        format!("{}s", secs)
+        format!("{}{}", secs, fl!("seconds"))
     }
 }
 
@@ -169,7 +170,7 @@ impl Application for CosmicBatteryApplet {
 
                     let mut popup_settings =
                         get_popup_settings(window::Id::new(0), new_id, (400, 240), None, None);
-                    // popup_settings.positioner.anchor_rect.x = 200;
+                    popup_settings.positioner.anchor_rect.x = 200;
                     return get_popup(popup_settings);
                 }
             }
@@ -216,13 +217,14 @@ impl Application for CosmicBatteryApplet {
             .style(Button::Text)
             .into(),
             SurfaceIdWrapper::Popup(_) => {
-                let name = text("Battery").size(18);
-                let description = text(if "battery-full-charged-symbolic" == self.icon_name {
-                    "Charging".to_string()
+                let name = text(fl!("battery")).size(18);
+                let description = text(if "battery-full-charging-symbolic" == self.icon_name || "battery-full-charged-symbolic" == self.icon_name {
+                    format!("{}%", self.battery_percent)
                 } else {
                     format!(
-                        "{} until empty ({:.0}%)",
+                        "{} {} ({:.0}%)",
                         format_duration(self.time_remaining),
+                        fl!("until-empty"),
                         self.battery_percent
                     )
                 })
@@ -240,10 +242,11 @@ impl Application for CosmicBatteryApplet {
                                     .height(Length::Units(24)),
                                 column![name, description]
                             ]
+                            .spacing(8)
                             .align_items(Alignment::Center),
                         separator!(1),
                         // text{"Limit Battery Charging"},
-                        widget::Toggler::new(self.charging_limit, String::from("Increase the lifespan of your battery by settings a maximum charger valur of 80%"), |_| Message::SetChargingLimit(!self.charging_limit)),
+                        widget::Toggler::new(self.charging_limit, fl!("max-charge"), |_| Message::SetChargingLimit(!self.charging_limit)),
                         separator!(1),
                         row![icon("display-brightness-symbolic", 24)
                         .style(
@@ -269,7 +272,7 @@ impl Application for CosmicBatteryApplet {
                             widget::slider(0..=100, (self.kbd_brightness * 100.0) as i32, Message::SetKbdBrightness),
                             text(format!("{:.0}%", self.kbd_brightness * 100.0)).width(Length::Units(40)).horizontal_alignment(Horizontal::Right)
                         ].spacing(12),
-                        button(text("Power Settings...").horizontal_alignment(Horizontal::Center).width(Length::Fill).style(theme::Text::Custom(|theme| {
+                        button(text(fl!("power-settings")).horizontal_alignment(Horizontal::Center).width(Length::Fill).style(theme::Text::Custom(|theme| {
                             let cosmic = theme.cosmic();
                             iced_style::text::Appearance {
                                 color: Some(cosmic.accent.on.into())
