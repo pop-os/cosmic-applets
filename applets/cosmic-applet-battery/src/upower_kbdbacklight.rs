@@ -5,9 +5,9 @@
 
 use cosmic::iced;
 use iced::subscription;
-use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel};
-use zbus::dbus_proxy;
 use std::{fmt::Debug, hash::Hash};
+use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
+use zbus::dbus_proxy;
 #[dbus_proxy(
     default_service = "org.freedesktop.UPower",
     interface = "org.freedesktop.UPower.KbdBacklight",
@@ -41,11 +41,17 @@ pub fn kbd_backlight_subscription<I: 'static + Hash + Copy + Send + Sync + Debug
 #[derive(Debug)]
 pub enum State {
     Ready,
-    Waiting(KbdBacklightProxy<'static>, UnboundedReceiver<KeyboardBacklightRequest>),
+    Waiting(
+        KbdBacklightProxy<'static>,
+        UnboundedReceiver<KeyboardBacklightRequest>,
+    ),
     Finished,
 }
 
-async fn start_listening<I: Copy>(id: I, state: State) -> (Option<(I, KeyboardBacklightUpdate)>, State) {
+async fn start_listening<I: Copy>(
+    id: I,
+    state: State,
+) -> (Option<(I, KeyboardBacklightUpdate)>, State) {
     match state {
         State::Ready => {
             let conn = match zbus::Connection::system().await {
@@ -61,38 +67,37 @@ async fn start_listening<I: Copy>(id: I, state: State) -> (Option<(I, KeyboardBa
             return (
                 Some((
                     id,
-                    KeyboardBacklightUpdate::Init(tx, kbd_proxy.get_brightness().await.unwrap_or_default() as f64)
+                    KeyboardBacklightUpdate::Init(
+                        tx,
+                        kbd_proxy.get_brightness().await.unwrap_or_default() as f64,
+                    ),
                 )),
                 State::Waiting(kbd_proxy, rx),
             );
+        }
+        State::Waiting(proxy, mut rx) => match rx.recv().await {
+            Some(req) => match req {
+                KeyboardBacklightRequest::Get => (
+                    Some((
+                        id,
+                        KeyboardBacklightUpdate::Update(
+                            proxy.get_brightness().await.unwrap_or_default() as f64,
+                        ),
+                    )),
+                    State::Waiting(proxy, rx),
+                ),
+                KeyboardBacklightRequest::Set(value) => {
+                    if let Ok(max_brightness) = proxy.get_max_brightness().await {
+                        let value = value.clamp(0., 1.) * (max_brightness as f64);
+                        let value = value.round() as i32;
+                        let _ = proxy.set_brightness(value).await;
+                    }
 
-        }
-        State::Waiting(proxy, mut rx) => {
-            match rx.recv().await {
-                Some(req) => match req {
-                    KeyboardBacklightRequest::Get => (
-                        Some((
-                            id,
-                            KeyboardBacklightUpdate::Update(proxy.get_brightness().await.unwrap_or_default() as f64)
-                        )),
-                        State::Waiting(proxy, rx),
-                    ),
-                    KeyboardBacklightRequest::Set(value) => {
-                        if let Ok(max_brightness) = proxy.get_max_brightness().await {
-                            let value = value.clamp(0., 1.) * (max_brightness as f64);
-                            let value = value.round() as i32;
-                            let _ = proxy.set_brightness(value).await;
-                        }
-                        
-                        (
-                            None,
-                            State::Waiting(proxy, rx),
-                        )
-                    },
-                },
-                None => (None, State::Finished),
-            }
-        }
+                    (None, State::Waiting(proxy, rx))
+                }
+            },
+            None => (None, State::Finished),
+        },
         State::Finished => iced::futures::future::pending().await,
     }
 }
@@ -100,7 +105,7 @@ async fn start_listening<I: Copy>(id: I, state: State) -> (Option<(I, KeyboardBa
 #[derive(Debug, Clone)]
 pub enum KeyboardBacklightUpdate {
     Update(f64),
-    Init(UnboundedSender<KeyboardBacklightRequest>, f64)
+    Init(UnboundedSender<KeyboardBacklightRequest>, f64),
 }
 
 #[derive(Debug, Clone)]

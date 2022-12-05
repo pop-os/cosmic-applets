@@ -1,7 +1,7 @@
 #[rustfmt::skip]
 mod backlight;
-mod config;
 mod app;
+mod config;
 mod localize;
 mod power_daemon;
 mod upower;

@@ -1,3 +1,12 @@
+use crate::backlight::{
+    screen_backlight_subscription, ScreenBacklightRequest, ScreenBacklightUpdate,
+};
+use crate::config;
+use crate::fl;
+use crate::upower_device::{device_subscription, DeviceDbusEvent};
+use crate::upower_kbdbacklight::{
+    kbd_backlight_subscription, KeyboardBacklightRequest, KeyboardBacklightUpdate,
+};
 use cosmic::applet::{get_popup_settings, icon_button, popup_container};
 use cosmic::iced::alignment::Horizontal;
 use cosmic::iced::{
@@ -17,14 +26,9 @@ use iced_sctk::application::SurfaceIdWrapper;
 use iced_sctk::command::platform_specific::wayland::window::SctkWindowSettings;
 use iced_sctk::commands::popup::{destroy_popup, get_popup};
 use iced_sctk::settings::InitialSurface;
-use iced_sctk::{Color};
+use iced_sctk::Color;
 use std::time::Duration;
 use tokio::sync::mpsc::UnboundedSender;
-use crate::backlight::{ScreenBacklightRequest, screen_backlight_subscription, ScreenBacklightUpdate};
-use crate::config;
-use crate::upower_device::{device_subscription, DeviceDbusEvent};
-use crate::upower_kbdbacklight::{KeyboardBacklightRequest, kbd_backlight_subscription, KeyboardBacklightUpdate};
-use crate::fl;
 
 // XXX improve
 // TODO: time to empty varies? needs averaging?
@@ -185,22 +189,21 @@ impl Application for CosmicBatteryApplet {
             }
             Message::UpdateKbdBrightness(b) => {
                 self.kbd_brightness = b;
-            },
-            Message::Ignore => {},
+            }
+            Message::Ignore => {}
             Message::InitKbdBacklight(tx, brightness) => {
                 let _ = tx.send(KeyboardBacklightRequest::Get);
                 self.kbd_sender = Some(tx);
                 self.kbd_brightness = brightness;
-            },
+            }
             Message::InitScreenBacklight(tx, brightness) => {
                 let _ = tx.send(ScreenBacklightRequest::Get);
                 self.screen_sender = Some(tx);
                 self.screen_brightness = brightness;
-                
-            },
+            }
             Message::UpdateScreenBrightness(b) => {
                 self.screen_brightness = b;
-            },
+            }
         }
         Command::none()
     }
@@ -218,66 +221,92 @@ impl Application for CosmicBatteryApplet {
             .into(),
             SurfaceIdWrapper::Popup(_) => {
                 let name = text(fl!("battery")).size(18);
-                let description = text(if "battery-full-charging-symbolic" == self.icon_name || "battery-full-charged-symbolic" == self.icon_name {
-                    format!("{}%", self.battery_percent)
-                } else {
-                    format!(
-                        "{} {} ({:.0}%)",
-                        format_duration(self.time_remaining),
-                        fl!("until-empty"),
-                        self.battery_percent
-                    )
-                })
+                let description = text(
+                    if "battery-full-charging-symbolic" == self.icon_name
+                        || "battery-full-charged-symbolic" == self.icon_name
+                    {
+                        format!("{}%", self.battery_percent)
+                    } else {
+                        format!(
+                            "{} {} ({:.0}%)",
+                            format_duration(self.time_remaining),
+                            fl!("until-empty"),
+                            self.battery_percent
+                        )
+                    },
+                )
                 .size(12);
                 popup_container(
                     column![
                         row![
-                                icon(&self.icon_name, 24)
-                                    .style(Svg::Custom(|theme| {
-                                        svg::Appearance {
-                                            fill: Some(theme.palette().text),
-                                        }
-                                    }))
-                                    .width(Length::Units(24))
-                                    .height(Length::Units(24)),
-                                column![name, description]
-                            ]
-                            .spacing(8)
-                            .align_items(Alignment::Center),
+                            icon(&self.icon_name, 24)
+                                .style(Svg::Custom(|theme| {
+                                    svg::Appearance {
+                                        fill: Some(theme.palette().text),
+                                    }
+                                }))
+                                .width(Length::Units(24))
+                                .height(Length::Units(24)),
+                            column![name, description]
+                        ]
+                        .spacing(8)
+                        .align_items(Alignment::Center),
                         separator!(1),
                         // text{"Limit Battery Charging"},
-                        widget::Toggler::new(self.charging_limit, fl!("max-charge"), |_| Message::SetChargingLimit(!self.charging_limit)),
+                        widget::Toggler::new(self.charging_limit, fl!("max-charge"), |_| {
+                            Message::SetChargingLimit(!self.charging_limit)
+                        }),
                         separator!(1),
-                        row![icon("display-brightness-symbolic", 24)
-                        .style(
-                            Svg::Custom(|theme| {
-                                svg::Appearance {
-                                    fill: Some(theme.palette().text),
-                                }
-                            }))
-                            .width(Length::Units(24))
-                            .height(Length::Units(24)),
-                            widget::slider(0..=100, (self.screen_brightness * 100.0) as i32, Message::SetScreenBrightness),
-                            text(format!("{:.0}%", self.screen_brightness * 100.0)).width(Length::Units(40)).horizontal_alignment(Horizontal::Right)
-                        ].spacing(12),
+                        row![
+                            icon("display-brightness-symbolic", 24)
+                                .style(Svg::Custom(|theme| {
+                                    svg::Appearance {
+                                        fill: Some(theme.palette().text),
+                                    }
+                                }))
+                                .width(Length::Units(24))
+                                .height(Length::Units(24)),
+                            widget::slider(
+                                0..=100,
+                                (self.screen_brightness * 100.0) as i32,
+                                Message::SetScreenBrightness
+                            ),
+                            text(format!("{:.0}%", self.screen_brightness * 100.0))
+                                .width(Length::Units(40))
+                                .horizontal_alignment(Horizontal::Right)
+                        ]
+                        .spacing(12),
                         row![
                             icon("keyboard-brightness-symbolic", 24)
-                            .style(Svg::Custom(|theme| {
-                                svg::Appearance {
-                                    fill: Some(theme.palette().text),
-                                }
-                            }))
-                            .width(Length::Units(24))
-                            .height(Length::Units(24)),
-                            widget::slider(0..=100, (self.kbd_brightness * 100.0) as i32, Message::SetKbdBrightness),
-                            text(format!("{:.0}%", self.kbd_brightness * 100.0)).width(Length::Units(40)).horizontal_alignment(Horizontal::Right)
-                        ].spacing(12),
-                        button(text(fl!("power-settings")).horizontal_alignment(Horizontal::Center).width(Length::Fill).style(theme::Text::Custom(|theme| {
-                            let cosmic = theme.cosmic();
-                            iced_style::text::Appearance {
-                                color: Some(cosmic.accent.on.into())
-                            }
-                        }))).width(Length::Fill)
+                                .style(Svg::Custom(|theme| {
+                                    svg::Appearance {
+                                        fill: Some(theme.palette().text),
+                                    }
+                                }))
+                                .width(Length::Units(24))
+                                .height(Length::Units(24)),
+                            widget::slider(
+                                0..=100,
+                                (self.kbd_brightness * 100.0) as i32,
+                                Message::SetKbdBrightness
+                            ),
+                            text(format!("{:.0}%", self.kbd_brightness * 100.0))
+                                .width(Length::Units(40))
+                                .horizontal_alignment(Horizontal::Right)
+                        ]
+                        .spacing(12),
+                        button(
+                            text(fl!("power-settings"))
+                                .horizontal_alignment(Horizontal::Center)
+                                .width(Length::Fill)
+                                .style(theme::Text::Custom(|theme| {
+                                    let cosmic = theme.cosmic();
+                                    iced_style::text::Appearance {
+                                        color: Some(cosmic.accent.on.into()),
+                                    }
+                                }))
+                        )
+                        .width(Length::Fill)
                     ]
                     .spacing(4)
                     .padding(8),
@@ -307,9 +336,8 @@ impl Application for CosmicBatteryApplet {
             screen_backlight_subscription(0).map(|(_, event)| match event {
                 ScreenBacklightUpdate::Update(b) => Message::UpdateScreenBrightness(b),
                 ScreenBacklightUpdate::Init(tx, b) => Message::InitScreenBacklight(tx, b),
-            })
+            }),
         ])
-        
     }
 
     fn theme(&self) -> Theme {
