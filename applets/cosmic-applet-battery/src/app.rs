@@ -174,7 +174,6 @@ impl Application for CosmicBatteryApplet {
 
                     let mut popup_settings =
                         get_popup_settings(window::Id::new(0), new_id, (400, 240), None, None);
-                    popup_settings.positioner.anchor_rect.x = 200;
                     return get_popup(popup_settings);
                 }
             }
