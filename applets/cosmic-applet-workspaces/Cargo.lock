@@ -371,7 +371,7 @@ dependencies = [
 [[package]]
 name = "cosmic-panel-config"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/cosmic-panel#a452fc323b574c28aef832951edd413a1d87bc3d"
+source = "git+https://github.com/pop-os/cosmic-panel#35d61a3a617b2ef552931645ec35c545a3a688f6"
 dependencies = [
  "anyhow",
  "ron",
@@ -1375,7 +1375,7 @@ dependencies = [
 [[package]]
 name = "iced_sctk"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/iced-sctk#a2c24d95ebc795245495677b99b631a4322ef876"
+source = "git+https://github.com/pop-os/iced-sctk#d126b62ef1001b22dc946db91928395890ff8d9f"
 dependencies = [
  "enum-repr",
  "futures",
@@ -1574,7 +1574,7 @@ checksum = "fc7fcc620a3bff7cdd7a365be3376c97191aeaccc2a603e600951e452615bf89"
 [[package]]
 name = "libcosmic"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic/?branch=sctk-cosmic-design-system#e87fe7056d09530c35e2c39d470205c6a7a920c6"
+source = "git+https://github.com/pop-os/libcosmic/?branch=fix/applets#244569d42d94a8be3a5aa3c3af8bedff047d780e"
 dependencies = [
  "apply",
  "cosmic-panel-config",

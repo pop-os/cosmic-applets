@@ -1,6 +1,6 @@
-use std::{cmp::Ordering, env};
-
+use std::cmp::Ordering;
 use calloop::channel::SyncSender;
+use cosmic::applet::CosmicAppletHelper;
 use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::mouse::{self, ScrollDelta};
 use cosmic::iced::widget::{column, container, row, text};
@@ -63,13 +63,10 @@ impl Application for IcedWorkspacesApplet {
     type Flags = ();
 
     fn new(_flags: ()) -> (Self, Command<Message>) {
+        let applet_helper = CosmicAppletHelper::default();
         (
             IcedWorkspacesApplet {
-                layout: match env::var("COSMIC_PANEL_ANCHOR")
-                    .ok()
-                    .and_then(|anchor| anchor.parse::<PanelAnchor>().ok())
-                    .unwrap_or_default()
-                {
+                layout: match &applet_helper.anchor {
                     PanelAnchor::Left | PanelAnchor::Right => Layout::Column,
                     PanelAnchor::Top | PanelAnchor::Bottom => Layout::Row,
                 },
@@ -100,8 +97,8 @@ impl Application for IcedWorkspacesApplet {
                     self.workspaces = list;
                     let unit = 32;
                     let (w, h) = match self.layout {
-                        Layout::Row => (unit * self.workspaces.len() as u32, unit),
-                        Layout::Column => (unit, unit * self.workspaces.len() as u32),
+                        Layout::Row => (unit * self.workspaces.len().max(1) as u32, unit),
+                        Layout::Column => (unit, unit * self.workspaces.len().max(1) as u32),
                     };
                     return commands::window::resize_window(window::Id::new(0), w, h);
                 }
@@ -132,6 +129,9 @@ impl Application for IcedWorkspacesApplet {
     }
 
     fn view(&self, _id: SurfaceIdWrapper) -> Element<Message> {
+        if self.workspaces.is_empty() {
+            return row![].padding(8).into();
+        }
         let buttons = self
             .workspaces
             .iter()

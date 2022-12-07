@@ -1730,7 +1730,7 @@ checksum = "db6d7e329c562c5dfab7a46a2afabc8b987ab9a4834c9d1ca04dc54c1546cef8"
 [[package]]
 name = "libcosmic"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic/?branch=fix/applets#0760008f54428ef44968df8db465dfceb7ee837d"
+source = "git+https://github.com/pop-os/libcosmic/?branch=fix/applets#244569d42d94a8be3a5aa3c3af8bedff047d780e"
 dependencies = [
  "apply",
  "cosmic-panel-config",
