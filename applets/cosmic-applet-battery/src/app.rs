@@ -7,19 +7,18 @@ use crate::upower_device::{device_subscription, DeviceDbusEvent};
 use crate::upower_kbdbacklight::{
     kbd_backlight_subscription, KeyboardBacklightRequest, KeyboardBacklightUpdate,
 };
-use cosmic::applet::{get_popup_settings, icon_button, popup_container};
+use cosmic::applet::CosmicAppletHelper;
 use cosmic::iced::alignment::Horizontal;
 use cosmic::iced::{
     executor,
-    widget::{button, column, row, text},
+    widget::{button, column, row, text, slider},
     window, Alignment, Application, Command, Length, Subscription,
 };
 use cosmic::iced_native::window::Settings;
 use cosmic::iced_style::application::{self, Appearance};
 use cosmic::iced_style::svg;
-use cosmic::separator;
-use cosmic::theme::{self, Button, Svg};
-use cosmic::widget::{icon, widget};
+use cosmic::theme::{self, Svg};
+use cosmic::widget::{icon, toggler, horizontal_rule};
 use cosmic::{iced_style, settings, Element, Theme};
 use cosmic_panel_config::{PanelAnchor, PanelSize};
 use iced_sctk::application::SurfaceIdWrapper;
@@ -82,9 +81,9 @@ struct CosmicBatteryApplet {
     screen_brightness: f64,
     popup: Option<window::Id>,
     id_ctr: u32,
-    anchor: PanelAnchor,
     screen_sender: Option<UnboundedSender<ScreenBacklightRequest>>,
     kbd_sender: Option<UnboundedSender<KeyboardBacklightRequest>>,
+    applet_helper: CosmicAppletHelper,
 }
 
 #[derive(Debug, Clone)]
@@ -117,13 +116,6 @@ impl Application for CosmicBatteryApplet {
         (
             CosmicBatteryApplet {
                 icon_name: "battery-symbolic".to_string(),
-                anchor: std::env::var("COSMIC_PANEL_ANCHOR")
-                    .ok()
-                    .map(|size| match size.parse::<PanelAnchor>() {
-                        Ok(p) => p,
-                        Err(_) => PanelAnchor::Top,
-                    })
-                    .unwrap_or(PanelAnchor::Top),
                 ..Default::default()
             },
             Command::none(),
@@ -172,8 +164,8 @@ impl Application for CosmicBatteryApplet {
                     let new_id = window::Id::new(self.id_ctr);
                     self.popup.replace(new_id);
 
-                    let mut popup_settings =
-                        get_popup_settings(window::Id::new(0), new_id, (400, 240), None, None);
+                    let popup_settings =
+                        self.applet_helper.get_popup_settings(window::Id::new(0), new_id, (400, 240), None, None);
                     return get_popup(popup_settings);
                 }
             }
@@ -209,14 +201,10 @@ impl Application for CosmicBatteryApplet {
     fn view(&self, id: SurfaceIdWrapper) -> Element<Message> {
         match id {
             SurfaceIdWrapper::LayerSurface(_) => unimplemented!(),
-            SurfaceIdWrapper::Window(_) => icon_button(
+            SurfaceIdWrapper::Window(_) => self.applet_helper.icon_button(
                 &self.icon_name,
-                Svg::Custom(|theme| svg::Appearance {
-                    fill: Some(theme.palette().text),
-                }),
             )
             .on_press(Message::TogglePopup)
-            .style(Button::Text)
             .into(),
             SurfaceIdWrapper::Popup(_) => {
                 let name = text(fl!("battery")).size(18);
@@ -235,7 +223,7 @@ impl Application for CosmicBatteryApplet {
                     },
                 )
                 .size(12);
-                popup_container(
+                self.applet_helper.popup_container(
                     column![
                         row![
                             icon(&self.icon_name, 24)
@@ -250,12 +238,12 @@ impl Application for CosmicBatteryApplet {
                         ]
                         .spacing(8)
                         .align_items(Alignment::Center),
-                        separator!(1),
+                        horizontal_rule(1),
                         // text{"Limit Battery Charging"},
-                        widget::Toggler::new(self.charging_limit, fl!("max-charge"), |_| {
+                        toggler(fl!("max-charge"), self.charging_limit, |_| {
                             Message::SetChargingLimit(!self.charging_limit)
                         }),
-                        separator!(1),
+                        horizontal_rule(1),
                         row![
                             icon("display-brightness-symbolic", 24)
                                 .style(Svg::Custom(|theme| {
@@ -265,7 +253,7 @@ impl Application for CosmicBatteryApplet {
                                 }))
                                 .width(Length::Units(24))
                                 .height(Length::Units(24)),
-                            widget::slider(
+                            slider(
                                 0..=100,
                                 (self.screen_brightness * 100.0) as i32,
                                 Message::SetScreenBrightness
@@ -284,7 +272,7 @@ impl Application for CosmicBatteryApplet {
                                 }))
                                 .width(Length::Units(24))
                                 .height(Length::Units(24)),
-                            widget::slider(
+                            slider(
                                 0..=100,
                                 (self.kbd_brightness * 100.0) as i32,
                                 Message::SetKbdBrightness
