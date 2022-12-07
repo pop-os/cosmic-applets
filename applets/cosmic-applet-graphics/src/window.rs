@@ -1,15 +1,14 @@
 use crate::dbus::{self, PowerDaemonProxy};
 use crate::graphics::{get_current_graphics, set_graphics, Graphics};
-use cosmic::applet::{get_popup_settings, icon_button, popup_container};
+use cosmic::applet::{CosmicAppletHelper};
 use cosmic::iced_style::application::{self, Appearance};
-use cosmic::iced_style::svg;
-use cosmic::separator;
-use cosmic::theme::{Button, Svg};
+use cosmic::theme::Button;
 use cosmic::{
     iced::widget::{column, radio, text},
     iced::{self, Application, Command, Length},
     iced_native::window,
-    theme::{self, Theme},
+    theme::Theme,
+    widget::{horizontal_rule},
     Element,
 };
 use cosmic_panel_config::{PanelAnchor, PanelSize};
@@ -56,6 +55,7 @@ pub struct Window {
     theme: Theme,
     dbus: Option<(Connection, PowerDaemonProxy<'static>)>,
     state: State,
+    applet_helper: CosmicAppletHelper,
 }
 
 #[allow(dead_code)]
@@ -141,7 +141,7 @@ impl Application for Window {
                         ));
                     }
                     let popup_settings =
-                        get_popup_settings(window::Id::new(0), new_id, (200, 240), None, None);
+                        self.applet_helper.get_popup_settings(window::Id::new(0), new_id, (200, 240), None, None);
                     commands.push(get_popup(popup_settings));
                     return Command::batch(commands);
                 }
@@ -183,11 +183,7 @@ impl Application for Window {
     fn view(&self, id: SurfaceIdWrapper) -> Element<Message> {
         match id {
             SurfaceIdWrapper::LayerSurface(_) => unimplemented!(),
-            SurfaceIdWrapper::Window(_) => icon_button("input-gaming-symbolic", Svg::Custom(|theme| {
-                svg::Appearance {
-                    fill: Some(theme.palette().text),
-                }
-            }))
+            SurfaceIdWrapper::Window(_) => self.applet_helper.icon_button("input-gaming-symbolic")
                 .on_press(Message::TogglePopup)
                 .style(Button::Text)
                 .into(),
@@ -252,14 +248,14 @@ impl Application for Window {
                         .into()
                     }
                 };
-                popup_container(
+                self.applet_helper.popup_container(
                     column(vec![
                         text("Graphics Mode")
                             .width(Length::Fill)
                             .horizontal_alignment(Horizontal::Center)
                             .size(24)
                             .into(),
-                        separator!(1).into(),
+                        horizontal_rule(1).into(),
                         content,
                     ])
                     .padding(4)

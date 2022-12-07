@@ -450,7 +450,7 @@ dependencies = [
 [[package]]
 name = "cosmic-panel-config"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/cosmic-panel#a452fc323b574c28aef832951edd413a1d87bc3d"
+source = "git+https://github.com/pop-os/cosmic-panel#35d61a3a617b2ef552931645ec35c545a3a688f6"
 dependencies = [
  "anyhow",
  "ron",
@@ -1531,7 +1531,7 @@ checksum = "db6d7e329c562c5dfab7a46a2afabc8b987ab9a4834c9d1ca04dc54c1546cef8"
 [[package]]
 name = "libcosmic"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic/?branch=sctk-cosmic-design-system#0f857b18ea0987a192b99a2dc34d29b9e41e5bf8"
+source = "git+https://github.com/pop-os/libcosmic/?branch=fix/applets#9d75dc8830f7ed8a21af790e2b11c93b90629b1f"
 dependencies = [
  "apply",
  "cosmic-panel-config",
