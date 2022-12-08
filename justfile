@@ -28,6 +28,9 @@ workspaces_button_id := 'com.system76.CosmicPanelWorkspacesButton'
 
 build: _extract_vendor
     #!/usr/bin/env bash
+    pushd applets/cosmic-applet-audio/
+    cargo build {{cargo_args}}
+    popd
     pushd applets/cosmic-applet-graphics/
     cargo build {{cargo_args}}
     popd
@@ -41,17 +44,17 @@ build: _extract_vendor
 
 # Installs files into the system
 install:
+    # audio
+    install -Dm0644 applets/cosmic-applet-audio/data/icons/{{audio_id}}.svg {{iconsdir}}/{{audio_id}}.svg
+    install -Dm0644 applets/cosmic-applet-audio/data/{{audio_id}}.desktop {{sharedir}}/applications/{{audio_id}}.desktop
+    install -Dm0755 applets/cosmic-applet-audio/target/release/cosmic-applet-audio {{bindir}}/cosmic-applet-audio
+
     # app list
     install -Dm0644 applets/cosmic-app-list/data/icons/{{app_list_id}}-symbolic.svg {{iconsdir}}/{{app_list_id}}-symbolic.svg
     install -Dm0644 applets/cosmic-app-list/data/icons/{{app_list_id}}.Devel.svg {{iconsdir}}/{{app_list_id}}.Devel.svg
     install -Dm0644 applets/cosmic-app-list/data/icons/{{app_list_id}}.svg {{iconsdir}}/{{app_list_id}}.svg
     install -Dm0644 applets/cosmic-app-list/data/{{app_list_id}}.desktop {{sharedir}}/applications/{{app_list_id}}.desktop
     install -Dm0755 target/release/cosmic-app-list {{bindir}}/cosmic-app-list
-
-    # audio
-    install -Dm0644 applets/cosmic-applet-audio/data/icons/{{audio_id}}.svg {{iconsdir}}/{{audio_id}}.svg
-    install -Dm0644 applets/cosmic-applet-audio/data/{{audio_id}}.desktop {{sharedir}}/applications/{{audio_id}}.desktop
-    install -Dm0755 target/release/cosmic-applet-audio {{bindir}}/cosmic-applet-audio
 
     # network
     install -Dm0644 applets/cosmic-applet-network/data/icons/{{network_id}}.svg {{iconsdir}}/{{network_id}}.svg
@@ -112,4 +115,5 @@ _extract_vendor:
         rm -rf applets/cosmic-applet-graphics/vendor; tar xf applets/cosmic-applet-graphics/vendor.tar --directory applets/cosmic-applet-graphics
         rm -rf applets/cosmic-applet-workspaces/vendor; tar xf applets/cosmic-applet-workspaces/vendor.tar --directory applets/cosmic-applet-workspaces
         rm -rf applets/cosmic-applet-battery/vendor; tar xf applets/cosmic-applet-battery/vendor.tar --directory applets/cosmic-applet-battery
+        rm -rf applets/cosmic-applet-audio/vendor; tar xf applets/cosmic-applet-audio/vendor.tar --directory applets/cosmic-applet-audio
     fi

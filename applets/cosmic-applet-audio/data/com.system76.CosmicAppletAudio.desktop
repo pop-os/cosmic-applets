@@ -1,5 +1,5 @@
 [Desktop Entry]
-Name=Cosmic Dock App List
+Name=Cosmic Applet Audio
 Comment=Write a GTK + Rust application
 Type=Application
 Exec=cosmic-applet-audio

@@ -229,7 +229,7 @@ source = "git+https://github.com/gtk-rs/gtk-rs-core#49d9100919c51b248bc176763b20
 dependencies = [
  "bitflags",
  "cairo-sys-rs",
- "glib 0.16.0",
+ "glib",
  "libc",
  "once_cell",
  "thiserror",
@@ -240,7 +240,7 @@ name = "cairo-sys-rs"
 version = "0.16.0"
 source = "git+https://github.com/gtk-rs/gtk-rs-core#49d9100919c51b248bc176763b203bce23efe0ee"
 dependencies = [
- "glib-sys 0.16.0",
+ "glib-sys",
  "libc",
  "system-deps",
 ]
@@ -346,29 +346,6 @@ dependencies = [
  "wayland-backend",
  "wayland-client",
  "xdg",
-]
-
-[[package]]
-name = "cosmic-applet-audio"
-version = "0.1.0"
-dependencies = [
- "async-io",
- "freedesktop-desktop-entry",
- "futures",
- "futures-util",
- "gtk4",
- "libadwaita",
- "libcosmic",
- "libcosmic-applet",
- "libpulse-binding",
- "libpulse-glib-binding",
- "mpris2-zbus",
- "once_cell",
- "relm4",
- "relm4-macros",
- "tokio",
- "tracker",
- "zbus 2.3.2",
 ]
 
 [[package]]
@@ -627,15 +604,6 @@ dependencies = [
 
 [[package]]
 name = "dirs"
-version = "3.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "30baa043103c9d0c2a57cf537cc2f35623889dc0d405e6c3cccfadbc81c71309"
-dependencies = [
- "dirs-sys",
-]
-
-[[package]]
-name = "dirs"
 version = "4.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ca3aa72a6f96ea37bbc5aa912f6788242832f75369bdfdadcb0e38423f100059"
@@ -807,19 +775,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
 
 [[package]]
-name = "freedesktop-desktop-entry"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "45157175a725e81f3f594382430b6b78af5f8f72db9bd51b94f0785f80fc6d29"
-dependencies = [
- "dirs 3.0.2",
- "gettext-rs",
- "memchr",
- "thiserror",
- "xdg",
-]
-
-[[package]]
 name = "futures"
 version = "0.3.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -940,7 +895,7 @@ dependencies = [
  "bitflags",
  "gdk-pixbuf-sys",
  "gio",
- "glib 0.16.0",
+ "glib",
  "libc",
 ]
 
@@ -950,8 +905,8 @@ version = "0.16.0"
 source = "git+https://github.com/gtk-rs/gtk-rs-core#49d9100919c51b248bc176763b203bce23efe0ee"
 dependencies = [
  "gio-sys",
- "glib-sys 0.16.0",
- "gobject-sys 0.16.0",
+ "glib-sys",
+ "gobject-sys",
  "libc",
  "system-deps",
 ]
@@ -966,7 +921,7 @@ dependencies = [
  "gdk-pixbuf",
  "gdk4-sys",
  "gio",
- "glib 0.16.0",
+ "glib",
  "libc",
  "pango",
 ]
@@ -979,8 +934,8 @@ dependencies = [
  "cairo-sys-rs",
  "gdk-pixbuf-sys",
  "gio-sys",
- "glib-sys 0.16.0",
- "gobject-sys 0.16.0",
+ "glib-sys",
+ "gobject-sys",
  "libc",
  "pango-sys",
  "pkg-config",
@@ -1011,26 +966,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "gettext-rs"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e49ea8a8fad198aaa1f9655a2524b64b70eb06b2f3ff37da407566c93054f364"
-dependencies = [
- "gettext-sys",
- "locale_config",
-]
-
-[[package]]
-name = "gettext-sys"
-version = "0.21.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c63ce2e00f56a206778276704bbe38564c8695249fdc8f354b4ef71c57c3839d"
-dependencies = [
- "cc",
- "temp-dir",
-]
-
-[[package]]
 name = "gio"
 version = "0.16.0"
 source = "git+https://github.com/gtk-rs/gtk-rs-core#49d9100919c51b248bc176763b203bce23efe0ee"
@@ -1041,7 +976,7 @@ dependencies = [
  "futures-io",
  "futures-util",
  "gio-sys",
- "glib 0.16.0",
+ "glib",
  "libc",
  "once_cell",
  "thiserror",
@@ -1052,31 +987,11 @@ name = "gio-sys"
 version = "0.16.0"
 source = "git+https://github.com/gtk-rs/gtk-rs-core#49d9100919c51b248bc176763b203bce23efe0ee"
 dependencies = [
- "glib-sys 0.16.0",
- "gobject-sys 0.16.0",
+ "glib-sys",
+ "gobject-sys",
  "libc",
  "system-deps",
  "winapi",
-]
-
-[[package]]
-name = "glib"
-version = "0.15.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "edb0306fbad0ab5428b0ca674a23893db909a98582969c9b537be4ced78c505d"
-dependencies = [
- "bitflags",
- "futures-channel",
- "futures-core",
- "futures-executor",
- "futures-task",
- "glib-macros 0.15.11",
- "glib-sys 0.15.10",
- "gobject-sys 0.15.10",
- "libc",
- "once_cell",
- "smallvec",
- "thiserror",
 ]
 
 [[package]]
@@ -1090,9 +1005,9 @@ dependencies = [
  "futures-executor",
  "futures-task",
  "futures-util",
- "glib-macros 0.16.0",
- "glib-sys 0.16.0",
- "gobject-sys 0.16.0",
+ "glib-macros",
+ "glib-sys",
+ "gobject-sys",
  "libc",
  "once_cell",
  "smallvec",
@@ -1106,21 +1021,6 @@ source = "git+https://github.com/gtk-rs/gtk-rs-core#4ca23ca05bd95655717605eaee34
 
 [[package]]
 name = "glib-macros"
-version = "0.15.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "25a68131a662b04931e71891fb14aaf65ee4b44d08e8abc10f49e77418c86c64"
-dependencies = [
- "anyhow",
- "heck",
- "proc-macro-crate",
- "proc-macro-error",
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "glib-macros"
 version = "0.16.0"
 source = "git+https://github.com/gtk-rs/gtk-rs-core#49d9100919c51b248bc176763b203bce23efe0ee"
 dependencies = [
@@ -1135,16 +1035,6 @@ dependencies = [
 
 [[package]]
 name = "glib-sys"
-version = "0.15.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ef4b192f8e65e9cf76cbf4ea71fa8e3be4a0e18ffe3d68b8da6836974cc5bad4"
-dependencies = [
- "libc",
- "system-deps",
-]
-
-[[package]]
-name = "glib-sys"
 version = "0.16.0"
 source = "git+https://github.com/gtk-rs/gtk-rs-core#49d9100919c51b248bc176763b203bce23efe0ee"
 dependencies = [
@@ -1154,21 +1044,10 @@ dependencies = [
 
 [[package]]
 name = "gobject-sys"
-version = "0.15.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d57ce44246becd17153bd035ab4d32cfee096a657fc01f2231c9278378d1e0a"
-dependencies = [
- "glib-sys 0.15.10",
- "libc",
- "system-deps",
-]
-
-[[package]]
-name = "gobject-sys"
 version = "0.16.0"
 source = "git+https://github.com/gtk-rs/gtk-rs-core#49d9100919c51b248bc176763b203bce23efe0ee"
 dependencies = [
- "glib-sys 0.16.0",
+ "glib-sys",
  "libc",
  "system-deps",
 ]
@@ -1178,7 +1057,7 @@ name = "graphene-rs"
 version = "0.16.0"
 source = "git+https://github.com/gtk-rs/gtk-rs-core#49d9100919c51b248bc176763b203bce23efe0ee"
 dependencies = [
- "glib 0.16.0",
+ "glib",
  "graphene-sys",
  "libc",
 ]
@@ -1188,7 +1067,7 @@ name = "graphene-sys"
 version = "0.16.0"
 source = "git+https://github.com/gtk-rs/gtk-rs-core#49d9100919c51b248bc176763b203bce23efe0ee"
 dependencies = [
- "glib-sys 0.16.0",
+ "glib-sys",
  "libc",
  "pkg-config",
  "system-deps",
@@ -1202,7 +1081,7 @@ dependencies = [
  "bitflags",
  "cairo-rs",
  "gdk4",
- "glib 0.16.0",
+ "glib",
  "graphene-rs",
  "gsk4-sys",
  "libc",
@@ -1216,8 +1095,8 @@ source = "git+https://github.com/gtk-rs/gtk4-rs#e4178e68237503c93ca98193e7832b7e
 dependencies = [
  "cairo-sys-rs",
  "gdk4-sys",
- "glib-sys 0.16.0",
- "gobject-sys 0.16.0",
+ "glib-sys",
+ "gobject-sys",
  "graphene-sys",
  "libc",
  "pango-sys",
@@ -1236,7 +1115,7 @@ dependencies = [
  "gdk-pixbuf",
  "gdk4",
  "gio",
- "glib 0.16.0",
+ "glib",
  "graphene-rs",
  "gsk4",
  "gtk4-macros",
@@ -1268,8 +1147,8 @@ dependencies = [
  "gdk-pixbuf-sys",
  "gdk4-sys",
  "gio-sys",
- "glib-sys 0.16.0",
- "gobject-sys 0.16.0",
+ "glib-sys",
+ "gobject-sys",
  "graphene-sys",
  "gsk4-sys",
  "libc",
@@ -1479,7 +1358,7 @@ dependencies = [
  "gdk-pixbuf",
  "gdk4",
  "gio",
- "glib 0.16.0",
+ "glib",
  "gtk4",
  "libadwaita-sys",
  "libc",
@@ -1494,8 +1373,8 @@ source = "git+https://gitlab.gnome.org/World/Rust/libadwaita-rs#01881b0c9f67ed5a
 dependencies = [
  "gdk4-sys",
  "gio-sys",
- "glib-sys 0.16.0",
- "gobject-sys 0.16.0",
+ "glib-sys",
+ "gobject-sys",
  "gtk4-sys",
  "libc",
  "system-deps",
@@ -1548,56 +1427,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "efbc0f03f9a775e9f6aed295c6a1ba2253c5757a9e03d55c6caa46a681abcddd"
 dependencies = [
  "cfg-if",
- "winapi",
-]
-
-[[package]]
-name = "libpulse-binding"
-version = "2.26.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "17be42160017e0ae993c03bfdab4ecb6f82ce3f8d515bd8da8fdf18d10703663"
-dependencies = [
- "bitflags",
- "libc",
- "libpulse-sys",
- "num-derive",
- "num-traits",
- "winapi",
-]
-
-[[package]]
-name = "libpulse-glib-binding"
-version = "2.25.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "df0e7a964c9f7e95d4f073affc19adfda009fa0d55e8831dbb66c78be1d0e6e5"
-dependencies = [
- "glib 0.15.12",
- "glib-sys 0.15.10",
- "libpulse-binding",
- "libpulse-mainloop-glib-sys",
-]
-
-[[package]]
-name = "libpulse-mainloop-glib-sys"
-version = "1.19.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "36f61c4064926cc77ea14bb206a21ce1d5a06e175e5c0ce078804bb6c4527b28"
-dependencies = [
- "glib-sys 0.15.10",
- "libpulse-sys",
- "pkg-config",
-]
-
-[[package]]
-name = "libpulse-sys"
-version = "1.19.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "991e6bd0efe2a36e6534e136e7996925e4c1a8e35b7807fe533f2beffff27c30"
-dependencies = [
- "libc",
- "num-derive",
- "num-traits",
- "pkg-config",
  "winapi",
 ]
 
@@ -1681,18 +1510,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "mpris2-zbus"
-version = "0.1.0"
-source = "git+https://github.com/pop-os/mpris2-zbus#4e853c5a62a8a89ce58af11daddb62427523bc07"
-dependencies = [
- "serde",
- "thiserror",
- "time 0.3.13",
- "zbus 2.3.2",
- "zvariant",
-]
-
-[[package]]
 name = "nanorand"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1738,17 +1555,6 @@ dependencies = [
  "libc",
  "memoffset",
  "pin-utils",
-]
-
-[[package]]
-name = "num-derive"
-version = "0.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "876a53fff98e03a936a674b29568b0e605f06b29372c2489ff4de23f1949743d"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]
@@ -1872,7 +1678,7 @@ source = "git+https://github.com/gtk-rs/gtk-rs-core#49d9100919c51b248bc176763b20
 dependencies = [
  "bitflags",
  "gio",
- "glib 0.16.0",
+ "glib",
  "libc",
  "once_cell",
  "pango-sys",
@@ -1883,8 +1689,8 @@ name = "pango-sys"
 version = "0.16.0"
 source = "git+https://github.com/gtk-rs/gtk-rs-core#49d9100919c51b248bc176763b203bce23efe0ee"
 dependencies = [
- "glib-sys 0.16.0",
- "gobject-sys 0.16.0",
+ "glib-sys",
+ "gobject-sys",
  "libc",
  "system-deps",
 ]
@@ -2188,7 +1994,7 @@ checksum = "a3f87b73ce11b1619a3c6332f45341e0047173771e8b8b73f87bfeefb7b56244"
 [[package]]
 name = "relm4"
 version = "0.5.0-beta.1"
-source = "git+https://github.com/relm4/relm4?branch=next#55231e300ce9e2b51d66f078b7759eba0759537c"
+source = "git+https://github.com/Relm4/Relm4.git?branch=next#55231e300ce9e2b51d66f078b7759eba0759537c"
 dependencies = [
  "async-broadcast",
  "async-oneshot",
@@ -2197,7 +2003,6 @@ dependencies = [
  "gtk4",
  "log",
  "once_cell",
- "relm4-macros",
  "tokio",
  "tracing",
 ]
@@ -2205,7 +2010,7 @@ dependencies = [
 [[package]]
 name = "relm4-macros"
 version = "0.5.0-beta.1"
-source = "git+https://github.com/relm4/relm4?branch=next#55231e300ce9e2b51d66f078b7759eba0759537c"
+source = "git+https://github.com/Relm4/Relm4.git?branch=next#55231e300ce9e2b51d66f078b7759eba0759537c"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2512,12 +2317,6 @@ dependencies = [
  "toml",
  "version-compare",
 ]
-
-[[package]]
-name = "temp-dir"
-version = "0.1.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "af547b166dd1ea4b472165569fc456cfb6818116f854690b0ff205e636523dab"
 
 [[package]]
 name = "tempfile"
@@ -3001,7 +2800,7 @@ version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c4583db5cbd4c4c0303df2d15af80f0539db703fa1c68802d4cbbd2dd0f88f6"
 dependencies = [
- "dirs 4.0.0",
+ "dirs",
 ]
 
 [[package]]
@@ -3029,7 +2828,7 @@ dependencies = [
  "async-trait",
  "byteorder",
  "derivative",
- "dirs 4.0.0",
+ "dirs",
  "enumflags2",
  "event-listener",
  "futures-core",
@@ -3069,7 +2868,7 @@ dependencies = [
  "async-trait",
  "byteorder",
  "derivative",
- "dirs 4.0.0",
+ "dirs",
  "enumflags2",
  "event-listener",
  "futures-core",

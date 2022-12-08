@@ -1,208 +1,372 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
+use iced::widget::Space;
 
-#[macro_use]
-extern crate relm4_macros;
+use cosmic::widget::{icon, toggler, horizontal_rule};
+use cosmic::applet::CosmicAppletHelper;
+use cosmic::Renderer;
 
-mod icons;
-mod input;
-mod now_playing;
-mod output;
-mod pa;
-use pa::PA;
-mod task;
-mod volume;
-mod volume_scale;
-use volume_scale::VolumeScale;
-
-use futures::{channel::mpsc, stream::StreamExt};
-use gtk4::{
-    gio::ApplicationFlags,
-    glib::{self, clone, MainContext, PRIORITY_DEFAULT},
-    prelude::*,
-    Align, Application, ApplicationWindow, Box as GtkBox, Button, Image, Label, ListBox,
-    Orientation, PositionType, Revealer, RevealerTransitionType, Scale, SelectionMode, Separator,
+use cosmic::iced_native::window::Settings;
+use cosmic::iced_style::application::{self, Appearance};
+use cosmic::iced_style::svg;
+use cosmic::theme::{self, Svg};
+use cosmic::{iced_style, settings, Element, Theme};
+use cosmic::iced::{
+    executor,
+    widget::{button, column, row, text, slider},
+    window, Alignment, Application, Command, Length, Subscription,
 };
-use libpulse_binding::{
-    context::{
-        subscribe::{Facility, InterestMaskSet, Operation},
-        FlagSet, State,
-    },
-    volume::Volume,
-};
-use mpris2_zbus::metadata::Metadata;
-use once_cell::sync::Lazy;
-use tokio::runtime::Runtime;
 
-static RT: Lazy<Runtime> = Lazy::new(|| Runtime::new().expect("failed to build tokio runtime"));
+use iced_sctk::application::SurfaceIdWrapper;
+use iced_sctk::command::platform_specific::wayland::window::SctkWindowSettings;
+use iced_sctk::commands::popup::{destroy_popup, get_popup};
+use iced_sctk::settings::InitialSurface;
+use iced_sctk::Color;
+use iced_sctk::widget::container;
 
-fn main() {
-    let _monitors = libcosmic::init();
-    let application = Application::new(None, ApplicationFlags::default());
-    application.connect_activate(app);
-    application.run();
+mod pulse;
+use crate::pulse::DeviceInfo;
+use libpulse_binding::volume::{Volume, VolumeLinear};
+
+pub fn main() -> cosmic::iced::Result {
+    let helper = CosmicAppletHelper::default();
+    Audio::run(helper.window_settings())
 }
 
-fn app(application: &Application) {
-    // XXX handle no pulseaudio daemon?
-    let pa = PA::new().unwrap();
-    let (refresh_output_tx, mut refresh_output_rx) = mpsc::unbounded();
-    let (refresh_input_tx, mut refresh_input_rx) = mpsc::unbounded();
-    let (now_playing_tx, mut now_playing_rx) = mpsc::unbounded::<Vec<Metadata>>();
-    pa
-        .set_subscribe_callback(clone!(@strong refresh_output_tx, @strong refresh_input_tx => move |facility, operation, _idx| {
-            if !matches!(operation, Some(Operation::Changed)) {
-                return;
-            }
-            match facility {
-                Some(Facility::Sink) => {
-                    refresh_output_tx.unbounded_send(()).expect("failed to send output refresh message");
+#[derive(Default)]
+struct Audio {
+    is_open: IsOpen,
+    current_output: Option<DeviceInfo>,
+    current_input: Option<DeviceInfo>,
+    outputs: Vec<DeviceInfo>,
+    inputs: Vec<DeviceInfo>,
+    pulse_state: PulseState,
+    applet_helper: CosmicAppletHelper,
+    icon_name: String,
+    theme: Theme,
+    popup: Option<window::Id>,
+    id_ctr: u32,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum IsOpen {
+    None,
+    Output,
+    Input,
+}
+
+#[derive(Debug, Clone)]
+enum Message {
+    SetOutputVolume(f64),
+    SetInputVolume(f64),
+    OutputToggle,
+    InputToggle,
+    OutputChanged(String),
+    InputChanged(String),
+    Pulse(pulse::Event),
+    Ignore,
+    TogglePopup,
+}
+
+impl Application for Audio {
+    type Message = Message;
+    type Theme = Theme;
+    type Executor = executor::Default;
+    type Flags = ();
+
+    fn new(_flags: ()) -> (Audio, Command<Message>) {
+        (
+            Audio {
+                is_open: IsOpen::None,
+                current_output: None,
+                current_input: None,
+                outputs: vec![],
+                inputs: vec![],
+                pulse_state: PulseState::Disconnected,
+                icon_name: "audio-volume-high-symbolic".to_string(),
+                ..Default::default()
+            },
+            Command::none(),
+        )
+    }
+
+    fn title(&self) -> String {
+        String::from("Audio")
+    }
+
+    fn theme(&self) -> Theme {   
+        self.theme
+    }
+
+    fn close_requested(&self, _id: iced_sctk::application::SurfaceIdWrapper) -> Self::Message {
+        Message::Ignore
+    }
+
+    fn style(&self) -> <Self::Theme as application::StyleSheet>::Style {
+        <Self::Theme as application::StyleSheet>::Style::Custom(|theme| Appearance {
+            background_color: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            text_color: theme.cosmic().on_bg_color().into(),
+        })
+    }
+
+    fn update(&mut self, message: Message) -> Command<Message> {
+        match message {
+            Message::TogglePopup => {
+                if let Some(p) = self.popup.take() {
+                    return destroy_popup(p);
+                } else {
+                    self.id_ctr += 1; 
+                    let new_id = window::Id::new(self.id_ctr);
+                    self.popup.replace(new_id);
+
+                    let popup_settings =
+                        self.applet_helper.get_popup_settings(window::Id::new(0), new_id, (400, 300), None, None);
+                    return get_popup(popup_settings);
                 }
-                Some(Facility::Source) => {
-                    refresh_input_tx.unbounded_send(()).expect("failed to send output refresh message");
-                }
-                _ => {}
             }
-        }));
-    pa.set_state_callback(move |pa, state| {
-        if state == State::Ready {
-            pa.subscribe(InterestMaskSet::SINK | InterestMaskSet::SOURCE);
-            refresh_output_tx
-                .unbounded_send(())
-                .expect("failed to send output refresh message");
-            refresh_input_tx
-                .unbounded_send(())
-                .expect("failed to send output refresh message");
-        }
-    });
-    pa.connect().unwrap(); // XXX unwrap
-    view! {
-        window = libcosmic_applet::AppletWindow {
-            set_application: Some(application),
-            set_title: Some("COSMIC Network Applet"),
-            #[wrap(Some)]
-            set_child: button = &libcosmic_applet::AppletButton {
-                set_button_icon_name: "audio-volume-medium-symbolic",
-                #[wrap(Some)]
-                set_popover_child: window_box = &GtkBox {
-                    set_orientation: Orientation::Vertical,
-                    set_spacing: 24,
-                    append: output_box = &GtkBox {
-                        set_orientation: Orientation::Horizontal,
-                        set_spacing: 16,
-                        append: output_icon = &Image {
-                            set_icon_name: Some("audio-speakers-symbolic"),
-                        },
-                        append: output_volume = &VolumeScale::new(pa.clone(), true) {
-                            set_format_value_func: |_, value| {
-                                format!("{:.0}%", value)
-                            },
-                            set_value_pos: PositionType::Right,
-                            set_hexpand: true
+            Message::SetOutputVolume(vol) => {
+                self.current_output.as_mut().map(|o| {
+                    o.volume
+                        .set(o.volume.len(), VolumeLinear(vol / 100.0).into())
+                });
+                if let PulseState::Connected(connection) = &mut self.pulse_state {
+                    if let Some(device) = &self.current_output {
+                        if let Some(name) = &device.name {
+                            connection.send(pulse::Message::SetSinkVolumeByName(
+                                name.clone().to_string(),
+                                device.volume,
+                            ))
                         }
-                    },
-                    append: input_box = &GtkBox {
-                        set_orientation: Orientation::Horizontal,
-                        set_spacing: 16,
-                        append: input_icon = &Image {
-                            set_icon_name: Some("audio-input-microphone-symbolic"),
-                        },
-                        append: input_volume = &VolumeScale::new(pa.clone(), false) {
-                            set_format_value_func: |_, value| {
-                                format!("{:.0}%", value)
-                            },
-                            set_value_pos: PositionType::Right,
-                            set_hexpand: true
-                        }
-                    },
-                    append = &Separator {
-                        set_orientation: Orientation::Horizontal,
-                    },
-                    append: output_list_box = &GtkBox {
-                        set_orientation: Orientation::Vertical,
-                        append: current_output_button = &Button {
-                            #[wrap(Some)]
-                            set_child: current_output = &Label {},
-                            connect_clicked[outputs_revealer] => move |_| {
-                                outputs_revealer.set_reveal_child(!outputs_revealer.reveals_child());
-                            }
-                        },
-                        append: outputs_revealer = &Revealer {
-                            set_transition_type: RevealerTransitionType::SlideDown,
-                            #[wrap(Some)]
-                            set_child: outputs = &ListBox {
-                                set_selection_mode: SelectionMode::None,
-                                set_activate_on_single_click: true
-                            }
-                        }
-                    },
-                    append = &Separator {
-                        set_orientation: Orientation::Horizontal,
-                    },
-                    append: input_list_box = &GtkBox {
-                        set_orientation: Orientation::Vertical,
-                        append: current_input_button = &Button {
-                            #[wrap(Some)]
-                            set_child: current_input = &Label {},
-                            connect_clicked[inputs_revealer] => move |_| {
-                                inputs_revealer.set_reveal_child(!inputs_revealer.reveals_child());
-                            }
-                        },
-                        append: inputs_revealer = &Revealer {
-                            set_transition_type: RevealerTransitionType::SlideDown,
-                            #[wrap(Some)]
-                            set_child: inputs = &ListBox {
-                                set_selection_mode: SelectionMode::None,
-                                set_activate_on_single_click: true
-                            }
-                        }
-                    },
-                    append = &Separator {
-                        set_orientation: Orientation::Horizontal,
-                    },
-                    append: playing_apps = &ListBox {
-                        set_selection_mode: SelectionMode::None,
                     }
                 }
+            }
+            Message::SetInputVolume(vol) => {
+                self.current_input.as_mut().map(|i| {
+                    i.volume
+                        .set(i.volume.len(), VolumeLinear(vol / 100.0).into())
+                });
+                if let PulseState::Connected(connection) = &mut self.pulse_state {
+                    if let Some(device) = &self.current_input {
+                        if let Some(name) = &device.name {
+                            println!("increasing volume of {}", name);
+                            connection.send(pulse::Message::SetSourceVolumeByName(
+                                name.clone().to_string(),
+                                device.volume,
+                            ))
+                        }
+                    }
+                }
+            }
+            Message::OutputChanged(val) => println!("changed output {}", val),
+            Message::InputChanged(val) => println!("changed input {}", val),
+            Message::OutputToggle => {
+                self.is_open = if self.is_open == IsOpen::Output {
+                    IsOpen::None
+                } else {
+                    IsOpen::Output
+                }
+            }
+            Message::InputToggle => {
+                self.is_open = if self.is_open == IsOpen::Input {
+                    IsOpen::None
+                } else {
+                    IsOpen::Input
+                }
+            }
+            Message::Pulse(event) => match event {
+                pulse::Event::Connected(mut connection) => {
+                    connection.send(pulse::Message::GetSinks);
+                    connection.send(pulse::Message::GetSources);
+                    connection.send(pulse::Message::GetDefaultSink);
+                    connection.send(pulse::Message::GetDefaultSource);
+                    self.pulse_state = PulseState::Connected(connection);
+                }
+                pulse::Event::MessageReceived(msg) => {
+                    match msg {
+                        // This is where we match messages from the subscription to app state
+                        pulse::Message::SetSinks(sinks) => self.outputs = sinks,
+                        pulse::Message::SetSources(sources) => {
+                            self.inputs = sources
+                                .into_iter()
+                                .filter(|source| {
+                                    !source
+                                        .name
+                                        .as_ref()
+                                        .unwrap_or(&String::from("Generic"))
+                                        .contains("monitor")
+                                })
+                                .collect()
+                        }
+                        pulse::Message::SetDefaultSink(sink) => {
+                            self.current_output = Some(sink);
+                        }
+                        pulse::Message::SetDefaultSource(source) => {
+                            self.current_input = Some(source)
+                        }
+                        pulse::Message::Disconnected => {
+                            panic!("Subscriton error handling is bad. This should never happen.")
+                        }
+                        _ => {
+                            println!("Received misc message")
+                        }
+                    }
+                }
+                // TODO: view() should gray out buttons/slider when state is disconnected
+                pulse::Event::Disconnected => {
+                    println!("setting state to disconnected");
+                    self.pulse_state = PulseState::Disconnected
+                }
+            },
+            Message::Ignore => {},
+        };
+
+        Command::none()
+    }
+
+    fn subscription(&self) -> Subscription<Message> {
+        pulse::connect().map(Message::Pulse)
+    }
+
+    fn view(&self, id: SurfaceIdWrapper) -> Element<Message> { 
+        match id {
+            SurfaceIdWrapper::LayerSurface(_) => unimplemented!(),
+            SurfaceIdWrapper::Window(_) => self.applet_helper.icon_button(
+                &self.icon_name,
+            )
+            .on_press(Message::TogglePopup)
+            .into(),
+            SurfaceIdWrapper::Popup(_) => {
+                let out_f64 = VolumeLinear::from(
+                    self.current_output
+                        .as_ref()
+                        .map(|o| o.volume.avg())
+                        .unwrap_or(Volume::default()),
+                )
+                .0 * 100.0;
+                let in_f64 = VolumeLinear::from(
+                    self.current_input
+                        .as_ref()
+                        .map(|o| o.volume.avg())
+                        .unwrap_or(Volume::default()),
+                )
+                .0 * 100.0;
+
+                let sink = row![
+                    icon("status/audio-volume-high-symbolic", 24),
+                    slider(0.0..=100.0, out_f64, Message::SetOutputVolume),
+                    text(format!("{}%", out_f64.round()))
+                ]
+                .spacing(10)
+                .padding(10);
+                let source = row![
+                    icon("devices/audio-input-microphone-symbolic", 24),
+                    slider(0.0..=100.0, in_f64, Message::SetInputVolume),
+                    text(format!("{}%", in_f64.round()))
+                ]
+                .spacing(10)
+                .padding(10);
+
+                // TODO change these from helper functions to iced components for improved reusability
+                let output_drop = revealer(
+                    self.is_open == IsOpen::Output,
+                    "Output",
+                    match &self.current_output {
+                        Some(output) => pretty_name(output.description.clone()),
+                        None => String::from("No device selected"),
+                    },
+                    self.outputs
+                        .clone()
+                        .into_iter()
+                        .map(|output| pretty_name(output.description))
+                        .collect(),
+                    Message::OutputToggle,
+                    Message::OutputChanged(String::from("test")),
+                );
+                let input_drop = revealer(
+                    self.is_open == IsOpen::Input,
+                    "Input",
+                    match &self.current_input {
+                        Some(input) => pretty_name(input.description.clone()),
+                        None => String::from("No device selected"),
+                    },
+                    self.inputs
+                        .clone()
+                        .into_iter()
+                        .map(|input| pretty_name(input.description))
+                        .collect(),
+                    Message::InputToggle,
+                    Message::InputChanged(String::from("test")),
+                );
+
+                let content = column![]
+                    .align_items(Alignment::Start)
+                    .spacing(20)
+                    .push(sink)
+                    .push(source)
+                    .push(spacer())
+                    .push(output_drop)
+                    .push(input_drop);
+
+                self.applet_helper.popup_container(
+                    container(content)
+                    ).into()
             }
         }
     }
+}
 
-    glib::MainContext::default().spawn_local(
-        clone!(@weak inputs, @weak current_input, @weak input_volume, @strong pa => async move {
-            while let Some(()) = refresh_input_rx.next().await {
-                input::refresh_input_widgets(&pa, &inputs).await;
-                let default_input = input::refresh_default_input(&pa, &current_input).await;
-                volume::update_volume(&default_input, &input_volume);
-            }
-        }),
-    );
-    glib::MainContext::default().spawn_local(
-        clone!(@weak outputs, @weak current_output, @weak output_volume, @strong pa, @strong button, => async move {
-            while let Some(()) = refresh_output_rx.next().await {
-                output::refresh_output_widgets(&pa, &outputs);
-                let default_output = output::refresh_default_output(&pa, &current_output).await;
-                volume::update_volume(&default_output, &output_volume);
-                button.set_button_icon_name({
-                    let volume = default_output.volume.avg().0 as f64 / Volume::NORMAL.0 as f64;
-                    // XXX correct cutoffs?
-                    if default_output.mute {
-                        "audio-volume-muted"
-                    } else if volume > 1.0 {
-                        "audio-volume-overamplified-symbolic"
-                    } else if volume > 0.66 {
-                        "audio-volume-high-symbolic"
-                    } else if volume > 0.33 {
-                        "audio-volume-medium-symbolic"
-                    } else {
-                        "audio-volume-low-symbolic"
-                    }
-                });
-            }
-        }),
-    );
-    glib::MainContext::default().spawn_local(clone!(@weak playing_apps => async move {
-        while let Some(all_metadata) = now_playing_rx.next().await {
-        }
-    }));
-    window.show();
+// TODO: Make this a themeable widget like the mock-ups
+fn spacer() -> iced::widget::Space {
+    Space::with_width(Length::Fill)
+}
+
+fn revealer<'a>(
+    open: bool,
+    title: &'a str,
+    selected: String,
+    options: Vec<String>,
+    toggle: Message,
+    _change: Message,
+) -> iced_sctk::widget::Column<'a, Message, Renderer> {
+    if open {
+        options.iter().fold(
+            column![revealer_head(open, title, selected, toggle)].width(Length::Fill),
+            |col, device| col.push(text(device)),
+        )
+    } else {
+        column![revealer_head(open, title, selected, toggle)]
+    }
+}
+
+fn revealer_head<'a>(
+    _open: bool,
+    title: &'a str,
+    selected: String,
+    toggle: Message,
+) -> iced_sctk::widget::Button<Message, Renderer> {
+    button(row![row![title].width(Length::Fill), text(selected)])
+        .width(Length::Fill)
+        .on_press(toggle)
+}
+
+fn pretty_name(name: Option<String>) -> String {
+    match name {
+        Some(n) => n,
+        None => String::from("Generic"),
+    }
+}
+
+enum PulseState {
+    Disconnected,
+    Connected(pulse::Connection),
+}
+
+impl Default for PulseState {
+    fn default() -> Self {
+        Self::Disconnected
+    }
+}
+
+impl Default for IsOpen {
+    fn default() -> Self {
+        IsOpen::None
+    }
 }
