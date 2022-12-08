@@ -1,6 +1,5 @@
 [workspace]
 members = [
-    "applets/cosmic-applet-audio",
     "applets/cosmic-applet-network",
     "applets/cosmic-applet-notifications",
     "applets/cosmic-applet-power",
@@ -14,13 +13,13 @@ exclude = [
     "applets/cosmic-applet-graphics",
     "applets/cosmic-applet-workspaces",
     "applets/cosmic-applet-battery",
-
+    "applets/cosmic-applet-audio",
 ]
 
 [patch.crates-io]
 wayland-protocols = { git = "https://github.com/smithay/wayland-rs", version = "0.30.0-beta.9"}
 wayland-protocols-wlr = { git = "https://github.com/smithay/wayland-rs", version = "0.1.0-beta.9"}
-wayland-sys = { git = "https://github.com/smithay/wayland-rs", version = "0.30.0-beta.13"}
-wayland-backend = { git = "https://github.com/smithay/wayland-rs", version = "0.1.0-beta.13"}
-wayland-scanner = { git = "https://github.com/smithay/wayland-rs", version = "0.30.0-beta.13"}
-wayland-client = { git = "https://github.com/smithay/wayland-rs", version = "0.30.0-beta.13"}
+wayland-sys = { git = "https://github.com/smithay/wayland-rs", version = "0.30.0-beta.9"}
+wayland-backend = { git = "https://github.com/smithay/wayland-rs", version = "0.1.0-beta.9"}
+wayland-scanner = { git = "https://github.com/smithay/wayland-rs", version = "0.30.0-beta.9"}
+wayland-client = { git = "https://github.com/smithay/wayland-rs", version = "0.30.0-beta.9"}
