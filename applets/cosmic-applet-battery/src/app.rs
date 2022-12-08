@@ -46,19 +46,8 @@ fn format_duration(duration: Duration) -> String {
 }
 
 pub fn run() -> cosmic::iced::Result {
-    let mut settings = settings();
     let helper = CosmicAppletHelper::default();
-    let pixels = helper.suggested_icon_size() as u32;
-    settings.initial_surface = InitialSurface::XdgWindow(SctkWindowSettings {
-        iced_settings: Settings {
-            size: (pixels + 16, pixels + 16),
-            min_size: Some((pixels + 16, pixels + 16)),
-            max_size: Some((pixels + 16, pixels + 16)),
-            ..Default::default()
-        },
-        ..Default::default()
-    });
-    CosmicBatteryApplet::run(settings)
+    CosmicBatteryApplet::run(helper.window_settings())
 }
 
 #[derive(Clone, Default)]

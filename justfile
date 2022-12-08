@@ -45,6 +45,8 @@ build: _extract_vendor
 # Installs files into the system
 install:
     # audio
+    install -Dm0644 applets/cosmic-applet-audio/data/icons/{{audio_id}}.svg {{iconsdir}}/{{audio_id}}.svg
+    install -Dm0644 applets/cosmic-applet-audio/data/{{audio_id}}.desktop {{sharedir}}/applications/{{audio_id}}.desktop
     install -Dm0755 applets/cosmic-applet-audio/target/release/cosmic-applet-audio {{bindir}}/cosmic-applet-audio
 
     # app list

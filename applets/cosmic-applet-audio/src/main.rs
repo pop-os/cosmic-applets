@@ -27,19 +27,8 @@ use crate::pulse::DeviceInfo;
 use libpulse_binding::volume::{Volume, VolumeLinear};
 
 pub fn main() -> cosmic::iced::Result {
-    let mut settings = settings();
     let helper = CosmicAppletHelper::default();
-    let pixels = helper.suggested_icon_size() as u32;
-    settings.initial_surface = InitialSurface::XdgWindow(SctkWindowSettings {
-        iced_settings: Settings {
-            size: (pixels + 16, pixels + 16),
-            min_size: Some((pixels + 16, pixels + 16)),
-            max_size: Some((pixels + 16, pixels + 16)),
-            ..Default::default()
-        },
-        ..Default::default()
-    });
-    Audio::run(settings)
+    Audio::run(helper.window_settings())
 }
 
 #[derive(Default)]
@@ -129,7 +118,7 @@ impl Application for Audio {
                     self.popup.replace(new_id);
 
                     let popup_settings =
-                        self.applet_helper.get_popup_settings(window::Id::new(0), new_id, (400, 600), None, None);
+                        self.applet_helper.get_popup_settings(window::Id::new(0), new_id, (400, 300), None, None);
                     return get_popup(popup_settings);
                 }
             }
