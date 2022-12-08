@@ -1,20 +1,44 @@
-use iced::executor;
-use iced::widget::{button, column, container, row, svg, text, Column, Slider, Space};
-use iced::{Alignment, Application, Command, Element, Length, Settings, Subscription, Theme};
+use iced::widget::Space;
+
+use cosmic::widget::{icon, toggler, horizontal_rule};
+use cosmic::applet::CosmicAppletHelper;
+
+use cosmic::iced_native::window::Settings;
+use cosmic::iced_style::application::{self, Appearance};
+use cosmic::iced_style::svg;
+use cosmic::theme::{self, Svg};
+use cosmic::{iced_style, settings, Element, Theme};
+use cosmic::iced::{
+    executor,
+    widget::{button, column, row, text, slider},
+    window, Alignment, Application, Command, Length, Subscription,
+};
+
+use iced_sctk::application::SurfaceIdWrapper;
+use iced_sctk::command::platform_specific::wayland::window::SctkWindowSettings;
+use iced_sctk::commands::popup::{destroy_popup, get_popup};
+use iced_sctk::settings::InitialSurface;
+use iced_sctk::Color;
+use iced_sctk::widget::container;
 
 mod pulse;
 use crate::pulse::DeviceInfo;
 use libpulse_binding::volume::{Volume, VolumeLinear};
 
-pub fn main() -> iced::Result {
-    Audio::run(Settings {
-        window: iced::window::Settings {
-            size: (350, 500),
-            resizable: true,
-            ..iced::window::Settings::default()
+pub fn main() -> cosmic::iced::Result {
+    let mut settings = settings();
+    let helper = CosmicAppletHelper::default();
+    let pixels = helper.suggested_icon_size() as u32;
+    settings.initial_surface = InitialSurface::XdgWindow(SctkWindowSettings {
+        iced_settings: Settings {
+            size: (pixels + 16, pixels + 16),
+            min_size: Some((pixels + 16, pixels + 16)),
+            max_size: Some((pixels + 16, pixels + 16)),
+            ..Default::default()
         },
-        ..Settings::default()
-    })
+        ..Default::default()
+    });
+    Audio::run(settings)
 }
 
 #[derive(Default)]
@@ -25,6 +49,11 @@ struct Audio {
     outputs: Vec<DeviceInfo>,
     inputs: Vec<DeviceInfo>,
     pulse_state: PulseState,
+    applet_helper: CosmicAppletHelper,
+    icon_name: String,
+    theme: Theme,
+    popup: Option<window::Id>,
+    id_ctr: u32,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -43,6 +72,8 @@ enum Message {
     OutputChanged(String),
     InputChanged(String),
     Pulse(pulse::Event),
+    Ignore,
+    TogglePopup,
 }
 
 impl Application for Audio {
@@ -60,6 +91,8 @@ impl Application for Audio {
                 outputs: vec![],
                 inputs: vec![],
                 pulse_state: PulseState::Disconnected,
+                icon_name: "audio-volume-high-symbolic".to_string(),
+                ..Default::default()
             },
             Command::none(),
         )
@@ -69,8 +102,36 @@ impl Application for Audio {
         String::from("Audio")
     }
 
+    fn theme(&self) -> Theme {   
+        self.theme
+    }
+
+    fn close_requested(&self, _id: iced_sctk::application::SurfaceIdWrapper) -> Self::Message {
+        Message::Ignore
+    }
+
+    fn style(&self) -> <Self::Theme as application::StyleSheet>::Style {
+        <Self::Theme as application::StyleSheet>::Style::Custom(|theme| Appearance {
+            background_color: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            text_color: theme.cosmic().on_bg_color().into(),
+        })
+    }
+
     fn update(&mut self, message: Message) -> Command<Message> {
         match message {
+            Message::TogglePopup => {
+                if let Some(p) = self.popup.take() {
+                    return destroy_popup(p);
+                } else {
+                    self.id_ctr += 1; 
+                    let new_id = window::Id::new(self.id_ctr);
+                    self.popup.replace(new_id);
+
+                    let popup_settings =
+                        self.applet_helper.get_popup_settings(window::Id::new(0), new_id, (400, 240), None, None);
+                    return get_popup(popup_settings);
+                }
+            }
             Message::SetOutputVolume(vol) => {
                 self.current_output.as_mut().map(|o| {
                     o.volume
@@ -165,6 +226,7 @@ impl Application for Audio {
                     self.pulse_state = PulseState::Disconnected
                 }
             },
+            Message::Ignore => {},
         };
 
         Command::none()
@@ -174,92 +236,92 @@ impl Application for Audio {
         pulse::connect().map(Message::Pulse)
     }
 
-    fn view(&self) -> Element<Message> {
-        let out_f64 = VolumeLinear::from(
-            self.current_output
-                .as_ref()
-                .map(|o| o.volume.avg())
-                .unwrap_or(Volume::default()),
-        )
-        .0 * 100.0;
-        let in_f64 = VolumeLinear::from(
-            self.current_input
-                .as_ref()
-                .map(|o| o.volume.avg())
-                .unwrap_or(Volume::default()),
-        )
-        .0 * 100.0;
+    fn view(&self, id: SurfaceIdWrapper) -> Element<Message> { 
+        match id {
+            SurfaceIdWrapper::LayerSurface(_) => unimplemented!(),
+            SurfaceIdWrapper::Window(_) => self.applet_helper.icon_button(
+                &self.icon_name,
+            )
+            .on_press(Message::TogglePopup)
+            .into(),
+            SurfaceIdWrapper::Popup(_) => {
+                let out_f64 = VolumeLinear::from(
+                    self.current_output
+                        .as_ref()
+                        .map(|o| o.volume.avg())
+                        .unwrap_or(Volume::default()),
+                )
+                .0 * 100.0;
+                let in_f64 = VolumeLinear::from(
+                    self.current_input
+                        .as_ref()
+                        .map(|o| o.volume.avg())
+                        .unwrap_or(Volume::default()),
+                )
+                .0 * 100.0;
 
-        let sink = row![
-            icon("status/audio-volume-high-symbolic"),
-            Slider::new(0.0..=100.0, out_f64, Message::SetOutputVolume),
-            text(format!("{}%", out_f64.round()))
-        ]
-        .spacing(10)
-        .padding(10);
-        let source = row![
-            icon("devices/audio-input-microphone-symbolic"),
-            Slider::new(0.0..=100.0, in_f64, Message::SetInputVolume),
-            text(format!("{}%", in_f64.round()))
-        ]
-        .spacing(10)
-        .padding(10);
+                let sink = row![
+                    icon("status/audio-volume-high-symbolic", 24),
+                    slider(0.0..=100.0, out_f64, Message::SetOutputVolume),
+                    text(format!("{}%", out_f64.round()))
+                ]
+                .spacing(10)
+                .padding(10);
+                let source = row![
+                    icon("devices/audio-input-microphone-symbolic", 24),
+                    slider(0.0..=100.0, in_f64, Message::SetInputVolume),
+                    text(format!("{}%", in_f64.round()))
+                ]
+                .spacing(10)
+                .padding(10);
 
-        // TODO change these from helper functions to iced components for improved reusability
-        let output_drop = revealer(
-            self.is_open == IsOpen::Output,
-            "Output",
-            match &self.current_output {
-                Some(output) => pretty_name(output.description.clone()),
-                None => String::from("No device selected"),
-            },
-            self.outputs
-                .clone()
-                .into_iter()
-                .map(|output| pretty_name(output.description))
-                .collect(),
-            Message::OutputToggle,
-            Message::OutputChanged(String::from("test")),
-        );
-        let input_drop = revealer(
-            self.is_open == IsOpen::Input,
-            "Input",
-            match &self.current_input {
-                Some(input) => pretty_name(input.description.clone()),
-                None => String::from("No device selected"),
-            },
-            self.inputs
-                .clone()
-                .into_iter()
-                .map(|input| pretty_name(input.description))
-                .collect(),
-            Message::InputToggle,
-            Message::InputChanged(String::from("test")),
-        );
+                // TODO change these from helper functions to iced components for improved reusability
+                let output_drop = revealer(
+                    self.is_open == IsOpen::Output,
+                    "Output",
+                    match &self.current_output {
+                        Some(output) => pretty_name(output.description.clone()),
+                        None => String::from("No device selected"),
+                    },
+                    self.outputs
+                        .clone()
+                        .into_iter()
+                        .map(|output| pretty_name(output.description))
+                        .collect(),
+                    Message::OutputToggle,
+                    Message::OutputChanged(String::from("test")),
+                );
+                let input_drop = revealer(
+                    self.is_open == IsOpen::Input,
+                    "Input",
+                    match &self.current_input {
+                        Some(input) => pretty_name(input.description.clone()),
+                        None => String::from("No device selected"),
+                    },
+                    self.inputs
+                        .clone()
+                        .into_iter()
+                        .map(|input| pretty_name(input.description))
+                        .collect(),
+                    Message::InputToggle,
+                    Message::InputChanged(String::from("test")),
+                );
 
-        let content = Column::new()
-            .align_items(Alignment::Start)
-            .spacing(20)
-            .push(sink)
-            .push(source)
-            .push(spacer())
-            .push(output_drop)
-            .push(input_drop);
+                let content = column![]
+                    .align_items(Alignment::Start)
+                    .spacing(20)
+                    .push(sink)
+                    .push(source)
+                    .push(spacer());
+                    //.push(output_drop)
+                    //.push(input_drop);
 
-        container(content)
-            .width(Length::Fill)
-            .center_x()
-            .center_y()
-            .into()
+                self.applet_helper.popup_container(
+                    container(content)
+                    ).into()
+            }
+        }
     }
-}
-
-fn icon(name: &str) -> iced::widget::Svg {
-    svg(svg::Handle::from_path(format!(
-        "/usr/share/icons/Pop/scalable/{}.svg",
-        name
-    )))
-    .width(Length::Units(20))
 }
 
 // TODO: Make this a themeable widget like the mock-ups
@@ -290,7 +352,7 @@ fn revealer_head<'a>(
     title: &'a str,
     selected: String,
     toggle: Message,
-) -> iced::widget::Button<'a, Message> {
+) -> iced::widget::Button<Message> {
     button(row![row![title].width(Length::Fill), text(selected)])
         .width(Length::Fill)
         .on_press(toggle)
