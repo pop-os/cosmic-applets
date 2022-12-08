@@ -2,6 +2,7 @@ use iced::widget::Space;
 
 use cosmic::widget::{icon, toggler, horizontal_rule};
 use cosmic::applet::CosmicAppletHelper;
+use cosmic::Renderer;
 
 use cosmic::iced_native::window::Settings;
 use cosmic::iced_style::application::{self, Appearance};
@@ -128,7 +129,7 @@ impl Application for Audio {
                     self.popup.replace(new_id);
 
                     let popup_settings =
-                        self.applet_helper.get_popup_settings(window::Id::new(0), new_id, (400, 240), None, None);
+                        self.applet_helper.get_popup_settings(window::Id::new(0), new_id, (400, 600), None, None);
                     return get_popup(popup_settings);
                 }
             }
@@ -153,7 +154,6 @@ impl Application for Audio {
                     i.volume
                         .set(i.volume.len(), VolumeLinear(vol / 100.0).into())
                 });
-                println!("{:?}", self.current_input);
                 if let PulseState::Connected(connection) = &mut self.pulse_state {
                     if let Some(device) = &self.current_input {
                         if let Some(name) = &device.name {
@@ -312,9 +312,9 @@ impl Application for Audio {
                     .spacing(20)
                     .push(sink)
                     .push(source)
-                    .push(spacer());
-                    //.push(output_drop)
-                    //.push(input_drop);
+                    .push(spacer())
+                    .push(output_drop)
+                    .push(input_drop);
 
                 self.applet_helper.popup_container(
                     container(content)
@@ -336,7 +336,7 @@ fn revealer<'a>(
     options: Vec<String>,
     toggle: Message,
     _change: Message,
-) -> iced::widget::Column<'a, Message> {
+) -> iced_sctk::widget::Column<'a, Message, Renderer> {
     if open {
         options.iter().fold(
             column![revealer_head(open, title, selected, toggle)].width(Length::Fill),
@@ -352,7 +352,7 @@ fn revealer_head<'a>(
     title: &'a str,
     selected: String,
     toggle: Message,
-) -> iced::widget::Button<Message> {
+) -> iced_sctk::widget::Button<Message, Renderer> {
     button(row![row![title].width(Length::Fill), text(selected)])
         .width(Length::Fill)
         .on_press(toggle)
