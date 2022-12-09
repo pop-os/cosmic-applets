@@ -119,5 +119,5 @@ _extract_vendor:
         rm -rf applets/cosmic-applet-workspaces/vendor; tar xf applets/cosmic-applet-workspaces/vendor.tar --directory applets/cosmic-applet-workspaces
         rm -rf applets/cosmic-applet-battery/vendor; tar xf applets/cosmic-applet-battery/vendor.tar --directory applets/cosmic-applet-battery
         rm -rf applets/cosmic-applet-audio/vendor; tar xf applets/cosmic-applet-audio/vendor.tar --directory applets/cosmic-applet-audio
-        rm -rf applets/cosmic-applet-network/vendor; tar xf applets/cosmic-applet-battery/vendor.tar --directory applets/cosmic-applet-battery
+        rm -rf applets/cosmic-applet-network/vendor; tar xf applets/cosmic-applet-network/vendor.tar --directory applets/cosmic-applet-network
     fi
