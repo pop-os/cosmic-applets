@@ -3,7 +3,8 @@
 use cosmic_dbus_networkmanager::device::wireless::WirelessDevice;
 
 use futures_util::StreamExt;
-use std::collections::{BTreeMap, HashMap};
+use itertools::Itertools;
+use std::collections::HashMap;
 
 pub async fn handle_wireless_device(device: WirelessDevice<'_>) -> zbus::Result<Vec<AccessPoint>> {
     device.request_scan(HashMap::new()).await?;
@@ -15,8 +16,8 @@ pub async fn handle_wireless_device(device: WirelessDevice<'_>) -> zbus::Result<
         }
     }
     let access_points = device.get_access_points().await?;
-    // Sort by SSID and remove duplicates
-    let mut aps = BTreeMap::<String, AccessPoint>::new();
+    // Sort by strength and remove duplicates
+    let mut aps = HashMap::<String, AccessPoint>::new();
     for ap in access_points {
         let ssid = String::from_utf8_lossy(&ap.ssid().await?.clone()).into_owned();
         let strength = ap.strength().await?;
@@ -27,7 +28,11 @@ pub async fn handle_wireless_device(device: WirelessDevice<'_>) -> zbus::Result<
         }
         aps.insert(ssid.clone(), AccessPoint { ssid, strength });
     }
-    let aps = aps.into_iter().map(|(_, x)| x).collect();
+    let aps = aps
+        .into_iter()
+        .map(|(_, x)| x)
+        .sorted_by(|a, b| b.strength.cmp(&a.strength))
+        .collect();
     Ok(aps)
 }
 

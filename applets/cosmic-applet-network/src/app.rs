@@ -2,16 +2,16 @@ use cosmic::{
     applet::CosmicAppletHelper,
     iced::{
         executor,
-        widget::{column, container, row, text},
+        widget::{column, container, row, scrollable, text},
         Alignment, Application, Color, Command, Length, Subscription,
     },
     iced_native::window,
     iced_style::{application, svg},
-    theme::Svg,
-    widget::{horizontal_rule, icon, toggler},
+    theme::{Button, Svg},
+    widget::{button, horizontal_rule, icon, list_column, toggler},
     Element, Theme,
 };
-use futures::{channel::mpsc::UnboundedSender, SinkExt};
+use futures::channel::mpsc::UnboundedSender;
 use iced_sctk::{
     application::SurfaceIdWrapper,
     commands::popup::{destroy_popup, get_popup},
@@ -45,6 +45,32 @@ struct CosmicNetworkApplet {
     nm_sender: Option<UnboundedSender<NetworkManagerRequest>>,
 }
 
+impl CosmicNetworkApplet {
+    fn update_icon_name(&mut self) {
+        self.icon_name = self
+        .active_conns
+        .iter()
+        .fold("network-offline-symbolic", |icon_name, conn| {
+            match (icon_name, conn) {
+                ("network-offline-symbolic", ActiveConnectionInfo::WiFi { .. }) => {
+                    "network-wireless-symbolic"
+                }
+                (
+                    "network-offline-symbolic",
+                    ActiveConnectionInfo::Wired { .. },
+                )
+                | (
+                    "network-wireless-symbolic",
+                    ActiveConnectionInfo::Wired { .. },
+                ) => "network-wired-symbolic",
+                (_, ActiveConnectionInfo::Vpn { .. }) => "network-vpn-symbolic",
+                _ => icon_name,
+            }
+        })
+        .to_string()
+    }
+}
+
 #[derive(Debug, Clone)]
 enum Message {
     TogglePopup,
@@ -53,6 +79,7 @@ enum Message {
     Errored(String),
     Ignore,
     NetworkManagerEvent(NetworkManagerEvent),
+    SelectWirelessAccessPoint(String),
 }
 
 impl Application for CosmicNetworkApplet {
@@ -86,14 +113,13 @@ impl Application for CosmicNetworkApplet {
                     let new_id = window::Id::new(self.id_ctr);
                     self.popup.replace(new_id);
 
-                    let mut popup_settings = self.applet_helper.get_popup_settings(
+                    let popup_settings = self.applet_helper.get_popup_settings(
                         window::Id::new(0),
                         new_id,
-                        (400, 240),
+                        (420, 600),
                         None,
                         None,
                     );
-                    popup_settings.positioner.offset.0 = 200;
                     return get_popup(popup_settings);
                 }
             }
@@ -122,6 +148,7 @@ impl Application for CosmicNetworkApplet {
                     self.active_conns = active_conns;
                     self.wifi = wifi_enabled;
                     self.airplane_mode = airplane_mode;
+                    self.update_icon_name();
                 }
                 NetworkManagerEvent::WiFiEnabled(enabled) => {
                     self.wifi = enabled;
@@ -131,8 +158,22 @@ impl Application for CosmicNetworkApplet {
                 }
                 NetworkManagerEvent::ActiveConns(conns) => {
                     self.active_conns = conns;
+                    self.update_icon_name();
                 }
+                NetworkManagerEvent::RequestResponse { wireless_access_points, active_conns, wifi_enabled, success, ..} => {
+                    if success {
+                        self.wireless_access_points = wireless_access_points;
+                        self.active_conns = active_conns;
+                        self.wifi = wifi_enabled;
+                        self.update_icon_name();
+                    }
+                },
             },
+            Message::SelectWirelessAccessPoint(ssid) => {
+                if let Some(tx) = self.nm_sender.as_ref() {
+                    let _ = tx.unbounded_send(NetworkManagerRequest::SelectAccessPoint(ssid));
+                }
+            }
         }
         Command::none()
     }
@@ -152,34 +193,132 @@ impl Application for CosmicNetworkApplet {
                     }))
                     .width(Length::Units(24))
                     .height(Length::Units(24));
-                self.applet_helper
-                    .popup_container(
-                        column![
-                            row![icon, name].spacing(8).width(Length::Fill),
-                            column![] // TODO active connections
-                                .padding([8, 0])
-                                .width(Length::Fill),
-                            horizontal_rule(1),
-                            container(
-                                toggler(fl!("airplane-mode"), self.airplane_mode, |m| {
-                                    Message::ToggleAirplaneMode(m)
-                                })
-                                .width(Length::Fill)
-                            )
-                            .padding([0, 12]),
-                            horizontal_rule(1),
-                            container(
-                                toggler(fl!("wifi"), self.wifi, |m| { Message::ToggleWiFi(m) })
-                                    .width(Length::Fill)
-                            )
-                            .padding([0, 12]),
-                            column![] // TODO wifi list
+                let mut list_col = list_column();
+
+                for conn in &self.active_conns {
+                    let el = match conn {
+                        ActiveConnectionInfo::Vpn { name, ip_addresses } => {
+                            let mut ipv4 = column![];
+                            let mut ipv6 = column![];
+                            for addr in ip_addresses {
+                                match addr {
+                                    std::net::IpAddr::V4(a) => {
+                                        ipv4 = ipv4.push(text(format!(
+                                            "{}: {}",
+                                            fl!("ipv4"),
+                                            a.to_string()
+                                        )));
+                                    }
+                                    std::net::IpAddr::V6(a) => {
+                                        ipv6 = ipv6.push(text(format!(
+                                            "{}: {}",
+                                            fl!("ipv6"),
+                                            a.to_string()
+                                        )));
+                                    }
+                                }
+                            }
+                            column![text(name), ipv4, ipv6].spacing(4)
+                        }
+                        ActiveConnectionInfo::Wired {
+                            name,
+                            hw_address,
+                            speed,
+                            ip_addresses,
+                        } => {
+                            let mut ipv4 = column![];
+                            let mut ipv6 = column![];
+                            for addr in ip_addresses {
+                                match addr {
+                                    std::net::IpAddr::V4(a) => {
+                                        ipv4 = ipv4.push(text(format!(
+                                            "{}: {}",
+                                            fl!("ipv4"),
+                                            a.to_string()
+                                        )));
+                                    }
+                                    std::net::IpAddr::V6(a) => {
+                                        ipv6 = ipv6.push(text(format!(
+                                            "{}: {}",
+                                            fl!("ipv6"),
+                                            a.to_string()
+                                        )));
+                                    }
+                                }
+                            }
+                            column![
+                                row![
+                                    text(name),
+                                    text(format!("{speed} {}", fl!("megabits-per-second")))
+                                ]
+                                .spacing(16),
+                                ipv4,
+                                ipv6,
+                                text(format!("{}: {hw_address}", fl!("mac"))),
+                            ]
+                            .spacing(4)
+                        }
+                        ActiveConnectionInfo::WiFi {
+                            name, hw_address, ..
+                        } => column![row![
+                            text(name),
+                            text(format!("{}: {hw_address}", fl!("mac")))
                         ]
-                        .align_items(Alignment::Center)
-                        .spacing(8)
-                        .padding(8),
+                        .spacing(12)]
+                        .spacing(4),
+                    };
+                    list_col = list_col.add(el);
+                }
+
+                let mut content = column![
+                    row![icon, name].spacing(8).width(Length::Fill),
+                    list_col,
+                    horizontal_rule(1),
+                    container(
+                        toggler(fl!("airplane-mode"), self.airplane_mode, |m| {
+                            Message::ToggleAirplaneMode(m)
+                        })
+                        .width(Length::Fill)
                     )
-                    .into()
+                    .padding([0, 12]),
+                    horizontal_rule(1),
+                    container(
+                        toggler(fl!("wifi"), self.wifi, |m| { Message::ToggleWiFi(m) })
+                            .width(Length::Fill)
+                    )
+                    .padding([0, 12]),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(8)
+                .padding(8);
+                if self.wifi {
+                    let mut list_col = list_column();
+                    for ap in &self.wireless_access_points {
+                        let button = self
+                            .active_conns
+                            .iter()
+                            .find_map(|conn| match conn {
+                                ActiveConnectionInfo::WiFi { name, .. } if name == &ap.ssid => {
+                                    Some(
+                                        button(Button::Primary)
+                                            .text(&ap.ssid)
+                                            .on_press(Message::Ignore)
+                                            .width(Length::Fill),
+                                    )
+                                }
+                                _ => None,
+                            })
+                            .unwrap_or_else(|| {
+                                button(Button::Text)
+                                    .text(&ap.ssid)
+                                    .on_press(Message::SelectWirelessAccessPoint(ap.ssid.clone()))
+                                    .width(Length::Fill)
+                            });
+                        list_col = list_col.add(button);
+                    }
+                    content = content.push(scrollable(list_col).height(Length::Fill));
+                }
+                self.applet_helper.popup_container(content).into()
             }
         }
     }

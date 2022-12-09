@@ -23,3 +23,10 @@ rust-embed = "6.3.0"
 itertools = "0.10.3"
 slotmap = "1.0.6"
 tokio = { version = "1.15.0", features = ["full"] }
+
+[dependencies.iced]
+git = "https://github.com/pop-os/iced.git"
+branch = "sctk-cosmic"
+# path = "../iced"
+default-features = false
+features = ["image", "svg", "tokio"]
