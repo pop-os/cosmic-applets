@@ -31,3 +31,13 @@ branch = "sctk-cosmic"
 [dependencies.iced_futures]
 git = "https://github.com/pop-os/iced.git"
 branch = "sctk-cosmic"
+
+# Until the 3.6.3 release, need the implementation of clone on zbus::Error
+[dependencies.zbus]
+git = "https://gitlab.freedesktop.org/dbus/zbus"
+branch = "main"
+
+# Until zbus 3.6.3 is released
+[dependencies.logind-zbus]
+git = "https://github.com/pop-os/logind-zbus"
+branch = "main"

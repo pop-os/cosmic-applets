@@ -19,6 +19,9 @@ use iced_sctk::commands::popup::{destroy_popup, get_popup};
 use iced_sctk::widget::Row;
 use iced_sctk::Color;
 
+use logind_zbus::manager::ManagerProxy;
+use zbus::Connection;
+
 pub fn main() -> cosmic::iced::Result {
     let helper = CosmicAppletHelper::default();
     Audio::run(helper.window_settings())
@@ -35,8 +38,12 @@ struct Audio {
 
 #[derive(Debug, Clone)]
 enum Message {
-    Ignore,
+    Suspend,
+    Restart,
+    Shutdown,
     TogglePopup,
+    Ignore,
+    Zbus(Result<(), zbus::Error>),
 }
 
 impl Application for Audio {
@@ -82,7 +89,7 @@ impl Application for Audio {
         match message {
             Message::TogglePopup => {
                 if let Some(p) = self.popup.take() {
-                    return destroy_popup(p);
+                    destroy_popup(p)
                 } else {
                     self.id_ctr += 1;
                     let new_id = window::Id::new(self.id_ctr);
@@ -95,13 +102,20 @@ impl Application for Audio {
                         Some(200),
                         None,
                     );
-                    return get_popup(popup_settings);
+                    get_popup(popup_settings)
                 }
             }
-            Message::Ignore => {}
-        };
-
-        Command::none()
+            Message::Suspend => Command::perform(suspend(), Message::Zbus),
+            Message::Restart => Command::perform(restart(), Message::Zbus),
+            Message::Shutdown => Command::perform(shutdown(), Message::Zbus),
+            Message::Zbus(result) => {
+                if let Err(e) = result {
+                    eprintln!("cosmic-applet-power ERROR: '{}'", e);
+                }
+                Command::none()
+            }
+            Message::Ignore => Command::none(),
+        }
     }
 
     fn view(&self, id: SurfaceIdWrapper) -> Element<Message> {
@@ -134,9 +148,10 @@ impl Application for Audio {
 
                 let power = row![
                     power_buttons("system-lock-screen-symbolic", "Suspend")
-                        .on_press(Message::Ignore),
-                    power_buttons("system-restart-symbolic", "Restart").on_press(Message::Ignore),
-                    power_buttons("system-shutdown-symbolic", "Shutdown").on_press(Message::Ignore),
+                        .on_press(Message::Suspend),
+                    power_buttons("system-restart-symbolic", "Restart").on_press(Message::Restart),
+                    power_buttons("system-shutdown-symbolic", "Shutdown")
+                        .on_press(Message::Shutdown),
                 ]
                 .spacing(24)
                 .padding([0, 24]);
@@ -156,6 +171,8 @@ impl Application for Audio {
         }
     }
 }
+
+// ### UI Helplers
 
 // todo put into libcosmic doing so will fix the row_button's boarder radius
 fn row_button(mut content: Vec<Element<Message>>) -> iced_sctk::widget::Button<Message, Renderer> {
@@ -190,4 +207,24 @@ fn text_icon(name: &str, size: u16) -> cosmic::widget::Icon {
     icon(name, size).style(Svg::Custom(|theme| svg::Appearance {
         fill: Some(theme.palette().text),
     }))
+}
+
+// ### System helpers
+
+async fn restart() -> zbus::Result<()> {
+    let connection = Connection::system().await?;
+    let manager_proxy = ManagerProxy::new(&connection).await?;
+    manager_proxy.reboot(true).await
+}
+
+async fn shutdown() -> zbus::Result<()> {
+    let connection = Connection::system().await?;
+    let manager_proxy = ManagerProxy::new(&connection).await?;
+    manager_proxy.power_off(true).await
+}
+
+async fn suspend() -> zbus::Result<()> {
+    let connection = Connection::system().await?;
+    let manager_proxy = ManagerProxy::new(&connection).await?;
+    manager_proxy.suspend(true).await
 }
