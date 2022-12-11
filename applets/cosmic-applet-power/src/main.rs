@@ -1,3 +1,5 @@
+use std::process;
+
 use iced::widget::Space;
 
 use cosmic::applet::CosmicAppletHelper;
@@ -20,7 +22,16 @@ use iced_sctk::widget::Row;
 use iced_sctk::Color;
 
 use logind_zbus::manager::ManagerProxy;
+use logind_zbus::session::{SessionProxy, SessionType};
+use logind_zbus::user::UserProxy;
+use nix::unistd::getuid;
 use zbus::Connection;
+
+pub mod cosmic_session;
+pub mod session_manager;
+
+use crate::cosmic_session::CosmicSessionProxy;
+use crate::session_manager::SessionManagerProxy;
 
 pub fn main() -> cosmic::iced::Result {
     let helper = CosmicAppletHelper::default();
@@ -38,10 +49,13 @@ struct Audio {
 
 #[derive(Debug, Clone)]
 enum Message {
+    Lock,
+    LogOut,
     Suspend,
     Restart,
     Shutdown,
     TogglePopup,
+    Settings,
     Ignore,
     Zbus(Result<(), zbus::Error>),
 }
@@ -105,6 +119,12 @@ impl Application for Audio {
                     get_popup(popup_settings)
                 }
             }
+            Message::Settings => {
+              let _ = process::Command::new("cosmic-settings").spawn();
+              Command::none()
+            }
+            Message::Lock => Command::perform(lock(), Message::Zbus),
+            Message::LogOut => Command::perform(log_out(), Message::Zbus),
             Message::Suspend => Command::perform(suspend(), Message::Zbus),
             Message::Restart => Command::perform(restart(), Message::Zbus),
             Message::Shutdown => Command::perform(shutdown(), Message::Zbus),
@@ -127,7 +147,8 @@ impl Application for Audio {
                 .on_press(Message::TogglePopup)
                 .into(),
             SurfaceIdWrapper::Popup(_) => {
-                let settings = row_button(vec!["Settings...".into()]).on_press(Message::Ignore);
+                let settings = row_button(vec!["Settings...".into()])
+                  .on_press(Message::Settings);
 
                 let session = column![
                     row_button(vec![
@@ -136,14 +157,14 @@ impl Application for Audio {
                         Space::with_width(Length::Fill).into(),
                         "Super + Escape".into(),
                     ])
-                    .on_press(Message::Ignore),
+                    .on_press(Message::Lock),
                     row_button(vec![
                         text_icon("system-log-out-symbolic", 24).into(),
                         "Log Out".into(),
                         Space::with_width(Length::Fill).into(),
                         "Ctrl + Alt + Delete".into(),
                     ])
-                    .on_press(Message::Ignore),
+                    .on_press(Message::LogOut),
                 ];
 
                 let power = row![
@@ -227,4 +248,48 @@ async fn suspend() -> zbus::Result<()> {
     let connection = Connection::system().await?;
     let manager_proxy = ManagerProxy::new(&connection).await?;
     manager_proxy.suspend(true).await
+}
+
+async fn lock() -> zbus::Result<()> {
+    let connection = Connection::system().await?;
+    let manager_proxy = ManagerProxy::new(&connection).await?;
+    // Get the session this current process is running in
+    let our_uid = getuid().as_raw() as u32;
+    let user_path = manager_proxy.get_user(our_uid).await?;
+    let user = UserProxy::builder(&connection)
+        .path(user_path)?
+        .build()
+        .await?;
+    // Lock all non-TTY sessions of this user
+    let sessions = user.sessions().await?;
+    for (_, session_path) in sessions {
+        let session = SessionProxy::builder(&connection)
+            .path(session_path)?
+            .build()
+            .await?;
+        if session.type_().await? != SessionType::TTY {
+            session.lock().await?;
+        }
+    }
+    Ok(())
+}
+
+async fn log_out() -> zbus::Result<()> {
+    let session_type = std::env::var("XDG_CURRENT_DESKTOP").ok();
+    let connection = Connection::session().await?;
+    match session_type.as_ref().map(|s| s.trim()) {
+        Some("pop:COSMIC") => {
+            let cosmic_session = CosmicSessionProxy::new(&connection).await?;
+            cosmic_session.exit().await?;
+        }
+        Some("pop:GNOME") => {
+            let manager_proxy = SessionManagerProxy::new(&connection).await?;
+            manager_proxy.logout(0).await?;
+        }
+        Some(desktop) => {
+            eprintln!("unknown XDG_CURRENT_DESKTOP: {desktop}")
+        }
+        None => {}
+    }
+    Ok(())
 }

@@ -2,8 +2,7 @@
 name = "cosmic-applet-power"
 version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+license = "GPL-3.0-or-later"
 
 [dependencies]
 icon-loader = { version = "0.3.6", features = ["gtk"] }
@@ -13,6 +12,7 @@ tokio = { version = "1.20.1", features=["full"] }
 libcosmic = { git = "https://github.com/pop-os/libcosmic/", branch = "master", default-features = false, features = ["wayland", "applet"] }
 iced_sctk = { git = "https://github.com/pop-os/iced-sctk" }
 sctk = { package = "smithay-client-toolkit", git = "https://github.com/Smithay/client-toolkit", version = "0.16" }
+nix = "0.24.1"
 
 [workspace]
 resolved = "2"
