@@ -51,6 +51,13 @@ override_dh_auto_clean:
 		tar pcf vendor.tar vendor; \
 		rm -rf vendor; \
 		cd ../..; \
+		cd applets/cosmic-applet-power/; \
+		mkdir -p .cargo; \
+		cargo vendor --sync Cargo.toml | head -n -1 > .cargo/config; \
+		echo 'directory = "vendor"' >> .cargo/config; \
+		tar pcf vendor.tar vendor; \
+		rm -rf vendor; \
+		cd ../..; \
 		cd applets/cosmic-applet-network/; \
 		mkdir -p .cargo; \
 		cargo vendor --sync Cargo.toml | head -n -1 > .cargo/config; \

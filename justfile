@@ -40,6 +40,9 @@ build: _extract_vendor
     pushd applets/cosmic-applet-battery/
     cargo build {{cargo_args}}
     popd
+    pushd applets/cosmic-applet-power/
+    cargo build {{cargo_args}}
+    popd
     pushd applets/cosmic-applet-workspaces/
     cargo build {{cargo_args}}
     popd
@@ -72,7 +75,7 @@ install:
     # power
     install -Dm0644 applets/cosmic-applet-power/data/icons/{{power_id}}.svg {{iconsdir}}/{{power_id}}.svg
     install -Dm0644 applets/cosmic-applet-power/data/{{power_id}}.desktop {{sharedir}}/applications/{{power_id}}.desktop
-    install -Dm0755 target/release/cosmic-applet-power {{bindir}}/cosmic-applet-power
+    install -Dm0755 applets/cosmic-applet-power/target/release/cosmic-applet-power {{bindir}}/cosmic-applet-power
 
     # status area
     install -Dm0644 applets/cosmic-applet-status-area/data/icons/{{status_area_id}}.svg {{iconsdir}}/{{status_area_id}}.svg
@@ -119,5 +122,6 @@ _extract_vendor:
         rm -rf applets/cosmic-applet-workspaces/vendor; tar xf applets/cosmic-applet-workspaces/vendor.tar --directory applets/cosmic-applet-workspaces
         rm -rf applets/cosmic-applet-battery/vendor; tar xf applets/cosmic-applet-battery/vendor.tar --directory applets/cosmic-applet-battery
         rm -rf applets/cosmic-applet-audio/vendor; tar xf applets/cosmic-applet-audio/vendor.tar --directory applets/cosmic-applet-audio
+        rm -rf applets/cosmic-applet-power/vendor; tar xf applets/cosmic-applet-power/vendor.tar --directory applets/cosmic-applet-power
         rm -rf applets/cosmic-applet-network/vendor; tar xf applets/cosmic-applet-network/vendor.tar --directory applets/cosmic-applet-network
     fi
