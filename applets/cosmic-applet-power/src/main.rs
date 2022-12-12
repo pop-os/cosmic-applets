@@ -113,7 +113,7 @@ impl Application for Audio {
                         window::Id::new(0),
                         new_id,
                         (400, 300),
-                        Some(200),
+                        None,
                         None,
                     );
                     get_popup(popup_settings)
