@@ -22,7 +22,7 @@
 
 use zbus::dbus_proxy;
 
-#[dbus_proxy(interface = "org.gnome.SessionManager")]
+#[dbus_proxy(interface = "org.gnome.SessionManager", assume_defaults = true)]
 trait SessionManager {
     /// CanRebootToFirmwareSetup method
     fn can_reboot_to_firmware_setup(&self) -> zbus::Result<bool>;
