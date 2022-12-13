@@ -28,6 +28,9 @@ workspaces_button_id := 'com.system76.CosmicPanelWorkspacesButton'
 
 build: _extract_vendor
     #!/usr/bin/env bash
+    pushd applets/cosmic-app-list/
+    cargo build {{cargo_args}}
+    popd
     pushd applets/cosmic-applet-audio/
     cargo build {{cargo_args}}
     popd
@@ -63,7 +66,7 @@ install:
     install -Dm0644 applets/cosmic-app-list/data/icons/{{app_list_id}}.Devel.svg {{iconsdir}}/{{app_list_id}}.Devel.svg
     install -Dm0644 applets/cosmic-app-list/data/icons/{{app_list_id}}.svg {{iconsdir}}/{{app_list_id}}.svg
     install -Dm0644 applets/cosmic-app-list/data/{{app_list_id}}.desktop {{sharedir}}/applications/{{app_list_id}}.desktop
-    install -Dm0755 target/release/cosmic-app-list {{bindir}}/cosmic-app-list
+    install -Dm0755 applets/cosmic-app-list/target/release/cosmic-app-list {{bindir}}/cosmic-app-list
 
     # network
     install -Dm0644 applets/cosmic-applet-network/data/icons/{{network_id}}.svg {{iconsdir}}/{{network_id}}.svg
@@ -128,4 +131,5 @@ _extract_vendor:
         rm -rf applets/cosmic-applet-power/vendor; tar xf applets/cosmic-applet-power/vendor.tar --directory applets/cosmic-applet-power
         rm -rf applets/cosmic-applet-time/vendor; tar xf applets/cosmic-applet-time/vendor.tar --directory applets/cosmic-applet-time
         rm -rf applets/cosmic-applet-network/vendor; tar xf applets/cosmic-applet-network/vendor.tar --directory applets/cosmic-applet-network
+        rm -rf applets/cosmic-app-list/vendor; tar xf applets/cosmic-app-list/vendor.tar --directory applets/cosmic-app-list
     fi
