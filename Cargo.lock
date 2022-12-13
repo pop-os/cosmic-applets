@@ -231,19 +231,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "calloop"
-version = "0.10.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a22a6a8f622f797120d452c630b0ab12e1331a1a753e2039ce7868d4ac77b4ee"
-dependencies = [
- "log",
- "nix 0.24.2",
- "slotmap",
- "thiserror",
- "vec_map",
-]
-
-[[package]]
 name = "cascade"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -299,39 +286,6 @@ name = "core-foundation-sys"
 version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5827cebf4670468b8772dd191856768aedcb1b0278a04f989f7766351917b9dc"
-
-[[package]]
-name = "cosmic-app-list"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "calloop",
- "cascade",
- "cosmic-panel-config",
- "cosmic-protocols",
- "futures",
- "futures-util",
- "gio",
- "glib-build-tools",
- "gsk4",
- "gtk4",
- "i18n-embed",
- "i18n-embed-fl",
- "libadwaita",
- "libcosmic",
- "log",
- "nix 0.25.0",
- "once_cell",
- "pretty_env_logger",
- "relm4-macros",
- "ron 0.8.0",
- "rust-embed",
- "serde",
- "serde_json",
- "wayland-backend",
- "wayland-client",
- "xdg",
-]
 
 [[package]]
 name = "cosmic-applet-notifications"
@@ -418,18 +372,6 @@ dependencies = [
  "wayland-protocols-wlr",
  "xdg",
  "xdg-shell-wrapper-config",
-]
-
-[[package]]
-name = "cosmic-protocols"
-version = "0.1.0"
-source = "git+https://github.com/pop-os/cosmic-protocols#3ff11df30ef551e1ccbdcb091930fe0d72266195"
-dependencies = [
- "bitflags",
- "wayland-backend",
- "wayland-client",
- "wayland-protocols",
- "wayland-scanner",
 ]
 
 [[package]]
@@ -1149,12 +1091,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "itoa"
-version = "1.0.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c8af84674fe1f223a982c933a0ee1086ac4d4052aa0fb8060c12c6ad838e754"
-
-[[package]]
 name = "js-sys"
 version = "0.3.59"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1331,7 +1267,6 @@ dependencies = [
  "cfg-if",
  "libc",
  "memoffset",
- "pin-utils",
 ]
 
 [[package]]
@@ -1807,12 +1742,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ryu"
-version = "1.0.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4501abdff3ae82a1c1b477a17252eb69cee9e66eb915c1abaa4f44d873df9f09"
-
-[[package]]
 name = "same-file"
 version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1878,17 +1807,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "serde_json"
-version = "1.0.83"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "38dd04e3c8279e75b31ef29dbdceebfe5ad89f4d0937213c53f7d49d01b3d5a7"
-dependencies = [
- "itoa",
- "ryu",
- "serde",
-]
-
-[[package]]
 name = "serde_repr"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1947,15 +1865,6 @@ name = "slog"
 version = "2.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8347046d4ebd943127157b94d63abb990fcf729dc4e9978927fdf4ac3c998d06"
-
-[[package]]
-name = "slotmap"
-version = "1.0.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e1e08e261d0e8f5c43123b7adf3e4ca1690d655377ac93a03b2c9d3e98de1342"
-dependencies = [
- "version_check",
-]
 
 [[package]]
 name = "smallvec"
@@ -2165,12 +2074,6 @@ name = "unicode-ident"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c4f5b37a154999a8f3f98cc23a628d850e154479cd94decf3414696e12e31aaf"
-
-[[package]]
-name = "vec_map"
-version = "0.8.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f1bddf1187be692e79c5ffeab891132dfb0f236ed36a43c7ed39f1165ee20191"
 
 [[package]]
 name = "version-compare"

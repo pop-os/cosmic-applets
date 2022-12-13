@@ -36,3 +36,12 @@ macro_rules! fl {
 pub fn localizer() -> Box<dyn Localizer> {
     Box::from(DefaultLocalizer::new(&*LANGUAGE_LOADER, &Localizations))
 }
+
+pub fn localize() {
+    let localizer = crate::localize::localizer();
+    let requested_languages = i18n_embed::DesktopLanguageRequester::requested_languages();
+
+    if let Err(error) = localizer.select(&requested_languages) {
+        eprintln!("Error while loading language for App List {}", error);
+    }
+}
