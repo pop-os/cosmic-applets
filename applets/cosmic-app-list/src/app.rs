@@ -329,7 +329,7 @@ impl Application for CosmicAppList {
                                 .height(Length::Units(self.applet_helper.suggested_icon_size()))
                                 .into()
                         };
-                        let dot_radius = (self.applet_helper.suggested_icon_size() / 8).max(2);
+                        let dot_radius = 2;
                         let dots = (0..toplevels.len())
                             .into_iter()
                             .map(|_| {
