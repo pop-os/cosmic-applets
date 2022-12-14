@@ -16,7 +16,7 @@ fn main() -> cosmic::iced::Result {
     pretty_env_logger::init();
     info!("Iced Workspaces Applet ({})", APP_ID);
     info!("Version: {}", VERSION);
-
+    config::AppListConfig::default().save().unwrap();
     // Prepare i18n
     localize();
 
