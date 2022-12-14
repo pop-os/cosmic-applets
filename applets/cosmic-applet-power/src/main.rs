@@ -49,6 +49,7 @@ struct Audio {
 
 #[derive(Debug, Clone)]
 enum Message {
+    BadCode(()),
     Lock,
     LogOut,
     Suspend,
@@ -72,7 +73,7 @@ impl Application for Audio {
                 icon_name: "system-shutdown-symbolic".to_string(),
                 ..Default::default()
             },
-            Command::none(),
+            Command::perform(bad_code(), Message::BadCode),
         )
     }
 
@@ -135,6 +136,7 @@ impl Application for Audio {
                 Command::none()
             }
             Message::Ignore => Command::none(),
+            Message::BadCode(_) => Command::none(),
         }
     }
 
@@ -292,4 +294,10 @@ async fn log_out() -> zbus::Result<()> {
         None => {}
     }
     Ok(())
+}
+
+// TODO: This is just a temporary bug fix, please don't let this reach production.
+async fn bad_code() -> () {
+  use std::{thread, time};
+  thread::sleep(time::Duration::from_millis(5));
 }
