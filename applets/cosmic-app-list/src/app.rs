@@ -43,9 +43,7 @@ pub fn run() -> cosmic::iced::Result {
 #[derive(Debug, Clone, Default)]
 struct Toplevel {
     toplevels: Vec<(ZcosmicToplevelHandleV1, ToplevelInfo)>,
-    app_id: String,
-    icon_path: PathBuf,
-    exec: String,
+    desktop_info: DesktopInfo,
 }
 
 #[derive(Clone, Default)]
@@ -76,18 +74,27 @@ enum Message {
     NewSeat(WlSeat),
     RemovedSeat(WlSeat),
 }
-fn icon_exec_for_app_ids(mut app_ids: Vec<String>) -> Vec<(String, PathBuf, String)> {
+
+#[derive(Debug, Clone, Default)]
+struct DesktopInfo {
+    id: String,
+    icon: PathBuf,
+    exec: String,
+    name: String,
+}
+
+fn desktop_info_for_app_ids(mut app_ids: Vec<String>) -> Vec<DesktopInfo> {
     let mut ret = freedesktop_desktop_entry::Iter::new(freedesktop_desktop_entry::default_paths())
         .filter_map(|path| {
             std::fs::read_to_string(&path).ok().and_then(|input| {
                 DesktopEntry::decode(&path, &input).ok().and_then(|de| {
-                    if let Some(i) = app_ids.iter().position(|s| s == de.appid) {
+                    if let Some(i) = app_ids.iter().position(|s| s == de.appid || s.eq(&de.name(None).unwrap_or_default())) {
                         let id = app_ids.remove(i);
                         freedesktop_icons::lookup(de.icon().unwrap_or(de.appid))
                             .with_size(128)
                             .with_cache()
                             .find()
-                            .map(|buf| (id, buf, de.exec().unwrap_or_default().to_string()))
+                            .map(|buf| DesktopInfo {id, icon: buf, exec: de.exec().unwrap_or_default().to_string(), name: de.name(None).unwrap_or_default().to_string()})
                     } else {
                         None
                     }
@@ -98,7 +105,7 @@ fn icon_exec_for_app_ids(mut app_ids: Vec<String>) -> Vec<(String, PathBuf, Stri
     ret.append(
         &mut app_ids
             .into_iter()
-            .map(|id| (id, Default::default(), Default::default()))
+            .map(|id| DesktopInfo { id, ..Default::default() })
             .collect_vec(),
     );
     ret
@@ -114,13 +121,11 @@ impl Application for CosmicAppList {
         let config = config::AppListConfig::load().unwrap_or_default();
         (
             CosmicAppList {
-                toplevel_list: icon_exec_for_app_ids(config.favorites.clone())
+                toplevel_list: desktop_info_for_app_ids(config.favorites.clone())
                     .into_iter()
                     .map(|e| Toplevel {
                         toplevels: Default::default(),
-                        app_id: e.0,
-                        icon_path: e.1,
-                        exec: e.2,
+                        desktop_info: e
                     })
                     .collect(),
                 config,
@@ -177,21 +182,22 @@ impl Application for CosmicAppList {
                 // dbg!(&self.toplevel_list);
                 match event {
                     ToplevelUpdate::AddToplevel(handle, info) => {
+                        if info.app_id == "" {
+                            return Command::none();
+                        }
                         if let Some(i) = self
                             .toplevel_list
                             .iter()
-                            .position(|Toplevel { app_id, .. }| app_id == &info.app_id)
+                            .position(|Toplevel { desktop_info, .. }| &desktop_info.id == &info.app_id)
                         {
                             self.toplevel_list[i].toplevels.push((handle, info));
                         } else {
-                            let (app_id, icon_path, exec) =
-                                icon_exec_for_app_ids(vec![info.app_id.clone()]).remove(0);
+                            let desktop_info =
+                                desktop_info_for_app_ids(vec![info.app_id.clone()]).remove(0);
 
                             self.toplevel_list.push(Toplevel {
                                 toplevels: vec![(handle, info)],
-                                app_id,
-                                icon_path,
-                                exec
+                                desktop_info
                             });
                             // TODO better way of setting window size?
                             let pixel_size = self.applet_helper.suggested_icon_size();
@@ -228,11 +234,11 @@ impl Application for CosmicAppList {
                     ToplevelUpdate::RemoveToplevel(handle) => {
                         if let Some(i) = self.toplevel_list.iter_mut().position(
                             |Toplevel {
-                                 toplevels, app_id, ..
+                                 toplevels, desktop_info, ..
                              }| {
                                 if let Some(ret) = toplevels.iter().position(|t| &t.0 == &handle) {
                                     toplevels.remove(ret);
-                                    toplevels.is_empty() && self.config.favorites.contains(app_id)
+                                    toplevels.is_empty() && self.config.favorites.contains(&desktop_info.id)
                                 } else {
                                     false
                                 }
@@ -263,6 +269,10 @@ impl Application for CosmicAppList {
                         return resize_window(window::Id::new(0), w, h);
                     }
                     ToplevelUpdate::UpdateToplevel(handle, info) => {
+                        // TODO probably want to make sure it is removed
+                        if info.app_id == "" {
+                            return Command::none();
+                        }
                         'toplevel_loop: for toplevel_list in &mut self.toplevel_list {
                             for (t_handle, t_info) in &mut toplevel_list.toplevels {
                                 if &handle == t_handle {
@@ -331,19 +341,17 @@ impl Application for CosmicAppList {
                         i,
                         Toplevel {
                             toplevels,
-                            app_id,
-                            icon_path,
-                            exec,
+                            desktop_info
                         },
                     )| {
-                        let icon = if icon_path.extension() == Some(&OsStr::new("svg")) {
-                            let handle = svg::Handle::from_path(icon_path);
+                        let icon = if desktop_info.icon.extension() == Some(&OsStr::new("svg")) {
+                            let handle = svg::Handle::from_path(&desktop_info.icon);
                             svg::Svg::new(handle)
                                 .width(Length::Units(self.applet_helper.suggested_icon_size()))
                                 .height(Length::Units(self.applet_helper.suggested_icon_size()))
                                 .into()
                         } else {
-                            Image::new(icon_path)
+                            Image::new(&desktop_info.icon)
                                 .width(Length::Units(self.applet_helper.suggested_icon_size()))
                                 .height(Length::Units(self.applet_helper.suggested_icon_size()))
                                 .into()
@@ -390,10 +398,10 @@ impl Application for CosmicAppList {
                         // TODO tooltip on hover
                         let icon_button = cosmic::widget::button(Button::Text)
                             .custom(vec![icon_wrapper])
-                            .on_press(toplevels.first().map(|t| Message::Activate(t.0.clone())).unwrap_or_else(|| Message::Exec(exec.clone())))
+                            .on_press(toplevels.first().map(|t| Message::Activate(t.0.clone())).unwrap_or_else(|| Message::Exec(desktop_info.exec.clone())))
                             .padding(8)
                             .into();
-                        if self.config.favorites.contains(&app_id) {
+                        if self.config.favorites.contains(&desktop_info.id) || self.config.favorites.contains(&desktop_info.name) {
                             favorites.push(icon_button)
                         } else {
                             running.push(icon_button);
