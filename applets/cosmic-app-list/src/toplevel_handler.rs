@@ -1,13 +1,17 @@
 use cctk::{
-    sctk::{self, event_loop::WaylandSource},
+    sctk::{self, event_loop::WaylandSource, seat::{SeatHandler, SeatState}, reexports::client::protocol::wl_seat::WlSeat},
     toplevel_info::{ToplevelInfoHandler, ToplevelInfoState},
-    wayland_client,
+    toplevel_management::{ToplevelManagerHandler, ToplevelManagerState},
+    wayland_client::{self, Proxy, backend::ObjectId},
 };
-use cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1;
+use cosmic_protocols::{
+    toplevel_info::v1::client::zcosmic_toplevel_handle_v1,
+    toplevel_management::v1::client::zcosmic_toplevel_manager_v1,
+};
 use futures::channel::mpsc::UnboundedSender;
 use sctk::registry::{ProvidesRegistryState, RegistryState};
 use wayland_client::{globals::registry_queue_init, Connection, QueueHandle};
-
+use itertools::Itertools;
 use crate::toplevel_subscription::{ToplevelRequest, ToplevelUpdate};
 
 struct AppData {
@@ -15,6 +19,8 @@ struct AppData {
     tx: UnboundedSender<ToplevelUpdate>,
     registry_state: RegistryState,
     toplevel_info_state: ToplevelInfoState,
+    toplevel_manager_state: ToplevelManagerState,
+    seat_state: SeatState,
 }
 
 impl ProvidesRegistryState for AppData {
@@ -23,6 +29,42 @@ impl ProvidesRegistryState for AppData {
     }
 
     sctk::registry_handlers!();
+}
+
+impl SeatHandler for AppData {
+    fn seat_state(&mut self) -> &mut sctk::seat::SeatState {
+        &mut self.seat_state
+    }
+
+    fn new_seat(&mut self, conn: &Connection, qh: &QueueHandle<Self>, seat: WlSeat) {}
+
+    fn new_capability(
+        &mut self,
+        conn: &Connection,
+        qh: &QueueHandle<Self>,
+        seat: WlSeat,
+        capability: sctk::seat::Capability,
+    ) {}
+
+    fn remove_capability(
+        &mut self,
+        conn: &Connection,
+        qh: &QueueHandle<Self>,
+        seat: WlSeat,
+        capability: sctk::seat::Capability,
+    ) {}
+
+    fn remove_seat(&mut self, conn: &Connection, qh: &QueueHandle<Self>, seat: WlSeat) {}
+}
+
+impl ToplevelManagerHandler for AppData {
+    fn toplevel_manager_state(&mut self) -> &mut cctk::toplevel_management::ToplevelManagerState {
+        &mut self.toplevel_manager_state
+    }
+
+    fn capabilities(&mut self, conn: &Connection, qh: &QueueHandle<Self>, capabilities: Vec<u8>) {
+        // TODO capabilities could affect the options in the applet
+    }
 }
 
 impl ToplevelInfoHandler for AppData {
@@ -90,8 +132,12 @@ pub(crate) fn toplevel_handler(
     if handle
         .insert_source(rx, |event, _, state| match event {
             calloop::channel::Event::Msg(req) => match req {
-                ToplevelRequest::Activate(_) => {} // TODO
-                ToplevelRequest::Quit(_) => {}     // TODO
+                ToplevelRequest::Activate(handle, seat) => {
+                    
+                    let manager = &state.toplevel_manager_state.manager;
+                    manager.activate(&handle, &seat);
+                } // TODO
+                ToplevelRequest::Quit(_) => {} // TODO
                 ToplevelRequest::Exit => {
                     state.exit = true;
                 }
@@ -108,7 +154,9 @@ pub(crate) fn toplevel_handler(
     let mut app_data = AppData {
         exit: false,
         tx,
+        seat_state: SeatState::new(&globals, &qh),
         toplevel_info_state: ToplevelInfoState::new(&registry_state, &qh),
+        toplevel_manager_state: ToplevelManagerState::new(&registry_state, &qh),
         registry_state,
     };
 
@@ -120,5 +168,7 @@ pub(crate) fn toplevel_handler(
     }
 }
 
+sctk::delegate_seat!(AppData);
 sctk::delegate_registry!(AppData);
 cctk::delegate_toplevel_info!(AppData);
+cctk::delegate_toplevel_manager!(AppData);
