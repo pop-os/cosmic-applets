@@ -8,12 +8,15 @@ use crate::toplevel_subscription::ToplevelRequest;
 use crate::toplevel_subscription::ToplevelUpdate;
 use calloop::channel::Sender;
 use cctk::toplevel_info::ToplevelInfo;
+use cctk::wayland_client::protocol::wl_seat::WlSeat;
 use cosmic::applet::CosmicAppletHelper;
+use cosmic::iced;
 use cosmic::iced::wayland::popup::destroy_popup;
 use cosmic::iced::wayland::popup::get_popup;
 use cosmic::iced::wayland::SurfaceIdWrapper;
 use cosmic::iced::widget::{column, row};
 use cosmic::iced::{executor, window, Application, Command, Subscription};
+use cosmic::iced_native::subscription::events_with;
 use cosmic::iced_style::application::{self, Appearance};
 use cosmic::iced_style::Color;
 use cosmic::theme::Button;
@@ -22,13 +25,13 @@ use cosmic::{Element, Theme};
 use cosmic_panel_config::PanelAnchor;
 use cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1;
 use freedesktop_desktop_entry::DesktopEntry;
-use iced::Alignment;
-use iced::Background;
 use iced::wayland::window::resize_window;
 use iced::widget::container;
 use iced::widget::horizontal_space;
 use iced::widget::svg;
 use iced::widget::Image;
+use iced::Alignment;
+use iced::Background;
 use iced::Length;
 use itertools::Itertools;
 
@@ -54,6 +57,7 @@ struct CosmicAppList {
     config: AppListConfig,
     toplevel_sender: Option<Sender<ToplevelRequest>>,
     applet_helper: CosmicAppletHelper,
+    seat: Option<WlSeat>,
 }
 
 // TODO DnD after sctk merges DnD
@@ -67,6 +71,8 @@ enum Message {
     Quit(ZcosmicToplevelHandleV1),
     Errored(String),
     Ignore,
+    NewSeat(WlSeat),
+    RemovedSeat(WlSeat),
 }
 fn icon_for_app_ids(mut app_ids: Vec<String>) -> Vec<(String, PathBuf)> {
     let mut ret = freedesktop_desktop_entry::Iter::new(freedesktop_desktop_entry::default_paths())
@@ -155,8 +161,8 @@ impl Application for CosmicAppList {
                 let _ = self.config.remove_favorite(id);
             }
             Message::Activate(handle) => {
-                if let (Some(tx), Some(handle)) = (self.toplevel_sender.as_ref(), handle) {
-                    let _ = tx.send(ToplevelRequest::Activate(handle));
+                if let (Some(tx), Some(seat), Some(handle)) = (self.toplevel_sender.as_ref(), self.seat.as_ref(), handle) {
+                    let _ = tx.send(ToplevelRequest::Activate(handle, seat.clone()));
                 }
             }
             Message::Quit(handle) => {
@@ -188,7 +194,16 @@ impl Application for CosmicAppList {
                             let padding = 8;
                             let dot_size = 4;
                             let spacing = 4;
-                            let length = self.toplevel_list.iter().map(|t| (pixel_size + 2 * padding).max((dot_size + spacing) * t.toplevels.len() as u16) as u32 + spacing as u32).sum();
+                            let length = self
+                                .toplevel_list
+                                .iter()
+                                .map(|t| {
+                                    (pixel_size + 2 * padding)
+                                        .max((dot_size + spacing) * t.toplevels.len() as u16)
+                                        as u32
+                                        + spacing as u32
+                                })
+                                .sum();
                             let thickness = (pixel_size + 2 * padding + dot_size + spacing) as u32;
                             let (w, h) = match self.applet_helper.anchor {
                                 PanelAnchor::Left | PanelAnchor::Right => (thickness, length),
@@ -202,6 +217,9 @@ impl Application for CosmicAppList {
                     }
                     ToplevelUpdate::Finished => {
                         self.subscription_ctr += 1;
+                        for t in &mut self.toplevel_list {
+                            t.toplevels.clear();
+                        }
                     }
                     ToplevelUpdate::RemoveToplevel(handle) => {
                         if let Some(i) = self.toplevel_list.iter_mut().position(
@@ -223,7 +241,16 @@ impl Application for CosmicAppList {
                         let padding = 8;
                         let dot_size = 4;
                         let spacing = 4;
-                        let length = self.toplevel_list.iter().map(|t| (pixel_size + 2 * padding).max((dot_size + spacing) * t.toplevels.len() as u16) as u32 + spacing as u32).sum();
+                        let length = self
+                            .toplevel_list
+                            .iter()
+                            .map(|t| {
+                                (pixel_size + 2 * padding)
+                                    .max((dot_size + spacing) * t.toplevels.len() as u16)
+                                    as u32
+                                    + spacing as u32
+                            })
+                            .sum();
                         let thickness = (pixel_size + 2 * padding + dot_size + spacing) as u32;
                         let (w, h) = match self.applet_helper.anchor {
                             PanelAnchor::Left | PanelAnchor::Right => (thickness, length),
@@ -245,7 +272,16 @@ impl Application for CosmicAppList {
                         let padding = 8;
                         let dot_size = 4;
                         let spacing = 4;
-                        let length = self.toplevel_list.iter().map(|t| (pixel_size + 2 * padding).max((dot_size + spacing) * t.toplevels.len() as u16) as u32 + spacing as u32).sum();
+                        let length = self
+                            .toplevel_list
+                            .iter()
+                            .map(|t| {
+                                (pixel_size + 2 * padding)
+                                    .max((dot_size + spacing) * t.toplevels.len() as u16)
+                                    as u32
+                                    + spacing as u32
+                            })
+                            .sum();
                         let thickness = (pixel_size + 2 * padding + dot_size + spacing) as u32;
                         let (w, h) = match self.applet_helper.anchor {
                             PanelAnchor::Left | PanelAnchor::Right => (thickness, length),
@@ -256,6 +292,12 @@ impl Application for CosmicAppList {
                 }
             }
             Message::Ignore => {}
+            Message::NewSeat(s) => {
+                self.seat.replace(s);
+            },
+            Message::RemovedSeat(_) => {
+                self.seat.take();
+            },
         }
         Command::none()
     }
@@ -287,16 +329,18 @@ impl Application for CosmicAppList {
                                 .height(Length::Units(self.applet_helper.suggested_icon_size()))
                                 .into()
                         };
-                        let dot_size = (self.applet_helper.suggested_icon_size() / 8).max(2);
+                        let dot_radius = (self.applet_helper.suggested_icon_size() / 8).max(2);
                         let dots = (0..toplevels.len())
                             .into_iter()
                             .map(|_| {
                                 container(horizontal_space(Length::Units(0)))
-                                    .padding(dot_size)
+                                    .padding(dot_radius)
                                     .style(<Self::Theme as container::StyleSheet>::Style::Custom(
                                         |theme| container::Appearance {
                                             text_color: Some(Color::TRANSPARENT),
-                                            background: Some(Background::Color(theme.cosmic().on_bg_color().into())),
+                                            background: Some(Background::Color(
+                                                theme.cosmic().on_bg_color().into(),
+                                            )),
                                             border_radius: 4.0,
                                             border_width: 0.0,
                                             border_color: Color::TRANSPARENT,
@@ -307,16 +351,29 @@ impl Application for CosmicAppList {
                             .collect_vec();
 
                         let icon_wrapper = match &self.applet_helper.anchor {
-                            PanelAnchor::Left => row(vec![column(dots).spacing(2).into(), icon]).align_items(iced::Alignment::Center).spacing(2).into(),
-                            PanelAnchor::Right => row(vec![icon, column(dots).spacing(2).into()]).align_items(iced::Alignment::Center).spacing(2).into(),
-                            PanelAnchor::Top => column(vec![row(dots).spacing(2).into(), icon]).align_items(iced::Alignment::Center).spacing(2).into(),
-                            PanelAnchor::Bottom => column(vec![icon, row(dots).spacing(2).into()]).align_items(iced::Alignment::Center).spacing(2).into(),
+                            PanelAnchor::Left => row(vec![column(dots).spacing(4).into(), icon])
+                                .align_items(iced::Alignment::Center)
+                                .spacing(4)
+                                .into(),
+                            PanelAnchor::Right => row(vec![icon, column(dots).spacing(4).into()])
+                                .align_items(iced::Alignment::Center)
+                                .spacing(4)
+                                .into(),
+                            PanelAnchor::Top => column(vec![row(dots).spacing(4).into(), icon])
+                                .align_items(iced::Alignment::Center)
+                                .spacing(4)
+                                .into(),
+                            PanelAnchor::Bottom => column(vec![icon, row(dots).spacing(4).into()])
+                                .align_items(iced::Alignment::Center)
+                                .spacing(4)
+                                .into(),
                         };
                         // TODO tooltip on hover
                         let icon_button = cosmic::widget::button(Button::Text)
-                        .custom(vec![icon_wrapper])
-                        .on_press(Message::Activate(toplevels.first().map(|t| t.0.clone())))
-                        .padding(8).into();
+                            .custom(vec![icon_wrapper])
+                            .on_press(Message::Activate(toplevels.first().map(|t| t.0.clone())))
+                            .padding(8)
+                            .into();
                         if self.config.favorites.contains(&app_id) {
                             favorites.push(icon_button)
                         } else {
@@ -327,10 +384,20 @@ impl Application for CosmicAppList {
                 );
                 match &self.applet_helper.anchor {
                     PanelAnchor::Left | PanelAnchor::Right => {
-                        column![column(favorites), horizontal_rule(1), column(running)].spacing(4).align_items(Alignment::Center).height(Length::Fill).width(Length::Fill).into()
+                        column![column(favorites), horizontal_rule(1), column(running)]
+                            .spacing(4)
+                            .align_items(Alignment::Center)
+                            .height(Length::Fill)
+                            .width(Length::Fill)
+                            .into()
                     }
                     PanelAnchor::Top | PanelAnchor::Bottom => {
-                        row![row(favorites), vertical_rule(1), row(running)].spacing(4).align_items(Alignment::Center).height(Length::Fill).width(Length::Fill).into()
+                        row![row(favorites), vertical_rule(1), row(running)]
+                            .spacing(4)
+                            .align_items(Alignment::Center)
+                            .height(Length::Fill)
+                            .width(Length::Fill)
+                            .into()
                     }
                 }
             }
@@ -342,7 +409,22 @@ impl Application for CosmicAppList {
 
     fn subscription(&self) -> Subscription<Message> {
         Subscription::batch(vec![
-            toplevel_subscription(self.subscription_ctr).map(|(_, event)| Message::Toplevel(event))
+            toplevel_subscription(self.subscription_ctr).map(|(_, event)| Message::Toplevel(event)),
+            events_with(|e, status| match e {
+                cosmic::iced_native::Event::PlatformSpecific(
+                    cosmic::iced_native::event::PlatformSpecific::Wayland(
+                        cosmic::iced_native::event::wayland::Event::Seat(e, seat),
+                    ),
+                ) => match e {
+                    cosmic::iced_native::event::wayland::SeatEvent::Enter => {
+                        Some(Message::NewSeat(seat))
+                    },
+                    cosmic::iced_native::event::wayland::SeatEvent::Leave => {
+                        Some(Message::RemovedSeat(seat))
+                    },
+                },
+                _ => None
+            }),
         ])
     }
 
