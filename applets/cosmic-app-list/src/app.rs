@@ -45,6 +45,7 @@ struct Toplevel {
     toplevels: Vec<(ZcosmicToplevelHandleV1, ToplevelInfo)>,
     app_id: String,
     icon_path: PathBuf,
+    exec: String,
 }
 
 #[derive(Clone, Default)]
@@ -67,14 +68,15 @@ enum Message {
     Favorite(String),
     UnFavorite(String),
     TogglePopup(usize),
-    Activate(Option<ZcosmicToplevelHandleV1>),
+    Activate(ZcosmicToplevelHandleV1),
+    Exec(String),
     Quit(ZcosmicToplevelHandleV1),
     Errored(String),
     Ignore,
     NewSeat(WlSeat),
     RemovedSeat(WlSeat),
 }
-fn icon_for_app_ids(mut app_ids: Vec<String>) -> Vec<(String, PathBuf)> {
+fn icon_exec_for_app_ids(mut app_ids: Vec<String>) -> Vec<(String, PathBuf, String)> {
     let mut ret = freedesktop_desktop_entry::Iter::new(freedesktop_desktop_entry::default_paths())
         .filter_map(|path| {
             std::fs::read_to_string(&path).ok().and_then(|input| {
@@ -85,7 +87,7 @@ fn icon_for_app_ids(mut app_ids: Vec<String>) -> Vec<(String, PathBuf)> {
                             .with_size(128)
                             .with_cache()
                             .find()
-                            .map(|buf| (id, buf))
+                            .map(|buf| (id, buf, de.exec().unwrap_or_default().to_string()))
                     } else {
                         None
                     }
@@ -96,7 +98,7 @@ fn icon_for_app_ids(mut app_ids: Vec<String>) -> Vec<(String, PathBuf)> {
     ret.append(
         &mut app_ids
             .into_iter()
-            .map(|id| (id, Default::default()))
+            .map(|id| (id, Default::default(), Default::default()))
             .collect_vec(),
     );
     ret
@@ -112,12 +114,13 @@ impl Application for CosmicAppList {
         let config = config::AppListConfig::load().unwrap_or_default();
         (
             CosmicAppList {
-                toplevel_list: icon_for_app_ids(config.favorites.clone())
+                toplevel_list: icon_exec_for_app_ids(config.favorites.clone())
                     .into_iter()
                     .map(|e| Toplevel {
                         toplevels: Default::default(),
                         app_id: e.0,
                         icon_path: e.1,
+                        exec: e.2,
                     })
                     .collect(),
                 config,
@@ -161,7 +164,7 @@ impl Application for CosmicAppList {
                 let _ = self.config.remove_favorite(id);
             }
             Message::Activate(handle) => {
-                if let (Some(tx), Some(seat), Some(handle)) = (self.toplevel_sender.as_ref(), self.seat.as_ref(), handle) {
+                if let (Some(tx), Some(seat)) = (self.toplevel_sender.as_ref(), self.seat.as_ref()) {
                     let _ = tx.send(ToplevelRequest::Activate(handle, seat.clone()));
                 }
             }
@@ -181,13 +184,14 @@ impl Application for CosmicAppList {
                         {
                             self.toplevel_list[i].toplevels.push((handle, info));
                         } else {
-                            let (app_id, icon_name) =
-                                icon_for_app_ids(vec![info.app_id.clone()]).remove(0);
+                            let (app_id, icon_path, exec) =
+                                icon_exec_for_app_ids(vec![info.app_id.clone()]).remove(0);
 
                             self.toplevel_list.push(Toplevel {
                                 toplevels: vec![(handle, info)],
                                 app_id,
-                                icon_path: icon_name,
+                                icon_path,
+                                exec
                             });
                             // TODO better way of setting window size?
                             let pixel_size = self.applet_helper.suggested_icon_size();
@@ -298,6 +302,20 @@ impl Application for CosmicAppList {
             Message::RemovedSeat(_) => {
                 self.seat.take();
             },
+            Message::Exec(exec_str) => {
+                let mut exec = shlex::Shlex::new(&exec_str);
+                let mut cmd = match exec.next() {
+                    Some(cmd) if !cmd.contains("=") => tokio::process::Command::new(cmd),
+                    _ => return Command::none(),
+                };
+                for arg in exec {
+                    // TODO handle "%" args here if necessary?
+                    if !arg.starts_with("%") {
+                        cmd.arg(arg);
+                    }
+                }
+                let _ = cmd.spawn();
+            },
         }
         Command::none()
     }
@@ -315,6 +333,7 @@ impl Application for CosmicAppList {
                             toplevels,
                             app_id,
                             icon_path,
+                            exec,
                         },
                     )| {
                         let icon = if icon_path.extension() == Some(&OsStr::new("svg")) {
@@ -371,7 +390,7 @@ impl Application for CosmicAppList {
                         // TODO tooltip on hover
                         let icon_button = cosmic::widget::button(Button::Text)
                             .custom(vec![icon_wrapper])
-                            .on_press(Message::Activate(toplevels.first().map(|t| t.0.clone())))
+                            .on_press(toplevels.first().map(|t| Message::Activate(t.0.clone())).unwrap_or_else(|| Message::Exec(exec.clone())))
                             .padding(8)
                             .into();
                         if self.config.favorites.contains(&app_id) {
