@@ -1,5 +1,5 @@
 use anyhow::anyhow;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use std::fs::File;
 use std::path::PathBuf;
