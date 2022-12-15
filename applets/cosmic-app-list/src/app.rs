@@ -19,6 +19,7 @@ use cosmic::iced::wayland::SurfaceIdWrapper;
 use cosmic::iced::widget::event_container;
 use cosmic::iced::widget::{column, row};
 use cosmic::iced::{executor, window, Application, Command, Subscription};
+use cosmic::iced_native::alignment::Horizontal;
 use cosmic::iced_native::subscription::events_with;
 use cosmic::iced_style::application::{self, Appearance};
 use cosmic::iced_style::Color;
@@ -108,7 +109,7 @@ enum Message {
     Ignore,
     NewSeat(WlSeat),
     RemovedSeat(WlSeat),
-    Rectangle((RectangleUpdate<u32>)),
+    Rectangle(RectangleUpdate<u32>),
 }
 
 #[derive(Debug, Clone, Default)]
@@ -167,25 +168,28 @@ impl Application for CosmicAppList {
     fn new(_flags: ()) -> (Self, Command<Message>) {
         let config = config::AppListConfig::load().unwrap_or_default();
         let mut toplevel_ctr = 0;
+        let self_ = CosmicAppList {
+            toplevel_list: desktop_info_for_app_ids(config.favorites.clone())
+                .into_iter()
+                .map(|e| {
+                    toplevel_ctr += 1;
+                    Toplevel {
+                        id: toplevel_ctr,
+                        toplevels: Default::default(),
+                        desktop_info: e,
+                        popup: None,
+                    }
+                })
+                .collect(),
+            config,
+            toplevel_ctr,
+            ..Default::default()
+        };
+        let (w, h) = self_.window_size();
+        
         (
-            CosmicAppList {
-                toplevel_list: desktop_info_for_app_ids(config.favorites.clone())
-                    .into_iter()
-                    .map(|e| {
-                        toplevel_ctr += 1;
-                        Toplevel {
-                            id: toplevel_ctr,
-                            toplevels: Default::default(),
-                            desktop_info: e,
-                            popup: None,
-                        }
-                    })
-                    .collect(),
-                config,
-                toplevel_ctr,
-                ..Default::default()
-            },
-            Command::none(),
+            self_,
+            resize_window(window::Id::new(0), w, h),
         )
     }
 
@@ -507,12 +511,12 @@ impl Application for CosmicAppList {
                         || self.config.favorites.contains(&desktop_info.name);
 
                     let mut content = column![
-                        iced::widget::text(&desktop_info.name),
+                        iced::widget::text(&desktop_info.name).horizontal_alignment(Horizontal::Center),
                         cosmic::widget::button(Button::Text)
                             .custom(vec![iced::widget::text(fl!("new-window")).into()])
                             .on_press(Message::Exec(desktop_info.exec.clone())),
                     ]
-                    .padding(4)
+                    .padding(8)
                     .spacing(4)
                     .align_items(Alignment::Center);
                     if !toplevels.is_empty() {
