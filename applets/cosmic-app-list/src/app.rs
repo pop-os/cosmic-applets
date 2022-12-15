@@ -102,6 +102,7 @@ enum Message {
     Favorite(String),
     UnFavorite(String),
     Popup(String),
+    ClosePopup,
     Activate(ZcosmicToplevelHandleV1),
     Exec(String),
     Quit(String),
@@ -186,11 +187,8 @@ impl Application for CosmicAppList {
             ..Default::default()
         };
         let (w, h) = self_.window_size();
-        
-        (
-            self_,
-            resize_window(window::Id::new(0), w, h),
-        )
+
+        (self_, resize_window(window::Id::new(0), w, h))
     }
 
     fn title(&self) -> String {
@@ -255,14 +253,6 @@ impl Application for CosmicAppList {
                 })
             }
             Message::Activate(handle) => {
-                if let Some(p) = self.popup.take() {
-                    if let Some(toplevel_group) =
-                        self.toplevel_list.iter_mut().find(|t| t.popup == Some(p))
-                    {
-                        toplevel_group.popup.take();
-                    }
-                    return destroy_popup(p);
-                }
                 if let (Some(tx), Some(seat)) = (self.toplevel_sender.as_ref(), self.seat.as_ref())
                 {
                     let _ = tx.send(ToplevelRequest::Activate(handle, seat.clone()));
@@ -382,6 +372,16 @@ impl Application for CosmicAppList {
                 }
             },
             Message::Ignore => {}
+            Message::ClosePopup => {
+                if let Some(p) = self.popup.take() {
+                    if let Some(toplevel_group) =
+                        self.toplevel_list.iter_mut().find(|t| t.popup == Some(p))
+                    {
+                        toplevel_group.popup.take();
+                    }
+                    return destroy_popup(p);
+                }
+            }
         }
         Command::none()
     }
@@ -450,21 +450,21 @@ impl Application for CosmicAppList {
                                 .spacing(4)
                                 .into(),
                         };
+                        let mut icon_button = cosmic::widget::button(Button::Text)
+                            .custom(vec![icon_wrapper])
+                            .padding(8);
+                        if self.popup.is_none() {
+                            icon_button = icon_button.on_press(
+                                toplevels
+                                    .first()
+                                    .map(|t| Message::Activate(t.0.clone()))
+                                    .unwrap_or_else(|| Message::Exec(desktop_info.exec.clone())),
+                            );
+                        }
+
                         // TODO tooltip on hover
-                        let icon_button = event_container(
-                            cosmic::widget::button(Button::Text)
-                                .custom(vec![icon_wrapper])
-                                .on_press(
-                                    toplevels
-                                        .first()
-                                        .map(|t| Message::Activate(t.0.clone()))
-                                        .unwrap_or_else(|| {
-                                            Message::Exec(desktop_info.exec.clone())
-                                        }),
-                                )
-                                .padding(8),
-                        )
-                        .on_right_release(Message::Popup(desktop_info.id.clone()));
+                        let icon_button = event_container(icon_button)
+                            .on_right_release(Message::Popup(desktop_info.id.clone()));
                         let icon_button = if let Some(tracker) = self.rectangle_tracker.as_ref() {
                             tracker.container(*id, icon_button).into()
                         } else {
@@ -481,23 +481,30 @@ impl Application for CosmicAppList {
                     },
                 );
 
-                match &self.applet_helper.anchor {
-                    PanelAnchor::Left | PanelAnchor::Right => {
+                let content = match &self.applet_helper.anchor {
+                    PanelAnchor::Left | PanelAnchor::Right => container(
                         column![column(favorites), horizontal_rule(1), column(running)]
                             .spacing(4)
                             .align_items(Alignment::Center)
                             .height(Length::Fill)
-                            .width(Length::Fill)
-                            .into()
-                    }
-                    PanelAnchor::Top | PanelAnchor::Bottom => {
+                            .width(Length::Fill),
+                    ),
+                    PanelAnchor::Top | PanelAnchor::Bottom => container(
                         row![row(favorites), vertical_rule(1), row(running)]
                             .spacing(4)
                             .align_items(Alignment::Center)
                             .height(Length::Fill)
-                            .width(Length::Fill)
-                            .into()
-                    }
+                            .width(Length::Fill),
+                    ),
+                };
+
+                if self.popup.is_some() {
+                    event_container(content)
+                        .on_right_press(Message::ClosePopup)
+                        .on_press(Message::ClosePopup)
+                        .into()
+                } else {
+                    content.into()
                 }
             }
             SurfaceIdWrapper::Popup(p) => {
@@ -511,7 +518,8 @@ impl Application for CosmicAppList {
                         || self.config.favorites.contains(&desktop_info.name);
 
                     let mut content = column![
-                        iced::widget::text(&desktop_info.name).horizontal_alignment(Horizontal::Center),
+                        iced::widget::text(&desktop_info.name)
+                            .horizontal_alignment(Horizontal::Center),
                         cosmic::widget::button(Button::Text)
                             .custom(vec![iced::widget::text(fl!("new-window")).into()])
                             .on_press(Message::Exec(desktop_info.exec.clone())),
