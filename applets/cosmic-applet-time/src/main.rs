@@ -1,19 +1,169 @@
-use cascade::cascade;
-use gtk4::{glib, prelude::*};
+use cosmic::applet::CosmicAppletHelper;
+use cosmic::iced::wayland::{
+    popup::{destroy_popup, get_popup},
+    SurfaceIdWrapper,
+};
+use cosmic::iced::{
+    executor, time,
+    widget::{button, column, text},
+    window, Alignment, Application, Color, Command, Subscription,
+};
+use cosmic::iced_style::application::{self, Appearance};
+use cosmic::{Element, Theme};
 
-mod deref_cell;
-mod time_button;
-use time_button::TimeButton;
+use chrono::{DateTime, Local, Timelike};
+use std::time::Duration;
 
-fn main() {
-    let _monitors = libcosmic::init();
+pub fn main() -> cosmic::iced::Result {
+    let helper = CosmicAppletHelper::default();
+    Time::run(helper.window_settings())
+}
 
-    cascade! {
-        libcosmic_applet::AppletWindow::new();
-        ..set_child(Some(&TimeButton::new()));
-        ..show();
-    };
+struct Time {
+    applet_helper: CosmicAppletHelper,
+    theme: Theme,
+    popup: Option<window::Id>,
+    id_ctr: u32,
+    update_at: Every,
+    now: DateTime<Local>,
+}
 
-    let main_loop = glib::MainLoop::new(None, false);
-    main_loop.run();
+impl Default for Time {
+    fn default() -> Self {
+        Time {
+            applet_helper: CosmicAppletHelper::default(),
+            theme: Theme::default(),
+            popup: None,
+            id_ctr: 0,
+            update_at: Every::Minute,
+            now: Local::now(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+#[allow(dead_code)]
+enum Every {
+    Minute,
+    Second,
+}
+
+#[derive(Debug, Clone)]
+enum Message {
+    TogglePopup,
+    Tick,
+    Ignore,
+}
+
+impl Application for Time {
+    type Message = Message;
+    type Theme = Theme;
+    type Executor = executor::Default;
+    type Flags = ();
+
+    fn new(_flags: ()) -> (Time, Command<Message>) {
+        (Time::default(), Command::none())
+    }
+
+    fn title(&self) -> String {
+        String::from("Time")
+    }
+
+    fn theme(&self) -> Theme {
+        self.theme
+    }
+
+    fn close_requested(&self, _id: SurfaceIdWrapper) -> Self::Message {
+        Message::Ignore
+    }
+
+    fn style(&self) -> <Self::Theme as application::StyleSheet>::Style {
+        <Self::Theme as application::StyleSheet>::Style::Custom(|theme| Appearance {
+            background_color: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+            text_color: theme.cosmic().on_bg_color().into(),
+        })
+    }
+
+    fn subscription(&self) -> Subscription<Message> {
+        const FALLBACK_DELAY: u64 = 500;
+        let update_delay = match self.update_at {
+            Every::Minute => chrono::Duration::minutes(1),
+            Every::Second => chrono::Duration::seconds(1),
+        };
+
+        // Calculate the time until next second/minute so we can sleep the thread until then.
+        let now = Local::now().time();
+        let next = (now + update_delay)
+            .with_second(0)
+            .expect("Setting seconds to 0 should always be possible")
+            .with_nanosecond(0)
+            .expect("Setting nanoseconds to 0 should always be possible.");
+        let wait = (next - now).num_milliseconds();
+        time::every(Duration::from_millis(
+            wait.try_into().unwrap_or(FALLBACK_DELAY),
+        ))
+        .map(|_| Message::Tick)
+    }
+
+    fn update(&mut self, message: Message) -> Command<Message> {
+        match message {
+            Message::TogglePopup => {
+                if let Some(p) = self.popup.take() {
+                    destroy_popup(p)
+                } else {
+                    self.id_ctr += 1;
+                    let new_id = window::Id::new(self.id_ctr);
+                    self.popup.replace(new_id);
+
+                    let popup_settings = self.applet_helper.get_popup_settings(
+                        window::Id::new(0),
+                        new_id,
+                        (400, 300),
+                        None,
+                        None,
+                    );
+                    get_popup(popup_settings)
+                }
+            }
+            Message::Tick => {
+                self.now = Local::now();
+                Command::none()
+            }
+            Message::Ignore => Command::none(),
+        }
+    }
+
+    fn view(&self, id: SurfaceIdWrapper) -> Element<Message> {
+        match id {
+            SurfaceIdWrapper::LayerSurface(_) => unimplemented!(),
+            SurfaceIdWrapper::Window(_) => {
+                button(text(self.now.format("%b %-d %-I:%M %p").to_string()))
+                    .on_press(Message::TogglePopup)
+                    .into()
+            }
+            SurfaceIdWrapper::Popup(_) => {
+                use std::os::unix::process::ExitStatusExt;
+                let calendar = std::str::from_utf8(
+                    &std::process::Command::new("happiness")
+                        .output()
+                        .unwrap_or(std::process::Output {
+                            stdout: "`sudo apt install happiness`".as_bytes().to_vec(),
+                            stderr: Vec::new(),
+                            status: std::process::ExitStatus::from_raw(0),
+                        })
+                        .stdout,
+                )
+                .unwrap()
+                .to_string();
+
+                let content = column![]
+                    .align_items(Alignment::Start)
+                    .spacing(12)
+                    .padding([24, 0])
+                    .push(text(calendar));
+
+                self.applet_helper.popup_container(content).into()
+            }
+        }
+    }
 }
