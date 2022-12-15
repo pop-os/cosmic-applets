@@ -1,18 +1,19 @@
+use crate::toplevel_subscription::{ToplevelRequest, ToplevelUpdate};
 use cctk::{
-    sctk::{self, event_loop::WaylandSource, seat::{SeatHandler, SeatState}, reexports::client::protocol::wl_seat::WlSeat},
+    sctk::{
+        self,
+        event_loop::WaylandSource,
+        reexports::client::protocol::wl_seat::WlSeat,
+        seat::{SeatHandler, SeatState},
+    },
     toplevel_info::{ToplevelInfoHandler, ToplevelInfoState},
     toplevel_management::{ToplevelManagerHandler, ToplevelManagerState},
-    wayland_client::{self, Proxy, backend::ObjectId},
+    wayland_client,
 };
-use cosmic_protocols::{
-    toplevel_info::v1::client::zcosmic_toplevel_handle_v1,
-    toplevel_management::v1::client::zcosmic_toplevel_manager_v1,
-};
+use cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1;
 use futures::channel::mpsc::UnboundedSender;
 use sctk::registry::{ProvidesRegistryState, RegistryState};
 use wayland_client::{globals::registry_queue_init, Connection, QueueHandle};
-use itertools::Itertools;
-use crate::toplevel_subscription::{ToplevelRequest, ToplevelUpdate};
 
 struct AppData {
     exit: bool,
@@ -36,25 +37,27 @@ impl SeatHandler for AppData {
         &mut self.seat_state
     }
 
-    fn new_seat(&mut self, conn: &Connection, qh: &QueueHandle<Self>, seat: WlSeat) {}
+    fn new_seat(&mut self, _: &Connection, _: &QueueHandle<Self>, _: WlSeat) {}
 
     fn new_capability(
         &mut self,
-        conn: &Connection,
-        qh: &QueueHandle<Self>,
-        seat: WlSeat,
-        capability: sctk::seat::Capability,
-    ) {}
+        _: &Connection,
+        _: &QueueHandle<Self>,
+        _: WlSeat,
+        _: sctk::seat::Capability,
+    ) {
+    }
 
     fn remove_capability(
         &mut self,
-        conn: &Connection,
-        qh: &QueueHandle<Self>,
-        seat: WlSeat,
-        capability: sctk::seat::Capability,
-    ) {}
+        _: &Connection,
+        _: &QueueHandle<Self>,
+        _: WlSeat,
+        _: sctk::seat::Capability,
+    ) {
+    }
 
-    fn remove_seat(&mut self, conn: &Connection, qh: &QueueHandle<Self>, seat: WlSeat) {}
+    fn remove_seat(&mut self, _: &Connection, _: &QueueHandle<Self>, _: WlSeat) {}
 }
 
 impl ToplevelManagerHandler for AppData {
@@ -62,7 +65,7 @@ impl ToplevelManagerHandler for AppData {
         &mut self.toplevel_manager_state
     }
 
-    fn capabilities(&mut self, conn: &Connection, qh: &QueueHandle<Self>, capabilities: Vec<u8>) {
+    fn capabilities(&mut self, _: &Connection, _: &QueueHandle<Self>, _: Vec<u8>) {
         // TODO capabilities could affect the options in the applet
     }
 }
@@ -133,11 +136,13 @@ pub(crate) fn toplevel_handler(
         .insert_source(rx, |event, _, state| match event {
             calloop::channel::Event::Msg(req) => match req {
                 ToplevelRequest::Activate(handle, seat) => {
-                    
                     let manager = &state.toplevel_manager_state.manager;
                     manager.activate(&handle, &seat);
-                } // TODO
-                ToplevelRequest::Quit(_) => {} // TODO
+                }
+                ToplevelRequest::Quit(handle) => {
+                    let manager = &state.toplevel_manager_state.manager;
+                    manager.close(&handle);
+                }
                 ToplevelRequest::Exit => {
                     state.exit = true;
                 }
