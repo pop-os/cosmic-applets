@@ -8,9 +8,12 @@ use cctk::{
     },
     toplevel_info::{ToplevelInfoHandler, ToplevelInfoState},
     toplevel_management::{ToplevelManagerHandler, ToplevelManagerState},
-    wayland_client,
+    wayland_client::{self, WEnum},
 };
-use cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1;
+use cosmic_protocols::{
+    toplevel_info::v1::client::zcosmic_toplevel_handle_v1,
+    toplevel_management::v1::client::zcosmic_toplevel_manager_v1,
+};
 use futures::channel::mpsc::UnboundedSender;
 use sctk::registry::{ProvidesRegistryState, RegistryState};
 use wayland_client::{globals::registry_queue_init, Connection, QueueHandle};
@@ -65,7 +68,12 @@ impl ToplevelManagerHandler for AppData {
         &mut self.toplevel_manager_state
     }
 
-    fn capabilities(&mut self, _: &Connection, _: &QueueHandle<Self>, _: Vec<u8>) {
+    fn capabilities(
+        &mut self,
+        _: &Connection,
+        _: &QueueHandle<Self>,
+        _: Vec<WEnum<zcosmic_toplevel_manager_v1::ZcosmicToplelevelManagementCapabilitiesV1>>,
+    ) {
         // TODO capabilities could affect the options in the applet
     }
 }
