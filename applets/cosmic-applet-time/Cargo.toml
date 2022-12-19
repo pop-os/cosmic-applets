@@ -13,21 +13,3 @@ libcosmic = { git = "https://github.com/pop-os/libcosmic/", branch = "master", d
 # sctk = { package = "smithay-client-toolkit", git = "https://github.com/Smithay/client-toolkit", commit = "f1d9c3ef9cfbd508d986f7f98b2fc267fcc39b84" }
 nix = "0.24.1"
 chrono = { version = "0.4.23", features = ["clock"] }
-
-[workspace]
-resolved = "2"
-
-[dependencies.iced]
-git = "https://github.com/pop-os/iced.git"
-branch = "sctk-cosmic"
-# path = "../iced"
-default-features = false
-features = ["image", "svg", "tokio", "wayland"]
-
-[dependencies.iced_native]
-git = "https://github.com/pop-os/iced.git"
-branch = "sctk-cosmic"
-
-[dependencies.iced_futures]
-git = "https://github.com/pop-os/iced.git"
-branch = "sctk-cosmic"
