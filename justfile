@@ -43,6 +43,9 @@ build: _extract_vendor
     pushd applets/cosmic-applet-power/
     cargo build {{cargo_args}}
     popd
+    pushd applets/cosmic-applet-time/
+    cargo build {{cargo_args}}
+    popd
     pushd applets/cosmic-applet-workspaces/
     cargo build {{cargo_args}}
     popd
@@ -85,7 +88,7 @@ install:
     # time
     install -Dm0644 applets/cosmic-applet-time/data/icons/{{time_id}}.svg {{iconsdir}}/{{time_id}}.svg
     install -Dm0644 applets/cosmic-applet-time/data/{{time_id}}.desktop {{sharedir}}/applications/{{time_id}}.desktop
-    install -Dm0755 target/release/cosmic-applet-time {{bindir}}/cosmic-applet-time
+    install -Dm0755 applets/cosmic-applet-time/target/release/cosmic-applet-time {{bindir}}/cosmic-applet-time
 
     # app library button
     install -Dm0644 applets/cosmic-panel-app-button/data/icons/{{app_button_id}}.svg {{iconsdir}}/{{app_button_id}}.svg
@@ -123,5 +126,6 @@ _extract_vendor:
         rm -rf applets/cosmic-applet-battery/vendor; tar xf applets/cosmic-applet-battery/vendor.tar --directory applets/cosmic-applet-battery
         rm -rf applets/cosmic-applet-audio/vendor; tar xf applets/cosmic-applet-audio/vendor.tar --directory applets/cosmic-applet-audio
         rm -rf applets/cosmic-applet-power/vendor; tar xf applets/cosmic-applet-power/vendor.tar --directory applets/cosmic-applet-power
+        rm -rf applets/cosmic-applet-time/vendor; tar xf applets/cosmic-applet-time/vendor.tar --directory applets/cosmic-applet-time
         rm -rf applets/cosmic-applet-network/vendor; tar xf applets/cosmic-applet-network/vendor.tar --directory applets/cosmic-applet-network
     fi
