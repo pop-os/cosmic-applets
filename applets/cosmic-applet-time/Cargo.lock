@@ -341,9 +341,6 @@ name = "cosmic-applet-time"
 version = "0.1.0"
 dependencies = [
  "chrono",
- "iced 0.5.2 (git+https://github.com/pop-os/iced.git?branch=sctk-cosmic)",
- "iced_futures 0.5.1 (git+https://github.com/pop-os/iced.git?branch=sctk-cosmic)",
- "iced_native 0.6.1 (git+https://github.com/pop-os/iced.git?branch=sctk-cosmic)",
  "icon-loader",
  "libcosmic",
  "nix 0.24.3",
@@ -1144,29 +1141,13 @@ name = "iced"
 version = "0.5.2"
 source = "git+https://github.com/pop-os/libcosmic/?branch=master#c2625ef450c0b7d33dcc61ede04d79f88981f6c0"
 dependencies = [
- "iced_core 0.6.1 (git+https://github.com/pop-os/libcosmic/?branch=master)",
- "iced_futures 0.5.1 (git+https://github.com/pop-os/libcosmic/?branch=master)",
- "iced_glow 0.4.1 (git+https://github.com/pop-os/libcosmic/?branch=master)",
- "iced_graphics 0.4.0 (git+https://github.com/pop-os/libcosmic/?branch=master)",
- "iced_native 0.6.1 (git+https://github.com/pop-os/libcosmic/?branch=master)",
- "iced_sctk 0.1.0 (git+https://github.com/pop-os/libcosmic/?branch=master)",
- "iced_wgpu 0.6.1 (git+https://github.com/pop-os/libcosmic/?branch=master)",
- "image",
- "thiserror",
-]
-
-[[package]]
-name = "iced"
-version = "0.5.2"
-source = "git+https://github.com/pop-os/iced.git?branch=sctk-cosmic#8ce93dd2922aebfe134b43302209f78f93c43546"
-dependencies = [
- "iced_core 0.6.1 (git+https://github.com/pop-os/iced.git?branch=sctk-cosmic)",
- "iced_futures 0.5.1 (git+https://github.com/pop-os/iced.git?branch=sctk-cosmic)",
- "iced_glow 0.4.1 (git+https://github.com/pop-os/iced.git?branch=sctk-cosmic)",
- "iced_graphics 0.4.0 (git+https://github.com/pop-os/iced.git?branch=sctk-cosmic)",
- "iced_native 0.6.1 (git+https://github.com/pop-os/iced.git?branch=sctk-cosmic)",
- "iced_sctk 0.1.0 (git+https://github.com/pop-os/iced.git?branch=sctk-cosmic)",
- "iced_wgpu 0.6.1 (git+https://github.com/pop-os/iced.git?branch=sctk-cosmic)",
+ "iced_core",
+ "iced_futures",
+ "iced_glow",
+ "iced_graphics",
+ "iced_native",
+ "iced_sctk",
+ "iced_wgpu",
  "image",
  "thiserror",
 ]
@@ -1175,16 +1156,6 @@ dependencies = [
 name = "iced_core"
 version = "0.6.1"
 source = "git+https://github.com/pop-os/libcosmic/?branch=master#c2625ef450c0b7d33dcc61ede04d79f88981f6c0"
-dependencies = [
- "bitflags",
- "palette",
- "wasm-timer",
-]
-
-[[package]]
-name = "iced_core"
-version = "0.6.1"
-source = "git+https://github.com/pop-os/iced.git?branch=sctk-cosmic#8ce93dd2922aebfe134b43302209f78f93c43546"
 dependencies = [
  "bitflags",
  "palette",
@@ -1204,18 +1175,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "iced_futures"
-version = "0.5.1"
-source = "git+https://github.com/pop-os/iced.git?branch=sctk-cosmic#8ce93dd2922aebfe134b43302209f78f93c43546"
-dependencies = [
- "futures",
- "log",
- "tokio",
- "wasm-bindgen-futures",
- "wasm-timer",
-]
-
-[[package]]
 name = "iced_glow"
 version = "0.4.1"
 source = "git+https://github.com/pop-os/libcosmic/?branch=master#c2625ef450c0b7d33dcc61ede04d79f88981f6c0"
@@ -1225,23 +1184,8 @@ dependencies = [
  "glow",
  "glow_glyph",
  "glyph_brush",
- "iced_graphics 0.4.0 (git+https://github.com/pop-os/libcosmic/?branch=master)",
- "iced_native 0.6.1 (git+https://github.com/pop-os/libcosmic/?branch=master)",
- "log",
-]
-
-[[package]]
-name = "iced_glow"
-version = "0.4.1"
-source = "git+https://github.com/pop-os/iced.git?branch=sctk-cosmic#8ce93dd2922aebfe134b43302209f78f93c43546"
-dependencies = [
- "bytemuck",
- "euclid",
- "glow",
- "glow_glyph",
- "glyph_brush",
- "iced_graphics 0.4.0 (git+https://github.com/pop-os/iced.git?branch=sctk-cosmic)",
- "iced_native 0.6.1 (git+https://github.com/pop-os/iced.git?branch=sctk-cosmic)",
+ "iced_graphics",
+ "iced_native",
  "log",
 ]
 
@@ -1253,28 +1197,8 @@ dependencies = [
  "bitflags",
  "bytemuck",
  "glam",
- "iced_native 0.6.1 (git+https://github.com/pop-os/libcosmic/?branch=master)",
- "iced_style 0.5.0 (git+https://github.com/pop-os/libcosmic/?branch=master)",
- "image",
- "kamadak-exif",
- "log",
- "raw-window-handle",
- "resvg",
- "thiserror",
- "tiny-skia",
- "usvg",
-]
-
-[[package]]
-name = "iced_graphics"
-version = "0.4.0"
-source = "git+https://github.com/pop-os/iced.git?branch=sctk-cosmic#8ce93dd2922aebfe134b43302209f78f93c43546"
-dependencies = [
- "bitflags",
- "bytemuck",
- "glam",
- "iced_native 0.6.1 (git+https://github.com/pop-os/iced.git?branch=sctk-cosmic)",
- "iced_style 0.5.0 (git+https://github.com/pop-os/iced.git?branch=sctk-cosmic)",
+ "iced_native",
+ "iced_style",
  "image",
  "kamadak-exif",
  "log",
@@ -1290,7 +1214,7 @@ name = "iced_lazy"
 version = "0.2.0"
 source = "git+https://github.com/pop-os/libcosmic/?branch=master#c2625ef450c0b7d33dcc61ede04d79f88981f6c0"
 dependencies = [
- "iced_native 0.6.1 (git+https://github.com/pop-os/libcosmic/?branch=master)",
+ "iced_native",
  "ouroboros",
 ]
 
@@ -1299,23 +1223,9 @@ name = "iced_native"
 version = "0.6.1"
 source = "git+https://github.com/pop-os/libcosmic/?branch=master#c2625ef450c0b7d33dcc61ede04d79f88981f6c0"
 dependencies = [
- "iced_core 0.6.1 (git+https://github.com/pop-os/libcosmic/?branch=master)",
- "iced_futures 0.5.1 (git+https://github.com/pop-os/libcosmic/?branch=master)",
- "iced_style 0.5.0 (git+https://github.com/pop-os/libcosmic/?branch=master)",
- "num-traits",
- "smithay-client-toolkit",
- "twox-hash",
- "unicode-segmentation",
-]
-
-[[package]]
-name = "iced_native"
-version = "0.6.1"
-source = "git+https://github.com/pop-os/iced.git?branch=sctk-cosmic#8ce93dd2922aebfe134b43302209f78f93c43546"
-dependencies = [
- "iced_core 0.6.1 (git+https://github.com/pop-os/iced.git?branch=sctk-cosmic)",
- "iced_futures 0.5.1 (git+https://github.com/pop-os/iced.git?branch=sctk-cosmic)",
- "iced_style 0.5.0 (git+https://github.com/pop-os/iced.git?branch=sctk-cosmic)",
+ "iced_core",
+ "iced_futures",
+ "iced_style",
  "num-traits",
  "smithay-client-toolkit",
  "twox-hash",
@@ -1331,28 +1241,9 @@ dependencies = [
  "futures",
  "glow",
  "glutin",
- "iced_futures 0.5.1 (git+https://github.com/pop-os/libcosmic/?branch=master)",
- "iced_graphics 0.4.0 (git+https://github.com/pop-os/libcosmic/?branch=master)",
- "iced_native 0.6.1 (git+https://github.com/pop-os/libcosmic/?branch=master)",
- "log",
- "raw-window-handle",
- "smithay-client-toolkit",
- "thiserror",
- "wayland-backend",
-]
-
-[[package]]
-name = "iced_sctk"
-version = "0.1.0"
-source = "git+https://github.com/pop-os/iced.git?branch=sctk-cosmic#8ce93dd2922aebfe134b43302209f78f93c43546"
-dependencies = [
- "enum-repr",
- "futures",
- "glow",
- "glutin",
- "iced_futures 0.5.1 (git+https://github.com/pop-os/iced.git?branch=sctk-cosmic)",
- "iced_graphics 0.4.0 (git+https://github.com/pop-os/iced.git?branch=sctk-cosmic)",
- "iced_native 0.6.1 (git+https://github.com/pop-os/iced.git?branch=sctk-cosmic)",
+ "iced_futures",
+ "iced_graphics",
+ "iced_native",
  "log",
  "raw-window-handle",
  "smithay-client-toolkit",
@@ -1365,17 +1256,7 @@ name = "iced_style"
 version = "0.5.0"
 source = "git+https://github.com/pop-os/libcosmic/?branch=master#c2625ef450c0b7d33dcc61ede04d79f88981f6c0"
 dependencies = [
- "iced_core 0.6.1 (git+https://github.com/pop-os/libcosmic/?branch=master)",
- "once_cell",
- "palette",
-]
-
-[[package]]
-name = "iced_style"
-version = "0.5.0"
-source = "git+https://github.com/pop-os/iced.git?branch=sctk-cosmic#8ce93dd2922aebfe134b43302209f78f93c43546"
-dependencies = [
- "iced_core 0.6.1 (git+https://github.com/pop-os/iced.git?branch=sctk-cosmic)",
+ "iced_core",
  "once_cell",
  "palette",
 ]
@@ -1392,28 +1273,8 @@ dependencies = [
  "glam",
  "glyph_brush",
  "guillotiere",
- "iced_graphics 0.4.0 (git+https://github.com/pop-os/libcosmic/?branch=master)",
- "iced_native 0.6.1 (git+https://github.com/pop-os/libcosmic/?branch=master)",
- "log",
- "raw-window-handle",
- "wgpu",
- "wgpu_glyph",
-]
-
-[[package]]
-name = "iced_wgpu"
-version = "0.6.1"
-source = "git+https://github.com/pop-os/iced.git?branch=sctk-cosmic#8ce93dd2922aebfe134b43302209f78f93c43546"
-dependencies = [
- "bitflags",
- "bytemuck",
- "encase",
- "futures",
- "glam",
- "glyph_brush",
- "guillotiere",
- "iced_graphics 0.4.0 (git+https://github.com/pop-os/iced.git?branch=sctk-cosmic)",
- "iced_native 0.6.1 (git+https://github.com/pop-os/iced.git?branch=sctk-cosmic)",
+ "iced_graphics",
+ "iced_native",
  "log",
  "raw-window-handle",
  "wgpu",
@@ -1572,12 +1433,12 @@ dependencies = [
  "cosmic-theme",
  "derive_setters",
  "freedesktop-icons",
- "iced 0.5.2 (git+https://github.com/pop-os/libcosmic/?branch=master)",
- "iced_core 0.6.1 (git+https://github.com/pop-os/libcosmic/?branch=master)",
- "iced_glow 0.4.1 (git+https://github.com/pop-os/libcosmic/?branch=master)",
+ "iced",
+ "iced_core",
+ "iced_glow",
  "iced_lazy",
- "iced_native 0.6.1 (git+https://github.com/pop-os/libcosmic/?branch=master)",
- "iced_style 0.5.0 (git+https://github.com/pop-os/libcosmic/?branch=master)",
+ "iced_native",
+ "iced_style",
  "lazy_static",
  "palette",
  "smithay-client-toolkit",
