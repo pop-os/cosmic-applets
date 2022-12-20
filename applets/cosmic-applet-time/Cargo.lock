@@ -1186,7 +1186,6 @@ dependencies = [
  "iced_graphics",
  "iced_native",
  "iced_sctk",
- "iced_swbuf",
  "iced_wgpu",
  "image",
  "thiserror",
@@ -1194,7 +1193,8 @@ dependencies = [
 
 [[package]]
 name = "iced_core"
-version = "0.6.2"
+version = "0.6.1"
+source = "git+https://github.com/pop-os/libcosmic/?branch=master#c2625ef450c0b7d33dcc61ede04d79f88981f6c0"
 dependencies = [
  "bitflags",
  "palette",
@@ -1204,6 +1204,7 @@ dependencies = [
 [[package]]
 name = "iced_futures"
 version = "0.5.1"
+source = "git+https://github.com/pop-os/libcosmic/?branch=master#c2625ef450c0b7d33dcc61ede04d79f88981f6c0"
 dependencies = [
  "futures",
  "log",
@@ -1250,7 +1251,7 @@ name = "iced_lazy"
 version = "0.3.0"
 dependencies = [
  "iced_native",
- "ouroboros 0.13.0",
+ "ouroboros",
 ]
 
 [[package]]
@@ -1278,6 +1279,7 @@ dependencies = [
  "iced_graphics",
  "iced_native",
  "log",
+ "raqote",
  "raw-window-handle",
  "smithay-client-toolkit",
  "thiserror",
@@ -1286,25 +1288,12 @@ dependencies = [
 
 [[package]]
 name = "iced_style"
-version = "0.5.1"
+version = "0.5.0"
+source = "git+https://github.com/pop-os/libcosmic/?branch=master#c2625ef450c0b7d33dcc61ede04d79f88981f6c0"
 dependencies = [
  "iced_core",
  "once_cell",
  "palette",
-]
-
-[[package]]
-name = "iced_swbuf"
-version = "0.1.0"
-dependencies = [
- "cosmic-text",
- "iced_graphics",
- "iced_native",
- "lazy_static",
- "log",
- "raqote",
- "raw-window-handle",
- "swbuf",
 ]
 
 [[package]]
