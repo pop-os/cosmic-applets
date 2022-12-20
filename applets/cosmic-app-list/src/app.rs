@@ -16,7 +16,7 @@ use cosmic::iced;
 use cosmic::iced::wayland::popup::destroy_popup;
 use cosmic::iced::wayland::popup::get_popup;
 use cosmic::iced::wayland::SurfaceIdWrapper;
-use cosmic::iced::widget::event_container;
+use cosmic::iced::widget::mouse_listener;
 use cosmic::iced::widget::{column, row};
 use cosmic::iced::{executor, window, Application, Command, Subscription};
 use cosmic::iced_native::alignment::Horizontal;
@@ -463,7 +463,7 @@ impl Application for CosmicAppList {
                         }
 
                         // TODO tooltip on hover
-                        let icon_button = event_container(icon_button)
+                        let icon_button = mouse_listener(icon_button)
                             .on_right_release(Message::Popup(desktop_info.id.clone()));
                         let icon_button = if let Some(tracker) = self.rectangle_tracker.as_ref() {
                             tracker.container(*id, icon_button).into()
@@ -499,7 +499,7 @@ impl Application for CosmicAppList {
                 };
 
                 if self.popup.is_some() {
-                    event_container(content)
+                    mouse_listener(content)
                         .on_right_press(Message::ClosePopup)
                         .on_press(Message::ClosePopup)
                         .into()
@@ -570,7 +570,7 @@ impl Application for CosmicAppList {
                     }
                     return self.applet_helper.popup_container(content).into();
                 }
-                return horizontal_space(Length::Units(0)).into();
+                return horizontal_space(Length::Units(1)).into();
             }
         }
     }
