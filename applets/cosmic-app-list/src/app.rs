@@ -223,7 +223,7 @@ impl Application for CosmicAppList {
                     let mut popup_settings = self.applet_helper.get_popup_settings(
                         window::Id::new(0),
                         new_id,
-                        (200, 240 + toplevel_group.toplevels.len() as u32 * 20),
+                        (240, 240 + toplevel_group.toplevels.len() as u32 * 24),
                         None,
                         None,
                     );
@@ -463,7 +463,7 @@ impl Application for CosmicAppList {
                         }
 
                         // TODO tooltip on hover
-                        let icon_button = mouse_listener(icon_button)
+                        let icon_button = mouse_listener(icon_button.width(Length::Shrink).height(Length::Shrink))
                             .on_right_release(Message::Popup(desktop_info.id.clone()));
                         let icon_button = if let Some(tracker) = self.rectangle_tracker.as_ref() {
                             tracker.container(*id, icon_button).into()
@@ -495,9 +495,8 @@ impl Application for CosmicAppList {
                             .align_items(Alignment::Center)
                             .height(Length::Fill)
                             .width(Length::Fill),
-                    ),
+                    ).height(Length::Fill).width(Length::Fill),
                 };
-
                 if self.popup.is_some() {
                     mouse_listener(content)
                         .on_right_press(Message::ClosePopup)
@@ -531,7 +530,7 @@ impl Application for CosmicAppList {
                         let mut list_col = column![];
                         for (handle, info) in toplevels {
                             let title = if info.title.len() > 20 {
-                                format!("{:.20}...", &info.title)
+                                format!("{:.24}...", &info.title)
                             } else {
                                 info.title.clone()
                             };

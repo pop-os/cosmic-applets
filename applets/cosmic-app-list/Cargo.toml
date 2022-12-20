@@ -28,6 +28,3 @@ freedesktop-icons = {git = "https://github.com/wash2/freedestkop-icons"}
 i18n-embed = { version = "0.13", features = ["fluent-system", "desktop-requester"] }
 i18n-embed-fl = "0.6"
 rust-embed = "6.3"
-# [patch."https://github.com/pop-os/iced"]
-# iced = { path = "../../../cosmic-iced", features = ["image", "svg", "tokio", "wayland"]}
-
