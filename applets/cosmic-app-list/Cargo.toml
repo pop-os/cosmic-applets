@@ -5,7 +5,7 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
-cctk = {git = "https://github.com/pop-os/cosmic-protocols", package = "cosmic-client-toolkit"}
+cctk = { git = "https://github.com/pop-os/cosmic-protocols", package = "cosmic-client-toolkit" }
 cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols", default-features = false, features = ["client"] }
 libcosmic = { git = "https://github.com/pop-os/libcosmic/", branch = "master", default-features = false, features = ["wayland", "applet", "tokio"] }
 ron = "0.8"
@@ -22,9 +22,8 @@ serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
 tokio = { version = "1.17.0", features = ["sync", "rt", "rt-multi-thread", "macros", "process"] }
 itertools = "*"
-cosmic-panel-config = {git = "https://github.com/pop-os/cosmic-panel", no-default-features = true}
 freedesktop-desktop-entry = "0.5.0"
-freedesktop-icons = {git = "https://github.com/wash2/freedestkop-icons"}
+freedesktop-icons = { git = "https://github.com/wash2/freedestkop-icons" }
 i18n-embed = { version = "0.13", features = ["fluent-system", "desktop-requester"] }
 i18n-embed-fl = "0.6"
 rust-embed = "6.3"

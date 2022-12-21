@@ -11,6 +11,7 @@ use crate::toplevel_subscription::ToplevelUpdate;
 use calloop::channel::Sender;
 use cctk::toplevel_info::ToplevelInfo;
 use cctk::wayland_client::protocol::wl_seat::WlSeat;
+use cosmic::applet::cosmic_panel_config::PanelAnchor;
 use cosmic::applet::CosmicAppletHelper;
 use cosmic::iced;
 use cosmic::iced::wayland::popup::destroy_popup;
@@ -29,7 +30,6 @@ use cosmic::widget::rectangle_tracker::RectangleTracker;
 use cosmic::widget::rectangle_tracker::RectangleUpdate;
 use cosmic::widget::{horizontal_rule, vertical_rule};
 use cosmic::{Element, Theme};
-use cosmic_panel_config::PanelAnchor;
 use cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1;
 use freedesktop_desktop_entry::DesktopEntry;
 use iced::wayland::window::resize_window;
@@ -73,7 +73,7 @@ struct CosmicAppList {
 
 impl CosmicAppList {
     fn window_size(&self) -> (u32, u32) {
-        let pixel_size = self.applet_helper.suggested_icon_size();
+        let pixel_size = self.applet_helper.suggested_size().0;
         let padding = 8;
         let dot_size = 4;
         let spacing = 4;
@@ -402,13 +402,13 @@ impl Application for CosmicAppList {
                         let icon = if desktop_info.icon.extension() == Some(&OsStr::new("svg")) {
                             let handle = svg::Handle::from_path(&desktop_info.icon);
                             svg::Svg::new(handle)
-                                .width(Length::Units(self.applet_helper.suggested_icon_size()))
-                                .height(Length::Units(self.applet_helper.suggested_icon_size()))
+                                .width(Length::Units(self.applet_helper.suggested_size().0))
+                                .height(Length::Units(self.applet_helper.suggested_size().0))
                                 .into()
                         } else {
                             Image::new(&desktop_info.icon)
-                                .width(Length::Units(self.applet_helper.suggested_icon_size()))
-                                .height(Length::Units(self.applet_helper.suggested_icon_size()))
+                                .width(Length::Units(self.applet_helper.suggested_size().0))
+                                .height(Length::Units(self.applet_helper.suggested_size().0))
                                 .into()
                         };
                         let dot_radius = 2;
