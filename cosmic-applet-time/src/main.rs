@@ -100,7 +100,7 @@ impl Application for Time {
             .expect("Setting seconds to 0 should always be possible")
             .with_nanosecond(0)
             .expect("Setting nanoseconds to 0 should always be possible.");
-        let wait = (next - now).num_milliseconds();
+        let wait = 1.max((next - now).num_milliseconds());
         time::every(Duration::from_millis(
             wait.try_into().unwrap_or(FALLBACK_DELAY),
         ))
