@@ -6,16 +6,18 @@ use cosmic::iced::wayland::{
 use cosmic::iced::{
     executor, time,
     widget::{button, column, text},
-    window, Alignment, Application, Color, Command, Subscription,
+    window, Alignment, Application, Color, Command, Length, Subscription,
 };
 use cosmic::iced_style::application::{self, Appearance};
+use cosmic::theme;
 use cosmic::{Element, Theme};
 
 use chrono::{DateTime, Local, Timelike};
 use std::time::Duration;
 
 pub fn main() -> cosmic::iced::Result {
-    let helper = CosmicAppletHelper::default();
+    let mut helper = CosmicAppletHelper::default();
+    helper.window_size(120, 16);
     Time::run(helper.window_settings())
 }
 
@@ -119,7 +121,7 @@ impl Application for Time {
                         window::Id::new(0),
                         new_id,
                         (400, 300),
-                        None,
+                        Some(60),
                         None,
                     );
                     get_popup(popup_settings)
@@ -136,11 +138,15 @@ impl Application for Time {
     fn view(&self, id: SurfaceIdWrapper) -> Element<Message> {
         match id {
             SurfaceIdWrapper::LayerSurface(_) => unimplemented!(),
-            SurfaceIdWrapper::Window(_) => {
-                button(text(self.now.format("%b %-d %-I:%M %p").to_string()))
-                    .on_press(Message::TogglePopup)
-                    .into()
-            }
+            SurfaceIdWrapper::Window(_) => button(
+                column![text(self.now.format("%b %-d %-I:%M %p").to_string())]
+                    .width(Length::Fill)
+                    .align_items(Alignment::Center),
+            )
+            .on_press(Message::TogglePopup)
+            .style(theme::Button::Text)
+            .width(Length::Units(120))
+            .into(),
             SurfaceIdWrapper::Popup(_) => {
                 use std::os::unix::process::ExitStatusExt;
                 let calendar = std::str::from_utf8(
