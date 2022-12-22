@@ -35,11 +35,11 @@ use crate::session_manager::SessionManagerProxy;
 
 pub fn main() -> cosmic::iced::Result {
     let helper = CosmicAppletHelper::default();
-    Audio::run(helper.window_settings())
+    Power::run(helper.window_settings())
 }
 
 #[derive(Default)]
-struct Audio {
+struct Power {
     applet_helper: CosmicAppletHelper,
     icon_name: String,
     theme: Theme,
@@ -60,15 +60,15 @@ enum Message {
     Zbus(Result<(), zbus::Error>),
 }
 
-impl Application for Audio {
+impl Application for Power {
     type Message = Message;
     type Theme = Theme;
     type Executor = executor::Default;
     type Flags = ();
 
-    fn new(_flags: ()) -> (Audio, Command<Message>) {
+    fn new(_flags: ()) -> (Power, Command<Message>) {
         (
-            Audio {
+            Power {
                 icon_name: "system-shutdown-symbolic".to_string(),
                 ..Default::default()
             },
