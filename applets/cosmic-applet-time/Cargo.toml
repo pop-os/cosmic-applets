@@ -8,8 +8,5 @@ license = "GPL-3.0-or-later"
 icon-loader = { version = "0.3.6", features = ["gtk"] }
 tokio = { version = "1.20.1", features=["full"] }
 libcosmic = { git = "https://github.com/pop-os/libcosmic/", branch = "master", default-features = false, features = ["wayland", "applet"] }
-# libcosmic = { path = "../../../../libcosmic", default-features = false, features = ["wayland", "applet"] }
-# iced_sctk = { git = "https://github.com/pop-os/iced-sctk" }
-# sctk = { package = "smithay-client-toolkit", git = "https://github.com/Smithay/client-toolkit", commit = "f1d9c3ef9cfbd508d986f7f98b2fc267fcc39b84" }
 nix = "0.24.1"
 chrono = { version = "0.4.23", features = ["clock"] }
