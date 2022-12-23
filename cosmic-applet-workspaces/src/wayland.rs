@@ -1,5 +1,5 @@
 use calloop::channel::*;
-use cosmic_panel_config::CosmicPanelOuput;
+use cosmic::applet::cosmic_panel_config::CosmicPanelOuput;
 use cosmic_protocols::workspace::v1::client::{
     zcosmic_workspace_group_handle_v1::{self, ZcosmicWorkspaceGroupHandleV1},
     zcosmic_workspace_handle_v1::{self, ZcosmicWorkspaceHandleV1},

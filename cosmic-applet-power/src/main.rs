@@ -1,8 +1,11 @@
 use std::process;
 
-use iced::widget::Space;
 
 use cosmic::applet::CosmicAppletHelper;
+use cosmic::iced::wayland::SurfaceIdWrapper;
+use cosmic::iced::wayland::popup::{get_popup, destroy_popup};
+use cosmic::iced::widget::{self, Row};
+use cosmic::iced_native::widget::Space;
 use cosmic::widget::{horizontal_rule, icon};
 use cosmic::Renderer;
 
@@ -12,14 +15,9 @@ use cosmic::iced::{
     window, Alignment, Application, Command, Length, Subscription,
 };
 use cosmic::iced_style::application::{self, Appearance};
-use cosmic::iced_style::svg;
+use cosmic::iced_style::{svg, Color};
 use cosmic::theme::{self, Svg};
 use cosmic::{Element, Theme};
-
-use iced_sctk::application::SurfaceIdWrapper;
-use iced_sctk::commands::popup::{destroy_popup, get_popup};
-use iced_sctk::widget::Row;
-use iced_sctk::Color;
 
 use logind_zbus::manager::ManagerProxy;
 use logind_zbus::session::{SessionProxy, SessionType};
@@ -84,7 +82,7 @@ impl Application for Power {
         self.theme
     }
 
-    fn close_requested(&self, _id: iced_sctk::application::SurfaceIdWrapper) -> Self::Message {
+    fn close_requested(&self, _id: SurfaceIdWrapper) -> Self::Message {
         Message::Ignore
     }
 
@@ -196,7 +194,7 @@ impl Application for Power {
 // ### UI Helplers
 
 // todo put into libcosmic doing so will fix the row_button's boarder radius
-fn row_button(mut content: Vec<Element<Message>>) -> iced_sctk::widget::Button<Message, Renderer> {
+fn row_button(mut content: Vec<Element<Message>>) -> widget::Button<Message, Renderer> {
     content.insert(0, Space::with_width(Length::Units(24)).into());
     content.push(Space::with_width(Length::Units(24)).into());
 
@@ -213,7 +211,7 @@ fn row_button(mut content: Vec<Element<Message>>) -> iced_sctk::widget::Button<M
 fn power_buttons<'a>(
     name: &'a str,
     text: &'a str,
-) -> iced_sctk::widget::Button<'a, Message, Renderer> {
+) -> widget::Button<'a, Message, Renderer> {
     button(
         column![text_icon(name, 40), text]
             .spacing(5)
@@ -226,7 +224,7 @@ fn power_buttons<'a>(
 
 fn text_icon(name: &str, size: u16) -> cosmic::widget::Icon {
     icon(name, size).style(Svg::Custom(|theme| svg::Appearance {
-        fill: Some(theme.palette().text),
+        color: Some(theme.palette().text),
     }))
 }
 

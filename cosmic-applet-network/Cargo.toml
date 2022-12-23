@@ -6,14 +6,12 @@ license = "GPL-3.0-or-later"
 
 [dependencies]
 once_cell = "1.16.0"
-cosmic-dbus-networkmanager = { git = "https://github.com/pop-os/dbus-settings-bindings" }
+cosmic-dbus-networkmanager = { git = "https://github.com/pop-os/dbus-settings-bindings", branch = "deps" }
 futures-util = "0.3.21"
 libcosmic = { git = "https://github.com/pop-os/libcosmic/", branch = "master", default-features = false, features = ["wayland", "applet"] }
-cosmic-panel-config = {git = "https://github.com/pop-os/cosmic-panel", default-features = false }
-iced_sctk = { git = "https://github.com/pop-os/iced-sctk" }
-sctk = { package = "smithay-client-toolkit", git = "https://github.com/Smithay/client-toolkit", version = "0.16" }
+sctk = { package = "smithay-client-toolkit", git = "https://github.com/Smithay/client-toolkit", rev = "73346019952f82ec7e4d4d15f5d66841b54e8b61" }
 futures = "0.3"
-zbus = { version = "3.5", no-default-features = true }
+zbus = { version = "3.6.2", no-default-features = true }
 log = "0.4"
 pretty_env_logger = "0.4"
 # Application i18n
@@ -23,10 +21,3 @@ rust-embed = "6.3.0"
 itertools = "0.10.3"
 slotmap = "1.0.6"
 tokio = { version = "1.15.0", features = ["full"] }
-
-[dependencies.iced]
-git = "https://github.com/pop-os/iced.git"
-branch = "sctk-cosmic"
-# path = "../iced"
-default-features = false
-features = ["image", "svg", "tokio"]

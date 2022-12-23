@@ -3,7 +3,7 @@ use cosmic::{
     iced::{
         executor,
         widget::{column, container, row, scrollable, text},
-        Alignment, Application, Color, Command, Length, Subscription,
+        Alignment, Application, Color, Command, Length, Subscription, wayland::{popup::{destroy_popup, get_popup}, SurfaceIdWrapper},
     },
     iced_native::window,
     iced_style::{application, svg},
@@ -12,10 +12,6 @@ use cosmic::{
     Element, Theme,
 };
 use futures::channel::mpsc::UnboundedSender;
-use iced_sctk::{
-    application::SurfaceIdWrapper,
-    commands::popup::{destroy_popup, get_popup},
-};
 
 use crate::{
     config, fl,
@@ -187,9 +183,9 @@ impl Application for CosmicNetworkApplet {
                 .into(),
             SurfaceIdWrapper::Popup(_) => {
                 let name = text(fl!("network")).size(18);
-                let icon = icon(&self.icon_name, 24)
+                let icon = icon(&*self.icon_name, 24)
                     .style(Svg::Custom(|theme| svg::Appearance {
-                        fill: Some(theme.palette().text),
+                        color: Some(theme.palette().text),
                     }))
                     .width(Length::Units(24))
                     .height(Length::Units(24));
@@ -331,7 +327,7 @@ impl Application for CosmicNetworkApplet {
         self.theme
     }
 
-    fn close_requested(&self, _id: iced_sctk::application::SurfaceIdWrapper) -> Self::Message {
+    fn close_requested(&self, _id: SurfaceIdWrapper) -> Self::Message {
         Message::Ignore
     }
 

@@ -6,12 +6,10 @@ edition = "2021"
 
 [dependencies]
 libcosmic = { git = "https://github.com/pop-os/libcosmic/", branch = "master", default-features = false, features = ["wayland", "applet"] }
-cosmic-panel-config = {git = "https://github.com/pop-os/cosmic-panel", default-features = false }
-iced_sctk = { git = "https://github.com/pop-os/iced-sctk" }
-sctk = { package = "smithay-client-toolkit", git = "https://github.com/Smithay/client-toolkit", version = "0.16" }
+sctk = { package = "smithay-client-toolkit", git = "https://github.com/Smithay/client-toolkit", rev = "73346019952f82ec7e4d4d15f5d66841b54e8b61" }
 cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols", default-features = false, features = ["client"] }
-wayland-backend = {version = "0.1.0-beta.13", features = ["client_system"]}
-wayland-client = {version = "0.30.0-beta.13"}
+wayland-backend = {version = "0.1.0-beta.14", features = ["client_system"]}
+wayland-client = {version = "0.30.0-beta.14"}
 calloop = "0.10.1"
 nix = "0.26.1"
 log = "0.4"
@@ -24,10 +22,3 @@ anyhow = "1.0"
 i18n-embed = { version = "0.13.4", features = ["fluent-system", "desktop-requester"] }
 i18n-embed-fl = "0.6.4"
 rust-embed = "6.3.0"
-
-[patch.crates-io]
-wayland-protocols = { git = "https://github.com/smithay/wayland-rs", version = "0.30.0-beta.13"}
-wayland-sys = { git = "https://github.com/smithay/wayland-rs", version = "0.30.0-beta.13"}
-wayland-backend = { git = "https://github.com/smithay/wayland-rs", version = "0.1.0-beta.13"}
-wayland-scanner = { git = "https://github.com/smithay/wayland-rs", version = "0.30.0-beta.13"}
-wayland-client = { git = "https://github.com/smithay/wayland-rs", version = "0.30.0-beta.13"}

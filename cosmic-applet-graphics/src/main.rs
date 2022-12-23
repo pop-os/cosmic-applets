@@ -3,12 +3,8 @@ mod graphics;
 mod window;
 
 use cosmic::{
-    iced::{sctk_settings::InitialSurface, Application},
-    iced_native::command::platform_specific::wayland::window::SctkWindowSettings,
-    iced_native::window::Settings,
-    settings, applet::CosmicAppletHelper,
+    iced::Application, applet::CosmicAppletHelper,
 };
-use cosmic_panel_config::PanelSize;
 use window::*;
 
 pub fn main() -> cosmic::iced::Result {

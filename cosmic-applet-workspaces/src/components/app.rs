@@ -1,22 +1,21 @@
 use std::cmp::Ordering;
 use calloop::channel::SyncSender;
 use cosmic::applet::CosmicAppletHelper;
+use cosmic::applet::cosmic_panel_config::PanelAnchor;
 use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::mouse::{self, ScrollDelta};
+use cosmic::iced::wayland::actions::window::SctkWindowSettings;
 use cosmic::iced::widget::{column, container, row, text};
 use cosmic::iced::{
     executor, subscription, widget::button, window, Application, Command, Event::Mouse, Length,
     Settings, Subscription,
 };
+use cosmic::iced_style::Color;
 use cosmic::iced_style::application::{self, Appearance};
 use cosmic::theme::Button;
 use cosmic::{Element, Theme};
-use cosmic_panel_config::PanelAnchor;
 use cosmic_protocols::workspace::v1::client::zcosmic_workspace_handle_v1;
-use iced_sctk::application::SurfaceIdWrapper;
-use iced_sctk::command::platform_specific::wayland::window::SctkWindowSettings;
-use iced_sctk::settings::InitialSurface;
-use iced_sctk::{commands, Color};
+use cosmic::iced::wayland::{SurfaceIdWrapper, InitialSurface, window::resize_window};
 use wayland_backend::client::ObjectId;
 
 use crate::config;
@@ -100,7 +99,7 @@ impl Application for IcedWorkspacesApplet {
                         Layout::Row => (unit * self.workspaces.len().max(1) as u32, unit),
                         Layout::Column => (unit, unit * self.workspaces.len().max(1) as u32),
                     };
-                    return commands::window::resize_window(window::Id::new(0), w, h);
+                    return resize_window(window::Id::new(0), w, h);
                 }
                 WorkspacesUpdate::Started(tx) => {
                     self.workspace_tx.replace(tx);
@@ -197,7 +196,7 @@ impl Application for IcedWorkspacesApplet {
         self.theme
     }
 
-    fn close_requested(&self, _id: iced_sctk::application::SurfaceIdWrapper) -> Self::Message {
+    fn close_requested(&self, _id: SurfaceIdWrapper) -> Self::Message {
         unimplemented!()
     }
 

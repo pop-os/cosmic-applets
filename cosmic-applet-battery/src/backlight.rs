@@ -12,7 +12,7 @@ use std::{
 };
 
 use cosmic::iced;
-use iced_sctk::subscription;
+use iced::subscription;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel};
 
 const BACKLIGHT_SYSDIR: &str = "/sys/class/backlight";
