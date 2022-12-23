@@ -1,1 +1,0 @@
-cosmic-panel-button = Bouton du panneau Cosmic
