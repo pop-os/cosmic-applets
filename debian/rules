@@ -12,73 +12,10 @@ override_dh_shlibdeps:
 
 override_dh_auto_clean:
 	if test "${CLEAN}" = "1"; then \
-		cd cosmic-applet-graphics; \
-		cargo clean --manifest-path Cargo.toml; \
-		cd ../cosmic-applet-workspaces; \
-		cargo clean --manifest-path Cargo.toml; \
-		cd ../cosmic-applet-notifications; \
-		cargo clean --manifest-path Cargo.toml; \
-		cd ..; \
+		cargo clean; \
 	fi
 
 	if ! ischroot && test "${VENDOR}" = "1"; then \
-		cd cosmic-applet-graphics/; \
-		mkdir -p .cargo; \
-		cargo vendor --sync Cargo.toml | head -n -1 > .cargo/config; \
-		echo 'directory = "vendor"' >> .cargo/config; \
-		tar pcf vendor.tar vendor; \
-		rm -rf vendor; \
-		cd ..; \
-		cd cosmic-applet-workspaces/; \
-		mkdir -p .cargo; \
-		cargo vendor --sync Cargo.toml | head -n -1 > .cargo/config; \
-		echo 'directory = "vendor"' >> .cargo/config; \
-		tar pcf vendor.tar vendor; \
-		rm -rf vendor; \
-		cd ..; \
-		cd cosmic-applet-battery/; \
-		mkdir -p .cargo; \
-		cargo vendor --sync Cargo.toml | head -n -1 > .cargo/config; \
-		echo 'directory = "vendor"' >> .cargo/config; \
-		tar pcf vendor.tar vendor; \
-		rm -rf vendor; \
-		cd ..; \
-		cd cosmic-applet-audio/; \
-		mkdir -p .cargo; \
-		cargo vendor --sync Cargo.toml | head -n -1 > .cargo/config; \
-		echo 'directory = "vendor"' >> .cargo/config; \
-		tar pcf vendor.tar vendor; \
-		rm -rf vendor; \
-		cd ..; \
-		cd cosmic-applet-time/; \
-		mkdir -p .cargo; \
-		cargo vendor --sync Cargo.toml | head -n -1 > .cargo/config; \
-		echo 'directory = "vendor"' >> .cargo/config; \
-		tar pcf vendor.tar vendor; \
-		rm -rf vendor; \
-		cd ..; \
-		cd cosmic-applet-power/; \
-		mkdir -p .cargo; \
-		cargo vendor --sync Cargo.toml | head -n -1 > .cargo/config; \
-		echo 'directory = "vendor"' >> .cargo/config; \
-		tar pcf vendor.tar vendor; \
-		rm -rf vendor; \
-		cd ..; \
-		cd cosmic-applet-notifications/; \
-		mkdir -p .cargo; \
-		cargo vendor --sync Cargo.toml | head -n -1 > .cargo/config; \
-		echo 'directory = "vendor"' >> .cargo/config; \
-		tar pcf vendor.tar vendor; \
-		rm -rf vendor; \
-		cd ..; \
-		cd cosmic-applet-network/; \
-		mkdir -p .cargo; \
-		cargo vendor --sync Cargo.toml | head -n -1 > .cargo/config; \
-		echo 'directory = "vendor"' >> .cargo/config; \
-		tar pcf vendor.tar vendor; \
-		rm -rf vendor; \
-		cd ..; \
-		cd cosmic-app-list/; \
 		mkdir -p .cargo; \
 		cargo vendor --sync Cargo.toml | head -n -1 > .cargo/config; \
 		echo 'directory = "vendor"' >> .cargo/config; \

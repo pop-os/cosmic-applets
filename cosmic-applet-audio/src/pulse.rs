@@ -1,4 +1,4 @@
-use iced_native::subscription::{self, Subscription};
+use cosmic::iced_native::subscription::{self, Subscription};
 use std::cell::RefCell;
 use std::{rc::Rc, thread};
 

@@ -1,6 +1,10 @@
 use crate::dbus::{self, PowerDaemonProxy};
 use crate::graphics::{get_current_graphics, set_graphics, Graphics};
 use cosmic::applet::{CosmicAppletHelper};
+use cosmic::iced::wayland::SurfaceIdWrapper;
+use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
+use cosmic::iced_native::alignment::Horizontal;
+use cosmic::iced_style::Color;
 use cosmic::iced_style::application::{self, Appearance};
 use cosmic::theme::Button;
 use cosmic::{
@@ -10,12 +14,8 @@ use cosmic::{
     theme::Theme,
     widget::{horizontal_rule},
     Element,
+    applet::cosmic_panel_config::{PanelAnchor, PanelSize}
 };
-use cosmic_panel_config::{PanelAnchor, PanelSize};
-use iced_sctk::alignment::Horizontal;
-use iced_sctk::application::SurfaceIdWrapper;
-use iced_sctk::commands::popup::{destroy_popup, get_popup};
-use iced_sctk::Color;
 use zbus::Connection;
 
 #[derive(Clone, Copy)]

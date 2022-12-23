@@ -1,0 +1,16 @@
+[workspace]
+
+members = [
+    "cosmic-app-list",
+    "cosmic-applet-audio",
+    "cosmic-applet-battery",
+    "cosmic-applet-graphics",
+    "cosmic-applet-network",
+    "cosmic-applet-notifications",
+    "cosmic-applet-power",
+    "cosmic-applet-time",
+    "cosmic-applet-workspaces",
+]
+
+[patch.crates-io]
+zbus = {git = "https://gitlab.freedesktop.org/dbus/zbus", branch = "main"}

@@ -9,23 +9,18 @@ use crate::upower_kbdbacklight::{
 };
 use cosmic::applet::CosmicAppletHelper;
 use cosmic::iced::alignment::Horizontal;
+use cosmic::iced::wayland::SurfaceIdWrapper;
+use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced::{
     executor,
     widget::{button, column, row, text, slider},
     window, Alignment, Application, Command, Length, Subscription,
 };
-use cosmic::iced_native::window::Settings;
 use cosmic::iced_style::application::{self, Appearance};
-use cosmic::iced_style::svg;
+use cosmic::iced_style::{svg, Color};
 use cosmic::theme::{self, Svg};
 use cosmic::widget::{icon, toggler, horizontal_rule};
 use cosmic::{iced_style, settings, Element, Theme};
-use cosmic_panel_config::{PanelAnchor, PanelSize};
-use iced_sctk::application::SurfaceIdWrapper;
-use iced_sctk::command::platform_specific::wayland::window::SctkWindowSettings;
-use iced_sctk::commands::popup::{destroy_popup, get_popup};
-use iced_sctk::settings::InitialSurface;
-use iced_sctk::Color;
 use std::time::Duration;
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -206,10 +201,10 @@ impl Application for CosmicBatteryApplet {
                 self.applet_helper.popup_container(
                     column![
                         row![
-                            icon(&self.icon_name, 24)
+                            icon(&*self.icon_name, 24)
                                 .style(Svg::Custom(|theme| {
                                     svg::Appearance {
-                                        fill: Some(theme.palette().text),
+                                        color: Some(theme.palette().text),
                                     }
                                 }))
                                 .width(Length::Units(24))
@@ -228,7 +223,7 @@ impl Application for CosmicBatteryApplet {
                             icon("display-brightness-symbolic", 24)
                                 .style(Svg::Custom(|theme| {
                                     svg::Appearance {
-                                        fill: Some(theme.palette().text),
+                                        color: Some(theme.palette().text),
                                     }
                                 }))
                                 .width(Length::Units(24))
@@ -247,7 +242,7 @@ impl Application for CosmicBatteryApplet {
                             icon("keyboard-brightness-symbolic", 24)
                                 .style(Svg::Custom(|theme| {
                                     svg::Appearance {
-                                        fill: Some(theme.palette().text),
+                                        color: Some(theme.palette().text),
                                     }
                                 }))
                                 .width(Length::Units(24))
@@ -311,7 +306,7 @@ impl Application for CosmicBatteryApplet {
         self.theme
     }
 
-    fn close_requested(&self, _id: iced_sctk::application::SurfaceIdWrapper) -> Self::Message {
+    fn close_requested(&self, _id: SurfaceIdWrapper) -> Self::Message {
         Message::Ignore
     }
 

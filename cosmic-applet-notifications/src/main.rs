@@ -96,7 +96,7 @@ impl Application for Notifications {
                         window::Id::new(0),
                         new_id,
                         (400, 300),
-                        Some(60),
+                        None,
                         None,
                     );
                     get_popup(popup_settings)

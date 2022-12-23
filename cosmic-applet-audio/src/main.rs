@@ -1,3 +1,5 @@
+use cosmic::iced::wayland::SurfaceIdWrapper;
+use cosmic::iced::widget;
 use iced::widget::Space;
 
 use cosmic::widget::{icon, toggler, horizontal_rule};
@@ -10,17 +12,16 @@ use cosmic::iced_style::svg;
 use cosmic::theme::{self, Svg};
 use cosmic::{iced_style, settings, Element, Theme};
 use cosmic::iced::{
+    self,
     executor,
     widget::{button, column, row, text, slider},
     window, Alignment, Application, Command, Length, Subscription,
 };
 
-use iced_sctk::application::SurfaceIdWrapper;
-use iced_sctk::command::platform_specific::wayland::window::SctkWindowSettings;
-use iced_sctk::commands::popup::{destroy_popup, get_popup};
-use iced_sctk::settings::InitialSurface;
-use iced_sctk::Color;
-use iced_sctk::widget::container;
+
+use iced::wayland::popup::{destroy_popup, get_popup};
+use iced::Color;
+use iced::widget::container;
 
 mod pulse;
 use crate::pulse::DeviceInfo;
@@ -96,7 +97,7 @@ impl Application for Audio {
         self.theme
     }
 
-    fn close_requested(&self, _id: iced_sctk::application::SurfaceIdWrapper) -> Self::Message {
+    fn close_requested(&self, _id: SurfaceIdWrapper) -> Self::Message {
         Message::Ignore
     }
 
@@ -325,7 +326,7 @@ fn revealer<'a>(
     options: Vec<String>,
     toggle: Message,
     _change: Message,
-) -> iced_sctk::widget::Column<'a, Message, Renderer> {
+) -> widget::Column<'a, Message, Renderer> {
     if open {
         options.iter().fold(
             column![revealer_head(open, title, selected, toggle)].width(Length::Fill),
@@ -341,7 +342,7 @@ fn revealer_head<'a>(
     title: &'a str,
     selected: String,
     toggle: Message,
-) -> iced_sctk::widget::Button<Message, Renderer> {
+) -> widget::Button<Message, Renderer> {
     button(row![row![title].width(Length::Fill), text(selected)])
         .width(Length::Fill)
         .on_press(toggle)
