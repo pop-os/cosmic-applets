@@ -1,30 +1,25 @@
-use std::process;
-
-use iced::widget::Space;
-
 use cosmic::applet::CosmicAppletHelper;
-use cosmic::widget::{horizontal_rule, icon};
-use cosmic::Renderer;
-
+use cosmic::iced::wayland::{
+    popup::{destroy_popup, get_popup},
+    SurfaceIdWrapper,
+};
 use cosmic::iced::{
     executor,
-    widget::{button, column, row},
-    window, Alignment, Application, Command, Length, Subscription,
+    widget::{button, column, horizontal_rule, row, Row, Space},
+    window, Alignment, Application, Color, Command, Length, Subscription,
 };
 use cosmic::iced_style::application::{self, Appearance};
 use cosmic::iced_style::svg;
 use cosmic::theme::{self, Svg};
+use cosmic::widget::icon;
+use cosmic::Renderer;
 use cosmic::{Element, Theme};
-
-use iced_sctk::application::SurfaceIdWrapper;
-use iced_sctk::commands::popup::{destroy_popup, get_popup};
-use iced_sctk::widget::Row;
-use iced_sctk::Color;
 
 use logind_zbus::manager::ManagerProxy;
 use logind_zbus::session::{SessionProxy, SessionType};
 use logind_zbus::user::UserProxy;
 use nix::unistd::getuid;
+use std::process;
 use zbus::Connection;
 
 pub mod cosmic_session;
@@ -84,7 +79,7 @@ impl Application for Audio {
         self.theme
     }
 
-    fn close_requested(&self, _id: iced_sctk::application::SurfaceIdWrapper) -> Self::Message {
+    fn close_requested(&self, _id: SurfaceIdWrapper) -> Self::Message {
         Message::Ignore
     }
 
@@ -120,8 +115,8 @@ impl Application for Audio {
                 }
             }
             Message::Settings => {
-              let _ = process::Command::new("cosmic-settings").spawn();
-              Command::none()
+                let _ = process::Command::new("cosmic-settings").spawn();
+                Command::none()
             }
             Message::Lock => Command::perform(lock(), Message::Zbus),
             Message::LogOut => Command::perform(log_out(), Message::Zbus),
@@ -147,8 +142,7 @@ impl Application for Audio {
                 .on_press(Message::TogglePopup)
                 .into(),
             SurfaceIdWrapper::Popup(_) => {
-                let settings = row_button(vec!["Settings...".into()])
-                  .on_press(Message::Settings);
+                let settings = row_button(vec!["Settings...".into()]).on_press(Message::Settings);
 
                 let session = column![
                     row_button(vec![
@@ -196,7 +190,9 @@ impl Application for Audio {
 // ### UI Helplers
 
 // todo put into libcosmic doing so will fix the row_button's boarder radius
-fn row_button(mut content: Vec<Element<Message>>) -> iced_sctk::widget::Button<Message, Renderer> {
+fn row_button(
+    mut content: Vec<Element<Message>>,
+) -> cosmic::iced::widget::Button<Message, Renderer> {
     content.insert(0, Space::with_width(Length::Units(24)).into());
     content.push(Space::with_width(Length::Units(24)).into());
 
@@ -213,7 +209,7 @@ fn row_button(mut content: Vec<Element<Message>>) -> iced_sctk::widget::Button<M
 fn power_buttons<'a>(
     name: &'a str,
     text: &'a str,
-) -> iced_sctk::widget::Button<'a, Message, Renderer> {
+) -> cosmic::iced::widget::Button<'a, Message, Renderer> {
     button(
         column![text_icon(name, 40), text]
             .spacing(5)
@@ -226,7 +222,7 @@ fn power_buttons<'a>(
 
 fn text_icon(name: &str, size: u16) -> cosmic::widget::Icon {
     icon(name, size).style(Svg::Custom(|theme| svg::Appearance {
-        fill: Some(theme.palette().text),
+        color: Some(theme.palette().text),
     }))
 }
 

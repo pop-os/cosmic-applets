@@ -8,29 +8,8 @@ license = "GPL-3.0-or-later"
 icon-loader = { version = "0.3.6", features = ["gtk"] }
 libpulse-binding = "2.26.0"
 libpulse-glib-binding = "2.25.0"
-tokio = { version = "1.20.1", features=["full"] }
 libcosmic = { git = "https://github.com/pop-os/libcosmic/", branch = "master", default-features = false, features = ["wayland", "applet"] }
-iced_sctk = { git = "https://github.com/pop-os/iced-sctk" }
-sctk = { package = "smithay-client-toolkit", git = "https://github.com/Smithay/client-toolkit", version = "0.16" }
 nix = "0.24.1"
-
-[workspace]
-resolved = "2"
-
-[dependencies.iced]
-git = "https://github.com/pop-os/iced.git"
-branch = "sctk-cosmic"
-# path = "../iced"
-default-features = false
-features = ["image", "svg", "tokio", "wayland"]
-
-[dependencies.iced_native]
-git = "https://github.com/pop-os/iced.git"
-branch = "sctk-cosmic"
-
-[dependencies.iced_futures]
-git = "https://github.com/pop-os/iced.git"
-branch = "sctk-cosmic"
 
 # Until the 3.6.3 release, need the implementation of clone on zbus::Error
 [dependencies.zbus]
