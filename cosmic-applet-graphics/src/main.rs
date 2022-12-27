@@ -2,9 +2,7 @@ mod dbus;
 mod graphics;
 mod window;
 
-use cosmic::{
-    iced::Application, applet::CosmicAppletHelper,
-};
+use cosmic::{applet::CosmicAppletHelper, iced::Application};
 use window::*;
 
 pub fn main() -> cosmic::iced::Result {

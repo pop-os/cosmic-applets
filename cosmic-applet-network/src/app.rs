@@ -2,8 +2,12 @@ use cosmic::{
     applet::CosmicAppletHelper,
     iced::{
         executor,
+        wayland::{
+            popup::{destroy_popup, get_popup},
+            SurfaceIdWrapper,
+        },
         widget::{column, container, row, scrollable, text},
-        Alignment, Application, Color, Command, Length, Subscription, wayland::{popup::{destroy_popup, get_popup}, SurfaceIdWrapper},
+        Alignment, Application, Color, Command, Length, Subscription,
     },
     iced_native::window,
     iced_style::{application, svg},
@@ -44,26 +48,22 @@ struct CosmicNetworkApplet {
 impl CosmicNetworkApplet {
     fn update_icon_name(&mut self) {
         self.icon_name = self
-        .active_conns
-        .iter()
-        .fold("network-offline-symbolic", |icon_name, conn| {
-            match (icon_name, conn) {
-                ("network-offline-symbolic", ActiveConnectionInfo::WiFi { .. }) => {
-                    "network-wireless-symbolic"
+            .active_conns
+            .iter()
+            .fold("network-offline-symbolic", |icon_name, conn| {
+                match (icon_name, conn) {
+                    ("network-offline-symbolic", ActiveConnectionInfo::WiFi { .. }) => {
+                        "network-wireless-symbolic"
+                    }
+                    ("network-offline-symbolic", ActiveConnectionInfo::Wired { .. })
+                    | ("network-wireless-symbolic", ActiveConnectionInfo::Wired { .. }) => {
+                        "network-wired-symbolic"
+                    }
+                    (_, ActiveConnectionInfo::Vpn { .. }) => "network-vpn-symbolic",
+                    _ => icon_name,
                 }
-                (
-                    "network-offline-symbolic",
-                    ActiveConnectionInfo::Wired { .. },
-                )
-                | (
-                    "network-wireless-symbolic",
-                    ActiveConnectionInfo::Wired { .. },
-                ) => "network-wired-symbolic",
-                (_, ActiveConnectionInfo::Vpn { .. }) => "network-vpn-symbolic",
-                _ => icon_name,
-            }
-        })
-        .to_string()
+            })
+            .to_string()
     }
 }
 
@@ -112,7 +112,7 @@ impl Application for CosmicNetworkApplet {
                     let popup_settings = self.applet_helper.get_popup_settings(
                         window::Id::new(0),
                         new_id,
-                        (420, 600),
+                        None,
                         None,
                         None,
                     );
@@ -156,14 +156,20 @@ impl Application for CosmicNetworkApplet {
                     self.active_conns = conns;
                     self.update_icon_name();
                 }
-                NetworkManagerEvent::RequestResponse { wireless_access_points, active_conns, wifi_enabled, success, ..} => {
+                NetworkManagerEvent::RequestResponse {
+                    wireless_access_points,
+                    active_conns,
+                    wifi_enabled,
+                    success,
+                    ..
+                } => {
                     if success {
                         self.wireless_access_points = wireless_access_points;
                         self.active_conns = active_conns;
                         self.wifi = wifi_enabled;
                         self.update_icon_name();
                     }
-                },
+                }
             },
             Message::SelectWirelessAccessPoint(ssid) => {
                 if let Some(tx) = self.nm_sender.as_ref() {
@@ -312,7 +318,7 @@ impl Application for CosmicNetworkApplet {
                             });
                         list_col = list_col.add(button);
                     }
-                    content = content.push(scrollable(list_col).height(Length::Fill));
+                    content = content.push(scrollable(list_col).height(Length::Units(300)));
                 }
                 self.applet_helper.popup_container(content).into()
             }

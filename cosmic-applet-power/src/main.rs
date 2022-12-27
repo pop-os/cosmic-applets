@@ -1,9 +1,8 @@
 use std::process;
 
-
 use cosmic::applet::CosmicAppletHelper;
+use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced::wayland::SurfaceIdWrapper;
-use cosmic::iced::wayland::popup::{get_popup, destroy_popup};
 use cosmic::iced::widget::{self, Row};
 use cosmic::iced_native::widget::Space;
 use cosmic::widget::{horizontal_rule, icon};
@@ -110,7 +109,7 @@ impl Application for Power {
                     let popup_settings = self.applet_helper.get_popup_settings(
                         window::Id::new(0),
                         new_id,
-                        (400, 300),
+                        None,
                         None,
                         None,
                     );
@@ -118,8 +117,8 @@ impl Application for Power {
                 }
             }
             Message::Settings => {
-              let _ = process::Command::new("cosmic-settings").spawn();
-              Command::none()
+                let _ = process::Command::new("cosmic-settings").spawn();
+                Command::none()
             }
             Message::Lock => Command::perform(lock(), Message::Zbus),
             Message::LogOut => Command::perform(log_out(), Message::Zbus),
@@ -145,8 +144,7 @@ impl Application for Power {
                 .on_press(Message::TogglePopup)
                 .into(),
             SurfaceIdWrapper::Popup(_) => {
-                let settings = row_button(vec!["Settings...".into()])
-                  .on_press(Message::Settings);
+                let settings = row_button(vec!["Settings...".into()]).on_press(Message::Settings);
 
                 let session = column![
                     row_button(vec![
@@ -183,7 +181,8 @@ impl Application for Power {
                     .push(horizontal_rule(1))
                     .push(session)
                     .push(horizontal_rule(1))
-                    .push(power);
+                    .push(power)
+                    .padding(8);
 
                 self.applet_helper.popup_container(content).into()
             }
@@ -208,10 +207,7 @@ fn row_button(mut content: Vec<Element<Message>>) -> widget::Button<Message, Ren
     .style(theme::Button::Text)
 }
 
-fn power_buttons<'a>(
-    name: &'a str,
-    text: &'a str,
-) -> widget::Button<'a, Message, Renderer> {
+fn power_buttons<'a>(name: &'a str, text: &'a str) -> widget::Button<'a, Message, Renderer> {
     button(
         column![text_icon(name, 40), text]
             .spacing(5)

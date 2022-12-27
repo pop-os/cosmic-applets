@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::ffi::OsStr;
+use std::path::Path;
 use std::path::PathBuf;
 
 use crate::config;
@@ -22,6 +22,7 @@ use cosmic::iced::widget::{column, row};
 use cosmic::iced::{executor, window, Application, Command, Subscription};
 use cosmic::iced_native::alignment::Horizontal;
 use cosmic::iced_native::subscription::events_with;
+use cosmic::iced_native::widget::vertical_space;
 use cosmic::iced_style::application::{self, Appearance};
 use cosmic::iced_style::Color;
 use cosmic::theme::Button;
@@ -35,8 +36,6 @@ use freedesktop_desktop_entry::DesktopEntry;
 use iced::wayland::window::resize_window;
 use iced::widget::container;
 use iced::widget::horizontal_space;
-use iced::widget::svg;
-use iced::widget::Image;
 use iced::Alignment;
 use iced::Background;
 use iced::Length;
@@ -219,11 +218,11 @@ impl Application for CosmicAppList {
                     let new_id = window::Id::new(self.surface_id_ctr);
                     self.popup.replace(new_id);
                     toplevel_group.popup.replace(new_id);
-
+                    
                     let mut popup_settings = self.applet_helper.get_popup_settings(
                         window::Id::new(0),
                         new_id,
-                        (240, 240 + toplevel_group.toplevels.len() as u32 * 24),
+                        None,
                         None,
                         None,
                     );
@@ -399,23 +398,24 @@ impl Application for CosmicAppList {
                          desktop_info,
                          ..
                      }| {
-                        let icon = if desktop_info.icon.extension() == Some(&OsStr::new("svg")) {
-                            let handle = svg::Handle::from_path(&desktop_info.icon);
-                            svg::Svg::new(handle)
-                                .width(Length::Units(self.applet_helper.suggested_size().0))
-                                .height(Length::Units(self.applet_helper.suggested_size().0))
-                                .into()
-                        } else {
-                            Image::new(&desktop_info.icon)
-                                .width(Length::Units(self.applet_helper.suggested_size().0))
-                                .height(Length::Units(self.applet_helper.suggested_size().0))
-                                .into()
-                        };
+                        let cosmic_icon = cosmic::widget::icon(Path::new(&desktop_info.icon), self.applet_helper.suggested_size().0);
+                        // let icon = if desktop_info.icon.extension() == Some(&OsStr::new("svg")) {
+                        //     svg::Handle::from_path(&desktop_info.icon);
+                        //     svg::Svg::new(handle)
+                        //         .width(Length::Units(self.applet_helper.suggested_size().0))
+                        //         .height(Length::Units(self.applet_helper.suggested_size().0))
+                        //         .into()
+                        // } else {
+                        //     Image::new(&desktop_info.icon)
+                        //         .width(Length::Units(self.applet_helper.suggested_size().0))
+                        //         .height(Length::Units(self.applet_helper.suggested_size().0))
+                        //         .into()
+                        // };
                         let dot_radius = 2;
-                        let dots = (0..toplevels.len())
+                        let mut dots = (0..toplevels.len())
                             .into_iter()
                             .map(|_| {
-                                container(horizontal_space(Length::Units(0)))
+                                container(vertical_space(Length::Units(0)))
                                     .padding(dot_radius)
                                     .style(<Self::Theme as container::StyleSheet>::Style::Custom(
                                         |theme| container::Appearance {
@@ -431,21 +431,21 @@ impl Application for CosmicAppList {
                                     .into()
                             })
                             .collect_vec();
-
+                        dots.push(vertical_space(Length::Units(4)).into());
                         let icon_wrapper = match &self.applet_helper.anchor {
-                            PanelAnchor::Left => row(vec![column(dots).spacing(4).into(), icon])
+                            PanelAnchor::Left => row(vec![column(dots).spacing(4).into(), cosmic_icon.into()])
                                 .align_items(iced::Alignment::Center)
                                 .spacing(4)
                                 .into(),
-                            PanelAnchor::Right => row(vec![icon, column(dots).spacing(4).into()])
+                            PanelAnchor::Right => row(vec![cosmic_icon.into(), column(dots).spacing(4).into()])
                                 .align_items(iced::Alignment::Center)
                                 .spacing(4)
                                 .into(),
-                            PanelAnchor::Top => column(vec![row(dots).spacing(4).into(), icon])
+                            PanelAnchor::Top => column(vec![row(dots).spacing(4).into(), cosmic_icon.into()])
                                 .align_items(iced::Alignment::Center)
                                 .spacing(4)
                                 .into(),
-                            PanelAnchor::Bottom => column(vec![icon, row(dots).spacing(4).into()])
+                            PanelAnchor::Bottom => column(vec![cosmic_icon.into(), row(dots).spacing(4).into()])
                                 .align_items(iced::Alignment::Center)
                                 .spacing(4)
                                 .into(),
@@ -567,6 +567,15 @@ impl Application for CosmicAppList {
                                 .on_press(Message::Quit(desktop_info.id.clone())),
                         )
                     }
+                    // return Container::new(Container::new(content.width(Length::Shrink).height(Length::Shrink)).style(
+                    //     cosmic::Container::Custom(|theme| container::Appearance {
+                    //         text_color: Some(theme.cosmic().on_bg_color().into()),
+                    //         background: Some(theme.extended_palette().background.base.color.into()),
+                    //         border_radius: 12.0,
+                    //         border_width: 0.0,
+                    //         border_color: Color::TRANSPARENT,
+                    //     }),
+                    // )).into();
                     return self.applet_helper.popup_container(content).into();
                 }
                 return horizontal_space(Length::Units(1)).into();

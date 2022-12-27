@@ -14,10 +14,22 @@ pub async fn active_connections(
     for connection in active_connections {
         if connection.vpn().await.unwrap_or_default() {
             let mut ip_addresses = Vec::new();
-            for address_data in connection.ip4_config().await?.address_data().await.unwrap_or_default() {
+            for address_data in connection
+                .ip4_config()
+                .await?
+                .address_data()
+                .await
+                .unwrap_or_default()
+            {
                 ip_addresses.push(IpAddr::V4(address_data.address));
             }
-            for address_data in connection.ip6_config().await?.address_data().await.unwrap_or_default() {
+            for address_data in connection
+                .ip6_config()
+                .await?
+                .address_data()
+                .await
+                .unwrap_or_default()
+            {
                 ip_addresses.push(IpAddr::V6(address_data.address));
             }
             info.push(ActiveConnectionInfo::Vpn {
@@ -27,13 +39,30 @@ pub async fn active_connections(
             continue;
         }
         for device in connection.devices().await.unwrap_or_default() {
-            match device.downcast_to_device().await.ok().and_then(|inner| inner) {
+            match device
+                .downcast_to_device()
+                .await
+                .ok()
+                .and_then(|inner| inner)
+            {
                 Some(SpecificDevice::Wired(wired_device)) => {
                     let mut ip_addresses = Vec::new();
-                    for address_data in device.ip4_config().await?.address_data().await.unwrap_or_default() {
+                    for address_data in device
+                        .ip4_config()
+                        .await?
+                        .address_data()
+                        .await
+                        .unwrap_or_default()
+                    {
                         ip_addresses.push(IpAddr::V4(address_data.address));
                     }
-                    for address_data in device.ip6_config().await?.address_data().await.unwrap_or_default() {
+                    for address_data in device
+                        .ip6_config()
+                        .await?
+                        .address_data()
+                        .await
+                        .unwrap_or_default()
+                    {
                         ip_addresses.push(IpAddr::V6(address_data.address));
                     }
                     info.push(ActiveConnectionInfo::Wired {
@@ -56,10 +85,22 @@ pub async fn active_connections(
                 }
                 Some(SpecificDevice::WireGuard(_)) => {
                     let mut ip_addresses = Vec::new();
-                    for address_data in connection.ip4_config().await?.address_data().await.unwrap_or_default() {
+                    for address_data in connection
+                        .ip4_config()
+                        .await?
+                        .address_data()
+                        .await
+                        .unwrap_or_default()
+                    {
                         ip_addresses.push(IpAddr::V4(address_data.address));
                     }
-                    for address_data in connection.ip6_config().await?.address_data().await.unwrap_or_default() {
+                    for address_data in connection
+                        .ip6_config()
+                        .await?
+                        .address_data()
+                        .await
+                        .unwrap_or_default()
+                    {
                         ip_addresses.push(IpAddr::V6(address_data.address));
                     }
                     info.push(ActiveConnectionInfo::Vpn {
@@ -71,14 +112,12 @@ pub async fn active_connections(
             }
         }
     }
-    
+
     info.sort_by(|a, b| {
-        let helper = |conn: &ActiveConnectionInfo| {
-            match conn {
-                ActiveConnectionInfo::Vpn { name, .. } => format!("0{name}"),
-                ActiveConnectionInfo::Wired { name, .. } => format!("1{name}"),
-                ActiveConnectionInfo::WiFi { name, .. } => format!("2{name}"),
-            }
+        let helper = |conn: &ActiveConnectionInfo| match conn {
+            ActiveConnectionInfo::Vpn { name, .. } => format!("0{name}"),
+            ActiveConnectionInfo::Wired { name, .. } => format!("1{name}"),
+            ActiveConnectionInfo::WiFi { name, .. } => format!("2{name}"),
         };
         helper(a).cmp(&helper(b))
     });

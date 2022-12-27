@@ -1,21 +1,21 @@
-use std::cmp::Ordering;
 use calloop::channel::SyncSender;
-use cosmic::applet::CosmicAppletHelper;
 use cosmic::applet::cosmic_panel_config::PanelAnchor;
+use cosmic::applet::CosmicAppletHelper;
 use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::mouse::{self, ScrollDelta};
 use cosmic::iced::wayland::actions::window::SctkWindowSettings;
+use cosmic::iced::wayland::{window::resize_window, InitialSurface, SurfaceIdWrapper};
 use cosmic::iced::widget::{column, container, row, text};
 use cosmic::iced::{
     executor, subscription, widget::button, window, Application, Command, Event::Mouse, Length,
     Settings, Subscription,
 };
-use cosmic::iced_style::Color;
 use cosmic::iced_style::application::{self, Appearance};
+use cosmic::iced_style::Color;
 use cosmic::theme::Button;
 use cosmic::{Element, Theme};
 use cosmic_protocols::workspace::v1::client::zcosmic_workspace_handle_v1;
-use cosmic::iced::wayland::{SurfaceIdWrapper, InitialSurface, window::resize_window};
+use std::cmp::Ordering;
 use wayland_backend::client::ObjectId;
 
 use crate::config;

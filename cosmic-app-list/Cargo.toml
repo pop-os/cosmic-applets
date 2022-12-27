@@ -23,7 +23,7 @@ log = "0.4"
 tokio = { version = "1.17.0", features = ["sync", "rt", "rt-multi-thread", "macros", "process"] }
 itertools = "*"
 freedesktop-desktop-entry = "0.5.0"
-freedesktop-icons = { git = "https://github.com/wash2/freedestkop-icons" }
+freedesktop-icons = "0.2.2"
 i18n-embed = { version = "0.13", features = ["fluent-system", "desktop-requester"] }
 i18n-embed-fl = "0.6"
 rust-embed = "6.3"

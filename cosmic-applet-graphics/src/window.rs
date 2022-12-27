@@ -1,20 +1,20 @@
 use crate::dbus::{self, PowerDaemonProxy};
 use crate::graphics::{get_current_graphics, set_graphics, Graphics};
-use cosmic::applet::{CosmicAppletHelper};
-use cosmic::iced::wayland::SurfaceIdWrapper;
+use cosmic::applet::CosmicAppletHelper;
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
+use cosmic::iced::wayland::SurfaceIdWrapper;
 use cosmic::iced_native::alignment::Horizontal;
-use cosmic::iced_style::Color;
 use cosmic::iced_style::application::{self, Appearance};
+use cosmic::iced_style::Color;
 use cosmic::theme::Button;
 use cosmic::{
+    applet::cosmic_panel_config::{PanelAnchor, PanelSize},
     iced::widget::{column, radio, text},
     iced::{self, Application, Command, Length},
     iced_native::window,
     theme::Theme,
-    widget::{horizontal_rule},
+    widget::horizontal_rule,
     Element,
-    applet::cosmic_panel_config::{PanelAnchor, PanelSize}
 };
 use zbus::Connection;
 
@@ -140,8 +140,13 @@ impl Application for Window {
                             |cur_graphics| Message::CurrentGraphics(cur_graphics.ok()),
                         ));
                     }
-                    let popup_settings =
-                        self.applet_helper.get_popup_settings(window::Id::new(0), new_id, (200, 240), None, None);
+                    let popup_settings = self.applet_helper.get_popup_settings(
+                        window::Id::new(0),
+                        new_id,
+                        None,
+                        None,
+                        None,
+                    );
                     commands.push(get_popup(popup_settings));
                     return Command::batch(commands);
                 }
@@ -183,7 +188,9 @@ impl Application for Window {
     fn view(&self, id: SurfaceIdWrapper) -> Element<Message> {
         match id {
             SurfaceIdWrapper::LayerSurface(_) => unimplemented!(),
-            SurfaceIdWrapper::Window(_) => self.applet_helper.icon_button("input-gaming-symbolic")
+            SurfaceIdWrapper::Window(_) => self
+                .applet_helper
+                .icon_button("input-gaming-symbolic")
                 .on_press(Message::TogglePopup)
                 .style(Button::Text)
                 .into(),
@@ -248,20 +255,21 @@ impl Application for Window {
                         .into()
                     }
                 };
-                self.applet_helper.popup_container(
-                    column(vec![
-                        text("Graphics Mode")
-                            .width(Length::Fill)
-                            .horizontal_alignment(Horizontal::Center)
-                            .size(24)
-                            .into(),
-                        horizontal_rule(1).into(),
-                        content,
-                    ])
-                    .padding(4)
-                    .spacing(4),
-                )
-                .into()
+                self.applet_helper
+                    .popup_container(
+                        column(vec![
+                            text("Graphics Mode")
+                                .width(Length::Fill)
+                                .horizontal_alignment(Horizontal::Center)
+                                .size(24)
+                                .into(),
+                            horizontal_rule(1).into(),
+                            content,
+                        ])
+                        .padding(8)
+                        .spacing(4),
+                    )
+                    .into()
             }
         }
     }

@@ -95,7 +95,7 @@ impl Application for Notifications {
                     let popup_settings = self.applet_helper.get_popup_settings(
                         window::Id::new(0),
                         new_id,
-                        (400, 300),
+                        None,
                         None,
                         None,
                     );
