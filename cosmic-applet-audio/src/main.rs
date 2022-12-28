@@ -118,7 +118,7 @@ impl Application for Audio {
                     let popup_settings = self.applet_helper.get_popup_settings(
                         window::Id::new(0),
                         new_id,
-                        Some((400, 300)),
+                        None,
                         None,
                         None,
                     );
