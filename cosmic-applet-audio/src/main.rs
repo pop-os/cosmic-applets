@@ -1,27 +1,24 @@
 use cosmic::iced::wayland::SurfaceIdWrapper;
 use cosmic::iced::widget;
+use cosmic::iced_native::alignment::Horizontal;
+use cosmic::theme::Svg;
 use iced::widget::Space;
 
-use cosmic::widget::{icon, toggler, horizontal_rule};
 use cosmic::applet::CosmicAppletHelper;
+use cosmic::widget::icon;
 use cosmic::Renderer;
 
-use cosmic::iced_native::window::Settings;
-use cosmic::iced_style::application::{self, Appearance};
-use cosmic::iced_style::svg;
-use cosmic::theme::{self, Svg};
-use cosmic::{iced_style, settings, Element, Theme};
 use cosmic::iced::{
-    self,
-    executor,
-    widget::{button, column, row, text, slider},
+    self, executor,
+    widget::{button, column, row, slider, text},
     window, Alignment, Application, Command, Length, Subscription,
 };
-
+use cosmic::iced_style::application::{self, Appearance};
+use cosmic::{Element, Theme};
 
 use iced::wayland::popup::{destroy_popup, get_popup};
-use iced::Color;
 use iced::widget::container;
+use iced::Color;
 
 mod pulse;
 use crate::pulse::DeviceInfo;
@@ -93,7 +90,7 @@ impl Application for Audio {
         String::from("Audio")
     }
 
-    fn theme(&self) -> Theme {   
+    fn theme(&self) -> Theme {
         self.theme
     }
 
@@ -114,12 +111,17 @@ impl Application for Audio {
                 if let Some(p) = self.popup.take() {
                     return destroy_popup(p);
                 } else {
-                    self.id_ctr += 1; 
+                    self.id_ctr += 1;
                     let new_id = window::Id::new(self.id_ctr);
                     self.popup.replace(new_id);
 
-                    let popup_settings =
-                        self.applet_helper.get_popup_settings(window::Id::new(0), new_id, (400, 300), None, None);
+                    let popup_settings = self.applet_helper.get_popup_settings(
+                        window::Id::new(0),
+                        new_id,
+                        None,
+                        None,
+                        None,
+                    );
                     return get_popup(popup_settings);
                 }
             }
@@ -216,7 +218,7 @@ impl Application for Audio {
                     self.pulse_state = PulseState::Disconnected
                 }
             },
-            Message::Ignore => {},
+            Message::Ignore => {}
         };
 
         Command::none()
@@ -226,14 +228,14 @@ impl Application for Audio {
         pulse::connect().map(Message::Pulse)
     }
 
-    fn view(&self, id: SurfaceIdWrapper) -> Element<Message> { 
+    fn view(&self, id: SurfaceIdWrapper) -> Element<Message> {
         match id {
             SurfaceIdWrapper::LayerSurface(_) => unimplemented!(),
-            SurfaceIdWrapper::Window(_) => self.applet_helper.icon_button(
-                &self.icon_name,
-            )
-            .on_press(Message::TogglePopup)
-            .into(),
+            SurfaceIdWrapper::Window(_) => self
+                .applet_helper
+                .icon_button(&self.icon_name)
+                .on_press(Message::TogglePopup)
+                .into(),
             SurfaceIdWrapper::Popup(_) => {
                 let out_f64 = VolumeLinear::from(
                     self.current_output
@@ -251,19 +253,19 @@ impl Application for Audio {
                 .0 * 100.0;
 
                 let sink = row![
-                    icon("status/audio-volume-high-symbolic", 24),
-                    slider(0.0..=100.0, out_f64, Message::SetOutputVolume),
-                    text(format!("{}%", out_f64.round()))
+                    icon("audio-volume-high-symbolic", 64).width(Length::Units(24)).height(Length::Units(24)).style(Svg::SymbolicActive),
+                    slider(0.0..=100.0, out_f64, Message::SetOutputVolume).width(Length::FillPortion(5)),
+                    text(format!("{}%", out_f64.round())).width(Length::FillPortion(1)).horizontal_alignment(Horizontal::Right)
                 ]
                 .spacing(10)
-                .padding(10);
+                .align_items(Alignment::Center);
                 let source = row![
-                    icon("devices/audio-input-microphone-symbolic", 24),
-                    slider(0.0..=100.0, in_f64, Message::SetInputVolume),
-                    text(format!("{}%", in_f64.round()))
+                    icon("audio-input-microphone-symbolic", 64).width(Length::Units(24)).height(Length::Units(24)).style(Svg::SymbolicActive),
+                    slider(0.0..=100.0, in_f64, Message::SetInputVolume).width(Length::FillPortion(5)),
+                    text(format!("{}%", in_f64.round())).width(Length::FillPortion(1)).horizontal_alignment(Horizontal::Right)
                 ]
                 .spacing(10)
-                .padding(10);
+                .align_items(Alignment::Center);
 
                 // TODO change these from helper functions to iced components for improved reusability
                 let output_drop = revealer(
@@ -304,11 +306,12 @@ impl Application for Audio {
                     .push(source)
                     .push(spacer())
                     .push(output_drop)
-                    .push(input_drop);
+                    .push(input_drop)
+                    .padding(8);
 
-                self.applet_helper.popup_container(
-                    container(content)
-                    ).into()
+                self.applet_helper
+                    .popup_container(container(content))
+                    .into()
             }
         }
     }

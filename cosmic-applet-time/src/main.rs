@@ -120,7 +120,7 @@ impl Application for Time {
                     let popup_settings = self.applet_helper.get_popup_settings(
                         window::Id::new(0),
                         new_id,
-                        (400, 300),
+                        None,
                         Some(60),
                         None,
                     );
@@ -166,7 +166,8 @@ impl Application for Time {
                     .align_items(Alignment::Start)
                     .spacing(12)
                     .padding([24, 0])
-                    .push(text(calendar));
+                    .push(text(calendar))
+                    .padding(8);
 
                 self.applet_helper.popup_container(content).into()
             }
