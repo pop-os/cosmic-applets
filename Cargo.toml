@@ -14,3 +14,6 @@ members = [
 
 [patch.crates-io]
 zbus = {git = "https://gitlab.freedesktop.org/dbus/zbus", branch = "main"}
+
+[profile.release]
+lto = "fat"
