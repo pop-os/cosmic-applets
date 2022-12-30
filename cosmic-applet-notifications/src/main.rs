@@ -19,6 +19,8 @@ use cosmic::{Element, Theme};
 
 use std::process;
 
+mod dbus;
+
 pub fn main() -> cosmic::iced::Result {
     let helper = CosmicAppletHelper::default();
     Notifications::run(helper.window_settings())
@@ -40,6 +42,7 @@ enum Message {
     TogglePopup,
     DoNotDisturb(bool),
     Settings,
+    Dbus(dbus::Message),
     Ignore,
 }
 
@@ -79,7 +82,7 @@ impl Application for Notifications {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        Subscription::none()
+        dbus::connect().map(Message::Dbus)
     }
 
     fn update(&mut self, message: Message) -> Command<Message> {
@@ -111,6 +114,7 @@ impl Application for Notifications {
                 Command::none()
             }
             Message::Ignore => Command::none(),
+            Message::Dbus(_) => Command::none(),
         }
     }
 

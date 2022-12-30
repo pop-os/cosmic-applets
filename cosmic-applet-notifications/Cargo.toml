@@ -9,3 +9,6 @@ icon-loader = { version = "0.3.6", features = ["gtk"] }
 libcosmic = { git = "https://github.com/pop-os/libcosmic/", branch = "master", default-features = false, features = ["wayland", "applet"] }
 nix = "0.24.1"
 zbus = { version = "3", default-features = false, features = ["tokio"] }
+serde = "1"
+futures = "0.3"
+tokio = { version = "1.20.1", features=["full"] }

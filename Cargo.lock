@@ -588,9 +588,13 @@ dependencies = [
 name = "cosmic-applet-notifications"
 version = "0.1.0"
 dependencies = [
+ "futures",
  "icon-loader",
  "libcosmic",
  "nix 0.24.3",
+ "serde",
+ "tokio",
+ "zbus",
 ]
 
 [[package]]
@@ -3968,6 +3972,7 @@ dependencies = [
  "signal-hook-registry",
  "socket2",
  "tokio-macros",
+ "tracing",
  "windows-sys 0.42.0",
 ]
 
@@ -4807,6 +4812,7 @@ dependencies = [
  "futures-sink",
  "futures-util",
  "hex",
+ "lazy_static",
  "nix 0.25.1",
  "once_cell",
  "ordered-stream",
@@ -4815,6 +4821,7 @@ dependencies = [
  "serde_repr",
  "sha1",
  "static_assertions",
+ "tokio",
  "tracing",
  "uds_windows",
  "winapi",
