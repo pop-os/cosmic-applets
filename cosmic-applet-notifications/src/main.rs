@@ -114,7 +114,10 @@ impl Application for Notifications {
                 Command::none()
             }
             Message::Ignore => Command::none(),
-            Message::Dbus(_) => Command::none(),
+            Message::Dbus(_) => {
+              println!("got a message!");
+              Command::none()
+            }
         }
     }
 

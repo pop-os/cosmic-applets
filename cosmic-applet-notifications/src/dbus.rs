@@ -1,4 +1,4 @@
-use zbus::{dbus_interface, Result, SignalContext, zvariant::{OwnedValue, Type}};
+use zbus::{dbus_interface, Result, SignalContext, zvariant::{OwnedValue, Type}, ConnectionBuilder};
 use cosmic::iced_native::subscription::{self, Subscription};
 
 use std::{ num::NonZeroU32,
@@ -31,14 +31,6 @@ pub enum Message {
 #[derive(Clone, Debug)]
 struct Notifications(mpsc::Sender<Message>);
 
-/*
-impl Notifications {
-  async fn send(&mut self, msg: Message) -> Result<()> {
-    self.0.send(msg).await.map_err(|e| zbus::Error::Unsupported)
-  }
-}
-*/
-
 #[dbus_interface(name = "org.freedesktop.Notifications")]
 #[allow(dead_code, non_snake_case)]
 impl Notifications {
@@ -53,6 +45,7 @@ impl Notifications {
         hints: Hints,
         expire_timeout: i32,
     ) -> u32 {
+      println!("got a message in dbus");
       let id = NonZeroU32::new(if replaces_id != 0 { replaces_id } else { let id = ID.load(Ordering::Relaxed).wrapping_add(1); ID.store(id, Ordering::Relaxed); id }).unwrap_or(NonZeroU32::new(1).unwrap());
       let _ = self.0.send(Message::Notify(Notification {
         id,
@@ -69,16 +62,7 @@ impl Notifications {
 
     async fn CloseNotification(&self, id: u32) {
       let _ = self.0.send(Message::CloseNotification(id));
-      // TODO
-      /*
-        if let Some(id) = NotificationId::new(id) {
-            self.0
-                .sender
-                .unbounded_send(Event::CloseNotification(id))
-                .unwrap();
-        }
-        // TODO error?
-        // */
+      // TODO error?
     }
 
     fn GetCapabilities(&self) -> Vec<&'static str> {
@@ -174,7 +158,7 @@ impl std::fmt::Debug for Hints {
 }
 
 enum State {
-  Connected,
+  Connected(mpsc::Receiver<Message>),
   Disconnected,
 }
 
@@ -183,8 +167,35 @@ pub fn connect() -> Subscription<Message> {
 
   subscription::unfold(std::any::TypeId::of::<Connect>(), State::Disconnected, |state| async move {
     match state {
-      State::Connected => (None, State::Connected),
-      State::Disconnected => (None, State::Disconnected),
+      State::Connected(mut recv) => {
+        println!("state is connected");
+        match recv.recv().await {
+          Some(msg) => {
+            println!("Got a message in recv");
+            (Some(msg), State::Connected(recv))
+          }
+          None => {
+            println!("recv failed for some reason");
+            (None, State::Disconnected)
+          }
+
+        }
+      }
+      State::Disconnected => {
+        let (send, recv) = mpsc::channel(10);
+        let notifications = Notifications(send);
+
+        let connection = ConnectionBuilder::session()
+          .and_then(|builder|  builder.name("org.freedesktop.Notifications"))
+          .and_then(|builder|  builder.serve_at("/org/freedesktop/Notifications", notifications))
+          .and_then(|builder|  Ok(builder.build()));
+
+        if let Ok(_) = connection.unwrap().await {
+          (None, State::Connected(recv))
+        } else {
+          (None, State::Disconnected)
+        }
+      }
     }
   })
 }
