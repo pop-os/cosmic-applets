@@ -4,6 +4,7 @@ use cosmic::applet::CosmicAppletHelper;
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced::wayland::SurfaceIdWrapper;
 use cosmic::iced::widget::{self, Row};
+use cosmic::iced_native::layout::Limits;
 use cosmic::iced_native::widget::Space;
 use cosmic::widget::{horizontal_rule, icon};
 use cosmic::Renderer;
@@ -106,13 +107,18 @@ impl Application for Power {
                     let new_id = window::Id::new(self.id_ctr);
                     self.popup.replace(new_id);
 
-                    let popup_settings = self.applet_helper.get_popup_settings(
+                    let mut popup_settings = self.applet_helper.get_popup_settings(
                         window::Id::new(0),
                         new_id,
                         None,
                         None,
                         None,
                     );
+                    popup_settings.positioner.size_limits = Limits::NONE
+                        .min_width(100)
+                        .min_height(100)
+                        .max_height(400)
+                        .max_width(500);
                     get_popup(popup_settings)
                 }
             }
