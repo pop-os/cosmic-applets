@@ -103,9 +103,9 @@ dependencies = [
 
 [[package]]
 name = "arc-swap"
-version = "1.5.1"
+version = "1.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "983cd8b9d4b02a6dc6ffa557262eb5858a27a0038ffffe21a0f133eaa819a164"
+checksum = "bddcadddf5e9015d310179a59bb28c4d4b9920ad0f11e8e14dbadf654890c9a6"
 
 [[package]]
 name = "arrayref"
@@ -136,9 +136,9 @@ dependencies = [
 
 [[package]]
 name = "async-broadcast"
-version = "0.4.1"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6d26004fe83b2d1cd3a97609b21e39f9a31535822210fe83205d2ce48866ea61"
+checksum = "1b19760fa2b7301cf235360ffd6d3558b1ed4249edd16d6cca8d690cee265b95"
 dependencies = [
  "event-listener",
  "futures-core",
@@ -643,7 +643,7 @@ dependencies = [
 [[package]]
 name = "cosmic-client-toolkit"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/cosmic-protocols#7d49ce0af1b38c3f2fa24288f5b9275a95440058"
+source = "git+https://github.com/pop-os/cosmic-protocols#1615d9048198d3beac93184259046cf546d63657"
 dependencies = [
  "cosmic-protocols",
  "gl_generator",
@@ -668,7 +668,7 @@ dependencies = [
 [[package]]
 name = "cosmic-panel-config"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/cosmic-panel?branch=master_jammy#d522b75e2eeff5b2f32a8e47c6ee6a06369b7f9e"
+source = "git+https://github.com/pop-os/cosmic-panel#9502913468dc7bf1cc17da6c1fcf1e274f43a769"
 dependencies = [
  "anyhow",
  "ron",
@@ -682,7 +682,7 @@ dependencies = [
 [[package]]
 name = "cosmic-protocols"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/cosmic-protocols#7d49ce0af1b38c3f2fa24288f5b9275a95440058"
+source = "git+https://github.com/pop-os/cosmic-protocols#1615d9048198d3beac93184259046cf546d63657"
 dependencies = [
  "bitflags",
  "wayland-backend",
@@ -1839,9 +1839,9 @@ dependencies = [
 
 [[package]]
 name = "half"
-version = "2.1.0"
+version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad6a9459c9c30b177b925162351f97e7d967c7ea8bab3b8352805327daf45554"
+checksum = "6c467d36af040b7b2681f5fddd27427f6da8d3d072f575a265e181d2f8e8d157"
 dependencies = [
  "crunchy",
 ]
@@ -1996,7 +1996,7 @@ dependencies = [
 [[package]]
 name = "iced"
 version = "0.6.0"
-source = "git+https://github.com/pop-os/libcosmic/?branch=master#f84410608b7a62335f197f96125d27d7df5f8a59"
+source = "git+https://github.com/pop-os/libcosmic/?branch=master#444e389496bb92a928b7731175f00f51ec4f0caa"
 dependencies = [
  "iced_core",
  "iced_futures",
@@ -2013,7 +2013,7 @@ dependencies = [
 [[package]]
 name = "iced_core"
 version = "0.6.2"
-source = "git+https://github.com/pop-os/libcosmic/?branch=master#f84410608b7a62335f197f96125d27d7df5f8a59"
+source = "git+https://github.com/pop-os/libcosmic/?branch=master#444e389496bb92a928b7731175f00f51ec4f0caa"
 dependencies = [
  "bitflags",
  "palette",
@@ -2023,7 +2023,7 @@ dependencies = [
 [[package]]
 name = "iced_futures"
 version = "0.5.1"
-source = "git+https://github.com/pop-os/libcosmic/?branch=master#f84410608b7a62335f197f96125d27d7df5f8a59"
+source = "git+https://github.com/pop-os/libcosmic/?branch=master#444e389496bb92a928b7731175f00f51ec4f0caa"
 dependencies = [
  "futures",
  "log",
@@ -2035,7 +2035,7 @@ dependencies = [
 [[package]]
 name = "iced_glow"
 version = "0.5.1"
-source = "git+https://github.com/pop-os/libcosmic/?branch=master#f84410608b7a62335f197f96125d27d7df5f8a59"
+source = "git+https://github.com/pop-os/libcosmic/?branch=master#444e389496bb92a928b7731175f00f51ec4f0caa"
 dependencies = [
  "bytemuck",
  "euclid",
@@ -2050,7 +2050,7 @@ dependencies = [
 [[package]]
 name = "iced_graphics"
 version = "0.5.0"
-source = "git+https://github.com/pop-os/libcosmic/?branch=master#f84410608b7a62335f197f96125d27d7df5f8a59"
+source = "git+https://github.com/pop-os/libcosmic/?branch=master#444e389496bb92a928b7731175f00f51ec4f0caa"
 dependencies = [
  "bitflags",
  "bytemuck",
@@ -2070,7 +2070,7 @@ dependencies = [
 [[package]]
 name = "iced_lazy"
 version = "0.3.0"
-source = "git+https://github.com/pop-os/libcosmic/?branch=master#f84410608b7a62335f197f96125d27d7df5f8a59"
+source = "git+https://github.com/pop-os/libcosmic/?branch=master#444e389496bb92a928b7731175f00f51ec4f0caa"
 dependencies = [
  "iced_native",
  "ouroboros 0.13.0",
@@ -2079,7 +2079,7 @@ dependencies = [
 [[package]]
 name = "iced_native"
 version = "0.7.0"
-source = "git+https://github.com/pop-os/libcosmic/?branch=master#f84410608b7a62335f197f96125d27d7df5f8a59"
+source = "git+https://github.com/pop-os/libcosmic/?branch=master#444e389496bb92a928b7731175f00f51ec4f0caa"
 dependencies = [
  "iced_core",
  "iced_futures",
@@ -2093,7 +2093,7 @@ dependencies = [
 [[package]]
 name = "iced_sctk"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic/?branch=master#f84410608b7a62335f197f96125d27d7df5f8a59"
+source = "git+https://github.com/pop-os/libcosmic/?branch=master#444e389496bb92a928b7731175f00f51ec4f0caa"
 dependencies = [
  "enum-repr",
  "futures",
@@ -2112,7 +2112,7 @@ dependencies = [
 [[package]]
 name = "iced_style"
 version = "0.5.1"
-source = "git+https://github.com/pop-os/libcosmic/?branch=master#f84410608b7a62335f197f96125d27d7df5f8a59"
+source = "git+https://github.com/pop-os/libcosmic/?branch=master#444e389496bb92a928b7731175f00f51ec4f0caa"
 dependencies = [
  "iced_core",
  "once_cell",
@@ -2122,7 +2122,7 @@ dependencies = [
 [[package]]
 name = "iced_swbuf"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic/?branch=master#f84410608b7a62335f197f96125d27d7df5f8a59"
+source = "git+https://github.com/pop-os/libcosmic/?branch=master#444e389496bb92a928b7731175f00f51ec4f0caa"
 dependencies = [
  "cosmic-text",
  "iced_graphics",
@@ -2137,7 +2137,7 @@ dependencies = [
 [[package]]
 name = "iced_wgpu"
 version = "0.7.0"
-source = "git+https://github.com/pop-os/libcosmic/?branch=master#f84410608b7a62335f197f96125d27d7df5f8a59"
+source = "git+https://github.com/pop-os/libcosmic/?branch=master#444e389496bb92a928b7731175f00f51ec4f0caa"
 dependencies = [
  "bitflags",
  "bytemuck",
@@ -2327,7 +2327,7 @@ checksum = "201de327520df007757c1f0adce6e827fe8562fbc28bfd9c15571c66ca1f5f79"
 [[package]]
 name = "libcosmic"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic/?branch=master#f84410608b7a62335f197f96125d27d7df5f8a59"
+source = "git+https://github.com/pop-os/libcosmic/?branch=master#444e389496bb92a928b7731175f00f51ec4f0caa"
 dependencies = [
  "apply",
  "cosmic-panel-config",
@@ -2660,9 +2660,9 @@ dependencies = [
 
 [[package]]
 name = "nom"
-version = "7.1.1"
+version = "7.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a8903e5a29a317527874d0402f867152a3d21c908bb0b933e416c65e301d4c36"
+checksum = "e5507769c4919c998e69e49c839d9dc6e693ede4cc4290d6ad8b41d4f09c548c"
 dependencies = [
  "memchr",
  "minimal-lexical",
@@ -2760,9 +2760,9 @@ dependencies = [
 
 [[package]]
 name = "once_cell"
-version = "1.16.0"
+version = "1.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "86f0b0d4bf799edbc74508c1e8bf170ff5f41238e5f8225603ca7caaae2b7860"
+checksum = "6f61fba1741ea2b3d6a1e3178721804bb716a68a6aeba1149b5d52e3d464ea66"
 
 [[package]]
 name = "ordered-float"
@@ -2785,9 +2785,9 @@ dependencies = [
 
 [[package]]
 name = "ordered-stream"
-version = "0.1.2"
+version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "01ca8c99d73c6e92ac1358f9f692c22c0bfd9c4701fa086f5d365c0d4ea818ea"
+checksum = "d4eb9ba3f3e42dbdd3b7b122de5ca169c81e93d561eb900da3a8c99bcfcf381a"
 dependencies = [
  "futures-core",
  "pin-project-lite",
@@ -3181,9 +3181,9 @@ checksum = "63e935c45e09cc6dcf00d2f0b2d630a58f4095320223d47fc68918722f0538b6"
 
 [[package]]
 name = "rangemap"
-version = "1.2.0"
+version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4fa20df61fa7daf0ecf0735b9841ced4a0d25962d1b1eb2dd28dcdd37bb688f2"
+checksum = "8b9283c6b06096b47afc7109834fdedab891175bb5241ee5d4f7d2546549f263"
 
 [[package]]
 name = "raqote"
@@ -3629,7 +3629,7 @@ checksum = "a507befe795404456341dfab10cef66ead4c041f62b8b11bbb92bffe5d0953e0"
 [[package]]
 name = "smithay"
 version = "0.3.0"
-source = "git+https://github.com/Smithay/smithay?rev=bcc4ee38b8936f57907c844a5e92cf6c0d7325e3#bcc4ee38b8936f57907c844a5e92cf6c0d7325e3"
+source = "git+https://github.com/Smithay/smithay?rev=c85e1e5#c85e1e520d14aaaadff1369bcbf88ea8204c0827"
 dependencies = [
  "appendlist",
  "bitflags",
@@ -3659,7 +3659,7 @@ dependencies = [
 [[package]]
 name = "smithay-client-toolkit"
 version = "0.16.0"
-source = "git+https://github.com/Smithay/client-toolkit?rev=73346019952f82ec7e4d4d15f5d66841b54e8b61#73346019952f82ec7e4d4d15f5d66841b54e8b61"
+source = "git+https://github.com/Smithay/client-toolkit?rev=3776d4a#3776d4aecf5bf94bbe0dc3bae3e64d5a07db7fd6"
 dependencies = [
  "bitflags",
  "calloop",
@@ -4329,14 +4329,14 @@ dependencies = [
 
 [[package]]
 name = "wayland-backend"
-version = "0.1.0-beta.14"
+version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "50598bd298e1e01de02ad3cdcfcfcdb961189e40fea41d9325bc07ba81f8740d"
+checksum = "fb23bfea266c92bb051ea36cce0eb1a52b743dc1c5f168021947eda79764656d"
 dependencies = [
  "cc",
  "downcast-rs",
  "io-lifetimes",
- "nix 0.25.1",
+ "nix 0.26.1",
  "scoped-tls",
  "smallvec",
  "wayland-sys",
@@ -4344,35 +4344,32 @@ dependencies = [
 
 [[package]]
 name = "wayland-client"
-version = "0.30.0-beta.14"
+version = "0.30.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ae06ffbf163db5cc6b40f9aa0ec66e7e1c22b979a327daf209814277f18834e1"
+checksum = "1a925bd68c8b652af4e6f11a32410bd31bf84061c5ef279ed081520c60f203b4"
 dependencies = [
  "bitflags",
- "futures-channel",
- "futures-core",
- "nix 0.25.1",
- "thiserror",
+ "nix 0.26.1",
  "wayland-backend",
  "wayland-scanner",
 ]
 
 [[package]]
 name = "wayland-cursor"
-version = "0.30.0-beta.14"
+version = "0.30.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e0ca2f99754a70feaddd3cb14acb152186db32841b7ac312487788ea33a78b1"
+checksum = "2d0c3a0d5b4b688b07b0442362d3ed6bf04724fcc16cd69ab6285b90dbc487aa"
 dependencies = [
- "nix 0.25.1",
+ "nix 0.26.1",
  "wayland-client",
  "xcursor",
 ]
 
 [[package]]
 name = "wayland-protocols"
-version = "0.30.0-beta.14"
+version = "0.30.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8491945e2705791d58695ae166bb05bfb1f01f2b7b848faa73966e3462269a2f"
+checksum = "7fefbeb8a360abe67ab7c2efe1d297a1a50ee011f5460791bc18870c26bb84e2"
 dependencies = [
  "bitflags",
  "wayland-backend",
@@ -4383,9 +4380,9 @@ dependencies = [
 
 [[package]]
 name = "wayland-protocols-misc"
-version = "0.1.0-beta.14"
+version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c3065c2e2b1a945d5f1afd549e098b6245cd3409317ef1e35a271dddd5ef4ab3"
+checksum = "897d4e99645e1ed9245e9e6b5efa78828d2b23b661016d63d55251243d812f8b"
 dependencies = [
  "bitflags",
  "wayland-backend",
@@ -4396,9 +4393,9 @@ dependencies = [
 
 [[package]]
 name = "wayland-protocols-wlr"
-version = "0.1.0-beta.14"
+version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "90968fc47879437fa8519182e07e25eb8173e866767728f2936cd28153f3444c"
+checksum = "fce991093320e4a6a525876e6b629ab24da25f9baef0c2e0080ad173ec89588a"
 dependencies = [
  "bitflags",
  "wayland-backend",
@@ -4410,26 +4407,25 @@ dependencies = [
 
 [[package]]
 name = "wayland-scanner"
-version = "0.30.0-beta.14"
+version = "0.30.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "28407261ad2bab693652acd84e8abcf1d2bef7270b5cc840ec8c6bed7c715838"
+checksum = "4834c14b3edf1d9986c83ca79b1e7e3afbe9874c7c144702f6467063259ce45d"
 dependencies = [
  "proc-macro2",
  "quick-xml",
  "quote",
- "syn",
 ]
 
 [[package]]
 name = "wayland-server"
-version = "0.30.0-beta.14"
+version = "0.30.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "246d94f203cd9b2993f130255e608639a335e57ec59a2e1ff40164ae4ed6ae40"
+checksum = "9062def387c1b1d80e366d8243c2b3bd6d9e4f343032a3e5da8d4aa03866cf89"
 dependencies = [
  "bitflags",
  "downcast-rs",
- "nix 0.25.1",
- "thiserror",
+ "io-lifetimes",
+ "nix 0.26.1",
  "wayland-backend",
  "wayland-scanner",
 ]
@@ -4740,7 +4736,7 @@ dependencies = [
 [[package]]
 name = "xdg-shell-wrapper-config"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/xdg-shell-wrapper?branch=master#1bf60b8eff599ef2ee68d5ce8d46f05b7807ffc6"
+source = "git+https://github.com/pop-os/xdg-shell-wrapper#82ce268c9c560be3728190a2255c849d3bae77e7"
 dependencies = [
  "serde",
  "wayland-protocols-wlr",
@@ -4789,7 +4785,7 @@ checksum = "c03b3e19c937b5b9bd8e52b1c88f30cce5c0d33d676cf174866175bb794ff658"
 [[package]]
 name = "zbus"
 version = "3.6.2"
-source = "git+https://gitlab.freedesktop.org/dbus/zbus?branch=main#9a8617bb8f2d92ef0a0104525f989fff0da4279b"
+source = "git+https://gitlab.freedesktop.org/dbus/zbus?branch=main#0b623738048395cdf398c18be24c9f00d8fdab58"
 dependencies = [
  "async-broadcast",
  "async-executor",
@@ -4826,7 +4822,7 @@ dependencies = [
 [[package]]
 name = "zbus_macros"
 version = "3.6.2"
-source = "git+https://gitlab.freedesktop.org/dbus/zbus?branch=main#9a8617bb8f2d92ef0a0104525f989fff0da4279b"
+source = "git+https://gitlab.freedesktop.org/dbus/zbus?branch=main#0b623738048395cdf398c18be24c9f00d8fdab58"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -4838,7 +4834,7 @@ dependencies = [
 [[package]]
 name = "zbus_names"
 version = "2.5.0"
-source = "git+https://gitlab.freedesktop.org/dbus/zbus?branch=main#9a8617bb8f2d92ef0a0104525f989fff0da4279b"
+source = "git+https://gitlab.freedesktop.org/dbus/zbus?branch=main#0b623738048395cdf398c18be24c9f00d8fdab58"
 dependencies = [
  "serde",
  "static_assertions",
@@ -4867,7 +4863,7 @@ dependencies = [
 [[package]]
 name = "zvariant"
 version = "3.10.0"
-source = "git+https://gitlab.freedesktop.org/dbus/zbus?branch=main#9a8617bb8f2d92ef0a0104525f989fff0da4279b"
+source = "git+https://gitlab.freedesktop.org/dbus/zbus?branch=main#0b623738048395cdf398c18be24c9f00d8fdab58"
 dependencies = [
  "byteorder",
  "enumflags2",
@@ -4892,7 +4888,7 @@ dependencies = [
 [[package]]
 name = "zvariant_derive"
 version = "3.10.0"
-source = "git+https://gitlab.freedesktop.org/dbus/zbus?branch=main#9a8617bb8f2d92ef0a0104525f989fff0da4279b"
+source = "git+https://gitlab.freedesktop.org/dbus/zbus?branch=main#0b623738048395cdf398c18be24c9f00d8fdab58"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
