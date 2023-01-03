@@ -624,6 +624,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "calloop",
+ "cosmic-client-toolkit",
  "cosmic-protocols",
  "futures",
  "i18n-embed",
@@ -634,7 +635,6 @@ dependencies = [
  "once_cell",
  "pretty_env_logger",
  "rust-embed",
- "smithay-client-toolkit",
  "wayland-backend",
  "wayland-client",
  "xdg",
