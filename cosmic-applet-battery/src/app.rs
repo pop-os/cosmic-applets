@@ -111,7 +111,7 @@ impl Application for CosmicBatteryApplet {
                 }
             }
             Message::SetScreenBrightness(brightness) => {
-                self.screen_brightness = brightness as f64 / 100.0;
+                self.screen_brightness = (brightness as f64 / 100.0).max(0.01).min(1.0);
                 if let Some(tx) = &self.screen_sender {
                     let _ = tx.send(ScreenBacklightRequest::Set(self.screen_brightness));
                 }
@@ -147,7 +147,11 @@ impl Application for CosmicBatteryApplet {
                         None,
                         None,
                     );
-                    popup_settings.positioner.size_limits = Limits::NONE.max_width(400).min_width(300).min_height(200).max_height(1080);
+                    popup_settings.positioner.size_limits = Limits::NONE
+                        .max_width(400)
+                        .min_width(300)
+                        .min_height(200)
+                        .max_height(1080);
                     return get_popup(popup_settings);
                 }
             }
@@ -224,7 +228,8 @@ impl Application for CosmicBatteryApplet {
                             horizontal_rule(1),
                             toggler(fl!("max-charge"), self.charging_limit, |_| {
                                 Message::SetChargingLimit(!self.charging_limit)
-                            }).width(Length::Fill),
+                            })
+                            .width(Length::Fill),
                             horizontal_rule(1),
                             row![
                                 icon("display-brightness-symbolic", 24)
@@ -236,7 +241,7 @@ impl Application for CosmicBatteryApplet {
                                     .width(Length::Units(24))
                                     .height(Length::Units(24)),
                                 slider(
-                                    0..=100,
+                                    1..=100,
                                     (self.screen_brightness * 100.0) as i32,
                                     Message::SetScreenBrightness
                                 ),
