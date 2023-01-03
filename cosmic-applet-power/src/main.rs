@@ -179,16 +179,16 @@ impl Application for Power {
                 .spacing(24)
                 .padding([0, 24]);
 
-                let content = column![]
-                    .align_items(Alignment::Start)
-                    .spacing(12)
-                    .padding([24, 0])
-                    .push(settings)
-                    .push(horizontal_rule(1))
-                    .push(session)
-                    .push(horizontal_rule(1))
-                    .push(power)
-                    .padding(8);
+                let content = column![
+                    settings,
+                    horizontal_rule(1),
+                    session,
+                    horizontal_rule(1),
+                    power
+                ]
+                .align_items(Alignment::Start)
+                .spacing(12)
+                .padding([8, 0]);
 
                 self.applet_helper.popup_container(content).into()
             }
