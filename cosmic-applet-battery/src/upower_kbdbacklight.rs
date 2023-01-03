@@ -64,28 +64,23 @@ async fn start_listening<I: Copy>(
             };
             let (tx, rx) = unbounded_channel();
 
+            let b = kbd_proxy.get_brightness().await.unwrap_or_default() as f64
+                / kbd_proxy.get_max_brightness().await.unwrap_or(1) as f64;
             return (
-                Some((
-                    id,
-                    KeyboardBacklightUpdate::Init(
-                        tx,
-                        kbd_proxy.get_brightness().await.unwrap_or_default() as f64,
-                    ),
-                )),
+                Some((id, KeyboardBacklightUpdate::Init(tx, b))),
                 State::Waiting(kbd_proxy, rx),
             );
         }
         State::Waiting(proxy, mut rx) => match rx.recv().await {
             Some(req) => match req {
-                KeyboardBacklightRequest::Get => (
-                    Some((
-                        id,
-                        KeyboardBacklightUpdate::Update(
-                            proxy.get_brightness().await.unwrap_or_default() as f64,
-                        ),
-                    )),
-                    State::Waiting(proxy, rx),
-                ),
+                KeyboardBacklightRequest::Get => {
+                    let b = proxy.get_brightness().await.unwrap_or_default() as f64
+                        / proxy.get_max_brightness().await.unwrap_or(1) as f64;
+                    (
+                        Some((id, KeyboardBacklightUpdate::Update(b))),
+                        State::Waiting(proxy, rx),
+                    )
+                }
                 KeyboardBacklightRequest::Set(value) => {
                     if let Ok(max_brightness) = proxy.get_max_brightness().await {
                         let value = value.clamp(0., 1.) * (max_brightness as f64);
