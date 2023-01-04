@@ -8,5 +8,5 @@ edition = "2021"
 [dependencies]
 zbus = "3.4"
 libcosmic = { git = "https://github.com/pop-os/libcosmic/", branch = "master", default-features = false, features = ["wayland", "applet"] }
-sctk = { package = "smithay-client-toolkit", git = "https://github.com/Smithay/client-toolkit", rev = "73346019952f82ec7e4d4d15f5d66841b54e8b61" }
+sctk = { package = "smithay-client-toolkit", git = "https://github.com/Smithay/client-toolkit", rev = "3776d4a" }
 
