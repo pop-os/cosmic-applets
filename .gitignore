@@ -6,6 +6,7 @@ _build/
 builddir/
 vendor/
 vendor.tar
+/result
 
 build-aux/app
 build-aux/.flatpak-builder/
