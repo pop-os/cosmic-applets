@@ -602,7 +602,7 @@ dependencies = [
  "libpulse-binding",
  "libpulse-glib-binding",
  "logind-zbus",
- "nix 0.24.3",
+ "nix 0.26.1",
  "smithay-client-toolkit",
  "tokio",
  "zbus",
