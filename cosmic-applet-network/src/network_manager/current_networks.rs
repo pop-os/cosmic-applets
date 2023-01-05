@@ -39,6 +39,25 @@ pub async fn active_connections(
             continue;
         }
         for device in connection.devices().await.unwrap_or_default() {
+            let mut ip_addresses = Vec::new();
+            for address_data in connection
+                .ip4_config()
+                .await?
+                .address_data()
+                .await
+                .unwrap_or_default()
+            {
+                ip_addresses.push(IpAddr::V4(address_data.address));
+            }
+            for address_data in connection
+                .ip6_config()
+                .await?
+                .address_data()
+                .await
+                .unwrap_or_default()
+            {
+                ip_addresses.push(IpAddr::V6(address_data.address));
+            }
             match device
                 .downcast_to_device()
                 .await
@@ -46,25 +65,6 @@ pub async fn active_connections(
                 .and_then(|inner| inner)
             {
                 Some(SpecificDevice::Wired(wired_device)) => {
-                    let mut ip_addresses = Vec::new();
-                    for address_data in device
-                        .ip4_config()
-                        .await?
-                        .address_data()
-                        .await
-                        .unwrap_or_default()
-                    {
-                        ip_addresses.push(IpAddr::V4(address_data.address));
-                    }
-                    for address_data in device
-                        .ip6_config()
-                        .await?
-                        .address_data()
-                        .await
-                        .unwrap_or_default()
-                    {
-                        ip_addresses.push(IpAddr::V6(address_data.address));
-                    }
                     info.push(ActiveConnectionInfo::Wired {
                         name: connection.id().await?,
                         hw_address: wired_device.hw_address().await?,
@@ -76,6 +76,7 @@ pub async fn active_connections(
                     if let Ok(access_point) = wireless_device.active_access_point().await {
                         info.push(ActiveConnectionInfo::WiFi {
                             name: String::from_utf8_lossy(&access_point.ssid().await?).into_owned(),
+                            ip_addresses,
                             hw_address: wireless_device.hw_address().await?,
                             flags: access_point.flags().await?,
                             rsn_flags: access_point.rsn_flags().await?,
@@ -84,25 +85,6 @@ pub async fn active_connections(
                     }
                 }
                 Some(SpecificDevice::WireGuard(_)) => {
-                    let mut ip_addresses = Vec::new();
-                    for address_data in connection
-                        .ip4_config()
-                        .await?
-                        .address_data()
-                        .await
-                        .unwrap_or_default()
-                    {
-                        ip_addresses.push(IpAddr::V4(address_data.address));
-                    }
-                    for address_data in connection
-                        .ip6_config()
-                        .await?
-                        .address_data()
-                        .await
-                        .unwrap_or_default()
-                    {
-                        ip_addresses.push(IpAddr::V6(address_data.address));
-                    }
                     info.push(ActiveConnectionInfo::Vpn {
                         name: connection.id().await?,
                         ip_addresses,
@@ -135,6 +117,7 @@ pub enum ActiveConnectionInfo {
     },
     WiFi {
         name: String,
+        ip_addresses: Vec<IpAddr>,
         hw_address: String,
         flags: ApFlags,
         rsn_flags: ApSecurityFlags,
@@ -144,4 +127,14 @@ pub enum ActiveConnectionInfo {
         name: String,
         ip_addresses: Vec<IpAddr>,
     },
+}
+
+impl ActiveConnectionInfo {
+    pub fn name(&self) -> String {
+        match &self {
+            ActiveConnectionInfo::Wired { name, .. } => name.clone(),
+            ActiveConnectionInfo::WiFi { name, .. } => name.clone(),
+            ActiveConnectionInfo::Vpn { name, .. } => name.clone(),
+        }
+    }
 }
