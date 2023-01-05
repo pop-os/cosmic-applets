@@ -79,13 +79,13 @@ impl Application for Window {
         let mut window = Window::default();
         let pixels = std::env::var("COSMIC_PANEL_SIZE")
             .ok()
-            .and_then(|size| match size.parse::<PanelSize>() {
-                Ok(PanelSize::XL) => Some(64),
-                Ok(PanelSize::L) => Some(36),
-                Ok(PanelSize::M) => Some(24),
-                Ok(PanelSize::S) => Some(16),
-                Ok(PanelSize::XS) => Some(12),
-                Err(_) => Some(12),
+            .map(|size| match size.parse::<PanelSize>() {
+                Ok(PanelSize::XL) => 64,
+                Ok(PanelSize::L) => 36,
+                Ok(PanelSize::M) => 24,
+                Ok(PanelSize::S) => 16,
+                Ok(PanelSize::XS) => 12,
+                Err(_) => 12,
             })
             .unwrap_or(16);
         window.icon_size = pixels;
@@ -96,10 +96,7 @@ impl Application for Window {
                 Err(_) => PanelAnchor::Top,
             })
             .unwrap_or(PanelAnchor::Top);
-        (
-            window,
-            Command::perform(dbus::init(), |dbus_init| Message::DBusInit(dbus_init)),
-        )
+        (window, Command::perform(dbus::init(), Message::DBusInit))
     }
 
     fn title(&self) -> String {
@@ -202,28 +199,28 @@ impl Application for Window {
                                 "Integrated Graphics",
                                 Graphics::Integrated,
                                 self.graphics_mode.map(|g| g.inner()),
-                                |g| Message::SelectGraphicsMode(g),
+                                Message::SelectGraphicsMode,
                             )
                             .into(),
                             radio(
                                 "Nvidia Graphics",
                                 Graphics::Nvidia,
                                 self.graphics_mode.map(|g| g.inner()),
-                                |g| Message::SelectGraphicsMode(g),
+                                Message::SelectGraphicsMode,
                             )
                             .into(),
                             radio(
                                 "Hybrid Graphics",
                                 Graphics::Hybrid,
                                 self.graphics_mode.map(|g| g.inner()),
-                                |g| Message::SelectGraphicsMode(g),
+                                Message::SelectGraphicsMode,
                             )
                             .into(),
                             radio(
                                 "Compute Graphics",
                                 Graphics::Compute,
                                 self.graphics_mode.map(|g| g.inner()),
-                                |g| Message::SelectGraphicsMode(g),
+                                Message::SelectGraphicsMode,
                             )
                             .into(),
                         ];
