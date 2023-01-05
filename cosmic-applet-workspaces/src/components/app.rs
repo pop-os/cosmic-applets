@@ -23,14 +23,16 @@ use crate::wayland::{WorkspaceEvent, WorkspaceList};
 use crate::wayland_subscription::{workspaces, WorkspacesUpdate};
 
 pub fn run() -> cosmic::iced::Result {
-    let mut settings = Settings::default();
-    settings.initial_surface = InitialSurface::XdgWindow(SctkWindowSettings {
-        iced_settings: cosmic::iced_native::window::Settings {
-            size: (32, 32),
+    let settings = Settings {
+        initial_surface: InitialSurface::XdgWindow(SctkWindowSettings {
+            iced_settings: cosmic::iced_native::window::Settings {
+                size: (32, 32),
+                ..Default::default()
+            },
             ..Default::default()
-        },
+        }),
         ..Default::default()
-    });
+    };
     IcedWorkspacesApplet::run(settings)
 }
 

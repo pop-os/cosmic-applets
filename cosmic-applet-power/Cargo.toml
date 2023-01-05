@@ -11,7 +11,7 @@ libpulse-glib-binding = "2.25.0"
 tokio = { version = "1.20.1", features=["full"] }
 libcosmic = { git = "https://github.com/pop-os/libcosmic/", branch = "master", default-features = false, features = ["wayland", "applet"] }
 sctk = { package = "smithay-client-toolkit", git = "https://github.com/Smithay/client-toolkit", rev = "3776d4a" }
-nix = "0.24.1"
+nix = "0.26.1"
 
 # Until the 3.6.3 release, need the implementation of clone on zbus::Error
 [dependencies.zbus]

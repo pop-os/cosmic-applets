@@ -117,12 +117,10 @@ pub fn spawn_workspaces(tx: mpsc::Sender<WorkspaceList>) -> SyncSender<Workspace
                                 } else {
                                     w_i.wrapping_add(1)
                                 }
+                            } else if w_i == 0 {
+                                max_w
                             } else {
-                                if w_i == 0 {
-                                    max_w
-                                } else {
-                                    w_i.wrapping_sub(1)
-                                }
+                                w_i.wrapping_sub(1)
                             };
                             if let Some(w) = w_g.workspaces.get(d_i) {
                                 w.handle.activate();

@@ -111,7 +111,7 @@ impl Application for CosmicBatteryApplet {
                 }
             }
             Message::SetScreenBrightness(brightness) => {
-                self.screen_brightness = (brightness as f64 / 100.0).max(0.01).min(1.0);
+                self.screen_brightness = (brightness as f64 / 100.0).clamp(0.01, 1.0);
                 if let Some(tx) = &self.screen_sender {
                     let _ = tx.send(ScreenBacklightRequest::Set(self.screen_brightness));
                 }
