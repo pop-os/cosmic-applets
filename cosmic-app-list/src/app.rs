@@ -218,7 +218,7 @@ impl Application for CosmicAppList {
                     let new_id = window::Id::new(self.surface_id_ctr);
                     self.popup.replace(new_id);
                     toplevel_group.popup.replace(new_id);
-                    
+
                     let mut popup_settings = self.applet_helper.get_popup_settings(
                         window::Id::new(0),
                         new_id,
@@ -271,11 +271,11 @@ impl Application for CosmicAppList {
             Message::Toplevel(event) => {
                 match event {
                     ToplevelUpdate::AddToplevel(handle, info) => {
-                        if info.app_id == "" {
+                        if info.app_id.is_empty() {
                             return Command::none();
                         }
                         if let Some(i) = self.toplevel_list.iter().position(
-                            |Toplevel { desktop_info, .. }| &desktop_info.id == &info.app_id,
+                            |Toplevel { desktop_info, .. }| desktop_info.id == info.app_id,
                         ) {
                             self.toplevel_list[i].toplevels.push((handle, info));
                         } else {
@@ -309,7 +309,7 @@ impl Application for CosmicAppList {
                                  desktop_info,
                                  ..
                              }| {
-                                if let Some(ret) = toplevels.iter().position(|t| &t.0 == &handle) {
+                                if let Some(ret) = toplevels.iter().position(|t| t.0 == handle) {
                                     toplevels.remove(ret);
                                     toplevels.is_empty()
                                         && !self.config.favorites.contains(&desktop_info.id)
@@ -326,7 +326,7 @@ impl Application for CosmicAppList {
                     }
                     ToplevelUpdate::UpdateToplevel(handle, info) => {
                         // TODO probably want to make sure it is removed
-                        if info.app_id == "" {
+                        if info.app_id.is_empty() {
                             return Command::none();
                         }
                         'toplevel_loop: for toplevel_list in &mut self.toplevel_list {
@@ -351,12 +351,12 @@ impl Application for CosmicAppList {
             Message::Exec(exec_str) => {
                 let mut exec = shlex::Shlex::new(&exec_str);
                 let mut cmd = match exec.next() {
-                    Some(cmd) if !cmd.contains("=") => tokio::process::Command::new(cmd),
+                    Some(cmd) if !cmd.contains('=') => tokio::process::Command::new(cmd),
                     _ => return Command::none(),
                 };
                 for arg in exec {
                     // TODO handle "%" args here if necessary?
-                    if !arg.starts_with("%") {
+                    if !arg.starts_with('%') {
                         cmd.arg(arg);
                     }
                 }
@@ -398,7 +398,10 @@ impl Application for CosmicAppList {
                          desktop_info,
                          ..
                      }| {
-                        let cosmic_icon = cosmic::widget::icon(Path::new(&desktop_info.icon), self.applet_helper.suggested_size().0);
+                        let cosmic_icon = cosmic::widget::icon(
+                            Path::new(&desktop_info.icon),
+                            self.applet_helper.suggested_size().0,
+                        );
                         // let icon = if desktop_info.icon.extension() == Some(&OsStr::new("svg")) {
                         //     svg::Handle::from_path(&desktop_info.icon);
                         //     svg::Svg::new(handle)
@@ -433,22 +436,30 @@ impl Application for CosmicAppList {
                             .collect_vec();
                         dots.push(vertical_space(Length::Units(4)).into());
                         let icon_wrapper = match &self.applet_helper.anchor {
-                            PanelAnchor::Left => row(vec![column(dots).spacing(4).into(), cosmic_icon.into()])
-                                .align_items(iced::Alignment::Center)
-                                .spacing(4)
-                                .into(),
-                            PanelAnchor::Right => row(vec![cosmic_icon.into(), column(dots).spacing(4).into()])
-                                .align_items(iced::Alignment::Center)
-                                .spacing(4)
-                                .into(),
-                            PanelAnchor::Top => column(vec![row(dots).spacing(4).into(), cosmic_icon.into()])
-                                .align_items(iced::Alignment::Center)
-                                .spacing(4)
-                                .into(),
-                            PanelAnchor::Bottom => column(vec![cosmic_icon.into(), row(dots).spacing(4).into()])
-                                .align_items(iced::Alignment::Center)
-                                .spacing(4)
-                                .into(),
+                            PanelAnchor::Left => {
+                                row(vec![column(dots).spacing(4).into(), cosmic_icon.into()])
+                                    .align_items(iced::Alignment::Center)
+                                    .spacing(4)
+                                    .into()
+                            }
+                            PanelAnchor::Right => {
+                                row(vec![cosmic_icon.into(), column(dots).spacing(4).into()])
+                                    .align_items(iced::Alignment::Center)
+                                    .spacing(4)
+                                    .into()
+                            }
+                            PanelAnchor::Top => {
+                                column(vec![row(dots).spacing(4).into(), cosmic_icon.into()])
+                                    .align_items(iced::Alignment::Center)
+                                    .spacing(4)
+                                    .into()
+                            }
+                            PanelAnchor::Bottom => {
+                                column(vec![cosmic_icon.into(), row(dots).spacing(4).into()])
+                                    .align_items(iced::Alignment::Center)
+                                    .spacing(4)
+                                    .into()
+                            }
                         };
                         let mut icon_button = cosmic::widget::button(Button::Text)
                             .custom(vec![icon_wrapper])
@@ -463,8 +474,10 @@ impl Application for CosmicAppList {
                         }
 
                         // TODO tooltip on hover
-                        let icon_button = mouse_listener(icon_button.width(Length::Shrink).height(Length::Shrink))
-                            .on_right_release(Message::Popup(desktop_info.id.clone()));
+                        let icon_button = mouse_listener(
+                            icon_button.width(Length::Shrink).height(Length::Shrink),
+                        )
+                        .on_right_release(Message::Popup(desktop_info.id.clone()));
                         let icon_button = if let Some(tracker) = self.rectangle_tracker.as_ref() {
                             tracker.container(*id, icon_button).into()
                         } else {
@@ -495,7 +508,9 @@ impl Application for CosmicAppList {
                             .align_items(Alignment::Center)
                             .height(Length::Fill)
                             .width(Length::Fill),
-                    ).height(Length::Fill).width(Length::Fill),
+                    )
+                    .height(Length::Fill)
+                    .width(Length::Fill),
                 };
                 if self.popup.is_some() {
                     mouse_listener(content)
@@ -554,19 +569,19 @@ impl Application for CosmicAppList {
                             .on_press(Message::Favorite(desktop_info.id.clone()))
                     });
 
-                    if toplevels.len() == 1 {
-                        content = content.push(
+                    content = match toplevels.len() {
+                        0 => content,
+                        1 => content.push(
                             cosmic::widget::button(Button::Text)
                                 .custom(vec![iced::widget::text(fl!("quit")).into()])
                                 .on_press(Message::Quit(desktop_info.id.clone())),
-                        )
-                    } else if toplevels.len() > 1 {
-                        content = content.push(
+                        ),
+                        _ => content.push(
                             cosmic::widget::button(Button::Text)
                                 .custom(vec![iced::widget::text(&fl!("quit-all")).into()])
                                 .on_press(Message::Quit(desktop_info.id.clone())),
-                        )
-                    }
+                        ),
+                    };
                     // return Container::new(Container::new(content.width(Length::Shrink).height(Length::Shrink)).style(
                     //     cosmic::Container::Custom(|theme| container::Appearance {
                     //         text_color: Some(theme.cosmic().on_bg_color().into()),
@@ -578,7 +593,7 @@ impl Application for CosmicAppList {
                     // )).into();
                     return self.applet_helper.popup_container(content).into();
                 }
-                return horizontal_space(Length::Units(1)).into();
+                horizontal_space(Length::Units(1)).into()
             }
         }
     }

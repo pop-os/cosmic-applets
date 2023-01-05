@@ -38,10 +38,10 @@ async fn start_listening<I: Copy>(id: I, state: State) -> (Option<(I, ToplevelUp
             std::thread::spawn(move || {
                 toplevel_handler(toplevel_tx, calloop_rx);
             });
-            return (
+            (
                 Some((id, ToplevelUpdate::Init(calloop_tx.clone()))),
                 State::Waiting(toplevel_rx, calloop_tx),
-            );
+            )
         }
         State::Waiting(mut rx, tx) => match rx.next().await {
             Some(u) => (Some((id, u)), State::Waiting(rx, tx)),
