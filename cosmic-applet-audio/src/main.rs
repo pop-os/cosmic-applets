@@ -22,7 +22,7 @@ use iced::Color;
 
 mod pulse;
 use crate::pulse::DeviceInfo;
-use libpulse_binding::volume::{Volume, VolumeLinear};
+use libpulse_binding::volume::VolumeLinear;
 
 pub fn main() -> cosmic::iced::Result {
     let helper = CosmicAppletHelper::default();
@@ -134,7 +134,7 @@ impl Application for Audio {
                     if let Some(device) = &self.current_output {
                         if let Some(name) = &device.name {
                             connection.send(pulse::Message::SetSinkVolumeByName(
-                                name.clone().to_string(),
+                                name.clone(),
                                 device.volume,
                             ))
                         }
@@ -151,7 +151,7 @@ impl Application for Audio {
                         if let Some(name) = &device.name {
                             println!("increasing volume of {}", name);
                             connection.send(pulse::Message::SetSourceVolumeByName(
-                                name.clone().to_string(),
+                                name.clone(),
                                 device.volume,
                             ))
                         }
@@ -241,28 +241,40 @@ impl Application for Audio {
                     self.current_output
                         .as_ref()
                         .map(|o| o.volume.avg())
-                        .unwrap_or(Volume::default()),
+                        .unwrap_or_default(),
                 )
                 .0 * 100.0;
                 let in_f64 = VolumeLinear::from(
                     self.current_input
                         .as_ref()
                         .map(|o| o.volume.avg())
-                        .unwrap_or(Volume::default()),
+                        .unwrap_or_default(),
                 )
                 .0 * 100.0;
 
                 let sink = row![
-                    icon("audio-volume-high-symbolic", 64).width(Length::Units(24)).height(Length::Units(24)).style(Svg::SymbolicActive),
-                    slider(0.0..=100.0, out_f64, Message::SetOutputVolume).width(Length::FillPortion(5)),
-                    text(format!("{}%", out_f64.round())).width(Length::FillPortion(1)).horizontal_alignment(Horizontal::Right)
+                    icon("audio-volume-high-symbolic", 64)
+                        .width(Length::Units(24))
+                        .height(Length::Units(24))
+                        .style(Svg::SymbolicActive),
+                    slider(0.0..=100.0, out_f64, Message::SetOutputVolume)
+                        .width(Length::FillPortion(5)),
+                    text(format!("{}%", out_f64.round()))
+                        .width(Length::FillPortion(1))
+                        .horizontal_alignment(Horizontal::Right)
                 ]
                 .spacing(10)
                 .align_items(Alignment::Center);
                 let source = row![
-                    icon("audio-input-microphone-symbolic", 64).width(Length::Units(24)).height(Length::Units(24)).style(Svg::SymbolicActive),
-                    slider(0.0..=100.0, in_f64, Message::SetInputVolume).width(Length::FillPortion(5)),
-                    text(format!("{}%", in_f64.round())).width(Length::FillPortion(1)).horizontal_alignment(Horizontal::Right)
+                    icon("audio-input-microphone-symbolic", 64)
+                        .width(Length::Units(24))
+                        .height(Length::Units(24))
+                        .style(Svg::SymbolicActive),
+                    slider(0.0..=100.0, in_f64, Message::SetInputVolume)
+                        .width(Length::FillPortion(5)),
+                    text(format!("{}%", in_f64.round()))
+                        .width(Length::FillPortion(1))
+                        .horizontal_alignment(Horizontal::Right)
                 ]
                 .spacing(10)
                 .align_items(Alignment::Center);
@@ -322,14 +334,14 @@ fn spacer() -> iced::widget::Space {
     Space::with_width(Length::Fill)
 }
 
-fn revealer<'a>(
+fn revealer(
     open: bool,
-    title: &'a str,
+    title: &str,
     selected: String,
     options: Vec<String>,
     toggle: Message,
     _change: Message,
-) -> widget::Column<'a, Message, Renderer> {
+) -> widget::Column<Message, Renderer> {
     if open {
         options.iter().fold(
             column![revealer_head(open, title, selected, toggle)].width(Length::Fill),
@@ -340,9 +352,9 @@ fn revealer<'a>(
     }
 }
 
-fn revealer_head<'a>(
+fn revealer_head(
     _open: bool,
-    title: &'a str,
+    title: &str,
     selected: String,
     toggle: Message,
 ) -> widget::Button<Message, Renderer> {

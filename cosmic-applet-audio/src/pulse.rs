@@ -8,7 +8,6 @@ use libpulse_binding::{
     callbacks::ListResult,
     context::{
         introspect::{Introspector, SinkInfo, SourceInfo},
-        subscribe::{Facility, InterestMaskSet, Operation},
         Context,
     },
     error::PAErr,
@@ -80,8 +79,7 @@ pub struct Connection(tokio::sync::mpsc::Sender<Message>);
 
 impl Connection {
     pub fn send(&mut self, message: Message) {
-        let _ = self
-            .0
+        self.0
             .try_send(message)
             .expect("Send message to PulseAudio server");
     }
@@ -198,7 +196,7 @@ impl PulseHandle {
     }
 
     fn blocking_send_disconnected(sender: &mut tokio::sync::mpsc::Sender<Message>) {
-        sender.blocking_send(Message::Disconnected);
+        sender.blocking_send(Message::Disconnected).unwrap()
     }
 
     fn blocking_send_connected(sender: &mut tokio::sync::mpsc::Sender<Message>) {
@@ -209,6 +207,7 @@ impl PulseHandle {
         sender.send(Message::Disconnected).await.unwrap()
     }
 
+    #[allow(dead_code)]
     async fn send_connected(sender: &mut tokio::sync::mpsc::Sender<Message>) {
         sender.send(Message::Connected).await.unwrap()
     }
@@ -258,7 +257,7 @@ impl PulseServer {
         context
             .borrow_mut()
             .connect(None, pulse::context::FlagSet::NOFLAGS, None)
-            .map_err(|e| PulseServerError::PAErr(e))?;
+            .map_err(PulseServerError::PAErr)?;
 
         Ok(PulseServer {
             mainloop,
@@ -308,13 +307,11 @@ impl PulseServer {
                 }
             },
         );
-        self.wait_for_result(operation)
-            .and_then(|_| {
-                list.borrow_mut().take().ok_or(PulseServerError::Misc(
-                    "get_sinks(): failed to wait for operation",
-                ))
-            })
-            .and_then(|result| Ok(result))
+        self.wait_for_result(operation).and_then(|_| {
+            list.borrow_mut().take().ok_or(PulseServerError::Misc(
+                "get_sinks(): failed to wait for operation",
+            ))
+        })
     }
 
     // Get a list of input devices
@@ -329,13 +326,11 @@ impl PulseServer {
                 }
             },
         );
-        self.wait_for_result(operation)
-            .and_then(|_| {
-                list.borrow_mut().take().ok_or(PulseServerError::Misc(
-                    "get_sources(): Failed to wait for operation",
-                ))
-            })
-            .and_then(|result| Ok(result))
+        self.wait_for_result(operation).and_then(|_| {
+            list.borrow_mut().take().ok_or(PulseServerError::Misc(
+                "get_sources(): Failed to wait for operation",
+            ))
+        })
     }
 
     pub fn get_server_info(&mut self) -> Result<ServerInfo, PulseServerError> {
@@ -355,7 +350,7 @@ impl PulseServer {
         let server_info = self.get_server_info();
         match server_info {
             Ok(info) => {
-                let name = &info.default_sink_name.unwrap_or(String::new());
+                let name = &info.default_sink_name.unwrap_or_default();
                 let device = Rc::new(RefCell::new(Some(None)));
                 let dev_ref = device.clone();
                 let op = self.introspector.get_sink_info_by_name(
@@ -368,7 +363,7 @@ impl PulseServer {
                 );
                 self.wait_for_result(op)?;
                 let mut result = device.borrow_mut();
-                result.take().unwrap().ok_or_else(|| {
+                result.take().unwrap().ok_or({
                     PulseServerError::Misc("get_default_sink(): Error getting requested device")
                 })
             }
@@ -380,7 +375,7 @@ impl PulseServer {
         let server_info = self.get_server_info();
         match server_info {
             Ok(info) => {
-                let name = &info.default_source_name.unwrap_or(String::new());
+                let name = &info.default_source_name.unwrap_or_default();
                 let device = Rc::new(RefCell::new(Some(None)));
                 let dev_ref = device.clone();
                 let op = self.introspector.get_source_info_by_name(
@@ -393,7 +388,7 @@ impl PulseServer {
                 );
                 self.wait_for_result(op)?;
                 let mut result = device.borrow_mut();
-                result.take().unwrap().ok_or_else(|| {
+                result.take().unwrap().ok_or({
                     PulseServerError::Misc("get_default_source(): Error getting requested device")
                 })
             }
