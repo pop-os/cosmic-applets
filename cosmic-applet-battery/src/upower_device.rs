@@ -199,7 +199,7 @@ async fn start_listening<I: Copy>(id: I, state: State) -> (Option<(I, DeviceDbus
                     State::Waiting(device),
                 );
             }
-            return (None, State::Finished);
+            (None, State::Finished)
         }
         State::Waiting(device) => {
             let mut stream = futures::stream_select!(

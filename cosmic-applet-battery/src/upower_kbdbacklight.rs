@@ -66,10 +66,10 @@ async fn start_listening<I: Copy>(
 
             let b = kbd_proxy.get_brightness().await.unwrap_or_default() as f64
                 / kbd_proxy.get_max_brightness().await.unwrap_or(1) as f64;
-            return (
+            (
                 Some((id, KeyboardBacklightUpdate::Init(tx, b))),
                 State::Waiting(kbd_proxy, rx),
-            );
+            )
         }
         State::Waiting(proxy, mut rx) => match rx.recv().await {
             Some(req) => match req {

@@ -114,10 +114,10 @@ async fn start_listening<I: Copy>(
             let b = (backlight.brightness().await.unwrap_or_default() as f64
                 / backlight.max_brightness().await.unwrap_or(1) as f64)
                 .clamp(0., 1.);
-            return (
+            (
                 Some((id, ScreenBacklightUpdate::Init(tx, b))),
                 State::Waiting(backlight, screen_proxy, rx),
-            );
+            )
         }
         State::Waiting(backlight, proxy, mut rx) => match rx.recv().await {
             Some(req) => match req {
