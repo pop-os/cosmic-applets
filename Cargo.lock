@@ -10,9 +10,9 @@ checksum = "fe438c63458706e03479442743baae6c88256498e6431708f6dfc520a26515d3"
 
 [[package]]
 name = "ab_glyph"
-version = "0.2.18"
+version = "0.2.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4dcdbc68024b653943864d436fe8a24b028095bc1cf91a8926f8241e4aaffe59"
+checksum = "e5568a4aa5ba8adf5175c5c460b030e27d8893412976cc37bef0e4fbc16cfbba"
 dependencies = [
  "ab_glyph_rasterizer",
  "owned_ttf_parser",
@@ -208,9 +208,9 @@ checksum = "7a40729d2133846d9ed0ea60a8b9541bccddab49cd30f0715a1da672fe9a2524"
 
 [[package]]
 name = "async-trait"
-version = "0.1.60"
+version = "0.1.61"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "677d1d8ab452a3936018a687b20e6f7cf5363d713b732b8884001317b0e48aa3"
+checksum = "705339e0e4a9690e2908d2b3d049d85682cf19fbd5782494498fbf7003a6a282"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -551,7 +551,7 @@ dependencies = [
  "rust-embed",
  "smithay-client-toolkit",
  "tokio",
- "zbus",
+ "zbus 3.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -560,7 +560,7 @@ version = "0.1.0"
 dependencies = [
  "libcosmic",
  "smithay-client-toolkit",
- "zbus",
+ "zbus 3.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -581,7 +581,7 @@ dependencies = [
  "slotmap",
  "smithay-client-toolkit",
  "tokio",
- "zbus",
+ "zbus 3.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -605,7 +605,7 @@ dependencies = [
  "nix 0.26.1",
  "smithay-client-toolkit",
  "tokio",
- "zbus",
+ "zbus 3.7.0 (git+https://gitlab.freedesktop.org/dbus/zbus?branch=main)",
 ]
 
 [[package]]
@@ -655,20 +655,20 @@ dependencies = [
 [[package]]
 name = "cosmic-dbus-networkmanager"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/dbus-settings-bindings?branch=deps#af1cc089ec08f4cb37d7d9448523963bf05995c6"
+source = "git+https://github.com/pop-os/dbus-settings-bindings?branch=main#5adeb6dc11fd11d26d09ec35c25b93866bb21d31"
 dependencies = [
  "bitflags",
  "derive_builder",
  "procfs",
  "time 0.3.17",
- "zbus",
- "zvariant 3.9.0",
+ "zbus 3.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "zvariant 3.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "cosmic-panel-config"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/cosmic-panel#bab60b3883bd90b71b1be8bdf771fa11be0cf1dc"
+source = "git+https://github.com/pop-os/cosmic-panel#b4e60dc30bb798d59cc57957291609e794d38821"
 dependencies = [
  "anyhow",
  "ron",
@@ -1557,6 +1557,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "gethostname"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c1ebd34e35c46e00bb73e81363248d627782724609fe1b6396f553f68fe3862e"
+dependencies = [
+ "libc",
+ "winapi",
+]
+
+[[package]]
 name = "getrandom"
 version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1996,7 +2006,7 @@ dependencies = [
 [[package]]
 name = "iced"
 version = "0.6.0"
-source = "git+https://github.com/pop-os/libcosmic/?branch=master#357de5e9be4110fa3762cd7ec057760353505620"
+source = "git+https://github.com/pop-os/libcosmic/?branch=master#5224c9b75c000fcf92a1851391fe1dc82486610a"
 dependencies = [
  "iced_core",
  "iced_futures",
@@ -2004,7 +2014,7 @@ dependencies = [
  "iced_graphics",
  "iced_native",
  "iced_sctk",
- "iced_swbuf",
+ "iced_softbuffer",
  "iced_wgpu",
  "image",
  "thiserror",
@@ -2013,7 +2023,7 @@ dependencies = [
 [[package]]
 name = "iced_core"
 version = "0.6.2"
-source = "git+https://github.com/pop-os/libcosmic/?branch=master#357de5e9be4110fa3762cd7ec057760353505620"
+source = "git+https://github.com/pop-os/libcosmic/?branch=master#5224c9b75c000fcf92a1851391fe1dc82486610a"
 dependencies = [
  "bitflags",
  "palette",
@@ -2023,7 +2033,7 @@ dependencies = [
 [[package]]
 name = "iced_futures"
 version = "0.5.1"
-source = "git+https://github.com/pop-os/libcosmic/?branch=master#357de5e9be4110fa3762cd7ec057760353505620"
+source = "git+https://github.com/pop-os/libcosmic/?branch=master#5224c9b75c000fcf92a1851391fe1dc82486610a"
 dependencies = [
  "futures",
  "log",
@@ -2035,7 +2045,7 @@ dependencies = [
 [[package]]
 name = "iced_glow"
 version = "0.5.1"
-source = "git+https://github.com/pop-os/libcosmic/?branch=master#357de5e9be4110fa3762cd7ec057760353505620"
+source = "git+https://github.com/pop-os/libcosmic/?branch=master#5224c9b75c000fcf92a1851391fe1dc82486610a"
 dependencies = [
  "bytemuck",
  "euclid",
@@ -2050,7 +2060,7 @@ dependencies = [
 [[package]]
 name = "iced_graphics"
 version = "0.5.0"
-source = "git+https://github.com/pop-os/libcosmic/?branch=master#357de5e9be4110fa3762cd7ec057760353505620"
+source = "git+https://github.com/pop-os/libcosmic/?branch=master#5224c9b75c000fcf92a1851391fe1dc82486610a"
 dependencies = [
  "bitflags",
  "bytemuck",
@@ -2070,7 +2080,7 @@ dependencies = [
 [[package]]
 name = "iced_lazy"
 version = "0.3.0"
-source = "git+https://github.com/pop-os/libcosmic/?branch=master#357de5e9be4110fa3762cd7ec057760353505620"
+source = "git+https://github.com/pop-os/libcosmic/?branch=master#5224c9b75c000fcf92a1851391fe1dc82486610a"
 dependencies = [
  "iced_native",
  "ouroboros 0.13.0",
@@ -2079,7 +2089,7 @@ dependencies = [
 [[package]]
 name = "iced_native"
 version = "0.7.0"
-source = "git+https://github.com/pop-os/libcosmic/?branch=master#357de5e9be4110fa3762cd7ec057760353505620"
+source = "git+https://github.com/pop-os/libcosmic/?branch=master#5224c9b75c000fcf92a1851391fe1dc82486610a"
 dependencies = [
  "iced_core",
  "iced_futures",
@@ -2093,7 +2103,7 @@ dependencies = [
 [[package]]
 name = "iced_sctk"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic/?branch=master#357de5e9be4110fa3762cd7ec057760353505620"
+source = "git+https://github.com/pop-os/libcosmic/?branch=master#5224c9b75c000fcf92a1851391fe1dc82486610a"
 dependencies = [
  "enum-repr",
  "futures",
@@ -2110,19 +2120,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "iced_style"
-version = "0.5.1"
-source = "git+https://github.com/pop-os/libcosmic/?branch=master#357de5e9be4110fa3762cd7ec057760353505620"
-dependencies = [
- "iced_core",
- "once_cell",
- "palette",
-]
-
-[[package]]
-name = "iced_swbuf"
+name = "iced_softbuffer"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic/?branch=master#357de5e9be4110fa3762cd7ec057760353505620"
+source = "git+https://github.com/pop-os/libcosmic/?branch=master#5224c9b75c000fcf92a1851391fe1dc82486610a"
 dependencies = [
  "cosmic-text",
  "iced_graphics",
@@ -2135,9 +2135,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "iced_style"
+version = "0.5.1"
+source = "git+https://github.com/pop-os/libcosmic/?branch=master#5224c9b75c000fcf92a1851391fe1dc82486610a"
+dependencies = [
+ "iced_core",
+ "once_cell",
+ "palette",
+]
+
+[[package]]
 name = "iced_wgpu"
 version = "0.7.0"
-source = "git+https://github.com/pop-os/libcosmic/?branch=master#357de5e9be4110fa3762cd7ec057760353505620"
+source = "git+https://github.com/pop-os/libcosmic/?branch=master#5224c9b75c000fcf92a1851391fe1dc82486610a"
 dependencies = [
  "bitflags",
  "bytemuck",
@@ -2327,7 +2337,7 @@ checksum = "201de327520df007757c1f0adce6e827fe8562fbc28bfd9c15571c66ca1f5f79"
 [[package]]
 name = "libcosmic"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic/?branch=master#357de5e9be4110fa3762cd7ec057760353505620"
+source = "git+https://github.com/pop-os/libcosmic/?branch=master#5224c9b75c000fcf92a1851391fe1dc82486610a"
 dependencies = [
  "apply",
  "cosmic-panel-config",
@@ -2470,7 +2480,7 @@ version = "3.0.3"
 source = "git+https://github.com/pop-os/logind-zbus?branch=main#0789bde15b61b3f65b1e028841eeb5411f66f474"
 dependencies = [
  "serde",
- "zbus",
+ "zbus 3.7.0 (git+https://gitlab.freedesktop.org/dbus/zbus?branch=main)",
 ]
 
 [[package]]
@@ -2841,11 +2851,11 @@ dependencies = [
 
 [[package]]
 name = "owned_ttf_parser"
-version = "0.17.1"
+version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "18904d3c65493a9f0d7542293d1a7f69bfdc309a6b9ef4f46dc3e58b0577edc5"
+checksum = "2a5f3c7ca08b6879e7965fb25e24d1f5eeb32ea73f9ad99b3854778a38c57e93"
 dependencies = [
- "ttf-parser 0.17.1",
+ "ttf-parser 0.18.0",
 ]
 
 [[package]]
@@ -3690,12 +3700,17 @@ dependencies = [
 
 [[package]]
 name = "softbuffer"
-version = "0.1.1"
-source = "git+https://github.com/rust-windowing/softbuffer?rev=d5bb2c1#d5bb2c1c78811854d11225ff7cc29f0062781333"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3177eca2c15033e254b9b70c4915150200b1cf6fa777de18be9977ae5850077f"
 dependencies = [
+ "bytemuck",
+ "cfg_aliases",
  "cocoa",
  "core-graphics",
+ "fastrand",
  "foreign-types",
+ "log",
  "nix 0.26.1",
  "objc",
  "raw-window-handle",
@@ -3708,6 +3723,7 @@ dependencies = [
  "web-sys",
  "windows-sys 0.42.0",
  "x11-dl",
+ "x11rb",
 ]
 
 [[package]]
@@ -3952,9 +3968,9 @@ dependencies = [
 
 [[package]]
 name = "tokio"
-version = "1.23.1"
+version = "1.24.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "38a54aca0c15d014013256222ba0ebed095673f89345dd79119d912eb561b7a8"
+checksum = "1d9f76183f91ecfb55e1d7d5602bd1d979e38a3a522fe900241cf195624d67ae"
 dependencies = [
  "autocfg",
  "bytes",
@@ -4034,6 +4050,12 @@ name = "ttf-parser"
 version = "0.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "375812fa44dab6df41c195cd2f7fecb488f6c09fbaafb62807488cefab642bff"
+
+[[package]]
+name = "ttf-parser"
+version = "0.18.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dbf554b6e535f9a160b2ed4ea83f99000f21cbc0a693df26e258eaf2c226a151"
 
 [[package]]
 name = "twox-hash"
@@ -4599,6 +4621,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "winapi-wsapoll"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "44c17110f57155602a80dca10be03852116403c9ff3cd25b079d666f2aa3df6e"
+dependencies = [
+ "winapi",
+]
+
+[[package]]
 name = "winapi-x86_64-pc-windows-gnu"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4716,6 +4747,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "x11rb"
+version = "0.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cdf3c79412dd91bae7a7366b8ad1565a85e35dd049affc3a6a2c549e97419617"
+dependencies = [
+ "gethostname",
+ "libc",
+ "libloading",
+ "nix 0.25.1",
+ "once_cell",
+ "winapi",
+ "winapi-wsapoll",
+ "x11rb-protocol",
+]
+
+[[package]]
+name = "x11rb-protocol"
+version = "0.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e0b1513b141123073ce54d5bb1d33f801f17508fbd61e02060b1214e96d39c56"
+dependencies = [
+ "nix 0.25.1",
+]
+
+[[package]]
 name = "xcursor"
 version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4736,7 +4792,7 @@ dependencies = [
 [[package]]
 name = "xdg-shell-wrapper-config"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/xdg-shell-wrapper#82ce268c9c560be3728190a2255c849d3bae77e7"
+source = "git+https://github.com/pop-os/xdg-shell-wrapper#95f6a663e383d3f6f13f689f9e9d7e691b9fe28b"
 dependencies = [
  "serde",
  "wayland-protocols-wlr",
@@ -4784,8 +4840,9 @@ checksum = "c03b3e19c937b5b9bd8e52b1c88f30cce5c0d33d676cf174866175bb794ff658"
 
 [[package]]
 name = "zbus"
-version = "3.6.2"
-source = "git+https://gitlab.freedesktop.org/dbus/zbus?branch=main#0b623738048395cdf398c18be24c9f00d8fdab58"
+version = "3.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "379d587c0ccb632d1179cf44082653f682842f0535f0fdfaefffc34849cc855e"
 dependencies = [
  "async-broadcast",
  "async-executor",
@@ -4816,15 +4873,65 @@ dependencies = [
  "tracing",
  "uds_windows",
  "winapi",
- "zbus_macros",
- "zbus_names",
- "zvariant 3.10.0",
+ "zbus_macros 3.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "zbus_names 2.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "zvariant 3.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "zbus"
+version = "3.7.0"
+source = "git+https://gitlab.freedesktop.org/dbus/zbus?branch=main#e90e72eb2d0d5f77144bf40baa7337de89932a53"
+dependencies = [
+ "async-broadcast",
+ "async-executor",
+ "async-io",
+ "async-lock",
+ "async-recursion",
+ "async-task",
+ "async-trait",
+ "byteorder",
+ "derivative",
+ "dirs 4.0.0",
+ "enumflags2",
+ "event-listener",
+ "futures-core",
+ "futures-sink",
+ "futures-util",
+ "hex",
+ "nix 0.25.1",
+ "once_cell",
+ "ordered-stream",
+ "rand",
+ "serde",
+ "serde_repr",
+ "sha1",
+ "static_assertions",
+ "tracing",
+ "uds_windows",
+ "winapi",
+ "zbus_macros 3.7.0 (git+https://gitlab.freedesktop.org/dbus/zbus?branch=main)",
+ "zbus_names 2.5.0 (git+https://gitlab.freedesktop.org/dbus/zbus?branch=main)",
+ "zvariant 3.10.0 (git+https://gitlab.freedesktop.org/dbus/zbus?branch=main)",
 ]
 
 [[package]]
 name = "zbus_macros"
-version = "3.6.2"
-source = "git+https://gitlab.freedesktop.org/dbus/zbus?branch=main#0b623738048395cdf398c18be24c9f00d8fdab58"
+version = "3.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "66492a2e90c0df7190583eccb8424aa12eb7ff06edea415a4fff6688fae18cf8"
+dependencies = [
+ "proc-macro-crate",
+ "proc-macro2",
+ "quote",
+ "regex",
+ "syn",
+]
+
+[[package]]
+name = "zbus_macros"
+version = "3.7.0"
+source = "git+https://gitlab.freedesktop.org/dbus/zbus?branch=main#e90e72eb2d0d5f77144bf40baa7337de89932a53"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -4836,11 +4943,22 @@ dependencies = [
 [[package]]
 name = "zbus_names"
 version = "2.5.0"
-source = "git+https://gitlab.freedesktop.org/dbus/zbus?branch=main#0b623738048395cdf398c18be24c9f00d8fdab58"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f34f314916bd89bdb9934154627fab152f4f28acdda03e7c4c68181b214fe7e3"
 dependencies = [
  "serde",
  "static_assertions",
- "zvariant 3.10.0",
+ "zvariant 3.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "zbus_names"
+version = "2.5.0"
+source = "git+https://gitlab.freedesktop.org/dbus/zbus?branch=main#e90e72eb2d0d5f77144bf40baa7337de89932a53"
+dependencies = [
+ "serde",
+ "static_assertions",
+ "zvariant 3.10.0 (git+https://gitlab.freedesktop.org/dbus/zbus?branch=main)",
 ]
 
 [[package]]
@@ -4851,35 +4969,36 @@ checksum = "c110ba09c9b3a43edd4803d570df0da2414fed6e822e22b976a4e3ef50860701"
 
 [[package]]
 name = "zvariant"
-version = "3.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "56f8c89c183461e11867ded456db252eae90874bc6769b7adbea464caa777e51"
-dependencies = [
- "byteorder",
- "libc",
- "serde",
- "static_assertions",
- "zvariant_derive 3.9.0",
-]
-
-[[package]]
-name = "zvariant"
 version = "3.10.0"
-source = "git+https://gitlab.freedesktop.org/dbus/zbus?branch=main#0b623738048395cdf398c18be24c9f00d8fdab58"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "576cc41e65c7f283e5460f5818073e68fb1f1631502b969ef228c2e03c862efb"
 dependencies = [
  "byteorder",
  "enumflags2",
  "libc",
  "serde",
  "static_assertions",
- "zvariant_derive 3.10.0",
+ "zvariant_derive 3.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "zvariant"
+version = "3.10.0"
+source = "git+https://gitlab.freedesktop.org/dbus/zbus?branch=main#e90e72eb2d0d5f77144bf40baa7337de89932a53"
+dependencies = [
+ "byteorder",
+ "enumflags2",
+ "libc",
+ "serde",
+ "static_assertions",
+ "zvariant_derive 3.10.0 (git+https://gitlab.freedesktop.org/dbus/zbus?branch=main)",
 ]
 
 [[package]]
 name = "zvariant_derive"
-version = "3.9.0"
+version = "3.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "155247a5d1ab55e335421c104ccd95d64f17cebbd02f50cdbc1c33385f9c4d81"
+checksum = "0fd4aafc0dee96ae7242a24249ce9babf21e1562822f03df650d4e68c20e41ed"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -4890,7 +5009,7 @@ dependencies = [
 [[package]]
 name = "zvariant_derive"
 version = "3.10.0"
-source = "git+https://gitlab.freedesktop.org/dbus/zbus?branch=main#0b623738048395cdf398c18be24c9f00d8fdab58"
+source = "git+https://gitlab.freedesktop.org/dbus/zbus?branch=main#e90e72eb2d0d5f77144bf40baa7337de89932a53"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",

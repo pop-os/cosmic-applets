@@ -5,10 +5,17 @@ use std::{fmt::Debug, hash::Hash, time::Duration};
 
 use cosmic::iced::{self, subscription};
 use cosmic_dbus_networkmanager::{
-    device::SpecificDevice, interface::enums::DeviceType, nm::NetworkManager,
+    device::SpecificDevice,
+    interface::{enums::DeviceType, settings::connection::ConnectionSettingsProxy},
+    nm::NetworkManager,
+    settings::{
+        connection::{ConnectionSettings, Secrets, Settings},
+        NetworkManagerSettings,
+    },
 };
 use futures::{
     channel::mpsc::{unbounded, UnboundedReceiver, UnboundedSender},
+    future::ok,
     FutureExt, StreamExt,
 };
 use zbus::Connection;
@@ -49,6 +56,12 @@ async fn start_listening<I: Copy>(
                 Ok(n) => n,
                 Err(_) => return (None, State::Finished),
             };
+            let s = match NetworkManagerSettings::new(&conn).await {
+                Ok(s) => s,
+                Err(_) => return (None, State::Finished),
+            };
+            let known_conns = s.list_connections().await.unwrap_or_default();
+
             let (tx, rx) = unbounded();
             let mut active_conns = active_connections(
                 network_manager
@@ -85,8 +98,30 @@ async fn start_listening<I: Copy>(
             let mut wireless_access_points =
                 Vec::with_capacity(wireless_access_point_futures.len());
             for f in wireless_access_point_futures {
-                wireless_access_points.append(&mut f.await);
+                let mut access_points = f.await;
+                wireless_access_points.append(&mut access_points);
             }
+            let mut known_ssid = Vec::with_capacity(known_conns.len());
+            for c in known_conns {
+                let s = c.get_settings().await.unwrap();
+                let s = Settings::new(s);
+                if let Some(cur_ssid) = s
+                    .wifi
+                    .clone()
+                    .and_then(|w| w.ssid)
+                    .and_then(|ssid| String::from_utf8(ssid).ok())
+                {
+                    known_ssid.push(cur_ssid);
+                }
+            }
+            let known_access_points: Vec<_> = wireless_access_points
+                .iter()
+                .filter(|a| {
+                    known_ssid.contains(&a.ssid)
+                        && !active_conns.iter().any(|ac| ac.name() == a.ssid)
+                })
+                .cloned()
+                .collect();
             wireless_access_points.sort_by(|a, b| b.strength.cmp(&a.strength));
             drop(network_manager);
             return (
@@ -97,6 +132,7 @@ async fn start_listening<I: Copy>(
                         wireless_access_points,
                         wifi_enabled,
                         airplane_mode: false,
+                        known_access_points,
                         active_conns,
                     },
                 )),
@@ -108,6 +144,7 @@ async fn start_listening<I: Copy>(
                 Ok(n) => n,
                 Err(_) => return (None, State::Finished),
             };
+
             let mut active_conns_changed = tokio::time::sleep(Duration::from_secs(5))
                 .then(|_| async { network_manager.receive_active_connections_changed().await })
                 .await;
@@ -153,7 +190,26 @@ async fn start_listening<I: Copy>(
                         Some(NetworkManagerRequest::SelectAccessPoint(ssid)) => {
                             'device_loop: for device in network_manager.devices().await.ok().unwrap_or_default() {
                                 if matches!(device.device_type().await.unwrap_or(DeviceType::Other), DeviceType::Wifi) {
+                                    let connection_settings = NetworkManagerSettings::new(&conn).await.unwrap();
+                                    for conn in connection_settings.list_connections().await.unwrap() {
+                                        let s = conn.get_settings().await.unwrap();
+                                        let s = Settings::new(s);
+
+                                        let cur_ssid = s
+                                            .wifi
+                                            .clone()
+                                            .and_then(|w| w.ssid)
+                                            .and_then(|ssid| String::from_utf8(ssid).ok());
+                                        if cur_ssid.as_ref() == Some(&ssid) {
+                                            // dbg!(s);
+                                            // dbg!(conn.get_secrets("connection").await);
+                                            // dbg!(Secrets::new(&conn).await);
+                                            // dbg!(psk);
+                                            // connection update can be used to set password
+                                        }
+                                    }
                                     for conn in device.available_connections().await.unwrap_or_default() {
+                                        // network_manager.activate_connection(conn, device.clone());
                                         // dbg!(&conn.path());
                                         // TODO activate connection
                                     }
@@ -225,6 +281,7 @@ pub enum NetworkManagerEvent {
         sender: UnboundedSender<NetworkManagerRequest>,
         wireless_access_points: Vec<AccessPoint>,
         active_conns: Vec<ActiveConnectionInfo>,
+        known_access_points: Vec<AccessPoint>,
         wifi_enabled: bool,
         airplane_mode: bool,
     },

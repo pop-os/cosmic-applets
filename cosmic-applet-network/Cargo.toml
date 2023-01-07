@@ -6,12 +6,13 @@ license = "GPL-3.0-or-later"
 
 [dependencies]
 once_cell = "1.16.0"
-cosmic-dbus-networkmanager = { git = "https://github.com/pop-os/dbus-settings-bindings", branch = "deps" }
+cosmic-dbus-networkmanager = { git = "https://github.com/pop-os/dbus-settings-bindings", branch = "main" }
+# cosmic-dbus-networkmanager = { path = "../../../dbus-settings-bindings/networkmanager" }
 futures-util = "0.3.21"
 libcosmic = { git = "https://github.com/pop-os/libcosmic/", branch = "master", default-features = false, features = ["wayland", "applet", "tokio"] }
 sctk = { package = "smithay-client-toolkit", git = "https://github.com/Smithay/client-toolkit", rev = "3776d4a" }
 futures = "0.3"
-zbus = { version = "3.6.2", no-default-features = true }
+zbus = { version = "3.7", no-default-features = true }
 log = "0.4"
 pretty_env_logger = "0.4"
 # Application i18n
