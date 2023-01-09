@@ -1,13 +1,13 @@
 pub mod available_wifi;
 pub mod current_networks;
 
-use std::{fmt::Debug, hash::Hash, time::Duration};
+use std::{collections::HashMap, fmt::Debug, hash::Hash, time::Duration};
 
 use cosmic::iced::{self, subscription};
 use cosmic_dbus_networkmanager::{
     device::SpecificDevice,
     interface::{enums::DeviceType, settings::connection::ConnectionSettingsProxy},
-    nm::NetworkManager,
+    nm::{self, NetworkManager},
     settings::{
         connection::{ConnectionSettings, Secrets, Settings},
         NetworkManagerSettings,
@@ -18,7 +18,11 @@ use futures::{
     future::ok,
     FutureExt, StreamExt,
 };
-use zbus::Connection;
+use tokio::process::Command;
+use zbus::{
+    zvariant::{self, Value},
+    Connection,
+};
 
 use self::{
     available_wifi::{handle_wireless_device, AccessPoint},
@@ -52,88 +56,15 @@ async fn start_listening<I: Copy>(
                 Ok(c) => c,
                 Err(_) => return (None, State::Finished),
             };
-            let network_manager = match NetworkManager::new(&conn).await {
-                Ok(n) => n,
-                Err(_) => return (None, State::Finished),
-            };
-            let s = match NetworkManagerSettings::new(&conn).await {
-                Ok(s) => s,
-                Err(_) => return (None, State::Finished),
-            };
-            let known_conns = s.list_connections().await.unwrap_or_default();
 
             let (tx, rx) = unbounded();
-            let mut active_conns = active_connections(
-                network_manager
-                    .active_connections()
-                    .await
-                    .unwrap_or_default(),
-            )
-            .await
-            .unwrap_or_default();
-            active_conns.sort_by(|a, b| {
-                let helper = |conn: &ActiveConnectionInfo| match conn {
-                    ActiveConnectionInfo::Vpn { name, .. } => format!("0{name}"),
-                    ActiveConnectionInfo::Wired { name, .. } => format!("1{name}"),
-                    ActiveConnectionInfo::WiFi { name, .. } => format!("2{name}"),
-                };
-                helper(a).cmp(&helper(b))
-            });
-            let wifi_enabled = network_manager.wireless_enabled().await.unwrap_or_default();
-            let devices = network_manager.devices().await.ok().unwrap_or_default();
-            let wireless_access_point_futures: Vec<_> = devices
-                .into_iter()
-                .map(|device| async move {
-                    if let Ok(Some(SpecificDevice::Wireless(wireless_device))) =
-                        device.downcast_to_device().await
-                    {
-                        handle_wireless_device(wireless_device)
-                            .await
-                            .unwrap_or_default()
-                    } else {
-                        Vec::new()
-                    }
-                })
-                .collect();
-            let mut wireless_access_points =
-                Vec::with_capacity(wireless_access_point_futures.len());
-            for f in wireless_access_point_futures {
-                let mut access_points = f.await;
-                wireless_access_points.append(&mut access_points);
-            }
-            let mut known_ssid = Vec::with_capacity(known_conns.len());
-            for c in known_conns {
-                let s = c.get_settings().await.unwrap();
-                let s = Settings::new(s);
-                if let Some(cur_ssid) = s
-                    .wifi
-                    .clone()
-                    .and_then(|w| w.ssid)
-                    .and_then(|ssid| String::from_utf8(ssid).ok())
-                {
-                    known_ssid.push(cur_ssid);
-                }
-            }
-            let known_access_points: Vec<_> = wireless_access_points
-                .iter()
-                .filter(|a| {
-                    known_ssid.contains(&a.ssid)
-                        && !active_conns.iter().any(|ac| ac.name() == a.ssid)
-                })
-                .cloned()
-                .collect();
-            wireless_access_points.sort_by(|a, b| b.strength.cmp(&a.strength));
-            drop(network_manager);
+            let nm_state = NetworkManagerState::new(&conn).await.unwrap_or_default();
             return (
                 Some((
                     id,
                     NetworkManagerEvent::Init {
                         sender: tx,
-                        wireless_access_points,
-                        wifi_enabled,
-                        airplane_mode: false,
-                        known_access_points,
-                        active_conns,
+                        state: nm_state,
                     },
                 )),
                 State::Waiting(conn, rx),
@@ -156,63 +87,83 @@ async fn start_listening<I: Copy>(
             let (update, should_exit) = futures::select! {
                 req = req => {
                     match req {
-                        Some(NetworkManagerRequest::SetAirplaneMode(state)) => {
-                            // TODO set airplane mode
-                            let _ = network_manager.set_wireless_enabled(state).await;
-                            (None, false)
+                        Some(NetworkManagerRequest::SetAirplaneMode(airplane_mode)) => {
+                            // wifi
+                            let mut success = network_manager.set_wireless_enabled(!airplane_mode).await.is_ok();
+                            // bluetooth
+                            success = success && Command::new("rfkill")
+                                .arg(if airplane_mode { "block" } else { "unblock" })
+                                .arg("bluetooth")
+                                .output()
+                                .await
+                                .is_ok();
+                            let response = NetworkManagerEvent::RequestResponse {
+                                req: NetworkManagerRequest::SetAirplaneMode(airplane_mode),
+                                success: true,
+                                state: NetworkManagerState::new(&conn).await.unwrap_or_default(),
+                            };
+                            (Some((id, response)), false)
                         }
                         Some(NetworkManagerRequest::SetWiFi(enabled)) => {
                             let success = network_manager.set_wireless_enabled(enabled).await.is_ok();
-                            let active_conns =  active_connections(network_manager.active_connections().await.unwrap_or_default()).await.unwrap_or_default();
-                            let devices = network_manager.devices().await.ok().unwrap_or_default();
-                            let wireless_access_point_futures: Vec<_> = devices.into_iter().map(|device| async move {
-                                if let Ok(Some(SpecificDevice::Wireless(wireless_device))) =
-                                device.downcast_to_device().await
-                                {
-                                    handle_wireless_device(wireless_device).await.unwrap_or_default()
-                                } else {
-                                    Vec::new()
-                                }
-                            }).collect();
-                            let mut wireless_access_points = Vec::with_capacity(wireless_access_point_futures.len());
-                            for f in wireless_access_point_futures {
-                                wireless_access_points.append(&mut f.await);
-                            }
-                            (Some((id, NetworkManagerEvent::RequestResponse {
-                                req: NetworkManagerRequest::SetWiFi(enabled),
+                            let response = NetworkManagerEvent::RequestResponse {
+                                req: NetworkManagerRequest::SetAirplaneMode(enabled),
                                 success,
-                                active_conns,
-                                wireless_access_points,
-                                wifi_enabled: enabled,
-                                airplane_mode: false,
-                            })), false)
+                                state: NetworkManagerState::new(&conn).await.unwrap_or_default(),
+                            };
+                            (Some((id, response)), false)
+                        }
+                        Some(NetworkManagerRequest::Password(ssid, password)) => {
+                            let s = match NetworkManagerSettings::new(&conn).await {
+                                Ok(s) => s,
+                                Err(_) => return (None, State::Finished),
+                            };
+
+                            // TODO more convenient methods of managing settings
+                            for c in s.list_connections().await.unwrap_or_default() {
+                                let mut settings = match c.get_settings().await.ok() {
+                                    Some(s) => s,
+                                    None => continue,
+                                };
+                                dbg!(&settings);
+                                let cur_ssid = settings
+                                    .get("802-11-wireless")
+                                    .and_then(|w| w.get("ssid"))
+                                            .cloned()
+                                            .and_then(|ssid| ssid.try_into().ok())
+                                            .and_then(|ssid| String::from_utf8(ssid).ok());
+                                dbg!(&cur_ssid);
+                                if cur_ssid.as_ref() != Some(&ssid) {
+                                    break;
+                                }
+
+                                let mut secrets = match
+                                c.get_secrets("802-11-wireless-security")
+                                .await {
+                                    Ok(s) => s,
+                                    _ => continue,
+                                };
+                                if let Some(s) = secrets.get_mut("802-11-wireless-security") {
+                                    s.insert("psk".into(), Value::Str(password.into()).to_owned());
+                                    drop(s);
+                                    settings.extend(secrets.into_iter());
+                                    let settings: HashMap<_, _> = settings.iter().map(|(k, v)| {
+                                        let map = (k.as_str(), v.iter()
+                                            .map(|(k, v)| (k.as_str(), v.into()))
+                                            .collect::<HashMap<_, _>>());
+                                        map
+                                    }).collect();
+                                    dbg!(settings.clone());
+                                    dbg!(c.update(settings).await);
+                                    break;
+                                }
+                            }
+
+                            (None, false)
                         }
                         Some(NetworkManagerRequest::SelectAccessPoint(ssid)) => {
                             'device_loop: for device in network_manager.devices().await.ok().unwrap_or_default() {
                                 if matches!(device.device_type().await.unwrap_or(DeviceType::Other), DeviceType::Wifi) {
-                                    let connection_settings = NetworkManagerSettings::new(&conn).await.unwrap();
-                                    for conn in connection_settings.list_connections().await.unwrap() {
-                                        let s = conn.get_settings().await.unwrap();
-                                        let s = Settings::new(s);
-
-                                        let cur_ssid = s
-                                            .wifi
-                                            .clone()
-                                            .and_then(|w| w.ssid)
-                                            .and_then(|ssid| String::from_utf8(ssid).ok());
-                                        if cur_ssid.as_ref() == Some(&ssid) {
-                                            // dbg!(s);
-                                            // dbg!(conn.get_secrets("connection").await);
-                                            // dbg!(Secrets::new(&conn).await);
-                                            // dbg!(psk);
-                                            // connection update can be used to set password
-                                        }
-                                    }
-                                    for conn in device.available_connections().await.unwrap_or_default() {
-                                        // network_manager.activate_connection(conn, device.clone());
-                                        // dbg!(&conn.path());
-                                        // TODO activate connection
-                                    }
                                 }
                             }
                             (None, false)
@@ -273,27 +224,120 @@ pub enum NetworkManagerRequest {
     SetAirplaneMode(bool),
     SetWiFi(bool),
     SelectAccessPoint(String),
+    Password(String, String),
 }
 
 #[derive(Debug, Clone)]
 pub enum NetworkManagerEvent {
-    Init {
-        sender: UnboundedSender<NetworkManagerRequest>,
-        wireless_access_points: Vec<AccessPoint>,
-        active_conns: Vec<ActiveConnectionInfo>,
-        known_access_points: Vec<AccessPoint>,
-        wifi_enabled: bool,
-        airplane_mode: bool,
-    },
     RequestResponse {
         req: NetworkManagerRequest,
-        wireless_access_points: Vec<AccessPoint>,
-        active_conns: Vec<ActiveConnectionInfo>,
-        wifi_enabled: bool,
-        airplane_mode: bool,
+        state: NetworkManagerState,
         success: bool,
+    },
+    Init {
+        sender: UnboundedSender<NetworkManagerRequest>,
+        state: NetworkManagerState,
     },
     WiFiEnabled(bool),
     WirelessAccessPoints(Vec<AccessPoint>),
     ActiveConns(Vec<ActiveConnectionInfo>),
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct NetworkManagerState {
+    pub wireless_access_points: Vec<AccessPoint>,
+    pub active_conns: Vec<ActiveConnectionInfo>,
+    pub known_access_points: Vec<AccessPoint>,
+    pub wifi_enabled: bool,
+    pub airplane_mode: bool,
+}
+
+impl NetworkManagerState {
+    pub async fn new(conn: &Connection) -> anyhow::Result<Self> {
+        let network_manager = NetworkManager::new(&conn).await?;
+        let mut _self = Self::default();
+
+        // airplane mode
+        let airplaine_mode = Command::new("rfkill")
+            .arg("list")
+            .arg("bluetooth")
+            .output()
+            .await?;
+        let airplane_mode = std::str::from_utf8(&airplaine_mode.stdout).unwrap_or_default();
+        let bluetooth_disabled = airplane_mode.contains("Soft blocked: yes");
+
+        if !network_manager.wireless_enabled().await.unwrap_or_default() {
+            _self.airplane_mode = bluetooth_disabled;
+            return Ok(_self);
+        } else {
+            _self.wifi_enabled = true;
+        };
+
+        let s = NetworkManagerSettings::new(&conn).await?;
+
+        let known_conns = s.list_connections().await.unwrap_or_default();
+
+        let mut active_conns = active_connections(
+            network_manager
+                .active_connections()
+                .await
+                .unwrap_or_default(),
+        )
+        .await
+        .unwrap_or_default();
+        active_conns.sort_by(|a, b| {
+            let helper = |conn: &ActiveConnectionInfo| match conn {
+                ActiveConnectionInfo::Vpn { name, .. } => format!("0{name}"),
+                ActiveConnectionInfo::Wired { name, .. } => format!("1{name}"),
+                ActiveConnectionInfo::WiFi { name, .. } => format!("2{name}"),
+            };
+            helper(a).cmp(&helper(b))
+        });
+        let devices = network_manager.devices().await.ok().unwrap_or_default();
+        let wireless_access_point_futures: Vec<_> = devices
+            .into_iter()
+            .map(|device| async move {
+                if let Ok(Some(SpecificDevice::Wireless(wireless_device))) =
+                    device.downcast_to_device().await
+                {
+                    handle_wireless_device(wireless_device)
+                        .await
+                        .unwrap_or_default()
+                } else {
+                    Vec::new()
+                }
+            })
+            .collect();
+        let mut wireless_access_points = Vec::with_capacity(wireless_access_point_futures.len());
+        for f in wireless_access_point_futures {
+            let mut access_points = f.await;
+            wireless_access_points.append(&mut access_points);
+        }
+        let mut known_ssid = Vec::with_capacity(known_conns.len());
+        for c in known_conns {
+            let s = c.get_settings().await.unwrap();
+            let s = Settings::new(s);
+            if let Some(cur_ssid) = s
+                .wifi
+                .clone()
+                .and_then(|w| w.ssid)
+                .and_then(|ssid| String::from_utf8(ssid).ok())
+            {
+                known_ssid.push(cur_ssid);
+            }
+        }
+        let known_access_points: Vec<_> = wireless_access_points
+            .iter()
+            .filter(|a| {
+                known_ssid.contains(&a.ssid) && !active_conns.iter().any(|ac| ac.name() == a.ssid)
+            })
+            .cloned()
+            .collect();
+        wireless_access_points.sort_by(|a, b| b.strength.cmp(&a.strength));
+
+        _self.wireless_access_points = wireless_access_points;
+        _self.active_conns = active_conns;
+        _self.known_access_points = known_access_points;
+        Ok(_self)
+    }
 }
