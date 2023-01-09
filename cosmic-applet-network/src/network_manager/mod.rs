@@ -198,7 +198,7 @@ async fn start_listening<I: Copy>(
                             }
 
                             if status.0.is_none() {
-                                (Some((id, NetworkManagerEvent::RequestResponse {
+                                status = (Some((id, NetworkManagerEvent::RequestResponse {
                                     req: NetworkManagerRequest::Password(ssid, password),
                                     success: false,
                                     state: NetworkManagerState::new(&conn).await.unwrap_or_default(),
@@ -208,8 +208,47 @@ async fn start_listening<I: Copy>(
                             status
                         }
                         Some(NetworkManagerRequest::SelectAccessPoint(ssid)) => {
+                            let s = match NetworkManagerSettings::new(&conn).await {
+                                Ok(s) => s,
+                                Err(_) => return (None, State::Finished),
+                            };
+                            // find known connection with matching ssid and activate
+                            let mut status = (None, false);
 
-                            (None, false)
+                            for c in s.list_connections().await.unwrap_or_default() {
+                                let settings = match c.get_settings().await.ok() {
+                                    Some(s) => s,
+                                    None => continue,
+                                };
+
+                                let cur_ssid = settings
+                                    .get("802-11-wireless")
+                                    .and_then(|w| w.get("ssid"))
+                                            .cloned()
+                                            .and_then(|ssid| ssid.try_into().ok())
+                                            .and_then(|ssid| String::from_utf8(ssid).ok());
+
+                                if cur_ssid.as_ref() != Some(&ssid) {
+                                    continue;
+                                }
+
+                                let success = network_manager.deref().activate_connection(c.deref().path(), &ObjectPath::try_from("/").unwrap(), &ObjectPath::try_from("/").unwrap()).await.is_ok();
+                                status = (Some((id, NetworkManagerEvent::RequestResponse {
+                                    req: NetworkManagerRequest::SelectAccessPoint(ssid.clone()),
+                                    success,
+                                    state: NetworkManagerState::new(&conn).await.unwrap_or_default(),
+                                })), false);
+
+                                break;
+                            }
+                            if status.0.is_none() {
+                                status = (Some((id, NetworkManagerEvent::RequestResponse {
+                                    req: NetworkManagerRequest::SelectAccessPoint(ssid.clone()),
+                                    success: false,
+                                    state: NetworkManagerState::new(&conn).await.unwrap_or_default(),
+                                })), false);
+                            }
+                            status
                         }
                         None => {
                             (None, true)
