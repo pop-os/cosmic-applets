@@ -539,4 +539,10 @@ impl NetworkManagerState {
         _self.known_access_points = known_access_points;
         Ok(_self)
     }
+
+    pub fn clear(&mut self) {
+        self.active_conns = Vec::new();
+        self.known_access_points = Vec::new();
+        self.wireless_access_points = Vec::new();
+    }
 }

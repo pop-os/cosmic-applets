@@ -567,6 +567,7 @@ dependencies = [
 name = "cosmic-applet-network"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "cosmic-dbus-networkmanager",
  "futures",
  "futures-util",
@@ -655,7 +656,7 @@ dependencies = [
 [[package]]
 name = "cosmic-dbus-networkmanager"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/dbus-settings-bindings?branch=main#5adeb6dc11fd11d26d09ec35c25b93866bb21d31"
+source = "git+https://github.com/pop-os/dbus-settings-bindings?branch=main#95f6d5e9ac86dfa5902ac74dee85b1a8cfc035fd"
 dependencies = [
  "bitflags",
  "derive_builder",
@@ -821,9 +822,9 @@ checksum = "b365fabc795046672053e29c954733ec3b05e4be654ab130fe8f1f94d7051f35"
 
 [[package]]
 name = "cxx"
-version = "1.0.85"
+version = "1.0.86"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5add3fc1717409d029b20c5b6903fc0c0b02fa6741d820054f4a2efa5e5816fd"
+checksum = "51d1075c37807dcf850c379432f0df05ba52cc30f279c5cfc43cc221ce7f8579"
 dependencies = [
  "cc",
  "cxxbridge-flags",
@@ -833,9 +834,9 @@ dependencies = [
 
 [[package]]
 name = "cxx-build"
-version = "1.0.85"
+version = "1.0.86"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b4c87959ba14bc6fbc61df77c3fcfe180fc32b93538c4f1031dd802ccb5f2ff0"
+checksum = "5044281f61b27bc598f2f6647d480aed48d2bf52d6eb0b627d84c0361b17aa70"
 dependencies = [
  "cc",
  "codespan-reporting",
@@ -848,15 +849,15 @@ dependencies = [
 
 [[package]]
 name = "cxxbridge-flags"
-version = "1.0.85"
+version = "1.0.86"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "69a3e162fde4e594ed2b07d0f83c6c67b745e7f28ce58c6df5e6b6bef99dfb59"
+checksum = "61b50bc93ba22c27b0d31128d2d130a0a6b3d267ae27ef7e4fae2167dfe8781c"
 
 [[package]]
 name = "cxxbridge-macro"
-version = "1.0.85"
+version = "1.0.86"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3e7e2adeb6a0d4a282e581096b06e1791532b7d576dcde5ccd9382acf55db8e6"
+checksum = "39e61fda7e62115119469c7b3591fd913ecca96fb766cfd3f2e2502ab7bc87a5"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1849,9 +1850,9 @@ dependencies = [
 
 [[package]]
 name = "half"
-version = "2.2.0"
+version = "2.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c467d36af040b7b2681f5fddd27427f6da8d3d072f575a265e181d2f8e8d157"
+checksum = "02b4af3693f1b705df946e9fe5631932443781d0aabb423b62fcd4d73f6d2fd0"
 dependencies = [
  "crunchy",
 ]
@@ -1912,9 +1913,9 @@ dependencies = [
 
 [[package]]
 name = "i18n-config"
-version = "0.4.2"
+version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b62affcd43abfb51f3cbd8736f9407908dc5b44fc558a9be07460bbfd104d983"
+checksum = "3d9f93ceee6543011739bc81699b5e0cf1f23f3a80364649b6d80de8636bc8df"
 dependencies = [
  "log",
  "serde",
@@ -1926,9 +1927,9 @@ dependencies = [
 
 [[package]]
 name = "i18n-embed"
-version = "0.13.4"
+version = "0.13.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e7f21ed76e44de8ac3dfa36bb37ab2e6480be0dc75c612474949be1f3cb2c253"
+checksum = "79ff7e6b37b61834ec97fc945d391315188d8bb87aa1d48f10f295e73a5f5bec"
 dependencies = [
  "fluent",
  "fluent-langneg",
@@ -1947,9 +1948,9 @@ dependencies = [
 
 [[package]]
 name = "i18n-embed-fl"
-version = "0.6.4"
+version = "0.6.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9420a9718ef9d0ab727840a398e25408ea0daff9ba3c681707ba05485face98e"
+checksum = "a425b9bbdc2e4cd797a2a79528662cb61894bd36db582e48da2c56c28eb727cd"
 dependencies = [
  "dashmap",
  "find-crate",
@@ -2373,9 +2374,9 @@ checksum = "348108ab3fba42ec82ff6e9564fc4ca0247bdccdc68dd8af9764bbc79c3c8ffb"
 
 [[package]]
 name = "libpulse-binding"
-version = "2.26.0"
+version = "2.27.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "17be42160017e0ae993c03bfdab4ecb6f82ce3f8d515bd8da8fdf18d10703663"
+checksum = "1745b20bfc194ac12ef828f144f0ec2d4a7fe993281fa3567a0bd4969aee6890"
 dependencies = [
  "bitflags",
  "libc",
@@ -2387,9 +2388,9 @@ dependencies = [
 
 [[package]]
 name = "libpulse-glib-binding"
-version = "2.25.1"
+version = "2.27.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "df0e7a964c9f7e95d4f073affc19adfda009fa0d55e8831dbb66c78be1d0e6e5"
+checksum = "d39d9166164cf39b619f6a029ffafac958e718a10dabdc35bcebf8f69b5fa3cf"
 dependencies = [
  "glib",
  "glib-sys",
@@ -2399,9 +2400,9 @@ dependencies = [
 
 [[package]]
 name = "libpulse-mainloop-glib-sys"
-version = "1.19.2"
+version = "1.20.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "36f61c4064926cc77ea14bb206a21ce1d5a06e175e5c0ce078804bb6c4527b28"
+checksum = "9b97cd2ed4e84e54f3825b85648ec8637bec273ea7fcb981032b0a575dfef697"
 dependencies = [
  "glib-sys",
  "libpulse-sys",
@@ -2410,9 +2411,9 @@ dependencies = [
 
 [[package]]
 name = "libpulse-sys"
-version = "1.19.3"
+version = "1.20.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "991e6bd0efe2a36e6534e136e7996925e4c1a8e35b7807fe533f2beffff27c30"
+checksum = "2191e6880818d1df4cf72eac8e91dce7a5a52ba0da4b2a5cdafabc22b937eadb"
 dependencies = [
  "libc",
  "num-derive",
@@ -2855,7 +2856,7 @@ version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2a5f3c7ca08b6879e7965fb25e24d1f5eeb32ea73f9ad99b3854778a38c57e93"
 dependencies = [
- "ttf-parser 0.18.0",
+ "ttf-parser 0.18.1",
 ]
 
 [[package]]
@@ -3274,9 +3275,9 @@ dependencies = [
 
 [[package]]
 name = "regex"
-version = "1.7.0"
+version = "1.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e076559ef8e241f2ae3479e36f97bd5741c0330689e217ad51ce2c76808b868a"
+checksum = "48aaa5748ba571fb95cd2c85c09f629215d3a6ece942baa100950af03a34f733"
 dependencies = [
  "aho-corasick",
  "memchr",
@@ -4053,9 +4054,9 @@ checksum = "375812fa44dab6df41c195cd2f7fecb488f6c09fbaafb62807488cefab642bff"
 
 [[package]]
 name = "ttf-parser"
-version = "0.18.0"
+version = "0.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dbf554b6e535f9a160b2ed4ea83f99000f21cbc0a693df26e258eaf2c226a151"
+checksum = "0609f771ad9c6155384897e1df4d948e692667cc0588548b68eb44d052b27633"
 
 [[package]]
 name = "twox-hash"
@@ -4079,9 +4080,9 @@ dependencies = [
 
 [[package]]
 name = "typed-arena"
-version = "2.0.1"
+version = "2.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0685c84d5d54d1c26f7d3eb96cd41550adb97baed141a761cf335d3d33bcd0ae"
+checksum = "6af6ae20167a9ece4bcb41af5b80f8a1f1df981f6391189ce00fd257af04126a"
 
 [[package]]
 name = "typenum"
@@ -4881,7 +4882,7 @@ dependencies = [
 [[package]]
 name = "zbus"
 version = "3.7.0"
-source = "git+https://gitlab.freedesktop.org/dbus/zbus?branch=main#e90e72eb2d0d5f77144bf40baa7337de89932a53"
+source = "git+https://gitlab.freedesktop.org/dbus/zbus?branch=main#18240526a612e56e9379f64d42c07053eed9657e"
 dependencies = [
  "async-broadcast",
  "async-executor",
@@ -4931,7 +4932,7 @@ dependencies = [
 [[package]]
 name = "zbus_macros"
 version = "3.7.0"
-source = "git+https://gitlab.freedesktop.org/dbus/zbus?branch=main#e90e72eb2d0d5f77144bf40baa7337de89932a53"
+source = "git+https://gitlab.freedesktop.org/dbus/zbus?branch=main#18240526a612e56e9379f64d42c07053eed9657e"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -4954,7 +4955,7 @@ dependencies = [
 [[package]]
 name = "zbus_names"
 version = "2.5.0"
-source = "git+https://gitlab.freedesktop.org/dbus/zbus?branch=main#e90e72eb2d0d5f77144bf40baa7337de89932a53"
+source = "git+https://gitlab.freedesktop.org/dbus/zbus?branch=main#18240526a612e56e9379f64d42c07053eed9657e"
 dependencies = [
  "serde",
  "static_assertions",
@@ -4984,7 +4985,7 @@ dependencies = [
 [[package]]
 name = "zvariant"
 version = "3.10.0"
-source = "git+https://gitlab.freedesktop.org/dbus/zbus?branch=main#e90e72eb2d0d5f77144bf40baa7337de89932a53"
+source = "git+https://gitlab.freedesktop.org/dbus/zbus?branch=main#18240526a612e56e9379f64d42c07053eed9657e"
 dependencies = [
  "byteorder",
  "enumflags2",
@@ -5009,7 +5010,7 @@ dependencies = [
 [[package]]
 name = "zvariant_derive"
 version = "3.10.0"
-source = "git+https://gitlab.freedesktop.org/dbus/zbus?branch=main#e90e72eb2d0d5f77144bf40baa7337de89932a53"
+source = "git+https://gitlab.freedesktop.org/dbus/zbus?branch=main#18240526a612e56e9379f64d42c07053eed9657e"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
