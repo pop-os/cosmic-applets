@@ -22,7 +22,7 @@ use futures::{
     future::ok,
     FutureExt, StreamExt,
 };
-use tokio::process::Command;
+use tokio::{process::Command, time::timeout};
 use zbus::{
     zvariant::{self, ObjectPath, Value},
     Connection,
@@ -170,7 +170,11 @@ async fn start_listening<I: Copy + Debug>(
                                             let active = ActiveConnectionProxy::builder(&conn).path(path).unwrap().destination(dummy.destination()).unwrap().interface(dummy.interface()).unwrap().build().await.unwrap();
                                             let state = enums::ActiveConnectionState::from(active.state().await.unwrap_or_default());
                                             let s = if let enums::ActiveConnectionState::Activating = state {
-                                                enums::ActiveConnectionState::from(active.receive_state_changed().await.next().await.unwrap().get().await.unwrap_or_default())
+                                                if let Ok(Some(s)) = timeout(Duration::from_secs(5), active.receive_state_changed().await.next()).await {
+                                                    s.get().await.unwrap_or_default().into()
+                                                } else {
+                                                    state
+                                                }
                                             } else {
                                                 state
                                             };
@@ -211,7 +215,11 @@ async fn start_listening<I: Copy + Debug>(
                                             let active = ActiveConnectionProxy::builder(&conn).path(path).unwrap().destination(dummy.destination()).unwrap().interface(dummy.interface()).unwrap().build().await.unwrap();
                                             let state = enums::ActiveConnectionState::from(active.state().await.unwrap_or_default());
                                             let s = if let enums::ActiveConnectionState::Activating = state {
-                                                enums::ActiveConnectionState::from(active.receive_state_changed().await.next().await.unwrap().get().await.unwrap_or_default())
+                                                if let Ok(Some(s)) = timeout(Duration::from_secs(5), active.receive_state_changed().await.next()).await {
+                                                    s.get().await.unwrap_or_default().into()
+                                                } else {
+                                                    state
+                                                }
                                             } else {
                                                 state
                                             };
@@ -273,7 +281,11 @@ async fn start_listening<I: Copy + Debug>(
                                     let active = ActiveConnectionProxy::builder(&conn).path(path).unwrap().destination(dummy.destination()).unwrap().interface(dummy.interface()).unwrap().build().await.unwrap();
                                     let state = enums::ActiveConnectionState::from(active.state().await.unwrap_or_default());
                                     let s = if let enums::ActiveConnectionState::Activating = state {
-                                        enums::ActiveConnectionState::from(active.receive_state_changed().await.next().await.unwrap().get().await.unwrap_or_default())
+                                        if let Ok(Some(s)) = timeout(Duration::from_secs(1), active.receive_state_changed().await.next()).await {
+                                            s.get().await.unwrap_or_default().into()
+                                        } else {
+                                            state
+                                        }
                                     } else {
                                         state
                                     };
@@ -322,7 +334,11 @@ async fn start_listening<I: Copy + Debug>(
                                             let active = ActiveConnectionProxy::builder(&conn).path(path).unwrap().destination(dummy.destination()).unwrap().interface(dummy.interface()).unwrap().build().await.unwrap();
                                             let state = enums::ActiveConnectionState::from(active.state().await.unwrap_or_default());
                                             let s = if let enums::ActiveConnectionState::Activating = state {
-                                                enums::ActiveConnectionState::from(active.receive_state_changed().await.next().await.unwrap().get().await.unwrap_or_default())
+                                                if let Ok(Some(s)) = timeout(Duration::from_secs(1), active.receive_state_changed().await.next()).await {
+                                                    s.get().await.unwrap_or_default().into()
+                                                } else {
+                                                    state
+                                                }
                                             } else {
                                                 state
                                             };
