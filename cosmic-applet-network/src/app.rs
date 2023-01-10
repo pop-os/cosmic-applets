@@ -7,7 +7,7 @@ use cosmic::{
             popup::{destroy_popup, get_popup},
             SurfaceIdWrapper,
         },
-        widget::{column, container, row, scrollable, text, text_input},
+        widget::{column, container, row, scrollable, text, text_input, Column},
         Alignment, Application, Color, Command, Length, Subscription,
     },
     iced_native::{
@@ -328,20 +328,16 @@ impl Application for CosmicNetworkApplet {
                 for conn in &self.nm_state.active_conns {
                     match conn {
                         ActiveConnectionInfo::Vpn { name, ip_addresses } => {
-                            let mut ipv4 = column![];
+                            let mut ipv4 = Vec::with_capacity(ip_addresses.len());
                             for addr in ip_addresses {
-                                match addr {
-                                    std::net::IpAddr::V4(a) => {
-                                        ipv4 = ipv4.push(
-                                            text(format!("{}: {}", fl!("ipv4"), a.to_string()))
-                                                .size(12),
-                                        );
-                                    }
-                                    std::net::IpAddr::V6(_) => {}
-                                }
+                                ipv4.push(
+                                    text(format!("{}: {}", fl!("ipv4"), addr.to_string()))
+                                        .size(12)
+                                        .into(),
+                                );
                             }
-                            vpn_ethernet_col =
-                                vpn_ethernet_col.push(column![text(name), ipv4].spacing(4));
+                            vpn_ethernet_col = vpn_ethernet_col
+                                .push(column![text(name), Column::with_children(ipv4)].spacing(4));
                         }
                         ActiveConnectionInfo::Wired {
                             name,
@@ -349,17 +345,13 @@ impl Application for CosmicNetworkApplet {
                             speed,
                             ip_addresses,
                         } => {
-                            let mut ipv4 = column![];
+                            let mut ipv4 = Vec::with_capacity(ip_addresses.len());
                             for addr in ip_addresses {
-                                match addr {
-                                    std::net::IpAddr::V4(a) => {
-                                        ipv4 = ipv4.push(
-                                            text(format!("{}: {}", fl!("ipv4"), a.to_string()))
-                                                .size(12),
-                                        );
-                                    }
-                                    std::net::IpAddr::V6(a) => {}
-                                }
+                                ipv4.push(
+                                    text(format!("{}: {}", fl!("ipv4"), addr.to_string()))
+                                        .size(12)
+                                        .into(),
+                                );
                             }
                             vpn_ethernet_col = vpn_ethernet_col.push(
                                 column![
@@ -368,7 +360,7 @@ impl Application for CosmicNetworkApplet {
                                         text(format!("{speed} {}", fl!("megabits-per-second")))
                                     ]
                                     .spacing(16),
-                                    ipv4,
+                                    Column::with_children(ipv4),
                                 ]
                                 .spacing(4),
                             );
@@ -376,17 +368,13 @@ impl Application for CosmicNetworkApplet {
                         ActiveConnectionInfo::WiFi {
                             name, ip_addresses, ..
                         } => {
-                            let mut ipv4 = column![];
+                            let mut ipv4 = Vec::with_capacity(ip_addresses.len());
                             for addr in ip_addresses {
-                                match addr {
-                                    std::net::IpAddr::V4(a) => {
-                                        ipv4 = ipv4.push(
-                                            text(format!("{}: {}", fl!("ipv4"), a.to_string()))
-                                                .size(12),
-                                        );
-                                    }
-                                    std::net::IpAddr::V6(_) => {}
-                                }
+                                ipv4.push(
+                                    text(format!("{}: {}", fl!("ipv4"), addr.to_string()))
+                                        .size(12)
+                                        .into(),
+                                );
                             }
                             known_wifi = known_wifi.push(column![button(Button::Secondary)
                                 .custom(vec![
@@ -397,7 +385,8 @@ impl Application for CosmicNetworkApplet {
                                         .width(Length::Units(24))
                                         .height(Length::Units(24))
                                         .into(),
-                                    column![text(name).size(14), ipv4,].into(),
+                                    column![text(name).size(14), Column::with_children(ipv4)]
+                                        .into(),
                                     text(format!("{}", fl!("connected")))
                                         .size(14)
                                         .width(Length::Fill)
@@ -615,7 +604,8 @@ impl Application for CosmicNetworkApplet {
                             }
                         }
                     } else if self.nm_state.wifi_enabled {
-                        let mut list_col = column![];
+                        let mut list_col =
+                            Vec::with_capacity(self.nm_state.wireless_access_points.len());
                         for ap in &self.nm_state.wireless_access_points {
                             if self
                                 .nm_state
@@ -644,9 +634,11 @@ impl Application for CosmicNetworkApplet {
                                 .on_press(Message::SelectWirelessAccessPoint(ap.clone()))
                                 .width(Length::Fill)
                                 .padding([8, 24]);
-                            list_col = list_col.push(button);
+                            list_col.push(button.into());
                         }
-                        content = content.push(scrollable(list_col).height(Length::Units(300)));
+                        content = content.push(
+                            scrollable(Column::with_children(list_col)).height(Length::Units(300)),
+                        );
                     }
                 }
                 self.applet_helper.popup_container(content).into()
