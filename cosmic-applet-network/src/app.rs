@@ -208,8 +208,6 @@ impl Application for CosmicNetworkApplet {
                             | NetworkManagerRequest::SetWiFi(_) => {}
                             NetworkManagerRequest::SelectAccessPoint(_)
                             | NetworkManagerRequest::Password(_, _) => {
-                                dbg!("success");
-                                dbg!(&state);
                                 self.new_connection.take();
                                 self.show_visible_networks = false;
                             }
