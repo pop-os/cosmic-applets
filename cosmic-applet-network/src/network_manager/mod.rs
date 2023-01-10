@@ -5,8 +5,12 @@ use std::{collections::HashMap, fmt::Debug, hash::Hash, ops::Deref, time::Durati
 
 use cosmic::iced::{self, subscription};
 use cosmic_dbus_networkmanager::{
+    active_connection::ActiveConnection,
     device::SpecificDevice,
-    interface::{enums::DeviceType, settings::connection::ConnectionSettingsProxy},
+    interface::{
+        active_connection::ActiveConnectionProxy, enums, enums::DeviceType,
+        settings::connection::ConnectionSettingsProxy,
+    },
     nm::{self, NetworkManager},
     settings::{
         connection::{ConnectionSettings, Secrets, Settings},
@@ -46,7 +50,7 @@ pub enum State {
     Finished,
 }
 
-async fn start_listening<I: Copy>(
+async fn start_listening<I: Copy + Debug>(
     id: I,
     state: State,
 ) -> (Option<(I, NetworkManagerEvent)>, State) {
@@ -135,7 +139,6 @@ async fn start_listening<I: Copy>(
                                             .cloned()
                                             .and_then(|ssid| ssid.try_into().ok())
                                             .and_then(|ssid| String::from_utf8(ssid).ok());
-
                                 if cur_ssid.as_ref() != Some(&ssid) {
                                     continue;
                                 }
@@ -144,7 +147,10 @@ async fn start_listening<I: Copy>(
                                 c.get_secrets("802-11-wireless-security")
                                 .await {
                                     Ok(s) => s,
-                                    _ => continue,
+                                    _ => HashMap::from([("802-11-wireless-security".into(), HashMap::from([
+                                        ("psk".into(), Value::Str(password.as_str().into()).to_owned()),
+                                        ("key-mgmt".into(), Value::Str("wpa-psk".into()).to_owned())
+                                    ]))]),
                                 };
                                 if let Some(s) = secrets.get_mut("802-11-wireless-security") {
                                     s.insert("psk".into(), Value::Str(password.clone().into()).to_owned());
@@ -156,10 +162,22 @@ async fn start_listening<I: Copy>(
                                             .collect::<HashMap<_, _>>());
                                         map
                                     }).collect();
-                                    dbg!(settings.clone());
-                                    let updated = c.update(settings).await.is_ok();
-                                    if updated {
-                                        let success = network_manager.deref().activate_connection(c.deref().path(), &ObjectPath::try_from("/").unwrap(), &ObjectPath::try_from("/").unwrap()).await.is_ok();
+                                    let updated = c.update(settings).await;
+                                    if updated.is_ok() {
+                                        let success = if let Ok(path) = network_manager.deref().activate_connection(c.deref().path(), &ObjectPath::try_from("/").unwrap(), &ObjectPath::try_from("/").unwrap()).await {
+                                            // let active_conn = ActiveConnection::from(ActiveConnectionProxy::from(conn.1));
+                                            let dummy = ActiveConnectionProxy::new(&conn).await.unwrap();
+                                            let active = ActiveConnectionProxy::builder(&conn).path(path).unwrap().destination(dummy.destination()).unwrap().interface(dummy.interface()).unwrap().build().await.unwrap();
+                                            let state = enums::ActiveConnectionState::from(active.state().await.unwrap_or_default());
+                                            let s = if let enums::ActiveConnectionState::Activating = state {
+                                                enums::ActiveConnectionState::from(active.receive_state_changed().await.next().await.unwrap().get().await.unwrap_or_default())
+                                            } else {
+                                                state
+                                            };
+                                            matches!(s, enums::ActiveConnectionState::Activated)
+                                        } else {
+                                            false
+                                        };
                                         status = (Some((id, NetworkManagerEvent::RequestResponse {
                                             req: NetworkManagerRequest::Password(ssid.clone(), password.clone()),
                                             success,
@@ -172,28 +190,43 @@ async fn start_listening<I: Copy>(
                             }
 
                             // create a connection
-                            for device in network_manager.devices().await.ok().unwrap_or_default() {
-                                if matches!(device.device_type().await.unwrap_or(DeviceType::Other), DeviceType::Wifi) {
-                                    let conn_settings: HashMap<&str, HashMap<&str, zvariant::Value>> = HashMap::from([
-                                        ("802-11-wireless".into(), HashMap::from([
-                                            ("ssid".into(), Value::Str(ssid.as_str().into())),
-                                        ])),
-                                        ("connection".into(), HashMap::from([
-                                            ("id".into(), Value::Str(ssid.as_str().into())),
-                                            ("type".into(), Value::Str("802-11-wireless".into())),
-                                        ])),
-                                        ("802-11-wireless-security".into(), HashMap::from([
-                                            ("psk".into(), Value::Str(password.as_str().into())),
-                                        ]))
-                                    ]);
-                                    let success = network_manager.add_and_activate_connection(conn_settings, device.path(), &ObjectPath::try_from("/").unwrap()).await.is_ok();
-                                    status = (Some((id, NetworkManagerEvent::RequestResponse {
-                                        req: NetworkManagerRequest::Password(ssid.clone(), password.clone()),
-                                        success,
-                                        state: NetworkManagerState::new(&conn).await.unwrap_or_default(),
-                                    })), false);
+                            if status.0.is_none() {
+                                for device in network_manager.devices().await.ok().unwrap_or_default() {
+                                    if matches!(device.device_type().await.unwrap_or(DeviceType::Other), DeviceType::Wifi) {
+                                        let conn_settings: HashMap<&str, HashMap<&str, zvariant::Value>> = HashMap::from([
+                                            ("802-11-wireless".into(), HashMap::from([
+                                                ("ssid".into(), Value::Array(ssid.as_bytes().into())),
+                                            ])),
+                                            ("connection".into(), HashMap::from([
+                                                ("id".into(), Value::Str(ssid.as_str().into())),
+                                                ("type".into(), Value::Str("802-11-wireless".into())),
+                                            ])),
+                                            ("802-11-wireless-security".into(), HashMap::from([
+                                                ("psk".into(), Value::Str(password.as_str().into())),
+                                                ("key-mgmt".into(), Value::Str("wpa-psk".into()))
+                                            ]))
+                                        ]);
+                                        let success = if let Ok((_, path)) = network_manager.add_and_activate_connection(conn_settings, device.path(), &ObjectPath::try_from("/").unwrap()).await {
+                                            let dummy = ActiveConnectionProxy::new(&conn).await.unwrap();
+                                            let active = ActiveConnectionProxy::builder(&conn).path(path).unwrap().destination(dummy.destination()).unwrap().interface(dummy.interface()).unwrap().build().await.unwrap();
+                                            let state = enums::ActiveConnectionState::from(active.state().await.unwrap_or_default());
+                                            let s = if let enums::ActiveConnectionState::Activating = state {
+                                                enums::ActiveConnectionState::from(active.receive_state_changed().await.next().await.unwrap().get().await.unwrap_or_default())
+                                            } else {
+                                                state
+                                            };
+                                            matches!(s, enums::ActiveConnectionState::Activated)
+                                        } else {
+                                            false
+                                        };
+                                        status = (Some((id, NetworkManagerEvent::RequestResponse {
+                                            req: NetworkManagerRequest::Password(ssid.clone(), password.clone()),
+                                            success,
+                                            state: NetworkManagerState::new(&conn).await.unwrap_or_default(),
+                                        })), false);
 
-                                    break;
+                                        break;
+                                    }
                                 }
                             }
 
@@ -215,6 +248,9 @@ async fn start_listening<I: Copy>(
                             // find known connection with matching ssid and activate
                             let mut status = (None, false);
 
+                            let devices = network_manager.devices().await.ok().unwrap_or_default();
+
+
                             for c in s.list_connections().await.unwrap_or_default() {
                                 let settings = match c.get_settings().await.ok() {
                                     Some(s) => s,
@@ -232,7 +268,20 @@ async fn start_listening<I: Copy>(
                                     continue;
                                 }
 
-                                let success = network_manager.deref().activate_connection(c.deref().path(), &ObjectPath::try_from("/").unwrap(), &ObjectPath::try_from("/").unwrap()).await.is_ok();
+                                let success = if let Ok(path) = network_manager.deref().activate_connection(c.deref().path(), &ObjectPath::try_from("/").unwrap(), &ObjectPath::try_from("/").unwrap()).await {
+                                    let dummy = ActiveConnectionProxy::new(&conn).await.unwrap();
+                                    let active = ActiveConnectionProxy::builder(&conn).path(path).unwrap().destination(dummy.destination()).unwrap().interface(dummy.interface()).unwrap().build().await.unwrap();
+                                    let state = enums::ActiveConnectionState::from(active.state().await.unwrap_or_default());
+                                    let s = if let enums::ActiveConnectionState::Activating = state {
+                                        enums::ActiveConnectionState::from(active.receive_state_changed().await.next().await.unwrap().get().await.unwrap_or_default())
+                                    } else {
+                                        state
+                                    };
+                                    matches!(s, enums::ActiveConnectionState::Activated)
+                                } else {
+                                    false
+                                };
+                                // dbg!(&success);
                                 status = (Some((id, NetworkManagerEvent::RequestResponse {
                                     req: NetworkManagerRequest::SelectAccessPoint(ssid.clone()),
                                     success,
@@ -241,6 +290,58 @@ async fn start_listening<I: Copy>(
 
                                 break;
                             }
+                            // dbg!(&status);
+                            let mut ap = None;
+
+                            for d in &devices {
+                                if let Ok(Some(SpecificDevice::Wireless(wireless_device))) =
+                                        d.downcast_to_device().await {
+                                    for a in wireless_device.access_points().await.ok().unwrap_or_default() {
+                                        if String::from_utf8(a.ssid().await.unwrap_or_default()).unwrap_or_default() == ssid {
+                                            ap = Some(a);
+                                            break;
+                                        }
+                                    }
+                                }
+                            };
+                            if status.0.is_none() {
+
+                                for device in network_manager.devices().await.ok().unwrap_or_default() {
+                                    if matches!(device.device_type().await.unwrap_or(DeviceType::Other), DeviceType::Wifi) {
+                                        let conn_settings: HashMap<&str, HashMap<&str, zvariant::Value>> = HashMap::from([
+                                            ("802-11-wireless".into(), HashMap::from([
+                                                ("ssid".into(), Value::Array(ssid.as_bytes().into())),
+                                            ])),
+                                            ("connection".into(), HashMap::from([
+                                                ("id".into(), Value::Str(ssid.as_str().into())),
+                                                ("type".into(), Value::Str("802-11-wireless".into())),
+                                            ])),
+                                        ]);
+                                        let success = if let Ok((_, path)) = network_manager.add_and_activate_connection(conn_settings, device.path(), &ap.as_ref().map(|ap| ap.path().clone()).unwrap_or_else(||ObjectPath::try_from("/").unwrap().into_owned())).await {
+                                            let dummy = ActiveConnectionProxy::new(&conn).await.unwrap();
+                                            let active = ActiveConnectionProxy::builder(&conn).path(path).unwrap().destination(dummy.destination()).unwrap().interface(dummy.interface()).unwrap().build().await.unwrap();
+                                            let state = enums::ActiveConnectionState::from(active.state().await.unwrap_or_default());
+                                            let s = if let enums::ActiveConnectionState::Activating = state {
+                                                enums::ActiveConnectionState::from(active.receive_state_changed().await.next().await.unwrap().get().await.unwrap_or_default())
+                                            } else {
+                                                state
+                                            };
+                                            matches!(s, enums::ActiveConnectionState::Activated)
+                                        } else {
+                                            false
+                                        };
+                                        status = (Some((id, NetworkManagerEvent::RequestResponse {
+                                            req: NetworkManagerRequest::SelectAccessPoint(ssid.clone()),
+                                            success,
+                                            state: NetworkManagerState::new(&conn).await.unwrap_or_default(),
+                                        })), false);
+
+                                        break;
+                                    }
+                                }
+                            }
+                            // dbg!(&status);
+
                             if status.0.is_none() {
                                 status = (Some((id, NetworkManagerEvent::RequestResponse {
                                     req: NetworkManagerRequest::SelectAccessPoint(ssid.clone()),

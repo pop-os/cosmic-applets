@@ -38,6 +38,7 @@ pub fn run() -> cosmic::iced::Result {
     CosmicNetworkApplet::run(helper.window_settings())
 }
 
+#[derive(Debug)]
 enum NewConnectionState {
     EnterPassword {
         access_point: AccessPoint,
@@ -216,19 +217,61 @@ impl Application for CosmicNetworkApplet {
                             airplane_mode,
                         },
                     success,
-                    ..
+                    req,
                 } => {
                     if success {
+                        match req {
+                            NetworkManagerRequest::SetAirplaneMode(_)
+                            | NetworkManagerRequest::SetWiFi(_) => {}
+                            NetworkManagerRequest::SelectAccessPoint(_)
+                            | NetworkManagerRequest::Password(_, _) => {
+                                self.new_connection.take();
+                                self.show_visible_networks = false;
+                            }
+                        }
                         self.wireless_access_points = wireless_access_points;
                         self.active_conns = active_conns;
                         self.known_access_points = known_access_points;
                         self.airplane_mode = airplane_mode;
                         self.wifi = wifi_enabled;
                         self.update_icon_name();
+                    } else {
+                        match req {
+                            NetworkManagerRequest::SetAirplaneMode(_)
+                            | NetworkManagerRequest::SetWiFi(_) => {}
+                            NetworkManagerRequest::SelectAccessPoint(_) => {
+                                if let Some(NewConnectionState::Waiting(access_point)) =
+                                    self.new_connection.as_ref()
+                                {
+                                    self.new_connection
+                                        .replace(NewConnectionState::Failure(access_point.clone()));
+                                }
+                            }
+                            NetworkManagerRequest::Password(_, _) => {
+                                if let Some(NewConnectionState::EnterPassword {
+                                    access_point,
+                                    ..
+                                }) = self.new_connection.as_ref()
+                                {
+                                    self.new_connection
+                                        .replace(NewConnectionState::Failure(access_point.clone()));
+                                }
+                            }
+                        }
                     }
                 }
             },
             Message::SelectWirelessAccessPoint(access_point) => {
+                let tx = if let Some(tx) = self.nm_sender.as_ref() {
+                    tx
+                } else {
+                    return Command::none();
+                };
+
+                let _ = tx.unbounded_send(NetworkManagerRequest::SelectAccessPoint(
+                    access_point.ssid.clone(),
+                ));
+
                 self.new_connection
                     .replace(NewConnectionState::EnterPassword {
                         access_point,
@@ -263,12 +306,19 @@ impl Application for CosmicNetworkApplet {
                             password.to_string(),
                         ));
                         self.new_connection
-                            .replace(NewConnectionState::Failure(access_point.clone()));
+                            .replace(NewConnectionState::Waiting(access_point.clone()));
                     }
                     _ => {}
                 };
             }
-            Message::ActivateKnownWifi(ssid) => {}
+            Message::ActivateKnownWifi(ssid) => {
+                let tx = if let Some(tx) = self.nm_sender.as_ref() {
+                    tx
+                } else {
+                    return Command::none();
+                };
+                let _ = tx.unbounded_send(NetworkManagerRequest::SelectAccessPoint(ssid));
+            }
             Message::CancelNewConnection => {
                 self.new_connection.take();
             }

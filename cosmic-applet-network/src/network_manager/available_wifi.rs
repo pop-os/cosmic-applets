@@ -28,7 +28,6 @@ pub async fn handle_wireless_device(device: WirelessDevice<'_>) -> zbus::Result<
     for ap in access_points {
         let ssid = String::from_utf8_lossy(&ap.ssid().await?.clone()).into_owned();
         let strength = ap.strength().await?;
-
         if let Some(access_point) = aps.get(&ssid) {
             if access_point.strength > strength {
                 continue;
