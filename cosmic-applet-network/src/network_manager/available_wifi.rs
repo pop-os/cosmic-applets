@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use cosmic_dbus_networkmanager::device::wireless::WirelessDevice;
+use cosmic_dbus_networkmanager::{device::wireless::WirelessDevice, interface::enums::DeviceState};
 
 use futures_util::StreamExt;
 use itertools::Itertools;
@@ -16,6 +16,13 @@ pub async fn handle_wireless_device(device: WirelessDevice<'_>) -> zbus::Result<
         }
     }
     let access_points = device.get_access_points().await?;
+    let state: DeviceState = device
+        .upcast()
+        .await
+        .and_then(|dev| dev.cached_state())
+        .unwrap_or_default()
+        .map(|s| s.into())
+        .unwrap_or_else(|| DeviceState::Unknown);
     // Sort by strength and remove duplicates
     let mut aps = HashMap::<String, AccessPoint>::new();
     for ap in access_points {
@@ -26,7 +33,14 @@ pub async fn handle_wireless_device(device: WirelessDevice<'_>) -> zbus::Result<
                 continue;
             }
         }
-        aps.insert(ssid.clone(), AccessPoint { ssid, strength });
+        aps.insert(
+            ssid.clone(),
+            AccessPoint {
+                ssid,
+                strength,
+                state: state,
+            },
+        );
     }
     let aps = aps
         .into_iter()
@@ -40,4 +54,5 @@ pub async fn handle_wireless_device(device: WirelessDevice<'_>) -> zbus::Result<
 pub struct AccessPoint {
     pub ssid: String,
     pub strength: u8,
+    pub state: DeviceState,
 }

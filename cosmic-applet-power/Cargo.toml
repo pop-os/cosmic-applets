@@ -12,13 +12,5 @@ tokio = { version = "1.20.1", features=["full"] }
 libcosmic = { git = "https://github.com/pop-os/libcosmic/", branch = "master", default-features = false, features = ["wayland", "applet"] }
 sctk = { package = "smithay-client-toolkit", git = "https://github.com/Smithay/client-toolkit", rev = "3776d4a" }
 nix = "0.26.1"
-
-# Until the 3.6.3 release, need the implementation of clone on zbus::Error
-[dependencies.zbus]
-git = "https://gitlab.freedesktop.org/dbus/zbus"
-branch = "main"
-
-# Until zbus 3.6.3 is released
-[dependencies.logind-zbus]
-git = "https://github.com/pop-os/logind-zbus"
-branch = "main"
+zbus = "3.7"
+logind-zbus = "3.1"
