@@ -1,0 +1,9 @@
+graphics-mode = Graphics Mode
+graphics = Graphics
+integrated = Integrated
+integrated-desc = Disables external displays. Requires Restart.
+nvidia = NVIDIA
+hybrid = Hybrid
+hybrid-desc = Requires Restart.
+compute = Compute
+compute-desc = Disables external displays. Requires Restart.
