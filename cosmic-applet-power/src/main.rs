@@ -1,17 +1,16 @@
 use std::process;
 
-use cosmic::applet::CosmicAppletHelper;
+use cosmic::applet::{CosmicAppletHelper, APPLET_BUTTON_THEME};
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced::wayland::SurfaceIdWrapper;
-use cosmic::iced::widget::{self, Row};
 use cosmic::iced_native::layout::Limits;
 use cosmic::iced_native::widget::Space;
-use cosmic::widget::{horizontal_rule, icon};
+use cosmic::widget::{button, horizontal_rule, icon};
 use cosmic::Renderer;
 
 use cosmic::iced::{
     executor,
-    widget::{button, column, row},
+    widget::{self, column, container, row, Row},
     window, Alignment, Application, Command, Length, Subscription,
 };
 use cosmic::iced_style::application::{self, Appearance};
@@ -181,9 +180,13 @@ impl Application for Power {
 
                 let content = column![
                     settings,
-                    horizontal_rule(1),
+                    container(horizontal_rule(1))
+                        .padding([0, 12])
+                        .width(Length::Fill),
                     session,
-                    horizontal_rule(1),
+                    container(horizontal_rule(1))
+                        .padding([0, 12])
+                        .width(Length::Fill),
                     power
                 ]
                 .align_items(Alignment::Start)
@@ -198,29 +201,24 @@ impl Application for Power {
 
 // ### UI Helplers
 
-// todo put into libcosmic doing so will fix the row_button's boarder radius
-fn row_button(mut content: Vec<Element<Message>>) -> widget::Button<Message, Renderer> {
-    content.insert(0, Space::with_width(Length::Units(24)).into());
-    content.push(Space::with_width(Length::Units(24)).into());
-
-    button(
-        Row::with_children(content)
-            .spacing(5)
-            .align_items(Alignment::Center),
-    )
-    .width(Length::Fill)
-    .height(Length::Units(35))
-    .style(theme::Button::Text)
+fn row_button(content: Vec<Element<Message>>) -> widget::Button<Message, Renderer> {
+    button(APPLET_BUTTON_THEME)
+        .custom(vec![Row::with_children(content)
+            .spacing(4)
+            .align_items(Alignment::Center)
+            .into()])
+        .width(Length::Fill)
+        .padding([8, 24])
 }
 
 fn power_buttons<'a>(name: &'a str, text: &'a str) -> widget::Button<'a, Message, Renderer> {
-    button(
+    widget::button(
         column![text_icon(name, 40), text]
-            .spacing(5)
+            .spacing(4)
             .align_items(Alignment::Center),
     )
     .width(Length::Fill)
-    .height(Length::Units(75))
+    .height(Length::Units(76))
     .style(theme::Button::Text)
 }
 
