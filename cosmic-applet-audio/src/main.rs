@@ -1,16 +1,16 @@
 use cosmic::iced::wayland::SurfaceIdWrapper;
 use cosmic::iced::widget;
 use cosmic::iced_native::alignment::Horizontal;
+use cosmic::iced_native::layout::Limits;
 use cosmic::theme::Svg;
-use iced::widget::Space;
 
-use cosmic::applet::CosmicAppletHelper;
-use cosmic::widget::icon;
+use cosmic::applet::{CosmicAppletHelper, APPLET_BUTTON_THEME};
+use cosmic::widget::{button, icon};
 use cosmic::Renderer;
 
 use cosmic::iced::{
     self, executor,
-    widget::{button, column, row, slider, text},
+    widget::{column, horizontal_rule, row, slider, text, toggler},
     window, Alignment, Application, Command, Length, Subscription,
 };
 use cosmic::iced_style::application::{self, Appearance};
@@ -41,6 +41,7 @@ struct Audio {
     icon_name: String,
     theme: Theme,
     popup: Option<window::Id>,
+    show_media_controls_in_top_panel: bool,
     id_ctr: u32,
 }
 
@@ -62,6 +63,7 @@ enum Message {
     Pulse(pulse::Event),
     Ignore,
     TogglePopup,
+    ToggleMediaControlsInTopPanel(bool),
 }
 
 impl Application for Audio {
@@ -115,13 +117,18 @@ impl Application for Audio {
                     let new_id = window::Id::new(self.id_ctr);
                     self.popup.replace(new_id);
 
-                    let popup_settings = self.applet_helper.get_popup_settings(
+                    let mut popup_settings = self.applet_helper.get_popup_settings(
                         window::Id::new(0),
                         new_id,
                         None,
                         None,
                         None,
                     );
+                    popup_settings.positioner.size_limits = Limits::NONE
+                        .min_height(1)
+                        .min_width(1)
+                        .max_width(400)
+                        .max_height(1080);
                     return get_popup(popup_settings);
                 }
             }
@@ -219,6 +226,9 @@ impl Application for Audio {
                 }
             },
             Message::Ignore => {}
+            Message::ToggleMediaControlsInTopPanel(enabled) => {
+                self.show_media_controls_in_top_panel = enabled;
+            }
         };
 
         Command::none()
@@ -252,74 +262,87 @@ impl Application for Audio {
                 )
                 .0 * 100.0;
 
-                let sink = row![
-                    icon("audio-volume-high-symbolic", 64)
-                        .width(Length::Units(24))
-                        .height(Length::Units(24))
-                        .style(Svg::SymbolicActive),
-                    slider(0.0..=100.0, out_f64, Message::SetOutputVolume)
-                        .width(Length::FillPortion(5)),
-                    text(format!("{}%", out_f64.round()))
-                        .width(Length::FillPortion(1))
-                        .horizontal_alignment(Horizontal::Right)
+                let content = column![
+                    row![
+                        icon("audio-volume-high-symbolic", 32)
+                            .width(Length::Units(24))
+                            .height(Length::Units(24))
+                            .style(Svg::Symbolic),
+                        slider(0.0..=100.0, out_f64, Message::SetOutputVolume)
+                            .width(Length::FillPortion(5)),
+                        text(format!("{}%", out_f64.round()))
+                            .width(Length::FillPortion(1))
+                            .horizontal_alignment(Horizontal::Right)
+                    ]
+                    .spacing(12)
+                    .align_items(Alignment::Center)
+                    .padding([8, 24]),
+                    row![
+                        icon("audio-input-microphone-symbolic", 32)
+                            .width(Length::Units(24))
+                            .height(Length::Units(24))
+                            .style(Svg::Symbolic),
+                        slider(0.0..=100.0, in_f64, Message::SetInputVolume)
+                            .width(Length::FillPortion(5)),
+                        text(format!("{}%", in_f64.round()))
+                            .width(Length::FillPortion(1))
+                            .horizontal_alignment(Horizontal::Right)
+                    ]
+                    .spacing(12)
+                    .align_items(Alignment::Center)
+                    .padding([8, 24]),
+                    container(horizontal_rule(1))
+                        .padding([12, 24])
+                        .width(Length::Fill),
+                    revealer(
+                        self.is_open == IsOpen::Output,
+                        "Output",
+                        match &self.current_output {
+                            Some(output) => pretty_name(output.description.clone()),
+                            None => String::from("No device selected"),
+                        },
+                        self.outputs
+                            .clone()
+                            .into_iter()
+                            .map(|output| pretty_name(output.description))
+                            .collect(),
+                        Message::OutputToggle,
+                        Message::OutputChanged(String::from("test")),
+                    ),
+                    revealer(
+                        self.is_open == IsOpen::Input,
+                        "Input",
+                        match &self.current_input {
+                            Some(input) => pretty_name(input.description.clone()),
+                            None => String::from("No device selected"),
+                        },
+                        self.inputs
+                            .clone()
+                            .into_iter()
+                            .map(|input| pretty_name(input.description))
+                            .collect(),
+                        Message::InputToggle,
+                        Message::InputChanged(String::from("test")),
+                    ),
+                    container(horizontal_rule(1))
+                        .padding([12, 24])
+                        .width(Length::Fill),
+                    container(toggler(
+                        Some("Show Media Controls on Top Panel".into()),
+                        self.show_media_controls_in_top_panel,
+                        Message::ToggleMediaControlsInTopPanel,
+                    ))
+                    .padding([0, 24]),
+                    container(horizontal_rule(1))
+                        .padding([12, 24])
+                        .width(Length::Fill),
+                    button(APPLET_BUTTON_THEME)
+                        .text("Sound Settings...")
+                        .padding([8, 24])
+                        .width(Length::Fill)
                 ]
-                .spacing(10)
-                .align_items(Alignment::Center);
-                let source = row![
-                    icon("audio-input-microphone-symbolic", 64)
-                        .width(Length::Units(24))
-                        .height(Length::Units(24))
-                        .style(Svg::SymbolicActive),
-                    slider(0.0..=100.0, in_f64, Message::SetInputVolume)
-                        .width(Length::FillPortion(5)),
-                    text(format!("{}%", in_f64.round()))
-                        .width(Length::FillPortion(1))
-                        .horizontal_alignment(Horizontal::Right)
-                ]
-                .spacing(10)
-                .align_items(Alignment::Center);
-
-                // TODO change these from helper functions to iced components for improved reusability
-                let output_drop = revealer(
-                    self.is_open == IsOpen::Output,
-                    "Output",
-                    match &self.current_output {
-                        Some(output) => pretty_name(output.description.clone()),
-                        None => String::from("No device selected"),
-                    },
-                    self.outputs
-                        .clone()
-                        .into_iter()
-                        .map(|output| pretty_name(output.description))
-                        .collect(),
-                    Message::OutputToggle,
-                    Message::OutputChanged(String::from("test")),
-                );
-                let input_drop = revealer(
-                    self.is_open == IsOpen::Input,
-                    "Input",
-                    match &self.current_input {
-                        Some(input) => pretty_name(input.description.clone()),
-                        None => String::from("No device selected"),
-                    },
-                    self.inputs
-                        .clone()
-                        .into_iter()
-                        .map(|input| pretty_name(input.description))
-                        .collect(),
-                    Message::InputToggle,
-                    Message::InputChanged(String::from("test")),
-                );
-
-                let content = column![]
-                    .align_items(Alignment::Start)
-                    .spacing(20)
-                    .push(sink)
-                    .push(source)
-                    .push(spacer())
-                    .push(output_drop)
-                    .push(input_drop)
-                    .padding(8);
+                .align_items(Alignment::Start)
+                .padding([8, 0]);
 
                 self.applet_helper
                     .popup_container(container(content))
@@ -327,11 +350,6 @@ impl Application for Audio {
             }
         }
     }
-}
-
-// TODO: Make this a themeable widget like the mock-ups
-fn spacer() -> iced::widget::Space {
-    Space::with_width(Length::Fill)
 }
 
 fn revealer(
@@ -345,7 +363,7 @@ fn revealer(
     if open {
         options.iter().fold(
             column![revealer_head(open, title, selected, toggle)].width(Length::Fill),
-            |col, device| col.push(text(device)),
+            |col, device| col.push(container(text(device)).padding([8, 48])),
         )
     } else {
         column![revealer_head(open, title, selected, toggle)]
@@ -358,7 +376,12 @@ fn revealer_head(
     selected: String,
     toggle: Message,
 ) -> widget::Button<Message, Renderer> {
-    button(row![row![title].width(Length::Fill), text(selected)])
+    button(APPLET_BUTTON_THEME)
+        .custom(vec![
+            text(title).width(Length::Fill).into(),
+            text(selected).into(),
+        ])
+        .padding([8, 24])
         .width(Length::Fill)
         .on_press(toggle)
 }
