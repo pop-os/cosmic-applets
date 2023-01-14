@@ -1,4 +1,4 @@
-use cosmic::applet::CosmicAppletHelper;
+use cosmic::applet::{CosmicAppletHelper, APPLET_BUTTON_THEME};
 use cosmic::iced::wayland::{
     popup::{destroy_popup, get_popup},
     SurfaceIdWrapper,
@@ -11,7 +11,7 @@ use cosmic::iced::{
 
 use cosmic::iced_style::application::{self, Appearance};
 use cosmic::iced_style::svg;
-use cosmic::theme::{self, Svg};
+use cosmic::theme::Svg;
 use cosmic::widget::icon;
 use cosmic::widget::toggler;
 use cosmic::Renderer;
@@ -174,12 +174,12 @@ fn row_button(
 
     button(
         Row::with_children(content)
-            .spacing(5)
+            .spacing(4)
             .align_items(Alignment::Center),
     )
     .width(Length::Fill)
-    .height(Length::Units(35))
-    .style(theme::Button::Text)
+    .height(Length::Units(36))
+    .style(APPLET_BUTTON_THEME)
 }
 
 fn text_icon(name: &str, size: u16) -> cosmic::widget::Icon {
