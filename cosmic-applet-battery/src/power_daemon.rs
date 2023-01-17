@@ -158,10 +158,10 @@ async fn start_listening<I: Copy>(id: I, state: State) -> (Option<(I, PowerProfi
                 }
             };
 
-            return (
+            (
                 Some((id, PowerProfileUpdate::Init(profile, tx))),
                 State::Waiting(conn, rx),
-            );
+            )
         }
         State::Waiting(conn, mut rx) => {
             let power_proxy = match PowerDaemonProxy::new(&conn)
@@ -180,22 +180,22 @@ async fn start_listening<I: Copy>(id: I, state: State) -> (Option<(I, PowerProfi
             match rx.recv().await {
                 Some(PowerProfileRequest::Get) => {
                     if let Ok(profile) = get_power_profile(power_proxy).await {
-                        return (
+                        (
                             Some((id, PowerProfileUpdate::Update { profile })),
                             State::Waiting(conn, rx),
-                        );
+                        )
                     } else {
-                        return (None, State::Waiting(conn, rx));
+                        (None, State::Waiting(conn, rx))
                     }
                 }
                 Some(PowerProfileRequest::Set(profile)) => {
                     if set_power_profile(power_proxy, profile).await.is_ok() {
-                        return (
+                        (
                             Some((id, PowerProfileUpdate::Update { profile })),
                             State::Waiting(conn, rx),
-                        );
+                        )
                     } else {
-                        return (None, State::Waiting(conn, rx));
+                        (None, State::Waiting(conn, rx))
                     }
                 }
                 None => (None, State::Finished),
