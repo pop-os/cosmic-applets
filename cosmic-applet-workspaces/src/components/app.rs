@@ -7,8 +7,8 @@ use cosmic::iced::wayland::actions::window::SctkWindowSettings;
 use cosmic::iced::wayland::{window::resize_window, InitialSurface, SurfaceIdWrapper};
 use cosmic::iced::widget::{column, container, row, text};
 use cosmic::iced::{
-    executor, subscription, widget::button, window, Application, Command, Event::Mouse, Length,
-    Settings, Subscription,
+    subscription, widget::button, window, Application, Command, Event::Mouse, Length, Settings,
+    Subscription,
 };
 use cosmic::iced_style::application::{self, Appearance};
 use cosmic::iced_style::Color;
@@ -60,7 +60,7 @@ enum Message {
 impl Application for IcedWorkspacesApplet {
     type Message = Message;
     type Theme = Theme;
-    type Executor = executor::Default;
+    type Executor = cosmic::SingleThreadExecutor;
     type Flags = ();
 
     fn new(_flags: ()) -> (Self, Command<Message>) {

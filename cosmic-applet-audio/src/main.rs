@@ -9,7 +9,7 @@ use cosmic::widget::{button, icon};
 use cosmic::Renderer;
 
 use cosmic::iced::{
-    self, executor,
+    self,
     widget::{column, horizontal_rule, row, slider, text, toggler},
     window, Alignment, Application, Command, Length, Subscription,
 };
@@ -69,7 +69,7 @@ enum Message {
 impl Application for Audio {
     type Message = Message;
     type Theme = Theme;
-    type Executor = executor::Default;
+    type Executor = cosmic::SingleThreadExecutor;
     type Flags = ();
 
     fn new(_flags: ()) -> (Audio, Command<Message>) {

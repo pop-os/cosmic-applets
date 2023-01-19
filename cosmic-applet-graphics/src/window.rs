@@ -60,7 +60,7 @@ pub enum Message {
 }
 
 impl Application for Window {
-    type Executor = iced::executor::Default;
+    type Executor = cosmic::SingleThreadExecutor;
     type Flags = ();
     type Message = Message;
     type Theme = Theme;

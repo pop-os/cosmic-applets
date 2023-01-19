@@ -19,7 +19,7 @@ use cosmic::iced::wayland::popup::get_popup;
 use cosmic::iced::wayland::SurfaceIdWrapper;
 use cosmic::iced::widget::mouse_listener;
 use cosmic::iced::widget::{column, row};
-use cosmic::iced::{executor, window, Application, Command, Subscription};
+use cosmic::iced::{window, Application, Command, Subscription};
 use cosmic::iced_native::alignment::Horizontal;
 use cosmic::iced_native::subscription::events_with;
 use cosmic::iced_native::widget::vertical_space;
@@ -162,7 +162,7 @@ fn desktop_info_for_app_ids(mut app_ids: Vec<String>) -> Vec<DesktopInfo> {
 impl Application for CosmicAppList {
     type Message = Message;
     type Theme = Theme;
-    type Executor = executor::Default;
+    type Executor = cosmic::SingleThreadExecutor;
     type Flags = ();
 
     fn new(_flags: ()) -> (Self, Command<Message>) {

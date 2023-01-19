@@ -15,7 +15,6 @@ use cosmic::iced::alignment::Horizontal;
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced::wayland::SurfaceIdWrapper;
 use cosmic::iced::{
-    executor,
     widget::{column, container, row, slider, text},
     window, Alignment, Application, Command, Length, Subscription,
 };
@@ -94,7 +93,7 @@ enum Message {
 impl Application for CosmicBatteryApplet {
     type Message = Message;
     type Theme = Theme;
-    type Executor = executor::Default;
+    type Executor = cosmic::SingleThreadExecutor;
     type Flags = ();
 
     fn new(_flags: ()) -> (Self, Command<Message>) {
