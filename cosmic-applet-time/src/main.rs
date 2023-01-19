@@ -4,7 +4,7 @@ use cosmic::iced::wayland::{
     SurfaceIdWrapper,
 };
 use cosmic::iced::{
-    executor, time,
+    time,
     widget::{button, column, text},
     window, Alignment, Application, Color, Command, Length, Subscription,
 };
@@ -60,7 +60,7 @@ enum Message {
 impl Application for Time {
     type Message = Message;
     type Theme = Theme;
-    type Executor = executor::Default;
+    type Executor = cosmic::SingleThreadExecutor;
     type Flags = ();
 
     fn new(_flags: ()) -> (Time, Command<Message>) {

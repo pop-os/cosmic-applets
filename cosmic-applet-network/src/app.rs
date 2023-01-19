@@ -2,7 +2,6 @@ use cosmic::iced_style;
 use cosmic::{
     applet::CosmicAppletHelper,
     iced::{
-        executor,
         wayland::{
             popup::{destroy_popup, get_popup},
             SurfaceIdWrapper,
@@ -117,7 +116,7 @@ enum Message {
 impl Application for CosmicNetworkApplet {
     type Message = Message;
     type Theme = Theme;
-    type Executor = executor::Default;
+    type Executor = cosmic::SingleThreadExecutor;
     type Flags = ();
 
     fn new(_flags: ()) -> (Self, Command<Message>) {

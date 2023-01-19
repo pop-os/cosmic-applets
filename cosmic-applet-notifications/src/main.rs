@@ -4,7 +4,6 @@ use cosmic::iced::wayland::{
     SurfaceIdWrapper,
 };
 use cosmic::iced::{
-    executor,
     widget::{button, column, horizontal_rule, row, text, Row, Space},
     window, Alignment, Application, Color, Command, Length, Subscription,
 };
@@ -46,7 +45,7 @@ enum Message {
 impl Application for Notifications {
     type Message = Message;
     type Theme = Theme;
-    type Executor = executor::Default;
+    type Executor = cosmic::SingleThreadExecutor;
     type Flags = ();
 
     fn new(_flags: ()) -> (Notifications, Command<Message>) {

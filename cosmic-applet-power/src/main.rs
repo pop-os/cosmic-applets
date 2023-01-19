@@ -9,7 +9,6 @@ use cosmic::widget::{button, horizontal_rule, icon};
 use cosmic::Renderer;
 
 use cosmic::iced::{
-    executor,
     widget::{self, column, container, row, Row},
     window, Alignment, Application, Command, Length, Subscription,
 };
@@ -60,7 +59,7 @@ enum Message {
 impl Application for Power {
     type Message = Message;
     type Theme = Theme;
-    type Executor = executor::Default;
+    type Executor = cosmic::SingleThreadExecutor;
     type Flags = ();
 
     fn new(_flags: ()) -> (Power, Command<Message>) {
