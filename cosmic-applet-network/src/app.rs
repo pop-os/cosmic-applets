@@ -1,3 +1,4 @@
+use cosmic::iced_sctk::Rectangle;
 use cosmic::iced_style;
 use cosmic::{
     applet::CosmicAppletHelper,
@@ -13,14 +14,14 @@ use cosmic::{
         alignment::{Horizontal, Vertical},
         layout::Limits,
         renderer::BorderRadius,
-        subscription, window,
+        window,
     },
     iced_style::{application, button::StyleSheet, svg},
     theme::{Button, Svg},
-    widget::{button, horizontal_rule, icon, list_column, toggler},
+    widget::{button, horizontal_rule, icon, toggler},
     Element, Theme,
 };
-use cosmic_dbus_networkmanager::{access_point, interface::enums::DeviceState};
+use cosmic_dbus_networkmanager::interface::enums::DeviceState;
 use futures::channel::mpsc::UnboundedSender;
 
 use crate::network_manager::NetworkManagerState;
@@ -151,11 +152,12 @@ impl Application for CosmicNetworkApplet {
                         None,
                         None,
                     );
+
                     popup_settings.positioner.size_limits = Limits::NONE
                         .min_height(1)
                         .min_width(1)
-                        .max_height(600)
-                        .max_width(600);
+                        .max_height(800)
+                        .max_width(400);
                     return get_popup(popup_settings);
                 }
             }

@@ -14,15 +14,19 @@ use cctk::wayland_client::protocol::wl_seat::WlSeat;
 use cosmic::applet::cosmic_panel_config::PanelAnchor;
 use cosmic::applet::CosmicAppletHelper;
 use cosmic::iced;
+use cosmic::iced::wayland::actions::window::SctkWindowSettings;
 use cosmic::iced::wayland::popup::destroy_popup;
 use cosmic::iced::wayland::popup::get_popup;
 use cosmic::iced::wayland::SurfaceIdWrapper;
 use cosmic::iced::widget::mouse_listener;
 use cosmic::iced::widget::{column, row};
+use cosmic::iced::Settings;
 use cosmic::iced::{window, Application, Command, Subscription};
 use cosmic::iced_native::alignment::Horizontal;
 use cosmic::iced_native::subscription::events_with;
 use cosmic::iced_native::widget::vertical_space;
+use cosmic::iced_sctk::layout::Limits;
+use cosmic::iced_sctk::settings::InitialSurface;
 use cosmic::iced_style::application::{self, Appearance};
 use cosmic::iced_style::Color;
 use cosmic::theme::Button;
@@ -43,7 +47,31 @@ use itertools::Itertools;
 
 pub fn run() -> cosmic::iced::Result {
     let helper = CosmicAppletHelper::default();
-    CosmicAppList::run(helper.window_settings())
+    let pixel_size = helper.suggested_size().0;
+    let padding = 8;
+    let dot_size = 4;
+    let spacing = 4;
+    let thickness = (pixel_size + 2 * padding + dot_size + spacing) as u32;
+    let (w, h) = match helper.anchor {
+        PanelAnchor::Top | PanelAnchor::Bottom => (2000, thickness),
+        PanelAnchor::Left | PanelAnchor::Right => (thickness, 2000),
+    };
+
+    CosmicAppList::run(Settings {
+        initial_surface: InitialSurface::XdgWindow(SctkWindowSettings {
+            iced_settings: cosmic::iced_native::window::Settings {
+                ..Default::default()
+            },
+            autosize: true,
+            size_limits: Limits::NONE
+                .min_height(1)
+                .min_width(1)
+                .max_height(h)
+                .max_width(w),
+            ..Default::default()
+        }),
+        ..Default::default()
+    })
 }
 
 #[derive(Debug, Clone, Default)]
@@ -68,30 +96,6 @@ struct CosmicAppList {
     seat: Option<WlSeat>,
     rectangle_tracker: Option<RectangleTracker<u32>>,
     rectangles: HashMap<u32, iced::Rectangle>,
-}
-
-impl CosmicAppList {
-    fn window_size(&self) -> (u32, u32) {
-        let pixel_size = self.applet_helper.suggested_size().0;
-        let padding = 8;
-        let dot_size = 4;
-        let spacing = 4;
-        let mut length = self
-            .toplevel_list
-            .iter()
-            .map(|t| {
-                (pixel_size + 2 * padding).max((dot_size + spacing) * t.toplevels.len() as u16)
-                    as u32
-                    + spacing as u32
-            })
-            .sum();
-        length += spacing as u32 * 2 + 2;
-        let thickness = (pixel_size + 2 * padding + dot_size + spacing) as u32;
-        match self.applet_helper.anchor {
-            PanelAnchor::Left | PanelAnchor::Right => (thickness, length),
-            PanelAnchor::Top | PanelAnchor::Bottom => (length, thickness),
-        }
-    }
 }
 
 // TODO DnD after sctk merges DnD
@@ -185,9 +189,8 @@ impl Application for CosmicAppList {
             toplevel_ctr,
             ..Default::default()
         };
-        let (w, h) = self_.window_size();
 
-        (self_, resize_window(window::Id::new(0), w, h))
+        (self_, Command::none())
     }
 
     fn title(&self) -> String {
@@ -288,9 +291,6 @@ impl Application for CosmicAppList {
                                 desktop_info,
                                 popup: None,
                             });
-
-                            let (w, h) = self.window_size();
-                            return resize_window(window::Id::new(0), w, h);
                         }
                     }
                     ToplevelUpdate::Init(tx) => {
@@ -321,8 +321,6 @@ impl Application for CosmicAppList {
                         ) {
                             self.toplevel_list.remove(i);
                         }
-                        let (w, h) = self.window_size();
-                        return resize_window(window::Id::new(0), w, h);
                     }
                     ToplevelUpdate::UpdateToplevel(handle, info) => {
                         // TODO probably want to make sure it is removed
@@ -337,8 +335,6 @@ impl Application for CosmicAppList {
                                 }
                             }
                         }
-                        let (w, h) = self.window_size();
-                        return resize_window(window::Id::new(0), w, h);
                     }
                 }
             }
@@ -402,20 +398,9 @@ impl Application for CosmicAppList {
                             Path::new(&desktop_info.icon),
                             self.applet_helper.suggested_size().0,
                         );
-                        // let icon = if desktop_info.icon.extension() == Some(&OsStr::new("svg")) {
-                        //     svg::Handle::from_path(&desktop_info.icon);
-                        //     svg::Svg::new(handle)
-                        //         .width(Length::Units(self.applet_helper.suggested_size().0))
-                        //         .height(Length::Units(self.applet_helper.suggested_size().0))
-                        //         .into()
-                        // } else {
-                        //     Image::new(&desktop_info.icon)
-                        //         .width(Length::Units(self.applet_helper.suggested_size().0))
-                        //         .height(Length::Units(self.applet_helper.suggested_size().0))
-                        //         .into()
-                        // };
+
                         let dot_radius = 2;
-                        let mut dots = (0..toplevels.len())
+                        let dots = (0..toplevels.len())
                             .into_iter()
                             .map(|_| {
                                 container(vertical_space(Length::Units(0)))
@@ -434,7 +419,6 @@ impl Application for CosmicAppList {
                                     .into()
                             })
                             .collect_vec();
-                        dots.push(vertical_space(Length::Units(4)).into());
                         let icon_wrapper = match &self.applet_helper.anchor {
                             PanelAnchor::Left => {
                                 row(vec![column(dots).spacing(4).into(), cosmic_icon.into()])
@@ -494,6 +478,11 @@ impl Application for CosmicAppList {
                     },
                 );
 
+                let (w, h) = match self.applet_helper.anchor {
+                    PanelAnchor::Top | PanelAnchor::Bottom => (Length::Shrink, Length::Fill),
+                    PanelAnchor::Left | PanelAnchor::Right => (Length::Fill, Length::Shrink),
+                };
+
                 let content = match &self.applet_helper.anchor {
                     PanelAnchor::Left | PanelAnchor::Right => container(
                         column![column(favorites), horizontal_rule(1), column(running)]
@@ -508,9 +497,7 @@ impl Application for CosmicAppList {
                             .align_items(Alignment::Center)
                             .height(Length::Fill)
                             .width(Length::Fill),
-                    )
-                    .height(Length::Fill)
-                    .width(Length::Fill),
+                    ),
                 };
                 if self.popup.is_some() {
                     mouse_listener(content)

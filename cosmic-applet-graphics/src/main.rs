@@ -26,6 +26,7 @@ pub fn main() -> cosmic::iced::Result {
                         .min_width(1)
                         .max_width(1000);
                 }
+                InitialSurface::None => unimplemented!(),
             };
         }
         _ => {}
