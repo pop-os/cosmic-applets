@@ -12,7 +12,7 @@ futures-util = "0.3.21"
 libcosmic = { git = "https://github.com/pop-os/libcosmic/", branch = "master", default-features = false, features = ["wayland", "applet", "tokio"] }
 sctk = { package = "smithay-client-toolkit", git = "https://github.com/Smithay/client-toolkit", rev = "3776d4a" }
 futures = "0.3"
-zbus = { version = "3.7", no-default-features = true }
+zbus = { version = "3.7", default-features = false }
 log = "0.4"
 pretty_env_logger = "0.4"
 itertools = "0.10.3"
