@@ -1,0 +1,9 @@
+graphics-mode = Modo Gráfico
+graphics = Gráfico
+integrated = Integrada
+integrated-desc = Desativa monitores externos. Requer reinicialização.
+nvidia = NVIDIA
+hybrid = Híbrida
+hybrid-desc = Requer reinicialização.
+compute = Calcular
+compute-desc = Desativa monitores externos. Requer reinicialização.
