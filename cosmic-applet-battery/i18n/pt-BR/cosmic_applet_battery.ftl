@@ -1,5 +1,10 @@
 cosmic-applet-button = Botão Cosmic
 battery = Bateria
+battery-desc = Consumo de energia e desempenho reduzidos.
+balanced = Equilibrado
+balanced-desc = Desempenho padrão e uso da bateria.
+performance = Alta performance
+performance-desc = High performance and power usage.
 max-charge = Aumente a vida útil da sua bateria definindo um valor máximo de carga de 80%
 seconds = s
 minutes = m
