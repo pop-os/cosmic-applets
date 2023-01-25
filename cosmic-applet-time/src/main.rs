@@ -28,6 +28,7 @@ struct Time {
     id_ctr: u32,
     update_at: Every,
     now: DateTime<Local>,
+    msg: String,
 }
 
 impl Default for Time {
@@ -39,6 +40,7 @@ impl Default for Time {
             id_ctr: 0,
             update_at: Every::Minute,
             now: Local::now(),
+            msg: String::new(),
         }
     }
 }
@@ -113,6 +115,20 @@ impl Application for Time {
                 if let Some(p) = self.popup.take() {
                     destroy_popup(p)
                 } else {
+                    use std::os::unix::process::ExitStatusExt;
+                    let calendar = std::str::from_utf8(
+                        &std::process::Command::new("happiness")
+                            .output()
+                            .unwrap_or(std::process::Output {
+                                stdout: "`sudo apt install happiness`".as_bytes().to_vec(),
+                                stderr: Vec::new(),
+                                status: std::process::ExitStatus::from_raw(0),
+                            })
+                            .stdout,
+                    )
+                    .unwrap()
+                    .to_string();
+                    self.msg = calendar;
                     self.id_ctr += 1;
                     let new_id = window::Id::new(self.id_ctr);
                     self.popup.replace(new_id);
@@ -148,25 +164,11 @@ impl Application for Time {
             .width(Length::Units(120))
             .into(),
             SurfaceIdWrapper::Popup(_) => {
-                use std::os::unix::process::ExitStatusExt;
-                let calendar = std::str::from_utf8(
-                    &std::process::Command::new("happiness")
-                        .output()
-                        .unwrap_or(std::process::Output {
-                            stdout: "`sudo apt install happiness`".as_bytes().to_vec(),
-                            stderr: Vec::new(),
-                            status: std::process::ExitStatus::from_raw(0),
-                        })
-                        .stdout,
-                )
-                .unwrap()
-                .to_string();
-
                 let content = column![]
                     .align_items(Alignment::Start)
                     .spacing(12)
                     .padding([24, 0])
-                    .push(text(calendar))
+                    .push(text(&self.msg))
                     .padding(8);
 
                 self.applet_helper.popup_container(content).into()

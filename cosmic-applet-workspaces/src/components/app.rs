@@ -47,6 +47,7 @@ struct IcedWorkspacesApplet {
     workspaces: WorkspaceList,
     workspace_tx: Option<SyncSender<WorkspaceEvent>>,
     layout: Layout,
+    helper: CosmicAppletHelper,
 }
 
 #[derive(Debug, Clone)]
@@ -74,6 +75,7 @@ impl Application for IcedWorkspacesApplet {
                 theme: Default::default(),
                 workspaces: Vec::new(),
                 workspace_tx: Default::default(),
+                helper: Default::default(),
             },
             Command::none(),
         )
@@ -96,7 +98,7 @@ impl Application for IcedWorkspacesApplet {
                         Ordering::Greater => Ordering::Greater,
                     });
                     self.workspaces = list;
-                    let unit = 32;
+                    let unit = self.helper.suggested_size().0 as u32 + 16;
                     let (w, h) = match self.layout {
                         Layout::Row => (unit * self.workspaces.len().max(1) as u32, unit),
                         Layout::Column => (unit, unit * self.workspaces.len().max(1) as u32),
