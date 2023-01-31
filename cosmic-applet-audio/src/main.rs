@@ -5,12 +5,12 @@ use cosmic::iced_native::layout::Limits;
 use cosmic::theme::Svg;
 
 use cosmic::applet::{CosmicAppletHelper, APPLET_BUTTON_THEME};
-use cosmic::widget::{button, icon};
+use cosmic::widget::{button, divider, icon};
 use cosmic::Renderer;
 
 use cosmic::iced::{
     self,
-    widget::{column, horizontal_rule, row, slider, text, toggler},
+    widget::{column, row, slider, text, toggler},
     window, Alignment, Application, Command, Length, Subscription,
 };
 use cosmic::iced_style::application::{self, Appearance};
@@ -302,7 +302,7 @@ impl Application for Audio {
                         .spacing(12)
                         .align_items(Alignment::Center)
                         .padding([8, 24]),
-                        container(horizontal_rule(1))
+                        container(divider::horizontal::light())
                             .padding([12, 24])
                             .width(Length::Fill),
                         revealer(
@@ -340,7 +340,7 @@ impl Application for Audio {
                 };
                 let content = column![
                     audio_content,
-                    container(horizontal_rule(1))
+                    container(divider::horizontal::light())
                         .padding([12, 24])
                         .width(Length::Fill),
                     container(toggler(
@@ -349,7 +349,7 @@ impl Application for Audio {
                         Message::ToggleMediaControlsInTopPanel,
                     ))
                     .padding([0, 24]),
-                    container(horizontal_rule(1))
+                    container(divider::horizontal::light())
                         .padding([12, 24])
                         .width(Length::Fill),
                     button(APPLET_BUTTON_THEME)

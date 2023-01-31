@@ -16,7 +16,7 @@ use cosmic::{
     iced::{self, Application, Command, Length},
     iced_native::window,
     theme::{Svg, Theme},
-    widget::{button, horizontal_rule},
+    widget::{button, divider},
     Element,
 };
 use zbus::Connection;
@@ -328,7 +328,7 @@ impl Application for Window {
                                 .horizontal_alignment(Horizontal::Center)
                                 .size(24)
                                 .into(),
-                            container(horizontal_rule(1))
+                            container(divider::horizontal::light())
                                 .padding([0, 12])
                                 .width(Length::Fill)
                                 .into(),
