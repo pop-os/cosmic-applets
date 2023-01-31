@@ -524,6 +524,8 @@ dependencies = [
  "libcosmic",
  "libpulse-binding",
  "libpulse-glib-binding",
+ "log",
+ "pretty_env_logger",
  "smithay-client-toolkit",
  "tokio",
 ]
