@@ -27,17 +27,17 @@ use cosmic::iced_native::subscription::events_with;
 use cosmic::iced_native::widget::vertical_space;
 use cosmic::iced_sctk::layout::Limits;
 use cosmic::iced_sctk::settings::InitialSurface;
+use cosmic::iced_sctk::widget::vertical_rule;
 use cosmic::iced_style::application::{self, Appearance};
 use cosmic::iced_style::Color;
 use cosmic::theme::Button;
+use cosmic::widget::divider;
 use cosmic::widget::rectangle_tracker::rectangle_tracker_subscription;
 use cosmic::widget::rectangle_tracker::RectangleTracker;
 use cosmic::widget::rectangle_tracker::RectangleUpdate;
-use cosmic::widget::{horizontal_rule, vertical_rule};
 use cosmic::{Element, Theme};
 use cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1;
 use freedesktop_desktop_entry::DesktopEntry;
-use iced::wayland::window::resize_window;
 use iced::widget::container;
 use iced::widget::horizontal_space;
 use iced::Alignment;
@@ -485,18 +485,22 @@ impl Application for CosmicAppList {
 
                 let content = match &self.applet_helper.anchor {
                     PanelAnchor::Left | PanelAnchor::Right => container(
-                        column![column(favorites), horizontal_rule(1), column(running)]
-                            .spacing(4)
-                            .align_items(Alignment::Center)
-                            .height(Length::Fill)
-                            .width(Length::Fill),
+                        column![
+                            column(favorites),
+                            divider::horizontal::light(),
+                            column(running)
+                        ]
+                        .spacing(4)
+                        .align_items(Alignment::Center)
+                        .height(h)
+                        .width(w),
                     ),
                     PanelAnchor::Top | PanelAnchor::Bottom => container(
                         row![row(favorites), vertical_rule(1), row(running)]
                             .spacing(4)
                             .align_items(Alignment::Center)
-                            .height(Length::Fill)
-                            .width(Length::Fill),
+                            .height(h)
+                            .width(w),
                     ),
                 };
                 if self.popup.is_some() {
@@ -542,9 +546,9 @@ impl Application for CosmicAppList {
                                     .on_press(Message::Activate(handle.clone())),
                             );
                         }
-                        content = content.push(horizontal_rule(1));
+                        content = content.push(divider::horizontal::light());
                         content = content.push(list_col);
-                        content = content.push(horizontal_rule(1));
+                        content = content.push(divider::horizontal::light());
                     }
                     content = content.push(if is_favorite {
                         cosmic::widget::button(Button::Text)
