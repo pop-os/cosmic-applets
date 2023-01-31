@@ -21,4 +21,6 @@ Architecture: amd64 arm64
 Depends:
   ${misc:Depends},
   ${shlibs:Depends}
+Recommends:
+  pipewire-pulse
 Description: Cosmic Applets
