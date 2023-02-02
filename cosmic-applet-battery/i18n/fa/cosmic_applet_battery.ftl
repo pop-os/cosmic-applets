@@ -1,0 +1,13 @@
+cosmic-applet-button = دکمه Cosmic
+battery = باتری
+battery-desc = کاهش مصرف برق و عملکرد.
+balanced = متعادل
+balanced-desc = عملکرد استاندارد و استفاده از باتری.
+performance = عملکرد بالا
+performance-desc = کارایی بالا و مصرف انرژی
+max-charge = با تنظیم حداکثر مقدار شارژ 80 درصد، طول عمر باتری خود را افزایش دهید.
+seconds = ث
+minutes = د
+hours = س
+until-empty = تا خالی شدن
+power-settings = تنظیمات برق و باتری...
