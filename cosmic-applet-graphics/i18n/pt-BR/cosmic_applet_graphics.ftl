@@ -7,4 +7,3 @@ hybrid = Híbrido
 hybrid-desc = Requer reinicialização.
 compute = Calcular
 compute-desc = Desativa monitores externos. Requer reinicialização.
-

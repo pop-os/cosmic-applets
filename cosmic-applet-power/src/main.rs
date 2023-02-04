@@ -5,7 +5,7 @@ use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced::wayland::SurfaceIdWrapper;
 use cosmic::iced_native::layout::Limits;
 use cosmic::iced_native::widget::Space;
-use cosmic::widget::{button, horizontal_rule, icon};
+use cosmic::widget::{button, divider, icon};
 use cosmic::Renderer;
 
 use cosmic::iced::{
@@ -179,11 +179,11 @@ impl Application for Power {
 
                 let content = column![
                     settings,
-                    container(horizontal_rule(1))
+                    container(divider::horizontal::light())
                         .padding([0, 12])
                         .width(Length::Fill),
                     session,
-                    container(horizontal_rule(1))
+                    container(divider::horizontal::light())
                         .padding([0, 12])
                         .width(Length::Fill),
                     power

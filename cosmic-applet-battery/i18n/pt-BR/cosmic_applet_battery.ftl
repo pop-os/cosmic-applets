@@ -11,4 +11,3 @@ minutes = m
 hours = h
 until-empty = vazio
 power-settings = Configurações de energia e bateria...
-
