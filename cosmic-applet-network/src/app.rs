@@ -1,4 +1,3 @@
-use cosmic::iced_sctk::Rectangle;
 use cosmic::iced_style;
 use cosmic::{
     applet::CosmicAppletHelper,
@@ -18,7 +17,7 @@ use cosmic::{
     },
     iced_style::{application, button::StyleSheet, svg},
     theme::{Button, Svg},
-    widget::{button, horizontal_rule, icon, toggler},
+    widget::{button, divider, icon, toggler},
     Element, Theme,
 };
 use cosmic_dbus_networkmanager::interface::enums::DeviceState;
@@ -444,7 +443,7 @@ impl Application for CosmicNetworkApplet {
                         .width(Length::Fill)
                     )
                     .padding([0, 12]),
-                    horizontal_rule(1),
+                    divider::horizontal::light(),
                     container(
                         toggler(fl!("wifi"), self.nm_state.wifi_enabled, |m| {
                             Message::ToggleWiFi(m)
@@ -452,7 +451,7 @@ impl Application for CosmicNetworkApplet {
                         .width(Length::Fill)
                     )
                     .padding([0, 12]),
-                    horizontal_rule(1),
+                    divider::horizontal::light(),
                     known_wifi,
                 ]
                 .align_items(Alignment::Center)

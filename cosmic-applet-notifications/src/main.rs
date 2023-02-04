@@ -4,15 +4,14 @@ use cosmic::iced::wayland::{
     SurfaceIdWrapper,
 };
 use cosmic::iced::{
-    widget::{button, column, horizontal_rule, row, text, Row, Space},
+    widget::{button, column, row, text, Row, Space},
     window, Alignment, Application, Color, Command, Length, Subscription,
 };
 
 use cosmic::iced_style::application::{self, Appearance};
 use cosmic::iced_style::svg;
 use cosmic::theme::Svg;
-use cosmic::widget::icon;
-use cosmic::widget::toggler;
+use cosmic::widget::{divider, icon, toggler};
 use cosmic::Renderer;
 use cosmic::{Element, Theme};
 
@@ -146,9 +145,13 @@ impl Application for Notifications {
                     row![text("TODO: make app worky with notifications")]
                 };
 
-                let main_content = column![horizontal_rule(1), notifications, horizontal_rule(1)]
-                    .padding([0, 24])
-                    .spacing(12);
+                let main_content = column![
+                    divider::horizontal::light(),
+                    notifications,
+                    divider::horizontal::light()
+                ]
+                .padding([0, 24])
+                .spacing(12);
 
                 let content = column![]
                     .align_items(Alignment::Start)

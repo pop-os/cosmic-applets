@@ -5,12 +5,12 @@ use cosmic::iced_native::layout::Limits;
 use cosmic::theme::Svg;
 
 use cosmic::applet::{CosmicAppletHelper, APPLET_BUTTON_THEME};
-use cosmic::widget::{button, icon};
+use cosmic::widget::{button, divider, icon};
 use cosmic::Renderer;
 
 use cosmic::iced::{
     self,
-    widget::{column, horizontal_rule, row, slider, text, toggler},
+    widget::{column, row, slider, text, toggler},
     window, Alignment, Application, Command, Length, Subscription,
 };
 use cosmic::iced_style::application::{self, Appearance};
@@ -25,6 +25,8 @@ use crate::pulse::DeviceInfo;
 use libpulse_binding::volume::VolumeLinear;
 
 pub fn main() -> cosmic::iced::Result {
+    pretty_env_logger::init();
+
     let helper = CosmicAppletHelper::default();
     Audio::run(helper.window_settings())
 }
@@ -80,7 +82,6 @@ impl Application for Audio {
                 current_input: None,
                 outputs: vec![],
                 inputs: vec![],
-                pulse_state: PulseState::Disconnected,
                 icon_name: "audio-volume-high-symbolic".to_string(),
                 ..Default::default()
             },
@@ -113,6 +114,9 @@ impl Application for Audio {
                 if let Some(p) = self.popup.take() {
                     return destroy_popup(p);
                 } else {
+                    if let Some(conn) = self.pulse_state.connection() {
+                        conn.send(pulse::Message::UpdateConnection);
+                    }
                     self.id_ctr += 1;
                     let new_id = window::Id::new(self.id_ctr);
                     self.popup.replace(new_id);
@@ -156,7 +160,7 @@ impl Application for Audio {
                 if let PulseState::Connected(connection) = &mut self.pulse_state {
                     if let Some(device) = &self.current_input {
                         if let Some(name) = &device.name {
-                            println!("increasing volume of {}", name);
+                            log::info!("increasing volume of {}", name);
                             connection.send(pulse::Message::SetSourceVolumeByName(
                                 name.clone(),
                                 device.volume,
@@ -165,8 +169,8 @@ impl Application for Audio {
                     }
                 }
             }
-            Message::OutputChanged(val) => println!("changed output {}", val),
-            Message::InputChanged(val) => println!("changed input {}", val),
+            Message::OutputChanged(val) => log::info!("changed output {}", val),
+            Message::InputChanged(val) => log::info!("changed input {}", val),
             Message::OutputToggle => {
                 self.is_open = if self.is_open == IsOpen::Output {
                     IsOpen::None
@@ -182,12 +186,16 @@ impl Application for Audio {
                 }
             }
             Message::Pulse(event) => match event {
-                pulse::Event::Connected(mut connection) => {
-                    connection.send(pulse::Message::GetSinks);
-                    connection.send(pulse::Message::GetSources);
-                    connection.send(pulse::Message::GetDefaultSink);
-                    connection.send(pulse::Message::GetDefaultSource);
-                    self.pulse_state = PulseState::Connected(connection);
+                pulse::Event::Init(conn) => self.pulse_state = PulseState::Disconnected(conn),
+                pulse::Event::Connected => {
+                    self.pulse_state.connected();
+
+                    if let Some(conn) = self.pulse_state.connection() {
+                        conn.send(pulse::Message::GetSinks);
+                        conn.send(pulse::Message::GetSources);
+                        conn.send(pulse::Message::GetDefaultSink);
+                        conn.send(pulse::Message::GetDefaultSource);
+                    }
                 }
                 pulse::Event::MessageReceived(msg) => {
                     match msg {
@@ -215,15 +223,11 @@ impl Application for Audio {
                             panic!("Subscriton error handling is bad. This should never happen.")
                         }
                         _ => {
-                            println!("Received misc message")
+                            log::trace!("Received misc message")
                         }
                     }
                 }
-                // TODO: view() should gray out buttons/slider when state is disconnected
-                pulse::Event::Disconnected => {
-                    println!("setting state to disconnected");
-                    self.pulse_state = PulseState::Disconnected
-                }
+                pulse::Event::Disconnected => self.pulse_state.disconnected(),
             },
             Message::Ignore => {}
             Message::ToggleMediaControlsInTopPanel(enabled) => {
@@ -247,6 +251,7 @@ impl Application for Audio {
                 .on_press(Message::TogglePopup)
                 .into(),
             SurfaceIdWrapper::Popup(_) => {
+                let audio_disabled = matches!(self.pulse_state, PulseState::Disconnected(_));
                 let out_f64 = VolumeLinear::from(
                     self.current_output
                         .as_ref()
@@ -262,69 +267,80 @@ impl Application for Audio {
                 )
                 .0 * 100.0;
 
+                let audio_content = if audio_disabled {
+                    column![text("PulseAudio Disconnected")
+                        .width(Length::Fill)
+                        .horizontal_alignment(Horizontal::Center)
+                        .size(24),]
+                } else {
+                    column![
+                        row![
+                            icon("audio-volume-high-symbolic", 32)
+                                .width(Length::Units(24))
+                                .height(Length::Units(24))
+                                .style(Svg::Symbolic),
+                            slider(0.0..=100.0, out_f64, Message::SetOutputVolume)
+                                .width(Length::FillPortion(5)),
+                            text(format!("{}%", out_f64.round()))
+                                .width(Length::FillPortion(1))
+                                .horizontal_alignment(Horizontal::Right)
+                        ]
+                        .spacing(12)
+                        .align_items(Alignment::Center)
+                        .padding([8, 24]),
+                        row![
+                            icon("audio-input-microphone-symbolic", 32)
+                                .width(Length::Units(24))
+                                .height(Length::Units(24))
+                                .style(Svg::Symbolic),
+                            slider(0.0..=100.0, in_f64, Message::SetInputVolume)
+                                .width(Length::FillPortion(5)),
+                            text(format!("{}%", in_f64.round()))
+                                .width(Length::FillPortion(1))
+                                .horizontal_alignment(Horizontal::Right)
+                        ]
+                        .spacing(12)
+                        .align_items(Alignment::Center)
+                        .padding([8, 24]),
+                        container(divider::horizontal::light())
+                            .padding([12, 24])
+                            .width(Length::Fill),
+                        revealer(
+                            self.is_open == IsOpen::Output,
+                            "Output",
+                            match &self.current_output {
+                                Some(output) => pretty_name(output.description.clone()),
+                                None => String::from("No device selected"),
+                            },
+                            self.outputs
+                                .clone()
+                                .into_iter()
+                                .map(|output| pretty_name(output.description))
+                                .collect(),
+                            Message::OutputToggle,
+                            Message::OutputChanged(String::from("test")),
+                        ),
+                        revealer(
+                            self.is_open == IsOpen::Input,
+                            "Input",
+                            match &self.current_input {
+                                Some(input) => pretty_name(input.description.clone()),
+                                None => String::from("No device selected"),
+                            },
+                            self.inputs
+                                .clone()
+                                .into_iter()
+                                .map(|input| pretty_name(input.description))
+                                .collect(),
+                            Message::InputToggle,
+                            Message::InputChanged(String::from("test")),
+                        )
+                    ]
+                    .align_items(Alignment::Start)
+                };
                 let content = column![
-                    row![
-                        icon("audio-volume-high-symbolic", 32)
-                            .width(Length::Units(24))
-                            .height(Length::Units(24))
-                            .style(Svg::Symbolic),
-                        slider(0.0..=100.0, out_f64, Message::SetOutputVolume)
-                            .width(Length::FillPortion(5)),
-                        text(format!("{}%", out_f64.round()))
-                            .width(Length::FillPortion(1))
-                            .horizontal_alignment(Horizontal::Right)
-                    ]
-                    .spacing(12)
-                    .align_items(Alignment::Center)
-                    .padding([8, 24]),
-                    row![
-                        icon("audio-input-microphone-symbolic", 32)
-                            .width(Length::Units(24))
-                            .height(Length::Units(24))
-                            .style(Svg::Symbolic),
-                        slider(0.0..=100.0, in_f64, Message::SetInputVolume)
-                            .width(Length::FillPortion(5)),
-                        text(format!("{}%", in_f64.round()))
-                            .width(Length::FillPortion(1))
-                            .horizontal_alignment(Horizontal::Right)
-                    ]
-                    .spacing(12)
-                    .align_items(Alignment::Center)
-                    .padding([8, 24]),
-                    container(horizontal_rule(1))
-                        .padding([12, 24])
-                        .width(Length::Fill),
-                    revealer(
-                        self.is_open == IsOpen::Output,
-                        "Output",
-                        match &self.current_output {
-                            Some(output) => pretty_name(output.description.clone()),
-                            None => String::from("No device selected"),
-                        },
-                        self.outputs
-                            .clone()
-                            .into_iter()
-                            .map(|output| pretty_name(output.description))
-                            .collect(),
-                        Message::OutputToggle,
-                        Message::OutputChanged(String::from("test")),
-                    ),
-                    revealer(
-                        self.is_open == IsOpen::Input,
-                        "Input",
-                        match &self.current_input {
-                            Some(input) => pretty_name(input.description.clone()),
-                            None => String::from("No device selected"),
-                        },
-                        self.inputs
-                            .clone()
-                            .into_iter()
-                            .map(|input| pretty_name(input.description))
-                            .collect(),
-                        Message::InputToggle,
-                        Message::InputChanged(String::from("test")),
-                    ),
-                    container(horizontal_rule(1))
+                    audio_content,
+                    container(divider::horizontal::light())
                         .padding([12, 24])
                         .width(Length::Fill),
                     container(toggler(
@@ -333,7 +349,7 @@ impl Application for Audio {
                         Message::ToggleMediaControlsInTopPanel,
                     ))
                     .padding([0, 24]),
-                    container(horizontal_rule(1))
+                    container(divider::horizontal::light())
                         .padding([12, 24])
                         .width(Length::Fill),
                     button(APPLET_BUTTON_THEME)
@@ -393,14 +409,33 @@ fn pretty_name(name: Option<String>) -> String {
     }
 }
 
+#[derive(Default)]
 enum PulseState {
-    Disconnected,
+    #[default]
+    Init,
+    Disconnected(pulse::Connection),
     Connected(pulse::Connection),
 }
 
-impl Default for PulseState {
-    fn default() -> Self {
-        Self::Disconnected
+impl PulseState {
+    fn connection(&mut self) -> Option<&mut pulse::Connection> {
+        match self {
+            PulseState::Disconnected(c) => Some(c),
+            PulseState::Connected(c) => Some(c),
+            PulseState::Init => None,
+        }
+    }
+
+    fn connected(&mut self) {
+        if let PulseState::Disconnected(c) = self {
+            *self = PulseState::Connected(c.clone());
+        }
+    }
+
+    fn disconnected(&mut self) {
+        if let PulseState::Connected(c) = self {
+            *self = PulseState::Disconnected(c.clone());
+        }
     }
 }
 

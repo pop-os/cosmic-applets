@@ -22,7 +22,7 @@ use cosmic::iced_native::layout::Limits;
 use cosmic::iced_style::application::{self, Appearance};
 use cosmic::iced_style::{svg, Color};
 use cosmic::theme::Svg;
-use cosmic::widget::{button, horizontal_rule, icon, toggler};
+use cosmic::widget::{button, divider, icon, toggler};
 use cosmic::{Element, Theme};
 use log::error;
 use std::time::Duration;
@@ -255,7 +255,7 @@ impl Application for CosmicBatteryApplet {
                             .padding([0, 24])
                             .spacing(8)
                             .align_items(Alignment::Center),
-                            container(horizontal_rule(1))
+                            container(divider::horizontal::light())
                                 .width(Length::Fill)
                                 .padding([0, 12]),
                             button(APPLET_BUTTON_THEME)
@@ -315,7 +315,7 @@ impl Application for CosmicBatteryApplet {
                                 .padding([8, 24])
                                 .on_press(Message::SelectProfile(Power::Performance))
                                 .width(Length::Fill),
-                            container(horizontal_rule(1))
+                            container(divider::horizontal::light())
                                 .width(Length::Fill)
                                 .padding([0, 12]),
                             container(toggler(fl!("max-charge"), self.charging_limit, |_| {
@@ -323,7 +323,7 @@ impl Application for CosmicBatteryApplet {
                             }))
                             .padding([0, 24])
                             .width(Length::Fill),
-                            container(horizontal_rule(1))
+                            container(divider::horizontal::light())
                                 .width(Length::Fill)
                                 .padding([0, 12]),
                             row![
@@ -366,7 +366,7 @@ impl Application for CosmicBatteryApplet {
                             ]
                             .padding([0, 24])
                             .spacing(12),
-                            container(horizontal_rule(1))
+                            container(divider::horizontal::light())
                                 .width(Length::Fill)
                                 .padding([0, 12]),
                             button(APPLET_BUTTON_THEME)
