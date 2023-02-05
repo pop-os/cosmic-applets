@@ -133,13 +133,12 @@ fn desktop_info_for_app_ids(mut app_ids: Vec<String>) -> Vec<DesktopInfo> {
                         .iter()
                         .position(|s| s == de.appid || s.eq(&de.name(None).unwrap_or_default()))
                     {
-                        let id = app_ids.remove(i);
                         freedesktop_icons::lookup(de.icon().unwrap_or(de.appid))
                             .with_size(128)
                             .with_cache()
                             .find()
                             .map(|buf| DesktopInfo {
-                                id,
+                                id: app_ids.remove(i),
                                 icon: buf,
                                 exec: de.exec().unwrap_or_default().to_string(),
                                 name: de.name(None).unwrap_or_default().to_string(),
