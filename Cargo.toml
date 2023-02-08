@@ -4,6 +4,7 @@ members = [
     "cosmic-app-list",
     "cosmic-applet-audio",
     "cosmic-applet-battery",
+    "cosmic-applet-bluetooth",
     "cosmic-applet-graphics",
     "cosmic-applet-network",
     "cosmic-applet-notifications",
@@ -12,5 +13,5 @@ members = [
     "cosmic-applet-workspaces",
 ]
 
-[profile.release]
-lto = "fat"
+#[profile.release]
+#lto = "fat"
