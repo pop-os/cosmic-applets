@@ -147,7 +147,6 @@ impl Application for CosmicBluetoothApplet {
                     }
                     self.bluer_state = state;
                     // TODO special handling for some requests
-
                     match req {
                         BluerRequest::StateUpdate
                             if self.popup.is_some() && self.bluer_sender.is_some() =>
@@ -314,7 +313,12 @@ impl Application for CosmicBluetoothApplet {
                 .into(),
             SurfaceIdWrapper::Popup(_) => {
                 let mut known_bluetooth = column![];
-                for dev in &self.bluer_state.devices {
+                for dev in self.bluer_state.devices.iter().filter(|d| {
+                    !self
+                        .request_confirmation
+                        .as_ref()
+                        .map_or(false, |(dev, _, _)| d.address == dev.address)
+                }) {
                     let mut row = row![].align_items(Alignment::Center);
                     row = row.push(
                         text(dev.name.clone())
@@ -477,7 +481,10 @@ impl Application for CosmicBluetoothApplet {
                             matches!(
                                 d.status,
                                 BluerDeviceStatus::Disconnected | BluerDeviceStatus::Pairing
-                            )
+                            ) && !self
+                                .request_confirmation
+                                .as_ref()
+                                .map_or(false, |(dev, _, _)| d.address == dev.address)
                         }) {
                             let mut row = row![].width(Length::Fill).align_items(Alignment::Center);
                             row = row.push(
