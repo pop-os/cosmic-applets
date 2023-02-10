@@ -159,6 +159,7 @@ impl Application for CosmicBluetoothApplet {
                     self.bluer_state = state;
                 }
                 BluerEvent::Finished => {
+                    // TODO should this exit with an error causing a restart?
                     eprintln!("bluetooth subscription finished. exiting...");
                     std::process::exit(0);
                 }

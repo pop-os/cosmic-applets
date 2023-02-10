@@ -35,13 +35,13 @@ async fn start_listening<I: Copy + Debug>(id: I, state: State) -> (Option<(I, Bl
         State::Ready => {
             let session = match Session::new().await {
                 Ok(s) => s,
-                Err(_) => return (None, State::Finished),
+                Err(_) => return (Some((id, BluerEvent::Finished)), State::Finished),
             };
             let (tx, rx) = channel(100);
 
             let session_state = match BluerSessionState::new(session, rx).await {
                 Ok(s) => s,
-                Err(_) => return (None, State::Finished),
+                Err(_) => return (Some((id, BluerEvent::Finished)), State::Finished),
             };
 
             let state = session_state.bluer_state().await;
@@ -60,7 +60,7 @@ async fn start_listening<I: Copy + Debug>(id: I, state: State) -> (Option<(I, Bl
             let mut session_rx = match session_state.rx.take() {
                 Some(rx) => rx,
                 None => {
-                    return (None, State::Finished); // fail if we can't get the rx
+                    return (Some((id, BluerEvent::Finished)), State::Finished); // fail if we can't get the rx
                 }
             };
 
@@ -85,7 +85,7 @@ async fn start_listening<I: Copy + Debug>(id: I, state: State) -> (Option<(I, Bl
                     _ => None,
                 }
             } else {
-                return (None, State::Finished);
+                return (Some((id, BluerEvent::Finished)), State::Finished);
             };
             session_state.rx = Some(session_rx);
             (event, State::Waiting { session_state })
@@ -480,6 +480,7 @@ impl BluerSessionState {
                         milli_timeout = (milli_timeout * 2).max(5120);
                     }
                 }
+                let _ = tx.send(BluerSessionEvent::ChangeStreamEnded).await;
                 Ok(())
             });
     }
