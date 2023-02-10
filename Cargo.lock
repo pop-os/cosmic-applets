@@ -591,6 +591,7 @@ dependencies = [
  "log",
  "once_cell",
  "pretty_env_logger",
+ "rand",
  "rust-embed",
  "slotmap",
  "smithay-client-toolkit",

@@ -9,6 +9,7 @@ Build-Depends:
   cargo,
   libgtk-4-dev,
   libadwaita-1-dev,
+  libdbus-1-dev,
   libpulse-dev,
   just,
   pkg-config,

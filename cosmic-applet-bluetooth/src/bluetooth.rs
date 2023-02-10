@@ -1,9 +1,13 @@
 use std::{collections::HashMap, fmt::Debug, hash::Hash, sync::Arc, time::Duration};
 
-use bluer::{Adapter, AdapterProperty, Address, DeviceProperty, Session};
+use bluer::{
+    agent::{Agent, AgentHandle},
+    Adapter, Address, DeviceProperty, Session, Uuid,
+};
 use cosmic::iced::{self, subscription};
 
 use futures::StreamExt;
+use rand::Rng;
 use tokio::{
     spawn,
     sync::{
@@ -20,7 +24,6 @@ pub fn bluetooth_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
     subscription::unfold(id, State::Ready, move |state| start_listening(id, state))
 }
 
-#[derive(Debug)]
 pub enum State {
     Ready,
     Waiting { session_state: BluerSessionState },
@@ -88,6 +91,7 @@ async fn start_listening<I: Copy + Debug>(id: I, state: State) -> (Option<(I, Bl
                             err_msg,
                         },
                     )),
+                    BluerSessionEvent::AgentEvent(e) => Some((id, BluerEvent::AgentEvent(e))),
                     _ => None,
                 }
             } else {
@@ -108,6 +112,7 @@ pub enum BluerRequest {
     ConnectDevice(Address),
     DisconnectDevice(Address),
     CancelConnect(Address),
+    StateUpdate,
 }
 
 #[derive(Debug, Clone)]
@@ -124,6 +129,7 @@ pub enum BluerEvent {
     DevicesChanged {
         state: BluerState,
     },
+    AgentEvent(BluerAgentEvent),
     Finished,
 }
 
@@ -140,6 +146,8 @@ pub enum BluerDeviceStatus {
     Paired,
     Connecting,
     Disconnecting,
+    /// Pairing is in progress, maybe with a passkey or pincode
+    /// passkey or pincode will be 000000 - 999999
     Pairing,
 }
 
@@ -151,6 +159,32 @@ pub struct BluerDevice {
     pub properties: Vec<DeviceProperty>,
 }
 
+impl BluerDevice {
+    pub async fn from_device(device: &bluer::Device) -> Self {
+        let name = device
+            .name()
+            .await
+            .unwrap_or_default()
+            .unwrap_or_else(|| "Unknown".to_string());
+        let is_paired = device.is_paired().await.unwrap_or_default();
+        let is_connected = device.is_connected().await.unwrap_or_default();
+        let properties = device.all_properties().await.unwrap_or_default();
+        let status = if is_connected {
+            BluerDeviceStatus::Connected
+        } else if is_paired {
+            BluerDeviceStatus::Paired
+        } else {
+            BluerDeviceStatus::Disconnected
+        };
+        Self {
+            name,
+            address: device.address(),
+            status,
+            properties,
+        }
+    }
+}
+
 pub enum BluerSessionEvent {
     RequestResponse {
         req: BluerRequest,
@@ -159,15 +193,27 @@ pub enum BluerSessionEvent {
     },
     ChangesProcessed(BluerState),
     ChangeStreamEnded, // TODO can we just restart the stream in a new task?
+    AgentEvent(BluerAgentEvent),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
+pub enum BluerAgentEvent {
+    DisplayPinCode(BluerDevice, String),
+    DisplayPasskey(BluerDevice, String),
+    RequestPinCode(BluerDevice),
+    RequestPasskey(BluerDevice),
+    RequestConfirmation(BluerDevice, String, Sender<bool>), // Note mpsc channel is used bc the sender must be cloned in the iced Message machinery
+    RequestDeviceAuthorization(BluerDevice, Sender<bool>),
+    RequestServiceAuthorization(BluerDevice, Uuid, Sender<bool>),
+}
+
 pub struct BluerSessionState {
-    session: Session,
+    _session: Session,
+    _agent_handle: AgentHandle,
     pub adapter: Adapter,
     pub devices: Arc<Mutex<Vec<BluerDevice>>>,
     pub rx: Option<Receiver<BluerSessionEvent>>,
-    tx: Option<Sender<BluerSessionEvent>>,
+    tx: Sender<BluerSessionEvent>,
     active_requests: Arc<Mutex<HashMap<BluerRequest, JoinHandle<anyhow::Result<()>>>>>,
 }
 
@@ -178,43 +224,205 @@ impl BluerSessionState {
     ) -> anyhow::Result<Self> {
         let adapter = session.default_adapter().await?;
         let devices = build_device_list(&adapter).await;
+        let (tx, rx) = tokio::sync::mpsc::channel(100);
+        let tx_clone_1 = tx.clone();
+        let tx_clone_2 = tx.clone();
+        let tx_clone_3 = tx.clone();
+        let tx_clone_4 = tx.clone();
+        let tx_clone_5 = tx.clone();
+        let tx_clone_6 = tx.clone();
+        let tx_clone_7 = tx.clone();
+        let adapter_clone_1 = adapter.clone();
+        let adapter_clone_2 = adapter.clone();
+        let adapter_clone_3 = adapter.clone();
+        let adapter_clone_4 = adapter.clone();
+        let adapter_clone_5 = adapter.clone();
+        let adapter_clone_6 = adapter.clone();
+        let adapter_clone_7 = adapter.clone();
+        let _agent = Agent {
+            request_default: true, // TODO which agent should eventually become the default? Maybe the one in the settings app?
+            request_pin_code: Some(Box::new(move |req| {
+                let agent_clone = adapter_clone_1.clone();
+                let tx_clone = tx_clone_1.clone();
+                Box::pin(async move {
+                    let device = match agent_clone.device(req.device) {
+                        Ok(d) => d,
+                        Err(_) => return Err(bluer::agent::ReqError::Rejected),
+                    };
+                    let _ = tx_clone
+                        .send(BluerSessionEvent::AgentEvent(
+                            BluerAgentEvent::RequestPinCode(
+                                BluerDevice::from_device(&device).await,
+                            ),
+                        ))
+                        .await;
+                    let mut rng = rand::thread_rng();
+                    let pin_code = rng.gen_range(0..999999);
+                    Ok(format!("{:06}", pin_code))
+                })
+            })),
+            display_pin_code: Some(Box::new(move |req| {
+                let agent_clone = adapter_clone_2.clone();
+                let tx_clone = tx_clone_2.clone();
+                Box::pin(async move {
+                    let device = match agent_clone.device(req.device) {
+                        Ok(d) => d,
+                        Err(_) => return Err(bluer::agent::ReqError::Rejected),
+                    };
+                    let _ = tx_clone
+                        .send(BluerSessionEvent::AgentEvent(
+                            BluerAgentEvent::DisplayPinCode(
+                                BluerDevice::from_device(&device).await,
+                                req.pincode,
+                            ),
+                        ))
+                        .await;
+
+                    Ok(())
+                })
+            })),
+            request_passkey: Some(Box::new(move |req| {
+                let agent_clone = adapter_clone_3.clone();
+                let tx_clone = tx_clone_3.clone();
+                Box::pin(async move {
+                    let device = match agent_clone.device(req.device) {
+                        Ok(d) => d,
+                        Err(_) => return Err(bluer::agent::ReqError::Rejected),
+                    };
+                    let _ = tx_clone
+                        .send(BluerSessionEvent::AgentEvent(
+                            BluerAgentEvent::RequestPasskey(
+                                BluerDevice::from_device(&device).await,
+                            ),
+                        ))
+                        .await;
+                    let mut rng = rand::thread_rng();
+                    let pin_code = rng.gen_range(0..999999);
+                    Ok(pin_code)
+                })
+            })),
+            display_passkey: Some(Box::new(move |req| {
+                let agent_clone = adapter_clone_4.clone();
+                let tx_clone = tx_clone_4.clone();
+                Box::pin(async move {
+                    let device = match agent_clone.device(req.device) {
+                        Ok(d) => d,
+                        Err(_) => return Err(bluer::agent::ReqError::Rejected),
+                    };
+                    let _ = tx_clone
+                        .send(BluerSessionEvent::AgentEvent(
+                            BluerAgentEvent::DisplayPasskey(
+                                BluerDevice::from_device(&device).await,
+                                format!("{:06}", req.passkey),
+                            ),
+                        ))
+                        .await;
+                    Ok(())
+                })
+            })),
+            request_confirmation: Some(Box::new(move |req| {
+                let agent_clone = adapter_clone_5.clone();
+                let tx_clone = tx_clone_5.clone();
+                Box::pin(async move {
+                    let device = match agent_clone.device(req.device) {
+                        Ok(d) => d,
+                        Err(_) => return Err(bluer::agent::ReqError::Rejected),
+                    };
+                    let (tx, mut rx) = channel(1);
+                    let _ = tx_clone
+                        .send(BluerSessionEvent::AgentEvent(
+                            BluerAgentEvent::RequestConfirmation(
+                                BluerDevice::from_device(&device).await,
+                                format!("{:06}", req.passkey),
+                                tx,
+                            ),
+                        ))
+                        .await;
+                    let res = rx.recv().await;
+                    dbg!(res);
+                    match res {
+                        Some(res) if res => Ok(()),
+                        _ => Err(bluer::agent::ReqError::Rejected),
+                    }
+                })
+            })),
+            request_authorization: Some(Box::new(move |req| {
+                let agent_clone = adapter_clone_6.clone();
+                let tx_clone = tx_clone_6.clone();
+                Box::pin(async move {
+                    let device = match agent_clone.device(req.device) {
+                        Ok(d) => d,
+                        Err(_) => return Err(bluer::agent::ReqError::Rejected),
+                    };
+                    let (tx, mut rx) = channel(1);
+                    let _ = tx_clone
+                        .send(BluerSessionEvent::AgentEvent(
+                            BluerAgentEvent::RequestDeviceAuthorization(
+                                BluerDevice::from_device(&device).await,
+                                tx,
+                            ),
+                        ))
+                        .await;
+                    let res = rx.recv().await;
+                    match res {
+                        Some(res) if res => Ok(()),
+                        _ => Err(bluer::agent::ReqError::Rejected),
+                    }
+                })
+            })),
+            authorize_service: Some(Box::new(move |req| {
+                let agent_clone = adapter_clone_7.clone();
+                let tx_clone = tx_clone_7.clone();
+                Box::pin(async move {
+                    let device = match agent_clone.device(req.device) {
+                        Ok(d) => d,
+                        Err(_) => return Err(bluer::agent::ReqError::Rejected),
+                    };
+                    let (tx, mut rx) = channel(1);
+                    // TODO better describe the service to the user
+                    let _ = tx_clone
+                        .send(BluerSessionEvent::AgentEvent(
+                            BluerAgentEvent::RequestServiceAuthorization(
+                                BluerDevice::from_device(&device).await,
+                                req.service,
+                                tx,
+                            ),
+                        ))
+                        .await;
+                    let res = rx.recv().await;
+                    match res {
+                        Some(res) if res => Ok(()),
+                        _ => Err(bluer::agent::ReqError::Rejected),
+                    }
+                })
+            })),
+            _non_exhaustive: (),
+        };
+        let _agent_handle = session.register_agent(_agent).await?;
 
         let mut self_ = Self {
-            session,
-            adapter: adapter,
+            _agent_handle,
+            _session: session,
+            adapter,
             devices: Arc::new(Mutex::new(devices)),
-            rx: None,
-            tx: None,
+            rx: Some(rx),
+            tx,
             active_requests: Arc::new(Mutex::new(HashMap::new())),
         };
         self_.process_changes();
         self_.process_requests(request_rx);
-
         Ok(self_)
     }
 
-    pub(crate) async fn devices(&self) -> Vec<BluerDevice> {
-        self.devices.lock().await.clone()
-    }
-
-    pub(crate) async fn clear(&mut self) {
-        self.devices.lock().await.clear();
-    }
-
-    pub(crate) fn start_monitoring(&mut self) {
-        self.process_changes();
-    }
-
+    // Note: For some reason, this doesn't actually seem to work so well. it seems unreliable...
     pub(crate) fn process_changes(&mut self) {
-        let (tx, rx) = tokio::sync::mpsc::channel(100);
-        self.tx = Some(tx.clone());
+        let tx = self.tx.clone();
         let devices_clone = self.devices.clone();
         let adapter_clone = self.adapter.clone();
         let _monitor_devices: tokio::task::JoinHandle<Result<(), anyhow::Error>> =
             spawn(async move {
                 let mut change_stream = adapter_clone.discover_devices_with_changes().await?;
 
-                let mut cur = None;
                 let mut devices_changed = false;
                 let mut milli_timeout = 10;
                 'outer: loop {
@@ -233,7 +441,7 @@ impl BluerSessionState {
                                     Err(_) => continue,
                                 };
 
-                                let mut status = if device.is_connected().await? {
+                                let status = if device.is_connected().await? {
                                     BluerDeviceStatus::Connected
                                 } else if device.is_paired().await? {
                                     BluerDeviceStatus::Paired
@@ -241,10 +449,7 @@ impl BluerSessionState {
                                     BluerDeviceStatus::Disconnected
                                 };
 
-                                if let Some(pos) =
-                                    devices.iter().position(|device| device.address == address)
-                                {
-                                    cur = Some(pos);
+                                if devices.iter().any(|device| device.address == address) {
                                     continue;
                                 };
                                 // only send a DevicesChanged event if we have actually added a device
@@ -260,29 +465,22 @@ impl BluerSessionState {
                                     status,
                                     properties: Vec::new(),
                                 });
-                                cur = Some(devices.len() - 1);
                             }
                             bluer::AdapterEvent::DeviceRemoved(address) => {
                                 if let Some(pos) =
                                     devices.iter().position(|device| device.address == address)
                                 {
                                     devices_changed = true;
-                                    cur = None;
                                     devices.remove(pos);
                                 };
                             }
-                            bluer::AdapterEvent::PropertyChanged(prop) => {
-                                let bluer_device = match cur.and_then(|i| devices.get_mut(i)) {
-                                    Some(d) => d,
-                                    None => continue,
-                                };
+                            bluer::AdapterEvent::PropertyChanged(_) => {
                                 devices_changed = true;
                             }
                         }
                     }
                     if devices_changed {
                         devices_changed = false;
-                        dbg!(&devices_clone);
                         let _ = tx
                             .send(BluerSessionEvent::ChangesProcessed(BluerState {
                                 devices: build_device_list(&adapter_clone).await,
@@ -299,14 +497,13 @@ impl BluerSessionState {
                 eprintln!("Change stream ended");
                 Ok(())
             });
-        self.rx.replace(rx);
     }
 
     pub(crate) fn process_requests(&self, request_rx: Receiver<BluerRequest>) {
         let active_requests = self.active_requests.clone();
         let adapter = self.adapter.clone();
-        let devices = self.devices.clone();
-        let tx = self.tx.clone().unwrap(); // TODO error handling
+        let tx = self.tx.clone();
+
         let _handle: JoinHandle<anyhow::Result<()>> = spawn(async move {
             let mut request_rx = request_rx;
 
@@ -314,7 +511,6 @@ impl BluerSessionState {
                 let req_clone = req.clone();
                 let req_clone_2 = req.clone();
                 let active_requests_clone = active_requests.clone();
-                let devices_clone = devices.clone();
                 let tx_clone = tx.clone();
                 let adapter_clone = adapter.clone();
                 let handle = spawn(async move {
@@ -373,6 +569,7 @@ impl BluerSessionState {
                                 err_msg = Some("No active connection request found".to_string());
                             }
                         }
+                        BluerRequest::StateUpdate => {}
                     };
 
                     let state = BluerState {

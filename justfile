@@ -16,6 +16,7 @@ bindir := rootdir + prefix + '/bin'
 app_list_id := 'com.system76.CosmicAppList'
 audio_id := 'com.system76.CosmicAppletAudio'
 battery_id := 'com.system76.CosmicAppletBattery'
+bluetooth_id := 'com.system76.CosmicAppletBluetooth'
 graphics_id := 'com.system76.CosmicAppletGraphics'
 network_id := 'com.system76.CosmicAppletNetwork'
 notifications_id := 'com.system76.CosmicAppletNotifications'
@@ -87,6 +88,12 @@ install:
     install -Dm0644 cosmic-applet-battery/data/icons/{{battery_id}}.svg {{iconsdir}}/{{battery_id}}.svg
     install -Dm0644 cosmic-applet-battery/data/{{battery_id}}.desktop {{sharedir}}/applications/{{battery_id}}.desktop
     install -Dm0755 target/release/cosmic-applet-battery {{bindir}}/cosmic-applet-battery
+
+    # battery
+    install -Dm0644 cosmic-applet-bluetooth/data/icons/{{bluetooth_id}}.svg {{iconsdir}}/{{bluetooth_id}}.svg
+    install -Dm0644 cosmic-applet-bluetooth/data/{{bluetooth_id}}.desktop {{sharedir}}/applications/{{bluetooth_id}}.desktop
+    install -Dm0755 target/release/cosmic-applet-bluetooth {{bindir}}/cosmic-applet-bluetooth
+
 
 # Extracts vendored dependencies if vendor=1
 _extract_vendor:
