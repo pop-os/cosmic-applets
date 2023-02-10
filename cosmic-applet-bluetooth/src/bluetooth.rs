@@ -60,14 +60,7 @@ async fn start_listening<I: Copy + Debug>(id: I, state: State) -> (Option<(I, Bl
             let mut session_rx = match session_state.rx.take() {
                 Some(rx) => rx,
                 None => {
-                    // try restarting the stream
-                    session_state.process_changes();
-                    match session_state.rx.take() {
-                        Some(rx) => rx,
-                        None => {
-                            return (None, State::Finished); // fail if we can't restart the stream
-                        }
-                    }
+                    return (None, State::Finished); // fail if we can't get the rx
                 }
             };
 
@@ -402,7 +395,7 @@ impl BluerSessionState {
         };
         let _agent_handle = session.register_agent(_agent).await?;
 
-        let mut self_ = Self {
+        let self_ = Self {
             _agent_handle,
             _session: session,
             adapter,
@@ -417,9 +410,8 @@ impl BluerSessionState {
     }
 
     // Note: For some reason, this doesn't actually seem to work so well. it seems unreliable...
-    pub(crate) fn process_changes(&mut self) {
+    pub(crate) fn process_changes(&self) {
         let tx = self.tx.clone();
-        let devices_clone = self.devices.clone();
         let adapter_clone = self.adapter.clone();
         let _monitor_devices: tokio::task::JoinHandle<Result<(), anyhow::Error>> =
             spawn(async move {
@@ -431,55 +423,10 @@ impl BluerSessionState {
                     while let Ok(event) =
                         timeout(Duration::from_millis(milli_timeout), change_stream.next()).await
                     {
-                        let event = match event {
-                            Some(e) => e,
-                            None => break 'outer, // No more events to receive...
-                        };
-                        let mut devices = devices_clone.lock().await;
-                        match event {
-                            bluer::AdapterEvent::DeviceAdded(address) => {
-                                let device = match adapter_clone.device(address) {
-                                    Ok(d) => d,
-                                    Err(_) => continue,
-                                };
-
-                                let status = if device.is_connected().await? {
-                                    BluerDeviceStatus::Connected
-                                } else if device.is_paired().await? {
-                                    BluerDeviceStatus::Paired
-                                } else {
-                                    BluerDeviceStatus::Disconnected
-                                };
-
-                                if devices.iter().any(|device| device.address == address) {
-                                    continue;
-                                };
-                                // only send a DevicesChanged event if we have actually added a device
-                                devices_changed = true;
-
-                                devices.push(BluerDevice {
-                                    name: device
-                                        .name()
-                                        .await
-                                        .unwrap_or_default()
-                                        .unwrap_or_default(),
-                                    address: device.address(),
-                                    status,
-                                    properties: Vec::new(),
-                                });
-                            }
-                            bluer::AdapterEvent::DeviceRemoved(address) => {
-                                if let Some(pos) =
-                                    devices.iter().position(|device| device.address == address)
-                                {
-                                    devices_changed = true;
-                                    devices.remove(pos);
-                                };
-                            }
-                            bluer::AdapterEvent::PropertyChanged(_) => {
-                                devices_changed = true;
-                            }
+                        if event.is_none() {
+                            break 'outer;
                         }
+                        devices_changed = true;
                     }
                     if devices_changed {
                         devices_changed = false;
@@ -496,7 +443,6 @@ impl BluerSessionState {
                         milli_timeout = (milli_timeout * 2).max(5120);
                     }
                 }
-                eprintln!("Change stream ended");
                 Ok(())
             });
     }
