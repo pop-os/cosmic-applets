@@ -13,5 +13,5 @@ members = [
     "cosmic-applet-workspaces",
 ]
 
-#[profile.release]
-#lto = "fat"
+[profile.release]
+lto = "fat"
