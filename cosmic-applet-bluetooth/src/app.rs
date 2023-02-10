@@ -34,19 +34,6 @@ pub fn run() -> cosmic::iced::Result {
     CosmicBluetoothApplet::run(helper.window_settings())
 }
 
-// impl Into<()> for NewConnectionState {
-//     fn into(self) -> AccessPoint {
-//         match self {
-//             NewConnectionState::EnterPassword {
-//                 access_point,
-//                 password,
-//             } => access_point,
-//             NewConnectionState::Waiting(access_point) => access_point,
-//             NewConnectionState::Failure(access_point) => access_point,
-//         }
-//     }
-// }
-
 #[derive(Default)]
 struct CosmicBluetoothApplet {
     icon_name: String,
@@ -151,9 +138,6 @@ impl Application for CosmicBluetoothApplet {
                         BluerRequest::StateUpdate
                             if self.popup.is_some() && self.bluer_sender.is_some() =>
                         {
-                            for device in &self.bluer_state.devices {
-                                dbg!((&device.name, &device.status));
-                            }
                             let tx = self.bluer_sender.as_ref().cloned().unwrap();
                             return Command::perform(
                                 async move {
@@ -172,9 +156,6 @@ impl Application for CosmicBluetoothApplet {
                     self.bluer_state = state;
                 }
                 BluerEvent::DevicesChanged { state } => {
-                    for device in &state.devices {
-                        dbg!(&device.name);
-                    }
                     self.bluer_state = state;
                 }
                 BluerEvent::Finished => {
@@ -372,12 +353,22 @@ impl Application for CosmicBluetoothApplet {
                 }
 
                 let mut content = column![
-                    container(
+                    column![
                         toggler(fl!("bluetooth"), self.bluer_state.bluetooth_enabled, |m| {
                             Message::Request(BluerRequest::SetBluetoothEnabled(m))
                         },)
+                        .width(Length::Fill),
+                        // these are not in the UX mockup, but they are useful imo
+                        toggler(fl!("discoverable"), self.bluer_state.discoverable, |m| {
+                            Message::Request(BluerRequest::SetDiscoverable(m))
+                        },)
+                        .width(Length::Fill),
+                        toggler(fl!("pairable"), self.bluer_state.pairable, |m| {
+                            Message::Request(BluerRequest::SetPairable(m))
+                        },)
                         .width(Length::Fill)
-                    )
+                    ]
+                    .spacing(8)
                     .padding([0, 12]),
                     divider::horizontal::light(),
                     known_bluetooth,

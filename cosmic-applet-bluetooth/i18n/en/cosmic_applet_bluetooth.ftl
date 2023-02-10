@@ -8,3 +8,5 @@ cancel = Cancel
 unsuccessful = Pairing Unsuccessful
 check-device = Make sure {$deviceName} is turned on, in range, and is ready to pair.
 try-again = Try Again
+discoverable = Discoverable
+pairable = Pairable
