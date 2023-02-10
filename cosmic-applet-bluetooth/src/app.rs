@@ -1,9 +1,6 @@
-use std::f32::consts::E;
-
 use crate::bluetooth::{BluerDeviceStatus, BluerRequest, BluerState};
 use cosmic::applet::APPLET_BUTTON_THEME;
 use cosmic::iced_style;
-use cosmic::widget::ListColumn;
 use cosmic::{
     applet::CosmicAppletHelper,
     iced::{
@@ -11,7 +8,7 @@ use cosmic::{
             popup::{destroy_popup, get_popup},
             SurfaceIdWrapper,
         },
-        widget::{column, container, row, scrollable, text, text_input, Column},
+        widget::{column, container, row, scrollable, text, Column},
         Alignment, Application, Color, Command, Length, Subscription,
     },
     iced_native::{
@@ -25,21 +22,16 @@ use cosmic::{
     widget::{button, divider, icon, toggler},
     Element, Theme,
 };
+use std::collections::HashMap;
+use std::time::Duration;
 use tokio::sync::mpsc::Sender;
 
-use crate::bluetooth::{bluetooth_subscription, BluerEvent};
+use crate::bluetooth::{bluetooth_subscription, BluerDevice, BluerEvent};
 use crate::{config, fl};
 
 pub fn run() -> cosmic::iced::Result {
     let helper = CosmicAppletHelper::default();
     CosmicBluetoothApplet::run(helper.window_settings())
-}
-
-#[derive(Debug)]
-enum NewConnectionState {
-    EnterPassword { device: (), password: String },
-    Waiting(()),
-    Failure(()),
 }
 
 // impl Into<()> for NewConnectionState {
@@ -66,7 +58,7 @@ struct CosmicBluetoothApplet {
     bluer_sender: Option<Sender<BluerRequest>>,
     // UI state
     show_visible_devices: bool,
-    new_connection: Option<NewConnectionState>,
+    request_confirmation: Option<(BluerDevice, String, Sender<bool>)>,
 }
 
 #[derive(Debug, Clone)]
@@ -77,6 +69,8 @@ enum Message {
     Ignore,
     BluetoothEvent(BluerEvent),
     Request(BluerRequest),
+    Cancel,
+    Confirm,
 }
 
 impl Application for CosmicBluetoothApplet {
@@ -123,56 +117,113 @@ impl Application for CosmicBluetoothApplet {
                         .min_width(1)
                         .max_height(800)
                         .max_width(400);
-                    return get_popup(popup_settings);
+                    let tx = self.bluer_sender.as_ref().cloned();
+                    return Command::batch(vec![
+                        Command::perform(
+                            async {
+                                if let Some(tx) = tx {
+                                    let _ = tx.send(BluerRequest::StateUpdate).await;
+                                }
+                            },
+                            |_| Message::Ignore,
+                        ),
+                        get_popup(popup_settings),
+                    ]);
                 }
             }
             Message::Errored(_) => todo!(),
             Message::Ignore => {}
-            // Message::SelectDevice(device) => {
-            // let tx = if let Some(tx) = self.nm_sender.as_ref() {
-            //     tx
-            // } else {
-            //     return Command::none();
-            // };
-
-            // let _ = tx.unbounded_send(NetworkManagerRequest::SelectAccessPoint(
-            //     access_point.ssid.clone(),
-            // ));
-
-            // self.new_connection
-            //     .replace(NewConnectionState::EnterPassword {
-            //         access_point,
-            //         password: String::new(),
-            //     });
-            // }
             Message::ToggleVisibleDevices(enabled) => {
-                self.new_connection.take();
                 self.show_visible_devices = enabled;
             }
             Message::BluetoothEvent(e) => match e {
                 BluerEvent::RequestResponse {
-                    req: _req,
+                    req,
                     state,
                     err_msg,
                 } => {
                     if let Some(err_msg) = err_msg {
                         eprintln!("bluetooth request error: {}", err_msg);
                     }
-                    dbg!(&state);
                     self.bluer_state = state;
                     // TODO special handling for some requests
+
+                    match req {
+                        BluerRequest::StateUpdate
+                            if self.popup.is_some() && self.bluer_sender.is_some() =>
+                        {
+                            for device in &self.bluer_state.devices {
+                                dbg!((&device.name, &device.status));
+                            }
+                            let tx = self.bluer_sender.as_ref().cloned().unwrap();
+                            return Command::perform(
+                                async move {
+                                    // sleep for a bit before requesting state update again
+                                    tokio::time::sleep(Duration::from_millis(3000)).await;
+                                    let _ = tx.send(BluerRequest::StateUpdate).await;
+                                },
+                                |_| Message::Ignore,
+                            );
+                        }
+                        _ => {}
+                    };
                 }
                 BluerEvent::Init { sender, state } => {
                     self.bluer_sender.replace(sender);
                     self.bluer_state = state;
                 }
                 BluerEvent::DevicesChanged { state } => {
+                    for device in &state.devices {
+                        dbg!(&device.name);
+                    }
                     self.bluer_state = state;
                 }
                 BluerEvent::Finished => {
-                    // TODO exit?
-                    todo!()
+                    eprintln!("bluetooth subscription finished. exiting...");
+                    std::process::exit(0);
                 }
+                // TODO handle agent events
+                BluerEvent::AgentEvent(event) => match event {
+                    crate::bluetooth::BluerAgentEvent::DisplayPinCode(d, code) => {
+                        dbg!((d.name, code));
+                    }
+                    crate::bluetooth::BluerAgentEvent::DisplayPasskey(d, code) => {
+                        dbg!((d.name, code));
+                    }
+                    crate::bluetooth::BluerAgentEvent::RequestPinCode(d) => {
+                        // TODO anything to be done here?
+                        dbg!("request pin code", d.name);
+                    }
+                    crate::bluetooth::BluerAgentEvent::RequestPasskey(d) => {
+                        // TODO anything to be done here?
+                        dbg!("request passkey", d.name);
+                    }
+                    crate::bluetooth::BluerAgentEvent::RequestConfirmation(d, code, tx) => {
+                        dbg!("request confirmation", &d.name, &code);
+                        self.request_confirmation.replace((d, code, tx));
+                        // let _ = tx.send(false);
+                    }
+                    crate::bluetooth::BluerAgentEvent::RequestDeviceAuthorization(d, _tx) => {
+                        // TODO anything to be done here?
+                        dbg!("request device authorization", d.name);
+                        // let_ = tx.send(false);
+                    }
+                    crate::bluetooth::BluerAgentEvent::RequestServiceAuthorization(
+                        d,
+                        service,
+                        _tx,
+                    ) => {
+                        // my headphones seem to always request this
+                        // doesn't seem to be defined in the UX mockups
+                        dbg!(
+                            "request service authorization",
+                            d.name,
+                            bluer::id::Service::try_from(service)
+                                .map(|s| s.to_string())
+                                .unwrap_or_else(|_| "unknown".to_string())
+                        );
+                    }
+                },
             },
             Message::Request(r) => {
                 match &r {
@@ -217,6 +268,26 @@ impl Application for CosmicBluetoothApplet {
                             let _ = tx.send(r).await;
                         },
                         |_| Message::Ignore, // Error handling
+                    );
+                }
+            }
+            Message::Cancel => {
+                if let Some((_, _, tx)) = self.request_confirmation.take() {
+                    return Command::perform(
+                        async move {
+                            let _ = tx.send(false).await;
+                        },
+                        |_| Message::Ignore,
+                    );
+                }
+            }
+            Message::Confirm => {
+                if let Some((_, _, tx)) = self.request_confirmation.take() {
+                    return Command::perform(
+                        async move {
+                            let _ = tx.send(true).await;
+                        },
+                        |_| Message::Ignore,
                     );
                 }
             }
@@ -344,9 +415,62 @@ impl Application for CosmicBluetoothApplet {
                     .style(button_style.clone())
                     .on_press(Message::ToggleVisibleDevices(!self.show_visible_devices));
                 content = content.push(available_connections_btn);
-                if self.show_visible_devices {
-                    let mut list_column = Vec::with_capacity(self.bluer_state.devices.len());
+                let mut list_column = Vec::with_capacity(self.bluer_state.devices.len());
 
+                if let Some((device, pin, _)) = self.request_confirmation.as_ref() {
+                    let row = column![
+                        text(&device.name)
+                            .horizontal_alignment(Horizontal::Left)
+                            .vertical_alignment(Vertical::Center)
+                            .width(Length::Fill),
+                        text(fl!(
+                            "confirm-pin",
+                            HashMap::from_iter(vec![("deviceName", device.name.clone())])
+                        ))
+                        .horizontal_alignment(Horizontal::Left)
+                        .vertical_alignment(Vertical::Center)
+                        .width(Length::Fill),
+                        text(pin)
+                            .horizontal_alignment(Horizontal::Center)
+                            .vertical_alignment(Vertical::Center)
+                            .width(Length::Fill)
+                            .size(24),
+                        row![
+                            button(Button::Secondary)
+                                .custom(
+                                    vec![text(fl!("cancel"))
+                                        .size(14)
+                                        .width(Length::Fill)
+                                        .height(Length::Units(24))
+                                        .vertical_alignment(Vertical::Center)
+                                        .into(),]
+                                    .into(),
+                                )
+                                .padding([8, 24])
+                                .style(button_style.clone())
+                                .on_press(Message::Cancel)
+                                .width(Length::Fill),
+                            button(Button::Secondary)
+                                .custom(
+                                    vec![text(fl!("confirm"))
+                                        .size(14)
+                                        .width(Length::Fill)
+                                        .height(Length::Units(24))
+                                        .vertical_alignment(Vertical::Center)
+                                        .into(),]
+                                    .into(),
+                                )
+                                .padding([8, 24])
+                                .style(button_style.clone())
+                                .on_press(Message::Confirm)
+                                .width(Length::Fill),
+                        ]
+                    ]
+                    .padding([0, 24])
+                    .spacing(8);
+                    list_column.push(row.into());
+                }
+                if self.show_visible_devices {
                     if self.bluer_state.bluetooth_enabled {
                         let mut visible_devices = column![];
                         for dev in self.bluer_state.devices.iter().filter(|d| {
@@ -370,15 +494,14 @@ impl Application for CosmicBluetoothApplet {
                         }
                         list_column.push(visible_devices.into());
                     }
-                    let num_dev = list_column.len();
-                    if num_dev > 5 {
-                        content = content.push(
-                            scrollable(Column::with_children(list_column))
-                                .height(Length::Units(300)),
-                        );
-                    } else {
-                        content = content.push(Column::with_children(list_column));
-                    }
+                }
+                let num_dev = list_column.len();
+                if num_dev > 5 {
+                    content = content.push(
+                        scrollable(Column::with_children(list_column)).height(Length::Units(300)),
+                    );
+                } else {
+                    content = content.push(Column::with_children(list_column));
                 }
                 self.applet_helper.popup_container(content).into()
             }

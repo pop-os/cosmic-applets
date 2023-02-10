@@ -2,7 +2,7 @@
 Name=Cosmic Applet Network
 Comment=Write a GTK + Rust application
 Type=Application
-Exec=cosmic-applet-network
+Exec=cosmic-applet-bluetooth
 Terminal=false
 Categories=GNOME;GTK;
 Keywords=Gnome;GTK;
