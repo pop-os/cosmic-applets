@@ -225,6 +225,7 @@ impl BluerSessionState {
         let adapter = session.default_adapter().await?;
         let devices = build_device_list(&adapter).await;
         let (tx, rx) = tokio::sync::mpsc::channel(100);
+
         let tx_clone_1 = tx.clone();
         let tx_clone_2 = tx.clone();
         let tx_clone_3 = tx.clone();
@@ -239,8 +240,9 @@ impl BluerSessionState {
         let adapter_clone_5 = adapter.clone();
         let adapter_clone_6 = adapter.clone();
         let adapter_clone_7 = adapter.clone();
+
         let _agent = Agent {
-            request_default: true, // TODO which agent should eventually become the default? Maybe the one in the settings app?
+            request_default: false, // TODO which agent should eventually become the default? Maybe the one in the settings app?
             request_pin_code: Some(Box::new(move |req| {
                 let agent_clone = adapter_clone_1.clone();
                 let tx_clone = tx_clone_1.clone();
