@@ -132,16 +132,16 @@ pub struct BluerState {
     pub pairable: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum BluerDeviceStatus {
     Connected,
-    Disconnected,
-    Paired,
     Connecting,
-    Disconnecting,
+    Paired,
     /// Pairing is in progress, maybe with a passkey or pincode
     /// passkey or pincode will be 000000 - 999999
     Pairing,
+    Disconnected,
+    Disconnecting,
 }
 
 #[derive(Debug, Clone)]
@@ -150,6 +150,34 @@ pub struct BluerDevice {
     pub address: Address,
     pub status: BluerDeviceStatus,
     pub properties: Vec<DeviceProperty>,
+}
+
+impl Eq for BluerDevice {}
+
+impl Ord for BluerDevice {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        match self.status.cmp(&other.status) {
+            std::cmp::Ordering::Equal => self.name.to_lowercase().cmp(&other.name.to_lowercase()),
+            o => o,
+        }
+    }
+}
+
+impl PartialOrd for BluerDevice {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        match self.status.cmp(&other.status) {
+            std::cmp::Ordering::Equal => {
+                Some(self.name.to_lowercase().cmp(&other.name.to_lowercase()))
+            }
+            o => Some(o),
+        }
+    }
+}
+
+impl PartialEq for BluerDevice {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name && self.address == other.address
+    }
 }
 
 impl BluerDevice {
@@ -606,5 +634,6 @@ async fn build_device_list(adapter: &Adapter) -> Vec<BluerDevice> {
             properties,
         });
     }
+    devices.sort();
     devices
 }
