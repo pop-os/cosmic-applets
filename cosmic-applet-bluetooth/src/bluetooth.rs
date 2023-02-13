@@ -150,6 +150,7 @@ pub struct BluerDevice {
     pub address: Address,
     pub status: BluerDeviceStatus,
     pub properties: Vec<DeviceProperty>,
+    pub icon: String,
 }
 
 impl Eq for BluerDevice {}
@@ -197,11 +198,23 @@ impl BluerDevice {
         } else {
             BluerDeviceStatus::Disconnected
         };
+        let icon = properties
+            .iter()
+            .find_map(|p| {
+                if let DeviceProperty::Icon(icon) = p {
+                    Some(icon.clone())
+                } else {
+                    None
+                }
+            })
+            .unwrap_or_else(|| "bluetooth-symbolic".into());
+
         Self {
             name,
             address: device.address(),
             status,
             properties,
+            icon,
         }
     }
 }
@@ -617,23 +630,8 @@ async fn build_device_list(adapter: &Adapter) -> Vec<BluerDevice> {
             Ok(device) => device,
             Err(_) => continue,
         };
-        let name = device.name().await.unwrap_or_default().unwrap_or_default();
-        let is_paired = device.is_paired().await.unwrap_or_default();
-        let is_connected = device.is_connected().await.unwrap_or_default();
-        let properties = device.all_properties().await.unwrap_or_default();
-        let status = if is_connected {
-            BluerDeviceStatus::Connected
-        } else if is_paired {
-            BluerDeviceStatus::Paired
-        } else {
-            BluerDeviceStatus::Disconnected
-        };
-        devices.push(BluerDevice {
-            name,
-            address,
-            status,
-            properties,
-        });
+
+        devices.push(BluerDevice::from_device(&device).await);
     }
     devices.sort();
     devices
