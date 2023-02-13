@@ -301,17 +301,22 @@ impl Application for CosmicBluetoothApplet {
                         .as_ref()
                         .map_or(false, |(dev, _, _)| d.address == dev.address)
                 }) {
-                    let mut row = row![].align_items(Alignment::Center);
-                    row = row.push(
+                    let mut row = row![
+                        icon(dev.icon.as_str(), 16).style(Svg::Symbolic),
                         text(dev.name.clone())
+                            .size(14)
                             .horizontal_alignment(Horizontal::Left)
                             .vertical_alignment(Vertical::Center)
-                            .width(Length::Fill),
-                    );
+                            .width(Length::Fill)
+                    ]
+                    .align_items(Alignment::Center)
+                    .spacing(12);
+
                     match &dev.status {
                         BluerDeviceStatus::Connected => {
                             row = row.push(
                                 text(fl!("connected"))
+                                    .size(14)
                                     .horizontal_alignment(Horizontal::Right)
                                     .vertical_alignment(Vertical::Center),
                             );
@@ -333,6 +338,7 @@ impl Application for CosmicBluetoothApplet {
                     known_bluetooth = known_bluetooth.push(
                         button(APPLET_BUTTON_THEME)
                             .custom(vec![row.into()])
+                            .style(APPLET_BUTTON_THEME)
                             .on_press(match dev.status {
                                 BluerDeviceStatus::Connected => {
                                     Message::Request(BluerRequest::DisconnectDevice(dev.address))
@@ -358,15 +364,18 @@ impl Application for CosmicBluetoothApplet {
                         toggler(fl!("bluetooth"), self.bluer_state.bluetooth_enabled, |m| {
                             Message::Request(BluerRequest::SetBluetoothEnabled(m))
                         },)
+                        .text_size(14)
                         .width(Length::Fill),
                         // these are not in the UX mockup, but they are useful imo
                         toggler(fl!("discoverable"), self.bluer_state.discoverable, |m| {
                             Message::Request(BluerRequest::SetDiscoverable(m))
                         },)
+                        .text_size(14)
                         .width(Length::Fill),
                         toggler(fl!("pairable"), self.bluer_state.pairable, |m| {
                             Message::Request(BluerRequest::SetPairable(m))
                         },)
+                        .text_size(14)
                         .width(Length::Fill)
                     ]
                     .spacing(8)
@@ -415,6 +424,7 @@ impl Application for CosmicBluetoothApplet {
 
                 if let Some((device, pin, _)) = self.request_confirmation.as_ref() {
                     let row = column![
+                        icon(device.icon.as_str(), 16).style(Svg::Symbolic),
                         text(&device.name)
                             .horizontal_alignment(Horizontal::Left)
                             .vertical_alignment(Vertical::Center)
@@ -425,12 +435,13 @@ impl Application for CosmicBluetoothApplet {
                         ))
                         .horizontal_alignment(Horizontal::Left)
                         .vertical_alignment(Vertical::Center)
-                        .width(Length::Fill),
+                        .width(Length::Fill)
+                        .size(14),
                         text(pin)
                             .horizontal_alignment(Horizontal::Center)
                             .vertical_alignment(Vertical::Center)
                             .width(Length::Fill)
-                            .size(24),
+                            .size(32),
                         row![
                             button(Button::Secondary)
                                 .custom(
@@ -463,7 +474,7 @@ impl Application for CosmicBluetoothApplet {
                         ]
                     ]
                     .padding([0, 24])
-                    .spacing(8);
+                    .spacing(12);
                     list_column.push(row.into());
                 }
                 if self.show_visible_devices {
@@ -478,10 +489,16 @@ impl Application for CosmicBluetoothApplet {
                                 .as_ref()
                                 .map_or(false, |(dev, _, _)| d.address == dev.address)
                         }) {
-                            let mut row = row![].width(Length::Fill).align_items(Alignment::Center);
-                            row = row.push(
-                                text(dev.name.clone()).horizontal_alignment(Horizontal::Left),
-                            );
+                            let row = row![
+                                icon(dev.icon.as_str(), 16).style(Svg::Symbolic),
+                                text(dev.name.clone())
+                                    .horizontal_alignment(Horizontal::Left)
+                                    .size(14),
+                            ]
+                            .width(Length::Fill)
+                            .align_items(Alignment::Center)
+                            .spacing(12);
+
                             visible_devices = visible_devices.push(
                                 button(APPLET_BUTTON_THEME)
                                     .custom(vec![row.width(Length::Fill).into()])
