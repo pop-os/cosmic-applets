@@ -183,11 +183,14 @@ impl PartialEq for BluerDevice {
 
 impl BluerDevice {
     pub async fn from_device(device: &bluer::Device) -> Self {
-        let name = device
+        let mut name = device
             .name()
             .await
             .unwrap_or_default()
-            .unwrap_or_else(|| "Unknown".to_string());
+            .unwrap_or_else(|| device.address().to_string());
+        if name == "" {
+            name = device.address().to_string();
+        };
         let is_paired = device.is_paired().await.unwrap_or_default();
         let is_connected = device.is_connected().await.unwrap_or_default();
         let properties = device.all_properties().await.unwrap_or_default();

@@ -420,7 +420,8 @@ impl Application for CosmicBluetoothApplet {
                     .style(button_style.clone())
                     .on_press(Message::ToggleVisibleDevices(!self.show_visible_devices));
                 content = content.push(available_connections_btn);
-                let mut list_column = Vec::with_capacity(self.bluer_state.devices.len());
+                let mut list_column: Vec<Element<'_, Message>> =
+                    Vec::with_capacity(self.bluer_state.devices.len());
 
                 if let Some((device, pin, _)) = self.request_confirmation.as_ref() {
                     let row = column![
@@ -477,6 +478,7 @@ impl Application for CosmicBluetoothApplet {
                     .spacing(12);
                     list_column.push(row.into());
                 }
+                let mut visible_devices_count = 0;
                 if self.show_visible_devices {
                     if self.bluer_state.bluetooth_enabled {
                         let mut visible_devices = column![];
@@ -498,7 +500,6 @@ impl Application for CosmicBluetoothApplet {
                             .width(Length::Fill)
                             .align_items(Alignment::Center)
                             .spacing(12);
-
                             visible_devices = visible_devices.push(
                                 button(APPLET_BUTTON_THEME)
                                     .custom(vec![row.width(Length::Fill).into()])
@@ -507,12 +508,20 @@ impl Application for CosmicBluetoothApplet {
                                     )))
                                     .width(Length::Fill),
                             );
+                            visible_devices_count += 1;
                         }
                         list_column.push(visible_devices.into());
                     }
                 }
-                let num_dev = list_column.len();
-                if num_dev > 5 {
+                let item_counter = visible_devices_count
+                    // request confirmation is pretty big
+                    + if self.request_confirmation.is_some() {
+                        5
+                    } else {
+                        0
+                    };
+
+                if item_counter > 10 {
                     content = content.push(
                         scrollable(Column::with_children(list_column)).height(Length::Units(300)),
                     );
