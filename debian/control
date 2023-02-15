@@ -7,13 +7,12 @@ Build-Depends:
   debhelper-compat (= 11),
   rustc (>=1.65),
   cargo,
-  libgtk-4-dev,
-  libadwaita-1-dev,
   libdbus-1-dev,
+  libegl-dev,
   libpulse-dev,
+  libxkbcommon-dev,
   just,
   pkg-config,
-  desktop-file-utils,
 Standards-Version: 4.3.0
 Homepage: https://github.com/pop-os/cosmic-applets
 
