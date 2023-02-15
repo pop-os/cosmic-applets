@@ -165,44 +165,44 @@ impl Application for CosmicBluetoothApplet {
                 }
                 // TODO handle agent events
                 BluerEvent::AgentEvent(event) => match event {
-                    crate::bluetooth::BluerAgentEvent::DisplayPinCode(d, code) => {
-                        dbg!((d.name, code));
+                    crate::bluetooth::BluerAgentEvent::DisplayPinCode(_d, _code) => {
+                        // dbg!((d.name, code));
                     }
-                    crate::bluetooth::BluerAgentEvent::DisplayPasskey(d, code) => {
-                        dbg!((d.name, code));
+                    crate::bluetooth::BluerAgentEvent::DisplayPasskey(_d, _code) => {
+                        // dbg!((d.name, code));
                     }
-                    crate::bluetooth::BluerAgentEvent::RequestPinCode(d) => {
+                    crate::bluetooth::BluerAgentEvent::RequestPinCode(_d) => {
                         // TODO anything to be done here?
-                        dbg!("request pin code", d.name);
+                        // dbg!("request pin code", d.name);
                     }
-                    crate::bluetooth::BluerAgentEvent::RequestPasskey(d) => {
+                    crate::bluetooth::BluerAgentEvent::RequestPasskey(_d) => {
                         // TODO anything to be done here?
-                        dbg!("request passkey", d.name);
+                        // dbg!("request passkey", d.name);
                     }
                     crate::bluetooth::BluerAgentEvent::RequestConfirmation(d, code, tx) => {
-                        dbg!("request confirmation", &d.name, &code);
+                        // dbg!("request confirmation", &d.name, &code);
                         self.request_confirmation.replace((d, code, tx));
                         // let _ = tx.send(false);
                     }
-                    crate::bluetooth::BluerAgentEvent::RequestDeviceAuthorization(d, _tx) => {
+                    crate::bluetooth::BluerAgentEvent::RequestDeviceAuthorization(_d, _tx) => {
                         // TODO anything to be done here?
-                        dbg!("request device authorization", d.name);
+                        // dbg!("request device authorization", d.name);
                         // let_ = tx.send(false);
                     }
                     crate::bluetooth::BluerAgentEvent::RequestServiceAuthorization(
-                        d,
-                        service,
+                        _d,
+                        _service,
                         _tx,
                     ) => {
                         // my headphones seem to always request this
                         // doesn't seem to be defined in the UX mockups
-                        dbg!(
-                            "request service authorization",
-                            d.name,
-                            bluer::id::Service::try_from(service)
-                                .map(|s| s.to_string())
-                                .unwrap_or_else(|_| "unknown".to_string())
-                        );
+                        // dbg!(
+                        //     "request service authorization",
+                        //     d.name,
+                        //     bluer::id::Service::try_from(service)
+                        //         .map(|s| s.to_string())
+                        //         .unwrap_or_else(|_| "unknown".to_string())
+                        // );
                     }
                 },
             },
