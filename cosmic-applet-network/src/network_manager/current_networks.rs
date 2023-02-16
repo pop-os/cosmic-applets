@@ -3,7 +3,7 @@
 use cosmic_dbus_networkmanager::{
     active_connection::ActiveConnection,
     device::SpecificDevice,
-    interface::enums::{ApFlags, ApSecurityFlags},
+    interface::enums::{ActiveConnectionState, ApFlags, ApSecurityFlags},
 };
 use std::net::Ipv4Addr;
 
@@ -19,6 +19,10 @@ pub async fn active_connections(
             .await
             .unwrap_or_default();
         let addresses: Vec<_> = ipv4.iter().map(|d| d.address).collect();
+        let state = connection
+            .state()
+            .await
+            .unwrap_or_else(|_| ActiveConnectionState::Unknown);
 
         if connection.vpn().await.unwrap_or_default() {
             info.push(ActiveConnectionInfo::Vpn {
@@ -51,6 +55,7 @@ pub async fn active_connections(
                             flags: access_point.flags().await?,
                             rsn_flags: access_point.rsn_flags().await?,
                             wpa_flags: access_point.wpa_flags().await?,
+                            state,
                         });
                     }
                 }
@@ -92,6 +97,7 @@ pub enum ActiveConnectionInfo {
         flags: ApFlags,
         rsn_flags: ApSecurityFlags,
         wpa_flags: ApSecurityFlags,
+        state: ActiveConnectionState,
     },
     Vpn {
         name: String,

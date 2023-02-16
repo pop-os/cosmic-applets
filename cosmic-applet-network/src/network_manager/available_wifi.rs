@@ -39,6 +39,7 @@ pub async fn handle_wireless_device(device: WirelessDevice<'_>) -> zbus::Result<
                 ssid,
                 strength,
                 state: state,
+                working: false,
             },
         );
     }
@@ -55,4 +56,5 @@ pub struct AccessPoint {
     pub ssid: String,
     pub strength: u8,
     pub state: DeviceState,
+    pub working: bool,
 }
