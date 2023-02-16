@@ -133,6 +133,14 @@ impl Application for Audio {
                         .min_width(1)
                         .max_width(400)
                         .max_height(1080);
+
+                    if let Some(conn) = self.pulse_state.connection() {
+                        conn.send(pulse::Message::GetDefaultSink);
+                        conn.send(pulse::Message::GetDefaultSource);
+                        conn.send(pulse::Message::GetSinks);
+                        conn.send(pulse::Message::GetSources);
+                    }
+
                     return get_popup(popup_settings);
                 }
             }
@@ -169,12 +177,27 @@ impl Application for Audio {
                     }
                 }
             }
-            Message::OutputChanged(val) => log::info!("changed output {}", val),
-            Message::InputChanged(val) => log::info!("changed input {}", val),
+            Message::OutputChanged(val) => {
+                if let Some(conn) = self.pulse_state.connection() {
+                    if let Some(val) = self.outputs.iter().find(|o| o.name.as_ref() == Some(&val)) {
+                        conn.send(pulse::Message::SetDefaultSink(val.clone()));
+                    }
+                }
+            }
+            Message::InputChanged(val) => {
+                if let Some(conn) = self.pulse_state.connection() {
+                    if let Some(val) = self.inputs.iter().find(|i| i.name.as_ref() == Some(&val)) {
+                        conn.send(pulse::Message::SetDefaultSource(val.clone()));
+                    }
+                }
+            }
             Message::OutputToggle => {
                 self.is_open = if self.is_open == IsOpen::Output {
                     IsOpen::None
                 } else {
+                    if let Some(conn) = self.pulse_state.connection() {
+                        conn.send(pulse::Message::GetSinks);
+                    }
                     IsOpen::Output
                 }
             }
@@ -182,6 +205,9 @@ impl Application for Audio {
                 self.is_open = if self.is_open == IsOpen::Input {
                     IsOpen::None
                 } else {
+                    if let Some(conn) = self.pulse_state.connection() {
+                        conn.send(pulse::Message::GetSources);
+                    }
                     IsOpen::Input
                 }
             }
@@ -315,10 +341,13 @@ impl Application for Audio {
                             self.outputs
                                 .clone()
                                 .into_iter()
-                                .map(|output| pretty_name(output.description))
+                                .map(|output| (
+                                    output.name.clone().unwrap_or_default(),
+                                    pretty_name(output.description)
+                                ))
                                 .collect(),
                             Message::OutputToggle,
-                            Message::OutputChanged(String::from("test")),
+                            Message::OutputChanged,
                         ),
                         revealer(
                             self.is_open == IsOpen::Input,
@@ -330,10 +359,13 @@ impl Application for Audio {
                             self.inputs
                                 .clone()
                                 .into_iter()
-                                .map(|input| pretty_name(input.description))
+                                .map(|input| (
+                                    input.name.clone().unwrap_or_default(),
+                                    pretty_name(input.description)
+                                ))
                                 .collect(),
                             Message::InputToggle,
-                            Message::InputChanged(String::from("test")),
+                            Message::InputChanged,
                         )
                     ]
                     .align_items(Alignment::Start)
@@ -372,14 +404,22 @@ fn revealer(
     open: bool,
     title: &str,
     selected: String,
-    options: Vec<String>,
+    options: Vec<(String, String)>,
     toggle: Message,
-    _change: Message,
+    mut change: impl FnMut(String) -> Message + 'static,
 ) -> widget::Column<Message, Renderer> {
     if open {
         options.iter().fold(
             column![revealer_head(open, title, selected, toggle)].width(Length::Fill),
-            |col, device| col.push(container(text(device)).padding([8, 48])),
+            |col, (id, name)| {
+                col.push(
+                    button(APPLET_BUTTON_THEME)
+                        .custom(vec![text(name).into()])
+                        .on_press(change(id.clone()))
+                        .width(Length::Fill)
+                        .padding([8, 48]),
+                )
+            },
         )
     } else {
         column![revealer_head(open, title, selected, toggle)]
