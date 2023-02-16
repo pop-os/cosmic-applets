@@ -13,87 +13,38 @@ sharedir := rootdir + prefix + '/share'
 iconsdir := sharedir + '/icons/hicolor/scalable/apps'
 bindir := rootdir + prefix + '/bin'
 
-app_list_id := 'com.system76.CosmicAppList'
-audio_id := 'com.system76.CosmicAppletAudio'
-battery_id := 'com.system76.CosmicAppletBattery'
-bluetooth_id := 'com.system76.CosmicAppletBluetooth'
-graphics_id := 'com.system76.CosmicAppletGraphics'
-network_id := 'com.system76.CosmicAppletNetwork'
-notifications_id := 'com.system76.CosmicAppletNotifications'
-power_id := 'com.system76.CosmicAppletPower'
-workspaces_id := 'com.system76.CosmicAppletWorkspaces'
-status_area_id := 'com.system76.CosmicAppletStatusArea'
-time_id := 'com.system76.CosmicAppletTime'
-app_button_id := 'com.system76.CosmicPanelAppButton'
-workspaces_button_id := 'com.system76.CosmicPanelWorkspacesButton'
-
 build: _extract_vendor
     #!/usr/bin/env bash
     cargo build {{cargo_args}}
 
+_install_icon path:
+    install -Dm0644 {{path}} {{iconsdir}}/{{file_name(path)}}
+
+_install_desktop path:
+    install -Dm0644 {{path}} {{sharedir}}/applications/{{file_name(path)}}
+
+_install_bin name:
+    install -Dm0755 target/release/{{name}} {{bindir}}/{{name}}
+
+_install id name: (_install_icon name + '/data/icons/' + id + '.svg') (_install_desktop name + '/data/' + id + '.desktop') (_install_bin name)
+
+_install_app_list: (_install 'com.system76.CosmicAppList' 'cosmic-app-list')
+_install_audio: (_install 'com.system76.CosmicAppletAudio' 'cosmic-applet-audio')
+_install_battery: (_install 'com.system76.CosmicAppletBattery' 'cosmic-applet-battery')
+_install_bluetooth: (_install 'com.system76.CosmicAppletBluetooth' 'cosmic-applet-bluetooth')
+_install_graphics: (_install 'com.system76.CosmicAppletGraphics' 'cosmic-applet-graphics')
+_install_network: (_install 'com.system76.CosmicAppletNetwork' 'cosmic-applet-network')
+_install_notifications: (_install 'com.system76.CosmicAppletNotifications' 'cosmic-applet-notifications')
+_install_power: (_install 'com.system76.CosmicAppletPower' 'cosmic-applet-power')
+_install_workspace: (_install 'com.system76.CosmicAppletWorkspaces' 'cosmic-applet-workspaces')
+_install_time: (_install 'com.system76.CosmicAppletTime' 'cosmic-applet-time')
+
+# TODO: `cosmic-panel-button` no longer exists and hasn't been ported to Iced
+# _install_app_button: (_install 'com.system76.CosmicPanelAppButton' 'cosmic-panel-app-button')
+# _install_workspaces_button: (_install 'com.system76.CosmicPanelWorkspacesButton' 'cosmic-panel-workspaces-button')
 
 # Installs files into the system
-install:
-    # audio
-    install -Dm0644 cosmic-applet-audio/data/icons/{{audio_id}}.svg {{iconsdir}}/{{audio_id}}.svg
-    install -Dm0644 cosmic-applet-audio/data/{{audio_id}}.desktop {{sharedir}}/applications/{{audio_id}}.desktop
-    install -Dm0755 target/release/cosmic-applet-audio {{bindir}}/cosmic-applet-audio
-
-    # app list
-    install -Dm0644 cosmic-app-list/data/icons/{{app_list_id}}-symbolic.svg {{iconsdir}}/{{app_list_id}}-symbolic.svg
-    install -Dm0644 cosmic-app-list/data/icons/{{app_list_id}}.Devel.svg {{iconsdir}}/{{app_list_id}}.Devel.svg
-    install -Dm0644 cosmic-app-list/data/icons/{{app_list_id}}.svg {{iconsdir}}/{{app_list_id}}.svg
-    install -Dm0644 cosmic-app-list/data/{{app_list_id}}.desktop {{sharedir}}/applications/{{app_list_id}}.desktop
-    install -Dm0755 target/release/cosmic-app-list {{bindir}}/cosmic-app-list
-
-    # network
-    install -Dm0644 cosmic-applet-network/data/icons/{{network_id}}.svg {{iconsdir}}/{{network_id}}.svg
-    install -Dm0644 cosmic-applet-network/data/{{network_id}}.desktop {{sharedir}}/applications/{{network_id}}.desktop
-    install -Dm0755 target/release/cosmic-applet-network {{bindir}}/cosmic-applet-network
-
-    # notifications
-    install -Dm0644 cosmic-applet-notifications/data/icons/{{notifications_id}}.svg {{iconsdir}}/{{notifications_id}}.svg
-    install -Dm0644 cosmic-applet-notifications/data/{{notifications_id}}.desktop {{sharedir}}/applications/{{notifications_id}}.desktop
-    install -Dm0755 target/release/cosmic-applet-notifications {{bindir}}/cosmic-applet-notifications
-
-    # power
-    install -Dm0644 cosmic-applet-power/data/icons/{{power_id}}.svg {{iconsdir}}/{{power_id}}.svg
-    install -Dm0644 cosmic-applet-power/data/{{power_id}}.desktop {{sharedir}}/applications/{{power_id}}.desktop
-    install -Dm0755 target/release/cosmic-applet-power {{bindir}}/cosmic-applet-power
-
-    # time
-    install -Dm0644 cosmic-applet-time/data/icons/{{time_id}}.svg {{iconsdir}}/{{time_id}}.svg
-    install -Dm0644 cosmic-applet-time/data/{{time_id}}.desktop {{sharedir}}/applications/{{time_id}}.desktop
-    install -Dm0755 target/release/cosmic-applet-time {{bindir}}/cosmic-applet-time
-
-    # app library button
-    install -Dm0644 cosmic-panel-app-button/data/icons/{{app_button_id}}.svg {{iconsdir}}/{{app_button_id}}.svg
-    install -Dm0644 cosmic-panel-app-button/data/{{app_button_id}}.desktop {{sharedir}}/applications/{{app_button_id}}.desktop
-
-    # workspaces button
-    install -Dm0644 cosmic-panel-workspaces-button/data/icons/{{workspaces_button_id}}.svg {{iconsdir}}/{{workspaces_button_id}}.svg
-    install -Dm0644 cosmic-panel-workspaces-button/data/{{workspaces_button_id}}.desktop {{sharedir}}/applications/{{workspaces_button_id}}.desktop
-
-    # graphics
-    install -Dm0644 cosmic-applet-graphics/data/icons/{{graphics_id}}.svg {{iconsdir}}/{{graphics_id}}.svg
-    install -Dm0644 cosmic-applet-graphics/data/{{graphics_id}}.desktop {{sharedir}}/applications/{{graphics_id}}.desktop
-    install -Dm0755 target/release/cosmic-applet-graphics {{bindir}}/cosmic-applet-graphics
-
-    # workspaces
-    install -Dm0644 cosmic-applet-workspaces/data/icons/{{workspaces_id}}.svg {{iconsdir}}/{{workspaces_id}}.svg
-    install -Dm0644 cosmic-applet-workspaces/data/{{workspaces_id}}.desktop {{sharedir}}/applications/{{workspaces_id}}.desktop
-    install -Dm0755 target/release/cosmic-applet-workspaces {{bindir}}/cosmic-applet-workspaces
-
-    # battery
-    install -Dm0644 cosmic-applet-battery/data/icons/{{battery_id}}.svg {{iconsdir}}/{{battery_id}}.svg
-    install -Dm0644 cosmic-applet-battery/data/{{battery_id}}.desktop {{sharedir}}/applications/{{battery_id}}.desktop
-    install -Dm0755 target/release/cosmic-applet-battery {{bindir}}/cosmic-applet-battery
-
-    # battery
-    install -Dm0644 cosmic-applet-bluetooth/data/icons/{{bluetooth_id}}.svg {{iconsdir}}/{{bluetooth_id}}.svg
-    install -Dm0644 cosmic-applet-bluetooth/data/{{bluetooth_id}}.desktop {{sharedir}}/applications/{{bluetooth_id}}.desktop
-    install -Dm0755 target/release/cosmic-applet-bluetooth {{bindir}}/cosmic-applet-bluetooth
-
+install: _install_app_list _install_audio _install_battery _install_bluetooth _install_graphics _install_network _install_notifications _install_power _install_workspace _install_time
 
 # Extracts vendored dependencies if vendor=1
 _extract_vendor:
