@@ -251,6 +251,44 @@ impl PulseHandle {
                                     server = Some(new_server);
                                 }
                             }
+                            Message::SetDefaultSink(device) => {
+                                let server = match server.as_mut() {
+                                    Some(s) => s,
+                                    None => continue,
+                                };
+                                let default_sink = match server.get_default_sink() {
+                                    Ok(sink) => sink,
+                                    Err(_) => continue,
+                                };
+                                let to_move = server.get_sink_inputs(default_sink.index);
+                                if let Some(name) = device.name.as_ref() {
+                                    if server.set_default_sink(name, to_move) {
+                                        from_pulse_send
+                                            .send(Message::SetDefaultSink(device))
+                                            .await
+                                            .unwrap();
+                                    }
+                                }
+                            }
+                            Message::SetDefaultSource(device) => {
+                                let server = match server.as_mut() {
+                                    Some(s) => s,
+                                    None => continue,
+                                };
+                                let default_source = match server.get_default_source() {
+                                    Ok(source) => source,
+                                    Err(_) => continue,
+                                };
+                                let to_move = server.get_source_outputs(default_source.index);
+                                if let Some(name) = device.name.as_ref() {
+                                    if server.set_default_source(name, to_move) {
+                                        from_pulse_send
+                                            .send(Message::SetDefaultSource(device))
+                                            .await
+                                            .unwrap();
+                                    }
+                                }
+                            }
                             _ => {
                                 log::warn!("message doesn't match")
                             }
@@ -408,6 +446,67 @@ impl PulseServer {
             .ok_or(PulseServerError::Misc("get_server_info(): failed"))
     }
 
+    fn set_default_sink(&mut self, sink: &str, to_move: Vec<u32>) -> bool {
+        let set_default_success = Rc::new(RefCell::new(false));
+        let set_default_success_ref = set_default_success.clone();
+        let op = self
+            .context
+            .borrow_mut()
+            .set_default_sink(sink, move |ret| {
+                *set_default_success.borrow_mut() = ret;
+            });
+        self.wait_for_result(op).ok();
+        if !set_default_success_ref.replace(true) {
+            return false;
+        }
+
+        for index in to_move {
+            let move_success = Rc::new(RefCell::new(false));
+            let op = self.introspector.move_sink_input_by_name(
+                index,
+                sink,
+                Some(Box::new(move |ret| {
+                    *move_success.borrow_mut() = ret;
+                })),
+            );
+
+            self.wait_for_result(op).ok();
+        }
+        // TODO handle errors
+        true
+    }
+
+    fn set_default_source(&mut self, sink: &str, to_move: Vec<u32>) -> bool {
+        let set_default_success = Rc::new(RefCell::new(false));
+        let set_default_success_ref = set_default_success.clone();
+        let op = self
+            .context
+            .borrow_mut()
+            .set_default_source(sink, move |ret| {
+                *set_default_success.borrow_mut() = ret;
+            });
+        self.wait_for_result(op).ok();
+
+        if !set_default_success_ref.replace(true) {
+            return false;
+        }
+
+        for index in to_move {
+            let move_success = Rc::new(RefCell::new(false));
+            let op = self.introspector.move_source_output_by_name(
+                index,
+                sink,
+                Some(Box::new(move |ret| {
+                    *move_success.borrow_mut() = ret;
+                })),
+            );
+
+            self.wait_for_result(op).ok();
+        }
+
+        true
+    }
+
     fn get_default_sink(&mut self) -> Result<DeviceInfo, PulseServerError> {
         let server_info = self.get_server_info();
         match server_info {
@@ -470,6 +569,34 @@ impl PulseServer {
             .introspector
             .set_source_volume_by_name(name, volume, None);
         self.wait_for_result(op).ok();
+    }
+
+    fn get_source_outputs(&mut self, source: u32) -> Vec<u32> {
+        let result = Rc::new(RefCell::new(Vec::new()));
+        let result_ref = Rc::new(RefCell::new(Vec::new()));
+        let op = self.introspector.get_source_output_info_list(move |list| {
+            if let ListResult::Item(item) = list {
+                if source == item.source {
+                    result.borrow_mut().push(item.index);
+                }
+            }
+        });
+        self.wait_for_result(op).ok();
+        result_ref.replace(Vec::new())
+    }
+
+    fn get_sink_inputs(&mut self, sink: u32) -> Vec<u32> {
+        let result = Rc::new(RefCell::new(Vec::new()));
+        let result_ref = Rc::new(RefCell::new(Vec::new()));
+        let op = self.introspector.get_sink_input_info_list(move |list| {
+            if let ListResult::Item(item) = list {
+                if sink == item.sink {
+                    result.borrow_mut().push(item.index);
+                }
+            }
+        });
+        self.wait_for_result(op).ok();
+        result_ref.replace(Vec::new())
     }
 
     // after building an operation such as get_devices() we need to keep polling
