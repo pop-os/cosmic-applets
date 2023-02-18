@@ -2,7 +2,7 @@
 Name=Cosmic Panel App Library Button
 Comment=Write a GTK + Rust application
 Type=Application
-Exec=cosmic-panel-button --id com.system76.CosmicAppLibrary
+Exec=cosmic-panel-button com.system76.CosmicAppLibrary
 Terminal=false
 Categories=GNOME;GTK;
 Keywords=Gnome;GTK;

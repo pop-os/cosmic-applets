@@ -11,6 +11,7 @@ members = [
     "cosmic-applet-power",
     "cosmic-applet-time",
     "cosmic-applet-workspaces",
+    "cosmic-panel-button",
 ]
 
 [profile.release]
