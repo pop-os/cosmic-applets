@@ -1,0 +1,13 @@
+cosmic-applet-button = Cosmic dugme
+battery = Baterija
+battery-desc = Smanjene performanse i potrošnja baterije.
+balanced = Balansirano
+balanced-desc = Standardne performanse i potrošnja baterije.
+performance = Visoke performanse
+performance-desc = Visoke performanse i potrošnja baterije.
+max-charge = Porodužiti životni vek baterije postavljajući njen limit punjenja na 80%.
+seconds = sek.
+minutes = min.
+hours = sat.
+until-empty = do potpunog pražnjenja
+power-settings = Podešavanja baterije i napajanja...
