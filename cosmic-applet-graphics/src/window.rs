@@ -24,14 +24,14 @@ use zbus::Connection;
 #[derive(Clone, Copy)]
 enum GraphicsMode {
     AppliedGraphicsMode(Graphics),
-    SelectedGraphicsMode(Graphics),
+    SelectedGraphicsMode { prev: Graphics, new: Graphics },
     CurrentGraphicsMode(Graphics),
 }
 
 impl GraphicsMode {
     fn inner(&self) -> Graphics {
         match self {
-            GraphicsMode::SelectedGraphicsMode(g) => *g,
+            GraphicsMode::SelectedGraphicsMode { new, .. } => *new,
             GraphicsMode::CurrentGraphicsMode(g) => *g,
             GraphicsMode::AppliedGraphicsMode(g) => *g,
         }
@@ -76,16 +76,16 @@ impl Application for Window {
 
     fn update(&mut self, message: Message) -> iced::Command<Self::Message> {
         match message {
-            Message::SelectGraphicsMode(new_graphics_mode) => {
+            Message::SelectGraphicsMode(new) => {
                 if let Some((_, proxy)) = self.dbus.as_ref() {
-                    self.graphics_mode =
-                        Some(GraphicsMode::SelectedGraphicsMode(new_graphics_mode));
-                    return Command::perform(
-                        set_graphics(proxy.clone(), new_graphics_mode),
-                        move |success| {
-                            Message::AppliedGraphics(success.ok().map(|_| new_graphics_mode))
-                        },
-                    );
+                    let prev = self
+                        .graphics_mode
+                        .map(|m| m.inner())
+                        .unwrap_or_else(|| Graphics::Integrated);
+                    self.graphics_mode = Some(GraphicsMode::SelectedGraphicsMode { prev, new });
+                    return Command::perform(set_graphics(proxy.clone(), new), move |success| {
+                        Message::AppliedGraphics(success.ok().map(|_| new))
+                    });
                 }
             }
             Message::TogglePopup => {
@@ -146,6 +146,38 @@ impl Application for Window {
             Message::AppliedGraphics(g) => {
                 if let Some(g) = g {
                     self.graphics_mode = Some(GraphicsMode::AppliedGraphicsMode(g));
+                } else {
+                    // Reset graphics
+                    match self.graphics_mode {
+                        Some(GraphicsMode::SelectedGraphicsMode { prev, new }) => {
+                            // TODO send notification with error?
+                            self.graphics_mode = Some(GraphicsMode::AppliedGraphicsMode(prev));
+                            // Reset to prev after failing
+                            // https://github.com/pop-os/system76-power/issues/387
+                            if let Some((_, proxy)) = self.dbus.as_ref() {
+                                return Command::perform(
+                                    set_graphics(proxy.clone(), prev),
+                                    move |success| {
+                                        Message::AppliedGraphics(success.ok().map(|_| new))
+                                    },
+                                );
+                            }
+                        }
+                        _ => {
+                            return Command::perform(
+                                get_current_graphics(self.dbus.as_ref().unwrap().1.clone()),
+                                |cur_graphics| {
+                                    Message::CurrentGraphics(match cur_graphics {
+                                        Ok(g) => Some(g),
+                                        Err(err) => {
+                                            dbg!(err);
+                                            None
+                                        }
+                                    })
+                                },
+                            )
+                        }
+                    };
                 }
             }
         }
@@ -199,9 +231,10 @@ impl Application for Window {
                             .width(Length::Fill),
                             icon(
                                 match self.graphics_mode {
-                                    Some(GraphicsMode::SelectedGraphicsMode(
-                                        Graphics::Integrated,
-                                    )) => "process-working-symbolic",
+                                    Some(GraphicsMode::SelectedGraphicsMode {
+                                        new: Graphics::Integrated,
+                                        ..
+                                    }) => "process-working-symbolic",
                                     _ => "emblem-ok-symbolic",
                                 },
                                 12
@@ -212,8 +245,10 @@ impl Application for Window {
                                     Svg::SymbolicActive,
                                 Some(GraphicsMode::AppliedGraphicsMode(Graphics::Integrated)) =>
                                     Svg::SymbolicActive,
-                                Some(GraphicsMode::SelectedGraphicsMode(Graphics::Integrated)) =>
-                                    Svg::Symbolic,
+                                Some(GraphicsMode::SelectedGraphicsMode {
+                                    new: Graphics::Integrated,
+                                    ..
+                                }) => Svg::Symbolic,
                                 _ => Svg::Default,
                             },),
                         ]
@@ -231,8 +266,10 @@ impl Application for Window {
                             .width(Length::Fill),
                             icon(
                                 match self.graphics_mode {
-                                    Some(GraphicsMode::SelectedGraphicsMode(Graphics::Nvidia)) =>
-                                        "process-working-symbolic",
+                                    Some(GraphicsMode::SelectedGraphicsMode {
+                                        new: Graphics::Nvidia,
+                                        ..
+                                    }) => "process-working-symbolic",
                                     _ => "emblem-ok-symbolic",
                                 },
                                 12
@@ -243,8 +280,10 @@ impl Application for Window {
                                     Svg::SymbolicActive,
                                 Some(GraphicsMode::AppliedGraphicsMode(Graphics::Nvidia)) =>
                                     Svg::SymbolicActive,
-                                Some(GraphicsMode::SelectedGraphicsMode(Graphics::Nvidia)) =>
-                                    Svg::Symbolic,
+                                Some(GraphicsMode::SelectedGraphicsMode {
+                                    new: Graphics::Nvidia,
+                                    ..
+                                }) => Svg::Symbolic,
                                 _ => Svg::Default,
                             }),
                         ]
@@ -263,8 +302,10 @@ impl Application for Window {
                             .width(Length::Fill),
                             icon(
                                 match self.graphics_mode {
-                                    Some(GraphicsMode::SelectedGraphicsMode(Graphics::Hybrid)) =>
-                                        "process-working-symbolic",
+                                    Some(GraphicsMode::SelectedGraphicsMode {
+                                        new: Graphics::Hybrid,
+                                        ..
+                                    }) => "process-working-symbolic",
                                     _ => "emblem-ok-symbolic",
                                 },
                                 12
@@ -275,8 +316,10 @@ impl Application for Window {
                                     Svg::SymbolicActive,
                                 Some(GraphicsMode::AppliedGraphicsMode(Graphics::Hybrid)) =>
                                     Svg::SymbolicActive,
-                                Some(GraphicsMode::SelectedGraphicsMode(Graphics::Hybrid)) =>
-                                    Svg::Symbolic,
+                                Some(GraphicsMode::SelectedGraphicsMode {
+                                    new: Graphics::Hybrid,
+                                    ..
+                                }) => Svg::Symbolic,
                                 _ => Svg::Default,
                             })
                         ]
@@ -295,8 +338,10 @@ impl Application for Window {
                             .width(Length::Fill),
                             icon(
                                 match self.graphics_mode {
-                                    Some(GraphicsMode::SelectedGraphicsMode(Graphics::Compute)) =>
-                                        "process-working-symbolic",
+                                    Some(GraphicsMode::SelectedGraphicsMode {
+                                        new: Graphics::Compute,
+                                        ..
+                                    }) => "process-working-symbolic",
                                     _ => "emblem-ok-symbolic",
                                 },
                                 12
@@ -307,8 +352,10 @@ impl Application for Window {
                                     Svg::SymbolicActive,
                                 Some(GraphicsMode::AppliedGraphicsMode(Graphics::Compute)) =>
                                     Svg::SymbolicActive,
-                                Some(GraphicsMode::SelectedGraphicsMode(Graphics::Compute)) =>
-                                    Svg::Symbolic,
+                                Some(GraphicsMode::SelectedGraphicsMode {
+                                    new: Graphics::Compute,
+                                    ..
+                                }) => Svg::Symbolic,
                                 _ => Svg::Default,
                             }),
                         ]
