@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 once_cell = "1.16.0"
 libcosmic = { git = "https://github.com/pop-os/libcosmic/", branch = "master", default-features = false, features = ["tokio", "wayland", "applet"] }
-sctk = { package = "smithay-client-toolkit", git = "https://github.com/Smithay/client-toolkit", rev = "3776d4a" }
+sctk = { package = "smithay-client-toolkit", git = "https://github.com/Smithay/client-toolkit", rev = "69bffe5" }
 futures = "0.3"
 zbus = { version = "3.5", default-features = false, features = ["tokio"] }
 log = "0.4"

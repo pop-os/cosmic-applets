@@ -20,7 +20,7 @@ use cosmic::iced::{
 };
 use cosmic::iced_native::layout::Limits;
 use cosmic::iced_style::application::{self, Appearance};
-use cosmic::iced_style::{svg, Color};
+use cosmic::iced_style::Color;
 use cosmic::theme::Svg;
 use cosmic::widget::{button, divider, icon, toggler};
 use cosmic::{Element, Theme};
@@ -243,11 +243,7 @@ impl Application for CosmicBatteryApplet {
                         column![
                             row![
                                 icon(&*self.icon_name, 24)
-                                    .style(Svg::Custom(|theme| {
-                                        svg::Appearance {
-                                            color: Some(theme.palette().text),
-                                        }
-                                    }))
+                                    .style(Svg::Symbolic)
                                     .width(Length::Units(24))
                                     .height(Length::Units(24)),
                                 column![name, description]
@@ -328,11 +324,7 @@ impl Application for CosmicBatteryApplet {
                                 .padding([0, 12]),
                             row![
                                 icon("display-brightness-symbolic", 24)
-                                    .style(Svg::Custom(|theme| {
-                                        svg::Appearance {
-                                            color: Some(theme.palette().text),
-                                        }
-                                    }))
+                                    .style(Svg::Symbolic)
                                     .width(Length::Units(24))
                                     .height(Length::Units(24)),
                                 slider(
@@ -348,11 +340,7 @@ impl Application for CosmicBatteryApplet {
                             .spacing(12),
                             row![
                                 icon("keyboard-brightness-symbolic", 24)
-                                    .style(Svg::Custom(|theme| {
-                                        svg::Appearance {
-                                            color: Some(theme.palette().text),
-                                        }
-                                    }))
+                                    .style(Svg::Symbolic)
                                     .width(Length::Units(24))
                                     .height(Length::Units(24)),
                                 slider(

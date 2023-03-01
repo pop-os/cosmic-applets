@@ -13,7 +13,7 @@ use cosmic::iced::{
     window, Alignment, Application, Command, Length, Subscription,
 };
 use cosmic::iced_style::application::{self, Appearance};
-use cosmic::iced_style::{svg, Color};
+use cosmic::iced_style::Color;
 use cosmic::theme::{self, Svg};
 use cosmic::{Element, Theme};
 
@@ -222,9 +222,7 @@ fn power_buttons<'a>(name: &'a str, text: &'a str) -> widget::Button<'a, Message
 }
 
 fn text_icon(name: &str, size: u16) -> cosmic::widget::Icon {
-    icon(name, size).style(Svg::Custom(|theme| svg::Appearance {
-        color: Some(theme.palette().text),
-    }))
+    icon(name, size).style(Svg::Symbolic)
 }
 
 // ### System helpers

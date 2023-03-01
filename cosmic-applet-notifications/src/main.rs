@@ -9,7 +9,7 @@ use cosmic::iced::{
 };
 
 use cosmic::iced_style::application::{self, Appearance};
-use cosmic::iced_style::svg;
+
 use cosmic::theme::Svg;
 use cosmic::widget::{divider, icon, toggler};
 use cosmic::Renderer;
@@ -185,7 +185,5 @@ fn row_button(
 }
 
 fn text_icon(name: &str, size: u16) -> cosmic::widget::Icon {
-    icon(name, size).style(Svg::Custom(|theme| svg::Appearance {
-        color: Some(theme.palette().text),
-    }))
+    icon(name, size).style(Svg::Symbolic)
 }

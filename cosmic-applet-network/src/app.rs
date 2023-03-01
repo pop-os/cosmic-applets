@@ -15,7 +15,7 @@ use cosmic::{
         renderer::BorderRadius,
         window,
     },
-    iced_style::{application, button::StyleSheet, svg},
+    iced_style::{application, button::StyleSheet},
     theme::{Button, Svg},
     widget::{button, divider, icon, toggler},
     Element, Theme,
@@ -415,9 +415,7 @@ impl Application for CosmicNetworkApplet {
                             }
                             let mut btn_content = vec![
                                 icon("network-wireless-symbolic", 24)
-                                    .style(Svg::Custom(|theme| svg::Appearance {
-                                        color: Some(theme.palette().text),
-                                    }))
+                                    .style(Svg::Symbolic)
                                     .width(Length::Units(24))
                                     .height(Length::Units(24))
                                     .into(),
@@ -430,9 +428,7 @@ impl Application for CosmicNetworkApplet {
                                 | ActiveConnectionState::Deactivating => {
                                     btn_content.push(
                                         icon("process-working-symbolic", 24)
-                                            .style(Svg::Custom(|theme| svg::Appearance {
-                                                color: Some(theme.palette().text),
-                                            }))
+                                            .style(Svg::Symbolic)
                                             .width(Length::Units(24))
                                             .height(Length::Units(24))
                                             .into(),
@@ -461,9 +457,7 @@ impl Application for CosmicNetworkApplet {
                 for known in &self.nm_state.known_access_points {
                     let mut btn_content = vec![
                         icon("network-wireless-symbolic", 24)
-                            .style(Svg::Custom(|theme| svg::Appearance {
-                                color: Some(theme.palette().text),
-                            }))
+                            .style(Svg::Symbolic)
                             .width(Length::Units(24))
                             .height(Length::Units(24))
                             .into(),
@@ -473,9 +467,7 @@ impl Application for CosmicNetworkApplet {
                     if known.working {
                         btn_content.push(
                             icon("process-working-symbolic", 24)
-                                .style(Svg::Custom(|theme| svg::Appearance {
-                                    color: Some(theme.palette().text),
-                                }))
+                                .style(Svg::Symbolic)
                                 .width(Length::Units(24))
                                 .height(Length::Units(24))
                                 .into(),
@@ -542,9 +534,7 @@ impl Application for CosmicNetworkApplet {
                                 .into(),
                             container(
                                 icon(dropdown_icon, 14)
-                                    .style(Svg::Custom(|theme| svg::Appearance {
-                                        color: Some(theme.palette().text),
-                                    }))
+                                    .style(Svg::Symbolic)
                                     .width(Length::Units(14))
                                     .height(Length::Units(14)),
                             )
@@ -569,9 +559,7 @@ impl Application for CosmicNetworkApplet {
                             } => {
                                 let id = row![
                                     icon("network-wireless-symbolic", 24)
-                                        .style(Svg::Custom(|theme| svg::Appearance {
-                                            color: Some(theme.palette().text),
-                                        }))
+                                        .style(Svg::Symbolic)
                                         .width(Length::Units(24))
                                         .height(Length::Units(24)),
                                     text(&access_point.ssid).size(14),
@@ -609,9 +597,7 @@ impl Application for CosmicNetworkApplet {
                             NewConnectionState::Waiting(access_point) => {
                                 let id = row![
                                     icon("network-wireless-symbolic", 24)
-                                        .style(Svg::Custom(|theme| svg::Appearance {
-                                            color: Some(theme.palette().text),
-                                        }))
+                                        .style(Svg::Symbolic)
                                         .width(Length::Units(24))
                                         .height(Length::Units(24)),
                                     text(&access_point.ssid).size(14),
@@ -622,9 +608,7 @@ impl Application for CosmicNetworkApplet {
                                 let connecting = row![
                                     id,
                                     icon("process-working-symbolic", 24)
-                                        .style(Svg::Custom(|theme| svg::Appearance {
-                                            color: Some(theme.palette().text),
-                                        }))
+                                        .style(Svg::Symbolic)
                                         .width(Length::Units(24))
                                         .height(Length::Units(24)),
                                 ]
@@ -635,9 +619,7 @@ impl Application for CosmicNetworkApplet {
                             NewConnectionState::Failure(access_point) => {
                                 let id = row![
                                     icon("network-wireless-symbolic", 24)
-                                        .style(Svg::Custom(|theme| svg::Appearance {
-                                            color: Some(theme.palette().text),
-                                        }))
+                                        .style(Svg::Symbolic)
                                         .width(Length::Units(24))
                                         .height(Length::Units(24)),
                                     text(&access_point.ssid).size(14),
@@ -687,9 +669,7 @@ impl Application for CosmicNetworkApplet {
                             let button = button(button_style)
                                 .custom(vec![row![
                                     icon("network-wireless-symbolic", 16)
-                                        .style(Svg::Custom(|theme| svg::Appearance {
-                                            color: Some(theme.palette().text),
-                                        }))
+                                        .style(Svg::Symbolic)
                                         .width(Length::Units(16))
                                         .height(Length::Units(16)),
                                     text(&ap.ssid)

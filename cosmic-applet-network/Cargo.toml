@@ -10,7 +10,7 @@ cosmic-dbus-networkmanager = { git = "https://github.com/pop-os/dbus-settings-bi
 # cosmic-dbus-networkmanager = { path = "../../../dbus-settings-bindings/networkmanager" }
 futures-util = "0.3.21"
 libcosmic = { git = "https://github.com/pop-os/libcosmic/", branch = "master", default-features = false, features = ["wayland", "applet", "tokio"] }
-sctk = { package = "smithay-client-toolkit", git = "https://github.com/Smithay/client-toolkit", rev = "3776d4a" }
+sctk = { package = "smithay-client-toolkit", git = "https://github.com/Smithay/client-toolkit", rev = "69bffe5" }
 futures = "0.3"
 zbus = { version = "3.7", default-features = false }
 log = "0.4"

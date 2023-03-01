@@ -11,6 +11,6 @@ libpulse-binding = "2.26.0"
 libpulse-glib-binding = "2.25.0"
 tokio = { version = "1.20.1", features=["full"] }
 libcosmic = { git = "https://github.com/pop-os/libcosmic/", branch = "master", default-features = false, features = ["tokio", "wayland", "applet"] }
-sctk = { package = "smithay-client-toolkit", git = "https://github.com/Smithay/client-toolkit", rev = "3776d4a" }
+sctk = { package = "smithay-client-toolkit", git = "https://github.com/Smithay/client-toolkit", rev = "69bffe5" }
 log = "0.4.14"
 pretty_env_logger = "0.4.0"
