@@ -2,8 +2,7 @@ use crate::toplevel_subscription::{ToplevelRequest, ToplevelUpdate};
 use cctk::{
     sctk::{
         self,
-        event_loop::WaylandSource,
-        reexports::client::protocol::wl_seat::WlSeat,
+        reexports::client::{protocol::wl_seat::WlSeat, WaylandSource},
         seat::{SeatHandler, SeatState},
     },
     toplevel_info::{ToplevelInfoHandler, ToplevelInfoState},

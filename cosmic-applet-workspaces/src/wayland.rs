@@ -3,8 +3,8 @@ use cosmic::applet::cosmic_panel_config::CosmicPanelOuput;
 use cosmic_client_toolkit::{
     sctk::{
         self,
-        event_loop::WaylandSource,
         output::{OutputHandler, OutputState},
+        reexports::client::WaylandSource,
         registry::{ProvidesRegistryState, RegistryState},
     },
     workspace::{WorkspaceHandler, WorkspaceState},

@@ -17,7 +17,7 @@ use cosmic::{
         renderer::BorderRadius,
         window,
     },
-    iced_style::{application, button::StyleSheet, svg},
+    iced_style::{application, button::StyleSheet},
     theme::{Button, Svg},
     widget::{button, divider, icon, toggler},
     Element, Theme,
@@ -325,9 +325,7 @@ impl Application for CosmicBluetoothApplet {
                         BluerDeviceStatus::Connecting | BluerDeviceStatus::Disconnecting => {
                             row = row.push(
                                 icon("process-working-symbolic", 24)
-                                    .style(Svg::Custom(|theme| svg::Appearance {
-                                        color: Some(theme.palette().text),
-                                    }))
+                                    .style(Svg::Symbolic)
                                     .width(Length::Units(24))
                                     .height(Length::Units(24)),
                             );
@@ -402,9 +400,7 @@ impl Application for CosmicBluetoothApplet {
                                 .into(),
                             container(
                                 icon(dropdown_icon, 14)
-                                    .style(Svg::Custom(|theme| svg::Appearance {
-                                        color: Some(theme.palette().text),
-                                    }))
+                                    .style(Svg::Symbolic)
                                     .width(Length::Units(14))
                                     .height(Length::Units(14)),
                             )

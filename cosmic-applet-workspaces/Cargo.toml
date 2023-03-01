@@ -8,8 +8,8 @@ edition = "2021"
 libcosmic = { git = "https://github.com/pop-os/libcosmic/", branch = "master", default-features = false, features = ["tokio", "wayland", "applet"] }
 cosmic-client-toolkit = { git = "https://github.com/pop-os/cosmic-protocols", default-features = false }
 cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols", default-features = false, features = ["client"] }
-wayland-backend = {version = "0.1.0-beta.14", features = ["client_system"]}
-wayland-client = {version = "0.30.0-beta.14"}
+wayland-backend = {version = "0.1.0", features = ["client_system"]}
+wayland-client = {version = "0.30.0"}
 calloop = "0.10.1"
 nix = "0.26.1"
 log = "0.4"
