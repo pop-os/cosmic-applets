@@ -1,0 +1,16 @@
+network = Netzwerk
+airplane-mode = Flugmodus
+wifi = Wi-Fi
+ipv4 = IPv4 Addresse
+ipv6 = IPv6 Addresse
+mac = MAC
+megabits-per-second = Mbps
+connected = Verbunden
+connecting = Verbinde
+connect = Verbinden
+cancel = Abbrechen
+visible-wireless-networks = Sichtbare Drahtlosnetzwerke
+enter-password = Geben Sie das Kennwort oder den Verschlüsselungsschlüssel ein
+router-wps-button = Sie können sich auch verbinden, indem Sie die "WPS"-Taste am Router drücken
+unable-to-connect = Netzwerkverbindung nicht möglich
+check-wifi-connection = Stellen Sie sicher, dass Wi-Fi mit dem Internet verbunden ist und das Passwort korrekt ist
