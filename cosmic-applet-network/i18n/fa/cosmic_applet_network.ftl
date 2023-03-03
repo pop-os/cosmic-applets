@@ -11,6 +11,6 @@ connect = وصل شدن
 cancel = لغو
 visible-wireless-networks = شبکه های بی سیم قابل مشاهده
 enter-password = رمز عبور یا کلید رمزگذاری را وارد کنید
-router-wps-button = همچنین می توانید با فشار دادن دکمه "WIPS" روی روتر متصل شوید
+router-wps-button = همچنین می توانید با فشار دادن دکمه "WPS" روی روتر متصل شوید
 unable-to-connect = ناموفض در اتصال به شبکه
 check-wifi-connection = مطمئن شوید که وای فای به اینترنت متصل است و رمز عبور صحیح است
