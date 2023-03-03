@@ -11,6 +11,6 @@ connect = Konektuj
 cancel = Poništi
 visible-wireless-networks = Vidljive bežične mreže
 enter-password = Unesite lozinku ili ključ za enkripciju
-router-wps-button = Možete se takođe povezati pritiskom "WIPS" dugmeta na vašem ruteru
+router-wps-button = Možete se takođe povezati pritiskom "WPS" dugmeta na vašem ruteru
 unable-to-connect = Nemoguće je konektovanje na ovu mrežu
 check-wifi-connection = Proverite da je Wi-Fi konektovan na internet i da je lozinka tačna
