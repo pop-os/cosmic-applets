@@ -235,20 +235,30 @@ impl PulseHandle {
                                 server.set_source_volume_by_name(&name, &channel_volumes)
                             }
                             Message::UpdateConnection => {
-                                log::trace!("Updating Connection {:?}", server.is_some());
+                                log::info!(
+                                    "Updating Connection, server exists: {:?}",
+                                    server.is_some()
+                                );
                                 if let Some(mut cur_server) = server.take() {
                                     log::trace!("getting server info...");
                                     if let Err(_) = cur_server.get_server_info() {
+                                        log::warn!("got error, server must be disconnected...");
                                         PulseHandle::send_disconnected(&mut from_pulse_send).await;
                                     } else {
+                                        log::trace!("got server info, still connected...");
                                         server = Some(cur_server);
                                     }
-                                } else if let Ok(new_server) =
-                                    PulseServer::connect().and_then(|server| server.init())
-                                {
-                                    log::trace!("got new server...");
-                                    PulseHandle::send_connected(&mut from_pulse_send).await;
-                                    server = Some(new_server);
+                                } else {
+                                    match PulseServer::connect().and_then(|server| server.init()) {
+                                        Ok(new_server) => {
+                                            log::info!("Connected to server");
+                                            PulseHandle::send_connected(&mut from_pulse_send).await;
+                                            server = Some(new_server);
+                                        }
+                                        Err(err) => {
+                                            log::error!("Failed to connect to server: {:?}", err);
+                                        }
+                                    }
                                 }
                             }
                             Message::SetDefaultSink(device) => {
