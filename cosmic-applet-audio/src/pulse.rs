@@ -43,8 +43,7 @@ pub fn connect() -> Subscription<Event> {
                         (Some(Event::Disconnected), State::Connecting(from_pulse))
                     }
                     Some(m) => {
-                        log::error!("Unexpected message: {:?}", m);
-                        (None, State::Connecting(from_pulse))
+                        panic!("Unexpected message: {:?}", m);
                     }
                     None => {
                         panic!("Pulse Sender dropped, something has gone wrong!");
