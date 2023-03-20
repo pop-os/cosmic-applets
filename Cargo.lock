@@ -684,7 +684,7 @@ dependencies = [
 [[package]]
 name = "cosmic-panel-config"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/cosmic-panel#c7aee034bfe719d04e84d7358357428ca5c0a4d6"
+source = "git+https://github.com/pop-os/cosmic-panel#f4d1755bc6df87f2c4a59987dcea522227e9f88c"
 dependencies = [
  "anyhow",
  "ron",
@@ -710,16 +710,15 @@ dependencies = [
 
 [[package]]
 name = "cosmic-text"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ab5d29bcf58238b07dc456ba16b012513ad1f21eb25dd738fcf833bc4f6a1442"
+version = "0.7.0"
+source = "git+https://github.com/pop-os/cosmic-text?rev=e788c175#e788c175ec31094b04dcacbc0537dba4433afcfc"
 dependencies = [
- "fontdb 0.10.0",
+ "fontdb 0.13.0",
  "libm",
  "log",
  "ouroboros 0.15.5",
  "rangemap",
- "rustybuzz 0.6.0",
+ "rustybuzz 0.7.0",
  "swash",
  "sys-locale",
  "unicode-bidi",
@@ -731,7 +730,7 @@ dependencies = [
 [[package]]
 name = "cosmic-theme"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/cosmic-theme.git#74e4bfe1d1daed1615b34ce143a1ef641f439b23"
+source = "git+https://github.com/pop-os/cosmic-theme.git#a1258308a894c5c7bbe6e261271e8476d55955d3"
 dependencies = [
  "anyhow",
  "csscolorparser",
@@ -1416,13 +1415,14 @@ dependencies = [
 
 [[package]]
 name = "fontdb"
-version = "0.10.0"
+version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8131752b3f3b876a20f42b3d08233ad177d6e7ec6d18aaa6954489a201071be5"
+checksum = "bfec8f19f9b89b2901219cc62604810d2bfef15dc1182e95320f57e7cbbe041a"
 dependencies = [
  "log",
  "memmap2 0.5.8",
- "ttf-parser 0.17.1",
+ "slotmap",
+ "ttf-parser 0.18.1",
 ]
 
 [[package]]
@@ -1987,7 +1987,7 @@ dependencies = [
 [[package]]
 name = "iced"
 version = "0.6.0"
-source = "git+https://github.com/pop-os/libcosmic/?branch=master#172d8ae51131ec29e9c35ddea18840432e82d124"
+source = "git+https://github.com/pop-os/libcosmic/?branch=master#24709e9c3b56c49a0af168d1e37ebef85f112c8a"
 dependencies = [
  "iced_core",
  "iced_dyrend",
@@ -2005,7 +2005,7 @@ dependencies = [
 [[package]]
 name = "iced_core"
 version = "0.6.2"
-source = "git+https://github.com/pop-os/libcosmic/?branch=master#172d8ae51131ec29e9c35ddea18840432e82d124"
+source = "git+https://github.com/pop-os/libcosmic/?branch=master#24709e9c3b56c49a0af168d1e37ebef85f112c8a"
 dependencies = [
  "bitflags",
  "palette",
@@ -2015,7 +2015,7 @@ dependencies = [
 [[package]]
 name = "iced_dyrend"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic/?branch=master#172d8ae51131ec29e9c35ddea18840432e82d124"
+source = "git+https://github.com/pop-os/libcosmic/?branch=master#24709e9c3b56c49a0af168d1e37ebef85f112c8a"
 dependencies = [
  "iced_glow",
  "iced_graphics",
@@ -2029,7 +2029,7 @@ dependencies = [
 [[package]]
 name = "iced_futures"
 version = "0.5.1"
-source = "git+https://github.com/pop-os/libcosmic/?branch=master#172d8ae51131ec29e9c35ddea18840432e82d124"
+source = "git+https://github.com/pop-os/libcosmic/?branch=master#24709e9c3b56c49a0af168d1e37ebef85f112c8a"
 dependencies = [
  "futures",
  "log",
@@ -2041,7 +2041,7 @@ dependencies = [
 [[package]]
 name = "iced_glow"
 version = "0.5.1"
-source = "git+https://github.com/pop-os/libcosmic/?branch=master#172d8ae51131ec29e9c35ddea18840432e82d124"
+source = "git+https://github.com/pop-os/libcosmic/?branch=master#24709e9c3b56c49a0af168d1e37ebef85f112c8a"
 dependencies = [
  "bytemuck",
  "euclid",
@@ -2056,7 +2056,7 @@ dependencies = [
 [[package]]
 name = "iced_graphics"
 version = "0.5.0"
-source = "git+https://github.com/pop-os/libcosmic/?branch=master#172d8ae51131ec29e9c35ddea18840432e82d124"
+source = "git+https://github.com/pop-os/libcosmic/?branch=master#24709e9c3b56c49a0af168d1e37ebef85f112c8a"
 dependencies = [
  "bitflags",
  "bytemuck",
@@ -2076,7 +2076,7 @@ dependencies = [
 [[package]]
 name = "iced_lazy"
 version = "0.3.0"
-source = "git+https://github.com/pop-os/libcosmic/?branch=master#172d8ae51131ec29e9c35ddea18840432e82d124"
+source = "git+https://github.com/pop-os/libcosmic/?branch=master#24709e9c3b56c49a0af168d1e37ebef85f112c8a"
 dependencies = [
  "iced_native",
  "ouroboros 0.13.0",
@@ -2085,7 +2085,7 @@ dependencies = [
 [[package]]
 name = "iced_native"
 version = "0.7.0"
-source = "git+https://github.com/pop-os/libcosmic/?branch=master#172d8ae51131ec29e9c35ddea18840432e82d124"
+source = "git+https://github.com/pop-os/libcosmic/?branch=master#24709e9c3b56c49a0af168d1e37ebef85f112c8a"
 dependencies = [
  "iced_core",
  "iced_futures",
@@ -2099,7 +2099,7 @@ dependencies = [
 [[package]]
 name = "iced_sctk"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic/?branch=master#172d8ae51131ec29e9c35ddea18840432e82d124"
+source = "git+https://github.com/pop-os/libcosmic/?branch=master#24709e9c3b56c49a0af168d1e37ebef85f112c8a"
 dependencies = [
  "enum-repr",
  "float-cmp",
@@ -2117,7 +2117,7 @@ dependencies = [
 [[package]]
 name = "iced_softbuffer"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic/?branch=master#172d8ae51131ec29e9c35ddea18840432e82d124"
+source = "git+https://github.com/pop-os/libcosmic/?branch=master#24709e9c3b56c49a0af168d1e37ebef85f112c8a"
 dependencies = [
  "cosmic-text",
  "iced_graphics",
@@ -2132,7 +2132,7 @@ dependencies = [
 [[package]]
 name = "iced_style"
 version = "0.5.1"
-source = "git+https://github.com/pop-os/libcosmic/?branch=master#172d8ae51131ec29e9c35ddea18840432e82d124"
+source = "git+https://github.com/pop-os/libcosmic/?branch=master#24709e9c3b56c49a0af168d1e37ebef85f112c8a"
 dependencies = [
  "iced_core",
  "once_cell",
@@ -2142,7 +2142,7 @@ dependencies = [
 [[package]]
 name = "iced_wgpu"
 version = "0.7.0"
-source = "git+https://github.com/pop-os/libcosmic/?branch=master#172d8ae51131ec29e9c35ddea18840432e82d124"
+source = "git+https://github.com/pop-os/libcosmic/?branch=master#24709e9c3b56c49a0af168d1e37ebef85f112c8a"
 dependencies = [
  "bitflags",
  "bytemuck",
@@ -2332,7 +2332,7 @@ checksum = "201de327520df007757c1f0adce6e827fe8562fbc28bfd9c15571c66ca1f5f79"
 [[package]]
 name = "libcosmic"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic/?branch=master#172d8ae51131ec29e9c35ddea18840432e82d124"
+source = "git+https://github.com/pop-os/libcosmic/?branch=master#24709e9c3b56c49a0af168d1e37ebef85f112c8a"
 dependencies = [
  "apply",
  "cosmic-panel-config",
@@ -3497,15 +3497,15 @@ dependencies = [
 
 [[package]]
 name = "rustybuzz"
-version = "0.6.0"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ab9e34ecf6900625412355a61bda0bd68099fe674de707c67e5e4aed2c05e489"
+checksum = "162bdf42e261bee271b3957691018634488084ef577dddeb6420a9684cab2a6a"
 dependencies = [
  "bitflags",
  "bytemuck",
  "libm",
  "smallvec",
- "ttf-parser 0.17.1",
+ "ttf-parser 0.18.1",
  "unicode-bidi-mirroring",
  "unicode-ccc",
  "unicode-general-category 0.6.0",
@@ -4107,12 +4107,6 @@ name = "ttf-parser"
 version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7ae2f58a822f08abdaf668897e96a5656fe72f5a9ce66422423e8849384872e6"
-
-[[package]]
-name = "ttf-parser"
-version = "0.17.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "375812fa44dab6df41c195cd2f7fecb488f6c09fbaafb62807488cefab642bff"
 
 [[package]]
 name = "ttf-parser"
