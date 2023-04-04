@@ -682,6 +682,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "cosmic-panel-button"
+version = "0.1.0"
+dependencies = [
+ "freedesktop-desktop-entry",
+ "libcosmic",
+]
+
+[[package]]
 name = "cosmic-panel-config"
 version = "0.1.0"
 source = "git+https://github.com/pop-os/cosmic-panel#f4d1755bc6df87f2c4a59987dcea522227e9f88c"

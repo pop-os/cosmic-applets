@@ -2,7 +2,7 @@
 Name=Cosmic Panel Workspaces Button
 Comment=Write a GTK + Rust application
 Type=Application
-Exec=cosmic-panel-button -id com.system76.CosmicWorkspaces
+Exec=cosmic-panel-button com.system76.CosmicWorkspaces
 Terminal=false
 Categories=GNOME;GTK;
 Keywords=Gnome;GTK;

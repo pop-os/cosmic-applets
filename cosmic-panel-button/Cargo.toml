@@ -1,0 +1,9 @@
+[package]
+name = "cosmic-panel-button"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0-or-later"
+
+[dependencies]
+freedesktop-desktop-entry = "0.5.0"
+libcosmic = { git = "https://github.com/pop-os/libcosmic/", branch = "master", default-features = false, features = ["tokio", "wayland", "applet"] }
