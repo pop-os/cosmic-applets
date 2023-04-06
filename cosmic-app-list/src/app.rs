@@ -73,27 +73,114 @@ pub fn run() -> cosmic::iced::Result {
 }
 
 #[derive(Debug, Clone, Default)]
-struct Toplevel {
-    id: u32,
+struct DockItem {
+    id: usize,
     toplevels: Vec<(ZcosmicToplevelHandleV1, ToplevelInfo)>,
     desktop_info: DesktopInfo,
-    popup: Option<window::Id>,
+}
+
+impl DockItem {
+    fn new(
+        id: usize,
+        toplevel: (ZcosmicToplevelHandleV1, ToplevelInfo),
+        desktop_info: DesktopInfo,
+    ) -> Self {
+        Self {
+            id,
+            toplevels: vec![toplevel],
+            desktop_info,
+        }
+    }
+
+    fn as_icon(&self, applet_helper: &CosmicAppletHelper, rectangle_tracker: Option<&RectangleTracker<usize>>, has_popup: bool) -> Element<'_, Message> {
+        let DockItem {
+            toplevels,
+            desktop_info,
+            id,
+            ..
+        } = self;
+
+        let cosmic_icon = cosmic::widget::icon(
+            Path::new(&desktop_info.icon),
+            applet_helper.suggested_size().0,
+        );
+
+        let dot_radius = 2;
+        let dots = (0..toplevels.len())
+            .into_iter()
+            .map(|_| {
+                container(vertical_space(Length::Units(0)))
+                    .padding(dot_radius)
+                    .style(<<CosmicAppList as cosmic::iced::Application>::Theme as container::StyleSheet>::Style::Custom(
+                        |theme| container::Appearance {
+                            text_color: Some(Color::TRANSPARENT),
+                            background: Some(Background::Color(
+                                theme.cosmic().on_bg_color().into(),
+                            )),
+                            border_radius: 4.0,
+                            border_width: 0.0,
+                            border_color: Color::TRANSPARENT,
+                        },
+                    ))
+                    .into()
+            })
+            .collect_vec();
+        let icon_wrapper = match applet_helper.anchor {
+            PanelAnchor::Left => row(vec![column(dots).spacing(4).into(), cosmic_icon.into()])
+                .align_items(iced::Alignment::Center)
+                .spacing(4)
+                .into(),
+            PanelAnchor::Right => row(vec![cosmic_icon.into(), column(dots).spacing(4).into()])
+                .align_items(iced::Alignment::Center)
+                .spacing(4)
+                .into(),
+            PanelAnchor::Top => column(vec![row(dots).spacing(4).into(), cosmic_icon.into()])
+                .align_items(iced::Alignment::Center)
+                .spacing(4)
+                .into(),
+            PanelAnchor::Bottom => column(vec![cosmic_icon.into(), row(dots).spacing(4).into()])
+                .align_items(iced::Alignment::Center)
+                .spacing(4)
+                .into(),
+        };
+        let mut icon_button = cosmic::widget::button(Button::Text)
+            .custom(vec![icon_wrapper])
+            .padding(8);
+        if !has_popup {
+            icon_button = icon_button.on_press(
+                toplevels
+                    .first()
+                    .map(|t| Message::Activate(t.0.clone()))
+                    .unwrap_or_else(|| Message::Exec(desktop_info.exec.clone())),
+            );
+        }
+
+        // TODO tooltip on hover
+        let icon_button = mouse_listener(icon_button.width(Length::Shrink).height(Length::Shrink))
+            .on_right_release(Message::Popup(desktop_info.id.clone()));
+        if let Some(tracker) = rectangle_tracker {
+            tracker.container(*id, icon_button).into()
+        } else {
+            icon_button.into()
+        }
+    }
 }
 
 #[derive(Clone, Default)]
 struct CosmicAppList {
     theme: Theme,
-    popup: Option<window::Id>,
+    popup: Option<(window::Id, DockItem)>,
     surface_id_ctr: u32,
     subscription_ctr: u32,
-    toplevel_ctr: u32,
-    toplevel_list: Vec<Toplevel>,
+    active_list: Vec<DockItem>,
+    favorite_list: Vec<DockItem>,
+    dnd_preview: Option<(bool, DockItem)>, // TODO allow non-toplevels to be dragged
     config: AppListConfig,
     toplevel_sender: Option<Sender<ToplevelRequest>>,
     applet_helper: CosmicAppletHelper,
     seat: Option<WlSeat>,
-    rectangle_tracker: Option<RectangleTracker<u32>>,
-    rectangles: HashMap<u32, iced::Rectangle>,
+    rectangle_tracker: Option<RectangleTracker<usize>>,
+    rectangles: HashMap<usize, iced::Rectangle>,
 }
 
 // TODO DnD after sctk merges DnD
@@ -107,11 +194,10 @@ enum Message {
     Activate(ZcosmicToplevelHandleV1),
     Exec(String),
     Quit(String),
-    Errored(String),
     Ignore,
     NewSeat(WlSeat),
     RemovedSeat(WlSeat),
-    Rectangle(RectangleUpdate<u32>),
+    Rectangle(RectangleUpdate<usize>),
 }
 
 #[derive(Debug, Clone, Default)]
@@ -160,6 +246,24 @@ fn desktop_info_for_app_ids(mut app_ids: Vec<String>) -> Vec<DesktopInfo> {
     ret
 }
 
+fn split_toplevel_favorites(
+    toplevel_list: Vec<DockItem>,
+    existing_favorites: &mut Vec<DockItem>,
+) -> Vec<DockItem> {
+    let mut active_list = Vec::new();
+    for toplevel in toplevel_list {
+        if let Some(favorite) = existing_favorites.iter_mut().find(|f| {
+            f.desktop_info.name == toplevel.desktop_info.id
+                || f.desktop_info.id == toplevel.desktop_info.id
+        }) {
+            favorite.toplevels = toplevel.toplevels;
+        } else {
+            active_list.push(toplevel);
+        }
+    }
+    active_list
+}
+
 impl Application for CosmicAppList {
     type Message = Message;
     type Theme = Theme;
@@ -168,22 +272,17 @@ impl Application for CosmicAppList {
 
     fn new(_flags: ()) -> (Self, Command<Message>) {
         let config = config::AppListConfig::load().unwrap_or_default();
-        let mut toplevel_ctr = 0;
         let self_ = CosmicAppList {
-            toplevel_list: desktop_info_for_app_ids(config.favorites.clone())
+            favorite_list: desktop_info_for_app_ids(config.favorites.clone())
                 .into_iter()
-                .map(|e| {
-                    toplevel_ctr += 1;
-                    Toplevel {
-                        id: toplevel_ctr,
-                        toplevels: Default::default(),
-                        desktop_info: e,
-                        popup: None,
-                    }
+                .enumerate()
+                .map(|(i, e)| DockItem {
+                    id: i,
+                    toplevels: Default::default(),
+                    desktop_info: e,
                 })
                 .collect(),
             config,
-            toplevel_ctr,
             ..Default::default()
         };
 
@@ -196,19 +295,16 @@ impl Application for CosmicAppList {
 
     fn update(&mut self, message: Message) -> Command<Message> {
         match message {
-            Message::Errored(_) => {
-                // TODO log errors
-            }
             Message::Popup(id) => {
+                if let Some((popup_id, _toplevel)) = self.popup.take() {
+                    return destroy_popup(popup_id);
+                }
                 if let Some(toplevel_group) = self
-                    .toplevel_list
-                    .iter_mut()
+                    .active_list
+                    .iter()
+                    .chain(self.favorite_list.iter())
                     .find(|t| t.desktop_info.id == id)
                 {
-                    if let Some(p) = self.popup.take() {
-                        toplevel_group.popup.take();
-                        return destroy_popup(p);
-                    }
                     let rectangle = match self.rectangles.get(&toplevel_group.id) {
                         Some(r) => r,
                         None => return Command::none(),
@@ -216,8 +312,7 @@ impl Application for CosmicAppList {
 
                     self.surface_id_ctr += 1;
                     let new_id = window::Id::new(self.surface_id_ctr);
-                    self.popup.replace(new_id);
-                    toplevel_group.popup.replace(new_id);
+                    self.popup = Some((new_id, toplevel_group.clone()));
 
                     let mut popup_settings = self.applet_helper.get_popup_settings(
                         window::Id::new(0),
@@ -245,11 +340,18 @@ impl Application for CosmicAppList {
                 let _ = self.config.add_favorite(id);
             }
             Message::UnFavorite(id) => {
-                let _ = self.config.remove_favorite(id);
-                self.toplevel_list.retain(|t| {
-                    self.config.favorites.contains(&t.desktop_info.id)
-                        || self.config.favorites.contains(&t.desktop_info.name)
-                })
+                let _ = self.config.remove_favorite(id.clone());
+                if let Some(i) = self
+                    .favorite_list
+                    .iter()
+                    .position(|t| t.desktop_info.id == id)
+                {
+                    let entry = self.favorite_list.remove(i);
+                    self.rectangles.remove(&entry.id);
+                    if !entry.toplevels.is_empty() {
+                        self.active_list.push(entry);
+                    }
+                }
             }
             Message::Activate(handle) => {
                 if let (Some(tx), Some(seat)) = (self.toplevel_sender.as_ref(), self.seat.as_ref())
@@ -258,8 +360,11 @@ impl Application for CosmicAppList {
                 }
             }
             Message::Quit(id) => {
-                if let Some(toplevel_group) =
-                    self.toplevel_list.iter().find(|t| t.desktop_info.id == id)
+                if let Some(toplevel_group) = self
+                    .active_list
+                    .iter()
+                    .chain(self.favorite_list.iter())
+                    .find(|t| t.desktop_info.id == id)
                 {
                     for (handle, _) in &toplevel_group.toplevels {
                         if let Some(tx) = self.toplevel_sender.as_ref() {
@@ -274,19 +379,22 @@ impl Application for CosmicAppList {
                         if info.app_id.is_empty() {
                             return Command::none();
                         }
-                        if let Some(i) = self.toplevel_list.iter().position(
-                            |Toplevel { desktop_info, .. }| desktop_info.id == info.app_id,
-                        ) {
-                            self.toplevel_list[i].toplevels.push((handle, info));
+                        if let Some(t) = self
+                            .active_list
+                            .iter_mut()
+                            .chain(self.favorite_list.iter_mut())
+                            .find(|DockItem { desktop_info, .. }| {
+                                desktop_info.id == info.app_id || desktop_info.name == info.app_id
+                            })
+                        {
+                            t.toplevels.push((handle, info));
                         } else {
                             let desktop_info =
                                 desktop_info_for_app_ids(vec![info.app_id.clone()]).remove(0);
-                            self.toplevel_ctr += 1;
-                            self.toplevel_list.push(Toplevel {
-                                id: self.toplevel_ctr,
+                            self.active_list.push(DockItem {
+                                id: self.active_list.len(),
                                 toplevels: vec![(handle, info)],
                                 desktop_info,
-                                popup: None,
                             });
                         }
                     }
@@ -295,36 +403,31 @@ impl Application for CosmicAppList {
                     }
                     ToplevelUpdate::Finished => {
                         self.subscription_ctr += 1;
-                        for t in &mut self.toplevel_list {
+                        for t in &mut self.favorite_list {
                             t.toplevels.clear();
                         }
+                        self.active_list.clear();
                     }
                     ToplevelUpdate::RemoveToplevel(handle) => {
-                        if let Some(i) = self.toplevel_list.iter_mut().position(
-                            |Toplevel {
-                                 toplevels,
-                                 desktop_info,
-                                 ..
-                             }| {
-                                if let Some(ret) = toplevels.iter().position(|t| t.0 == handle) {
-                                    toplevels.remove(ret);
-                                    toplevels.is_empty()
-                                        && !self.config.favorites.contains(&desktop_info.id)
-                                        && !self.config.favorites.contains(&desktop_info.name)
-                                } else {
-                                    false
-                                }
-                            },
-                        ) {
-                            self.toplevel_list.remove(i);
+                        for t in self
+                            .active_list
+                            .iter_mut()
+                            .chain(self.favorite_list.iter_mut())
+                        {
+                            t.toplevels.retain(|(t_handle, _)| t_handle != &handle);
                         }
+                        self.active_list.retain(|t| !t.toplevels.is_empty());
                     }
                     ToplevelUpdate::UpdateToplevel(handle, info) => {
                         // TODO probably want to make sure it is removed
                         if info.app_id.is_empty() {
                             return Command::none();
                         }
-                        'toplevel_loop: for toplevel_list in &mut self.toplevel_list {
+                        'toplevel_loop: for toplevel_list in self
+                            .active_list
+                            .iter_mut()
+                            .chain(self.favorite_list.iter_mut())
+                        {
                             for (t_handle, t_info) in &mut toplevel_list.toplevels {
                                 if &handle == t_handle {
                                     *t_info = info;
@@ -366,12 +469,7 @@ impl Application for CosmicAppList {
             Message::Ignore => {}
             Message::ClosePopup => {
                 if let Some(p) = self.popup.take() {
-                    if let Some(toplevel_group) =
-                        self.toplevel_list.iter_mut().find(|t| t.popup == Some(p))
-                    {
-                        toplevel_group.popup.take();
-                    }
-                    return destroy_popup(p);
+                    return destroy_popup(p.0);
                 }
             }
         }
@@ -379,11 +477,14 @@ impl Application for CosmicAppList {
     }
 
     fn view(&self, id: window::Id) -> Element<Message> {
-        if let Some(Toplevel {
-            toplevels,
-            desktop_info,
-            ..
-        }) = self.toplevel_list.iter().find(|t| t.popup == Some(id))
+        if let Some((
+            popup_id,
+            DockItem {
+                toplevels,
+                desktop_info,
+                ..
+            },
+        )) = self.popup.as_ref().filter(|p| id == p.0)
         {
             let is_favorite = self.config.favorites.contains(&desktop_info.id)
                 || self.config.favorites.contains(&desktop_info.name);
@@ -450,97 +551,24 @@ impl Application for CosmicAppList {
             return self.applet_helper.popup_container(content).into();
         }
 
-        let (favorites, running) = self.toplevel_list.iter().fold(
-            (Vec::new(), Vec::new()),
-            |(mut favorites, mut running),
-             Toplevel {
-                 id,
-                 toplevels,
-                 desktop_info,
-                 ..
-             }| {
-                let cosmic_icon = cosmic::widget::icon(
-                    Path::new(&desktop_info.icon),
-                    self.applet_helper.suggested_size().0,
-                );
-
-                let dot_radius = 2;
-                let dots = (0..toplevels.len())
-                    .into_iter()
-                    .map(|_| {
-                        container(vertical_space(Length::Units(0)))
-                            .padding(dot_radius)
-                            .style(<Self::Theme as container::StyleSheet>::Style::Custom(
-                                |theme| container::Appearance {
-                                    text_color: Some(Color::TRANSPARENT),
-                                    background: Some(Background::Color(
-                                        theme.cosmic().on_bg_color().into(),
-                                    )),
-                                    border_radius: 4.0,
-                                    border_width: 0.0,
-                                    border_color: Color::TRANSPARENT,
-                                },
-                            ))
-                            .into()
-                    })
-                    .collect_vec();
-                let icon_wrapper = match &self.applet_helper.anchor {
-                    PanelAnchor::Left => {
-                        row(vec![column(dots).spacing(4).into(), cosmic_icon.into()])
-                            .align_items(iced::Alignment::Center)
-                            .spacing(4)
-                            .into()
-                    }
-                    PanelAnchor::Right => {
-                        row(vec![cosmic_icon.into(), column(dots).spacing(4).into()])
-                            .align_items(iced::Alignment::Center)
-                            .spacing(4)
-                            .into()
-                    }
-                    PanelAnchor::Top => {
-                        column(vec![row(dots).spacing(4).into(), cosmic_icon.into()])
-                            .align_items(iced::Alignment::Center)
-                            .spacing(4)
-                            .into()
-                    }
-                    PanelAnchor::Bottom => {
-                        column(vec![cosmic_icon.into(), row(dots).spacing(4).into()])
-                            .align_items(iced::Alignment::Center)
-                            .spacing(4)
-                            .into()
-                    }
-                };
-                let mut icon_button = cosmic::widget::button(Button::Text)
-                    .custom(vec![icon_wrapper])
-                    .padding(8);
-                if self.popup.is_none() {
-                    icon_button = icon_button.on_press(
-                        toplevels
-                            .first()
-                            .map(|t| Message::Activate(t.0.clone()))
-                            .unwrap_or_else(|| Message::Exec(desktop_info.exec.clone())),
-                    );
-                }
-
-                // TODO tooltip on hover
-                let icon_button =
-                    mouse_listener(icon_button.width(Length::Shrink).height(Length::Shrink))
-                        .on_right_release(Message::Popup(desktop_info.id.clone()));
-                let icon_button = if let Some(tracker) = self.rectangle_tracker.as_ref() {
-                    tracker.container(*id, icon_button).into()
-                } else {
-                    icon_button.into()
-                };
-                if self.config.favorites.contains(&desktop_info.id)
-                    || self.config.favorites.contains(&desktop_info.name)
-                {
-                    favorites.push(icon_button)
-                } else {
-                    running.push(icon_button);
-                }
-                (favorites, running)
-            },
-        );
+        let favorites = self
+            .favorite_list
+            .iter()
+            .map(
+                |dock_item| {
+                    dock_item.as_icon(&self.applet_helper, self.rectangle_tracker.as_ref(), self.popup.is_some())
+                },
+            )
+            .collect();
+        let active = self
+            .active_list
+            .iter()
+            .map(
+                |dock_item| {
+                    dock_item.as_icon(&self.applet_helper, self.rectangle_tracker.as_ref(), self.popup.is_some())
+                 },
+            )
+            .collect();
 
         let (w, h) = match self.applet_helper.anchor {
             PanelAnchor::Top | PanelAnchor::Bottom => (Length::Shrink, Length::Fill),
@@ -552,7 +580,7 @@ impl Application for CosmicAppList {
                 column![
                     column(favorites),
                     divider::horizontal::light(),
-                    column(running)
+                    column(active)
                 ]
                 .spacing(4)
                 .align_items(Alignment::Center)
@@ -560,7 +588,7 @@ impl Application for CosmicAppList {
                 .width(w),
             ),
             PanelAnchor::Top | PanelAnchor::Bottom => container(
-                row![row(favorites), vertical_rule(1), row(running)]
+                row![row(favorites), vertical_rule(1), row(active)]
                     .spacing(4)
                     .align_items(Alignment::Center)
                     .height(h)
