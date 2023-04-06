@@ -1,7 +1,6 @@
 use cosmic::applet::{CosmicAppletHelper, APPLET_BUTTON_THEME};
 use cosmic::iced::wayland::{
     popup::{destroy_popup, get_popup},
-    SurfaceIdWrapper,
 };
 use cosmic::iced::{
     widget::{button, column, row, text, Row, Space},
@@ -65,7 +64,7 @@ impl Application for Notifications {
         self.theme
     }
 
-    fn close_requested(&self, _id: SurfaceIdWrapper) -> Self::Message {
+    fn close_requested(&self, _id: window::Id) -> Self::Message {
         Message::Ignore
     }
 
@@ -112,57 +111,54 @@ impl Application for Notifications {
         }
     }
 
-    fn view(&self, id: SurfaceIdWrapper) -> Element<Message> {
-        match id {
-            SurfaceIdWrapper::LayerSurface(_) => unimplemented!(),
-            SurfaceIdWrapper::Window(_) => self
-                .applet_helper
+    fn view(&self, id: window::Id) -> Element<Message> {
+        if id == window::Id::new(0) {
+            self.applet_helper
                 .icon_button(&self.icon_name)
                 .on_press(Message::TogglePopup)
-                .into(),
-            SurfaceIdWrapper::Popup(_) => {
-                let do_not_disturb =
-                    row![
-                        toggler(String::from("Do Not Disturb"), self.do_not_disturb, |b| {
-                            Message::DoNotDisturb(b)
-                        })
-                        .width(Length::Fill)
-                    ]
-                    .padding([0, 24]);
-
-                let settings =
-                    row_button(vec!["Notification Settings...".into()]).on_press(Message::Settings);
-
-                let notifications = if self.notifications.len() == 0 {
-                    row![
-                        Space::with_width(Length::Fill),
-                        column![text_icon(&self.icon_name, 40), "No Notifications"]
-                            .align_items(Alignment::Center),
-                        Space::with_width(Length::Fill)
-                    ]
-                    .spacing(12)
-                } else {
-                    row![text("TODO: make app worky with notifications")]
-                };
-
-                let main_content = column![
-                    divider::horizontal::light(),
-                    notifications,
-                    divider::horizontal::light()
+                .into()
+        } else {
+            let do_not_disturb =
+                row![
+                    toggler(String::from("Do Not Disturb"), self.do_not_disturb, |b| {
+                        Message::DoNotDisturb(b)
+                    })
+                    .width(Length::Fill)
                 ]
-                .padding([0, 24])
-                .spacing(12);
+                .padding([0, 24]);
 
-                let content = column![]
-                    .align_items(Alignment::Start)
-                    .spacing(12)
-                    .padding([12, 0])
-                    .push(do_not_disturb)
-                    .push(main_content)
-                    .push(settings);
+            let settings =
+                row_button(vec!["Notification Settings...".into()]).on_press(Message::Settings);
 
-                self.applet_helper.popup_container(content).into()
-            }
+            let notifications = if self.notifications.len() == 0 {
+                row![
+                    Space::with_width(Length::Fill),
+                    column![text_icon(&self.icon_name, 40), "No Notifications"]
+                        .align_items(Alignment::Center),
+                    Space::with_width(Length::Fill)
+                ]
+                .spacing(12)
+            } else {
+                row![text("TODO: make app worky with notifications")]
+            };
+
+            let main_content = column![
+                divider::horizontal::light(),
+                notifications,
+                divider::horizontal::light()
+            ]
+            .padding([0, 24])
+            .spacing(12);
+
+            let content = column![]
+                .align_items(Alignment::Start)
+                .spacing(12)
+                .padding([12, 0])
+                .push(do_not_disturb)
+                .push(main_content)
+                .push(settings);
+
+            self.applet_helper.popup_container(content).into()
         }
     }
 }

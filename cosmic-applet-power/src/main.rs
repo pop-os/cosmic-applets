@@ -2,7 +2,6 @@ use std::process;
 
 use cosmic::applet::{CosmicAppletHelper, APPLET_BUTTON_THEME};
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
-use cosmic::iced::wayland::SurfaceIdWrapper;
 use cosmic::iced_native::layout::Limits;
 use cosmic::iced_native::widget::Space;
 use cosmic::widget::{button, divider, icon};
@@ -80,7 +79,7 @@ impl Application for Power {
         self.theme
     }
 
-    fn close_requested(&self, _id: SurfaceIdWrapper) -> Self::Message {
+    fn close_requested(&self, _id: window::Id) -> Self::Message {
         Message::Ignore
     }
 
@@ -139,61 +138,56 @@ impl Application for Power {
         }
     }
 
-    fn view(&self, id: SurfaceIdWrapper) -> Element<Message> {
-        match id {
-            SurfaceIdWrapper::LayerSurface(_) => unimplemented!(),
-            SurfaceIdWrapper::Window(_) => self
-                .applet_helper
+    fn view(&self, id: window::Id) -> Element<Message> {
+        if id == window::Id::new(0) {
+            self.applet_helper
                 .icon_button(&self.icon_name)
                 .on_press(Message::TogglePopup)
-                .into(),
-            SurfaceIdWrapper::Popup(_) => {
-                let settings = row_button(vec!["Settings...".into()]).on_press(Message::Settings);
+                .into()
+        } else {
+            let settings = row_button(vec!["Settings...".into()]).on_press(Message::Settings);
 
-                let session = column![
-                    row_button(vec![
-                        text_icon("system-lock-screen-symbolic", 24).into(),
-                        "Lock Screen".into(),
-                        Space::with_width(Length::Fill).into(),
-                        "Super + Escape".into(),
-                    ])
-                    .on_press(Message::Lock),
-                    row_button(vec![
-                        text_icon("system-log-out-symbolic", 24).into(),
-                        "Log Out".into(),
-                        Space::with_width(Length::Fill).into(),
-                        "Ctrl + Alt + Delete".into(),
-                    ])
-                    .on_press(Message::LogOut),
-                ];
+            let session = column![
+                row_button(vec![
+                    text_icon("system-lock-screen-symbolic", 24).into(),
+                    "Lock Screen".into(),
+                    Space::with_width(Length::Fill).into(),
+                    "Super + Escape".into(),
+                ])
+                .on_press(Message::Lock),
+                row_button(vec![
+                    text_icon("system-log-out-symbolic", 24).into(),
+                    "Log Out".into(),
+                    Space::with_width(Length::Fill).into(),
+                    "Ctrl + Alt + Delete".into(),
+                ])
+                .on_press(Message::LogOut),
+            ];
 
-                let power = row![
-                    power_buttons("system-lock-screen-symbolic", "Suspend")
-                        .on_press(Message::Suspend),
-                    power_buttons("system-restart-symbolic", "Restart").on_press(Message::Restart),
-                    power_buttons("system-shutdown-symbolic", "Shutdown")
-                        .on_press(Message::Shutdown),
-                ]
-                .spacing(24)
-                .padding([0, 24]);
+            let power = row![
+                power_buttons("system-lock-screen-symbolic", "Suspend").on_press(Message::Suspend),
+                power_buttons("system-restart-symbolic", "Restart").on_press(Message::Restart),
+                power_buttons("system-shutdown-symbolic", "Shutdown").on_press(Message::Shutdown),
+            ]
+            .spacing(24)
+            .padding([0, 24]);
 
-                let content = column![
-                    settings,
-                    container(divider::horizontal::light())
-                        .padding([0, 12])
-                        .width(Length::Fill),
-                    session,
-                    container(divider::horizontal::light())
-                        .padding([0, 12])
-                        .width(Length::Fill),
-                    power
-                ]
-                .align_items(Alignment::Start)
-                .spacing(12)
-                .padding([8, 0]);
+            let content = column![
+                settings,
+                container(divider::horizontal::light())
+                    .padding([0, 12])
+                    .width(Length::Fill),
+                session,
+                container(divider::horizontal::light())
+                    .padding([0, 12])
+                    .width(Length::Fill),
+                power
+            ]
+            .align_items(Alignment::Start)
+            .spacing(12)
+            .padding([8, 0]);
 
-                self.applet_helper.popup_container(content).into()
-            }
+            self.applet_helper.popup_container(content).into()
         }
     }
 }

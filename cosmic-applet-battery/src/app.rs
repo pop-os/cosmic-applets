@@ -13,7 +13,6 @@ use crate::upower_kbdbacklight::{
 use cosmic::applet::{CosmicAppletHelper, APPLET_BUTTON_THEME};
 use cosmic::iced::alignment::Horizontal;
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
-use cosmic::iced::wayland::SurfaceIdWrapper;
 use cosmic::iced::{
     widget::{column, container, row, slider, text},
     window, Alignment, Application, Command, Length, Subscription,
@@ -213,163 +212,158 @@ impl Application for CosmicBatteryApplet {
         }
         Command::none()
     }
-    fn view(&self, id: SurfaceIdWrapper) -> Element<Message> {
-        match id {
-            SurfaceIdWrapper::LayerSurface(_) => unimplemented!(),
-            SurfaceIdWrapper::Window(_) => self
-                .applet_helper
+    fn view(&self, id: window::Id) -> Element<Message> {
+        if id == window::Id::new(0) {
+            self.applet_helper
                 .icon_button(&self.icon_name)
                 .on_press(Message::TogglePopup)
-                .into(),
-            SurfaceIdWrapper::Popup(_) => {
-                let name = text(fl!("battery")).size(18);
-                let description = text(
-                    if "battery-full-charging-symbolic" == self.icon_name
-                        || "battery-full-charged-symbolic" == self.icon_name
-                    {
-                        format!("{}%", self.battery_percent)
-                    } else {
-                        format!(
-                            "{} {} ({:.0}%)",
-                            format_duration(self.time_remaining),
-                            fl!("until-empty"),
-                            self.battery_percent
-                        )
-                    },
-                )
-                .size(12);
-                self.applet_helper
-                    .popup_container(
-                        column![
-                            row![
-                                icon(&*self.icon_name, 24)
-                                    .style(Svg::Symbolic)
-                                    .width(Length::Units(24))
-                                    .height(Length::Units(24)),
-                                column![name, description]
-                            ]
-                            .padding([0, 24])
-                            .spacing(8)
-                            .align_items(Alignment::Center),
-                            container(divider::horizontal::light())
-                                .width(Length::Fill)
-                                .padding([0, 12]),
-                            button(APPLET_BUTTON_THEME)
-                                .custom(vec![row![
-                                    column![
-                                        text(fl!("battery")).size(14),
-                                        text(fl!("battery-desc")).size(12)
-                                    ]
-                                    .width(Length::Fill),
-                                    icon("emblem-ok-symbolic", 12).size(12).style(
-                                        match self.power_profile {
-                                            Power::Battery => Svg::SymbolicActive,
-                                            _ => Svg::Default,
-                                        }
-                                    ),
-                                ]
-                                .align_items(Alignment::Center)
-                                .into()])
-                                .padding([8, 24])
-                                .on_press(Message::SelectProfile(Power::Battery))
-                                .width(Length::Fill),
-                            button(APPLET_BUTTON_THEME)
-                                .custom(vec![row![
-                                    column![
-                                        text(fl!("balanced")).size(14),
-                                        text(fl!("balanced-desc")).size(12)
-                                    ]
-                                    .width(Length::Fill),
-                                    icon("emblem-ok-symbolic", 12).size(12).style(
-                                        match self.power_profile {
-                                            Power::Balanced => Svg::SymbolicActive,
-                                            _ => Svg::Default,
-                                        }
-                                    ),
-                                ]
-                                .align_items(Alignment::Center)
-                                .into()])
-                                .padding([8, 24])
-                                .on_press(Message::SelectProfile(Power::Balanced))
-                                .width(Length::Fill),
-                            button(APPLET_BUTTON_THEME)
-                                .custom(vec![row![
-                                    column![
-                                        text(fl!("performance")).size(14),
-                                        text(fl!("performance-desc")).size(12)
-                                    ]
-                                    .width(Length::Fill),
-                                    icon("emblem-ok-symbolic", 12).size(12).style(
-                                        match self.power_profile {
-                                            Power::Performance => Svg::SymbolicActive,
-                                            _ => Svg::Default,
-                                        }
-                                    ),
-                                ]
-                                .align_items(Alignment::Center)
-                                .into()])
-                                .padding([8, 24])
-                                .on_press(Message::SelectProfile(Power::Performance))
-                                .width(Length::Fill),
-                            container(divider::horizontal::light())
-                                .width(Length::Fill)
-                                .padding([0, 12]),
-                            container(toggler(fl!("max-charge"), self.charging_limit, |_| {
-                                Message::SetChargingLimit(!self.charging_limit)
-                            }))
-                            .padding([0, 24])
-                            .width(Length::Fill),
-                            container(divider::horizontal::light())
-                                .width(Length::Fill)
-                                .padding([0, 12]),
-                            row![
-                                icon("display-brightness-symbolic", 24)
-                                    .style(Svg::Symbolic)
-                                    .width(Length::Units(24))
-                                    .height(Length::Units(24)),
-                                slider(
-                                    1..=100,
-                                    (self.screen_brightness * 100.0) as i32,
-                                    Message::SetScreenBrightness
-                                ),
-                                text(format!("{:.0}%", self.screen_brightness * 100.0))
-                                    .width(Length::Units(40))
-                                    .horizontal_alignment(Horizontal::Right)
-                            ]
-                            .padding([0, 24])
-                            .spacing(12),
-                            row![
-                                icon("keyboard-brightness-symbolic", 24)
-                                    .style(Svg::Symbolic)
-                                    .width(Length::Units(24))
-                                    .height(Length::Units(24)),
-                                slider(
-                                    0..=100,
-                                    (self.kbd_brightness * 100.0) as i32,
-                                    Message::SetKbdBrightness
-                                ),
-                                text(format!("{:.0}%", self.kbd_brightness * 100.0))
-                                    .width(Length::Units(40))
-                                    .horizontal_alignment(Horizontal::Right)
-                            ]
-                            .padding([0, 24])
-                            .spacing(12),
-                            container(divider::horizontal::light())
-                                .width(Length::Fill)
-                                .padding([0, 12]),
-                            button(APPLET_BUTTON_THEME)
-                                .custom(vec![text(fl!("power-settings"))
-                                    .width(Length::Fill)
-                                    .into()])
-                                .on_press(Message::OpenBatterySettings)
-                                .width(Length::Fill)
-                                .padding([8, 24])
-                        ]
-                        .spacing(8)
-                        .padding([8, 0]),
+                .into()
+        } else {
+            let name = text(fl!("battery")).size(18);
+            let description = text(
+                if "battery-full-charging-symbolic" == self.icon_name
+                    || "battery-full-charged-symbolic" == self.icon_name
+                {
+                    format!("{}%", self.battery_percent)
+                } else {
+                    format!(
+                        "{} {} ({:.0}%)",
+                        format_duration(self.time_remaining),
+                        fl!("until-empty"),
+                        self.battery_percent
                     )
-                    .into()
-            }
+                },
+            )
+            .size(12);
+            self.applet_helper
+                .popup_container(
+                    column![
+                        row![
+                            icon(&*self.icon_name, 24)
+                                .style(Svg::Symbolic)
+                                .width(Length::Units(24))
+                                .height(Length::Units(24)),
+                            column![name, description]
+                        ]
+                        .padding([0, 24])
+                        .spacing(8)
+                        .align_items(Alignment::Center),
+                        container(divider::horizontal::light())
+                            .width(Length::Fill)
+                            .padding([0, 12]),
+                        button(APPLET_BUTTON_THEME)
+                            .custom(vec![row![
+                                column![
+                                    text(fl!("battery")).size(14),
+                                    text(fl!("battery-desc")).size(12)
+                                ]
+                                .width(Length::Fill),
+                                icon("emblem-ok-symbolic", 12).size(12).style(
+                                    match self.power_profile {
+                                        Power::Battery => Svg::SymbolicActive,
+                                        _ => Svg::Default,
+                                    }
+                                ),
+                            ]
+                            .align_items(Alignment::Center)
+                            .into()])
+                            .padding([8, 24])
+                            .on_press(Message::SelectProfile(Power::Battery))
+                            .width(Length::Fill),
+                        button(APPLET_BUTTON_THEME)
+                            .custom(vec![row![
+                                column![
+                                    text(fl!("balanced")).size(14),
+                                    text(fl!("balanced-desc")).size(12)
+                                ]
+                                .width(Length::Fill),
+                                icon("emblem-ok-symbolic", 12).size(12).style(
+                                    match self.power_profile {
+                                        Power::Balanced => Svg::SymbolicActive,
+                                        _ => Svg::Default,
+                                    }
+                                ),
+                            ]
+                            .align_items(Alignment::Center)
+                            .into()])
+                            .padding([8, 24])
+                            .on_press(Message::SelectProfile(Power::Balanced))
+                            .width(Length::Fill),
+                        button(APPLET_BUTTON_THEME)
+                            .custom(vec![row![
+                                column![
+                                    text(fl!("performance")).size(14),
+                                    text(fl!("performance-desc")).size(12)
+                                ]
+                                .width(Length::Fill),
+                                icon("emblem-ok-symbolic", 12).size(12).style(
+                                    match self.power_profile {
+                                        Power::Performance => Svg::SymbolicActive,
+                                        _ => Svg::Default,
+                                    }
+                                ),
+                            ]
+                            .align_items(Alignment::Center)
+                            .into()])
+                            .padding([8, 24])
+                            .on_press(Message::SelectProfile(Power::Performance))
+                            .width(Length::Fill),
+                        container(divider::horizontal::light())
+                            .width(Length::Fill)
+                            .padding([0, 12]),
+                        container(toggler(fl!("max-charge"), self.charging_limit, |_| {
+                            Message::SetChargingLimit(!self.charging_limit)
+                        }))
+                        .padding([0, 24])
+                        .width(Length::Fill),
+                        container(divider::horizontal::light())
+                            .width(Length::Fill)
+                            .padding([0, 12]),
+                        row![
+                            icon("display-brightness-symbolic", 24)
+                                .style(Svg::Symbolic)
+                                .width(Length::Units(24))
+                                .height(Length::Units(24)),
+                            slider(
+                                1..=100,
+                                (self.screen_brightness * 100.0) as i32,
+                                Message::SetScreenBrightness
+                            ),
+                            text(format!("{:.0}%", self.screen_brightness * 100.0))
+                                .width(Length::Units(40))
+                                .horizontal_alignment(Horizontal::Right)
+                        ]
+                        .padding([0, 24])
+                        .spacing(12),
+                        row![
+                            icon("keyboard-brightness-symbolic", 24)
+                                .style(Svg::Symbolic)
+                                .width(Length::Units(24))
+                                .height(Length::Units(24)),
+                            slider(
+                                0..=100,
+                                (self.kbd_brightness * 100.0) as i32,
+                                Message::SetKbdBrightness
+                            ),
+                            text(format!("{:.0}%", self.kbd_brightness * 100.0))
+                                .width(Length::Units(40))
+                                .horizontal_alignment(Horizontal::Right)
+                        ]
+                        .padding([0, 24])
+                        .spacing(12),
+                        container(divider::horizontal::light())
+                            .width(Length::Fill)
+                            .padding([0, 12]),
+                        button(APPLET_BUTTON_THEME)
+                            .custom(vec![text(fl!("power-settings")).width(Length::Fill).into()])
+                            .on_press(Message::OpenBatterySettings)
+                            .width(Length::Fill)
+                            .padding([8, 24])
+                    ]
+                    .spacing(8)
+                    .padding([8, 0]),
+                )
+                .into()
         }
     }
 
@@ -406,7 +400,7 @@ impl Application for CosmicBatteryApplet {
         self.theme
     }
 
-    fn close_requested(&self, _id: SurfaceIdWrapper) -> Self::Message {
+    fn close_requested(&self, _id: window::Id) -> Message {
         Message::Ignore
     }
 

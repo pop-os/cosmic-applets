@@ -4,7 +4,7 @@ use cosmic::applet::CosmicAppletHelper;
 use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::mouse::{self, ScrollDelta};
 use cosmic::iced::wayland::actions::window::SctkWindowSettings;
-use cosmic::iced::wayland::{window::resize_window, InitialSurface, SurfaceIdWrapper};
+use cosmic::iced::wayland::{window::resize_window, InitialSurface};
 use cosmic::iced::widget::{column, container, row, text};
 use cosmic::iced::{
     subscription, widget::button, window, Application, Command, Event::Mouse, Length, Settings,
@@ -131,7 +131,7 @@ impl Application for IcedWorkspacesApplet {
         Command::none()
     }
 
-    fn view(&self, _id: SurfaceIdWrapper) -> Element<Message> {
+    fn view(&self, _id: window::Id) -> Element<Message> {
         if self.workspaces.is_empty() {
             return row![].padding(8).into();
         }
@@ -200,7 +200,7 @@ impl Application for IcedWorkspacesApplet {
         self.theme
     }
 
-    fn close_requested(&self, _id: SurfaceIdWrapper) -> Self::Message {
+    fn close_requested(&self, _id: window::Id) -> Self::Message {
         unimplemented!()
     }
 

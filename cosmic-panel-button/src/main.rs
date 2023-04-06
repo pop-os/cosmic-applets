@@ -2,11 +2,12 @@ use cosmic::{
     applet::CosmicAppletHelper,
     iced::{
         self,
-        wayland::{InitialSurface, SurfaceIdWrapper},
+        wayland::InitialSurface,
         Application,
     },
     iced_sctk::layout::Limits,
     iced_style::application,
+    iced_native::window,
 };
 use freedesktop_desktop_entry::DesktopEntry;
 use std::{env, fs, process::Command};
@@ -41,7 +42,7 @@ impl iced::Application for Button {
         String::from("Button")
     }
 
-    fn close_requested(&self, _id: SurfaceIdWrapper) -> Msg {
+    fn close_requested(&self, _id: window::Id) -> Msg {
         unimplemented!()
     }
 
@@ -65,7 +66,7 @@ impl iced::Application for Button {
         }
     }
 
-    fn view(&self, _id: SurfaceIdWrapper) -> cosmic::Element<Msg> {
+    fn view(&self, _id: window::Id) -> cosmic::Element<Msg> {
         // TODO icon?
         cosmic::widget::button(cosmic::theme::Button::Text)
             .text(&self.desktop.name)

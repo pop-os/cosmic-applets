@@ -1,8 +1,5 @@
 use cosmic::applet::{cosmic_panel_config::PanelAnchor, CosmicAppletHelper};
-use cosmic::iced::wayland::{
-    popup::{destroy_popup, get_popup},
-    SurfaceIdWrapper,
-};
+use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced::{
     time,
     wayland::InitialSurface,
@@ -28,9 +25,7 @@ pub fn main() -> cosmic::iced::Result {
             s.iced_settings.min_size = Some((1, 1));
             s.iced_settings.max_size = None;
             s.autosize = true;
-            s.size_limits = Limits::NONE
-                .min_height(1)
-                .min_width(1);
+            s.size_limits = Limits::NONE.min_height(1).min_width(1);
         }
         _ => {}
     };
@@ -98,7 +93,7 @@ impl Application for Time {
         self.theme
     }
 
-    fn close_requested(&self, _id: SurfaceIdWrapper) -> Self::Message {
+    fn close_requested(&self, _id: window::Id) -> Self::Message {
         Message::Ignore
     }
 
@@ -198,61 +193,57 @@ impl Application for Time {
         }
     }
 
-    fn view(&self, id: SurfaceIdWrapper) -> Element<Message> {
-        match id {
-            SurfaceIdWrapper::LayerSurface(_) => unimplemented!(),
-            SurfaceIdWrapper::Window(_) => {
-                let button = button(
-                    if matches!(
-                        self.applet_helper.anchor,
-                        PanelAnchor::Top | PanelAnchor::Bottom
-                    ) {
-                        column![text(self.now.format("%b %-d %-I:%M %p").to_string())]
-                    } else {
-                        let mut date_time_col = column![
-                            icon(
-                                "emoji-recent-symbolic",
-                                self.applet_helper.suggested_size().0
-                            )
-                            .style(theme::Svg::Symbolic),
-                            text(self.now.format("%I").to_string()),
-                            text(self.now.format("%M").to_string()),
-                            text(self.now.format("%p").to_string()),
-                            vertical_space(Length::Units(4)),
-                            // TODO better calendar icon?
-                            icon(
-                                "calendar-go-today-symbolic",
-                                self.applet_helper.suggested_size().0
-                            )
-                            .style(theme::Svg::Symbolic),
-                        ]
-                        .align_items(Alignment::Center)
-                        .spacing(4);
-                        for d in self.now.format("%x").to_string().split("/") {
-                            date_time_col = date_time_col.push(text(d.to_string()));
-                        }
-                        date_time_col
-                    },
-                )
-                .on_press(Message::TogglePopup)
-                .style(theme::Button::Text);
-
-                if let Some(tracker) = self.rectangle_tracker.as_ref() {
-                    tracker.container(0, button).into()
+    fn view(&self, id: window::Id) -> Element<Message> {
+        if id == window::Id::new(0) {
+            let button = button(
+                if matches!(
+                    self.applet_helper.anchor,
+                    PanelAnchor::Top | PanelAnchor::Bottom
+                ) {
+                    column![text(self.now.format("%b %-d %-I:%M %p").to_string())]
                 } else {
-                    button.into()
-                }
-            }
-            SurfaceIdWrapper::Popup(_) => {
-                let content = column![]
-                    .align_items(Alignment::Start)
-                    .spacing(12)
-                    .padding([24, 0])
-                    .push(text(&self.msg))
-                    .padding(8);
+                    let mut date_time_col = column![
+                        icon(
+                            "emoji-recent-symbolic",
+                            self.applet_helper.suggested_size().0
+                        )
+                        .style(theme::Svg::Symbolic),
+                        text(self.now.format("%I").to_string()),
+                        text(self.now.format("%M").to_string()),
+                        text(self.now.format("%p").to_string()),
+                        vertical_space(Length::Units(4)),
+                        // TODO better calendar icon?
+                        icon(
+                            "calendar-go-today-symbolic",
+                            self.applet_helper.suggested_size().0
+                        )
+                        .style(theme::Svg::Symbolic),
+                    ]
+                    .align_items(Alignment::Center)
+                    .spacing(4);
+                    for d in self.now.format("%x").to_string().split("/") {
+                        date_time_col = date_time_col.push(text(d.to_string()));
+                    }
+                    date_time_col
+                },
+            )
+            .on_press(Message::TogglePopup)
+            .style(theme::Button::Text);
 
-                self.applet_helper.popup_container(content).into()
+            if let Some(tracker) = self.rectangle_tracker.as_ref() {
+                tracker.container(0, button).into()
+            } else {
+                button.into()
             }
+        } else {
+            let content = column![]
+                .align_items(Alignment::Start)
+                .spacing(12)
+                .padding([24, 0])
+                .push(text(&self.msg))
+                .padding(8);
+
+            self.applet_helper.popup_container(content).into()
         }
     }
 }
