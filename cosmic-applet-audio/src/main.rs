@@ -1,4 +1,3 @@
-use cosmic::iced::wayland::SurfaceIdWrapper;
 use cosmic::iced::widget;
 use cosmic::iced_native::alignment::Horizontal;
 use cosmic::iced_native::layout::Limits;
@@ -97,7 +96,7 @@ impl Application for Audio {
         self.theme
     }
 
-    fn close_requested(&self, _id: SurfaceIdWrapper) -> Self::Message {
+    fn close_requested(&self, _id: window::Id) -> Self::Message {
         Message::Ignore
     }
 
@@ -268,134 +267,131 @@ impl Application for Audio {
         pulse::connect().map(Message::Pulse)
     }
 
-    fn view(&self, id: SurfaceIdWrapper) -> Element<Message> {
-        match id {
-            SurfaceIdWrapper::LayerSurface(_) => unimplemented!(),
-            SurfaceIdWrapper::Window(_) => self
-                .applet_helper
+    fn view(&self, id: window::Id) -> Element<Message> {
+        if id == window::Id::new(0) {
+            self.applet_helper
                 .icon_button(&self.icon_name)
                 .on_press(Message::TogglePopup)
-                .into(),
-            SurfaceIdWrapper::Popup(_) => {
-                let audio_disabled = matches!(self.pulse_state, PulseState::Disconnected(_));
-                let out_f64 = VolumeLinear::from(
-                    self.current_output
-                        .as_ref()
-                        .map(|o| o.volume.avg())
-                        .unwrap_or_default(),
-                )
-                .0 * 100.0;
-                let in_f64 = VolumeLinear::from(
-                    self.current_input
-                        .as_ref()
-                        .map(|o| o.volume.avg())
-                        .unwrap_or_default(),
-                )
-                .0 * 100.0;
+                .into()
+        } else {
+            let audio_disabled = matches!(self.pulse_state, PulseState::Disconnected(_));
+            let out_f64 = VolumeLinear::from(
+                self.current_output
+                    .as_ref()
+                    .map(|o| o.volume.avg())
+                    .unwrap_or_default(),
+            )
+            .0 * 100.0;
+            let in_f64 = VolumeLinear::from(
+                self.current_input
+                    .as_ref()
+                    .map(|o| o.volume.avg())
+                    .unwrap_or_default(),
+            )
+            .0 * 100.0;
 
-                let audio_content = if audio_disabled {
-                    column![text("PulseAudio Disconnected")
-                        .width(Length::Fill)
-                        .horizontal_alignment(Horizontal::Center)
-                        .size(24),]
-                } else {
-                    column![
-                        row![
-                            icon("audio-volume-high-symbolic", 32)
-                                .width(Length::Units(24))
-                                .height(Length::Units(24))
-                                .style(Svg::Symbolic),
-                            slider(0.0..=100.0, out_f64, Message::SetOutputVolume)
-                                .width(Length::FillPortion(5)),
-                            text(format!("{}%", out_f64.round()))
-                                .width(Length::FillPortion(1))
-                                .horizontal_alignment(Horizontal::Right)
-                        ]
-                        .spacing(12)
-                        .align_items(Alignment::Center)
-                        .padding([8, 24]),
-                        row![
-                            icon("audio-input-microphone-symbolic", 32)
-                                .width(Length::Units(24))
-                                .height(Length::Units(24))
-                                .style(Svg::Symbolic),
-                            slider(0.0..=100.0, in_f64, Message::SetInputVolume)
-                                .width(Length::FillPortion(5)),
-                            text(format!("{}%", in_f64.round()))
-                                .width(Length::FillPortion(1))
-                                .horizontal_alignment(Horizontal::Right)
-                        ]
-                        .spacing(12)
-                        .align_items(Alignment::Center)
-                        .padding([8, 24]),
-                        container(divider::horizontal::light())
-                            .padding([12, 24])
-                            .width(Length::Fill),
-                        revealer(
-                            self.is_open == IsOpen::Output,
-                            "Output",
-                            match &self.current_output {
-                                Some(output) => pretty_name(output.description.clone()),
-                                None => String::from("No device selected"),
-                            },
-                            self.outputs
-                                .clone()
-                                .into_iter()
-                                .map(|output| (
-                                    output.name.clone().unwrap_or_default(),
-                                    pretty_name(output.description)
-                                ))
-                                .collect(),
-                            Message::OutputToggle,
-                            Message::OutputChanged,
-                        ),
-                        revealer(
-                            self.is_open == IsOpen::Input,
-                            "Input",
-                            match &self.current_input {
-                                Some(input) => pretty_name(input.description.clone()),
-                                None => String::from("No device selected"),
-                            },
-                            self.inputs
-                                .clone()
-                                .into_iter()
-                                .map(|input| (
-                                    input.name.clone().unwrap_or_default(),
-                                    pretty_name(input.description)
-                                ))
-                                .collect(),
-                            Message::InputToggle,
-                            Message::InputChanged,
-                        )
+            let audio_content = if audio_disabled {
+                column![text("PulseAudio Disconnected")
+                    .width(Length::Fill)
+                    .horizontal_alignment(Horizontal::Center)
+                    .size(24),]
+            } else {
+                column![
+                    row![
+                        icon("audio-volume-high-symbolic", 32)
+                            .width(Length::Units(24))
+                            .height(Length::Units(24))
+                            .style(Svg::Symbolic),
+                        slider(0.0..=100.0, out_f64, Message::SetOutputVolume)
+                            .width(Length::FillPortion(5)),
+                        text(format!("{}%", out_f64.round()))
+                            .width(Length::FillPortion(1))
+                            .horizontal_alignment(Horizontal::Right)
                     ]
-                    .align_items(Alignment::Start)
-                };
-                let content = column![
-                    audio_content,
+                    .spacing(12)
+                    .align_items(Alignment::Center)
+                    .padding([8, 24]),
+                    row![
+                        icon("audio-input-microphone-symbolic", 32)
+                            .width(Length::Units(24))
+                            .height(Length::Units(24))
+                            .style(Svg::Symbolic),
+                        slider(0.0..=100.0, in_f64, Message::SetInputVolume)
+                            .width(Length::FillPortion(5)),
+                        text(format!("{}%", in_f64.round()))
+                            .width(Length::FillPortion(1))
+                            .horizontal_alignment(Horizontal::Right)
+                    ]
+                    .spacing(12)
+                    .align_items(Alignment::Center)
+                    .padding([8, 24]),
                     container(divider::horizontal::light())
                         .padding([12, 24])
                         .width(Length::Fill),
-                    container(toggler(
-                        Some("Show Media Controls on Top Panel".into()),
-                        self.show_media_controls_in_top_panel,
-                        Message::ToggleMediaControlsInTopPanel,
-                    ))
-                    .padding([0, 24]),
-                    container(divider::horizontal::light())
-                        .padding([12, 24])
-                        .width(Length::Fill),
-                    button(APPLET_BUTTON_THEME)
-                        .text("Sound Settings...")
-                        .padding([8, 24])
-                        .width(Length::Fill)
+                    revealer(
+                        self.is_open == IsOpen::Output,
+                        "Output",
+                        match &self.current_output {
+                            Some(output) => pretty_name(output.description.clone()),
+                            None => String::from("No device selected"),
+                        },
+                        self.outputs
+                            .clone()
+                            .into_iter()
+                            .map(|output| (
+                                output.name.clone().unwrap_or_default(),
+                                pretty_name(output.description)
+                            ))
+                            .collect(),
+                        Message::OutputToggle,
+                        Message::OutputChanged,
+                    ),
+                    revealer(
+                        self.is_open == IsOpen::Input,
+                        "Input",
+                        match &self.current_input {
+                            Some(input) => pretty_name(input.description.clone()),
+                            None => String::from("No device selected"),
+                        },
+                        self.inputs
+                            .clone()
+                            .into_iter()
+                            .map(|input| (
+                                input.name.clone().unwrap_or_default(),
+                                pretty_name(input.description)
+                            ))
+                            .collect(),
+                        Message::InputToggle,
+                        Message::InputChanged,
+                    )
                 ]
                 .align_items(Alignment::Start)
-                .padding([8, 0]);
+            };
+            let content = column![
+                audio_content,
+                container(divider::horizontal::light())
+                    .padding([12, 24])
+                    .width(Length::Fill),
+                container(toggler(
+                    Some("Show Media Controls on Top Panel".into()),
+                    self.show_media_controls_in_top_panel,
+                    Message::ToggleMediaControlsInTopPanel,
+                ))
+                .padding([0, 24]),
+                container(divider::horizontal::light())
+                    .padding([12, 24])
+                    .width(Length::Fill),
+                button(APPLET_BUTTON_THEME)
+                    .text("Sound Settings...")
+                    .padding([8, 24])
+                    .width(Length::Fill)
+            ]
+            .align_items(Alignment::Start)
+            .padding([8, 0]);
 
-                self.applet_helper
-                    .popup_container(container(content))
-                    .into()
-            }
+            self.applet_helper
+                .popup_container(container(content))
+                .into()
         }
     }
 }

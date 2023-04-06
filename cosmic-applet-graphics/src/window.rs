@@ -3,7 +3,6 @@ use crate::fl;
 use crate::graphics::{get_current_graphics, set_graphics, Graphics};
 use cosmic::applet::CosmicAppletHelper;
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
-use cosmic::iced::wayland::SurfaceIdWrapper;
 use cosmic::iced_native::alignment::Horizontal;
 use cosmic::iced_native::Alignment;
 use cosmic::iced_style::application::{self, Appearance};
@@ -121,7 +120,7 @@ impl Application for Window {
                         Message::CurrentGraphics(match cur_graphics {
                             Ok(g) => Some(g),
                             Err(err) => {
-                                dbg!(err);
+                                eprintln!("{err}");
                                 None
                             }
                         })
@@ -184,10 +183,9 @@ impl Application for Window {
         Command::none()
     }
 
-    fn view(&self, id: SurfaceIdWrapper) -> Element<Message> {
-        match id {
-            SurfaceIdWrapper::LayerSurface(_) => unimplemented!(),
-            SurfaceIdWrapper::Window(_) => match self.applet_helper.anchor {
+    fn view(&self, id: window::Id) -> Element<Message> {
+        if id == window::Id::new(0) {
+            match self.applet_helper.anchor {
                 PanelAnchor::Left | PanelAnchor::Right => self
                     .applet_helper
                     .icon_button("input-gaming-symbolic")
@@ -219,187 +217,185 @@ impl Application for Window {
                     .width(Length::Shrink)
                     .height(Length::Shrink)
                     .into(),
-            },
-            SurfaceIdWrapper::Popup(_) => {
-                let content_list = vec![
-                    button(APPLET_BUTTON_THEME)
-                        .custom(vec![row![
-                            column![
-                                text(format!("{} {}", fl!("integrated"), fl!("graphics"))).size(14),
-                                text(fl!("integrated-desc")).size(12)
-                            ]
-                            .width(Length::Fill),
-                            icon(
-                                match self.graphics_mode {
-                                    Some(GraphicsMode::SelectedGraphicsMode {
-                                        new: Graphics::Integrated,
-                                        ..
-                                    }) => "process-working-symbolic",
-                                    _ => "emblem-ok-symbolic",
-                                },
-                                12
-                            )
-                            .size(12)
-                            .style(match self.graphics_mode {
-                                Some(GraphicsMode::CurrentGraphicsMode(Graphics::Integrated)) =>
-                                    Svg::SymbolicActive,
-                                Some(GraphicsMode::AppliedGraphicsMode(Graphics::Integrated)) =>
-                                    Svg::SymbolicActive,
+            }
+        } else {
+            let content_list = vec![
+                button(APPLET_BUTTON_THEME)
+                    .custom(vec![row![
+                        column![
+                            text(format!("{} {}", fl!("integrated"), fl!("graphics"))).size(14),
+                            text(fl!("integrated-desc")).size(12)
+                        ]
+                        .width(Length::Fill),
+                        icon(
+                            match self.graphics_mode {
                                 Some(GraphicsMode::SelectedGraphicsMode {
                                     new: Graphics::Integrated,
                                     ..
-                                }) => Svg::Symbolic,
-                                _ => Svg::Default,
-                            },),
-                        ]
-                        .align_items(Alignment::Center)
-                        .into()])
-                        .padding([8, 24])
-                        .on_press(Message::SelectGraphicsMode(Graphics::Integrated))
-                        .width(Length::Fill)
-                        .into(),
-                    button(APPLET_BUTTON_THEME)
-                        .custom(vec![row![
-                            column![
-                                text(format!("{} {}", fl!("nvidia"), fl!("graphics"))).size(14),
-                            ]
+                                }) => "process-working-symbolic",
+                                _ => "emblem-ok-symbolic",
+                            },
+                            12
+                        )
+                        .size(12)
+                        .style(match self.graphics_mode {
+                            Some(GraphicsMode::CurrentGraphicsMode(Graphics::Integrated)) =>
+                                Svg::SymbolicActive,
+                            Some(GraphicsMode::AppliedGraphicsMode(Graphics::Integrated)) =>
+                                Svg::SymbolicActive,
+                            Some(GraphicsMode::SelectedGraphicsMode {
+                                new: Graphics::Integrated,
+                                ..
+                            }) => Svg::Symbolic,
+                            _ => Svg::Default,
+                        },),
+                    ]
+                    .align_items(Alignment::Center)
+                    .into()])
+                    .padding([8, 24])
+                    .on_press(Message::SelectGraphicsMode(Graphics::Integrated))
+                    .width(Length::Fill)
+                    .into(),
+                button(APPLET_BUTTON_THEME)
+                    .custom(vec![row![
+                        column![text(format!("{} {}", fl!("nvidia"), fl!("graphics"))).size(14),]
                             .width(Length::Fill),
-                            icon(
-                                match self.graphics_mode {
-                                    Some(GraphicsMode::SelectedGraphicsMode {
-                                        new: Graphics::Nvidia,
-                                        ..
-                                    }) => "process-working-symbolic",
-                                    _ => "emblem-ok-symbolic",
-                                },
-                                12
-                            )
-                            .size(12)
-                            .style(match self.graphics_mode {
-                                Some(GraphicsMode::CurrentGraphicsMode(Graphics::Nvidia)) =>
-                                    Svg::SymbolicActive,
-                                Some(GraphicsMode::AppliedGraphicsMode(Graphics::Nvidia)) =>
-                                    Svg::SymbolicActive,
+                        icon(
+                            match self.graphics_mode {
                                 Some(GraphicsMode::SelectedGraphicsMode {
                                     new: Graphics::Nvidia,
                                     ..
-                                }) => Svg::Symbolic,
-                                _ => Svg::Default,
-                            }),
+                                }) => "process-working-symbolic",
+                                _ => "emblem-ok-symbolic",
+                            },
+                            12
+                        )
+                        .size(12)
+                        .style(match self.graphics_mode {
+                            Some(GraphicsMode::CurrentGraphicsMode(Graphics::Nvidia)) =>
+                                Svg::SymbolicActive,
+                            Some(GraphicsMode::AppliedGraphicsMode(Graphics::Nvidia)) =>
+                                Svg::SymbolicActive,
+                            Some(GraphicsMode::SelectedGraphicsMode {
+                                new: Graphics::Nvidia,
+                                ..
+                            }) => Svg::Symbolic,
+                            _ => Svg::Default,
+                        }),
+                    ]
+                    .align_items(Alignment::Center)
+                    .into()])
+                    .padding([8, 24])
+                    .on_press(Message::SelectGraphicsMode(Graphics::Nvidia))
+                    .width(Length::Fill)
+                    .into(),
+                button(APPLET_BUTTON_THEME)
+                    .custom(vec![row![
+                        column![
+                            text(format!("{} {}", fl!("hybrid"), fl!("graphics"))).size(14),
+                            text(fl!("hybrid-desc")).size(12)
                         ]
-                        .align_items(Alignment::Center)
-                        .into()])
-                        .padding([8, 24])
-                        .on_press(Message::SelectGraphicsMode(Graphics::Nvidia))
-                        .width(Length::Fill)
-                        .into(),
-                    button(APPLET_BUTTON_THEME)
-                        .custom(vec![row![
-                            column![
-                                text(format!("{} {}", fl!("hybrid"), fl!("graphics"))).size(14),
-                                text(fl!("hybrid-desc")).size(12)
-                            ]
-                            .width(Length::Fill),
-                            icon(
-                                match self.graphics_mode {
-                                    Some(GraphicsMode::SelectedGraphicsMode {
-                                        new: Graphics::Hybrid,
-                                        ..
-                                    }) => "process-working-symbolic",
-                                    _ => "emblem-ok-symbolic",
-                                },
-                                12
-                            )
-                            .size(12)
-                            .style(match self.graphics_mode {
-                                Some(GraphicsMode::CurrentGraphicsMode(Graphics::Hybrid)) =>
-                                    Svg::SymbolicActive,
-                                Some(GraphicsMode::AppliedGraphicsMode(Graphics::Hybrid)) =>
-                                    Svg::SymbolicActive,
+                        .width(Length::Fill),
+                        icon(
+                            match self.graphics_mode {
                                 Some(GraphicsMode::SelectedGraphicsMode {
                                     new: Graphics::Hybrid,
                                     ..
-                                }) => Svg::Symbolic,
-                                _ => Svg::Default,
-                            })
+                                }) => "process-working-symbolic",
+                                _ => "emblem-ok-symbolic",
+                            },
+                            12
+                        )
+                        .size(12)
+                        .style(match self.graphics_mode {
+                            Some(GraphicsMode::CurrentGraphicsMode(Graphics::Hybrid)) =>
+                                Svg::SymbolicActive,
+                            Some(GraphicsMode::AppliedGraphicsMode(Graphics::Hybrid)) =>
+                                Svg::SymbolicActive,
+                            Some(GraphicsMode::SelectedGraphicsMode {
+                                new: Graphics::Hybrid,
+                                ..
+                            }) => Svg::Symbolic,
+                            _ => Svg::Default,
+                        })
+                    ]
+                    .align_items(Alignment::Center)
+                    .into()])
+                    .padding([8, 24])
+                    .on_press(Message::SelectGraphicsMode(Graphics::Hybrid))
+                    .width(Length::Fill)
+                    .into(),
+                button(APPLET_BUTTON_THEME)
+                    .custom(vec![row![
+                        column![
+                            text(format!("{} {}", fl!("compute"), fl!("graphics"))).size(14),
+                            text(fl!("compute-desc")).size(12)
                         ]
-                        .align_items(Alignment::Center)
-                        .into()])
-                        .padding([8, 24])
-                        .on_press(Message::SelectGraphicsMode(Graphics::Hybrid))
-                        .width(Length::Fill)
-                        .into(),
-                    button(APPLET_BUTTON_THEME)
-                        .custom(vec![row![
-                            column![
-                                text(format!("{} {}", fl!("compute"), fl!("graphics"))).size(14),
-                                text(fl!("compute-desc")).size(12)
-                            ]
-                            .width(Length::Fill),
-                            icon(
-                                match self.graphics_mode {
-                                    Some(GraphicsMode::SelectedGraphicsMode {
-                                        new: Graphics::Compute,
-                                        ..
-                                    }) => "process-working-symbolic",
-                                    _ => "emblem-ok-symbolic",
-                                },
-                                12
-                            )
-                            .size(12)
-                            .style(match self.graphics_mode {
-                                Some(GraphicsMode::CurrentGraphicsMode(Graphics::Compute)) =>
-                                    Svg::SymbolicActive,
-                                Some(GraphicsMode::AppliedGraphicsMode(Graphics::Compute)) =>
-                                    Svg::SymbolicActive,
+                        .width(Length::Fill),
+                        icon(
+                            match self.graphics_mode {
                                 Some(GraphicsMode::SelectedGraphicsMode {
                                     new: Graphics::Compute,
                                     ..
-                                }) => Svg::Symbolic,
-                                _ => Svg::Default,
-                            }),
-                        ]
-                        .align_items(Alignment::Center)
-                        .into()])
-                        .padding([8, 24])
-                        .on_press(Message::SelectGraphicsMode(Graphics::Compute))
-                        .width(Length::Fill)
-                        .into(),
-                ];
+                                }) => "process-working-symbolic",
+                                _ => "emblem-ok-symbolic",
+                            },
+                            12
+                        )
+                        .size(12)
+                        .style(match self.graphics_mode {
+                            Some(GraphicsMode::CurrentGraphicsMode(Graphics::Compute)) =>
+                                Svg::SymbolicActive,
+                            Some(GraphicsMode::AppliedGraphicsMode(Graphics::Compute)) =>
+                                Svg::SymbolicActive,
+                            Some(GraphicsMode::SelectedGraphicsMode {
+                                new: Graphics::Compute,
+                                ..
+                            }) => Svg::Symbolic,
+                            _ => Svg::Default,
+                        }),
+                    ]
+                    .align_items(Alignment::Center)
+                    .into()])
+                    .padding([8, 24])
+                    .on_press(Message::SelectGraphicsMode(Graphics::Compute))
+                    .width(Length::Fill)
+                    .into(),
+            ];
 
-                self.applet_helper
-                    .popup_container(
-                        column(vec![
-                            text(fl!("graphics-mode"))
-                                .width(Length::Fill)
-                                .horizontal_alignment(Horizontal::Center)
-                                .size(24)
-                                .into(),
-                            container(divider::horizontal::light())
-                                .padding([0, 12])
-                                .width(Length::Fill)
-                                .into(),
-                            column(content_list).into(),
-                        ])
-                        .padding([8, 0])
-                        .spacing(12),
-                    )
-                    .into()
-            }
+            self.applet_helper
+                .popup_container(
+                    column(vec![
+                        text(fl!("graphics-mode"))
+                            .width(Length::Fill)
+                            .horizontal_alignment(Horizontal::Center)
+                            .size(24)
+                            .into(),
+                        container(divider::horizontal::light())
+                            .padding([0, 12])
+                            .width(Length::Fill)
+                            .into(),
+                        column(content_list).into(),
+                    ])
+                    .padding([8, 0])
+                    .spacing(12),
+                )
+                .into()
         }
     }
 
-    fn close_requested(&self, id: SurfaceIdWrapper) -> Self::Message {
-        match id {
-            SurfaceIdWrapper::LayerSurface(_) | SurfaceIdWrapper::Window(_) => unimplemented!(),
-            SurfaceIdWrapper::Popup(id) => Message::PopupClosed(id),
+    fn close_requested(&self, id: window::Id) -> Self::Message {
+        if id != window::Id::new(0) {
+            Message::PopupClosed(id)
+        } else {
+            unimplemented!();
         }
     }
 
     fn style(&self) -> <Self::Theme as application::StyleSheet>::Style {
         <Self::Theme as application::StyleSheet>::Style::Custom(|theme| Appearance {
             background_color: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
-            text_color: theme.cosmic().on_bg_color().into(),
+            text_color: theme.cosmic().background.on.into(),
         })
     }
 

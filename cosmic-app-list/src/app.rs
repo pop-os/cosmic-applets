@@ -17,7 +17,6 @@ use cosmic::iced;
 use cosmic::iced::wayland::actions::window::SctkWindowSettings;
 use cosmic::iced::wayland::popup::destroy_popup;
 use cosmic::iced::wayland::popup::get_popup;
-use cosmic::iced::wayland::SurfaceIdWrapper;
 use cosmic::iced::widget::mouse_listener;
 use cosmic::iced::widget::{column, row};
 use cosmic::iced::Settings;
@@ -39,7 +38,6 @@ use cosmic::{Element, Theme};
 use cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1;
 use freedesktop_desktop_entry::DesktopEntry;
 use iced::widget::container;
-use iced::widget::horizontal_space;
 use iced::Alignment;
 use iced::Background;
 use iced::Length;
@@ -380,211 +378,202 @@ impl Application for CosmicAppList {
         Command::none()
     }
 
-    fn view(&self, id: SurfaceIdWrapper) -> Element<Message> {
-        match id {
-            SurfaceIdWrapper::LayerSurface(_) => unimplemented!(),
-            SurfaceIdWrapper::Window(_) => {
-                let (favorites, running) = self.toplevel_list.iter().fold(
-                    (Vec::new(), Vec::new()),
-                    |(mut favorites, mut running),
-                     Toplevel {
-                         id,
-                         toplevels,
-                         desktop_info,
-                         ..
-                     }| {
-                        let cosmic_icon = cosmic::widget::icon(
-                            Path::new(&desktop_info.icon),
-                            self.applet_helper.suggested_size().0,
-                        );
+    fn view(&self, id: window::Id) -> Element<Message> {
+        if let Some(Toplevel {
+            toplevels,
+            desktop_info,
+            ..
+        }) = self.toplevel_list.iter().find(|t| t.popup == Some(id))
+        {
+            let is_favorite = self.config.favorites.contains(&desktop_info.id)
+                || self.config.favorites.contains(&desktop_info.name);
 
-                        let dot_radius = 2;
-                        let dots = (0..toplevels.len())
-                            .into_iter()
-                            .map(|_| {
-                                container(vertical_space(Length::Units(0)))
-                                    .padding(dot_radius)
-                                    .style(<Self::Theme as container::StyleSheet>::Style::Custom(
-                                        |theme| container::Appearance {
-                                            text_color: Some(Color::TRANSPARENT),
-                                            background: Some(Background::Color(
-                                                theme.cosmic().on_bg_color().into(),
-                                            )),
-                                            border_radius: 4.0,
-                                            border_width: 0.0,
-                                            border_color: Color::TRANSPARENT,
-                                        },
-                                    ))
-                                    .into()
-                            })
-                            .collect_vec();
-                        let icon_wrapper = match &self.applet_helper.anchor {
-                            PanelAnchor::Left => {
-                                row(vec![column(dots).spacing(4).into(), cosmic_icon.into()])
-                                    .align_items(iced::Alignment::Center)
-                                    .spacing(4)
-                                    .into()
-                            }
-                            PanelAnchor::Right => {
-                                row(vec![cosmic_icon.into(), column(dots).spacing(4).into()])
-                                    .align_items(iced::Alignment::Center)
-                                    .spacing(4)
-                                    .into()
-                            }
-                            PanelAnchor::Top => {
-                                column(vec![row(dots).spacing(4).into(), cosmic_icon.into()])
-                                    .align_items(iced::Alignment::Center)
-                                    .spacing(4)
-                                    .into()
-                            }
-                            PanelAnchor::Bottom => {
-                                column(vec![cosmic_icon.into(), row(dots).spacing(4).into()])
-                                    .align_items(iced::Alignment::Center)
-                                    .spacing(4)
-                                    .into()
-                            }
-                        };
-                        let mut icon_button = cosmic::widget::button(Button::Text)
-                            .custom(vec![icon_wrapper])
-                            .padding(8);
-                        if self.popup.is_none() {
-                            icon_button = icon_button.on_press(
-                                toplevels
-                                    .first()
-                                    .map(|t| Message::Activate(t.0.clone()))
-                                    .unwrap_or_else(|| Message::Exec(desktop_info.exec.clone())),
-                            );
-                        }
+            let mut content = column![
+                iced::widget::text(&desktop_info.name).horizontal_alignment(Horizontal::Center),
+                cosmic::widget::button(Button::Text)
+                    .custom(vec![iced::widget::text(fl!("new-window")).into()])
+                    .on_press(Message::Exec(desktop_info.exec.clone())),
+            ]
+            .padding(8)
+            .spacing(4)
+            .align_items(Alignment::Center);
+            if !toplevels.is_empty() {
+                let mut list_col = column![];
+                for (handle, info) in toplevels {
+                    let title = if info.title.len() > 20 {
+                        format!("{:.24}...", &info.title)
+                    } else {
+                        info.title.clone()
+                    };
+                    list_col = list_col.push(
+                        cosmic::widget::button(Button::Text)
+                            .custom(vec![iced::widget::text(title).into()])
+                            .on_press(Message::Activate(handle.clone())),
+                    );
+                }
+                content = content.push(divider::horizontal::light());
+                content = content.push(list_col);
+                content = content.push(divider::horizontal::light());
+            }
+            content = content.push(if is_favorite {
+                cosmic::widget::button(Button::Text)
+                    .custom(vec![iced::widget::text(fl!("unfavorite")).into()])
+                    .on_press(Message::UnFavorite(desktop_info.id.clone()))
+            } else {
+                cosmic::widget::button(Button::Text)
+                    .custom(vec![iced::widget::text(fl!("favorite")).into()])
+                    .on_press(Message::Favorite(desktop_info.id.clone()))
+            });
 
-                        // TODO tooltip on hover
-                        let icon_button = mouse_listener(
-                            icon_button.width(Length::Shrink).height(Length::Shrink),
-                        )
-                        .on_right_release(Message::Popup(desktop_info.id.clone()));
-                        let icon_button = if let Some(tracker) = self.rectangle_tracker.as_ref() {
-                            tracker.container(*id, icon_button).into()
-                        } else {
-                            icon_button.into()
-                        };
-                        if self.config.favorites.contains(&desktop_info.id)
-                            || self.config.favorites.contains(&desktop_info.name)
-                        {
-                            favorites.push(icon_button)
-                        } else {
-                            running.push(icon_button);
-                        }
-                        (favorites, running)
-                    },
+            content = match toplevels.len() {
+                0 => content,
+                1 => content.push(
+                    cosmic::widget::button(Button::Text)
+                        .custom(vec![iced::widget::text(fl!("quit")).into()])
+                        .on_press(Message::Quit(desktop_info.id.clone())),
+                ),
+                _ => content.push(
+                    cosmic::widget::button(Button::Text)
+                        .custom(vec![iced::widget::text(&fl!("quit-all")).into()])
+                        .on_press(Message::Quit(desktop_info.id.clone())),
+                ),
+            };
+            // return Container::new(Container::new(content.width(Length::Shrink).height(Length::Shrink)).style(
+            //     cosmic::Container::Custom(|theme| container::Appearance {
+            //         text_color: Some(theme.cosmic().on_bg_color().into()),
+            //         background: Some(theme.extended_palette().background.base.color.into()),
+            //         border_radius: 12.0,
+            //         border_width: 0.0,
+            //         border_color: Color::TRANSPARENT,
+            //     }),
+            // )).into();
+            return self.applet_helper.popup_container(content).into();
+        }
+
+        let (favorites, running) = self.toplevel_list.iter().fold(
+            (Vec::new(), Vec::new()),
+            |(mut favorites, mut running),
+             Toplevel {
+                 id,
+                 toplevels,
+                 desktop_info,
+                 ..
+             }| {
+                let cosmic_icon = cosmic::widget::icon(
+                    Path::new(&desktop_info.icon),
+                    self.applet_helper.suggested_size().0,
                 );
 
-                let (w, h) = match self.applet_helper.anchor {
-                    PanelAnchor::Top | PanelAnchor::Bottom => (Length::Shrink, Length::Fill),
-                    PanelAnchor::Left | PanelAnchor::Right => (Length::Fill, Length::Shrink),
-                };
-
-                let content = match &self.applet_helper.anchor {
-                    PanelAnchor::Left | PanelAnchor::Right => container(
-                        column![
-                            column(favorites),
-                            divider::horizontal::light(),
-                            column(running)
-                        ]
-                        .spacing(4)
-                        .align_items(Alignment::Center)
-                        .height(h)
-                        .width(w),
-                    ),
-                    PanelAnchor::Top | PanelAnchor::Bottom => container(
-                        row![row(favorites), vertical_rule(1), row(running)]
+                let dot_radius = 2;
+                let dots = (0..toplevels.len())
+                    .into_iter()
+                    .map(|_| {
+                        container(vertical_space(Length::Units(0)))
+                            .padding(dot_radius)
+                            .style(<Self::Theme as container::StyleSheet>::Style::Custom(
+                                |theme| container::Appearance {
+                                    text_color: Some(Color::TRANSPARENT),
+                                    background: Some(Background::Color(
+                                        theme.cosmic().on_bg_color().into(),
+                                    )),
+                                    border_radius: 4.0,
+                                    border_width: 0.0,
+                                    border_color: Color::TRANSPARENT,
+                                },
+                            ))
+                            .into()
+                    })
+                    .collect_vec();
+                let icon_wrapper = match &self.applet_helper.anchor {
+                    PanelAnchor::Left => {
+                        row(vec![column(dots).spacing(4).into(), cosmic_icon.into()])
+                            .align_items(iced::Alignment::Center)
                             .spacing(4)
-                            .align_items(Alignment::Center)
-                            .height(h)
-                            .width(w),
-                    ),
-                };
-                if self.popup.is_some() {
-                    mouse_listener(content)
-                        .on_right_press(Message::ClosePopup)
-                        .on_press(Message::ClosePopup)
-                        .into()
-                } else {
-                    content.into()
-                }
-            }
-            SurfaceIdWrapper::Popup(p) => {
-                if let Some(Toplevel {
-                    toplevels,
-                    desktop_info,
-                    ..
-                }) = self.toplevel_list.iter().find(|t| t.popup == Some(p))
-                {
-                    let is_favorite = self.config.favorites.contains(&desktop_info.id)
-                        || self.config.favorites.contains(&desktop_info.name);
-
-                    let mut content = column![
-                        iced::widget::text(&desktop_info.name)
-                            .horizontal_alignment(Horizontal::Center),
-                        cosmic::widget::button(Button::Text)
-                            .custom(vec![iced::widget::text(fl!("new-window")).into()])
-                            .on_press(Message::Exec(desktop_info.exec.clone())),
-                    ]
-                    .padding(8)
-                    .spacing(4)
-                    .align_items(Alignment::Center);
-                    if !toplevels.is_empty() {
-                        let mut list_col = column![];
-                        for (handle, info) in toplevels {
-                            let title = if info.title.len() > 20 {
-                                format!("{:.24}...", &info.title)
-                            } else {
-                                info.title.clone()
-                            };
-                            list_col = list_col.push(
-                                cosmic::widget::button(Button::Text)
-                                    .custom(vec![iced::widget::text(title).into()])
-                                    .on_press(Message::Activate(handle.clone())),
-                            );
-                        }
-                        content = content.push(divider::horizontal::light());
-                        content = content.push(list_col);
-                        content = content.push(divider::horizontal::light());
+                            .into()
                     }
-                    content = content.push(if is_favorite {
-                        cosmic::widget::button(Button::Text)
-                            .custom(vec![iced::widget::text(fl!("unfavorite")).into()])
-                            .on_press(Message::UnFavorite(desktop_info.id.clone()))
-                    } else {
-                        cosmic::widget::button(Button::Text)
-                            .custom(vec![iced::widget::text(fl!("favorite")).into()])
-                            .on_press(Message::Favorite(desktop_info.id.clone()))
-                    });
-
-                    content = match toplevels.len() {
-                        0 => content,
-                        1 => content.push(
-                            cosmic::widget::button(Button::Text)
-                                .custom(vec![iced::widget::text(fl!("quit")).into()])
-                                .on_press(Message::Quit(desktop_info.id.clone())),
-                        ),
-                        _ => content.push(
-                            cosmic::widget::button(Button::Text)
-                                .custom(vec![iced::widget::text(&fl!("quit-all")).into()])
-                                .on_press(Message::Quit(desktop_info.id.clone())),
-                        ),
-                    };
-                    // return Container::new(Container::new(content.width(Length::Shrink).height(Length::Shrink)).style(
-                    //     cosmic::Container::Custom(|theme| container::Appearance {
-                    //         text_color: Some(theme.cosmic().on_bg_color().into()),
-                    //         background: Some(theme.extended_palette().background.base.color.into()),
-                    //         border_radius: 12.0,
-                    //         border_width: 0.0,
-                    //         border_color: Color::TRANSPARENT,
-                    //     }),
-                    // )).into();
-                    return self.applet_helper.popup_container(content).into();
+                    PanelAnchor::Right => {
+                        row(vec![cosmic_icon.into(), column(dots).spacing(4).into()])
+                            .align_items(iced::Alignment::Center)
+                            .spacing(4)
+                            .into()
+                    }
+                    PanelAnchor::Top => {
+                        column(vec![row(dots).spacing(4).into(), cosmic_icon.into()])
+                            .align_items(iced::Alignment::Center)
+                            .spacing(4)
+                            .into()
+                    }
+                    PanelAnchor::Bottom => {
+                        column(vec![cosmic_icon.into(), row(dots).spacing(4).into()])
+                            .align_items(iced::Alignment::Center)
+                            .spacing(4)
+                            .into()
+                    }
+                };
+                let mut icon_button = cosmic::widget::button(Button::Text)
+                    .custom(vec![icon_wrapper])
+                    .padding(8);
+                if self.popup.is_none() {
+                    icon_button = icon_button.on_press(
+                        toplevels
+                            .first()
+                            .map(|t| Message::Activate(t.0.clone()))
+                            .unwrap_or_else(|| Message::Exec(desktop_info.exec.clone())),
+                    );
                 }
-                horizontal_space(Length::Units(1)).into()
-            }
+
+                // TODO tooltip on hover
+                let icon_button =
+                    mouse_listener(icon_button.width(Length::Shrink).height(Length::Shrink))
+                        .on_right_release(Message::Popup(desktop_info.id.clone()));
+                let icon_button = if let Some(tracker) = self.rectangle_tracker.as_ref() {
+                    tracker.container(*id, icon_button).into()
+                } else {
+                    icon_button.into()
+                };
+                if self.config.favorites.contains(&desktop_info.id)
+                    || self.config.favorites.contains(&desktop_info.name)
+                {
+                    favorites.push(icon_button)
+                } else {
+                    running.push(icon_button);
+                }
+                (favorites, running)
+            },
+        );
+
+        let (w, h) = match self.applet_helper.anchor {
+            PanelAnchor::Top | PanelAnchor::Bottom => (Length::Shrink, Length::Fill),
+            PanelAnchor::Left | PanelAnchor::Right => (Length::Fill, Length::Shrink),
+        };
+
+        let content = match &self.applet_helper.anchor {
+            PanelAnchor::Left | PanelAnchor::Right => container(
+                column![
+                    column(favorites),
+                    divider::horizontal::light(),
+                    column(running)
+                ]
+                .spacing(4)
+                .align_items(Alignment::Center)
+                .height(h)
+                .width(w),
+            ),
+            PanelAnchor::Top | PanelAnchor::Bottom => container(
+                row![row(favorites), vertical_rule(1), row(running)]
+                    .spacing(4)
+                    .align_items(Alignment::Center)
+                    .height(h)
+                    .width(w),
+            ),
+        };
+        if self.popup.is_some() {
+            mouse_listener(content)
+                .on_right_press(Message::ClosePopup)
+                .on_press(Message::ClosePopup)
+                .into()
+        } else {
+            content.into()
         }
     }
 
@@ -614,7 +603,7 @@ impl Application for CosmicAppList {
         self.theme
     }
 
-    fn close_requested(&self, _id: SurfaceIdWrapper) -> Self::Message {
+    fn close_requested(&self, _id: window::Id) -> Self::Message {
         Message::Ignore
     }
 

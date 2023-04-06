@@ -97,7 +97,7 @@ pub fn spawn_workspaces(tx: mpsc::Sender<WorkspaceList>) -> SyncSender<Workspace
                             .workspace_groups()
                             .iter()
                             .find_map(|g| {
-                                if g.output != state.expected_output {
+                                if !g.outputs.iter().any(|o| Some(o) == state.expected_output.as_ref()) {
                                     return None;
                                 }
                                 g.workspaces
@@ -179,7 +179,7 @@ impl State {
             .workspace_groups()
             .iter()
             .filter_map(|g| {
-                if g.output == self.expected_output {
+                if g.outputs.iter().any(|o| Some(o) == self.expected_output.as_ref()) {
                     Some(g.workspaces.iter().map(|w| {
                         (
                             w.name.clone(),
