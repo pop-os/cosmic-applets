@@ -10,13 +10,17 @@ use crate::toplevel_subscription::ToplevelRequest;
 use crate::toplevel_subscription::ToplevelUpdate;
 use calloop::channel::Sender;
 use cctk::toplevel_info::ToplevelInfo;
+use cctk::wayland_client::protocol::wl_data_device_manager::DndAction;
 use cctk::wayland_client::protocol::wl_seat::WlSeat;
 use cosmic::applet::cosmic_panel_config::PanelAnchor;
 use cosmic::applet::CosmicAppletHelper;
 use cosmic::iced;
+use cosmic::iced::wayland::actions::data_device::DataFromMimeType;
+use cosmic::iced::wayland::actions::data_device::DndIcon;
 use cosmic::iced::wayland::actions::window::SctkWindowSettings;
 use cosmic::iced::wayland::popup::destroy_popup;
 use cosmic::iced::wayland::popup::get_popup;
+use cosmic::iced::widget::dnd_source;
 use cosmic::iced::widget::mouse_listener;
 use cosmic::iced::widget::{column, row};
 use cosmic::iced::Settings;
@@ -24,6 +28,7 @@ use cosmic::iced::{window, Application, Command, Subscription};
 use cosmic::iced_native::alignment::Horizontal;
 use cosmic::iced_native::subscription::events_with;
 use cosmic::iced_native::widget::vertical_space;
+use cosmic::iced_sctk::commands::data_device::start_drag;
 use cosmic::iced_sctk::layout::Limits;
 use cosmic::iced_sctk::settings::InitialSurface;
 use cosmic::iced_sctk::widget::vertical_rule;
@@ -42,6 +47,9 @@ use iced::Alignment;
 use iced::Background;
 use iced::Length;
 use itertools::Itertools;
+use url::Url;
+
+static MIME_TYPE: &str = "text/uri-list";
 
 pub fn run() -> cosmic::iced::Result {
     let helper = CosmicAppletHelper::default();
@@ -79,6 +87,22 @@ struct DockItem {
     desktop_info: DesktopInfo,
 }
 
+impl DataFromMimeType for DockItem {
+    fn from_mime_type(&self, mime_type: &str) -> Option<Vec<u8>> {
+        if mime_type == MIME_TYPE {
+            Some(
+                Url::from_file_path(self.desktop_info.path.clone())
+                    .ok()?
+                    .to_string()
+                    .as_bytes()
+                    .to_vec(),
+            )
+        } else {
+            None
+        }
+    }
+}
+
 impl DockItem {
     fn new(
         id: usize,
@@ -92,7 +116,12 @@ impl DockItem {
         }
     }
 
-    fn as_icon(&self, applet_helper: &CosmicAppletHelper, rectangle_tracker: Option<&RectangleTracker<usize>>, has_popup: bool) -> Element<'_, Message> {
+    fn as_icon(
+        &self,
+        applet_helper: &CosmicAppletHelper,
+        rectangle_tracker: Option<&RectangleTracker<usize>>,
+        has_popup: bool,
+    ) -> Element<'_, Message> {
         let DockItem {
             toplevels,
             desktop_info,
@@ -143,6 +172,7 @@ impl DockItem {
                 .spacing(4)
                 .into(),
         };
+
         let mut icon_button = cosmic::widget::button(Button::Text)
             .custom(vec![icon_wrapper])
             .padding(8);
@@ -156,8 +186,13 @@ impl DockItem {
         }
 
         // TODO tooltip on hover
-        let icon_button = mouse_listener(icon_button.width(Length::Shrink).height(Length::Shrink))
-            .on_right_release(Message::Popup(desktop_info.id.clone()));
+        let icon_button = dnd_source(
+            mouse_listener(icon_button.width(Length::Shrink).height(Length::Shrink))
+                .on_right_release(Message::Popup(desktop_info.id.clone())),
+        )
+        .on_drag(Message::StartDrag(*id))
+        .on_cancelled(Message::DragFinished)
+        .on_finished(Message::DragFinished);
         if let Some(tracker) = rectangle_tracker {
             tracker.container(*id, icon_button).into()
         } else {
@@ -174,6 +209,7 @@ struct CosmicAppList {
     subscription_ctr: u32,
     active_list: Vec<DockItem>,
     favorite_list: Vec<DockItem>,
+    dnd_source: Option<(window::Id, DockItem, DndAction)>,
     dnd_preview: Option<(bool, DockItem)>, // TODO allow non-toplevels to be dragged
     config: AppListConfig,
     toplevel_sender: Option<Sender<ToplevelRequest>>,
@@ -198,6 +234,8 @@ enum Message {
     NewSeat(WlSeat),
     RemovedSeat(WlSeat),
     Rectangle(RectangleUpdate<usize>),
+    StartDrag(usize), // id of the DockItem
+    DragFinished
 }
 
 #[derive(Debug, Clone, Default)]
@@ -206,6 +244,7 @@ struct DesktopInfo {
     icon: PathBuf,
     exec: String,
     name: String,
+    path: PathBuf,
 }
 
 fn desktop_info_for_app_ids(mut app_ids: Vec<String>) -> Vec<DesktopInfo> {
@@ -226,6 +265,7 @@ fn desktop_info_for_app_ids(mut app_ids: Vec<String>) -> Vec<DesktopInfo> {
                                 icon: buf,
                                 exec: de.exec().unwrap_or_default().to_string(),
                                 name: de.name(None).unwrap_or_default().to_string(),
+                                path: path.clone(),
                             })
                     } else {
                         None
@@ -373,6 +413,28 @@ impl Application for CosmicAppList {
                     }
                 }
             }
+            Message::StartDrag(id) => {
+                if let Some(toplevel_group) = self
+                    .active_list
+                    .iter()
+                    .chain(self.favorite_list.iter())
+                    .find(|t| t.id == id)
+                {
+                    self.surface_id_ctr += 1;
+                    let icon_id = window::Id::new(self.surface_id_ctr);
+                    self.dnd_source = Some((icon_id, toplevel_group.clone(), DndAction::empty()));
+                    return start_drag(
+                        vec![MIME_TYPE.to_string()],
+                        DndAction::all(),
+                        window::Id::new(0),
+                        Some(DndIcon::Custom(icon_id)),
+                        Box::new(toplevel_group.clone()),
+                    );
+                }
+            }
+            Message::DragFinished => {
+                self.dnd_source = None;
+            }
             Message::Toplevel(event) => {
                 match event {
                     ToplevelUpdate::AddToplevel(handle, info) => {
@@ -477,8 +539,15 @@ impl Application for CosmicAppList {
     }
 
     fn view(&self, id: window::Id) -> Element<Message> {
+        if let Some((_, item, _)) = self.dnd_source.as_ref().filter(|s| s.0 == id) {
+            return cosmic::widget::icon(
+                Path::new(&item.desktop_info.icon),
+                self.applet_helper.suggested_size().0,
+            )
+            .into();
+        }
         if let Some((
-            popup_id,
+            _popup_id,
             DockItem {
                 toplevels,
                 desktop_info,
@@ -539,35 +608,30 @@ impl Application for CosmicAppList {
                         .on_press(Message::Quit(desktop_info.id.clone())),
                 ),
             };
-            // return Container::new(Container::new(content.width(Length::Shrink).height(Length::Shrink)).style(
-            //     cosmic::Container::Custom(|theme| container::Appearance {
-            //         text_color: Some(theme.cosmic().on_bg_color().into()),
-            //         background: Some(theme.extended_palette().background.base.color.into()),
-            //         border_radius: 12.0,
-            //         border_width: 0.0,
-            //         border_color: Color::TRANSPARENT,
-            //     }),
-            // )).into();
             return self.applet_helper.popup_container(content).into();
         }
 
         let favorites = self
             .favorite_list
             .iter()
-            .map(
-                |dock_item| {
-                    dock_item.as_icon(&self.applet_helper, self.rectangle_tracker.as_ref(), self.popup.is_some())
-                },
-            )
+            .map(|dock_item| {
+                dock_item.as_icon(
+                    &self.applet_helper,
+                    self.rectangle_tracker.as_ref(),
+                    self.popup.is_some(),
+                )
+            })
             .collect();
         let active = self
             .active_list
             .iter()
-            .map(
-                |dock_item| {
-                    dock_item.as_icon(&self.applet_helper, self.rectangle_tracker.as_ref(), self.popup.is_some())
-                 },
-            )
+            .map(|dock_item| {
+                dock_item.as_icon(
+                    &self.applet_helper,
+                    self.rectangle_tracker.as_ref(),
+                    self.popup.is_some(),
+                )
+            })
             .collect();
 
         let (w, h) = match self.applet_helper.anchor {
