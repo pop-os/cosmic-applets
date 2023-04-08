@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::path::Path;
 use std::path::PathBuf;
+use std::str::FromStr;
 
 use crate::config;
 use crate::config::AppListConfig;
@@ -28,9 +29,14 @@ use cosmic::iced::{window, Application, Command, Subscription};
 use cosmic::iced_native::alignment::Horizontal;
 use cosmic::iced_native::subscription::events_with;
 use cosmic::iced_native::widget::vertical_space;
+use cosmic::iced_sctk::commands::data_device::accept_mime_type;
+use cosmic::iced_sctk::commands::data_device::finish_dnd;
+use cosmic::iced_sctk::commands::data_device::request_dnd_data;
+use cosmic::iced_sctk::commands::data_device::set_actions;
 use cosmic::iced_sctk::commands::data_device::start_drag;
 use cosmic::iced_sctk::layout::Limits;
 use cosmic::iced_sctk::settings::InitialSurface;
+use cosmic::iced_sctk::widget::dnd_listener;
 use cosmic::iced_sctk::widget::vertical_rule;
 use cosmic::iced_style::application::{self, Appearance};
 use cosmic::iced_style::Color;
@@ -82,7 +88,7 @@ pub fn run() -> cosmic::iced::Result {
 
 #[derive(Debug, Clone, Default)]
 struct DockItem {
-    id: usize,
+    id: u32,
     toplevels: Vec<(ZcosmicToplevelHandleV1, ToplevelInfo)>,
     desktop_info: DesktopInfo,
 }
@@ -105,13 +111,13 @@ impl DataFromMimeType for DockItem {
 
 impl DockItem {
     fn new(
-        id: usize,
-        toplevel: (ZcosmicToplevelHandleV1, ToplevelInfo),
+        id: u32,
+        toplevels: Vec<(ZcosmicToplevelHandleV1, ToplevelInfo)>,
         desktop_info: DesktopInfo,
     ) -> Self {
         Self {
             id,
-            toplevels: vec![toplevel],
+            toplevels,
             desktop_info,
         }
     }
@@ -119,7 +125,7 @@ impl DockItem {
     fn as_icon(
         &self,
         applet_helper: &CosmicAppletHelper,
-        rectangle_tracker: Option<&RectangleTracker<usize>>,
+        rectangle_tracker: Option<&RectangleTracker<u32>>,
         has_popup: bool,
     ) -> Element<'_, Message> {
         let DockItem {
@@ -201,22 +207,29 @@ impl DockItem {
     }
 }
 
+#[derive(Debug, Clone, Default)]
+struct DndOffer {
+    dock_item: Option<DockItem>,
+    preview_index: usize,
+}
+
 #[derive(Clone, Default)]
 struct CosmicAppList {
     theme: Theme,
     popup: Option<(window::Id, DockItem)>,
     surface_id_ctr: u32,
     subscription_ctr: u32,
+    item_ctr: u32,
     active_list: Vec<DockItem>,
     favorite_list: Vec<DockItem>,
     dnd_source: Option<(window::Id, DockItem, DndAction)>,
-    dnd_preview: Option<(bool, DockItem)>, // TODO allow non-toplevels to be dragged
     config: AppListConfig,
     toplevel_sender: Option<Sender<ToplevelRequest>>,
     applet_helper: CosmicAppletHelper,
     seat: Option<WlSeat>,
-    rectangle_tracker: Option<RectangleTracker<usize>>,
-    rectangles: HashMap<usize, iced::Rectangle>,
+    rectangle_tracker: Option<RectangleTracker<u32>>,
+    rectangles: HashMap<u32, iced::Rectangle>,
+    dnd_offer: Option<DndOffer>,
 }
 
 // TODO DnD after sctk merges DnD
@@ -233,9 +246,14 @@ enum Message {
     Ignore,
     NewSeat(WlSeat),
     RemovedSeat(WlSeat),
-    Rectangle(RectangleUpdate<usize>),
-    StartDrag(usize), // id of the DockItem
-    DragFinished
+    Rectangle(RectangleUpdate<u32>),
+    StartDrag(u32), // id of the DockItem
+    DragFinished,
+    DndEnter(f32, f32),
+    DndExit,
+    DndMotion(f32, f32),
+    DndDrop,
+    DndData(PathBuf),
 }
 
 #[derive(Debug, Clone, Default)]
@@ -304,6 +322,49 @@ fn split_toplevel_favorites(
     active_list
 }
 
+fn index_in_list(
+    mut list_len: usize,
+    item_size: f32,
+    divider_size: f32,
+    existing_preview: Option<usize>,
+    pos_in_list: f32,
+) -> usize {
+    if existing_preview.is_some() {
+        list_len += 1;
+    }
+    let total_len = list_len as f32 * (item_size + divider_size) - divider_size;
+    let pos_in_list = pos_in_list * total_len as f32;
+    let index = if list_len == 0 {
+        0
+    } else {
+        if pos_in_list < item_size / 2.0 {
+            0
+        } else {
+            let mut i = 1;
+            let mut pos = item_size / 2.0;
+            while i < list_len {
+                let next_pos = pos + item_size + divider_size;
+                if pos > pos_in_list && pos_in_list < next_pos {
+                    break;
+                }
+                pos = next_pos;
+                i += 1;
+            }
+            i
+        }
+    };
+
+    if let Some(existing_preview) = existing_preview {
+        if index >= existing_preview {
+            index.checked_sub(1).unwrap_or_default()
+        } else {
+            index
+        }
+    } else {
+        index
+    }
+}
+
 impl Application for CosmicAppList {
     type Message = Message;
     type Theme = Theme;
@@ -312,14 +373,17 @@ impl Application for CosmicAppList {
 
     fn new(_flags: ()) -> (Self, Command<Message>) {
         let config = config::AppListConfig::load().unwrap_or_default();
+        let mut favorite_ctr = 0;
         let self_ = CosmicAppList {
             favorite_list: desktop_info_for_app_ids(config.favorites.clone())
                 .into_iter()
-                .enumerate()
-                .map(|(i, e)| DockItem {
-                    id: i,
-                    toplevels: Default::default(),
-                    desktop_info: e,
+                .map(|e| {
+                    favorite_ctr += 1;
+                    DockItem {
+                        id: favorite_ctr,
+                        toplevels: Default::default(),
+                        desktop_info: e,
+                    }
                 })
                 .collect(),
             config,
@@ -377,7 +441,19 @@ impl Application for CosmicAppList {
                 }
             }
             Message::Favorite(id) => {
+                if let Some(i) = self
+                    .active_list
+                    .iter()
+                    .position(|t| t.desktop_info.id == id || t.desktop_info.name == id)
+                {
+                    let entry = self.active_list.remove(i);
+                    self.favorite_list.push(entry);
+                }
+
                 let _ = self.config.add_favorite(id);
+                if let Some((popup_id, _toplevel)) = self.popup.take() {
+                    return destroy_popup(popup_id);
+                }
             }
             Message::UnFavorite(id) => {
                 let _ = self.config.remove_favorite(id.clone());
@@ -386,11 +462,15 @@ impl Application for CosmicAppList {
                     .iter()
                     .position(|t| t.desktop_info.id == id)
                 {
+                    println!("Removing favorite 2 {}", id);
                     let entry = self.favorite_list.remove(i);
                     self.rectangles.remove(&entry.id);
                     if !entry.toplevels.is_empty() {
                         self.active_list.push(entry);
                     }
+                }
+                if let Some((popup_id, _toplevel)) = self.popup.take() {
+                    return destroy_popup(popup_id);
                 }
             }
             Message::Activate(handle) => {
@@ -412,20 +492,41 @@ impl Application for CosmicAppList {
                         }
                     }
                 }
+                if let Some((popup_id, _toplevel)) = self.popup.take() {
+                    return destroy_popup(popup_id);
+                }
             }
             Message::StartDrag(id) => {
-                if let Some(toplevel_group) = self
+                if let Some((is_favorite, toplevel_group)) = self
                     .active_list
                     .iter()
-                    .chain(self.favorite_list.iter())
-                    .find(|t| t.id == id)
+                    .find_map(|t| {
+                        if t.id == id {
+                            Some((false, t.clone()))
+                        } else {
+                            None
+                        }
+                    })
+                    .or_else(|| {
+                        if let Some(pos) = self.favorite_list.iter().position(|t| t.id == id) {
+                            let t = self.favorite_list.remove(pos);
+                            let _ = self.config.remove_favorite(t.desktop_info.id.clone());
+                            Some((true, t))
+                        } else {
+                            None
+                        }
+                    })
                 {
                     self.surface_id_ctr += 1;
                     let icon_id = window::Id::new(self.surface_id_ctr);
                     self.dnd_source = Some((icon_id, toplevel_group.clone(), DndAction::empty()));
                     return start_drag(
                         vec![MIME_TYPE.to_string()],
-                        DndAction::all(),
+                        if is_favorite {
+                            DndAction::all()
+                        } else {
+                            DndAction::Copy
+                        },
                         window::Id::new(0),
                         Some(DndIcon::Custom(icon_id)),
                         Box::new(toplevel_group.clone()),
@@ -433,7 +534,134 @@ impl Application for CosmicAppList {
                 }
             }
             Message::DragFinished => {
-                self.dnd_source = None;
+                if let Some((_, mut toplevel_group, _)) = self.dnd_source.take() {
+                    if !self
+                        .favorite_list
+                        .iter()
+                        .chain(self.active_list.iter())
+                        .any(|t| t.desktop_info.id == toplevel_group.desktop_info.id)
+                        && !toplevel_group.toplevels.is_empty()
+                    {
+                        self.item_ctr += 1;
+                        toplevel_group.id = self.item_ctr;
+                        self.active_list.push(toplevel_group);
+                    }
+                }
+            }
+            Message::DndEnter(x, y) => {
+                let item_size = self.applet_helper.suggested_size().0;
+                let pos_in_list = match self.applet_helper.anchor {
+                    PanelAnchor::Top | PanelAnchor::Bottom => x,
+                    PanelAnchor::Left | PanelAnchor::Right => y,
+                };
+                let num_favs = self.favorite_list.len();
+                let index = index_in_list(num_favs, item_size as f32, 4.0, None, pos_in_list);
+                self.dnd_offer = Some(DndOffer {
+                    preview_index: index,
+                    ..DndOffer::default()
+                });
+                let mut cmds = vec![
+                    accept_mime_type(Some(MIME_TYPE.to_string())),
+                    set_actions(
+                        if self.dnd_source.is_some() {
+                            DndAction::Move
+                        } else {
+                            DndAction::Copy
+                        },
+                        DndAction::all(),
+                    ),
+                ];
+                if let Some(dnd_source) = self.dnd_source.as_ref() {
+                    self.dnd_offer.as_mut().unwrap().dock_item = Some(dnd_source.1.clone());
+                } else {
+                    cmds.push(request_dnd_data(MIME_TYPE.to_string()));
+                }
+                return Command::batch(cmds);
+            }
+            Message::DndMotion(x, y) => {
+                if let Some(DndOffer { preview_index, .. }) = self.dnd_offer.as_mut() {
+                    let item_size = self.applet_helper.suggested_size().0;
+                    let pos_in_list = match self.applet_helper.anchor {
+                        PanelAnchor::Top | PanelAnchor::Bottom => x,
+                        PanelAnchor::Left | PanelAnchor::Right => y,
+                    };
+                    let num_favs = self.favorite_list.len();
+                    let index = index_in_list(
+                        num_favs,
+                        item_size as f32,
+                        4.0,
+                        Some(*preview_index),
+                        pos_in_list,
+                    );
+                    *preview_index = index;
+                }
+            }
+            Message::DndExit => {
+                self.dnd_offer = None;
+                return accept_mime_type(None);
+            }
+            Message::DndData(file_path) => {
+                if let Some(DndOffer { dock_item, .. }) = self.dnd_offer.as_mut() {
+                    if let Some(di) = std::fs::read_to_string(&file_path).ok().and_then(|input| {
+                        DesktopEntry::decode(&file_path, &input)
+                            .ok()
+                            .and_then(|de| {
+                                freedesktop_icons::lookup(de.icon().unwrap_or(de.appid))
+                                    .with_size(128)
+                                    .with_cache()
+                                    .find()
+                                    .map(|buf| DesktopInfo {
+                                        id: de.id().to_string(),
+                                        icon: buf,
+                                        exec: de.exec().unwrap_or_default().to_string(),
+                                        name: de.name(None).unwrap_or_default().to_string(),
+                                        path: file_path.clone(),
+                                    })
+                            })
+                    }) {
+                        self.item_ctr += 1;
+                        *dock_item = Some(DockItem::new(self.item_ctr, Vec::new(), di));
+                    }
+                }
+            }
+            Message::DndDrop => {
+                // we actually should have the data already, if not, we probably shouldn't do
+                // anything anyway
+                if let Some((mut dock_item, index)) = self
+                    .dnd_offer
+                    .take()
+                    .and_then(|o| o.dock_item.map(|i| (i, o.preview_index)))
+                {
+                    self.item_ctr += 1;
+                    let _ = self.config.add_favorite(dock_item.desktop_info.id.clone());
+                    if let Some((pos, is_favorite)) = self
+                        .active_list
+                        .iter()
+                        .position(|DockItem { desktop_info, .. }| {
+                            desktop_info.id == dock_item.desktop_info.id
+                        })
+                        .map(|pos| (pos, false))
+                        .or_else(|| {
+                            self.favorite_list
+                                .iter()
+                                .position(|DockItem { desktop_info, .. }| {
+                                    desktop_info.id == dock_item.desktop_info.id
+                                })
+                                .map(|pos| (pos, true))
+                        })
+                    {
+                        let t = if is_favorite {
+                            self.favorite_list.remove(pos)
+                        } else {
+                            self.active_list.remove(pos)
+                        };
+                        dock_item.toplevels = t.toplevels;
+                    };
+                    dock_item.id = self.item_ctr;
+                    self.favorite_list
+                        .insert(index.min(self.favorite_list.len()), dock_item);
+                }
+                return finish_dnd();
             }
             Message::Toplevel(event) => {
                 match event {
@@ -453,8 +681,9 @@ impl Application for CosmicAppList {
                         } else {
                             let desktop_info =
                                 desktop_info_for_app_ids(vec![info.app_id.clone()]).remove(0);
+                            self.item_ctr += 1;
                             self.active_list.push(DockItem {
-                                id: self.active_list.len(),
+                                id: self.item_ctr,
                                 toplevels: vec![(handle, info)],
                                 desktop_info,
                             });
@@ -611,7 +840,7 @@ impl Application for CosmicAppList {
             return self.applet_helper.popup_container(content).into();
         }
 
-        let favorites = self
+        let mut favorites: Vec<_> = self
             .favorite_list
             .iter()
             .map(|dock_item| {
@@ -622,6 +851,14 @@ impl Application for CosmicAppList {
                 )
             })
             .collect();
+
+        if let Some((item, index)) = self
+            .dnd_offer
+            .as_ref()
+            .and_then(|o| o.dock_item.as_ref().map(|item| (item, o.preview_index)))
+        {
+            favorites.insert(index, item.as_icon(&self.applet_helper, None, false));
+        }
         let active = self
             .active_list
             .iter()
@@ -639,20 +876,50 @@ impl Application for CosmicAppList {
             PanelAnchor::Left | PanelAnchor::Right => (Length::Fill, Length::Shrink),
         };
 
+        let favorites = match self.applet_helper.anchor {
+            PanelAnchor::Left | PanelAnchor::Right => dnd_listener(column(favorites)),
+            PanelAnchor::Top | PanelAnchor::Bottom => dnd_listener(row(favorites)),
+        }
+        .on_enter(|_actions, mime_types, location| {
+            if mime_types.iter().any(|m| m == MIME_TYPE) {
+                Message::DndEnter(location.0, location.1)
+            } else {
+                Message::Ignore
+            }
+        })
+        .on_motion(if self.dnd_offer.is_some() {
+            |x, y| Message::DndMotion(x, y)
+        } else {
+            |_, _| Message::Ignore
+        })
+        .on_exit(Message::DndExit)
+        .on_drop(Message::DndDrop)
+        .on_data(|mime_type, data| {
+            if mime_type == MIME_TYPE {
+                if let Some(p) = String::from_utf8(data)
+                    .ok()
+                    .and_then(|s| Url::from_str(&s).ok())
+                    .and_then(|u| u.to_file_path().ok())
+                {
+                    Message::DndData(p)
+                } else {
+                    Message::Ignore
+                }
+            } else {
+                Message::Ignore
+            }
+        });
+
         let content = match &self.applet_helper.anchor {
             PanelAnchor::Left | PanelAnchor::Right => container(
-                column![
-                    column(favorites),
-                    divider::horizontal::light(),
-                    column(active)
-                ]
-                .spacing(4)
-                .align_items(Alignment::Center)
-                .height(h)
-                .width(w),
+                column![favorites, divider::horizontal::light(), column(active)]
+                    .spacing(4)
+                    .align_items(Alignment::Center)
+                    .height(h)
+                    .width(w),
             ),
             PanelAnchor::Top | PanelAnchor::Bottom => container(
-                row![row(favorites), vertical_rule(1), row(active)]
+                row![favorites, vertical_rule(1), row(active)]
                     .spacing(4)
                     .align_items(Alignment::Center)
                     .height(h)
@@ -685,6 +952,16 @@ impl Application for CosmicAppList {
                         Some(Message::RemovedSeat(seat))
                     }
                 },
+                // XXX Must be done to catch a finished drag after the source is removed
+                // (for now, the source is removed when the drag starts)
+                cosmic::iced_native::Event::PlatformSpecific(
+                    cosmic::iced_native::event::PlatformSpecific::Wayland(
+                        cosmic::iced_sctk::event::wayland::Event::DataSource(
+                            cosmic::iced_sctk::event::wayland::DataSourceEvent::DndFinished
+                            | cosmic::iced_sctk::event::wayland::DataSourceEvent::Cancelled,
+                        ),
+                    ),
+                ) => Some(Message::DragFinished),
                 _ => None,
             }),
             rectangle_tracker_subscription(0).map(|(_, update)| Message::Rectangle(update)),
