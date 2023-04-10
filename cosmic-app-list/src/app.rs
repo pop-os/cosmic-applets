@@ -21,9 +21,7 @@ use cosmic::iced::wayland::actions::data_device::DndIcon;
 use cosmic::iced::wayland::actions::window::SctkWindowSettings;
 use cosmic::iced::wayland::popup::destroy_popup;
 use cosmic::iced::wayland::popup::get_popup;
-use cosmic::iced::widget::dnd_source;
-use cosmic::iced::widget::mouse_listener;
-use cosmic::iced::widget::{column, row};
+use cosmic::iced::widget::{column, dnd_source, mouse_listener, row, text, Column, Row};
 use cosmic::iced::Settings;
 use cosmic::iced::{window, Application, Command, Subscription};
 use cosmic::iced_native::alignment::Horizontal;
@@ -126,7 +124,7 @@ impl DockItem {
         &self,
         applet_helper: &CosmicAppletHelper,
         rectangle_tracker: Option<&RectangleTracker<u32>>,
-        has_popup: bool,
+        interaction_enabled: bool,
     ) -> Element<'_, Message> {
         let DockItem {
             toplevels,
@@ -182,23 +180,28 @@ impl DockItem {
         let mut icon_button = cosmic::widget::button(Button::Text)
             .custom(vec![icon_wrapper])
             .padding(8);
-        if !has_popup {
-            icon_button = icon_button.on_press(
-                toplevels
-                    .first()
-                    .map(|t| Message::Activate(t.0.clone()))
-                    .unwrap_or_else(|| Message::Exec(desktop_info.exec.clone())),
-            );
-        }
-
-        // TODO tooltip on hover
-        let icon_button = dnd_source(
-            mouse_listener(icon_button.width(Length::Shrink).height(Length::Shrink))
+        let icon_button = if interaction_enabled {
+            dnd_source(
+                mouse_listener(
+                    icon_button
+                        .on_press(
+                            toplevels
+                                .first()
+                                .map(|t| Message::Activate(t.0.clone()))
+                                .unwrap_or_else(|| Message::Exec(desktop_info.exec.clone())),
+                        )
+                        .width(Length::Shrink)
+                        .height(Length::Shrink),
+                )
                 .on_right_release(Message::Popup(desktop_info.id.clone())),
-        )
-        .on_drag(Message::StartDrag(*id))
-        .on_cancelled(Message::DragFinished)
-        .on_finished(Message::DragFinished);
+            )
+            .on_drag(Message::StartDrag(desktop_info.id.clone()))
+            .on_cancelled(Message::DragFinished)
+            .on_finished(Message::DragFinished)
+        } else {
+            dnd_source(icon_button)
+        };
+
         if let Some(tracker) = rectangle_tracker {
             tracker.container(*id, icon_button).into()
         } else {
@@ -230,6 +233,7 @@ struct CosmicAppList {
     rectangle_tracker: Option<RectangleTracker<u32>>,
     rectangles: HashMap<u32, iced::Rectangle>,
     dnd_offer: Option<DndOffer>,
+    is_listening_for_dnd: bool,
 }
 
 // TODO DnD after sctk merges DnD
@@ -247,13 +251,15 @@ enum Message {
     NewSeat(WlSeat),
     RemovedSeat(WlSeat),
     Rectangle(RectangleUpdate<u32>),
-    StartDrag(u32), // id of the DockItem
+    StartDrag(String), // id of the DockItem
     DragFinished,
     DndEnter(f32, f32),
     DndExit,
     DndMotion(f32, f32),
     DndDrop,
     DndData(PathBuf),
+    StartListeningForDnd,
+    StopListeningForDnd,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -302,24 +308,6 @@ fn desktop_info_for_app_ids(mut app_ids: Vec<String>) -> Vec<DesktopInfo> {
             .collect_vec(),
     );
     ret
-}
-
-fn split_toplevel_favorites(
-    toplevel_list: Vec<DockItem>,
-    existing_favorites: &mut Vec<DockItem>,
-) -> Vec<DockItem> {
-    let mut active_list = Vec::new();
-    for toplevel in toplevel_list {
-        if let Some(favorite) = existing_favorites.iter_mut().find(|f| {
-            f.desktop_info.name == toplevel.desktop_info.id
-                || f.desktop_info.id == toplevel.desktop_info.id
-        }) {
-            favorite.toplevels = toplevel.toplevels;
-        } else {
-            active_list.push(toplevel);
-        }
-    }
-    active_list
 }
 
 fn index_in_list(
@@ -462,7 +450,6 @@ impl Application for CosmicAppList {
                     .iter()
                     .position(|t| t.desktop_info.id == id)
                 {
-                    println!("Removing favorite 2 {}", id);
                     let entry = self.favorite_list.remove(i);
                     self.rectangles.remove(&entry.id);
                     if !entry.toplevels.is_empty() {
@@ -474,6 +461,9 @@ impl Application for CosmicAppList {
                 }
             }
             Message::Activate(handle) => {
+                if let Some(p) = self.popup.take() {
+                    return destroy_popup(p.0);
+                }
                 if let (Some(tx), Some(seat)) = (self.toplevel_sender.as_ref(), self.seat.as_ref())
                 {
                     let _ = tx.send(ToplevelRequest::Activate(handle, seat.clone()));
@@ -501,14 +491,18 @@ impl Application for CosmicAppList {
                     .active_list
                     .iter()
                     .find_map(|t| {
-                        if t.id == id {
+                        if t.desktop_info.id == id {
                             Some((false, t.clone()))
                         } else {
                             None
                         }
                     })
                     .or_else(|| {
-                        if let Some(pos) = self.favorite_list.iter().position(|t| t.id == id) {
+                        if let Some(pos) = self
+                            .favorite_list
+                            .iter()
+                            .position(|t| t.desktop_info.id == id)
+                        {
                             let t = self.favorite_list.remove(pos);
                             let _ = self.config.remove_favorite(t.desktop_info.id.clone());
                             Some((true, t))
@@ -763,11 +757,21 @@ impl Application for CosmicAppList {
                     return destroy_popup(p.0);
                 }
             }
+            Message::StartListeningForDnd => {
+                self.is_listening_for_dnd = true;
+            }
+            Message::StopListeningForDnd => {
+                self.is_listening_for_dnd = false;
+            }
         }
         Command::none()
     }
 
     fn view(&self, id: window::Id) -> Element<Message> {
+        let is_horizontal = match self.applet_helper.anchor {
+            PanelAnchor::Top | PanelAnchor::Bottom => true,
+            PanelAnchor::Left | PanelAnchor::Right => false,
+        };
         if let Some((_, item, _)) = self.dnd_source.as_ref().filter(|s| s.0 == id) {
             return cosmic::widget::icon(
                 Path::new(&item.desktop_info.icon),
@@ -847,7 +851,7 @@ impl Application for CosmicAppList {
                 dock_item.as_icon(
                     &self.applet_helper,
                     self.rectangle_tracker.as_ref(),
-                    self.popup.is_some(),
+                    self.popup.is_none(),
                 )
             })
             .collect();
@@ -858,68 +862,105 @@ impl Application for CosmicAppList {
             .and_then(|o| o.dock_item.as_ref().map(|item| (item, o.preview_index)))
         {
             favorites.insert(index, item.as_icon(&self.applet_helper, None, false));
+        } else if self.is_listening_for_dnd && self.favorite_list.is_empty() {
+            // show star indicating favorite_list is drag target
+            favorites.push(
+                container(cosmic::widget::icon(
+                    "starred-symbolic.symbolic",
+                    self.applet_helper.suggested_size().0,
+                ))
+                .padding(8)
+                .into(),
+            );
         }
-        let active = self
+
+        let active: Vec<_> = self
             .active_list
             .iter()
             .map(|dock_item| {
                 dock_item.as_icon(
                     &self.applet_helper,
                     self.rectangle_tracker.as_ref(),
-                    self.popup.is_some(),
+                    self.popup.is_none(),
                 )
             })
             .collect();
 
-        let (w, h) = match self.applet_helper.anchor {
-            PanelAnchor::Top | PanelAnchor::Bottom => (Length::Shrink, Length::Fill),
-            PanelAnchor::Left | PanelAnchor::Right => (Length::Fill, Length::Shrink),
+        let (w, h, favorites, active, divider) = if is_horizontal {
+            (
+                Length::Fill,
+                Length::Shrink,
+                dnd_listener(row(favorites)),
+                row(active).into(),
+                vertical_rule(1).into(),
+            )
+        } else {
+            (
+                Length::Shrink,
+                Length::Fill,
+                dnd_listener(column(favorites)),
+                column(active).into(),
+                divider::horizontal::light().into(),
+            )
         };
 
-        let favorites = match self.applet_helper.anchor {
-            PanelAnchor::Left | PanelAnchor::Right => dnd_listener(column(favorites)),
-            PanelAnchor::Top | PanelAnchor::Bottom => dnd_listener(row(favorites)),
-        }
-        .on_enter(|_actions, mime_types, location| {
-            if mime_types.iter().any(|m| m == MIME_TYPE) {
-                Message::DndEnter(location.0, location.1)
-            } else {
-                Message::Ignore
-            }
-        })
-        .on_motion(if self.dnd_offer.is_some() {
-            |x, y| Message::DndMotion(x, y)
-        } else {
-            |_, _| Message::Ignore
-        })
-        .on_exit(Message::DndExit)
-        .on_drop(Message::DndDrop)
-        .on_data(|mime_type, data| {
-            if mime_type == MIME_TYPE {
-                if let Some(p) = String::from_utf8(data)
-                    .ok()
-                    .and_then(|s| Url::from_str(&s).ok())
-                    .and_then(|u| u.to_file_path().ok())
-                {
-                    Message::DndData(p)
+        let favorites = favorites
+            .on_enter(|_actions, mime_types, location| {
+                if self.is_listening_for_dnd || mime_types.iter().any(|m| m == MIME_TYPE) {
+                    Message::DndEnter(location.0, location.1)
                 } else {
                     Message::Ignore
                 }
+            })
+            .on_motion(if self.dnd_offer.is_some() {
+                |x, y| Message::DndMotion(x, y)
             } else {
-                Message::Ignore
-            }
-        });
+                |_, _| Message::Ignore
+            })
+            .on_exit(Message::DndExit)
+            .on_drop(Message::DndDrop)
+            .on_data(|mime_type, data| {
+                if mime_type == MIME_TYPE {
+                    if let Some(p) = String::from_utf8(data)
+                        .ok()
+                        .and_then(|s| Url::from_str(&s).ok())
+                        .and_then(|u| u.to_file_path().ok())
+                    {
+                        Message::DndData(p)
+                    } else {
+                        Message::Ignore
+                    }
+                } else {
+                    Message::Ignore
+                }
+            });
+
+        let show_favorites =
+            !self.favorite_list.is_empty() || self.dnd_offer.is_some() || self.is_listening_for_dnd;
+        let content_list: Vec<Element<_>> = if show_favorites && !self.active_list.is_empty() {
+            vec![favorites.into(), divider, active]
+        } else if show_favorites {
+            vec![favorites.into()]
+        } else if !self.active_list.is_empty() {
+            vec![active]
+        } else {
+            vec![cosmic::widget::icon(
+                "com.system76.CosmicAppList",
+                self.applet_helper.suggested_size().0,
+            )
+            .into()]
+        };
 
         let content = match &self.applet_helper.anchor {
             PanelAnchor::Left | PanelAnchor::Right => container(
-                column![favorites, divider::horizontal::light(), column(active)]
+                Column::with_children(content_list)
                     .spacing(4)
                     .align_items(Alignment::Center)
                     .height(h)
                     .width(w),
             ),
             PanelAnchor::Top | PanelAnchor::Bottom => container(
-                row![favorites, vertical_rule(1), row(active)]
+                Row::with_children(content_list)
                     .spacing(4)
                     .align_items(Alignment::Center)
                     .height(h)
@@ -928,7 +969,7 @@ impl Application for CosmicAppList {
         };
         if self.popup.is_some() {
             mouse_listener(content)
-                .on_right_press(Message::ClosePopup)
+                .on_right_release(Message::ClosePopup)
                 .on_press(Message::ClosePopup)
                 .into()
         } else {
@@ -962,6 +1003,30 @@ impl Application for CosmicAppList {
                         ),
                     ),
                 ) => Some(Message::DragFinished),
+                cosmic::iced_native::Event::PlatformSpecific(
+                    cosmic::iced_native::event::PlatformSpecific::Wayland(
+                        cosmic::iced_native::event::wayland::Event::DndOffer(
+                            cosmic::iced_native::event::wayland::DndOfferEvent::Enter {
+                                mime_types,
+                                ..
+                            },
+                        ),
+                    ),
+                ) => {
+                    if mime_types.iter().any(|m| m == MIME_TYPE) {
+                        Some(Message::StartListeningForDnd)
+                    } else {
+                        None
+                    }
+                }
+                cosmic::iced_native::Event::PlatformSpecific(
+                    cosmic::iced_native::event::PlatformSpecific::Wayland(
+                        cosmic::iced_native::event::wayland::Event::DndOffer(
+                            cosmic::iced_native::event::wayland::DndOfferEvent::Leave
+                            | cosmic::iced_native::event::wayland::DndOfferEvent::DropPerformed,
+                        ),
+                    ),
+                ) => Some(Message::StopListeningForDnd),
                 _ => None,
             }),
             rectangle_tracker_subscription(0).map(|(_, update)| Message::Rectangle(update)),
