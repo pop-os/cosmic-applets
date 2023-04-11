@@ -24,6 +24,7 @@ use cosmic::iced::wayland::popup::get_popup;
 use cosmic::iced::widget::{column, dnd_source, mouse_listener, row, text, Column, Row};
 use cosmic::iced::Settings;
 use cosmic::iced::{window, Application, Command, Subscription};
+use cosmic::iced_native as native;
 use cosmic::iced_native::alignment::Horizontal;
 use cosmic::iced_native::subscription::events_with;
 use cosmic::iced_native::widget::vertical_space;
@@ -51,6 +52,7 @@ use iced::Alignment;
 use iced::Background;
 use iced::Length;
 use itertools::Itertools;
+use native::event;
 use url::Url;
 
 static MIME_TYPE: &str = "text/uri-list";
@@ -981,52 +983,38 @@ impl Application for CosmicAppList {
         Subscription::batch(vec![
             toplevel_subscription(self.subscription_ctr).map(|(_, event)| Message::Toplevel(event)),
             events_with(|e, _| match e {
-                cosmic::iced_native::Event::PlatformSpecific(
-                    cosmic::iced_native::event::PlatformSpecific::Wayland(
-                        cosmic::iced_native::event::wayland::Event::Seat(e, seat),
-                    ),
-                ) => match e {
-                    cosmic::iced_native::event::wayland::SeatEvent::Enter => {
-                        Some(Message::NewSeat(seat))
-                    }
-                    cosmic::iced_native::event::wayland::SeatEvent::Leave => {
-                        Some(Message::RemovedSeat(seat))
-                    }
+                native::Event::PlatformSpecific(event::PlatformSpecific::Wayland(
+                    event::wayland::Event::Seat(e, seat),
+                )) => match e {
+                    event::wayland::SeatEvent::Enter => Some(Message::NewSeat(seat)),
+                    event::wayland::SeatEvent::Leave => Some(Message::RemovedSeat(seat)),
                 },
                 // XXX Must be done to catch a finished drag after the source is removed
                 // (for now, the source is removed when the drag starts)
-                cosmic::iced_native::Event::PlatformSpecific(
-                    cosmic::iced_native::event::PlatformSpecific::Wayland(
-                        cosmic::iced_sctk::event::wayland::Event::DataSource(
-                            cosmic::iced_sctk::event::wayland::DataSourceEvent::DndFinished
-                            | cosmic::iced_sctk::event::wayland::DataSourceEvent::Cancelled,
-                        ),
+                native::Event::PlatformSpecific(event::PlatformSpecific::Wayland(
+                    event::wayland::Event::DataSource(
+                        event::wayland::DataSourceEvent::DndFinished
+                        | event::wayland::DataSourceEvent::Cancelled,
                     ),
-                ) => Some(Message::DragFinished),
-                cosmic::iced_native::Event::PlatformSpecific(
-                    cosmic::iced_native::event::PlatformSpecific::Wayland(
-                        cosmic::iced_native::event::wayland::Event::DndOffer(
-                            cosmic::iced_native::event::wayland::DndOfferEvent::Enter {
-                                mime_types,
-                                ..
-                            },
-                        ),
-                    ),
-                ) => {
+                )) => Some(Message::DragFinished),
+                native::Event::PlatformSpecific(event::PlatformSpecific::Wayland(
+                    event::wayland::Event::DndOffer(event::wayland::DndOfferEvent::Enter {
+                        mime_types,
+                        ..
+                    }),
+                )) => {
                     if mime_types.iter().any(|m| m == MIME_TYPE) {
                         Some(Message::StartListeningForDnd)
                     } else {
                         None
                     }
                 }
-                cosmic::iced_native::Event::PlatformSpecific(
-                    cosmic::iced_native::event::PlatformSpecific::Wayland(
-                        cosmic::iced_native::event::wayland::Event::DndOffer(
-                            cosmic::iced_native::event::wayland::DndOfferEvent::Leave
-                            | cosmic::iced_native::event::wayland::DndOfferEvent::DropPerformed,
-                        ),
+                native::Event::PlatformSpecific(event::PlatformSpecific::Wayland(
+                    event::wayland::Event::DndOffer(
+                        event::wayland::DndOfferEvent::Leave
+                        | event::wayland::DndOfferEvent::DropPerformed,
                     ),
-                ) => Some(Message::StopListeningForDnd),
+                )) => Some(Message::StopListeningForDnd),
                 _ => None,
             }),
             rectangle_tracker_subscription(0).map(|(_, update)| Message::Rectangle(update)),
