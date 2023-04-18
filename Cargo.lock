@@ -1050,6 +1050,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "cosmic-applet-status-line"
+version = "0.1.0"
+dependencies = [
+ "delegate",
+ "libcosmic",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tokio-stream",
+ "tracing",
+ "tracing-log",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "cosmic-applet-tiling"
 version = "0.1.0"
 dependencies = [
@@ -1557,6 +1572,17 @@ dependencies = [
  "dbus",
  "libc",
  "tokio",
+]
+
+[[package]]
+name = "delegate"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d358e0ec5c59a5e1603b933def447096886121660fc680dc1e64a0753981fe3c"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
 ]
 
 [[package]]
