@@ -152,7 +152,7 @@ trait Device {
 
 pub fn device_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
     id: I,
-) -> iced::Subscription<(I, DeviceDbusEvent)> {
+) -> iced::Subscription<Option<(I, DeviceDbusEvent)>> {
     subscription::unfold(id, State::Ready, move |state| start_listening(id, state))
 }
 

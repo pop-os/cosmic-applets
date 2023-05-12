@@ -6,12 +6,12 @@ use cosmic::iced::mouse::{self, ScrollDelta};
 use cosmic::iced::wayland::actions::window::SctkWindowSettings;
 use cosmic::iced::wayland::{window::resize_window, InitialSurface};
 use cosmic::iced::widget::{column, container, row, text};
+use cosmic::iced::Color;
 use cosmic::iced::{
     subscription, widget::button, window, Application, Command, Event::Mouse, Length, Settings,
     Subscription,
 };
 use cosmic::iced_style::application::{self, Appearance};
-use cosmic::iced_style::Color;
 use cosmic::theme::Button;
 use cosmic::{Element, Theme};
 use cosmic_protocols::workspace::v1::client::zcosmic_workspace_handle_v1;
@@ -25,10 +25,7 @@ use crate::wayland_subscription::{workspaces, WorkspacesUpdate};
 pub fn run() -> cosmic::iced::Result {
     let settings = Settings {
         initial_surface: InitialSurface::XdgWindow(SctkWindowSettings {
-            iced_settings: cosmic::iced_native::window::Settings {
-                size: (32, 32),
-                ..Default::default()
-            },
+            size: (32, 32),
             ..Default::default()
         }),
         ..Default::default()
@@ -103,7 +100,7 @@ impl Application for IcedWorkspacesApplet {
                         Layout::Row => (unit * self.workspaces.len().max(1) as u32, unit),
                         Layout::Column => (unit, unit * self.workspaces.len().max(1) as u32),
                     };
-                    return resize_window(window::Id::new(0), w, h);
+                    return resize_window(window::Id(0), w, h);
                 }
                 WorkspacesUpdate::Started(tx) => {
                     self.workspace_tx.replace(tx);
@@ -184,7 +181,10 @@ impl Application for IcedWorkspacesApplet {
     fn subscription(&self) -> Subscription<Message> {
         Subscription::batch(
             vec![
-                workspaces(0).map(|(_, msg)| Message::WorkspaceUpdate(msg)),
+                workspaces(0).map(|e| match e {
+                    Some(msg) => Message::WorkspaceUpdate(msg.1),
+                    None => Message::Errored,
+                }),
                 subscription::events_with(|e, _| match e {
                     Mouse(mouse::Event::WheelScrolled { delta }) => {
                         Some(Message::WheelScrolled(delta))
@@ -205,9 +205,9 @@ impl Application for IcedWorkspacesApplet {
     }
 
     fn style(&self) -> <Self::Theme as application::StyleSheet>::Style {
-        <Self::Theme as application::StyleSheet>::Style::Custom(|theme| Appearance {
+        <Self::Theme as application::StyleSheet>::Style::Custom(Box::new(|theme| Appearance {
             background_color: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
             text_color: theme.cosmic().on_bg_color().into(),
-        })
+        }))
     }
 }

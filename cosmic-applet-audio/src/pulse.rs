@@ -1,8 +1,8 @@
-use cosmic::iced_native::subscription::{self, Subscription};
 use std::cell::RefCell;
 use std::{rc::Rc, thread};
 
 extern crate libpulse_binding as pulse;
+use cosmic::iced::{subscription, Subscription};
 //use futures::channel::mpsc;
 use libpulse_binding::{
     callbacks::ListResult,
@@ -15,7 +15,7 @@ use libpulse_binding::{
     proplist::Proplist,
     volume::ChannelVolumes,
 };
-pub fn connect() -> Subscription<Event> {
+pub fn connect() -> Subscription<Option<Event>> {
     struct Connect;
 
     subscription::unfold(

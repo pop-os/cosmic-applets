@@ -31,7 +31,7 @@ use self::{
 
 pub fn network_manager_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
     id: I,
-) -> iced::Subscription<(I, NetworkManagerEvent)> {
+) -> iced::Subscription<Option<(I, NetworkManagerEvent)>> {
     subscription::unfold(id, State::Ready, move |state| start_listening(id, state))
 }
 

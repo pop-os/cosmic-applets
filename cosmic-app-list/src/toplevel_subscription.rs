@@ -17,7 +17,7 @@ use crate::toplevel_handler::toplevel_handler;
 
 pub fn toplevel_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
     id: I,
-) -> iced::Subscription<(I, ToplevelUpdate)> {
+) -> iced::Subscription<Option<(I, ToplevelUpdate)>> {
     subscription::unfold(id, State::Ready, move |state| start_listening(id, state))
 }
 

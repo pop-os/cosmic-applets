@@ -1,18 +1,17 @@
 use std::process;
 
-use cosmic::applet::{CosmicAppletHelper, APPLET_BUTTON_THEME};
+use cosmic::applet::{applet_button_theme, CosmicAppletHelper};
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
-use cosmic::iced_native::layout::Limits;
-use cosmic::iced_native::widget::Space;
+use cosmic::iced_runtime::core::layout::Limits;
 use cosmic::widget::{button, divider, icon};
 use cosmic::Renderer;
 
+use cosmic::iced::Color;
 use cosmic::iced::{
-    widget::{self, column, container, row, Row},
+    widget::{self, column, container, row, space::Space, Row},
     window, Alignment, Application, Command, Length, Subscription,
 };
 use cosmic::iced_style::application::{self, Appearance};
-use cosmic::iced_style::Color;
 use cosmic::theme::{self, Svg};
 use cosmic::{Element, Theme};
 
@@ -39,7 +38,7 @@ struct Power {
     icon_name: String,
     theme: Theme,
     popup: Option<window::Id>,
-    id_ctr: u32,
+    id_ctr: u128,
 }
 
 #[derive(Debug, Clone)]
@@ -84,10 +83,10 @@ impl Application for Power {
     }
 
     fn style(&self) -> <Self::Theme as application::StyleSheet>::Style {
-        <Self::Theme as application::StyleSheet>::Style::Custom(|theme| Appearance {
+        <Self::Theme as application::StyleSheet>::Style::Custom(Box::new(|theme| Appearance {
             background_color: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
             text_color: theme.cosmic().on_bg_color().into(),
-        })
+        }))
     }
 
     fn subscription(&self) -> Subscription<Message> {
@@ -101,21 +100,21 @@ impl Application for Power {
                     destroy_popup(p)
                 } else {
                     self.id_ctr += 1;
-                    let new_id = window::Id::new(self.id_ctr);
+                    let new_id = window::Id(self.id_ctr);
                     self.popup.replace(new_id);
 
                     let mut popup_settings = self.applet_helper.get_popup_settings(
-                        window::Id::new(0),
+                        window::Id(0),
                         new_id,
                         None,
                         None,
                         None,
                     );
                     popup_settings.positioner.size_limits = Limits::NONE
-                        .min_width(100)
-                        .min_height(100)
-                        .max_height(400)
-                        .max_width(500);
+                        .min_width(100.0)
+                        .min_height(100.0)
+                        .max_height(400.0)
+                        .max_width(500.0);
                     get_popup(popup_settings)
                 }
             }
@@ -139,7 +138,7 @@ impl Application for Power {
     }
 
     fn view(&self, id: window::Id) -> Element<Message> {
-        if id == window::Id::new(0) {
+        if id == window::Id(0) {
             self.applet_helper
                 .icon_button(&self.icon_name)
                 .on_press(Message::TogglePopup)
@@ -195,7 +194,7 @@ impl Application for Power {
 // ### UI Helplers
 
 fn row_button(content: Vec<Element<Message>>) -> widget::Button<Message, Renderer> {
-    button(APPLET_BUTTON_THEME)
+    button(applet_button_theme())
         .custom(vec![Row::with_children(content)
             .spacing(4)
             .align_items(Alignment::Center)
@@ -211,7 +210,7 @@ fn power_buttons<'a>(name: &'a str, text: &'a str) -> widget::Button<'a, Message
             .align_items(Alignment::Center),
     )
     .width(Length::Fill)
-    .height(Length::Units(76))
+    .height(Length::Fixed(76.0))
     .style(theme::Button::Text)
 }
 

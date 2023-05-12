@@ -3,17 +3,17 @@ use crate::fl;
 use crate::graphics::{get_current_graphics, set_graphics, Graphics};
 use cosmic::applet::CosmicAppletHelper;
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
-use cosmic::iced_native::alignment::Horizontal;
-use cosmic::iced_native::Alignment;
+use cosmic::iced::Color;
+use cosmic::iced_runtime::core::alignment::Horizontal;
+use cosmic::iced_runtime::core::Alignment;
 use cosmic::iced_style::application::{self, Appearance};
-use cosmic::iced_style::Color;
 use cosmic::theme::Button;
 use cosmic::widget::icon;
 use cosmic::{
-    applet::{cosmic_panel_config::PanelAnchor, APPLET_BUTTON_THEME},
+    applet::{applet_button_theme, cosmic_panel_config::PanelAnchor},
     iced::widget::{column, container, row, text},
     iced::{self, Application, Command, Length},
-    iced_native::window,
+    iced_runtime::core::window,
     theme::{Svg, Theme},
     widget::{button, divider},
     Element,
@@ -41,7 +41,7 @@ impl GraphicsMode {
 pub struct Window {
     popup: Option<window::Id>,
     graphics_mode: Option<GraphicsMode>,
-    id_ctr: u32,
+    id_ctr: u128,
     theme: Theme,
     dbus: Option<(Connection, PowerDaemonProxy<'static>)>,
     applet_helper: CosmicAppletHelper,
@@ -92,7 +92,7 @@ impl Application for Window {
                     return destroy_popup(p);
                 } else {
                     self.id_ctr += 1;
-                    let new_id = window::Id::new(self.id_ctr);
+                    let new_id = window::Id(self.id_ctr);
                     self.popup.replace(new_id);
                     let mut commands = Vec::new();
                     if let Some((_, proxy)) = self.dbus.as_ref() {
@@ -102,7 +102,7 @@ impl Application for Window {
                         ));
                     }
                     let popup_settings = self.applet_helper.get_popup_settings(
-                        window::Id::new(0),
+                        window::Id(0),
                         new_id,
                         None,
                         None,
@@ -184,7 +184,7 @@ impl Application for Window {
     }
 
     fn view(&self, id: window::Id) -> Element<Message> {
-        if id == window::Id::new(0) {
+        if id == window::Id(0) {
             match self.applet_helper.anchor {
                 PanelAnchor::Left | PanelAnchor::Right => self
                     .applet_helper
@@ -220,7 +220,7 @@ impl Application for Window {
             }
         } else {
             let content_list = vec![
-                button(APPLET_BUTTON_THEME)
+                button(applet_button_theme())
                     .custom(vec![row![
                         column![
                             text(format!("{} {}", fl!("integrated"), fl!("graphics"))).size(14),
@@ -256,7 +256,7 @@ impl Application for Window {
                     .on_press(Message::SelectGraphicsMode(Graphics::Integrated))
                     .width(Length::Fill)
                     .into(),
-                button(APPLET_BUTTON_THEME)
+                button(applet_button_theme())
                     .custom(vec![row![
                         column![text(format!("{} {}", fl!("nvidia"), fl!("graphics"))).size(14),]
                             .width(Length::Fill),
@@ -289,7 +289,7 @@ impl Application for Window {
                     .on_press(Message::SelectGraphicsMode(Graphics::Nvidia))
                     .width(Length::Fill)
                     .into(),
-                button(APPLET_BUTTON_THEME)
+                button(applet_button_theme())
                     .custom(vec![row![
                         column![
                             text(format!("{} {}", fl!("hybrid"), fl!("graphics"))).size(14),
@@ -325,7 +325,7 @@ impl Application for Window {
                     .on_press(Message::SelectGraphicsMode(Graphics::Hybrid))
                     .width(Length::Fill)
                     .into(),
-                button(APPLET_BUTTON_THEME)
+                button(applet_button_theme())
                     .custom(vec![row![
                         column![
                             text(format!("{} {}", fl!("compute"), fl!("graphics"))).size(14),
@@ -385,7 +385,7 @@ impl Application for Window {
     }
 
     fn close_requested(&self, id: window::Id) -> Self::Message {
-        if id != window::Id::new(0) {
+        if id != window::Id(0) {
             Message::PopupClosed(id)
         } else {
             unimplemented!();
@@ -393,10 +393,10 @@ impl Application for Window {
     }
 
     fn style(&self) -> <Self::Theme as application::StyleSheet>::Style {
-        <Self::Theme as application::StyleSheet>::Style::Custom(|theme| Appearance {
+        <Self::Theme as application::StyleSheet>::Style::Custom(Box::new(|theme| Appearance {
             background_color: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
             text_color: theme.cosmic().background.on.into(),
-        })
+        }))
     }
 
     fn should_exit(&self) -> bool {

@@ -1,7 +1,5 @@
-use cosmic::applet::{CosmicAppletHelper, APPLET_BUTTON_THEME};
-use cosmic::iced::wayland::{
-    popup::{destroy_popup, get_popup},
-};
+use cosmic::applet::{applet_button_theme, CosmicAppletHelper};
+use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced::{
     widget::{button, column, row, text, Row, Space},
     window, Alignment, Application, Color, Command, Length, Subscription,
@@ -9,6 +7,7 @@ use cosmic::iced::{
 
 use cosmic::iced_style::application::{self, Appearance};
 
+use cosmic::iced_widget::Button;
 use cosmic::theme::Svg;
 use cosmic::widget::{divider, icon, toggler};
 use cosmic::Renderer;
@@ -27,7 +26,7 @@ struct Notifications {
     theme: Theme,
     icon_name: String,
     popup: Option<window::Id>,
-    id_ctr: u32,
+    id_ctr: u128,
     do_not_disturb: bool,
     notifications: Vec<Vec<String>>,
 }
@@ -69,10 +68,10 @@ impl Application for Notifications {
     }
 
     fn style(&self) -> <Self::Theme as application::StyleSheet>::Style {
-        <Self::Theme as application::StyleSheet>::Style::Custom(|theme| Appearance {
+        <Self::Theme as application::StyleSheet>::Style::Custom(Box::new(|theme| Appearance {
             background_color: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
             text_color: theme.cosmic().on_bg_color().into(),
-        })
+        }))
     }
 
     fn subscription(&self) -> Subscription<Message> {
@@ -86,11 +85,11 @@ impl Application for Notifications {
                     destroy_popup(p)
                 } else {
                     self.id_ctr += 1;
-                    let new_id = window::Id::new(self.id_ctr);
+                    let new_id = window::Id(self.id_ctr);
                     self.popup.replace(new_id);
 
                     let popup_settings = self.applet_helper.get_popup_settings(
-                        window::Id::new(0),
+                        window::Id(0),
                         new_id,
                         None,
                         None,
@@ -112,7 +111,7 @@ impl Application for Notifications {
     }
 
     fn view(&self, id: window::Id) -> Element<Message> {
-        if id == window::Id::new(0) {
+        if id == window::Id(0) {
             self.applet_helper
                 .icon_button(&self.icon_name)
                 .on_press(Message::TogglePopup)
@@ -164,11 +163,9 @@ impl Application for Notifications {
 }
 
 // todo put into libcosmic doing so will fix the row_button's boarder radius
-fn row_button(
-    mut content: Vec<Element<Message>>,
-) -> cosmic::iced_native::widget::Button<Message, Renderer> {
-    content.insert(0, Space::with_width(Length::Units(24)).into());
-    content.push(Space::with_width(Length::Units(24)).into());
+fn row_button(mut content: Vec<Element<Message>>) -> Button<Message, Renderer> {
+    content.insert(0, Space::with_width(Length::Fixed(24.0)).into());
+    content.push(Space::with_width(Length::Fixed(24.0)).into());
 
     button(
         Row::with_children(content)
@@ -176,8 +173,8 @@ fn row_button(
             .align_items(Alignment::Center),
     )
     .width(Length::Fill)
-    .height(Length::Units(36))
-    .style(APPLET_BUTTON_THEME)
+    .height(Length::Fixed(36.0))
+    .style(applet_button_theme())
 }
 
 fn text_icon(name: &str, size: u16) -> cosmic::widget::Icon {

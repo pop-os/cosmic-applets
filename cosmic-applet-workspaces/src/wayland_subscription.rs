@@ -12,7 +12,7 @@ pub enum WorkspacesUpdate {
 
 pub fn workspaces<I: 'static + Hash + Copy + Send + Sync>(
     id: I,
-) -> cosmic::iced::Subscription<(I, WorkspacesUpdate)> {
+) -> cosmic::iced::Subscription<Option<(I, WorkspacesUpdate)>> {
     use cosmic::iced::subscription;
 
     subscription::unfold(id, State::Ready, move |state| _workspaces(id, state))

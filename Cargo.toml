@@ -15,4 +15,4 @@ members = [
 ]
 
 [profile.release]
-lto = "fat"
+#lto = "fat"

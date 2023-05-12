@@ -34,7 +34,7 @@ trait KbdBacklight {
 
 pub fn kbd_backlight_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
     id: I,
-) -> iced::Subscription<(I, KeyboardBacklightUpdate)> {
+) -> iced::Subscription<Option<(I, KeyboardBacklightUpdate)>> {
     subscription::unfold(id, State::Ready, move |state| start_listening(id, state))
 }
 

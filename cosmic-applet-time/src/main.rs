@@ -1,12 +1,12 @@
 use cosmic::applet::{cosmic_panel_config::PanelAnchor, CosmicAppletHelper};
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
+use cosmic::iced::Limits;
 use cosmic::iced::{
     time,
     wayland::InitialSurface,
     widget::{button, column, text, vertical_space},
     window, Alignment, Application, Color, Command, Length, Rectangle, Subscription,
 };
-use cosmic::iced_sctk::layout::Limits;
 use cosmic::iced_style::application::{self, Appearance};
 use cosmic::theme;
 use cosmic::{
@@ -22,10 +22,8 @@ pub fn main() -> cosmic::iced::Result {
     let mut settings = helper.window_settings();
     match &mut settings.initial_surface {
         InitialSurface::XdgWindow(s) => {
-            s.iced_settings.min_size = Some((1, 1));
-            s.iced_settings.max_size = None;
             s.autosize = true;
-            s.size_limits = Limits::NONE.min_height(1).min_width(1);
+            s.size_limits = Limits::NONE.min_height(1.0).min_width(1.0);
         }
         _ => {}
     };
@@ -36,7 +34,7 @@ struct Time {
     applet_helper: CosmicAppletHelper,
     theme: Theme,
     popup: Option<window::Id>,
-    id_ctr: u32,
+    id_ctr: u128,
     update_at: Every,
     now: DateTime<Local>,
     msg: String,
@@ -98,10 +96,10 @@ impl Application for Time {
     }
 
     fn style(&self) -> <Self::Theme as application::StyleSheet>::Style {
-        <Self::Theme as application::StyleSheet>::Style::Custom(|theme| Appearance {
+        <Self::Theme as application::StyleSheet>::Style::Custom(Box::new(|theme| Appearance {
             background_color: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
             text_color: theme.cosmic().on_bg_color().into(),
-        })
+        }))
     }
 
     fn subscription(&self) -> Subscription<Message> {
@@ -120,7 +118,10 @@ impl Application for Time {
             .expect("Setting nanoseconds to 0 should always be possible.");
         let wait = 1.max((next - now).num_milliseconds());
         Subscription::batch(vec![
-            rectangle_tracker_subscription(0).map(|(_, update)| Message::Rectangle(update)),
+            rectangle_tracker_subscription(0).map(|e| match e {
+                Some(e) => Message::Rectangle(e.1),
+                None => Message::Ignore,
+            }),
             time::every(Duration::from_millis(
                 wait.try_into().unwrap_or(FALLBACK_DELAY),
             ))
@@ -149,11 +150,11 @@ impl Application for Time {
                     .to_string();
                     self.msg = calendar;
                     self.id_ctr += 1;
-                    let new_id = window::Id::new(self.id_ctr);
+                    let new_id = window::Id(self.id_ctr);
                     self.popup.replace(new_id);
 
                     let mut popup_settings = self.applet_helper.get_popup_settings(
-                        window::Id::new(0),
+                        window::Id(0),
                         new_id,
                         None,
                         None,
@@ -194,7 +195,7 @@ impl Application for Time {
     }
 
     fn view(&self, id: window::Id) -> Element<Message> {
-        if id == window::Id::new(0) {
+        if id == window::Id(0) {
             let button = button(
                 if matches!(
                     self.applet_helper.anchor,
@@ -211,7 +212,7 @@ impl Application for Time {
                         text(self.now.format("%I").to_string()),
                         text(self.now.format("%M").to_string()),
                         text(self.now.format("%p").to_string()),
-                        vertical_space(Length::Units(4)),
+                        vertical_space(Length::Fixed(4.0)),
                         // TODO better calendar icon?
                         icon(
                             "calendar-go-today-symbolic",

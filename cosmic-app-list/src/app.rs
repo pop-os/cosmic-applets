@@ -16,29 +16,29 @@ use cctk::wayland_client::protocol::wl_seat::WlSeat;
 use cosmic::applet::cosmic_panel_config::PanelAnchor;
 use cosmic::applet::CosmicAppletHelper;
 use cosmic::iced;
+use cosmic::iced::subscription::events_with;
 use cosmic::iced::wayland::actions::data_device::DataFromMimeType;
 use cosmic::iced::wayland::actions::data_device::DndIcon;
 use cosmic::iced::wayland::actions::window::SctkWindowSettings;
 use cosmic::iced::wayland::popup::destroy_popup;
 use cosmic::iced::wayland::popup::get_popup;
-use cosmic::iced::widget::{column, dnd_source, mouse_listener, row, text, Column, Row};
+use cosmic::iced::widget::dnd_listener;
+use cosmic::iced::widget::vertical_rule;
+use cosmic::iced::widget::vertical_space;
+use cosmic::iced::widget::{column, dnd_source, mouse_area, row, text, Column, Row};
+use cosmic::iced::Color;
+use cosmic::iced::Limits;
 use cosmic::iced::Settings;
 use cosmic::iced::{window, Application, Command, Subscription};
-use cosmic::iced_native as native;
-use cosmic::iced_native::alignment::Horizontal;
-use cosmic::iced_native::subscription::events_with;
-use cosmic::iced_native::widget::vertical_space;
+use cosmic::iced_runtime::core::alignment::Horizontal;
+use cosmic::iced_runtime::core::event;
 use cosmic::iced_sctk::commands::data_device::accept_mime_type;
 use cosmic::iced_sctk::commands::data_device::finish_dnd;
 use cosmic::iced_sctk::commands::data_device::request_dnd_data;
 use cosmic::iced_sctk::commands::data_device::set_actions;
 use cosmic::iced_sctk::commands::data_device::start_drag;
-use cosmic::iced_sctk::layout::Limits;
 use cosmic::iced_sctk::settings::InitialSurface;
-use cosmic::iced_sctk::widget::dnd_listener;
-use cosmic::iced_sctk::widget::vertical_rule;
 use cosmic::iced_style::application::{self, Appearance};
-use cosmic::iced_style::Color;
 use cosmic::theme::Button;
 use cosmic::widget::divider;
 use cosmic::widget::rectangle_tracker::rectangle_tracker_subscription;
@@ -52,7 +52,6 @@ use iced::Alignment;
 use iced::Background;
 use iced::Length;
 use itertools::Itertools;
-use native::event;
 use url::Url;
 
 static MIME_TYPE: &str = "text/uri-list";
@@ -71,15 +70,12 @@ pub fn run() -> cosmic::iced::Result {
 
     CosmicAppList::run(Settings {
         initial_surface: InitialSurface::XdgWindow(SctkWindowSettings {
-            iced_settings: cosmic::iced_native::window::Settings {
-                ..Default::default()
-            },
             autosize: true,
             size_limits: Limits::NONE
-                .min_height(1)
-                .min_width(1)
-                .max_height(h)
-                .max_width(w),
+                .min_height(1.0)
+                .min_width(1.0)
+                .max_height(h as f32)
+                .max_width(w as f32),
             ..Default::default()
         }),
         ..Default::default()
@@ -144,9 +140,9 @@ impl DockItem {
         let dots = (0..toplevels.len())
             .into_iter()
             .map(|_| {
-                container(vertical_space(Length::Units(0)))
+                container(vertical_space(Length::Fixed(0.0)))
                     .padding(dot_radius)
-                    .style(<<CosmicAppList as cosmic::iced::Application>::Theme as container::StyleSheet>::Style::Custom(
+                    .style(<<CosmicAppList as cosmic::iced::Application>::Theme as container::StyleSheet>::Style::Custom(Box::new(
                         |theme| container::Appearance {
                             text_color: Some(Color::TRANSPARENT),
                             background: Some(Background::Color(
@@ -156,7 +152,7 @@ impl DockItem {
                             border_width: 0.0,
                             border_color: Color::TRANSPARENT,
                         },
-                    ))
+                    )))
                     .into()
             })
             .collect_vec();
@@ -184,7 +180,7 @@ impl DockItem {
             .padding(8);
         let icon_button = if interaction_enabled {
             dnd_source(
-                mouse_listener(
+                mouse_area(
                     icon_button
                         .on_press(
                             toplevels
@@ -222,7 +218,7 @@ struct DndOffer {
 struct CosmicAppList {
     theme: Theme,
     popup: Option<(window::Id, DockItem)>,
-    surface_id_ctr: u32,
+    surface_id_ctr: u128,
     subscription_ctr: u32,
     item_ctr: u32,
     active_list: Vec<DockItem>,
@@ -405,11 +401,11 @@ impl Application for CosmicAppList {
                     };
 
                     self.surface_id_ctr += 1;
-                    let new_id = window::Id::new(self.surface_id_ctr);
+                    let new_id = window::Id(self.surface_id_ctr);
                     self.popup = Some((new_id, toplevel_group.clone()));
 
                     let mut popup_settings = self.applet_helper.get_popup_settings(
-                        window::Id::new(0),
+                        window::Id(0),
                         new_id,
                         None,
                         None,
@@ -514,7 +510,7 @@ impl Application for CosmicAppList {
                     })
                 {
                     self.surface_id_ctr += 1;
-                    let icon_id = window::Id::new(self.surface_id_ctr);
+                    let icon_id = window::Id(self.surface_id_ctr);
                     self.dnd_source = Some((icon_id, toplevel_group.clone(), DndAction::empty()));
                     return start_drag(
                         vec![MIME_TYPE.to_string()],
@@ -523,7 +519,7 @@ impl Application for CosmicAppList {
                         } else {
                             DndAction::Copy
                         },
-                        window::Id::new(0),
+                        window::Id(0),
                         Some(DndIcon::Custom(icon_id)),
                         Box::new(toplevel_group.clone()),
                     );
@@ -970,7 +966,7 @@ impl Application for CosmicAppList {
             ),
         };
         if self.popup.is_some() {
-            mouse_listener(content)
+            mouse_area(content)
                 .on_right_release(Message::ClosePopup)
                 .on_press(Message::ClosePopup)
                 .into()
@@ -981,43 +977,48 @@ impl Application for CosmicAppList {
 
     fn subscription(&self) -> Subscription<Message> {
         Subscription::batch(vec![
-            toplevel_subscription(self.subscription_ctr).map(|(_, event)| Message::Toplevel(event)),
+            toplevel_subscription(self.subscription_ctr).map(|e| match e {
+                Some((_, event)) => Message::Toplevel(event),
+                _ => Message::Ignore,
+            }),
             events_with(|e, _| match e {
-                native::Event::PlatformSpecific(event::PlatformSpecific::Wayland(
-                    event::wayland::Event::Seat(e, seat),
-                )) => match e {
+                cosmic::iced_runtime::core::Event::PlatformSpecific(
+                    event::PlatformSpecific::Wayland(event::wayland::Event::Seat(e, seat)),
+                ) => match e {
                     event::wayland::SeatEvent::Enter => Some(Message::NewSeat(seat)),
                     event::wayland::SeatEvent::Leave => Some(Message::RemovedSeat(seat)),
                 },
                 // XXX Must be done to catch a finished drag after the source is removed
                 // (for now, the source is removed when the drag starts)
-                native::Event::PlatformSpecific(event::PlatformSpecific::Wayland(
-                    event::wayland::Event::DataSource(
+                cosmic::iced_runtime::core::Event::PlatformSpecific(
+                    event::PlatformSpecific::Wayland(event::wayland::Event::DataSource(
                         event::wayland::DataSourceEvent::DndFinished
                         | event::wayland::DataSourceEvent::Cancelled,
-                    ),
-                )) => Some(Message::DragFinished),
-                native::Event::PlatformSpecific(event::PlatformSpecific::Wayland(
-                    event::wayland::Event::DndOffer(event::wayland::DndOfferEvent::Enter {
-                        mime_types,
-                        ..
-                    }),
-                )) => {
+                    )),
+                ) => Some(Message::DragFinished),
+                cosmic::iced_runtime::core::Event::PlatformSpecific(
+                    event::PlatformSpecific::Wayland(event::wayland::Event::DndOffer(
+                        event::wayland::DndOfferEvent::Enter { mime_types, .. },
+                    )),
+                ) => {
                     if mime_types.iter().any(|m| m == MIME_TYPE) {
                         Some(Message::StartListeningForDnd)
                     } else {
                         None
                     }
                 }
-                native::Event::PlatformSpecific(event::PlatformSpecific::Wayland(
-                    event::wayland::Event::DndOffer(
+                cosmic::iced_runtime::core::Event::PlatformSpecific(
+                    event::PlatformSpecific::Wayland(event::wayland::Event::DndOffer(
                         event::wayland::DndOfferEvent::Leave
                         | event::wayland::DndOfferEvent::DropPerformed,
-                    ),
-                )) => Some(Message::StopListeningForDnd),
+                    )),
+                ) => Some(Message::StopListeningForDnd),
                 _ => None,
             }),
-            rectangle_tracker_subscription(0).map(|(_, update)| Message::Rectangle(update)),
+            rectangle_tracker_subscription(0).map(|update| match update {
+                Some((_, update)) => Message::Rectangle(update),
+                _ => Message::Ignore,
+            }),
         ])
     }
 
@@ -1030,9 +1031,9 @@ impl Application for CosmicAppList {
     }
 
     fn style(&self) -> <Self::Theme as application::StyleSheet>::Style {
-        <Self::Theme as application::StyleSheet>::Style::Custom(|theme| Appearance {
+        <Self::Theme as application::StyleSheet>::Style::Custom(Box::new(|theme| Appearance {
             background_color: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
             text_color: theme.cosmic().on_bg_color().into(),
-        })
+        }))
     }
 }

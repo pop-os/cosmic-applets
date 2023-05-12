@@ -1,9 +1,9 @@
 use cosmic::iced::widget;
-use cosmic::iced_native::alignment::Horizontal;
-use cosmic::iced_native::layout::Limits;
+use cosmic::iced::Limits;
+use cosmic::iced_runtime::core::alignment::Horizontal;
 use cosmic::theme::Svg;
 
-use cosmic::applet::{CosmicAppletHelper, APPLET_BUTTON_THEME};
+use cosmic::applet::{applet_button_theme, CosmicAppletHelper};
 use cosmic::widget::{button, divider, icon};
 use cosmic::Renderer;
 
@@ -43,7 +43,7 @@ struct Audio {
     theme: Theme,
     popup: Option<window::Id>,
     show_media_controls_in_top_panel: bool,
-    id_ctr: u32,
+    id_ctr: u128,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -101,10 +101,10 @@ impl Application for Audio {
     }
 
     fn style(&self) -> <Self::Theme as application::StyleSheet>::Style {
-        <Self::Theme as application::StyleSheet>::Style::Custom(|theme| Appearance {
+        <Self::Theme as application::StyleSheet>::Style::Custom(Box::new(|theme| Appearance {
             background_color: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
             text_color: theme.cosmic().on_bg_color().into(),
-        })
+        }))
     }
 
     fn update(&mut self, message: Message) -> Command<Message> {
@@ -117,21 +117,21 @@ impl Application for Audio {
                         conn.send(pulse::Message::UpdateConnection);
                     }
                     self.id_ctr += 1;
-                    let new_id = window::Id::new(self.id_ctr);
+                    let new_id = window::Id(self.id_ctr);
                     self.popup.replace(new_id);
 
                     let mut popup_settings = self.applet_helper.get_popup_settings(
-                        window::Id::new(0),
+                        window::Id(0),
                         new_id,
                         None,
                         None,
                         None,
                     );
                     popup_settings.positioner.size_limits = Limits::NONE
-                        .min_height(1)
-                        .min_width(1)
-                        .max_width(400)
-                        .max_height(1080);
+                        .min_height(1.0)
+                        .min_width(1.0)
+                        .max_width(400.0)
+                        .max_height(1080.0);
 
                     if let Some(conn) = self.pulse_state.connection() {
                         conn.send(pulse::Message::GetDefaultSink);
@@ -264,11 +264,14 @@ impl Application for Audio {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        pulse::connect().map(Message::Pulse)
+        pulse::connect().map(|m| match m {
+            Some(m) => Message::Pulse(m),
+            None => Message::Ignore,
+        })
     }
 
     fn view(&self, id: window::Id) -> Element<Message> {
-        if id == window::Id::new(0) {
+        if id == window::Id(0) {
             self.applet_helper
                 .icon_button(&self.icon_name)
                 .on_press(Message::TogglePopup)
@@ -299,8 +302,8 @@ impl Application for Audio {
                 column![
                     row![
                         icon("audio-volume-high-symbolic", 32)
-                            .width(Length::Units(24))
-                            .height(Length::Units(24))
+                            .width(Length::Fixed(24.0))
+                            .height(Length::Fixed(24.0))
                             .style(Svg::Symbolic),
                         slider(0.0..=100.0, out_f64, Message::SetOutputVolume)
                             .width(Length::FillPortion(5)),
@@ -313,8 +316,8 @@ impl Application for Audio {
                     .padding([8, 24]),
                     row![
                         icon("audio-input-microphone-symbolic", 32)
-                            .width(Length::Units(24))
-                            .height(Length::Units(24))
+                            .width(Length::Fixed(24.0))
+                            .height(Length::Fixed(24.0))
                             .style(Svg::Symbolic),
                         slider(0.0..=100.0, in_f64, Message::SetInputVolume)
                             .width(Length::FillPortion(5)),
@@ -381,7 +384,7 @@ impl Application for Audio {
                 container(divider::horizontal::light())
                     .padding([12, 24])
                     .width(Length::Fill),
-                button(APPLET_BUTTON_THEME)
+                button(applet_button_theme())
                     .text("Sound Settings...")
                     .padding([8, 24])
                     .width(Length::Fill)
@@ -409,7 +412,7 @@ fn revealer(
             column![revealer_head(open, title, selected, toggle)].width(Length::Fill),
             |col, (id, name)| {
                 col.push(
-                    button(APPLET_BUTTON_THEME)
+                    button(applet_button_theme())
                         .custom(vec![text(name).into()])
                         .on_press(change(id.clone()))
                         .width(Length::Fill)
@@ -428,7 +431,7 @@ fn revealer_head(
     selected: String,
     toggle: Message,
 ) -> widget::Button<Message, Renderer> {
-    button(APPLET_BUTTON_THEME)
+    button(applet_button_theme())
         .custom(vec![
             text(title).width(Length::Fill).into(),
             text(selected).into(),

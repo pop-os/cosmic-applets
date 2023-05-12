@@ -19,7 +19,7 @@
 //! …consequently `zbus-xmlgen` did not generate code for the above interfaces.
 
 use cosmic::iced;
-use cosmic::iced_native::subscription;
+use cosmic::iced::subscription;
 use std::fmt::Debug;
 use std::hash::Hash;
 use tokio::sync::mpsc::UnboundedReceiver;
@@ -113,7 +113,7 @@ pub async fn set_power_profile(daemon: PowerDaemonProxy<'_>, power: Power) -> Re
 
 pub fn power_profile_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
     id: I,
-) -> iced::Subscription<(I, PowerProfileUpdate)> {
+) -> iced::Subscription<Option<(I, PowerProfileUpdate)>> {
     subscription::unfold(id, State::Ready, move |state| start_listening(id, state))
 }
 
