@@ -118,10 +118,7 @@ impl Application for Time {
             .expect("Setting nanoseconds to 0 should always be possible.");
         let wait = 1.max((next - now).num_milliseconds());
         Subscription::batch(vec![
-            rectangle_tracker_subscription(0).map(|e| match e {
-                Some(e) => Message::Rectangle(e.1),
-                None => Message::Ignore,
-            }),
+            rectangle_tracker_subscription(0).map(|e| Message::Rectangle(e.1)),
             time::every(Duration::from_millis(
                 wait.try_into().unwrap_or(FALLBACK_DELAY),
             ))

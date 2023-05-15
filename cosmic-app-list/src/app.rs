@@ -359,14 +359,13 @@ impl Application for CosmicAppList {
 
     fn new(_flags: ()) -> (Self, Command<Message>) {
         let config = config::AppListConfig::load().unwrap_or_default();
-        let mut favorite_ctr = 0;
-        let self_ = CosmicAppList {
+        let mut self_ = CosmicAppList {
             favorite_list: desktop_info_for_app_ids(config.favorites.clone())
                 .into_iter()
-                .map(|e| {
-                    favorite_ctr += 1;
+                .enumerate()
+                .map(|(favorite_ctr, e)| {
                     DockItem {
-                        id: favorite_ctr,
+                        id: favorite_ctr as u32,
                         toplevels: Default::default(),
                         desktop_info: e,
                     }
@@ -375,6 +374,7 @@ impl Application for CosmicAppList {
             config,
             ..Default::default()
         };
+        self_.item_ctr = self_.favorite_list.len() as u32;
 
         (self_, Command::none())
     }
@@ -977,10 +977,7 @@ impl Application for CosmicAppList {
 
     fn subscription(&self) -> Subscription<Message> {
         Subscription::batch(vec![
-            toplevel_subscription(self.subscription_ctr).map(|e| match e {
-                Some((_, event)) => Message::Toplevel(event),
-                _ => Message::Ignore,
-            }),
+            toplevel_subscription(self.subscription_ctr).map(|e| Message::Toplevel(e.1)),
             events_with(|e, _| match e {
                 cosmic::iced_runtime::core::Event::PlatformSpecific(
                     event::PlatformSpecific::Wayland(event::wayland::Event::Seat(e, seat)),
@@ -1015,10 +1012,7 @@ impl Application for CosmicAppList {
                 ) => Some(Message::StopListeningForDnd),
                 _ => None,
             }),
-            rectangle_tracker_subscription(0).map(|update| match update {
-                Some((_, update)) => Message::Rectangle(update),
-                _ => Message::Ignore,
-            }),
+            rectangle_tracker_subscription(0).map(|update| Message::Rectangle(update.1)),
         ])
     }
 
