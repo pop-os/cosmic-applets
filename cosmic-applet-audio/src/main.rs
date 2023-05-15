@@ -264,10 +264,7 @@ impl Application for Audio {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        pulse::connect().map(|m| match m {
-            Some(m) => Message::Pulse(m),
-            None => Message::Ignore,
-        })
+        pulse::connect().map(Message::Pulse)
     }
 
     fn view(&self, id: window::Id) -> Element<Message> {

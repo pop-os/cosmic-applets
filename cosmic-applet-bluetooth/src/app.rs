@@ -524,10 +524,7 @@ impl Application for CosmicBluetoothApplet {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        bluetooth_subscription(0).map(|e| match e {
-            Some((_, e)) => Message::BluetoothEvent(e),
-            None => Message::Ignore,
-        })
+        bluetooth_subscription(0).map(|(_, e)| Message::BluetoothEvent(e))
     }
 
     fn theme(&self) -> Theme {

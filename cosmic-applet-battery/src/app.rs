@@ -369,38 +369,32 @@ impl Application for CosmicBatteryApplet {
 
     fn subscription(&self) -> Subscription<Message> {
         Subscription::batch(vec![
-            device_subscription(0).map(|event| match event {
-                Some((
+            device_subscription(0).map(
+                |(
                     _,
                     DeviceDbusEvent::Update {
                         icon_name,
                         percent,
                         time_to_empty,
                     },
-                )) => Message::Update {
+                )| Message::Update {
                     icon_name,
                     percent,
                     time_to_empty,
                 },
-                _ => Message::Ignore,
-            }),
+            ),
             kbd_backlight_subscription(0).map(|event| match event {
-                Some((_, KeyboardBacklightUpdate::Update(b))) => Message::UpdateKbdBrightness(b),
-                Some((_, KeyboardBacklightUpdate::Init(tx, b))) => Message::InitKbdBacklight(tx, b),
-                None => Message::Ignore,
+                (_, KeyboardBacklightUpdate::Update(b)) => Message::UpdateKbdBrightness(b),
+                (_, KeyboardBacklightUpdate::Init(tx, b)) => Message::InitKbdBacklight(tx, b),
             }),
             screen_backlight_subscription(0).map(|e| match e {
-                Some((_, ScreenBacklightUpdate::Update(b))) => Message::UpdateScreenBrightness(b),
-                Some((_, ScreenBacklightUpdate::Init(tx, b))) => {
-                    Message::InitScreenBacklight(tx, b)
-                }
-                None => Message::Ignore,
+                (_, ScreenBacklightUpdate::Update(b)) => Message::UpdateScreenBrightness(b),
+                (_, ScreenBacklightUpdate::Init(tx, b)) => Message::InitScreenBacklight(tx, b),
             }),
             power_profile_subscription(0).map(|event| match event {
-                Some((_, PowerProfileUpdate::Update { profile })) => Message::Profile(profile),
-                Some((_, PowerProfileUpdate::Init(tx, p))) => Message::InitProfile(p, tx),
-                Some((_, PowerProfileUpdate::Error(e))) => Message::Errored(e), // TODO: handle error
-                None => Message::Ignore,
+                (_, PowerProfileUpdate::Update { profile }) => Message::Profile(profile),
+                (_, PowerProfileUpdate::Init(tx, p)) => Message::InitProfile(p, tx),
+                (_, PowerProfileUpdate::Error(e)) => Message::Errored(e), // TODO: handle error
             }),
         ])
     }

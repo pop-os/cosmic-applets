@@ -20,14 +20,27 @@ use tokio::{
 
 pub fn bluetooth_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
     id: I,
-) -> iced::Subscription<Option<(I, BluerEvent)>> {
-    subscription::unfold(id, State::Ready, move |state| start_listening(id, state))
+) -> iced::Subscription<(I, BluerEvent)> {
+    subscription::unfold(id, State::Ready, move |state| start_listening_loop(id, state))
 }
 
 pub enum State {
     Ready,
     Waiting { session_state: BluerSessionState },
     Finished,
+}
+
+async fn start_listening_loop<I: Copy + Debug>(
+    id: I,
+    mut state: State,
+) -> ((I, BluerEvent), State) {
+    loop {
+        let (update, new_state) = start_listening(id, state).await;
+        state = new_state;
+        if let Some(update) = update {
+            return (update, state);
+        }
+    }
 }
 
 async fn start_listening<I: Copy + Debug>(id: I, state: State) -> (Option<(I, BluerEvent)>, State) {

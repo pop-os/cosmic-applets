@@ -31,8 +31,10 @@ use self::{
 
 pub fn network_manager_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
     id: I,
-) -> iced::Subscription<Option<(I, NetworkManagerEvent)>> {
-    subscription::unfold(id, State::Ready, move |state| start_listening(id, state))
+) -> iced::Subscription<(I, NetworkManagerEvent)> {
+    subscription::unfold(id, State::Ready, move |state| {
+        start_listening_loop(id, state)
+    })
 }
 
 #[derive(Debug)]
@@ -40,6 +42,19 @@ pub enum State {
     Ready,
     Waiting(Connection, UnboundedReceiver<NetworkManagerRequest>),
     Finished,
+}
+
+async fn start_listening_loop<I: Copy + Debug>(
+    id: I,
+    mut state: State,
+) -> ((I, NetworkManagerEvent), State) {
+    loop {
+        let (update, new_state) = start_listening(id, state).await;
+        state = new_state;
+        if let Some(update) = update {
+            return (update, state);
+        }
+    }
 }
 
 async fn start_listening<I: Copy + Debug>(

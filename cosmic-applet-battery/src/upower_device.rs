@@ -152,8 +152,8 @@ trait Device {
 
 pub fn device_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
     id: I,
-) -> iced::Subscription<Option<(I, DeviceDbusEvent)>> {
-    subscription::unfold(id, State::Ready, move |state| start_listening(id, state))
+) -> iced::Subscription<(I, DeviceDbusEvent)> {
+    subscription::unfold(id, State::Ready, move |state| start_listening_loop(id, state))
 }
 
 #[derive(Debug)]
@@ -172,6 +172,19 @@ async fn display_device() -> zbus::Result<DeviceProxy<'static>> {
         .cache_properties(zbus::CacheProperties::Yes)
         .build()
         .await
+}
+
+async fn start_listening_loop<I: Copy + Debug>(
+    id: I,
+    mut state: State,
+) -> ((I, DeviceDbusEvent), State) {
+    loop {
+        let (update, new_state) = start_listening(id, state).await;
+        state = new_state;
+        if let Some(update) = update {
+            return (update, state);
+        }
+    }
 }
 
 async fn start_listening<I: Copy>(id: I, state: State) -> (Option<(I, DeviceDbusEvent)>, State) {

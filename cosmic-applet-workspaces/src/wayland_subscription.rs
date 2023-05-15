@@ -12,35 +12,42 @@ pub enum WorkspacesUpdate {
 
 pub fn workspaces<I: 'static + Hash + Copy + Send + Sync>(
     id: I,
-) -> cosmic::iced::Subscription<Option<(I, WorkspacesUpdate)>> {
+) -> cosmic::iced::Subscription<(I, WorkspacesUpdate)> {
     use cosmic::iced::subscription;
 
     subscription::unfold(id, State::Ready, move |state| _workspaces(id, state))
 }
 
-async fn _workspaces<I: Copy>(id: I, state: State) -> (Option<(I, WorkspacesUpdate)>, State) {
-    match state {
-        State::Ready => {
-            if let Ok(watcher) = WorkspacesWatcher::new() {
-                (
-                    Some((id, WorkspacesUpdate::Started(watcher.get_sender()))),
-                    State::Waiting(watcher),
-                )
-            } else {
-                (Some((id, WorkspacesUpdate::Errored)), State::Error)
+async fn _workspaces<I: Copy>(id: I, mut state: State) -> ((I, WorkspacesUpdate), State) {
+    loop {
+        let (update, new_state) = match state {
+            State::Ready => {
+                if let Ok(watcher) = WorkspacesWatcher::new() {
+                    (
+                        Some((id, WorkspacesUpdate::Started(watcher.get_sender()))),
+                        State::Waiting(watcher),
+                    )
+                } else {
+                    (Some((id, WorkspacesUpdate::Errored)), State::Error)
+                }
             }
-        }
-        State::Waiting(mut t) => {
-            if let Some(w) = t.workspaces().await {
-                (
-                    Some((id, WorkspacesUpdate::Workspaces(w))),
-                    State::Waiting(t),
-                )
-            } else {
-                (Some((id, WorkspacesUpdate::Errored)), State::Error)
+            State::Waiting(mut t) => {
+                if let Some(w) = t.workspaces().await {
+                    (
+                        Some((id, WorkspacesUpdate::Workspaces(w))),
+                        State::Waiting(t),
+                    )
+                } else {
+                    (Some((id, WorkspacesUpdate::Errored)), State::Error)
+                }
             }
+            State::Error => cosmic::iced::futures::future::pending().await,
+        };
+        state = new_state;
+
+        if let Some(update) = update {
+            return (update, state);
         }
-        State::Error => cosmic::iced::futures::future::pending().await,
     }
 }
 

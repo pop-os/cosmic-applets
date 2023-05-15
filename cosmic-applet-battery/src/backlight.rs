@@ -77,8 +77,21 @@ pub async fn backlight() -> io::Result<Option<Backlight>> {
 
 pub fn screen_backlight_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
     id: I,
-) -> iced::Subscription<Option<(I, ScreenBacklightUpdate)>> {
-    subscription::unfold(id, State::Ready, move |state| start_listening(id, state))
+) -> iced::Subscription<(I, ScreenBacklightUpdate)> {
+    subscription::unfold(id, State::Ready, move |state| start_listening_loop(id, state))
+}
+
+async fn start_listening_loop<I: Copy + Debug>(
+    id: I,
+    mut state: State,
+) -> ((I, ScreenBacklightUpdate), State) {
+    loop {
+        let (update, new_state) = start_listening(id, state).await;
+        state = new_state;
+        if let Some(update) = update {
+            return (update, state);
+        }
+    }
 }
 
 pub enum State {

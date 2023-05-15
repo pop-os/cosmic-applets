@@ -181,10 +181,7 @@ impl Application for IcedWorkspacesApplet {
     fn subscription(&self) -> Subscription<Message> {
         Subscription::batch(
             vec![
-                workspaces(0).map(|e| match e {
-                    Some(msg) => Message::WorkspaceUpdate(msg.1),
-                    None => Message::Errored,
-                }),
+                workspaces(0).map(|e| Message::WorkspaceUpdate(e.1)),
                 subscription::events_with(|e, _| match e {
                     Mouse(mouse::Event::WheelScrolled { delta }) => {
                         Some(Message::WheelScrolled(delta))

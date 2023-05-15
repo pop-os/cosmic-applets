@@ -691,10 +691,7 @@ impl Application for CosmicNetworkApplet {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        network_manager_subscription(0).map(|e| match e {
-            Some(e) => Message::NetworkManagerEvent(e.1),
-            None => Message::Ignore,
-        })
+        network_manager_subscription(0).map(|e| Message::NetworkManagerEvent(e.1))
     }
 
     fn theme(&self) -> Theme {

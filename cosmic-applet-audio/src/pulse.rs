@@ -15,69 +15,78 @@ use libpulse_binding::{
     proplist::Proplist,
     volume::ChannelVolumes,
 };
-pub fn connect() -> Subscription<Option<Event>> {
+
+pub fn connect() -> Subscription<Event> {
     struct Connect;
 
     subscription::unfold(
         std::any::TypeId::of::<Connect>(),
         State::Init,
-        |state| async move {
-            match state {
-                State::Init => {
-                    let PulseHandle {
-                        to_pulse,
-                        from_pulse,
-                    } = PulseHandle::new();
-                    (
-                        Some(Event::Init(Connection(to_pulse))),
-                        State::Connecting(from_pulse),
-                    )
-                }
-                // Waiting for Connection to succeed
-                // The GUI doesn't have to monitor this state, as it is never sent to the GUI
-                State::Connecting(mut from_pulse) => match from_pulse.recv().await {
-                    Some(Message::Connected) => {
-                        (Some(Event::Connected), State::Connected(from_pulse))
-                    }
-                    Some(Message::Disconnected) => {
-                        (Some(Event::Disconnected), State::Connecting(from_pulse))
-                    }
-                    Some(m) => {
-                        panic!("Unexpected message: {:?}", m);
-                    }
-                    None => {
-                        panic!("Pulse Sender dropped, something has gone wrong!");
-                    }
-                },
-                State::Connected(mut from_pulse) => {
-                    // This is where we match messages from the pulse server to pass to the gui
-                    match from_pulse.recv().await {
-                        Some(Message::SetSinks(sinks)) => (
-                            Some(Event::MessageReceived(Message::SetSinks(sinks))),
-                            State::Connected(from_pulse),
-                        ),
-                        Some(Message::SetSources(sources)) => (
-                            Some(Event::MessageReceived(Message::SetSources(sources))),
-                            State::Connected(from_pulse),
-                        ),
-                        Some(Message::SetDefaultSink(sink)) => (
-                            Some(Event::MessageReceived(Message::SetDefaultSink(sink))),
-                            State::Connected(from_pulse),
-                        ),
-                        Some(Message::SetDefaultSource(source)) => (
-                            Some(Event::MessageReceived(Message::SetDefaultSource(source))),
-                            State::Connected(from_pulse),
-                        ),
-                        Some(Message::Disconnected) => {
-                            (Some(Event::Disconnected), State::Connecting(from_pulse))
-                        }
-                        None => (Some(Event::Disconnected), State::Connecting(from_pulse)),
-                        _ => (None, State::Connected(from_pulse)),
-                    }
+        |mut state| async move {
+            loop {
+                let (update, new_state) = connection(state).await;
+                state = new_state;
+                if let Some(update) = update {
+                    return (update, state);
                 }
             }
         },
     )
+}
+
+async fn connection(state: State) -> (Option<Event>, State) {
+    match state {
+        State::Init => {
+            let PulseHandle {
+                to_pulse,
+                from_pulse,
+            } = PulseHandle::new();
+            (
+                Some(Event::Init(Connection(to_pulse))),
+                State::Connecting(from_pulse),
+            )
+        }
+        // Waiting for Connection to succeed
+        // The GUI doesn't have to monitor this state, as it is never sent to the GUI
+        State::Connecting(mut from_pulse) => match from_pulse.recv().await {
+            Some(Message::Connected) => (Some(Event::Connected), State::Connected(from_pulse)),
+            Some(Message::Disconnected) => {
+                (Some(Event::Disconnected), State::Connecting(from_pulse))
+            }
+            Some(m) => {
+                panic!("Unexpected message: {:?}", m);
+            }
+            None => {
+                panic!("Pulse Sender dropped, something has gone wrong!");
+            }
+        },
+        State::Connected(mut from_pulse) => {
+            // This is where we match messages from the pulse server to pass to the gui
+            match from_pulse.recv().await {
+                Some(Message::SetSinks(sinks)) => (
+                    Some(Event::MessageReceived(Message::SetSinks(sinks))),
+                    State::Connected(from_pulse),
+                ),
+                Some(Message::SetSources(sources)) => (
+                    Some(Event::MessageReceived(Message::SetSources(sources))),
+                    State::Connected(from_pulse),
+                ),
+                Some(Message::SetDefaultSink(sink)) => (
+                    Some(Event::MessageReceived(Message::SetDefaultSink(sink))),
+                    State::Connected(from_pulse),
+                ),
+                Some(Message::SetDefaultSource(source)) => (
+                    Some(Event::MessageReceived(Message::SetDefaultSource(source))),
+                    State::Connected(from_pulse),
+                ),
+                Some(Message::Disconnected) => {
+                    (Some(Event::Disconnected), State::Connecting(from_pulse))
+                }
+                None => (Some(Event::Disconnected), State::Connecting(from_pulse)),
+                _ => (None, State::Connected(from_pulse)),
+            }
+        }
+    }
 }
 
 // #[derive(Debug)]
