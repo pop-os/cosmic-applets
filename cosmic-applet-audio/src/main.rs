@@ -1,3 +1,5 @@
+mod localize;
+
 use cosmic::iced::widget;
 use cosmic::iced::Limits;
 use cosmic::iced_runtime::core::alignment::Horizontal;
@@ -20,11 +22,15 @@ use iced::widget::container;
 use iced::Color;
 
 mod pulse;
+use crate::localize::localize;
 use crate::pulse::DeviceInfo;
 use libpulse_binding::volume::VolumeLinear;
 
 pub fn main() -> cosmic::iced::Result {
     pretty_env_logger::init();
+
+    // Prepare i18n
+    localize();
 
     let helper = CosmicAppletHelper::default();
     Audio::run(helper.window_settings())
@@ -291,7 +297,7 @@ impl Application for Audio {
             .0 * 100.0;
 
             let audio_content = if audio_disabled {
-                column![text("PulseAudio Disconnected")
+                column![text(fl!("disconnected"))
                     .width(Length::Fill)
                     .horizontal_alignment(Horizontal::Center)
                     .size(24),]
@@ -332,7 +338,7 @@ impl Application for Audio {
                         .width(Length::Fill),
                     revealer(
                         self.is_open == IsOpen::Output,
-                        "Output",
+                        fl!("output"),
                         match &self.current_output {
                             Some(output) => pretty_name(output.description.clone()),
                             None => String::from("No device selected"),
@@ -350,10 +356,10 @@ impl Application for Audio {
                     ),
                     revealer(
                         self.is_open == IsOpen::Input,
-                        "Input",
+                        fl!("input"),
                         match &self.current_input {
                             Some(input) => pretty_name(input.description.clone()),
-                            None => String::from("No device selected"),
+                            None => fl!("no-device"),
                         },
                         self.inputs
                             .clone()
@@ -376,7 +382,7 @@ impl Application for Audio {
                     .width(Length::Fill),
                 container(
                     toggler(
-                        Some("Show Media Controls on Top Panel".into()),
+                        Some(fl!("show-media-controls")),
                         self.show_media_controls_in_top_panel,
                         Message::ToggleMediaControlsInTopPanel,
                     )
@@ -387,7 +393,7 @@ impl Application for Audio {
                     .padding([12, 24])
                     .width(Length::Fill),
                 button(applet_button_theme())
-                    .custom(vec![text("Sound Settings...").size(14).into()])
+                    .custom(vec![text(fl!("sound-settings")).size(14).into()])
                     .padding([8, 24])
                     .width(Length::Fill)
             ]
@@ -403,12 +409,12 @@ impl Application for Audio {
 
 fn revealer(
     open: bool,
-    title: &str,
+    title: String,
     selected: String,
     options: Vec<(String, String)>,
     toggle: Message,
     mut change: impl FnMut(String) -> Message + 'static,
-) -> widget::Column<Message, Renderer> {
+) -> widget::Column<'static, Message, Renderer> {
     if open {
         options.iter().fold(
             column![revealer_head(open, title, selected, toggle)].width(Length::Fill),
@@ -429,10 +435,10 @@ fn revealer(
 
 fn revealer_head(
     _open: bool,
-    title: &str,
+    title: String,
     selected: String,
     toggle: Message,
-) -> widget::Button<Message, Renderer> {
+) -> widget::Button<'static, Message, Renderer> {
     button(applet_button_theme())
         .custom(vec![
             text(title).width(Length::Fill).size(14).into(),
