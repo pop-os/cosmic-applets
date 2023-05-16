@@ -21,6 +21,7 @@ use logind_zbus::user::UserProxy;
 use nix::unistd::getuid;
 use zbus::Connection;
 
+mod localize;
 pub mod cosmic_session;
 pub mod session_manager;
 
@@ -71,7 +72,7 @@ impl Application for Power {
     }
 
     fn title(&self) -> String {
-        String::from("Power")
+       fl!("power")
     }
 
     fn theme(&self) -> Theme {
@@ -144,29 +145,29 @@ impl Application for Power {
                 .on_press(Message::TogglePopup)
                 .into()
         } else {
-            let settings = row_button(vec![text("Settings...").size(14).into()]).on_press(Message::Settings);
+            let settings = row_button(vec![text(fl!("settings")).size(14).into()]).on_press(Message::Settings);
 
             let session = column![
                 row_button(vec![
                     text_icon("system-lock-screen-symbolic", 24).into(),
-                    text("Lock Screen").size(14).into(),
+                    text(fl!("lock-screen")).size(14).into(),
                     Space::with_width(Length::Fill).into(),
-                    text("Super + Escape").size(14).into(),
+                    text(fl!("lock-screen-shortcut")).size(14).into(),
                 ])
                 .on_press(Message::Lock),
                 row_button(vec![
                     text_icon("system-log-out-symbolic", 24).into(),
-                    text("Log Out").size(14).into(),
+                    text(fl!("log-out")).size(14).into(),
                     Space::with_width(Length::Fill).into(),
-                    text("Ctrl + Alt + Delete").size(14).into(),
+                    text(fl!("log-out-shortcut")).size(14).into(),
                 ])
                 .on_press(Message::LogOut),
             ];
 
             let power = row![
-                power_buttons("system-lock-screen-symbolic", "Suspend").on_press(Message::Suspend),
-                power_buttons("system-restart-symbolic", "Restart").on_press(Message::Restart),
-                power_buttons("system-shutdown-symbolic", "Shutdown").on_press(Message::Shutdown),
+                power_buttons("system-lock-screen-symbolic", fl!("suspend")).on_press(Message::Suspend),
+                power_buttons("system-restart-symbolic", fl!("restart")).on_press(Message::Restart),
+                power_buttons("system-shutdown-symbolic", fl!("shutdown")).on_press(Message::Shutdown),
             ]
             .spacing(24)
             .padding([0, 24]);
@@ -203,7 +204,7 @@ fn row_button(content: Vec<Element<Message>>) -> widget::Button<Message, Rendere
         .padding([8, 24])
 }
 
-fn power_buttons<'a>(name: &'a str, msg: &'a str) -> widget::Button<'a, Message, Renderer> {
+fn power_buttons<'a>(name: &'a str, msg: String) -> widget::Button<'a, Message, Renderer> {
     widget::button(
         column![text_icon(name, 40), text(msg).size(14)]
             .spacing(4)

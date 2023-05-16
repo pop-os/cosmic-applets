@@ -781,12 +781,17 @@ dependencies = [
 name = "cosmic-applet-power"
 version = "0.1.0"
 dependencies = [
+ "i18n-embed",
+ "i18n-embed-fl",
  "icon-loader",
  "libcosmic",
  "libpulse-binding",
  "libpulse-glib-binding",
  "logind-zbus",
  "nix 0.26.2",
+ "once_cell",
+ "rust-embed",
+ "rust-embed-utils",
  "tokio",
  "zbus",
 ]
