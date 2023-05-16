@@ -19,8 +19,12 @@ use cosmic::{
 };
 use cosmic_dbus_networkmanager::interface::enums::{ActiveConnectionState, DeviceState};
 use futures::channel::mpsc::UnboundedSender;
+use zbus::Connection;
 
-use crate::network_manager::NetworkManagerState;
+use crate::network_manager::active_conns::active_conns_subscription;
+use crate::network_manager::devices::devices_subscription;
+use crate::network_manager::wireless_enabled::wireless_enabled_subscription;
+use crate::network_manager::{NetworkManagerState};
 use crate::{
     config, fl,
     network_manager::{
@@ -84,6 +88,7 @@ struct CosmicNetworkApplet {
     nm_sender: Option<UnboundedSender<NetworkManagerRequest>>,
     show_visible_networks: bool,
     new_connection: Option<NewConnectionState>,
+    conn: Option<Connection>,
 }
 
 impl CosmicNetworkApplet {
@@ -110,7 +115,7 @@ impl CosmicNetworkApplet {
 }
 
 #[derive(Debug, Clone)]
-enum Message {
+pub(crate) enum Message {
     ActivateKnownWifi(String),
     Disconnect(String),
     TogglePopup,
@@ -193,10 +198,11 @@ impl Application for CosmicNetworkApplet {
                 }
             }
             Message::NetworkManagerEvent(event) => match event {
-                NetworkManagerEvent::Init { sender, state } => {
+                NetworkManagerEvent::Init {conn, sender, state } => {
                     self.nm_sender.replace(sender);
                     self.nm_state = state;
                     self.update_icon_name();
+                    self.conn = Some(conn);
                 }
                 NetworkManagerEvent::WiFiEnabled(state) => {
                     self.nm_state = state;
@@ -691,7 +697,18 @@ impl Application for CosmicNetworkApplet {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        network_manager_subscription(0).map(|e| Message::NetworkManagerEvent(e.1))
+        let network_sub = network_manager_subscription(0).map(|e| Message::NetworkManagerEvent(e.1));
+        
+        if let Some(conn) = self.conn.as_ref() {
+            Subscription::batch(vec![
+                network_sub,
+                active_conns_subscription(0, conn.clone()).map(|e| Message::NetworkManagerEvent(e.1)),
+                devices_subscription(0, conn.clone()).map(|e| Message::NetworkManagerEvent(e.1)),
+                wireless_enabled_subscription(0, conn.clone()).map(|e| Message::NetworkManagerEvent(e.1)),
+            ])
+        } else {
+            network_sub
+        }
     }
 
     fn theme(&self) -> Theme {
