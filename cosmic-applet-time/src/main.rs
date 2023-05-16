@@ -198,7 +198,7 @@ impl Application for Time {
                     self.applet_helper.anchor,
                     PanelAnchor::Top | PanelAnchor::Bottom
                 ) {
-                    column![text(self.now.format("%b %-d %-I:%M %p").to_string())]
+                    column![text(self.now.format("%b %-d %-I:%M %p").to_string()).size(14)]
                 } else {
                     let mut date_time_col = column![
                         icon(
@@ -206,9 +206,9 @@ impl Application for Time {
                             self.applet_helper.suggested_size().0
                         )
                         .style(theme::Svg::Symbolic),
-                        text(self.now.format("%I").to_string()),
-                        text(self.now.format("%M").to_string()),
-                        text(self.now.format("%p").to_string()),
+                        text(self.now.format("%I").to_string()).size(14),
+                        text(self.now.format("%M").to_string()).size(14),
+                        text(self.now.format("%p").to_string()).size(14),
                         vertical_space(Length::Fixed(4.0)),
                         // TODO better calendar icon?
                         icon(
@@ -220,7 +220,7 @@ impl Application for Time {
                     .align_items(Alignment::Center)
                     .spacing(4);
                     for d in self.now.format("%x").to_string().split("/") {
-                        date_time_col = date_time_col.push(text(d.to_string()));
+                        date_time_col = date_time_col.push(text(d.to_string()).size(14));
                     }
                     date_time_col
                 },
@@ -238,7 +238,7 @@ impl Application for Time {
                 .align_items(Alignment::Start)
                 .spacing(12)
                 .padding([24, 0])
-                .push(text(&self.msg))
+                .push(text(&self.msg).size(14))
                 .padding(8);
 
             self.applet_helper.popup_container(content).into()

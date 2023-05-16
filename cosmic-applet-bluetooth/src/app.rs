@@ -418,6 +418,7 @@ impl Application for CosmicBluetoothApplet {
                 let row = column![
                     icon(device.icon.as_str(), 16).style(Svg::Symbolic),
                     text(&device.name)
+                        .size(14)
                         .horizontal_alignment(Horizontal::Left)
                         .vertical_alignment(Vertical::Center)
                         .width(Length::Fill),
@@ -433,7 +434,7 @@ impl Application for CosmicBluetoothApplet {
                         .horizontal_alignment(Horizontal::Center)
                         .vertical_alignment(Vertical::Center)
                         .width(Length::Fill)
-                        .size(32),
+                        .size(22),
                     row![
                         button(Button::Secondary)
                             .custom(

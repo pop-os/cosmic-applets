@@ -219,7 +219,7 @@ impl Application for CosmicBatteryApplet {
                 .on_press(Message::TogglePopup)
                 .into()
         } else {
-            let name = text(fl!("battery")).size(18);
+            let name = text(fl!("battery")).size(14);
             let description = text(
                 if "battery-full-charging-symbolic" == self.icon_name
                     || "battery-full-charged-symbolic" == self.icon_name
@@ -234,7 +234,7 @@ impl Application for CosmicBatteryApplet {
                     )
                 },
             )
-            .size(12);
+            .size(10);
             self.applet_helper
                 .popup_container(
                     column![
@@ -255,7 +255,7 @@ impl Application for CosmicBatteryApplet {
                             .custom(vec![row![
                                 column![
                                     text(fl!("battery")).size(14),
-                                    text(fl!("battery-desc")).size(12)
+                                    text(fl!("battery-desc")).size(10)
                                 ]
                                 .width(Length::Fill),
                                 icon("emblem-ok-symbolic", 12).size(12).style(
@@ -274,7 +274,7 @@ impl Application for CosmicBatteryApplet {
                             .custom(vec![row![
                                 column![
                                     text(fl!("balanced")).size(14),
-                                    text(fl!("balanced-desc")).size(12)
+                                    text(fl!("balanced-desc")).size(10)
                                 ]
                                 .width(Length::Fill),
                                 icon("emblem-ok-symbolic", 12).size(12).style(
@@ -293,7 +293,7 @@ impl Application for CosmicBatteryApplet {
                             .custom(vec![row![
                                 column![
                                     text(fl!("performance")).size(14),
-                                    text(fl!("performance-desc")).size(12)
+                                    text(fl!("performance-desc")).size(10)
                                 ]
                                 .width(Length::Fill),
                                 icon("emblem-ok-symbolic", 12).size(12).style(
@@ -313,7 +313,7 @@ impl Application for CosmicBatteryApplet {
                             .padding([0, 12]),
                         container(toggler(fl!("max-charge"), self.charging_limit, |_| {
                             Message::SetChargingLimit(!self.charging_limit)
-                        }))
+                        }).text_size(14))
                         .padding([0, 24])
                         .width(Length::Fill),
                         container(divider::horizontal::light())
@@ -330,6 +330,7 @@ impl Application for CosmicBatteryApplet {
                                 Message::SetScreenBrightness
                             ),
                             text(format!("{:.0}%", self.screen_brightness * 100.0))
+                                .size(16)
                                 .width(Length::Fixed(40.0))
                                 .horizontal_alignment(Horizontal::Right)
                         ]
@@ -346,6 +347,7 @@ impl Application for CosmicBatteryApplet {
                                 Message::SetKbdBrightness
                             ),
                             text(format!("{:.0}%", self.kbd_brightness * 100.0))
+                                .size(16)
                                 .width(Length::Fixed(40.0))
                                 .horizontal_alignment(Horizontal::Right)
                         ]
@@ -355,7 +357,7 @@ impl Application for CosmicBatteryApplet {
                             .width(Length::Fill)
                             .padding([0, 12]),
                         button(applet_button_theme())
-                            .custom(vec![text(fl!("power-settings")).width(Length::Fill).into()])
+                            .custom(vec![text(fl!("power-settings")).size(14).width(Length::Fill).into()])
                             .on_press(Message::OpenBatterySettings)
                             .width(Length::Fill)
                             .padding([8, 24])

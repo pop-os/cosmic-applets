@@ -8,7 +8,7 @@ use cosmic::Renderer;
 
 use cosmic::iced::Color;
 use cosmic::iced::{
-    widget::{self, column, container, row, space::Space, Row},
+    widget::{self, text, column, container, row, space::Space, Row},
     window, Alignment, Application, Command, Length, Subscription,
 };
 use cosmic::iced_style::application::{self, Appearance};
@@ -144,21 +144,21 @@ impl Application for Power {
                 .on_press(Message::TogglePopup)
                 .into()
         } else {
-            let settings = row_button(vec!["Settings...".into()]).on_press(Message::Settings);
+            let settings = row_button(vec![text("Settings...").size(14).into()]).on_press(Message::Settings);
 
             let session = column![
                 row_button(vec![
                     text_icon("system-lock-screen-symbolic", 24).into(),
-                    "Lock Screen".into(),
+                    text("Lock Screen").size(14).into(),
                     Space::with_width(Length::Fill).into(),
-                    "Super + Escape".into(),
+                    text("Super + Escape").size(14).into(),
                 ])
                 .on_press(Message::Lock),
                 row_button(vec![
                     text_icon("system-log-out-symbolic", 24).into(),
-                    "Log Out".into(),
+                    text("Log Out").size(14).into(),
                     Space::with_width(Length::Fill).into(),
-                    "Ctrl + Alt + Delete".into(),
+                    text("Ctrl + Alt + Delete").size(14).into(),
                 ])
                 .on_press(Message::LogOut),
             ];
@@ -203,9 +203,9 @@ fn row_button(content: Vec<Element<Message>>) -> widget::Button<Message, Rendere
         .padding([8, 24])
 }
 
-fn power_buttons<'a>(name: &'a str, text: &'a str) -> widget::Button<'a, Message, Renderer> {
+fn power_buttons<'a>(name: &'a str, msg: &'a str) -> widget::Button<'a, Message, Renderer> {
     widget::button(
-        column![text_icon(name, 40), text]
+        column![text_icon(name, 40), text(msg).size(14)]
             .spacing(4)
             .align_items(Alignment::Center),
     )

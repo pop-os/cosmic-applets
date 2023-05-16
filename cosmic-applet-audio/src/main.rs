@@ -305,6 +305,7 @@ impl Application for Audio {
                         slider(0.0..=100.0, out_f64, Message::SetOutputVolume)
                             .width(Length::FillPortion(5)),
                         text(format!("{}%", out_f64.round()))
+                            .size(16)
                             .width(Length::FillPortion(1))
                             .horizontal_alignment(Horizontal::Right)
                     ]
@@ -319,6 +320,7 @@ impl Application for Audio {
                         slider(0.0..=100.0, in_f64, Message::SetInputVolume)
                             .width(Length::FillPortion(5)),
                         text(format!("{}%", in_f64.round()))
+                            .size(16)
                             .width(Length::FillPortion(1))
                             .horizontal_alignment(Horizontal::Right)
                     ]
@@ -372,17 +374,20 @@ impl Application for Audio {
                 container(divider::horizontal::light())
                     .padding([12, 24])
                     .width(Length::Fill),
-                container(toggler(
-                    Some("Show Media Controls on Top Panel".into()),
-                    self.show_media_controls_in_top_panel,
-                    Message::ToggleMediaControlsInTopPanel,
-                ))
+                container(
+                    toggler(
+                        Some("Show Media Controls on Top Panel".into()),
+                        self.show_media_controls_in_top_panel,
+                        Message::ToggleMediaControlsInTopPanel,
+                    )
+                    .text_size(14)
+                )
                 .padding([0, 24]),
                 container(divider::horizontal::light())
                     .padding([12, 24])
                     .width(Length::Fill),
                 button(applet_button_theme())
-                    .text("Sound Settings...")
+                    .custom(vec![text("Sound Settings...").size(14).into()])
                     .padding([8, 24])
                     .width(Length::Fill)
             ]
@@ -410,7 +415,7 @@ fn revealer(
             |col, (id, name)| {
                 col.push(
                     button(applet_button_theme())
-                        .custom(vec![text(name).into()])
+                        .custom(vec![text(name).size(14).into()])
                         .on_press(change(id.clone()))
                         .width(Length::Fill)
                         .padding([8, 48]),
@@ -430,8 +435,8 @@ fn revealer_head(
 ) -> widget::Button<Message, Renderer> {
     button(applet_button_theme())
         .custom(vec![
-            text(title).width(Length::Fill).into(),
-            text(selected).into(),
+            text(title).width(Length::Fill).size(14).into(),
+            text(selected).size(10).into(),
         ])
         .padding([8, 24])
         .width(Length::Fill)

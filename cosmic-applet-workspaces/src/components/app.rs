@@ -138,6 +138,7 @@ impl Application for IcedWorkspacesApplet {
             .filter_map(|w| {
                 let btn = button(
                     text(w.0.clone())
+                        .size(14)
                         .horizontal_alignment(Horizontal::Center)
                         .vertical_alignment(Vertical::Center)
                         .width(Length::Fill)

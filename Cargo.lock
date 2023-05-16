@@ -757,6 +757,7 @@ dependencies = [
  "once_cell",
  "pretty_env_logger",
  "rust-embed",
+ "rust-embed-utils",
  "slotmap",
  "tokio",
  "zbus",

@@ -8,6 +8,7 @@ use iced::subscription;
 use std::{fmt::Debug, hash::Hash};
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 use zbus::dbus_proxy;
+
 #[dbus_proxy(
     default_service = "org.freedesktop.UPower",
     interface = "org.freedesktop.UPower.KbdBacklight",

@@ -368,7 +368,7 @@ impl Application for CosmicNetworkApplet {
                         for addr in ip_addresses {
                             ipv4.push(
                                 text(format!("{}: {}", fl!("ipv4"), addr.to_string()))
-                                    .size(12)
+                                    .size(10)
                                     .into(),
                             );
                         }
@@ -501,6 +501,7 @@ impl Application for CosmicNetworkApplet {
                     toggler(fl!("airplane-mode"), self.nm_state.airplane_mode, |m| {
                         Message::ToggleAirplaneMode(m)
                     })
+                    .text_size(14)
                     .width(Length::Fill)
                 )
                 .padding([0, 12]),
@@ -509,6 +510,7 @@ impl Application for CosmicNetworkApplet {
                     toggler(fl!("wifi"), self.nm_state.wifi_enabled, |m| {
                         Message::ToggleWiFi(m)
                     })
+                    .text_size(14)
                     .width(Length::Fill)
                 )
                 .padding([0, 12]),
