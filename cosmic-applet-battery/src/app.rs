@@ -313,7 +313,7 @@ impl Application for CosmicBatteryApplet {
                             .padding([0, 12]),
                         container(toggler(fl!("max-charge"), self.charging_limit, |_| {
                             Message::SetChargingLimit(!self.charging_limit)
-                        }).text_size(14))
+                        }).text_size(14).width(Length::Fill))
                         .padding([0, 24])
                         .width(Length::Fill),
                         container(divider::horizontal::light())
