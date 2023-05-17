@@ -2,7 +2,8 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
-
+use std::time::Duration; 
+use rand::{thread_rng, Rng};
 use crate::config;
 use crate::config::AppListConfig;
 use crate::fl;
@@ -47,11 +48,13 @@ use cosmic::widget::rectangle_tracker::RectangleUpdate;
 use cosmic::{Element, Theme};
 use cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1;
 use freedesktop_desktop_entry::DesktopEntry;
+use futures::future::pending;
 use iced::widget::container;
 use iced::Alignment;
 use iced::Background;
 use iced::Length;
 use itertools::Itertools;
+use tokio::time::sleep;
 use url::Url;
 
 static MIME_TYPE: &str = "text/uri-list";
@@ -258,6 +261,7 @@ enum Message {
     DndData(PathBuf),
     StartListeningForDnd,
     StopListeningForDnd,
+    IncrementSubscriptionCtr,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -363,12 +367,10 @@ impl Application for CosmicAppList {
             favorite_list: desktop_info_for_app_ids(config.favorites.clone())
                 .into_iter()
                 .enumerate()
-                .map(|(favorite_ctr, e)| {
-                    DockItem {
-                        id: favorite_ctr as u32,
-                        toplevels: Default::default(),
-                        desktop_info: e,
-                    }
+                .map(|(favorite_ctr, e)| DockItem {
+                    id: favorite_ctr as u32,
+                    toplevels: Default::default(),
+                    desktop_info: e,
                 })
                 .collect(),
             config,
@@ -685,11 +687,23 @@ impl Application for CosmicAppList {
                         self.toplevel_sender.replace(tx);
                     }
                     ToplevelUpdate::Finished => {
-                        self.subscription_ctr += 1;
                         for t in &mut self.favorite_list {
                             t.toplevels.clear();
                         }
                         self.active_list.clear();
+                        let subscription_ctr = self.subscription_ctr;
+                        let mut rng = thread_rng();
+                        let rand_d = rng.gen_range(0..100);
+                        return Command::perform(
+                            async move {
+                                if let Some(millis) = 2u64.checked_pow(subscription_ctr).and_then(|d| d.checked_add(rand_d)) {
+                                    sleep(Duration::from_millis(millis)).await;
+                                } else {
+                                    pending::<()>().await;
+                                }
+                            },
+                            |_| Message::IncrementSubscriptionCtr,
+                        );
                     }
                     ToplevelUpdate::RemoveToplevel(handle) => {
                         for t in self
@@ -760,6 +774,9 @@ impl Application for CosmicAppList {
             }
             Message::StopListeningForDnd => {
                 self.is_listening_for_dnd = false;
+            }
+            Message::IncrementSubscriptionCtr => {
+                self.subscription_ctr += 1;
             }
         }
         Command::none()
