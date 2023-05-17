@@ -1,4 +1,5 @@
 use cosmic::iced_style;
+use cosmic::iced_widget::Row;
 use cosmic::{
     applet::CosmicAppletHelper,
     iced::{
@@ -24,7 +25,7 @@ use zbus::Connection;
 use crate::network_manager::active_conns::active_conns_subscription;
 use crate::network_manager::devices::devices_subscription;
 use crate::network_manager::wireless_enabled::wireless_enabled_subscription;
-use crate::network_manager::{NetworkManagerState};
+use crate::network_manager::NetworkManagerState;
 use crate::{
     config, fl,
     network_manager::{
@@ -198,7 +199,11 @@ impl Application for CosmicNetworkApplet {
                 }
             }
             Message::NetworkManagerEvent(event) => match event {
-                NetworkManagerEvent::Init {conn, sender, state } => {
+                NetworkManagerEvent::Init {
+                    conn,
+                    sender,
+                    state,
+                } => {
                     self.nm_sender.replace(sender);
                     self.nm_state = state;
                     self.update_icon_name();
@@ -447,7 +452,10 @@ impl Application for CosmicNetworkApplet {
                         };
                         known_wifi = known_wifi.push(
                             column![button(Button::Secondary)
-                                .custom(btn_content)
+                                .custom(vec![Row::with_children(btn_content)
+                                    .align_items(Alignment::Center)
+                                    .spacing(8)
+                                    .into()])
                                 .padding([8, 24])
                                 .style(button_style())
                                 .on_press(Message::Disconnect(name.clone()))]
@@ -477,7 +485,10 @@ impl Application for CosmicNetworkApplet {
                 }
 
                 let mut btn = button(Button::Secondary)
-                    .custom(btn_content)
+                    .custom(vec![Row::with_children(btn_content)
+                        .align_items(Alignment::Center)
+                        .spacing(8)
+                        .into()])
                     .padding([8, 24])
                     .width(Length::Fill)
                     .style(button_style());
@@ -699,14 +710,17 @@ impl Application for CosmicNetworkApplet {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        let network_sub = network_manager_subscription(0).map(|e| Message::NetworkManagerEvent(e.1));
-        
+        let network_sub =
+            network_manager_subscription(0).map(|e| Message::NetworkManagerEvent(e.1));
+
         if let Some(conn) = self.conn.as_ref() {
             Subscription::batch(vec![
                 network_sub,
-                active_conns_subscription(0, conn.clone()).map(|e| Message::NetworkManagerEvent(e.1)),
+                active_conns_subscription(0, conn.clone())
+                    .map(|e| Message::NetworkManagerEvent(e.1)),
                 devices_subscription(0, conn.clone()).map(|e| Message::NetworkManagerEvent(e.1)),
-                wireless_enabled_subscription(0, conn.clone()).map(|e| Message::NetworkManagerEvent(e.1)),
+                wireless_enabled_subscription(0, conn.clone())
+                    .map(|e| Message::NetworkManagerEvent(e.1)),
             ])
         } else {
             network_sub
