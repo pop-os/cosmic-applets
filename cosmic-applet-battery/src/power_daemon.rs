@@ -114,7 +114,9 @@ pub async fn set_power_profile(daemon: PowerDaemonProxy<'_>, power: Power) -> Re
 pub fn power_profile_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
     id: I,
 ) -> iced::Subscription<(I, PowerProfileUpdate)> {
-    subscription::unfold(id, State::Ready, move |state| start_listening_loop(id, state))
+    subscription::unfold(id, State::Ready, move |state| {
+        start_listening_loop(id, state)
+    })
 }
 
 #[derive(Debug)]
@@ -202,14 +204,11 @@ async fn start_listening<I: Copy>(id: I, state: State) -> (Option<(I, PowerProfi
                     }
                 }
                 Some(PowerProfileRequest::Set(profile)) => {
-                    if set_power_profile(power_proxy, profile).await.is_ok() {
-                        (
-                            Some((id, PowerProfileUpdate::Update { profile })),
-                            State::Waiting(conn, rx),
-                        )
-                    } else {
-                        (None, State::Waiting(conn, rx))
-                    }
+                    let _ = set_power_profile(power_proxy, profile).await;
+                    (
+                        Some((id, PowerProfileUpdate::Update { profile })),
+                        State::Waiting(conn, rx),
+                    )
                 }
                 None => (None, State::Finished),
             }
