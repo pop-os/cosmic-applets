@@ -1,14 +1,27 @@
+use std::collections::HashMap;
 use std::process;
+use std::time::Duration;
 
 use cosmic::applet::{applet_button_theme, CosmicAppletHelper};
+use cosmic::iced::alignment::{Horizontal, Vertical};
+use cosmic::iced::event::wayland::{self, LayerEvent};
+use cosmic::iced::event::PlatformSpecific;
+use cosmic::iced::subscription::events_with;
+use cosmic::iced::wayland::actions::layer_surface::SctkLayerSurfaceSettings;
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced_runtime::core::layout::Limits;
+use cosmic::iced_runtime::keyboard::KeyCode;
+use cosmic::iced_sctk::commands::layer_surface::{
+    destroy_layer_surface, get_layer_surface, Anchor, KeyboardInteractivity,
+};
+use cosmic::iced_widget::core::Widget;
+use cosmic::iced_widget::mouse_area;
 use cosmic::widget::{button, divider, icon};
 use cosmic::Renderer;
 
 use cosmic::iced::Color;
 use cosmic::iced::{
-    widget::{self, text, column, container, row, space::Space, Row},
+    widget::{self, column, container, row, space::Space, text, Row},
     window, Alignment, Application, Command, Length, Subscription,
 };
 use cosmic::iced_style::application::{self, Appearance};
@@ -19,10 +32,11 @@ use logind_zbus::manager::ManagerProxy;
 use logind_zbus::session::{SessionProxy, SessionType};
 use logind_zbus::user::UserProxy;
 use nix::unistd::getuid;
+use tokio::time::sleep;
 use zbus::Connection;
 
-mod localize;
 pub mod cosmic_session;
+mod localize;
 pub mod session_manager;
 
 use crate::cosmic_session::CosmicSessionProxy;
@@ -40,18 +54,27 @@ struct Power {
     theme: Theme,
     popup: Option<window::Id>,
     id_ctr: u128,
+    action_to_confirm: Option<(window::Id, PowerAction)>,
 }
 
-#[derive(Debug, Clone)]
-enum Message {
+#[derive(Debug, Clone, Copy)]
+enum PowerAction {
     Lock,
     LogOut,
     Suspend,
     Restart,
     Shutdown,
+}
+
+#[derive(Debug, Clone)]
+enum Message {
+    Timeout(window::Id),
+    Action(PowerAction),
     TogglePopup,
     Settings,
-    Ignore,
+    Confirm,
+    Cancel,
+    Closed(window::Id),
     Zbus(Result<(), zbus::Error>),
 }
 
@@ -72,15 +95,15 @@ impl Application for Power {
     }
 
     fn title(&self) -> String {
-       fl!("power")
+        fl!("power")
     }
 
     fn theme(&self) -> Theme {
         self.theme
     }
 
-    fn close_requested(&self, _id: window::Id) -> Self::Message {
-        Message::Ignore
+    fn close_requested(&self, id: window::Id) -> Self::Message {
+        Message::Closed(id)
     }
 
     fn style(&self) -> <Self::Theme as application::StyleSheet>::Style {
@@ -91,7 +114,15 @@ impl Application for Power {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        Subscription::none()
+        events_with(|e, _status| match e {
+            cosmic::iced::Event::PlatformSpecific(PlatformSpecific::Wayland(
+                wayland::Event::Layer(LayerEvent::Unfocused, ..),
+            )) => Some(Message::Cancel),
+            // cosmic::iced::Event::PlatformSpecific(PlatformSpecific::Wayland(
+            //     wayland::Event::Seat(wayland::SeatEvent::Leave, _),
+            // )) => Some(Message::Cancel),
+            _ => None,
+        })
     }
 
     fn update(&mut self, message: Message) -> Command<Message> {
@@ -123,29 +154,92 @@ impl Application for Power {
                 let _ = process::Command::new("cosmic-settings").spawn();
                 Command::none()
             }
-            Message::Lock => Command::perform(lock(), Message::Zbus),
-            Message::LogOut => Command::perform(log_out(), Message::Zbus),
-            Message::Suspend => Command::perform(suspend(), Message::Zbus),
-            Message::Restart => Command::perform(restart(), Message::Zbus),
-            Message::Shutdown => Command::perform(shutdown(), Message::Zbus),
+            Message::Action(action) => {
+                self.id_ctr += 1;
+                let id = window::Id(self.id_ctr);
+                self.action_to_confirm = Some((id, action));
+                return Command::batch(vec![
+                    Command::perform(async { sleep(Duration::from_secs(60)).await }, move |_| {
+                        Message::Timeout(id)
+                    }),
+                    get_layer_surface(SctkLayerSurfaceSettings {
+                        id,
+                        keyboard_interactivity: KeyboardInteractivity::None,
+                        anchor: Anchor::all(),
+                        namespace: "dialog".into(),
+                        size: Some((None, None)),
+                        size_limits: Limits::NONE.min_width(1.0).min_height(1.0),
+                        ..Default::default()
+                    }),
+                ]);
+            }
             Message::Zbus(result) => {
                 if let Err(e) = result {
                     eprintln!("cosmic-applet-power ERROR: '{}'", e);
                 }
                 Command::none()
             }
-            Message::Ignore => Command::none(),
+            Message::Confirm => {
+                if let Some((id, a)) = self.action_to_confirm.take() {
+                    Command::batch(vec![
+                        destroy_layer_surface(id),
+                        match a {
+                            PowerAction::Lock => Command::perform(lock(), Message::Zbus),
+                            PowerAction::LogOut => Command::perform(log_out(), Message::Zbus),
+                            PowerAction::Suspend => Command::perform(suspend(), Message::Zbus),
+                            PowerAction::Restart => Command::perform(restart(), Message::Zbus),
+                            PowerAction::Shutdown => Command::perform(shutdown(), Message::Zbus),
+                        },
+                    ])
+                } else {
+                    Command::none()
+                }
+            }
+            Message::Cancel => {
+                if let Some((id, _)) = self.action_to_confirm.take() {
+                    return destroy_layer_surface(id);
+                }
+                Command::none()
+            }
+            Message::Closed(id) => {
+                if let Some((surface_id, _)) = self.action_to_confirm {
+                    if id == surface_id {
+                        self.action_to_confirm = None;
+                        return destroy_layer_surface(id);
+                    }
+                }
+                if id == window::Id(0) {
+                    process::exit(0);
+                }
+                Command::none()
+            }
+            Message::Timeout(id) => {
+                if let Some((surface_id, a)) = self.action_to_confirm {
+                    if id == surface_id {
+                        self.action_to_confirm = None;
+                        return Command::batch(vec![
+                            destroy_layer_surface(id),
+                            match a {
+                                PowerAction::Lock => Command::perform(lock(), Message::Zbus),
+                                PowerAction::LogOut => Command::perform(log_out(), Message::Zbus),
+                                PowerAction::Suspend => Command::perform(suspend(), Message::Zbus),
+                                PowerAction::Restart => Command::perform(restart(), Message::Zbus),
+                                PowerAction::Shutdown => {
+                                    Command::perform(shutdown(), Message::Zbus)
+                                }
+                            },
+                        ]);
+                    }
+                }
+                Command::none()
+            }
         }
     }
 
     fn view(&self, id: window::Id) -> Element<Message> {
-        if id == window::Id(0) {
-            self.applet_helper
-                .icon_button(&self.icon_name)
-                .on_press(Message::TogglePopup)
-                .into()
-        } else {
-            let settings = row_button(vec![text(fl!("settings")).size(14).into()]).on_press(Message::Settings);
+        if matches!(self.popup, Some(p) if p == id) {
+            let settings =
+                row_button(vec![text(fl!("settings")).size(14).into()]).on_press(Message::Settings);
 
             let session = column![
                 row_button(vec![
@@ -154,20 +248,23 @@ impl Application for Power {
                     Space::with_width(Length::Fill).into(),
                     text(fl!("lock-screen-shortcut")).size(14).into(),
                 ])
-                .on_press(Message::Lock),
+                .on_press(Message::Action(PowerAction::Lock)),
                 row_button(vec![
                     text_icon("system-log-out-symbolic", 24).into(),
                     text(fl!("log-out")).size(14).into(),
                     Space::with_width(Length::Fill).into(),
                     text(fl!("log-out-shortcut")).size(14).into(),
                 ])
-                .on_press(Message::LogOut),
+                .on_press(Message::Action(PowerAction::LogOut)),
             ];
 
             let power = row![
-                power_buttons("system-lock-screen-symbolic", fl!("suspend")).on_press(Message::Suspend),
-                power_buttons("system-restart-symbolic", fl!("restart")).on_press(Message::Restart),
-                power_buttons("system-shutdown-symbolic", fl!("shutdown")).on_press(Message::Shutdown),
+                power_buttons("system-lock-screen-symbolic", fl!("suspend"))
+                    .on_press(Message::Action(PowerAction::Suspend)),
+                power_buttons("system-restart-symbolic", fl!("restart"))
+                    .on_press(Message::Action(PowerAction::Restart)),
+                power_buttons("system-shutdown-symbolic", fl!("shutdown"))
+                    .on_press(Message::Action(PowerAction::Shutdown)),
             ]
             .spacing(24)
             .padding([0, 24]);
@@ -188,6 +285,65 @@ impl Application for Power {
             .padding([8, 0]);
 
             self.applet_helper.popup_container(content).into()
+        } else if matches!(self.action_to_confirm, Some((c_id, _)) if c_id == id) {
+            let action = match self.action_to_confirm.as_ref().unwrap().1 {
+                PowerAction::Lock => "lock-screen",
+                PowerAction::LogOut => "log-out",
+                PowerAction::Suspend => "suspend",
+                PowerAction::Restart => "restart",
+                PowerAction::Shutdown => "shutdown",
+            };
+            // TODO actual countdown
+            let content = column![
+                text(fl!(
+                    "confirm-question",
+                    HashMap::from_iter(vec![("action", action), ("countdown", "60")])
+                ))
+                .size(16),
+                row![
+                    button(theme::Button::Primary)
+                        .custom(vec![text(fl!("confirm")).size(14).into()])
+                        .on_press(Message::Confirm),
+                    button(theme::Button::Primary)
+                        .custom(vec![text(fl!("cancel")).size(14).into()])
+                        .on_press(Message::Cancel),
+                ]
+                .spacing(24)
+            ]
+            .align_items(Alignment::Center)
+            .spacing(12)
+            .padding(24);
+            mouse_area(
+                container(
+                    container(content)
+                        .style(cosmic::theme::Container::custom(|theme| {
+                            cosmic::iced_style::container::Appearance {
+                                text_color: Some(theme.cosmic().background.on.into()),
+                                background: Some(
+                                    Color::from(theme.cosmic().background.base).into(),
+                                ),
+                                border_radius: 12.0,
+                                border_width: 2.0,
+                                border_color: theme.cosmic().bg_divider().into(),
+                            }
+                        }))
+                        .width(Length::Shrink)
+                        .height(Length::Shrink),
+                )
+                .align_x(Horizontal::Center)
+                .align_y(Vertical::Center)
+                .width(Length::Fill)
+                .height(Length::Fill),
+            )
+            .on_press(Message::Cancel)
+            .on_right_press(Message::Cancel)
+            .on_middle_press(Message::Cancel)
+            .into()
+        } else {
+            self.applet_helper
+                .icon_button(&self.icon_name)
+                .on_press(Message::TogglePopup)
+                .into()
         }
     }
 }

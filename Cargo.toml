@@ -16,3 +16,6 @@ members = [
 
 [profile.release]
 #lto = "fat"
+
+# [patch.'https://github.com/pop-os/libcosmic']
+# libcosmic = { path = "../libcosmic/" }
