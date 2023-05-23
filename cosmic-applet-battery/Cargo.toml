@@ -7,7 +7,7 @@ edition = "2021"
 once_cell = "1.16.0"
 libcosmic = { git = "https://github.com/pop-os/libcosmic/", branch = "cosmic-advanced-text", default-features = false, features = ["tokio", "wayland", "applet"] }
 futures = "0.3"
-zbus = { version = "3.5", default-features = false, features = ["tokio"] }
+zbus = { version = "3.13", default-features = false, features = ["tokio"] }
 log = "0.4"
 pretty_env_logger = "0.4"
 # Application i18n

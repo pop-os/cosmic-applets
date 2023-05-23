@@ -11,7 +11,7 @@ cosmic-dbus-networkmanager = { git = "https://github.com/pop-os/dbus-settings-bi
 futures-util = "0.3.21"
 libcosmic = { git = "https://github.com/pop-os/libcosmic/", branch = "cosmic-advanced-text", default-features = false, features = ["wayland", "applet", "tokio"] }
 futures = "0.3"
-zbus = { version = "3.7", default-features = false }
+zbus = { version = "3.13", default-features = false }
 log = "0.4"
 pretty_env_logger = "0.4"
 itertools = "0.10.3"

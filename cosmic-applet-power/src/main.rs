@@ -10,11 +10,9 @@ use cosmic::iced::subscription::events_with;
 use cosmic::iced::wayland::actions::layer_surface::SctkLayerSurfaceSettings;
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced_runtime::core::layout::Limits;
-use cosmic::iced_runtime::keyboard::KeyCode;
 use cosmic::iced_sctk::commands::layer_surface::{
     destroy_layer_surface, get_layer_surface, Anchor, KeyboardInteractivity,
 };
-use cosmic::iced_widget::core::Widget;
 use cosmic::iced_widget::mouse_area;
 use cosmic::widget::{button, divider, icon};
 use cosmic::Renderer;

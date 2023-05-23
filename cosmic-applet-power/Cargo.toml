@@ -10,8 +10,8 @@ libpulse-binding = "2.26.0"
 libpulse-glib-binding = "2.25.0"
 tokio = { version = "1.20.1", features=["full"] }
 libcosmic = { git = "https://github.com/pop-os/libcosmic/", branch = "cosmic-advanced-text", default-features = false, features = ["tokio", "wayland", "applet"] }
-nix = "0.26.1"
-zbus = "3.7"
+nix = "0.26.2"
+zbus = "3.13"
 logind-zbus = "3.1"
 # Application i18n
 i18n-embed = { version = "0.13", features = ["fluent-system", "desktop-requester"] }
