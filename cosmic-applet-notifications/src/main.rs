@@ -60,7 +60,7 @@ impl Application for Notifications {
     }
 
     fn theme(&self) -> Theme {
-        self.theme
+        self.theme.clone()
     }
 
     fn close_requested(&self, _id: window::Id) -> Self::Message {

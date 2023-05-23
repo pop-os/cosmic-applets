@@ -8,6 +8,7 @@ edition = "2021"
 cctk = { git = "https://github.com/pop-os/cosmic-protocols", package = "cosmic-client-toolkit" }
 cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols", default-features = false, features = ["client"] }
 libcosmic = { git = "https://github.com/pop-os/libcosmic/", branch = "cosmic-advanced-text", default-features = false, features = ["wayland", "applet", "tokio"] }
+cosmic-config = { git = "https://github.com/pop-os/libcosmic/", branch = "cosmic-advanced-text"}
 # libcosmic = { path = "../../libcosmic", default-features = false, features = ["wayland", "applet", "tokio"] }
 ron = "0.8"
 futures = "0.3"

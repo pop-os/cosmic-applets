@@ -205,7 +205,8 @@ impl Application for Window {
                             Some(Graphics::Compute) => fl!("compute"),
                             Some(Graphics::Hybrid) => fl!("hybrid"),
                             None => "".into(),
-                        }).size(14)
+                        })
+                        .size(14)
                     ]
                     .spacing(8)
                     .padding([0, self.applet_helper.suggested_size().0 / 2])
@@ -404,6 +405,6 @@ impl Application for Window {
     }
 
     fn theme(&self) -> Theme {
-        self.theme
+        self.theme.clone()
     }
 }

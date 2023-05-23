@@ -311,9 +311,13 @@ impl Application for CosmicBatteryApplet {
                         container(divider::horizontal::light())
                             .width(Length::Fill)
                             .padding([0, 12]),
-                        container(toggler(fl!("max-charge"), self.charging_limit, |_| {
-                            Message::SetChargingLimit(!self.charging_limit)
-                        }).text_size(14).width(Length::Fill))
+                        container(
+                            toggler(fl!("max-charge"), self.charging_limit, |_| {
+                                Message::SetChargingLimit(!self.charging_limit)
+                            })
+                            .text_size(14)
+                            .width(Length::Fill)
+                        )
                         .padding([0, 24])
                         .width(Length::Fill),
                         container(divider::horizontal::light())
@@ -357,7 +361,10 @@ impl Application for CosmicBatteryApplet {
                             .width(Length::Fill)
                             .padding([0, 12]),
                         button(applet_button_theme())
-                            .custom(vec![text(fl!("power-settings")).size(14).width(Length::Fill).into()])
+                            .custom(vec![text(fl!("power-settings"))
+                                .size(14)
+                                .width(Length::Fill)
+                                .into()])
                             .on_press(Message::OpenBatterySettings)
                             .width(Length::Fill)
                             .padding([8, 24])
@@ -402,7 +409,7 @@ impl Application for CosmicBatteryApplet {
     }
 
     fn theme(&self) -> Theme {
-        self.theme
+        self.theme.clone()
     }
 
     fn close_requested(&self, _id: window::Id) -> Message {

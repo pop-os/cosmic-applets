@@ -99,7 +99,7 @@ impl Application for Power {
     }
 
     fn theme(&self) -> Theme {
-        self.theme
+        self.theme.clone()
     }
 
     fn close_requested(&self, id: window::Id) -> Self::Message {
