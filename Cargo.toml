@@ -15,4 +15,5 @@ members = [
 ]
 
 [profile.release]
+lto = "thin"
 #lto = "fat"

@@ -1,7 +1,7 @@
 use anyhow::anyhow;
 
-use cosmic_config::cosmic_config_derive::CosmicConfigEntry;
-use cosmic_config::{Config, ConfigGet, ConfigSet, CosmicConfigEntry};
+use cosmic::cosmic_config::cosmic_config_derive::CosmicConfigEntry;
+use cosmic::cosmic_config::{self, Config, ConfigGet, ConfigSet, CosmicConfigEntry};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use std::fs::File;

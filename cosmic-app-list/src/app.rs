@@ -11,6 +11,8 @@ use cctk::wayland_client::protocol::wl_data_device_manager::DndAction;
 use cctk::wayland_client::protocol::wl_seat::WlSeat;
 use cosmic::applet::cosmic_panel_config::PanelAnchor;
 use cosmic::applet::CosmicAppletHelper;
+use cosmic::cosmic_config;
+use cosmic::cosmic_config::Config;
 use cosmic::iced;
 use cosmic::iced::subscription::events_with;
 use cosmic::iced::wayland::actions::data_device::DataFromMimeType;
@@ -41,7 +43,6 @@ use cosmic::widget::rectangle_tracker::rectangle_tracker_subscription;
 use cosmic::widget::rectangle_tracker::RectangleTracker;
 use cosmic::widget::rectangle_tracker::RectangleUpdate;
 use cosmic::{Element, Theme};
-use cosmic_config::Config;
 use cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1;
 use freedesktop_desktop_entry::DesktopEntry;
 use futures::future::pending;
@@ -154,7 +155,7 @@ impl DockItem {
                             background: Some(Background::Color(
                                 theme.cosmic().on_bg_color().into(),
                             )),
-                            border_radius: 4.0,
+                            border_radius: 4.0.into(),
                             border_width: 0.0,
                             border_color: Color::TRANSPARENT,
                         },

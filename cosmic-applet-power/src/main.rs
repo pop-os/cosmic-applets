@@ -320,7 +320,7 @@ impl Application for Power {
                                 background: Some(
                                     Color::from(theme.cosmic().background.base).into(),
                                 ),
-                                border_radius: 12.0,
+                                border_radius: 12.0.into(),
                                 border_width: 2.0,
                                 border_color: theme.cosmic().bg_divider().into(),
                             }
