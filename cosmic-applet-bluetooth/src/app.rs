@@ -9,7 +9,6 @@ use cosmic::{
     iced_runtime::core::{
         alignment::{Horizontal, Vertical},
         layout::Limits,
-        renderer::BorderRadius,
         window,
     },
     iced_style::{application, button::StyleSheet},

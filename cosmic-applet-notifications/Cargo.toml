@@ -6,6 +6,6 @@ license = "GPL-3.0-or-later"
 
 [dependencies]
 icon-loader = { version = "0.3.6", features = ["gtk"] }
-libcosmic = { git = "https://github.com/pop-os/libcosmic/", rev = "f06a81c", default-features = false, features = ["tokio", "wayland"] }
+libcosmic = { git = "https://github.com/pop-os/libcosmic/", rev = "31f7e97", default-features = false, features = ["tokio", "wayland"] }
 cosmic-applet = { path = "../applet" }
 nix = "0.24.1"
