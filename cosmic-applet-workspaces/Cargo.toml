@@ -5,7 +5,7 @@ authors = ["Ashley Wulber <ashley@system76.com>"]
 edition = "2021"
 
 [dependencies]
-libcosmic = { git = "https://github.com/pop-os/libcosmic/", rev = "e056e8c", default-features = false, features = ["tokio", "wayland", "applet"] }
+libcosmic = { git = "https://github.com/pop-os/libcosmic/", rev = "f06a81c", default-features = false, features = ["tokio", "wayland", "applet"] }
 cosmic-client-toolkit = { git = "https://github.com/pop-os/cosmic-protocols", default-features = false }
 cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols", default-features = false, features = ["client"] }
 wayland-backend = {version = "0.1.0", features = ["client_system"]}

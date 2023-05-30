@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 zbus = "3.13"
-libcosmic = { git = "https://github.com/pop-os/libcosmic/", rev = "e056e8c", default-features = false, features = ["tokio", "wayland", "applet"] }
+libcosmic = { git = "https://github.com/pop-os/libcosmic/", rev = "f06a81c", default-features = false, features = ["tokio", "wayland", "applet"] }
 once_cell = "1"
 # Application i18n
 i18n-embed = { version = "0.13.4", features = ["fluent-system", "desktop-requester"] }
