@@ -1,8 +1,6 @@
 use crate::bluetooth::{BluerDeviceStatus, BluerRequest, BluerState};
-use cosmic::applet::applet_button_theme;
 use cosmic::iced_style;
 use cosmic::{
-    applet::CosmicAppletHelper,
     iced::{
         wayland::popup::{destroy_popup, get_popup},
         widget::{column, container, row, scrollable, text, Column},
@@ -19,6 +17,7 @@ use cosmic::{
     widget::{button, divider, icon, toggler},
     Element, Theme,
 };
+use cosmic_applet::{applet_button_theme, CosmicAppletHelper};
 use std::collections::HashMap;
 use std::time::Duration;
 use tokio::sync::mpsc::Sender;

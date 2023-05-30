@@ -10,7 +10,6 @@ use crate::upower_device::{device_subscription, DeviceDbusEvent};
 use crate::upower_kbdbacklight::{
     kbd_backlight_subscription, KeyboardBacklightRequest, KeyboardBacklightUpdate,
 };
-use cosmic::applet::{applet_button_theme, CosmicAppletHelper};
 use cosmic::iced::alignment::Horizontal;
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced::Color;
@@ -23,6 +22,7 @@ use cosmic::iced_style::application::{self, Appearance};
 use cosmic::theme::Svg;
 use cosmic::widget::{button, divider, icon, toggler};
 use cosmic::{Element, Theme};
+use cosmic_applet::{applet_button_theme, CosmicAppletHelper};
 use log::error;
 use std::time::Duration;
 use tokio::sync::mpsc::UnboundedSender;

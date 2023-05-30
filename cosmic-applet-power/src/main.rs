@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::process;
 use std::time::Duration;
 
-use cosmic::applet::{applet_button_theme, CosmicAppletHelper};
 use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::event::wayland::{self, LayerEvent};
 use cosmic::iced::event::PlatformSpecific;
@@ -16,6 +15,7 @@ use cosmic::iced_sctk::commands::layer_surface::{
 use cosmic::iced_widget::mouse_area;
 use cosmic::widget::{button, divider, icon};
 use cosmic::Renderer;
+use cosmic_applet::{applet_button_theme, CosmicAppletHelper};
 
 use cosmic::iced::Color;
 use cosmic::iced::{

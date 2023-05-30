@@ -5,9 +5,9 @@ use cosmic::iced::Limits;
 use cosmic::iced_runtime::core::alignment::Horizontal;
 use cosmic::theme::Svg;
 
-use cosmic::applet::{applet_button_theme, CosmicAppletHelper};
 use cosmic::widget::{button, divider, icon};
 use cosmic::Renderer;
+use cosmic_applet::{applet_button_theme, CosmicAppletHelper};
 
 use cosmic::iced::{
     self,

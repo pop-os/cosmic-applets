@@ -1,7 +1,6 @@
 use cosmic::iced_style;
 use cosmic::iced_widget::Row;
 use cosmic::{
-    applet::CosmicAppletHelper,
     iced::{
         wayland::popup::{destroy_popup, get_popup},
         widget::{column, container, row, scrollable, text, text_input, Column},
@@ -18,6 +17,7 @@ use cosmic::{
     widget::{button, divider, icon, toggler},
     Element, Theme,
 };
+use cosmic_applet::CosmicAppletHelper;
 use cosmic_dbus_networkmanager::interface::enums::{ActiveConnectionState, DeviceState};
 use futures::channel::mpsc::UnboundedSender;
 use zbus::Connection;

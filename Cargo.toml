@@ -1,6 +1,7 @@
 [workspace]
 
 members = [
+    "applet",
     "cosmic-app-list",
     "cosmic-applet-audio",
     "cosmic-applet-battery",
@@ -16,4 +17,4 @@ members = [
 
 [profile.release]
 lto = "thin"
-#lto = "fat"
+# lto = "fat"

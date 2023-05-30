@@ -1,4 +1,3 @@
-use cosmic::applet::{cosmic_panel_config::PanelAnchor, CosmicAppletHelper};
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced::Limits;
 use cosmic::iced::{
@@ -13,6 +12,7 @@ use cosmic::{
     widget::{icon, rectangle_tracker::*},
     Element, Theme,
 };
+use cosmic_applet::{cosmic_panel_config::PanelAnchor, CosmicAppletHelper};
 
 use chrono::{DateTime, Local, Timelike};
 use std::time::Duration;

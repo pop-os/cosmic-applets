@@ -1,6 +1,4 @@
 use calloop::channel::SyncSender;
-use cosmic::applet::cosmic_panel_config::PanelAnchor;
-use cosmic::applet::CosmicAppletHelper;
 use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::mouse::{self, ScrollDelta};
 use cosmic::iced::wayland::actions::window::SctkWindowSettings;
@@ -14,6 +12,8 @@ use cosmic::iced::{
 use cosmic::iced_style::application::{self, Appearance};
 use cosmic::theme::Button;
 use cosmic::{Element, Theme};
+use cosmic_applet::cosmic_panel_config::PanelAnchor;
+use cosmic_applet::CosmicAppletHelper;
 use cosmic_protocols::workspace::v1::client::zcosmic_workspace_handle_v1;
 use std::cmp::Ordering;
 use wayland_backend::client::ObjectId;

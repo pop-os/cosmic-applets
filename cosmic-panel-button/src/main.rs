@@ -1,10 +1,10 @@
 use cosmic::{
-    applet::CosmicAppletHelper,
     iced::Limits,
     iced::{self, wayland::InitialSurface, Application},
     iced_runtime::core::window,
     iced_style::application,
 };
+use cosmic_applet::CosmicAppletHelper;
 use freedesktop_desktop_entry::DesktopEntry;
 use std::{env, fs, process::Command};
 

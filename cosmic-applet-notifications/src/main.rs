@@ -1,9 +1,9 @@
-use cosmic::applet::{applet_button_theme, CosmicAppletHelper};
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced::{
     widget::{button, column, row, text, Row, Space},
     window, Alignment, Application, Color, Command, Length, Subscription,
 };
+use cosmic_applet::{applet_button_theme, CosmicAppletHelper};
 
 use cosmic::iced_style::application::{self, Appearance};
 

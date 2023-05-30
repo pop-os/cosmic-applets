@@ -534,9 +534,9 @@ checksum = "fd16c4719339c4530435d38e511904438d07cce7950afa3718a84ac36c10e89e"
 
 [[package]]
 name = "chrono"
-version = "0.4.25"
+version = "0.4.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fdbc37d37da9e5bce8173f3a41b71d9bf3c674deebbaceacd0ebdabde76efb03"
+checksum = "ec837a71355b28f6556dbd569b37b3f363091c0bd4b2e735674521b4c5fd9bc5"
 dependencies = [
  "android-tzdata",
  "iana-time-zone",
@@ -662,6 +662,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "calloop",
+ "cosmic-applet",
  "cosmic-client-toolkit",
  "cosmic-protocols",
  "freedesktop-desktop-entry",
@@ -675,7 +676,7 @@ dependencies = [
  "log",
  "nix 0.26.2",
  "once_cell",
- "pretty_env_logger",
+ "pretty_env_logger 0.5.0",
  "rand",
  "ron",
  "rust-embed",
@@ -688,9 +689,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "cosmic-applet"
+version = "0.1.0"
+dependencies = [
+ "cosmic-panel-config",
+ "libcosmic",
+ "ron",
+ "serde",
+]
+
+[[package]]
 name = "cosmic-applet-audio"
 version = "0.1.0"
 dependencies = [
+ "cosmic-applet",
  "i18n-embed",
  "i18n-embed-fl",
  "icon-loader",
@@ -699,7 +711,7 @@ dependencies = [
  "libpulse-glib-binding",
  "log",
  "once_cell",
- "pretty_env_logger",
+ "pretty_env_logger 0.4.0",
  "rust-embed",
  "rust-embed-utils",
  "tokio",
@@ -709,13 +721,14 @@ dependencies = [
 name = "cosmic-applet-battery"
 version = "0.1.0"
 dependencies = [
+ "cosmic-applet",
  "futures",
  "i18n-embed",
  "i18n-embed-fl",
  "libcosmic",
  "log",
  "once_cell",
- "pretty_env_logger",
+ "pretty_env_logger 0.4.0",
  "rust-embed",
  "tokio",
  "zbus",
@@ -727,6 +740,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bluer",
+ "cosmic-applet",
  "futures",
  "futures-util",
  "i18n-embed",
@@ -735,7 +749,7 @@ dependencies = [
  "libcosmic",
  "log",
  "once_cell",
- "pretty_env_logger",
+ "pretty_env_logger 0.4.0",
  "rand",
  "rust-embed",
  "slotmap",
@@ -746,6 +760,7 @@ dependencies = [
 name = "cosmic-applet-graphics"
 version = "0.1.0"
 dependencies = [
+ "cosmic-applet",
  "i18n-embed",
  "i18n-embed-fl",
  "libcosmic",
@@ -759,6 +774,7 @@ name = "cosmic-applet-network"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "cosmic-applet",
  "cosmic-dbus-networkmanager",
  "futures",
  "futures-util",
@@ -768,7 +784,7 @@ dependencies = [
  "libcosmic",
  "log",
  "once_cell",
- "pretty_env_logger",
+ "pretty_env_logger 0.4.0",
  "rust-embed",
  "rust-embed-utils",
  "slotmap",
@@ -780,6 +796,7 @@ dependencies = [
 name = "cosmic-applet-notifications"
 version = "0.1.0"
 dependencies = [
+ "cosmic-applet",
  "icon-loader",
  "libcosmic",
  "nix 0.24.3",
@@ -789,6 +806,7 @@ dependencies = [
 name = "cosmic-applet-power"
 version = "0.1.0"
 dependencies = [
+ "cosmic-applet",
  "i18n-embed",
  "i18n-embed-fl",
  "icon-loader",
@@ -809,6 +827,7 @@ name = "cosmic-applet-time"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "cosmic-applet",
  "icon-loader",
  "libcosmic",
  "nix 0.24.3",
@@ -820,6 +839,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "calloop",
+ "cosmic-applet",
  "cosmic-client-toolkit",
  "cosmic-protocols",
  "futures",
@@ -829,7 +849,7 @@ dependencies = [
  "log",
  "nix 0.26.2",
  "once_cell",
- "pretty_env_logger",
+ "pretty_env_logger 0.4.0",
  "rust-embed",
  "wayland-backend",
  "wayland-client 0.30.2",
@@ -849,38 +869,15 @@ dependencies = [
 [[package]]
 name = "cosmic-config"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic/?rev=e056e8c#e056e8c830780be92a96cf176680d9202d6734a1"
-dependencies = [
- "atomicwrites",
- "cosmic-config-derive 0.1.0 (git+https://github.com/pop-os/libcosmic/?rev=e056e8c)",
- "dirs 5.0.1",
- "iced_futures 0.6.0 (git+https://github.com/pop-os/libcosmic/?rev=e056e8c)",
- "notify",
- "ron",
- "serde",
-]
-
-[[package]]
-name = "cosmic-config"
-version = "0.1.0"
 source = "git+https://github.com/pop-os/libcosmic/?rev=f06a81c#f06a81ccf9fdeaef0033bfc07aa493ff8675f420"
 dependencies = [
  "atomicwrites",
- "cosmic-config-derive 0.1.0 (git+https://github.com/pop-os/libcosmic/?rev=f06a81c)",
+ "cosmic-config-derive",
  "dirs 5.0.1",
- "iced_futures 0.6.0 (git+https://github.com/pop-os/libcosmic/?rev=f06a81c)",
+ "iced_futures",
  "notify",
  "ron",
  "serde",
-]
-
-[[package]]
-name = "cosmic-config-derive"
-version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic/?rev=e056e8c#e056e8c830780be92a96cf176680d9202d6734a1"
-dependencies = [
- "quote",
- "syn 1.0.109",
 ]
 
 [[package]]
@@ -909,6 +906,7 @@ dependencies = [
 name = "cosmic-panel-button"
 version = "0.1.0"
 dependencies = [
+ "cosmic-applet",
  "freedesktop-desktop-entry",
  "libcosmic",
 ]
@@ -916,10 +914,10 @@ dependencies = [
 [[package]]
 name = "cosmic-panel-config"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/cosmic-panel?rev=6d2c228#6d2c228d086190a4158e92ffc52d7c97555a3040"
+source = "git+https://github.com/pop-os/cosmic-panel?rev=adbe256#adbe256782887cb0a15b9b421a477e70d1ca1b80"
 dependencies = [
  "anyhow",
- "cosmic-config 0.1.0 (git+https://github.com/pop-os/libcosmic/?rev=e056e8c)",
+ "cosmic-config",
  "ron",
  "serde",
  "tracing",
@@ -965,7 +963,7 @@ version = "0.1.0"
 source = "git+https://github.com/pop-os/libcosmic/?rev=f06a81c#f06a81ccf9fdeaef0033bfc07aa493ff8675f420"
 dependencies = [
  "anyhow",
- "cosmic-config 0.1.0 (git+https://github.com/pop-os/libcosmic/?rev=f06a81c)",
+ "cosmic-config",
  "csscolorparser",
  "directories",
  "lazy_static",
@@ -1452,7 +1450,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "44533bbbb3bb3c1fa17d9f2e4e38bbbaf8396ba82193c4cb1b6445d711445d36"
 dependencies = [
  "atty",
- "humantime",
+ "humantime 1.3.0",
+ "log",
+ "regex",
+ "termcolor",
+]
+
+[[package]]
+name = "env_logger"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "85cdab6a89accf66733ad5a1693a4dcced6aeff64602b634530dd73c1f3ee9f0"
+dependencies = [
+ "humantime 2.1.0",
+ "is-terminal",
  "log",
  "regex",
  "termcolor",
@@ -2158,6 +2169,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "humantime"
+version = "2.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
+
+[[package]]
 name = "i18n-config"
 version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2256,8 +2273,8 @@ version = "0.9.0"
 source = "git+https://github.com/pop-os/libcosmic/?rev=f06a81c#f06a81ccf9fdeaef0033bfc07aa493ff8675f420"
 dependencies = [
  "iced_accessibility",
- "iced_core 0.9.0 (git+https://github.com/pop-os/libcosmic/?rev=f06a81c)",
- "iced_futures 0.6.0 (git+https://github.com/pop-os/libcosmic/?rev=f06a81c)",
+ "iced_core",
+ "iced_futures",
  "iced_renderer",
  "iced_sctk",
  "iced_widget",
@@ -2272,18 +2289,6 @@ source = "git+https://github.com/pop-os/libcosmic/?rev=f06a81c#f06a81ccf9fdeaef0
 dependencies = [
  "accesskit",
  "accesskit_unix",
-]
-
-[[package]]
-name = "iced_core"
-version = "0.9.0"
-source = "git+https://github.com/pop-os/libcosmic/?rev=e056e8c#e056e8c830780be92a96cf176680d9202d6734a1"
-dependencies = [
- "bitflags 1.3.2",
- "instant",
- "log",
- "thiserror",
- "twox-hash",
 ]
 
 [[package]]
@@ -2304,22 +2309,10 @@ dependencies = [
 [[package]]
 name = "iced_futures"
 version = "0.6.0"
-source = "git+https://github.com/pop-os/libcosmic/?rev=e056e8c#e056e8c830780be92a96cf176680d9202d6734a1"
-dependencies = [
- "futures",
- "iced_core 0.9.0 (git+https://github.com/pop-os/libcosmic/?rev=e056e8c)",
- "log",
- "wasm-bindgen-futures",
- "wasm-timer",
-]
-
-[[package]]
-name = "iced_futures"
-version = "0.6.0"
 source = "git+https://github.com/pop-os/libcosmic/?rev=f06a81c#f06a81ccf9fdeaef0033bfc07aa493ff8675f420"
 dependencies = [
  "futures",
- "iced_core 0.9.0 (git+https://github.com/pop-os/libcosmic/?rev=f06a81c)",
+ "iced_core",
  "log",
  "tokio",
  "wasm-bindgen-futures",
@@ -2334,7 +2327,7 @@ dependencies = [
  "bitflags 1.3.2",
  "bytemuck",
  "glam",
- "iced_core 0.9.0 (git+https://github.com/pop-os/libcosmic/?rev=f06a81c)",
+ "iced_core",
  "image",
  "kamadak-exif",
  "log",
@@ -2361,8 +2354,8 @@ version = "0.1.0"
 source = "git+https://github.com/pop-os/libcosmic/?rev=f06a81c#f06a81ccf9fdeaef0033bfc07aa493ff8675f420"
 dependencies = [
  "iced_accessibility",
- "iced_core 0.9.0 (git+https://github.com/pop-os/libcosmic/?rev=f06a81c)",
- "iced_futures 0.6.0 (git+https://github.com/pop-os/libcosmic/?rev=f06a81c)",
+ "iced_core",
+ "iced_futures",
  "smithay-client-toolkit 0.17.0 (git+https://github.com/pop-os/client-toolkit?tag=themed-pointer)",
  "thiserror",
 ]
@@ -2375,7 +2368,7 @@ dependencies = [
  "enum-repr",
  "float-cmp",
  "futures",
- "iced_futures 0.6.0 (git+https://github.com/pop-os/libcosmic/?rev=f06a81c)",
+ "iced_futures",
  "iced_graphics",
  "iced_runtime",
  "iced_style",
@@ -2393,7 +2386,7 @@ name = "iced_style"
 version = "0.8.0"
 source = "git+https://github.com/pop-os/libcosmic/?rev=f06a81c#f06a81ccf9fdeaef0033bfc07aa493ff8675f420"
 dependencies = [
- "iced_core 0.9.0 (git+https://github.com/pop-os/libcosmic/?rev=f06a81c)",
+ "iced_core",
  "once_cell",
  "palette",
 ]
@@ -2575,6 +2568,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "is-terminal"
+version = "0.4.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "adcf93614601c8129ddf72e2d5633df827ba6551541c6d8c59520a371475be1f"
+dependencies = [
+ "hermit-abi 0.3.1",
+ "io-lifetimes",
+ "rustix 0.37.19",
+ "windows-sys 0.48.0",
+]
+
+[[package]]
 name = "itertools"
 version = "0.10.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2680,22 +2685,19 @@ version = "0.1.0"
 source = "git+https://github.com/pop-os/libcosmic/?rev=f06a81c#f06a81ccf9fdeaef0033bfc07aa493ff8675f420"
 dependencies = [
  "apply",
- "cosmic-config 0.1.0 (git+https://github.com/pop-os/libcosmic/?rev=f06a81c)",
- "cosmic-panel-config",
+ "cosmic-config",
  "cosmic-theme",
  "derive_setters",
  "fraction",
  "freedesktop-icons",
  "iced",
- "iced_core 0.9.0 (git+https://github.com/pop-os/libcosmic/?rev=f06a81c)",
+ "iced_core",
  "iced_runtime",
  "iced_sctk",
  "iced_style",
  "iced_widget",
  "lazy_static",
  "palette",
- "ron",
- "serde",
  "slotmap",
  "smithay-client-toolkit 0.17.0 (git+https://github.com/pop-os/client-toolkit?tag=themed-pointer)",
  "tokio",
@@ -3492,7 +3494,17 @@ version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "926d36b9553851b8b0005f1275891b392ee4d2d833852c417ed025477350fb9d"
 dependencies = [
- "env_logger",
+ "env_logger 0.7.1",
+ "log",
+]
+
+[[package]]
+name = "pretty_env_logger"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "865724d4dbe39d9f3dd3b52b88d859d66bcb2d6a0acfd5ea68a65fb66d4bdc1c"
+dependencies = [
+ "env_logger 0.10.0",
  "log",
 ]
 

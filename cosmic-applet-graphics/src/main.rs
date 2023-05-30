@@ -4,10 +4,10 @@ mod localize;
 mod window;
 
 use cosmic::{
-    applet::{cosmic_panel_config::PanelAnchor, CosmicAppletHelper},
     iced::{wayland::InitialSurface, Application, Settings},
     iced_runtime::core::layout::Limits,
 };
+use cosmic_applet::{cosmic_panel_config::PanelAnchor, CosmicAppletHelper};
 
 use window::*;
 
