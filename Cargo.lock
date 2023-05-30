@@ -728,7 +728,7 @@ dependencies = [
  "libcosmic",
  "log",
  "once_cell",
- "pretty_env_logger 0.4.0",
+ "pretty_env_logger 0.5.0",
  "rust-embed",
  "tokio",
  "zbus",
@@ -749,7 +749,7 @@ dependencies = [
  "libcosmic",
  "log",
  "once_cell",
- "pretty_env_logger 0.4.0",
+ "pretty_env_logger 0.5.0",
  "rand",
  "rust-embed",
  "slotmap",
@@ -784,7 +784,7 @@ dependencies = [
  "libcosmic",
  "log",
  "once_cell",
- "pretty_env_logger 0.4.0",
+ "pretty_env_logger 0.5.0",
  "rust-embed",
  "rust-embed-utils",
  "slotmap",
@@ -849,7 +849,7 @@ dependencies = [
  "log",
  "nix 0.26.2",
  "once_cell",
- "pretty_env_logger 0.4.0",
+ "pretty_env_logger 0.5.0",
  "rust-embed",
  "wayland-backend",
  "wayland-client 0.30.2",
@@ -859,10 +859,10 @@ dependencies = [
 [[package]]
 name = "cosmic-client-toolkit"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/cosmic-protocols#7d80b59afc464a8ecdb8001333f18de554f299f4"
+source = "git+https://github.com/pop-os/cosmic-protocols?rev=f0cfe09#f0cfe0973376b31fba4a726a35633a8e39e9319e"
 dependencies = [
  "cosmic-protocols",
- "smithay-client-toolkit 0.17.0 (git+https://github.com/Smithay/client-toolkit?rev=389a4f2)",
+ "smithay-client-toolkit 0.17.0",
  "wayland-client 0.30.2",
 ]
 
@@ -928,7 +928,7 @@ dependencies = [
 [[package]]
 name = "cosmic-protocols"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/cosmic-protocols#7d80b59afc464a8ecdb8001333f18de554f299f4"
+source = "git+https://github.com/pop-os/cosmic-protocols?rev=f0cfe09#f0cfe0973376b31fba4a726a35633a8e39e9319e"
 dependencies = [
  "bitflags 1.3.2",
  "wayland-backend",
@@ -2301,7 +2301,7 @@ dependencies = [
  "instant",
  "log",
  "palette",
- "smithay-client-toolkit 0.17.0 (git+https://github.com/pop-os/client-toolkit?tag=themed-pointer)",
+ "smithay-client-toolkit 0.17.0",
  "thiserror",
  "twox-hash",
 ]
@@ -2356,7 +2356,7 @@ dependencies = [
  "iced_accessibility",
  "iced_core",
  "iced_futures",
- "smithay-client-toolkit 0.17.0 (git+https://github.com/pop-os/client-toolkit?tag=themed-pointer)",
+ "smithay-client-toolkit 0.17.0",
  "thiserror",
 ]
 
@@ -2375,7 +2375,7 @@ dependencies = [
  "itertools",
  "log",
  "raw-window-handle",
- "smithay-client-toolkit 0.17.0 (git+https://github.com/pop-os/client-toolkit?tag=themed-pointer)",
+ "smithay-client-toolkit 0.17.0",
  "smithay-clipboard",
  "thiserror",
  "wayland-backend",
@@ -2441,7 +2441,7 @@ dependencies = [
  "iced_style",
  "num-traits",
  "ouroboros 0.13.0",
- "smithay-client-toolkit 0.17.0 (git+https://github.com/pop-os/client-toolkit?tag=themed-pointer)",
+ "smithay-client-toolkit 0.17.0",
  "thiserror",
  "unicode-segmentation",
 ]
@@ -2699,7 +2699,7 @@ dependencies = [
  "lazy_static",
  "palette",
  "slotmap",
- "smithay-client-toolkit 0.17.0 (git+https://github.com/pop-os/client-toolkit?tag=themed-pointer)",
+ "smithay-client-toolkit 0.17.0",
  "tokio",
 ]
 
@@ -4100,29 +4100,6 @@ dependencies = [
  "bitflags 1.3.2",
  "calloop",
  "cursor-icon",
- "dlib",
- "lazy_static",
- "log",
- "memmap2",
- "nix 0.26.2",
- "pkg-config",
- "thiserror",
- "wayland-backend",
- "wayland-client 0.30.2",
- "wayland-cursor 0.30.0",
- "wayland-protocols 0.30.0",
- "wayland-protocols-wlr",
- "wayland-scanner 0.30.0",
- "xkbcommon",
-]
-
-[[package]]
-name = "smithay-client-toolkit"
-version = "0.17.0"
-source = "git+https://github.com/Smithay/client-toolkit?rev=389a4f2#389a4f21872a99a3ba346cc3dabd55c4079ec191"
-dependencies = [
- "bitflags 1.3.2",
- "calloop",
  "dlib",
  "lazy_static",
  "log",

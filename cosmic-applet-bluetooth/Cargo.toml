@@ -12,7 +12,7 @@ libcosmic = { git = "https://github.com/pop-os/libcosmic/", rev = "f06a81c", def
 cosmic-applet = { path = "../applet" }
 futures = "0.3"
 log = "0.4"
-pretty_env_logger = "0.4"
+pretty_env_logger = "0.5"
 itertools = "0.10.3"
 slotmap = "1.0.6"
 tokio = { version = "1.15.0", features = ["full"] }
