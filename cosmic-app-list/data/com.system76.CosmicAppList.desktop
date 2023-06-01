@@ -1,13 +1,14 @@
 [Desktop Entry]
 Name=Cosmic Dock App List
-Comment=Write a GTK + Rust application
+Comment=Applet for Cosmic Panel
 Type=Application
 Exec=cosmic-app-list
 Terminal=false
-Categories=GNOME;GTK;
-Keywords=Gnome;GTK;
+Categories=Cosmic;Iced;
+Keywords=Cosmic;Iced;
 # Translators: Do NOT translate or transliterate this text (this is an icon file name)!
 Icon=com.system76.CosmicAppList
 StartupNotify=true
 NoDisplay=true
+X-CosmicApplet=true
 X-HostWaylandDisplay=true
