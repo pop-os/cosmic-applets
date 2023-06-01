@@ -19,7 +19,7 @@
 //! …consequently `zbus-xmlgen` did not generate code for the above interfaces.
 
 use cosmic::iced;
-use cosmic::iced_native::subscription;
+use cosmic::iced::subscription;
 use std::fmt::Debug;
 use std::hash::Hash;
 use tokio::sync::mpsc::UnboundedReceiver;
@@ -114,7 +114,9 @@ pub async fn set_power_profile(daemon: PowerDaemonProxy<'_>, power: Power) -> Re
 pub fn power_profile_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
     id: I,
 ) -> iced::Subscription<(I, PowerProfileUpdate)> {
-    subscription::unfold(id, State::Ready, move |state| start_listening(id, state))
+    subscription::unfold(id, State::Ready, move |state| {
+        start_listening_loop(id, state)
+    })
 }
 
 #[derive(Debug)]
@@ -122,6 +124,19 @@ pub enum State {
     Ready,
     Waiting(Connection, UnboundedReceiver<PowerProfileRequest>),
     Finished,
+}
+
+async fn start_listening_loop<I: Copy + Debug>(
+    id: I,
+    mut state: State,
+) -> ((I, PowerProfileUpdate), State) {
+    loop {
+        let (update, new_state) = start_listening(id, state).await;
+        state = new_state;
+        if let Some(update) = update {
+            return (update, state);
+        }
+    }
 }
 
 async fn start_listening<I: Copy>(id: I, state: State) -> (Option<(I, PowerProfileUpdate)>, State) {
@@ -189,14 +204,11 @@ async fn start_listening<I: Copy>(id: I, state: State) -> (Option<(I, PowerProfi
                     }
                 }
                 Some(PowerProfileRequest::Set(profile)) => {
-                    if set_power_profile(power_proxy, profile).await.is_ok() {
-                        (
-                            Some((id, PowerProfileUpdate::Update { profile })),
-                            State::Waiting(conn, rx),
-                        )
-                    } else {
-                        (None, State::Waiting(conn, rx))
-                    }
+                    let _ = set_power_profile(power_proxy, profile).await;
+                    (
+                        Some((id, PowerProfileUpdate::Update { profile })),
+                        State::Waiting(conn, rx),
+                    )
                 }
                 None => (None, State::Finished),
             }

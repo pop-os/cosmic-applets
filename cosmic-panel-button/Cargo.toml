@@ -6,4 +6,5 @@ license = "GPL-3.0-or-later"
 
 [dependencies]
 freedesktop-desktop-entry = "0.5.0"
-libcosmic = { git = "https://github.com/pop-os/libcosmic/", branch = "master", default-features = false, features = ["tokio", "wayland", "applet"] }
+libcosmic = { git = "https://github.com/pop-os/libcosmic/", rev = "31f7e97", default-features = false, features = ["tokio", "wayland"] }
+cosmic-applet = { path = "../applet" }

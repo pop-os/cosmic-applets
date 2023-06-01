@@ -1,21 +1,23 @@
 use anyhow::anyhow;
+
+use cosmic::cosmic_config::cosmic_config_derive::CosmicConfigEntry;
+use cosmic::cosmic_config::{self, Config, ConfigGet, ConfigSet, CosmicConfigEntry};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use std::fs::File;
 use std::path::PathBuf;
 use xdg::BaseDirectories;
-
 pub const APP_ID: &str = "com.system76.CosmicAppList";
 pub const VERSION: &str = "0.1.0";
 
-#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq)]
 pub enum TopLevelFilter {
     #[default]
     ActiveWorkspace,
     ConfiguredOutput,
 }
 
-#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[derive(Debug, Clone, Default, Deserialize, Serialize, PartialEq, Eq, CosmicConfigEntry)]
 pub struct AppListConfig {
     pub filter_top_levels: Option<TopLevelFilter>,
     pub favorites: Vec<String>,
@@ -42,26 +44,17 @@ impl AppListConfig {
             .map_err(|err| anyhow!("Failed to parse config file: {}", err))
     }
 
-    pub fn add_favorite(&mut self, id: String) -> anyhow::Result<()> {
+    pub fn add_favorite(&mut self, id: String, config: &Config) {
         if !self.favorites.contains(&id) {
             self.favorites.push(id);
+            let _ = self.write_entry(&config);
         }
-        self.save()
     }
 
-    pub fn remove_favorite(&mut self, id: String) -> anyhow::Result<()> {
-        self.favorites.retain(|e| e != &id);
-        self.save()
-    }
-
-    // TODO async?
-    pub fn save(&self) -> anyhow::Result<()> {
-        let bd = BaseDirectories::new()?;
-        let mut relative_path = PathBuf::from(APP_ID);
-        relative_path.push("config.ron");
-        let config_path = bd.place_config_file(relative_path)?;
-        let f = File::create(config_path)?;
-        ron::ser::to_writer_pretty(f, self, Default::default())?;
-        Ok(())
+    pub fn remove_favorite(&mut self, id: String, config: &Config) {
+        if let Some(pos) = self.favorites.iter().position(|e| e == &id) {
+            self.favorites.remove(pos);
+            let _ = self.write_entry(&config);
+        }
     }
 }

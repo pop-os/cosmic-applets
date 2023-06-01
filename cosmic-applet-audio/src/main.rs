@@ -1,11 +1,13 @@
+mod localize;
+
 use cosmic::iced::widget;
-use cosmic::iced_native::alignment::Horizontal;
-use cosmic::iced_native::layout::Limits;
+use cosmic::iced::Limits;
+use cosmic::iced_runtime::core::alignment::Horizontal;
 use cosmic::theme::Svg;
 
-use cosmic::applet::{CosmicAppletHelper, APPLET_BUTTON_THEME};
 use cosmic::widget::{button, divider, icon};
 use cosmic::Renderer;
+use cosmic_applet::{applet_button_theme, CosmicAppletHelper};
 
 use cosmic::iced::{
     self,
@@ -20,11 +22,15 @@ use iced::widget::container;
 use iced::Color;
 
 mod pulse;
+use crate::localize::localize;
 use crate::pulse::DeviceInfo;
 use libpulse_binding::volume::VolumeLinear;
 
 pub fn main() -> cosmic::iced::Result {
     pretty_env_logger::init();
+
+    // Prepare i18n
+    localize();
 
     let helper = CosmicAppletHelper::default();
     Audio::run(helper.window_settings())
@@ -43,7 +49,7 @@ struct Audio {
     theme: Theme,
     popup: Option<window::Id>,
     show_media_controls_in_top_panel: bool,
-    id_ctr: u32,
+    id_ctr: u128,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -93,7 +99,7 @@ impl Application for Audio {
     }
 
     fn theme(&self) -> Theme {
-        self.theme
+        self.theme.clone()
     }
 
     fn close_requested(&self, _id: window::Id) -> Self::Message {
@@ -101,10 +107,10 @@ impl Application for Audio {
     }
 
     fn style(&self) -> <Self::Theme as application::StyleSheet>::Style {
-        <Self::Theme as application::StyleSheet>::Style::Custom(|theme| Appearance {
+        <Self::Theme as application::StyleSheet>::Style::Custom(Box::new(|theme| Appearance {
             background_color: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
             text_color: theme.cosmic().on_bg_color().into(),
-        })
+        }))
     }
 
     fn update(&mut self, message: Message) -> Command<Message> {
@@ -117,21 +123,21 @@ impl Application for Audio {
                         conn.send(pulse::Message::UpdateConnection);
                     }
                     self.id_ctr += 1;
-                    let new_id = window::Id::new(self.id_ctr);
+                    let new_id = window::Id(self.id_ctr);
                     self.popup.replace(new_id);
 
                     let mut popup_settings = self.applet_helper.get_popup_settings(
-                        window::Id::new(0),
+                        window::Id(0),
                         new_id,
                         None,
                         None,
                         None,
                     );
                     popup_settings.positioner.size_limits = Limits::NONE
-                        .min_height(1)
-                        .min_width(1)
-                        .max_width(400)
-                        .max_height(1080);
+                        .min_height(1.0)
+                        .min_width(1.0)
+                        .max_width(400.0)
+                        .max_height(1080.0);
 
                     if let Some(conn) = self.pulse_state.connection() {
                         conn.send(pulse::Message::GetDefaultSink);
@@ -268,7 +274,7 @@ impl Application for Audio {
     }
 
     fn view(&self, id: window::Id) -> Element<Message> {
-        if id == window::Id::new(0) {
+        if id == window::Id(0) {
             self.applet_helper
                 .icon_button(&self.icon_name)
                 .on_press(Message::TogglePopup)
@@ -291,20 +297,18 @@ impl Application for Audio {
             .0 * 100.0;
 
             let audio_content = if audio_disabled {
-                column![text("PulseAudio Disconnected")
+                column![text(fl!("disconnected"))
                     .width(Length::Fill)
                     .horizontal_alignment(Horizontal::Center)
                     .size(24),]
             } else {
                 column![
                     row![
-                        icon("audio-volume-high-symbolic", 32)
-                            .width(Length::Units(24))
-                            .height(Length::Units(24))
-                            .style(Svg::Symbolic),
+                        icon("audio-volume-high-symbolic", 24).style(Svg::Symbolic),
                         slider(0.0..=100.0, out_f64, Message::SetOutputVolume)
                             .width(Length::FillPortion(5)),
                         text(format!("{}%", out_f64.round()))
+                            .size(16)
                             .width(Length::FillPortion(1))
                             .horizontal_alignment(Horizontal::Right)
                     ]
@@ -312,13 +316,11 @@ impl Application for Audio {
                     .align_items(Alignment::Center)
                     .padding([8, 24]),
                     row![
-                        icon("audio-input-microphone-symbolic", 32)
-                            .width(Length::Units(24))
-                            .height(Length::Units(24))
-                            .style(Svg::Symbolic),
+                        icon("audio-input-microphone-symbolic", 24).style(Svg::Symbolic),
                         slider(0.0..=100.0, in_f64, Message::SetInputVolume)
                             .width(Length::FillPortion(5)),
                         text(format!("{}%", in_f64.round()))
+                            .size(16)
                             .width(Length::FillPortion(1))
                             .horizontal_alignment(Horizontal::Right)
                     ]
@@ -330,7 +332,7 @@ impl Application for Audio {
                         .width(Length::Fill),
                     revealer(
                         self.is_open == IsOpen::Output,
-                        "Output",
+                        fl!("output"),
                         match &self.current_output {
                             Some(output) => pretty_name(output.description.clone()),
                             None => String::from("No device selected"),
@@ -348,10 +350,10 @@ impl Application for Audio {
                     ),
                     revealer(
                         self.is_open == IsOpen::Input,
-                        "Input",
+                        fl!("input"),
                         match &self.current_input {
                             Some(input) => pretty_name(input.description.clone()),
-                            None => String::from("No device selected"),
+                            None => fl!("no-device"),
                         },
                         self.inputs
                             .clone()
@@ -372,17 +374,20 @@ impl Application for Audio {
                 container(divider::horizontal::light())
                     .padding([12, 24])
                     .width(Length::Fill),
-                container(toggler(
-                    Some("Show Media Controls on Top Panel".into()),
-                    self.show_media_controls_in_top_panel,
-                    Message::ToggleMediaControlsInTopPanel,
-                ))
+                container(
+                    toggler(
+                        Some(fl!("show-media-controls")),
+                        self.show_media_controls_in_top_panel,
+                        Message::ToggleMediaControlsInTopPanel,
+                    )
+                    .text_size(14)
+                )
                 .padding([0, 24]),
                 container(divider::horizontal::light())
                     .padding([12, 24])
                     .width(Length::Fill),
-                button(APPLET_BUTTON_THEME)
-                    .text("Sound Settings...")
+                button(applet_button_theme())
+                    .custom(vec![text(fl!("sound-settings")).size(14).into()])
                     .padding([8, 24])
                     .width(Length::Fill)
             ]
@@ -398,19 +403,19 @@ impl Application for Audio {
 
 fn revealer(
     open: bool,
-    title: &str,
+    title: String,
     selected: String,
     options: Vec<(String, String)>,
     toggle: Message,
     mut change: impl FnMut(String) -> Message + 'static,
-) -> widget::Column<Message, Renderer> {
+) -> widget::Column<'static, Message, Renderer> {
     if open {
         options.iter().fold(
             column![revealer_head(open, title, selected, toggle)].width(Length::Fill),
             |col, (id, name)| {
                 col.push(
-                    button(APPLET_BUTTON_THEME)
-                        .custom(vec![text(name).into()])
+                    button(applet_button_theme())
+                        .custom(vec![text(name).size(14).into()])
                         .on_press(change(id.clone()))
                         .width(Length::Fill)
                         .padding([8, 48]),
@@ -424,14 +429,14 @@ fn revealer(
 
 fn revealer_head(
     _open: bool,
-    title: &str,
+    title: String,
     selected: String,
     toggle: Message,
-) -> widget::Button<Message, Renderer> {
-    button(APPLET_BUTTON_THEME)
+) -> widget::Button<'static, Message, Renderer> {
+    button(applet_button_theme())
         .custom(vec![
-            text(title).width(Length::Fill).into(),
-            text(selected).into(),
+            text(title).width(Length::Fill).size(14).into(),
+            text(selected).size(10).into(),
         ])
         .padding([8, 24])
         .width(Length::Fill)

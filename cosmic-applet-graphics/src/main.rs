@@ -4,10 +4,10 @@ mod localize;
 mod window;
 
 use cosmic::{
-    applet::{cosmic_panel_config::PanelAnchor, CosmicAppletHelper},
     iced::{wayland::InitialSurface, Application, Settings},
-    iced_native::layout::Limits,
+    iced_runtime::core::layout::Limits,
 };
+use cosmic_applet::{cosmic_panel_config::PanelAnchor, CosmicAppletHelper};
 
 use window::*;
 
@@ -21,10 +21,10 @@ pub fn main() -> cosmic::iced::Result {
                 InitialSurface::XdgWindow(w) => {
                     w.autosize = true;
                     w.size_limits = Limits::NONE
-                        .min_height(1)
-                        .max_height(200)
-                        .min_width(1)
-                        .max_width(1000);
+                        .min_height(1.0)
+                        .max_height(200.0)
+                        .min_width(1.0)
+                        .max_width(1000.0);
                 }
                 InitialSurface::None => unimplemented!(),
             };

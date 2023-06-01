@@ -1,5 +1,4 @@
 use calloop::channel::*;
-use cosmic::applet::cosmic_panel_config::CosmicPanelOuput;
 use cosmic_client_toolkit::{
     sctk::{
         self,
@@ -11,7 +10,7 @@ use cosmic_client_toolkit::{
 };
 use cosmic_protocols::workspace::v1::client::zcosmic_workspace_handle_v1;
 use futures::{channel::mpsc, executor::block_on, SinkExt};
-use std::{env, os::unix::net::UnixStream, path::PathBuf, str::FromStr, time::Duration};
+use std::{env, os::unix::net::UnixStream, path::PathBuf, time::Duration};
 use wayland_backend::client::ObjectId;
 use wayland_client::{
     globals::registry_queue_init,
@@ -45,10 +44,6 @@ pub fn spawn_workspaces(tx: mpsc::Sender<WorkspaceList>) -> SyncSender<Workspace
         std::thread::spawn(move || {
             let configured_output = std::env::var("COSMIC_PANEL_OUTPUT")
                 .ok()
-                .map(|output_str| match CosmicPanelOuput::from_str(&output_str) {
-                    Ok(CosmicPanelOuput::Name(name)) => name,
-                    _ => "".to_string(),
-                })
                 .unwrap_or_default();
             let mut event_loop = calloop::EventLoop::<State>::try_new().unwrap();
             let loop_handle = event_loop.handle();
@@ -97,7 +92,11 @@ pub fn spawn_workspaces(tx: mpsc::Sender<WorkspaceList>) -> SyncSender<Workspace
                             .workspace_groups()
                             .iter()
                             .find_map(|g| {
-                                if !g.outputs.iter().any(|o| Some(o) == state.expected_output.as_ref()) {
+                                if !g
+                                    .outputs
+                                    .iter()
+                                    .any(|o| Some(o) == state.expected_output.as_ref())
+                                {
                                     return None;
                                 }
                                 g.workspaces
@@ -179,7 +178,10 @@ impl State {
             .workspace_groups()
             .iter()
             .filter_map(|g| {
-                if g.outputs.iter().any(|o| Some(o) == self.expected_output.as_ref()) {
+                if g.outputs
+                    .iter()
+                    .any(|o| Some(o) == self.expected_output.as_ref())
+                {
                     Some(g.workspaces.iter().map(|w| {
                         (
                             w.name.clone(),

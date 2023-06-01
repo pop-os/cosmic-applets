@@ -11,7 +11,7 @@ use futures::{
     channel::mpsc::{unbounded, UnboundedReceiver},
     StreamExt,
 };
-use std::{fmt::Debug, hash::Hash};
+use std::{fmt::Debug, hash::Hash, thread::JoinHandle};
 
 use crate::toplevel_handler::toplevel_handler;
 
@@ -26,31 +26,45 @@ pub enum State {
     Waiting(
         UnboundedReceiver<ToplevelUpdate>,
         calloop::channel::Sender<ToplevelRequest>,
+        JoinHandle<()>,
     ),
     Finished,
 }
 
-async fn start_listening<I: Copy>(id: I, state: State) -> (Option<(I, ToplevelUpdate)>, State) {
-    match state {
-        State::Ready => {
-            let (calloop_tx, calloop_rx) = calloop::channel::channel();
-            let (toplevel_tx, toplevel_rx) = unbounded();
-            std::thread::spawn(move || {
-                toplevel_handler(toplevel_tx, calloop_rx);
-            });
-            (
-                Some((id, ToplevelUpdate::Init(calloop_tx.clone()))),
-                State::Waiting(toplevel_rx, calloop_tx),
-            )
-        }
-        State::Waiting(mut rx, tx) => match rx.next().await {
-            Some(u) => (Some((id, u)), State::Waiting(rx, tx)),
-            None => {
-                let _ = tx.send(ToplevelRequest::Exit);
-                (Some((id, ToplevelUpdate::Finished)), State::Finished)
+async fn start_listening<I: Copy>(id: I, mut state: State) -> ((I, ToplevelUpdate), State) {
+    loop {
+        let (update, new_state) = match state {
+            State::Ready => {
+                let (calloop_tx, calloop_rx) = calloop::channel::channel();
+                let (toplevel_tx, toplevel_rx) = unbounded();
+                let handle = std::thread::spawn(move || {
+                    toplevel_handler(toplevel_tx, calloop_rx);
+                });
+                (
+                    Some((id, ToplevelUpdate::Init(calloop_tx.clone()))),
+                    State::Waiting(toplevel_rx, calloop_tx, handle),
+                )
             }
-        },
-        State::Finished => iced::futures::future::pending().await,
+            State::Waiting(mut rx, tx, handle) => {
+                if handle.is_finished() {
+                    return ((id, ToplevelUpdate::Finished), State::Finished);
+                }
+                match rx.next().await {
+                    Some(u) => (Some((id, u)), State::Waiting(rx, tx, handle)),
+                    None => {
+                        let _ = tx.send(ToplevelRequest::Exit);
+                        (Some((id, ToplevelUpdate::Finished)), State::Finished)
+                    }
+                }
+            }
+            State::Finished => iced::futures::future::pending().await,
+        };
+
+        if let Some(update) = update {
+            return (update, new_state);
+        } else {
+            state = new_state;
+        }
     }
 }
 

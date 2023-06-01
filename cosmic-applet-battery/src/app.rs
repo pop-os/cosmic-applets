@@ -10,19 +10,19 @@ use crate::upower_device::{device_subscription, DeviceDbusEvent};
 use crate::upower_kbdbacklight::{
     kbd_backlight_subscription, KeyboardBacklightRequest, KeyboardBacklightUpdate,
 };
-use cosmic::applet::{CosmicAppletHelper, APPLET_BUTTON_THEME};
 use cosmic::iced::alignment::Horizontal;
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
+use cosmic::iced::Color;
 use cosmic::iced::{
     widget::{column, container, row, slider, text},
     window, Alignment, Application, Command, Length, Subscription,
 };
-use cosmic::iced_native::layout::Limits;
+use cosmic::iced_runtime::core::layout::Limits;
 use cosmic::iced_style::application::{self, Appearance};
-use cosmic::iced_style::Color;
 use cosmic::theme::Svg;
 use cosmic::widget::{button, divider, icon, toggler};
 use cosmic::{Element, Theme};
+use cosmic_applet::{applet_button_theme, CosmicAppletHelper};
 use log::error;
 use std::time::Duration;
 use tokio::sync::mpsc::UnboundedSender;
@@ -58,7 +58,7 @@ struct CosmicBatteryApplet {
     kbd_brightness: f64,
     screen_brightness: f64,
     popup: Option<window::Id>,
-    id_ctr: u32,
+    id_ctr: u128,
     screen_sender: Option<UnboundedSender<ScreenBacklightRequest>>,
     kbd_sender: Option<UnboundedSender<KeyboardBacklightRequest>>,
     applet_helper: CosmicAppletHelper,
@@ -144,21 +144,21 @@ impl Application for CosmicBatteryApplet {
                     }
 
                     self.id_ctr += 1;
-                    let new_id = window::Id::new(self.id_ctr);
+                    let new_id = window::Id(self.id_ctr);
                     self.popup.replace(new_id);
 
                     let mut popup_settings = self.applet_helper.get_popup_settings(
-                        window::Id::new(0),
+                        window::Id(0),
                         new_id,
                         None,
                         None,
                         None,
                     );
                     popup_settings.positioner.size_limits = Limits::NONE
-                        .max_width(372)
-                        .min_width(300)
-                        .min_height(200)
-                        .max_height(1080);
+                        .max_width(372.0)
+                        .min_width(300.0)
+                        .min_height(200.0)
+                        .max_height(1080.0);
                     if let Some(tx) = self.power_profile_sender.as_ref() {
                         let _ = tx.send(PowerProfileRequest::Get);
                     }
@@ -213,13 +213,13 @@ impl Application for CosmicBatteryApplet {
         Command::none()
     }
     fn view(&self, id: window::Id) -> Element<Message> {
-        if id == window::Id::new(0) {
+        if id == window::Id(0) {
             self.applet_helper
                 .icon_button(&self.icon_name)
                 .on_press(Message::TogglePopup)
                 .into()
         } else {
-            let name = text(fl!("battery")).size(18);
+            let name = text(fl!("battery")).size(14);
             let description = text(
                 if "battery-full-charging-symbolic" == self.icon_name
                     || "battery-full-charged-symbolic" == self.icon_name
@@ -234,15 +234,12 @@ impl Application for CosmicBatteryApplet {
                     )
                 },
             )
-            .size(12);
+            .size(10);
             self.applet_helper
                 .popup_container(
                     column![
                         row![
-                            icon(&*self.icon_name, 24)
-                                .style(Svg::Symbolic)
-                                .width(Length::Units(24))
-                                .height(Length::Units(24)),
+                            icon(&*self.icon_name, 24).style(Svg::Symbolic),
                             column![name, description]
                         ]
                         .padding([0, 24])
@@ -251,11 +248,11 @@ impl Application for CosmicBatteryApplet {
                         container(divider::horizontal::light())
                             .width(Length::Fill)
                             .padding([0, 12]),
-                        button(APPLET_BUTTON_THEME)
+                        button(applet_button_theme())
                             .custom(vec![row![
                                 column![
                                     text(fl!("battery")).size(14),
-                                    text(fl!("battery-desc")).size(12)
+                                    text(fl!("battery-desc")).size(10)
                                 ]
                                 .width(Length::Fill),
                                 icon("emblem-ok-symbolic", 12).size(12).style(
@@ -270,11 +267,11 @@ impl Application for CosmicBatteryApplet {
                             .padding([8, 24])
                             .on_press(Message::SelectProfile(Power::Battery))
                             .width(Length::Fill),
-                        button(APPLET_BUTTON_THEME)
+                        button(applet_button_theme())
                             .custom(vec![row![
                                 column![
                                     text(fl!("balanced")).size(14),
-                                    text(fl!("balanced-desc")).size(12)
+                                    text(fl!("balanced-desc")).size(10)
                                 ]
                                 .width(Length::Fill),
                                 icon("emblem-ok-symbolic", 12).size(12).style(
@@ -289,11 +286,11 @@ impl Application for CosmicBatteryApplet {
                             .padding([8, 24])
                             .on_press(Message::SelectProfile(Power::Balanced))
                             .width(Length::Fill),
-                        button(APPLET_BUTTON_THEME)
+                        button(applet_button_theme())
                             .custom(vec![row![
                                 column![
                                     text(fl!("performance")).size(14),
-                                    text(fl!("performance-desc")).size(12)
+                                    text(fl!("performance-desc")).size(10)
                                 ]
                                 .width(Length::Fill),
                                 icon("emblem-ok-symbolic", 12).size(12).style(
@@ -311,42 +308,42 @@ impl Application for CosmicBatteryApplet {
                         container(divider::horizontal::light())
                             .width(Length::Fill)
                             .padding([0, 12]),
-                        container(toggler(fl!("max-charge"), self.charging_limit, |_| {
-                            Message::SetChargingLimit(!self.charging_limit)
-                        }))
+                        container(
+                            toggler(fl!("max-charge"), self.charging_limit, |_| {
+                                Message::SetChargingLimit(!self.charging_limit)
+                            })
+                            .text_size(14)
+                            .width(Length::Fill)
+                        )
                         .padding([0, 24])
                         .width(Length::Fill),
                         container(divider::horizontal::light())
                             .width(Length::Fill)
                             .padding([0, 12]),
                         row![
-                            icon("display-brightness-symbolic", 24)
-                                .style(Svg::Symbolic)
-                                .width(Length::Units(24))
-                                .height(Length::Units(24)),
+                            icon("display-brightness-symbolic", 24).style(Svg::Symbolic),
                             slider(
                                 1..=100,
                                 (self.screen_brightness * 100.0) as i32,
                                 Message::SetScreenBrightness
                             ),
                             text(format!("{:.0}%", self.screen_brightness * 100.0))
-                                .width(Length::Units(40))
+                                .size(16)
+                                .width(Length::Fixed(40.0))
                                 .horizontal_alignment(Horizontal::Right)
                         ]
                         .padding([0, 24])
                         .spacing(12),
                         row![
-                            icon("keyboard-brightness-symbolic", 24)
-                                .style(Svg::Symbolic)
-                                .width(Length::Units(24))
-                                .height(Length::Units(24)),
+                            icon("keyboard-brightness-symbolic", 24).style(Svg::Symbolic),
                             slider(
                                 0..=100,
                                 (self.kbd_brightness * 100.0) as i32,
                                 Message::SetKbdBrightness
                             ),
                             text(format!("{:.0}%", self.kbd_brightness * 100.0))
-                                .width(Length::Units(40))
+                                .size(16)
+                                .width(Length::Fixed(40.0))
                                 .horizontal_alignment(Horizontal::Right)
                         ]
                         .padding([0, 24])
@@ -354,8 +351,11 @@ impl Application for CosmicBatteryApplet {
                         container(divider::horizontal::light())
                             .width(Length::Fill)
                             .padding([0, 12]),
-                        button(APPLET_BUTTON_THEME)
-                            .custom(vec![text(fl!("power-settings")).width(Length::Fill).into()])
+                        button(applet_button_theme())
+                            .custom(vec![text(fl!("power-settings"))
+                                .size(14)
+                                .width(Length::Fill)
+                                .into()])
                             .on_press(Message::OpenBatterySettings)
                             .width(Length::Fill)
                             .padding([8, 24])
@@ -369,35 +369,38 @@ impl Application for CosmicBatteryApplet {
 
     fn subscription(&self) -> Subscription<Message> {
         Subscription::batch(vec![
-            device_subscription(0).map(|(_, event)| match event {
-                DeviceDbusEvent::Update {
-                    icon_name,
-                    percent,
-                    time_to_empty,
-                } => Message::Update {
+            device_subscription(0).map(
+                |(
+                    _,
+                    DeviceDbusEvent::Update {
+                        icon_name,
+                        percent,
+                        time_to_empty,
+                    },
+                )| Message::Update {
                     icon_name,
                     percent,
                     time_to_empty,
                 },
+            ),
+            kbd_backlight_subscription(0).map(|event| match event {
+                (_, KeyboardBacklightUpdate::Update(b)) => Message::UpdateKbdBrightness(b),
+                (_, KeyboardBacklightUpdate::Init(tx, b)) => Message::InitKbdBacklight(tx, b),
             }),
-            kbd_backlight_subscription(0).map(|(_, event)| match event {
-                KeyboardBacklightUpdate::Update(b) => Message::UpdateKbdBrightness(b),
-                KeyboardBacklightUpdate::Init(tx, b) => Message::InitKbdBacklight(tx, b),
+            screen_backlight_subscription(0).map(|e| match e {
+                (_, ScreenBacklightUpdate::Update(b)) => Message::UpdateScreenBrightness(b),
+                (_, ScreenBacklightUpdate::Init(tx, b)) => Message::InitScreenBacklight(tx, b),
             }),
-            screen_backlight_subscription(0).map(|(_, event)| match event {
-                ScreenBacklightUpdate::Update(b) => Message::UpdateScreenBrightness(b),
-                ScreenBacklightUpdate::Init(tx, b) => Message::InitScreenBacklight(tx, b),
-            }),
-            power_profile_subscription(0).map(|(_, event)| match event {
-                PowerProfileUpdate::Update { profile } => Message::Profile(profile),
-                PowerProfileUpdate::Init(tx, p) => Message::InitProfile(p, tx),
-                PowerProfileUpdate::Error(e) => Message::Errored(e), // TODO: handle error
+            power_profile_subscription(0).map(|event| match event {
+                (_, PowerProfileUpdate::Update { profile }) => Message::Profile(profile),
+                (_, PowerProfileUpdate::Init(tx, p)) => Message::InitProfile(p, tx),
+                (_, PowerProfileUpdate::Error(e)) => Message::Errored(e), // TODO: handle error
             }),
         ])
     }
 
     fn theme(&self) -> Theme {
-        self.theme
+        self.theme.clone()
     }
 
     fn close_requested(&self, _id: window::Id) -> Message {
@@ -405,9 +408,9 @@ impl Application for CosmicBatteryApplet {
     }
 
     fn style(&self) -> <Self::Theme as application::StyleSheet>::Style {
-        <Self::Theme as application::StyleSheet>::Style::Custom(|theme| Appearance {
+        <Self::Theme as application::StyleSheet>::Style::Custom(Box::new(|theme| Appearance {
             background_color: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
             text_color: theme.cosmic().on_bg_color().into(),
-        })
+        }))
     }
 }

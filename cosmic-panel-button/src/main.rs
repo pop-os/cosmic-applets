@@ -1,14 +1,10 @@
 use cosmic::{
-    applet::CosmicAppletHelper,
-    iced::{
-        self,
-        wayland::InitialSurface,
-        Application,
-    },
-    iced_sctk::layout::Limits,
+    iced::Limits,
+    iced::{self, wayland::InitialSurface, Application},
+    iced_runtime::core::window,
     iced_style::application,
-    iced_native::window,
 };
+use cosmic_applet::CosmicAppletHelper;
 use freedesktop_desktop_entry::DesktopEntry;
 use std::{env, fs, process::Command};
 
@@ -47,10 +43,12 @@ impl iced::Application for Button {
     }
 
     fn style(&self) -> <Self::Theme as application::StyleSheet>::Style {
-        <Self::Theme as application::StyleSheet>::Style::Custom(|theme| application::Appearance {
-            background_color: iced::Color::from_rgba(0.0, 0.0, 0.0, 0.0),
-            text_color: theme.cosmic().on_bg_color().into(),
-        })
+        <Self::Theme as application::StyleSheet>::Style::Custom(Box::new(|theme| {
+            application::Appearance {
+                background_color: iced::Color::from_rgba(0.0, 0.0, 0.0, 0.0),
+                text_color: theme.cosmic().on_bg_color().into(),
+            }
+        }))
     }
 
     fn subscription(&self) -> iced::Subscription<Msg> {
@@ -112,10 +110,8 @@ pub fn main() -> iced::Result {
     };
     match &mut settings.initial_surface {
         InitialSurface::XdgWindow(s) => {
-            s.iced_settings.min_size = Some((1, 1));
-            s.iced_settings.max_size = None;
             s.autosize = true;
-            s.size_limits = Limits::NONE.min_height(1).min_width(1);
+            s.size_limits = Limits::NONE.min_height(1.0).min_width(1.0);
         }
         _ => unreachable!(),
     };

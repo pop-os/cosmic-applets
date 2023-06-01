@@ -8,6 +8,7 @@ use iced::subscription;
 use std::{fmt::Debug, hash::Hash};
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 use zbus::dbus_proxy;
+
 #[dbus_proxy(
     default_service = "org.freedesktop.UPower",
     interface = "org.freedesktop.UPower.KbdBacklight",
@@ -35,7 +36,20 @@ trait KbdBacklight {
 pub fn kbd_backlight_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
     id: I,
 ) -> iced::Subscription<(I, KeyboardBacklightUpdate)> {
-    subscription::unfold(id, State::Ready, move |state| start_listening(id, state))
+    subscription::unfold(id, State::Ready, move |state| start_listening_loop(id, state))
+}
+
+async fn start_listening_loop<I: Copy + Debug>(
+    id: I,
+    mut state: State,
+) -> ((I, KeyboardBacklightUpdate), State) {
+    loop {
+        let (update, new_state) = start_listening(id, state).await;
+        state = new_state;
+        if let Some(update) = update {
+            return (update, state);
+        }
+    }
 }
 
 #[derive(Debug)]
