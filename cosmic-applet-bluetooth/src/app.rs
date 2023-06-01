@@ -316,12 +316,7 @@ impl Application for CosmicBluetoothApplet {
                     }
                     BluerDeviceStatus::Paired => {}
                     BluerDeviceStatus::Connecting | BluerDeviceStatus::Disconnecting => {
-                        row = row.push(
-                            icon("process-working-symbolic", 24)
-                                .style(Svg::Symbolic)
-                                .width(Length::Fixed(24.0))
-                                .height(Length::Fixed(24.0)),
-                        );
+                        row = row.push(icon("process-working-symbolic", 24).style(Svg::Symbolic));
                     }
                     BluerDeviceStatus::Disconnected | BluerDeviceStatus::Pairing => continue,
                 };
@@ -391,17 +386,12 @@ impl Application for CosmicBluetoothApplet {
                             .height(Length::Fixed(24.0))
                             .vertical_alignment(Vertical::Center)
                             .into(),
-                        container(
-                            icon(dropdown_icon, 14)
-                                .style(Svg::Symbolic)
-                                .width(Length::Fixed(14.0))
-                                .height(Length::Fixed(14.0)),
-                        )
-                        .align_x(Horizontal::Center)
-                        .align_y(Vertical::Center)
-                        .width(Length::Fixed(24.0))
-                        .height(Length::Fixed(24.0))
-                        .into(),
+                        container(icon(dropdown_icon, 14).style(Svg::Symbolic))
+                            .align_x(Horizontal::Center)
+                            .align_y(Vertical::Center)
+                            .width(Length::Fixed(24.0))
+                            .height(Length::Fixed(24.0))
+                            .into(),
                     ]
                     .into(),
                 )

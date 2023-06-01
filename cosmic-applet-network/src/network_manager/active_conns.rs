@@ -1,11 +1,11 @@
 use super::{NetworkManagerEvent, NetworkManagerState};
 use cosmic::iced::{self, subscription};
 use cosmic_dbus_networkmanager::nm::NetworkManager;
+use futures::StreamExt;
 use log::error;
 use std::fmt::Debug;
 use std::hash::Hash;
 use zbus::Connection;
-use futures::StreamExt;
 
 pub fn active_conns_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
     id: I,
@@ -50,11 +50,7 @@ async fn start_listening<I: Copy + Debug>(
     let new_state = NetworkManagerState::new(&conn).await.unwrap_or_default();
 
     (
-        Some((
-            id,
-            NetworkManagerEvent::ActiveConns(new_state),
-        )),
+        Some((id, NetworkManagerEvent::ActiveConns(new_state))),
         State::Continue(conn),
     )
 }
-

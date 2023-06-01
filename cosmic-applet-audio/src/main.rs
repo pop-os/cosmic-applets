@@ -304,10 +304,7 @@ impl Application for Audio {
             } else {
                 column![
                     row![
-                        icon("audio-volume-high-symbolic", 32)
-                            .width(Length::Fixed(24.0))
-                            .height(Length::Fixed(24.0))
-                            .style(Svg::Symbolic),
+                        icon("audio-volume-high-symbolic", 24).style(Svg::Symbolic),
                         slider(0.0..=100.0, out_f64, Message::SetOutputVolume)
                             .width(Length::FillPortion(5)),
                         text(format!("{}%", out_f64.round()))
@@ -319,10 +316,7 @@ impl Application for Audio {
                     .align_items(Alignment::Center)
                     .padding([8, 24]),
                     row![
-                        icon("audio-input-microphone-symbolic", 32)
-                            .width(Length::Fixed(24.0))
-                            .height(Length::Fixed(24.0))
-                            .style(Svg::Symbolic),
+                        icon("audio-input-microphone-symbolic", 24).style(Svg::Symbolic),
                         slider(0.0..=100.0, in_f64, Message::SetInputVolume)
                             .width(Length::FillPortion(5)),
                         text(format!("{}%", in_f64.round()))

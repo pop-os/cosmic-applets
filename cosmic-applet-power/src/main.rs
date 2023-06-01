@@ -157,7 +157,7 @@ impl Application for Power {
                 let id = window::Id(self.id_ctr);
                 self.action_to_confirm = Some((id, action));
                 return Command::batch(vec![
-                    Command::perform(async { sleep(Duration::from_secs(60)).await }, move |_| {
+                    Command::perform(sleep(Duration::from_secs(60)), move |_| {
                         Message::Timeout(id)
                     }),
                     get_layer_surface(SctkLayerSurfaceSettings {

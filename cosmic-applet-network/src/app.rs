@@ -422,8 +422,6 @@ impl Application for CosmicNetworkApplet {
                         let mut btn_content = vec![
                             icon("network-wireless-symbolic", 24)
                                 .style(Svg::Symbolic)
-                                .width(Length::Fixed(24.0))
-                                .height(Length::Fixed(24.0))
                                 .into(),
                             column![text(name).size(14), Column::with_children(ipv4)]
                                 .width(Length::Fill)
@@ -435,8 +433,6 @@ impl Application for CosmicNetworkApplet {
                                 btn_content.push(
                                     icon("process-working-symbolic", 24)
                                         .style(Svg::Symbolic)
-                                        .width(Length::Fixed(24.0))
-                                        .height(Length::Fixed(24.0))
                                         .into(),
                                 );
                             }
@@ -467,8 +463,6 @@ impl Application for CosmicNetworkApplet {
                 let mut btn_content = vec![
                     icon("network-wireless-symbolic", 24)
                         .style(Svg::Symbolic)
-                        .width(Length::Fixed(24.0))
-                        .height(Length::Fixed(24.0))
                         .into(),
                     text(&known.ssid).size(14).width(Length::Fill).into(),
                 ];
@@ -477,8 +471,6 @@ impl Application for CosmicNetworkApplet {
                     btn_content.push(
                         icon("process-working-symbolic", 24)
                             .style(Svg::Symbolic)
-                            .width(Length::Fixed(24.0))
-                            .height(Length::Fixed(24.0))
                             .into(),
                     );
                 }
@@ -544,17 +536,12 @@ impl Application for CosmicNetworkApplet {
                             .height(Length::Fixed(24.0))
                             .vertical_alignment(Vertical::Center)
                             .into(),
-                        container(
-                            icon(dropdown_icon, 14)
-                                .style(Svg::Symbolic)
-                                .width(Length::Fixed(14.0))
-                                .height(Length::Fixed(14.0)),
-                        )
-                        .align_x(Horizontal::Center)
-                        .align_y(Vertical::Center)
-                        .width(Length::Fixed(24.0))
-                        .height(Length::Fixed(24.0))
-                        .into(),
+                        container(icon(dropdown_icon, 14).style(Svg::Symbolic))
+                            .align_x(Horizontal::Center)
+                            .align_y(Vertical::Center)
+                            .width(Length::Fixed(24.0))
+                            .height(Length::Fixed(24.0))
+                            .into(),
                     ]
                     .into(),
                 )
@@ -570,10 +557,7 @@ impl Application for CosmicNetworkApplet {
                             password,
                         } => {
                             let id = row![
-                                icon("network-wireless-symbolic", 24)
-                                    .style(Svg::Symbolic)
-                                    .width(Length::Fixed(24.0))
-                                    .height(Length::Fixed(24.0)),
+                                icon("network-wireless-symbolic", 24).style(Svg::Symbolic),
                                 text(&access_point.ssid).size(14),
                             ]
                             .align_items(Alignment::Center)
@@ -610,10 +594,7 @@ impl Application for CosmicNetworkApplet {
                         }
                         NewConnectionState::Waiting(access_point) => {
                             let id = row![
-                                icon("network-wireless-symbolic", 24)
-                                    .style(Svg::Symbolic)
-                                    .width(Length::Fixed(24.0))
-                                    .height(Length::Fixed(24.0)),
+                                icon("network-wireless-symbolic", 24).style(Svg::Symbolic),
                                 text(&access_point.ssid).size(14),
                             ]
                             .align_items(Alignment::Center)
@@ -621,10 +602,7 @@ impl Application for CosmicNetworkApplet {
                             .spacing(12);
                             let connecting = row![
                                 id,
-                                icon("process-working-symbolic", 24)
-                                    .style(Svg::Symbolic)
-                                    .width(Length::Fixed(24.0))
-                                    .height(Length::Fixed(24.0)),
+                                icon("process-working-symbolic", 24).style(Svg::Symbolic),
                             ]
                             .spacing(8)
                             .padding([0, 24]);
@@ -632,10 +610,7 @@ impl Application for CosmicNetworkApplet {
                         }
                         NewConnectionState::Failure(access_point) => {
                             let id = row![
-                                icon("network-wireless-symbolic", 24)
-                                    .style(Svg::Symbolic)
-                                    .width(Length::Fixed(24.0))
-                                    .height(Length::Fixed(24.0)),
+                                icon("network-wireless-symbolic", 24).style(Svg::Symbolic),
                                 text(&access_point.ssid).size(14),
                             ]
                             .align_items(Alignment::Center)
@@ -682,10 +657,7 @@ impl Application for CosmicNetworkApplet {
                         }
                         let button = button(button_style())
                             .custom(vec![row![
-                                icon("network-wireless-symbolic", 16)
-                                    .style(Svg::Symbolic)
-                                    .width(Length::Fixed(16.0))
-                                    .height(Length::Fixed(16.0)),
+                                icon("network-wireless-symbolic", 16).style(Svg::Symbolic),
                                 text(&ap.ssid)
                                     .size(14)
                                     .height(Length::Fixed(24.0))

@@ -239,10 +239,7 @@ impl Application for CosmicBatteryApplet {
                 .popup_container(
                     column![
                         row![
-                            icon(&*self.icon_name, 24)
-                                .style(Svg::Symbolic)
-                                .width(Length::Fixed(24.0))
-                                .height(Length::Fixed(24.0)),
+                            icon(&*self.icon_name, 24).style(Svg::Symbolic),
                             column![name, description]
                         ]
                         .padding([0, 24])
@@ -324,10 +321,7 @@ impl Application for CosmicBatteryApplet {
                             .width(Length::Fill)
                             .padding([0, 12]),
                         row![
-                            icon("display-brightness-symbolic", 24)
-                                .style(Svg::Symbolic)
-                                .width(Length::Fixed(24.0))
-                                .height(Length::Fixed(24.0)),
+                            icon("display-brightness-symbolic", 24).style(Svg::Symbolic),
                             slider(
                                 1..=100,
                                 (self.screen_brightness * 100.0) as i32,
@@ -341,10 +335,7 @@ impl Application for CosmicBatteryApplet {
                         .padding([0, 24])
                         .spacing(12),
                         row![
-                            icon("keyboard-brightness-symbolic", 24)
-                                .style(Svg::Symbolic)
-                                .width(Length::Fixed(24.0))
-                                .height(Length::Fixed(24.0)),
+                            icon("keyboard-brightness-symbolic", 24).style(Svg::Symbolic),
                             slider(
                                 0..=100,
                                 (self.kbd_brightness * 100.0) as i32,
