@@ -10,3 +10,4 @@ Keywords=COSMIC;Iced;
 Icon=com.system76.CosmicAppletBluetooth
 StartupNotify=true
 NoDisplay=true
+X-CosmicApplet=true
