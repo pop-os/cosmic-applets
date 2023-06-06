@@ -13,11 +13,13 @@ use cosmic::{
     },
     iced_style::{application, button::StyleSheet},
     theme::{Button, Svg},
-    widget::{button, divider, icon, toggler},
+    widget::{button, divider, icon},
     Element, Theme,
 };
 use cosmic_applet::CosmicAppletHelper;
 use cosmic_dbus_networkmanager::interface::enums::{ActiveConnectionState, DeviceState};
+use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
+
 use futures::channel::mpsc::UnboundedSender;
 use zbus::Connection;
 
@@ -76,6 +78,9 @@ impl Into<AccessPoint> for NewConnectionState {
     }
 }
 
+static WIFI: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
+static AIRPLANE_MODE: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
+
 #[derive(Default)]
 struct CosmicNetworkApplet {
     icon_name: String,
@@ -89,6 +94,7 @@ struct CosmicNetworkApplet {
     show_visible_networks: bool,
     new_connection: Option<NewConnectionState>,
     conn: Option<Connection>,
+    timeline: Timeline,
 }
 
 impl CosmicNetworkApplet {
@@ -112,6 +118,29 @@ impl CosmicNetworkApplet {
             })
             .to_string()
     }
+
+    fn update_togglers(&mut self, state: &NetworkManagerState) {
+        let timeline = &mut self.timeline;
+        if state.wifi_enabled != self.nm_state.wifi_enabled {
+            let chain = if state.wifi_enabled {
+                chain::Toggler::on(WIFI.clone(), 1.)
+            } else {
+                chain::Toggler::off(WIFI.clone(), 1.)
+            };
+            timeline.set_chain(chain);
+        };
+
+        if state.airplane_mode != self.nm_state.airplane_mode {
+            let chain = if state.airplane_mode {
+                chain::Toggler::on(AIRPLANE_MODE.clone(), 1.)
+            } else {
+                chain::Toggler::off(AIRPLANE_MODE.clone(), 1.)
+            };
+            timeline.set_chain(chain);
+        };
+
+        timeline.start();
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -122,13 +151,14 @@ pub(crate) enum Message {
     ToggleAirplaneMode(bool),
     ToggleWiFi(bool),
     ToggleVisibleNetworks,
-    Errored(String),
     Ignore,
     NetworkManagerEvent(NetworkManagerEvent),
     SelectWirelessAccessPoint(AccessPoint),
     CancelNewConnection,
     Password(String),
     SubmitPassword,
+    Frame(Instant),
+    // Errored(String),
 }
 
 impl Application for CosmicNetworkApplet {
@@ -153,6 +183,7 @@ impl Application for CosmicNetworkApplet {
 
     fn update(&mut self, message: Message) -> Command<Message> {
         match message {
+            Message::Frame(now) => self.timeline.now(now),
             Message::TogglePopup => {
                 if let Some(p) = self.popup.take() {
                     self.show_visible_networks = false;
@@ -179,20 +210,14 @@ impl Application for CosmicNetworkApplet {
                     return get_popup(popup_settings);
                 }
             }
-            Message::Errored(_) => todo!(),
+            // Message::Errored(_) => todo!(),
             Message::Ignore => {}
             Message::ToggleAirplaneMode(enabled) => {
-                self.nm_state.airplane_mode = enabled;
                 if let Some(tx) = self.nm_sender.as_mut() {
                     let _ = tx.unbounded_send(NetworkManagerRequest::SetAirplaneMode(enabled));
                 }
             }
             Message::ToggleWiFi(enabled) => {
-                if !enabled {
-                    self.nm_state.clear();
-                }
-                self.nm_state.wifi_enabled = enabled;
-
                 if let Some(tx) = self.nm_sender.as_mut() {
                     let _ = tx.unbounded_send(NetworkManagerRequest::SetWiFi(enabled));
                 }
@@ -204,6 +229,7 @@ impl Application for CosmicNetworkApplet {
                     state,
                 } => {
                     self.nm_sender.replace(sender);
+                    self.update_togglers(&state);
                     self.nm_state = state;
                     self.update_icon_name();
                     self.conn = Some(conn);
@@ -236,7 +262,9 @@ impl Application for CosmicNetworkApplet {
                                     self.new_connection.take();
                                 }
                             }
-                            _ => {}
+                            _ => {
+                                self.update_togglers(&state);
+                            }
                         }
                     } else {
                         match req {
@@ -500,18 +528,28 @@ impl Application for CosmicNetworkApplet {
             let mut content = column![
                 vpn_ethernet_col,
                 container(
-                    toggler(fl!("airplane-mode"), self.nm_state.airplane_mode, |m| {
-                        Message::ToggleAirplaneMode(m)
-                    })
+                    anim!(
+                        //toggler
+                        AIRPLANE_MODE,
+                        &self.timeline,
+                        fl!("airplane-mode"),
+                        self.nm_state.airplane_mode,
+                        |_chain, enable| { Message::ToggleAirplaneMode(enable) },
+                    )
                     .text_size(14)
                     .width(Length::Fill)
                 )
                 .padding([0, 12]),
                 divider::horizontal::light(),
                 container(
-                    toggler(fl!("wifi"), self.nm_state.wifi_enabled, |m| {
-                        Message::ToggleWiFi(m)
-                    })
+                    anim!(
+                        //toggler
+                        WIFI,
+                        &self.timeline,
+                        fl!("wifi"),
+                        self.nm_state.wifi_enabled,
+                        |_chain, enable| { Message::ToggleWiFi(enable) },
+                    )
                     .text_size(14)
                     .width(Length::Fill)
                 )
@@ -683,9 +721,11 @@ impl Application for CosmicNetworkApplet {
     fn subscription(&self) -> Subscription<Message> {
         let network_sub =
             network_manager_subscription(0).map(|e| Message::NetworkManagerEvent(e.1));
+        let timeline = self.timeline.as_subscription().map(Message::Frame);
 
         if let Some(conn) = self.conn.as_ref() {
             Subscription::batch(vec![
+                timeline,
                 network_sub,
                 active_conns_subscription(0, conn.clone())
                     .map(|e| Message::NetworkManagerEvent(e.1)),
@@ -694,7 +734,7 @@ impl Application for CosmicNetworkApplet {
                     .map(|e| Message::NetworkManagerEvent(e.1)),
             ])
         } else {
-            network_sub
+            Subscription::batch(vec![timeline, network_sub])
         }
     }
 

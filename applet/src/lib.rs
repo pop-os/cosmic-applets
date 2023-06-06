@@ -1,16 +1,15 @@
 use cosmic::{
-    iced::{self, window, Limits},
+    iced::{
+      alignment::{Horizontal, Vertical},
+      wayland::InitialSurface,
+      widget::{self, Container},
+      window, Limits, Color, Element, Length, Rectangle, Settings,
+    },
     iced_style, iced_widget, sctk,
     theme::Button,
     Renderer,
 };
 use cosmic_panel_config::{CosmicPanelBackground, PanelAnchor, PanelSize};
-use iced::{
-    alignment::{Horizontal, Vertical},
-    wayland::InitialSurface,
-    widget::{self, Container},
-    Color, Element, Length, Rectangle, Settings,
-};
 use iced_style::{button::StyleSheet, container::Appearance};
 use iced_widget::runtime::command::platform_specific::wayland::{
     popup::{SctkPopupSettings, SctkPositioner},

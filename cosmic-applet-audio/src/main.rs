@@ -11,11 +11,15 @@ use cosmic_applet::{applet_button_theme, CosmicAppletHelper};
 
 use cosmic::iced::{
     self,
-    widget::{column, row, slider, text, toggler},
+    widget::{column, row, slider, text},
     window, Alignment, Application, Command, Length, Subscription,
 };
 use cosmic::iced_style::application::{self, Appearance};
 use cosmic::{Element, Theme};
+use cosmic_time::{
+  once_cell::sync::Lazy,
+  anim, chain, id, Timeline, Instant,
+};
 
 use iced::wayland::popup::{destroy_popup, get_popup};
 use iced::widget::container;
@@ -36,6 +40,8 @@ pub fn main() -> cosmic::iced::Result {
     Audio::run(helper.window_settings())
 }
 
+static SHOW_MEDIA_CONTROLS: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
+
 #[derive(Default)]
 struct Audio {
     is_open: IsOpen,
@@ -50,6 +56,7 @@ struct Audio {
     popup: Option<window::Id>,
     show_media_controls_in_top_panel: bool,
     id_ctr: u128,
+    timeline: Timeline,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -70,7 +77,8 @@ enum Message {
     Pulse(pulse::Event),
     Ignore,
     TogglePopup,
-    ToggleMediaControlsInTopPanel(bool),
+    ToggleMediaControlsInTopPanel(chain::Toggler, bool),
+    Frame(Instant),
 }
 
 impl Application for Audio {
@@ -115,6 +123,9 @@ impl Application for Audio {
 
     fn update(&mut self, message: Message) -> Command<Message> {
         match message {
+            Message::Frame(now) => {
+              self.timeline.now(now)
+            },
             Message::TogglePopup => {
                 if let Some(p) = self.popup.take() {
                     return destroy_popup(p);
@@ -261,7 +272,8 @@ impl Application for Audio {
                 pulse::Event::Disconnected => self.pulse_state.disconnected(),
             },
             Message::Ignore => {}
-            Message::ToggleMediaControlsInTopPanel(enabled) => {
+            Message::ToggleMediaControlsInTopPanel(chain, enabled) => {
+                self.timeline.set_chain(chain).start();
                 self.show_media_controls_in_top_panel = enabled;
             }
         };
@@ -270,7 +282,9 @@ impl Application for Audio {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        pulse::connect().map(Message::Pulse)
+        Subscription::batch(vec![pulse::connect().map(Message::Pulse),
+        self.timeline.as_subscription().map(Message::Frame),
+        ])
     }
 
     fn view(&self, id: window::Id) -> Element<Message> {
@@ -375,12 +389,13 @@ impl Application for Audio {
                     .padding([12, 24])
                     .width(Length::Fill),
                 container(
-                    toggler(
-                        Some(fl!("show-media-controls")),
-                        self.show_media_controls_in_top_panel,
-                        Message::ToggleMediaControlsInTopPanel,
-                    )
-                    .text_size(14)
+                  anim!( // toggler
+                    SHOW_MEDIA_CONTROLS,
+                    &self.timeline,
+                    Some(fl!("show-media-controls")),
+                    self.show_media_controls_in_top_panel,
+                    Message::ToggleMediaControlsInTopPanel,
+                  ).text_size(14)
                 )
                 .padding([0, 24]),
                 container(divider::horizontal::light())
