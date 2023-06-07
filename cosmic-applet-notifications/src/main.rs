@@ -9,9 +9,10 @@ use cosmic::iced_style::application::{self, Appearance};
 
 use cosmic::iced_widget::Button;
 use cosmic::theme::Svg;
-use cosmic::widget::{divider, icon, toggler};
+use cosmic::widget::{divider, icon};
 use cosmic::Renderer;
 use cosmic::{Element, Theme};
+use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
 
 use std::process;
 
@@ -19,6 +20,8 @@ pub fn main() -> cosmic::iced::Result {
     let helper = CosmicAppletHelper::default();
     Notifications::run(helper.window_settings())
 }
+
+static DO_NOT_DISTURB: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
 
 #[derive(Default)]
 struct Notifications {
@@ -29,14 +32,16 @@ struct Notifications {
     id_ctr: u128,
     do_not_disturb: bool,
     notifications: Vec<Vec<String>>,
+    timeline: Timeline,
 }
 
 #[derive(Debug, Clone)]
 enum Message {
     TogglePopup,
-    DoNotDisturb(bool),
+    DoNotDisturb(chain::Toggler, bool),
     Settings,
     Ignore,
+    Frame(Instant),
 }
 
 impl Application for Notifications {
@@ -75,11 +80,15 @@ impl Application for Notifications {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        Subscription::none()
+        self.timeline.as_subscription().map(Message::Frame)
     }
 
     fn update(&mut self, message: Message) -> Command<Message> {
         match message {
+            Message::Frame(now) => {
+                self.timeline.now(now);
+                Command::none()
+            }
             Message::TogglePopup => {
                 if let Some(p) = self.popup.take() {
                     destroy_popup(p)
@@ -98,7 +107,8 @@ impl Application for Notifications {
                     get_popup(popup_settings)
                 }
             }
-            Message::DoNotDisturb(b) => {
+            Message::DoNotDisturb(chain, b) => {
+                self.timeline.set_chain(chain).start();
                 self.do_not_disturb = b;
                 Command::none()
             }
@@ -117,14 +127,15 @@ impl Application for Notifications {
                 .on_press(Message::TogglePopup)
                 .into()
         } else {
-            let do_not_disturb =
-                row![
-                    toggler(String::from("Do Not Disturb"), self.do_not_disturb, |b| {
-                        Message::DoNotDisturb(b)
-                    })
-                    .width(Length::Fill)
-                ]
-                .padding([0, 24]);
+            let do_not_disturb = row![anim!(
+                DO_NOT_DISTURB,
+                &self.timeline,
+                String::from("Do Not Disturb"),
+                self.do_not_disturb,
+                Message::DoNotDisturb
+            )
+            .width(Length::Fill)]
+            .padding([0, 24]);
 
             let settings =
                 row_button(vec!["Notification Settings...".into()]).on_press(Message::Settings);

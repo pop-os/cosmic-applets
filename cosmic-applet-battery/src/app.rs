@@ -20,9 +20,14 @@ use cosmic::iced::{
 use cosmic::iced_runtime::core::layout::Limits;
 use cosmic::iced_style::application::{self, Appearance};
 use cosmic::theme::Svg;
-use cosmic::widget::{button, divider, icon, toggler};
+use cosmic::widget::{button, divider, icon};
 use cosmic::{Element, Theme};
 use cosmic_applet::{applet_button_theme, CosmicAppletHelper};
+use cosmic_time::{
+  once_cell::sync::Lazy,
+  anim, chain, id, Timeline, Instant,
+};
+
 use log::error;
 use std::time::Duration;
 use tokio::sync::mpsc::UnboundedSender;
@@ -48,6 +53,8 @@ pub fn run() -> cosmic::iced::Result {
     CosmicBatteryApplet::run(helper.window_settings())
 }
 
+static MAX_CHARGE: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
+
 #[derive(Clone, Default)]
 struct CosmicBatteryApplet {
     icon_name: String,
@@ -64,6 +71,7 @@ struct CosmicBatteryApplet {
     applet_helper: CosmicAppletHelper,
     power_profile: Power,
     power_profile_sender: Option<UnboundedSender<PowerProfileRequest>>,
+    timeline: Timeline,
 }
 
 #[derive(Debug, Clone)]
@@ -76,7 +84,7 @@ enum Message {
     },
     SetKbdBrightness(i32),
     SetScreenBrightness(i32),
-    SetChargingLimit(bool),
+    SetChargingLimit(chain::Toggler, bool),
     UpdateKbdBrightness(f64),
     UpdateScreenBrightness(f64),
     OpenBatterySettings,
@@ -87,6 +95,7 @@ enum Message {
     InitProfile(UnboundedSender<PowerProfileRequest>, Power),
     Profile(Power),
     SelectProfile(Power),
+    Frame(Instant),
 }
 
 impl Application for CosmicBatteryApplet {
@@ -111,6 +120,7 @@ impl Application for CosmicBatteryApplet {
 
     fn update(&mut self, message: Message) -> Command<Message> {
         match message {
+            Message::Frame(now) => self.timeline.now(now),
             Message::SetKbdBrightness(brightness) => {
                 self.kbd_brightness = (brightness as f64 / 100.0).clamp(0., 1.);
                 if let Some(tx) = &self.kbd_sender {
@@ -123,8 +133,9 @@ impl Application for CosmicBatteryApplet {
                     let _ = tx.send(ScreenBacklightRequest::Set(self.screen_brightness));
                 }
             }
-            Message::SetChargingLimit(enable_charging_limit) => {
-                self.charging_limit = enable_charging_limit;
+            Message::SetChargingLimit(chain, enable) => {
+                self.timeline.set_chain(chain).start();
+                self.charging_limit = enable;
             }
             Message::OpenBatterySettings => {
                 // TODO Ashley
@@ -309,9 +320,13 @@ impl Application for CosmicBatteryApplet {
                             .width(Length::Fill)
                             .padding([0, 12]),
                         container(
-                            toggler(fl!("max-charge"), self.charging_limit, |_| {
-                                Message::SetChargingLimit(!self.charging_limit)
-                            })
+                            anim!( //toggler
+                                MAX_CHARGE,
+                                &self.timeline,
+                                fl!("max-charge"),
+                                self.charging_limit,
+                                Message::SetChargingLimit,
+                            )
                             .text_size(14)
                             .width(Length::Fill)
                         )
@@ -396,6 +411,7 @@ impl Application for CosmicBatteryApplet {
                 (_, PowerProfileUpdate::Init(tx, p)) => Message::InitProfile(p, tx),
                 (_, PowerProfileUpdate::Error(e)) => Message::Errored(e), // TODO: handle error
             }),
+            self.timeline.as_subscription().map(Message::Frame),
         ])
     }
 

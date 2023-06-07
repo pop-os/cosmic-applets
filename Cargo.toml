@@ -15,6 +15,8 @@ members = [
     "cosmic-panel-button",
 ]
 
+resolver="2"
+
 [profile.release]
 lto = "thin"
 # lto = "fat"

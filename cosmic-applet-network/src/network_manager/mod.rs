@@ -15,7 +15,7 @@ use cosmic_dbus_networkmanager::{
 };
 use futures::{
     channel::mpsc::{unbounded, UnboundedReceiver, UnboundedSender},
-    FutureExt, StreamExt,
+    StreamExt,
 };
 use tokio::{process::Command, time::timeout};
 use zbus::{
@@ -141,7 +141,7 @@ async fn start_listening<I: Copy + Debug>(
                 Some(NetworkManagerRequest::SetWiFi(enabled)) => {
                     let success = network_manager.set_wireless_enabled(enabled).await.is_ok();
                     let response = NetworkManagerEvent::RequestResponse {
-                        req: NetworkManagerRequest::SetAirplaneMode(enabled),
+                        req: NetworkManagerRequest::SetWiFi(enabled),
                         success,
                         state: NetworkManagerState::new(&conn).await.unwrap_or_default(),
                     };
@@ -624,6 +624,7 @@ impl NetworkManagerState {
         Ok(_self)
     }
 
+    #[allow(dead_code)]
     pub fn clear(&mut self) {
         self.active_conns = Vec::new();
         self.known_access_points = Vec::new();
