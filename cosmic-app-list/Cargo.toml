@@ -7,7 +7,7 @@ edition = "2021"
 [dependencies]
 cctk = { git = "https://github.com/pop-os/cosmic-protocols", package = "cosmic-client-toolkit", rev = "f0cfe09" }
 cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols", default-features = false, features = ["client"], rev = "f0cfe09" }
-libcosmic = { git = "https://github.com/pop-os/libcosmic/", rev = "5765053", default-features = false, features = ["wayland", "tokio"] }
+libcosmic = { git = "https://github.com/pop-os/libcosmic/", rev = "6699aa4", default-features = false, features = ["wayland", "tokio"] }
 cosmic-applet = { path = "../applet" }
 # libcosmic = { path = "../../libcosmic", default-features = false, features = ["wayland", "tokio"] }
 ron = "0.8"
