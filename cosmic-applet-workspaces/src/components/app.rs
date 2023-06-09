@@ -52,6 +52,7 @@ enum Message {
     WorkspaceUpdate(WorkspacesUpdate),
     WorkspacePressed(ObjectId),
     WheelScrolled(ScrollDelta),
+    Theme(Theme),
     Errored,
 }
 
@@ -69,7 +70,7 @@ impl Application for IcedWorkspacesApplet {
                     PanelAnchor::Left | PanelAnchor::Right => Layout::Column,
                     PanelAnchor::Top | PanelAnchor::Bottom => Layout::Row,
                 },
-                theme: Default::default(),
+                theme: applet_helper.theme(),
                 workspaces: Vec::new(),
                 workspace_tx: Default::default(),
                 helper: Default::default(),
@@ -124,6 +125,7 @@ impl Application for IcedWorkspacesApplet {
                 }
             }
             Message::Errored => {}
+            Message::Theme(t) => self.theme = t,
         }
         Command::none()
     }
@@ -182,6 +184,7 @@ impl Application for IcedWorkspacesApplet {
     fn subscription(&self) -> Subscription<Message> {
         Subscription::batch(
             vec![
+                self.helper.theme_subscription(0).map(Message::Theme),
                 workspaces(0).map(|e| Message::WorkspaceUpdate(e.1)),
                 subscription::events_with(|e, _| match e {
                     Mouse(mouse::Event::WheelScrolled { delta }) => {

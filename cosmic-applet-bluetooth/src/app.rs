@@ -53,6 +53,7 @@ enum Message {
     Request(BluerRequest),
     Cancel,
     Confirm,
+    Theme(Theme),
 }
 
 impl Application for CosmicBluetoothApplet {
@@ -62,9 +63,13 @@ impl Application for CosmicBluetoothApplet {
     type Flags = ();
 
     fn new(_flags: ()) -> (Self, Command<Message>) {
+        let applet_helper = CosmicAppletHelper::default();
+        let theme = applet_helper.theme();
         (
             CosmicBluetoothApplet {
                 icon_name: "bluetooth-symbolic".to_string(),
+                theme,
+                applet_helper,
                 ..Default::default()
             },
             Command::none(),
@@ -266,6 +271,9 @@ impl Application for CosmicBluetoothApplet {
                         |_| Message::Ignore,
                     );
                 }
+            }
+            Message::Theme(t) => {
+                self.theme = t;
             }
         }
         Command::none()
@@ -513,7 +521,10 @@ impl Application for CosmicBluetoothApplet {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        bluetooth_subscription(0).map(|(_, e)| Message::BluetoothEvent(e))
+        Subscription::batch(vec![
+            self.applet_helper.theme_subscription(0).map(Message::Theme),
+            bluetooth_subscription(0).map(|(_, e)| Message::BluetoothEvent(e)),
+        ])
     }
 
     fn theme(&self) -> Theme {

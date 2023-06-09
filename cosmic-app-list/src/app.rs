@@ -267,6 +267,7 @@ enum Message {
     StopListeningForDnd,
     IncrementSubscriptionCtr,
     ConfigUpdated(AppListConfig),
+    Theme(Theme),
 }
 
 #[derive(Debug, Clone, Default)]
@@ -368,6 +369,8 @@ impl Application for CosmicAppList {
 
     fn new(_flags: ()) -> (Self, Command<Message>) {
         let config = config::AppListConfig::load().unwrap_or_default();
+        let helper = CosmicAppletHelper::default();
+        let theme = helper.theme();
         let mut self_ = CosmicAppList {
             favorite_list: desktop_info_for_app_ids(config.favorites.clone())
                 .into_iter()
@@ -378,7 +381,9 @@ impl Application for CosmicAppList {
                     desktop_info: e,
                 })
                 .collect(),
+            applet_helper: helper,
             config,
+            theme,
             ..Default::default()
         };
         self_.item_ctr = self_.favorite_list.len() as u32;
@@ -835,6 +840,9 @@ impl Application for CosmicAppList {
 
                 self.favorite_list = new_list;
             }
+            Message::Theme(t) => {
+                self.theme = t;
+            }
         }
         Command::none()
     }
@@ -1051,6 +1059,7 @@ impl Application for CosmicAppList {
 
     fn subscription(&self) -> Subscription<Message> {
         Subscription::batch(vec![
+            self.applet_helper.theme_subscription(0).map(Message::Theme),
             toplevel_subscription(self.subscription_ctr).map(|e| Message::Toplevel(e.1)),
             events_with(|e, _| match e {
                 cosmic::iced_runtime::core::Event::PlatformSpecific(

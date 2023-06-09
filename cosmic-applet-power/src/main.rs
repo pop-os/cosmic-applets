@@ -74,6 +74,7 @@ enum Message {
     Cancel,
     Closed(window::Id),
     Zbus(Result<(), zbus::Error>),
+    Theme(Theme),
 }
 
 impl Application for Power {
@@ -83,8 +84,12 @@ impl Application for Power {
     type Flags = ();
 
     fn new(_flags: ()) -> (Power, Command<Message>) {
+        let applet_helper = CosmicAppletHelper::default();
+        let theme = applet_helper.theme();
         (
             Power {
+                applet_helper,
+                theme,
                 icon_name: "system-shutdown-symbolic".to_string(),
                 ..Default::default()
             },
@@ -112,19 +117,26 @@ impl Application for Power {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        events_with(|e, _status| match e {
-            cosmic::iced::Event::PlatformSpecific(PlatformSpecific::Wayland(
-                wayland::Event::Layer(LayerEvent::Unfocused, ..),
-            )) => Some(Message::Cancel),
-            // cosmic::iced::Event::PlatformSpecific(PlatformSpecific::Wayland(
-            //     wayland::Event::Seat(wayland::SeatEvent::Leave, _),
-            // )) => Some(Message::Cancel),
-            _ => None,
-        })
+        Subscription::batch(vec![
+            self.applet_helper.theme_subscription(0).map(Message::Theme),
+            events_with(|e, _status| match e {
+                cosmic::iced::Event::PlatformSpecific(PlatformSpecific::Wayland(
+                    wayland::Event::Layer(LayerEvent::Unfocused, ..),
+                )) => Some(Message::Cancel),
+                // cosmic::iced::Event::PlatformSpecific(PlatformSpecific::Wayland(
+                //     wayland::Event::Seat(wayland::SeatEvent::Leave, _),
+                // )) => Some(Message::Cancel),
+                _ => None,
+            }),
+        ])
     }
 
     fn update(&mut self, message: Message) -> Command<Message> {
         match message {
+            Message::Theme(t) => {
+                self.theme = t;
+                Command::none()
+            }
             Message::TogglePopup => {
                 if let Some(p) = self.popup.take() {
                     destroy_popup(p)

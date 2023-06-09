@@ -1,10 +1,15 @@
+use std::sync::Arc;
+
 use cosmic::{
+    cosmic_config::{config_subscription, CosmicConfigEntry},
+    cosmic_theme::util::CssColor,
     iced::{
-      alignment::{Horizontal, Vertical},
-      wayland::InitialSurface,
-      widget::{self, Container},
-      window, Limits, Color, Element, Length, Rectangle, Settings,
+        alignment::{Horizontal, Vertical},
+        wayland::InitialSurface,
+        widget::{self, Container},
+        window, Color, Element, Length, Limits, Rectangle, Settings,
     },
+    iced_futures::Subscription,
     iced_style, iced_widget, sctk,
     theme::Button,
     Renderer,
@@ -15,6 +20,7 @@ use iced_widget::runtime::command::platform_specific::wayland::{
     popup::{SctkPopupSettings, SctkPositioner},
     window::SctkWindowSettings,
 };
+use log::error;
 use sctk::reexports::protocols::xdg::shell::client::xdg_positioner::{Anchor, Gravity};
 
 pub use cosmic_panel_config;
@@ -197,6 +203,54 @@ impl CosmicAppletHelper {
             },
             parent_size: None,
             grab: true,
+        }
+    }
+
+    pub fn theme(&self) -> cosmic::theme::Theme {
+        match self.background {
+            CosmicPanelBackground::ThemeDefault | CosmicPanelBackground::Color(_) => {
+                let Ok(helper) = cosmic::cosmic_config::Config::new(
+                    cosmic::cosmic_theme::NAME,
+                    cosmic::cosmic_theme::Theme::<CssColor>::version() as u64,
+                ) else {
+                    return cosmic::theme::Theme::dark();
+                };
+                let t = cosmic::cosmic_theme::Theme::get_entry(&helper)
+                    .map(|t| t.into_srgba())
+                    .unwrap_or_else(|(errors, theme)| {
+                        for err in errors {
+                            error!("{:?}", err);
+                        }
+                        theme.into_srgba()
+                    });
+                cosmic::theme::Theme::custom(Arc::new(t))
+            }
+            CosmicPanelBackground::Dark => cosmic::theme::Theme::dark(),
+            CosmicPanelBackground::Light => cosmic::theme::Theme::light(),
+        }
+    }
+
+    pub fn theme_subscription(&self, id: u64) -> Subscription<cosmic::theme::Theme> {
+        match self.background {
+            CosmicPanelBackground::ThemeDefault | CosmicPanelBackground::Color(_) => {
+                config_subscription::<u64, cosmic::cosmic_theme::Theme<CssColor>>(
+                    id,
+                    cosmic::cosmic_theme::NAME.into(),
+                    cosmic::cosmic_theme::Theme::<CssColor>::version() as u64,
+                )
+                .map(|(_, res)| {
+                    let theme =
+                        res.map(|theme| theme.into_srgba())
+                            .unwrap_or_else(|(errors, theme)| {
+                                for err in errors {
+                                    error!("{:?}", err);
+                                }
+                                theme.into_srgba()
+                            });
+                    cosmic::theme::Theme::custom(Arc::new(theme))
+                })
+            }
+            CosmicPanelBackground::Dark | CosmicPanelBackground::Light => Subscription::none(),
         }
     }
 }

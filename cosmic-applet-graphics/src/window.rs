@@ -3,6 +3,7 @@ use crate::fl;
 use crate::graphics::{get_current_graphics, set_graphics, Graphics};
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced::Color;
+use cosmic::iced_futures::Subscription;
 use cosmic::iced_runtime::core::alignment::Horizontal;
 use cosmic::iced_runtime::core::Alignment;
 use cosmic::iced_style::application::{self, Appearance};
@@ -55,6 +56,7 @@ pub enum Message {
     SelectGraphicsMode(Graphics),
     TogglePopup,
     PopupClosed(window::Id),
+    Theme(Theme),
 }
 
 impl Application for Window {
@@ -64,7 +66,13 @@ impl Application for Window {
     type Theme = Theme;
 
     fn new(_flags: ()) -> (Self, Command<Self::Message>) {
-        let window = Window::default();
+        let applet_helper = CosmicAppletHelper::default();
+        let theme = applet_helper.theme();
+        let window = Window {
+            theme,
+            applet_helper,
+            ..Default::default()
+        };
         (window, Command::perform(dbus::init(), Message::DBusInit))
     }
 
@@ -74,6 +82,9 @@ impl Application for Window {
 
     fn update(&mut self, message: Message) -> iced::Command<Self::Message> {
         match message {
+            Message::Theme(t) => {
+                self.theme = t;
+            }
             Message::SelectGraphicsMode(new) => {
                 if let Some((_, proxy)) = self.dbus.as_ref() {
                     let prev = self
@@ -382,6 +393,9 @@ impl Application for Window {
                 )
                 .into()
         }
+    }
+    fn subscription(&self) -> Subscription<Message> {
+        self.applet_helper.theme_subscription(0).map(Message::Theme)
     }
 
     fn close_requested(&self, id: window::Id) -> Self::Message {

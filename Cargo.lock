@@ -695,6 +695,7 @@ version = "0.1.0"
 dependencies = [
  "cosmic-panel-config",
  "libcosmic",
+ "log",
  "ron",
  "serde",
 ]
