@@ -71,6 +71,7 @@ enum Message {
     Tick,
     Ignore,
     Rectangle(RectangleUpdate<u32>),
+    Theme(Theme),
 }
 
 impl Application for Time {
@@ -80,7 +81,16 @@ impl Application for Time {
     type Flags = ();
 
     fn new(_flags: ()) -> (Time, Command<Message>) {
-        (Time::default(), Command::none())
+        let applet_helper = CosmicAppletHelper::default();
+        let theme = applet_helper.theme();
+        (
+            Time {
+                applet_helper,
+                theme,
+                ..Default::default()
+            },
+            Command::none(),
+        )
     }
 
     fn title(&self) -> String {
@@ -118,6 +128,7 @@ impl Application for Time {
             .expect("Setting nanoseconds to 0 should always be possible.");
         let wait = 1.max((next - now).num_milliseconds());
         Subscription::batch(vec![
+            self.applet_helper.theme_subscription(0).map(Message::Theme),
             rectangle_tracker_subscription(0).map(|e| Message::Rectangle(e.1)),
             time::every(Duration::from_millis(
                 wait.try_into().unwrap_or(FALLBACK_DELAY),
@@ -128,6 +139,10 @@ impl Application for Time {
 
     fn update(&mut self, message: Message) -> Command<Message> {
         match message {
+            Message::Theme(t) => {
+                self.theme = t;
+                Command::none()
+            }
             Message::TogglePopup => {
                 if let Some(p) = self.popup.take() {
                     destroy_popup(p)

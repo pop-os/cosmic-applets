@@ -10,3 +10,4 @@ libcosmic = { git = "https://github.com/pop-os/libcosmic/", rev = "5765053", def
 ron = { version = "0.8" }
 serde = { version = "1.0" }
 cosmic-panel-config = { git = "https://github.com/pop-os/cosmic-panel", rev = "6cef482" }
+log = { version = "0.4" }

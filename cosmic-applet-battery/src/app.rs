@@ -23,10 +23,7 @@ use cosmic::theme::Svg;
 use cosmic::widget::{button, divider, icon};
 use cosmic::{Element, Theme};
 use cosmic_applet::{applet_button_theme, CosmicAppletHelper};
-use cosmic_time::{
-  once_cell::sync::Lazy,
-  anim, chain, id, Timeline, Instant,
-};
+use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
 
 use log::error;
 use std::time::Duration;
@@ -96,6 +93,7 @@ enum Message {
     Profile(Power),
     SelectProfile(Power),
     Frame(Instant),
+    Theme(Theme),
 }
 
 impl Application for CosmicBatteryApplet {
@@ -105,9 +103,13 @@ impl Application for CosmicBatteryApplet {
     type Flags = ();
 
     fn new(_flags: ()) -> (Self, Command<Message>) {
+        let applet_helper = CosmicAppletHelper::default();
+        let theme = applet_helper.theme();
         (
             CosmicBatteryApplet {
                 icon_name: "battery-symbolic".to_string(),
+                applet_helper,
+                theme,
                 ..Default::default()
             },
             Command::none(),
@@ -220,6 +222,9 @@ impl Application for CosmicBatteryApplet {
                     let _ = tx.send(PowerProfileRequest::Set(profile));
                 }
             }
+            Message::Theme(t) => {
+                self.theme = t;
+            }
         }
         Command::none()
     }
@@ -320,7 +325,8 @@ impl Application for CosmicBatteryApplet {
                             .width(Length::Fill)
                             .padding([0, 12]),
                         container(
-                            anim!( //toggler
+                            anim!(
+                                //toggler
                                 MAX_CHARGE,
                                 &self.timeline,
                                 fl!("max-charge"),
@@ -384,6 +390,7 @@ impl Application for CosmicBatteryApplet {
 
     fn subscription(&self) -> Subscription<Message> {
         Subscription::batch(vec![
+            self.applet_helper.theme_subscription(0).map(Message::Theme),
             device_subscription(0).map(
                 |(
                     _,

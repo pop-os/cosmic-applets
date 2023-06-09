@@ -3,6 +3,7 @@ use cosmic::{
     iced::{self, wayland::InitialSurface, Application},
     iced_runtime::core::window,
     iced_style::application,
+    theme::Theme,
 };
 use cosmic_applet::CosmicAppletHelper;
 use freedesktop_desktop_entry::DesktopEntry;
@@ -17,11 +18,14 @@ struct Desktop {
 
 struct Button {
     desktop: Desktop,
+    applet_helper: CosmicAppletHelper,
+    theme: Theme,
 }
 
 #[derive(Debug, Clone)]
 enum Msg {
     Press,
+    Theme(Theme),
 }
 
 impl iced::Application for Button {
@@ -31,7 +35,16 @@ impl iced::Application for Button {
     type Flags = Desktop;
 
     fn new(desktop: Desktop) -> (Self, iced::Command<Msg>) {
-        (Button { desktop }, iced::Command::none())
+        let applet_helper = CosmicAppletHelper::default();
+        let theme = applet_helper.theme();
+        (
+            Button {
+                desktop,
+                applet_helper,
+                theme,
+            },
+            iced::Command::none(),
+        )
     }
 
     fn title(&self) -> String {
@@ -52,16 +65,19 @@ impl iced::Application for Button {
     }
 
     fn subscription(&self) -> iced::Subscription<Msg> {
-        iced::Subscription::none()
+        self.applet_helper.theme_subscription(0).map(Msg::Theme)
     }
 
     fn update(&mut self, message: Msg) -> iced::Command<Msg> {
         match message {
             Msg::Press => {
                 let _ = Command::new("sh").arg("-c").arg(&self.desktop.exec).spawn();
-                iced::Command::none()
+            }
+            Msg::Theme(t) => {
+                self.theme = t;
             }
         }
+        iced::Command::none()
     }
 
     fn view(&self, _id: window::Id) -> cosmic::Element<Msg> {

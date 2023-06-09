@@ -42,6 +42,7 @@ enum Message {
     Settings,
     Ignore,
     Frame(Instant),
+    Theme(Theme),
 }
 
 impl Application for Notifications {
@@ -51,8 +52,12 @@ impl Application for Notifications {
     type Flags = ();
 
     fn new(_flags: ()) -> (Notifications, Command<Message>) {
+        let applet_helper = CosmicAppletHelper::default();
+        let theme = applet_helper.theme();
         (
             Notifications {
+                applet_helper,
+                theme,
                 icon_name: "notification-alert-symbolic".to_string(),
                 ..Default::default()
             },
@@ -80,11 +85,18 @@ impl Application for Notifications {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        self.timeline.as_subscription().map(Message::Frame)
+        Subscription::batch(vec![
+            self.applet_helper.theme_subscription(0).map(Message::Theme),
+            self.timeline.as_subscription().map(Message::Frame),
+        ])
     }
 
     fn update(&mut self, message: Message) -> Command<Message> {
         match message {
+            Message::Theme(t) => {
+                self.theme = t;
+                Command::none()
+            }
             Message::Frame(now) => {
                 self.timeline.now(now);
                 Command::none()

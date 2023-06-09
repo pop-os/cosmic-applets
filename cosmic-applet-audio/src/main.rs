@@ -16,10 +16,7 @@ use cosmic::iced::{
 };
 use cosmic::iced_style::application::{self, Appearance};
 use cosmic::{Element, Theme};
-use cosmic_time::{
-  once_cell::sync::Lazy,
-  anim, chain, id, Timeline, Instant,
-};
+use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
 
 use iced::wayland::popup::{destroy_popup, get_popup};
 use iced::widget::container;
@@ -79,6 +76,7 @@ enum Message {
     TogglePopup,
     ToggleMediaControlsInTopPanel(chain::Toggler, bool),
     Frame(Instant),
+    Theme(Theme),
 }
 
 impl Application for Audio {
@@ -88,6 +86,8 @@ impl Application for Audio {
     type Flags = ();
 
     fn new(_flags: ()) -> (Audio, Command<Message>) {
+        let applet_helper = CosmicAppletHelper::default();
+        let theme = applet_helper.theme();
         (
             Audio {
                 is_open: IsOpen::None,
@@ -96,6 +96,8 @@ impl Application for Audio {
                 outputs: vec![],
                 inputs: vec![],
                 icon_name: "audio-volume-high-symbolic".to_string(),
+                applet_helper,
+                theme,
                 ..Default::default()
             },
             Command::none(),
@@ -123,9 +125,7 @@ impl Application for Audio {
 
     fn update(&mut self, message: Message) -> Command<Message> {
         match message {
-            Message::Frame(now) => {
-              self.timeline.now(now)
-            },
+            Message::Frame(now) => self.timeline.now(now),
             Message::TogglePopup => {
                 if let Some(p) = self.popup.take() {
                     return destroy_popup(p);
@@ -276,14 +276,19 @@ impl Application for Audio {
                 self.timeline.set_chain(chain).start();
                 self.show_media_controls_in_top_panel = enabled;
             }
+            Message::Theme(t) => {
+                self.theme = t;
+            }
         };
 
         Command::none()
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        Subscription::batch(vec![pulse::connect().map(Message::Pulse),
-        self.timeline.as_subscription().map(Message::Frame),
+        Subscription::batch(vec![
+            self.applet_helper.theme_subscription(0).map(Message::Theme),
+            pulse::connect().map(Message::Pulse),
+            self.timeline.as_subscription().map(Message::Frame),
         ])
     }
 
@@ -389,13 +394,15 @@ impl Application for Audio {
                     .padding([12, 24])
                     .width(Length::Fill),
                 container(
-                  anim!( // toggler
-                    SHOW_MEDIA_CONTROLS,
-                    &self.timeline,
-                    Some(fl!("show-media-controls")),
-                    self.show_media_controls_in_top_panel,
-                    Message::ToggleMediaControlsInTopPanel,
-                  ).text_size(14)
+                    anim!(
+                        // toggler
+                        SHOW_MEDIA_CONTROLS,
+                        &self.timeline,
+                        Some(fl!("show-media-controls")),
+                        self.show_media_controls_in_top_panel,
+                        Message::ToggleMediaControlsInTopPanel,
+                    )
+                    .text_size(14)
                 )
                 .padding([0, 24]),
                 container(divider::horizontal::light())

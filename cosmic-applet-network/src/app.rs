@@ -158,6 +158,7 @@ pub(crate) enum Message {
     Password(String),
     SubmitPassword,
     Frame(Instant),
+    Theme(Theme),
     // Errored(String),
 }
 
@@ -168,9 +169,13 @@ impl Application for CosmicNetworkApplet {
     type Flags = ();
 
     fn new(_flags: ()) -> (Self, Command<Message>) {
+        let applet_helper = CosmicAppletHelper::default();
+        let theme = applet_helper.theme();
         (
             CosmicNetworkApplet {
                 icon_name: "network-offline-symbolic".to_string(),
+                theme,
+                applet_helper,
                 ..Default::default()
             },
             Command::none(),
@@ -183,6 +188,9 @@ impl Application for CosmicNetworkApplet {
 
     fn update(&mut self, message: Message) -> Command<Message> {
         match message {
+            Message::Theme(t) => {
+                self.theme = t;
+            }
             Message::Frame(now) => self.timeline.now(now),
             Message::TogglePopup => {
                 if let Some(p) = self.popup.take() {
@@ -725,6 +733,7 @@ impl Application for CosmicNetworkApplet {
 
         if let Some(conn) = self.conn.as_ref() {
             Subscription::batch(vec![
+                self.applet_helper.theme_subscription(0).map(Message::Theme),
                 timeline,
                 network_sub,
                 active_conns_subscription(0, conn.clone())
