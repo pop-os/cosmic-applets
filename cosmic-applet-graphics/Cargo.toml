@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 zbus = "3.13"
-libcosmic = { git = "https://github.com/pop-os/libcosmic/", rev = "5765053", default-features = false, features = ["tokio", "wayland"] }
+libcosmic = { git = "https://github.com/pop-os/libcosmic/", rev = "6699aa4", default-features = false, features = ["tokio", "wayland"] }
 cosmic-applet = { path = "../applet" }
 once_cell = "1"
 # Application i18n
