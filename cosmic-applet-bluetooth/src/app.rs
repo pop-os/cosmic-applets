@@ -281,11 +281,11 @@ impl Application for CosmicBluetoothApplet {
     fn view(&self, id: window::Id) -> Element<Message> {
         let button_style = || Button::Custom {
             active: Box::new(|t| iced_style::button::Appearance {
-                border_radius: 0.0,
+                border_radius: 0.0.into(),
                 ..t.active(&Button::Text)
             }),
             hover: Box::new(|t| iced_style::button::Appearance {
-                border_radius: 0.0,
+                border_radius: 0.0.into(),
                 ..t.hovered(&Button::Text)
             }),
         };

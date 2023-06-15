@@ -9,7 +9,7 @@ icon-loader = { version = "0.3.6", features = ["gtk"] }
 libpulse-binding = "2.26.0"
 libpulse-glib-binding = "2.25.0"
 tokio = { version = "1.20.1", features=["full"] }
-libcosmic = { git = "https://github.com/pop-os/libcosmic/", rev = "6699aa4", default-features = false, features = ["tokio", "wayland"] }
+libcosmic = { git = "https://github.com/pop-os/libcosmic/", default-features = false, features = ["tokio", "wayland"] }
 cosmic-applet = { path = "../applet" }
 nix = "0.26.2"
 zbus = "3.13"

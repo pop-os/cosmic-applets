@@ -6,8 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-libcosmic = { git = "https://github.com/pop-os/libcosmic/", rev = "6699aa4", default-features = false, features = ["tokio", "wayland"] }
+libcosmic = { git = "https://github.com/pop-os/libcosmic/", default-features = false, features = ["tokio", "wayland"] }
 ron = { version = "0.8" }
 serde = { version = "1.0" }
-cosmic-panel-config = { git = "https://github.com/pop-os/cosmic-panel", rev = "a47c24d" }
+cosmic-panel-config = { git = "https://github.com/pop-os/cosmic-panel" }
 log = { version = "0.4" }

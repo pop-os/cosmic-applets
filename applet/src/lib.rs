@@ -31,11 +31,11 @@ const APPLET_PADDING: u32 = 8;
 pub fn applet_button_theme() -> Button {
     Button::Custom {
         active: Box::new(|t| iced_style::button::Appearance {
-            border_radius: 0.0,
+            border_radius: 0.0.into(),
             ..t.active(&Button::Text)
         }),
         hover: Box::new(|t| iced_style::button::Appearance {
-            border_radius: 0.0,
+            border_radius: 0.0.into(),
             ..t.hovered(&Button::Text)
         }),
     }
