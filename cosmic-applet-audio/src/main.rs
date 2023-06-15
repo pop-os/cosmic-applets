@@ -288,7 +288,9 @@ impl Application for Audio {
         Subscription::batch(vec![
             self.applet_helper.theme_subscription(0).map(Message::Theme),
             pulse::connect().map(Message::Pulse),
-            self.timeline.as_subscription().map(Message::Frame),
+            self.timeline
+                .as_subscription()
+                .map(|(_, now)| Message::Frame(now)),
         ])
     }
 

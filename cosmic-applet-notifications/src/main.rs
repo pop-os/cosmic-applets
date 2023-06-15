@@ -87,7 +87,9 @@ impl Application for Notifications {
     fn subscription(&self) -> Subscription<Message> {
         Subscription::batch(vec![
             self.applet_helper.theme_subscription(0).map(Message::Theme),
-            self.timeline.as_subscription().map(Message::Frame),
+            self.timeline
+                .as_subscription()
+                .map(|(_, now)| Message::Frame(now)),
         ])
     }
 

@@ -418,7 +418,9 @@ impl Application for CosmicBatteryApplet {
                 (_, PowerProfileUpdate::Init(tx, p)) => Message::InitProfile(p, tx),
                 (_, PowerProfileUpdate::Error(e)) => Message::Errored(e), // TODO: handle error
             }),
-            self.timeline.as_subscription().map(Message::Frame),
+            self.timeline
+                .as_subscription()
+                .map(|(_, now)| Message::Frame(now)),
         ])
     }
 

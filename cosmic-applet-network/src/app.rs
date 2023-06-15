@@ -385,11 +385,11 @@ impl Application for CosmicNetworkApplet {
     fn view(&self, id: window::Id) -> Element<Message> {
         let button_style = || Button::Custom {
             active: Box::new(|t| iced_style::button::Appearance {
-                border_radius: 0.0,
+                border_radius: 0.0.into(),
                 ..t.active(&Button::Text)
             }),
             hover: Box::new(|t| iced_style::button::Appearance {
-                border_radius: 0.0,
+                border_radius: 0.0.into(),
                 ..t.hovered(&Button::Text)
             }),
         };
@@ -729,7 +729,10 @@ impl Application for CosmicNetworkApplet {
     fn subscription(&self) -> Subscription<Message> {
         let network_sub =
             network_manager_subscription(0).map(|e| Message::NetworkManagerEvent(e.1));
-        let timeline = self.timeline.as_subscription().map(Message::Frame);
+        let timeline = self
+            .timeline
+            .as_subscription()
+            .map(|(_, now)| Message::Frame(now));
 
         if let Some(conn) = self.conn.as_ref() {
             Subscription::batch(vec![
