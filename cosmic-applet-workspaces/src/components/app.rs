@@ -26,6 +26,8 @@ pub fn run() -> cosmic::iced::Result {
     let settings = Settings {
         initial_surface: InitialSurface::XdgWindow(SctkWindowSettings {
             size: (32, 32),
+            autosize: true,
+            resizable: None,
             ..Default::default()
         }),
         ..Default::default()
@@ -96,12 +98,6 @@ impl Application for IcedWorkspacesApplet {
                         Ordering::Greater => Ordering::Greater,
                     });
                     self.workspaces = list;
-                    let unit = self.helper.suggested_size().0 as u32 + 16;
-                    let (w, h) = match self.layout {
-                        Layout::Row => (unit * self.workspaces.len().max(1) as u32, unit),
-                        Layout::Column => (unit, unit * self.workspaces.len().max(1) as u32),
-                    };
-                    return resize_window(window::Id(0), w, h);
                 }
                 WorkspacesUpdate::Started(tx) => {
                     self.workspace_tx.replace(tx);
@@ -146,8 +142,8 @@ impl Application for IcedWorkspacesApplet {
                         .width(Length::Fill)
                         .height(Length::Fill),
                 )
-                .width(Length::Fill)
-                .height(Length::Fill)
+                .width(Length::Fixed(self.helper.suggested_size().0 as f32 + 16.0))
+                .height(Length::Fixed(self.helper.suggested_size().0 as f32 + 16.0))
                 .on_press(Message::WorkspacePressed(w.2.clone()))
                 .padding(0);
                 Some(
@@ -163,20 +159,20 @@ impl Application for IcedWorkspacesApplet {
             .collect();
         let layout_section: Element<_> = match self.layout {
             Layout::Row => row(buttons)
-                .width(Length::Fill)
-                .height(Length::Fill)
+                .width(Length::Shrink)
+                .height(Length::Shrink)
                 .padding(0)
                 .into(),
             Layout::Column => column(buttons)
-                .width(Length::Fill)
-                .height(Length::Fill)
+                .width(Length::Shrink)
+                .height(Length::Shrink)
                 .padding(0)
                 .into(),
         };
 
         container(layout_section)
-            .width(Length::Fill)
-            .height(Length::Fill)
+            .width(Length::Shrink)
+            .height(Length::Shrink)
             .padding(0)
             .into()
     }
