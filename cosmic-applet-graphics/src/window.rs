@@ -179,7 +179,7 @@ impl Application for Window {
                                     Message::CurrentGraphics(match cur_graphics {
                                         Ok(g) => Some(g),
                                         Err(err) => {
-                                            dbg!(err);
+                                            tracing::error!("{:?}", err);
                                             None
                                         }
                                     })
