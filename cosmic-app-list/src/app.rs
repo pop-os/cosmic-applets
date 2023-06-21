@@ -83,6 +83,7 @@ pub fn run() -> cosmic::iced::Result {
                 .min_width(1.0)
                 .max_height(h as f32)
                 .max_width(w as f32),
+            resizable: None,
             ..Default::default()
         }),
         ..Default::default()
