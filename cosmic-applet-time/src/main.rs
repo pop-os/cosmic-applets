@@ -23,6 +23,7 @@ pub fn main() -> cosmic::iced::Result {
     match &mut settings.initial_surface {
         InitialSurface::XdgWindow(s) => {
             s.autosize = true;
+            s.resizable = None;
             s.size_limits = Limits::NONE.min_height(1.0).min_width(1.0);
         }
         _ => {}

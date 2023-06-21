@@ -20,6 +20,7 @@ pub fn main() -> cosmic::iced::Result {
                 InitialSurface::LayerSurface(_) => todo!(),
                 InitialSurface::XdgWindow(w) => {
                     w.autosize = true;
+                    w.resizable = None;
                     w.size_limits = Limits::NONE
                         .min_height(1.0)
                         .max_height(200.0)
