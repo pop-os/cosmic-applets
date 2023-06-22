@@ -665,7 +665,7 @@ dependencies = [
  "futures-util",
  "i18n-embed",
  "i18n-embed-fl",
- "itertools",
+ "itertools 0.11.0",
  "libcosmic",
  "log",
  "nix 0.26.2",
@@ -741,7 +741,7 @@ dependencies = [
  "futures-util",
  "i18n-embed",
  "i18n-embed-fl",
- "itertools",
+ "itertools 0.10.5",
  "libcosmic",
  "log",
  "once_cell",
@@ -778,7 +778,7 @@ dependencies = [
  "futures-util",
  "i18n-embed",
  "i18n-embed-fl",
- "itertools",
+ "itertools 0.10.5",
  "libcosmic",
  "log",
  "pretty_env_logger 0.5.0",
@@ -912,7 +912,7 @@ dependencies = [
 [[package]]
 name = "cosmic-panel-config"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/cosmic-panel#2d57cec0d1d835f70e1348175ee2ceae6242e739"
+source = "git+https://github.com/pop-os/cosmic-panel#9189de540ccc273f90c6f2635bc368b0898add20"
 dependencies = [
  "anyhow",
  "cosmic-config",
@@ -2353,7 +2353,7 @@ dependencies = [
  "iced_graphics",
  "iced_runtime",
  "iced_style",
- "itertools",
+ "itertools 0.10.5",
  "raw-window-handle",
  "smithay-client-toolkit 0.17.0",
  "smithay-clipboard",
@@ -2565,6 +2565,15 @@ name = "itertools"
 version = "0.10.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b0fd2260e829bddf4cb6ea802289de2f86d6a7a690192fbe91b3f46e0f2c8473"
+dependencies = [
+ "either",
+]
+
+[[package]]
+name = "itertools"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b1c173a5686ce8bfa551b3563d0c2170bf24ca44da99c7ca4bfdab5418c3fe57"
 dependencies = [
  "either",
 ]
@@ -4297,9 +4306,9 @@ dependencies = [
 
 [[package]]
 name = "system-deps"
-version = "6.1.0"
+version = "6.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e5fa6fb9ee296c0dc2df41a656ca7948546d061958115ddb0bcaae43ad0d17d2"
+checksum = "30c2de8a4d8f4b823d634affc9cd2a74ec98c53a756f317e529a48046cbf71f3"
 dependencies = [
  "cfg-expr",
  "heck",
@@ -4550,9 +4559,9 @@ dependencies = [
 
 [[package]]
 name = "tracing-attributes"
-version = "0.1.25"
+version = "0.1.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8803eee176538f94ae9a14b55b2804eb7e1441f8210b1c31290b3bccdccff73b"
+checksum = "5f4f31f56159e98206da9efd823404b79b6ef3143b4a7ab76e67b1751b25a4ab"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -5494,7 +5503,7 @@ dependencies = [
 [[package]]
 name = "xdg-shell-wrapper-config"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/xdg-shell-wrapper?rev=99a9cda#99a9cda4c9f56e0a5208e1a9375af93fd7040d5a"
+source = "git+https://github.com/pop-os/xdg-shell-wrapper#39880a3cf2a11ea969616d8b961289519bbeb742"
 dependencies = [
  "serde",
  "wayland-protocols-wlr",
