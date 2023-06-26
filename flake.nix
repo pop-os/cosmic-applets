@@ -39,6 +39,7 @@
             glib # For gobject
             libglvnd # For libEGL
             libpulseaudio
+            dbus.dev
           ];
           runtimeDependencies = with pkgs; [ wayland libglvnd ];
         };
