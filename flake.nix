@@ -22,6 +22,8 @@
         craneLib = crane.lib.${system}.overrideToolchain fenix.packages.${system}.stable.toolchain;
 
         pkgDef = {
+          pname = "cosmic-applets";
+          version = "0.1.0";
           src = nix-filter.lib.filter {
             root = ./.;
             exclude = [
@@ -29,11 +31,10 @@
               ./flake.nix
               ./flake.lock
               ./LICENSE
-              ./justfile
               ./debian
             ];
           };
-          nativeBuildInputs = with pkgs; [ pkg-config autoPatchelfHook ];
+          nativeBuildInputs = with pkgs; [ just pkg-config autoPatchelfHook ];
           buildInputs = with pkgs; [
             libxkbcommon
             glib # For gobject
@@ -53,7 +54,14 @@
           inherit cosmic-applets;
         };
 
-        packages.default = cosmic-applets;
+        packages.default = cosmic-applets.overrideAttrs (oldAttrs: rec {
+          buildPhase = ''
+            just prefix=$out build-release
+          '';
+          installPhase = ''
+            just prefix=$out install
+          '';
+        });
 
         apps.default = flake-utils.lib.mkApp {
           drv = cosmic-applets;

@@ -17,6 +17,13 @@ build: _extract_vendor
     #!/usr/bin/env bash
     cargo build {{cargo_args}}
 
+# Compiles with debug profile
+build-debug *args:
+    cargo build {{args}}
+
+# Compiles with release profile
+build-release *args: (build-debug '--release' args)
+
 _install_icon path:
     install -Dm0644 {{path}} {{iconsdir}}/{{file_name(path)}}
 
