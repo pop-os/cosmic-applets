@@ -9,3 +9,4 @@ Keywords=Cosmic;Iced;
 Icon=com.system76.CosmicAppletNotifications
 NoDisplay=true
 X-CosmicApplet=true
+X-NotificationsApplet=true
