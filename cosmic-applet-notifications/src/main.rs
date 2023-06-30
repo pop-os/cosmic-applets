@@ -1,3 +1,5 @@
+mod subscriptions;
+
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced::{
     widget::{button, column, row, text, Row, Space},
@@ -13,10 +15,15 @@ use cosmic::widget::{divider, icon};
 use cosmic::Renderer;
 use cosmic::{Element, Theme};
 use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
-
+use cosmic_notifications_util::AppletEvent;
+use tracing::info;
 use std::process;
 
 pub fn main() -> cosmic::iced::Result {
+    tracing_subscriber::fmt::init();
+
+    info!("Notifications applet");
+
     let helper = CosmicAppletHelper::default();
     Notifications::run(helper.window_settings())
 }
@@ -43,6 +50,7 @@ enum Message {
     Ignore,
     Frame(Instant),
     Theme(Theme),
+    NotificationEvent(AppletEvent)
 }
 
 impl Application for Notifications {
@@ -90,6 +98,7 @@ impl Application for Notifications {
             self.timeline
                 .as_subscription()
                 .map(|(_, now)| Message::Frame(now)),
+            subscriptions::notifications::notifications().map(Message::NotificationEvent)
         ])
     }
 
@@ -128,6 +137,10 @@ impl Application for Notifications {
             }
             Message::Settings => {
                 let _ = process::Command::new("cosmic-settings notifications").spawn();
+                Command::none()
+            }
+            Message::NotificationEvent(e) => {
+                dbg!(e);
                 Command::none()
             }
             Message::Ignore => Command::none(),
