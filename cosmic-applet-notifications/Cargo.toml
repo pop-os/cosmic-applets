@@ -5,8 +5,16 @@ edition = "2021"
 license = "GPL-3.0-or-later"
 
 [dependencies]
+anyhow = "1"
 icon-loader = { version = "0.3.6", features = ["gtk"] }
 libcosmic.workspace = true
 cosmic-time.workspace = true
 cosmic-applet = { path = "../applet" }
-nix = "0.24.1"
+nix = "0.26"
+tokio = { version = "1.24.1", features = ["sync", "rt", "tracing", "macros", "net", "io-util", "io-std"] }
+cosmic-notifications-util = { git = "https://github.com/pop-os/cosmic-notifications" }
+tracing = "0.1"
+ron = "0.8"
+sendfd = { version = "0.4", features = [ "tokio" ] }
+bytemuck = "1"
+tracing-subscriber = "0.3"
