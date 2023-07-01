@@ -1,9 +1,3 @@
-use tokio::{
-    io::{AsyncBufReadExt, BufReader},
-    net::UnixStream,
-    sync::oneshot,
-};
-use tracing::{error, info};
 use cosmic::{
     iced::{
         futures::{self, SinkExt},
@@ -12,8 +6,14 @@ use cosmic::{
     iced_futures::Subscription,
 };
 use cosmic_notifications_util::AppletEvent;
-use std::os::unix::io::{FromRawFd, RawFd};
 use sendfd::RecvWithFd;
+use std::os::unix::io::{FromRawFd, RawFd};
+use tokio::{
+    io::{self, AsyncBufReadExt, BufReader},
+    net::UnixStream,
+    sync::oneshot,
+};
+use tracing::{error, info, warn};
 
 #[derive(Debug)]
 pub enum State {
@@ -42,14 +42,14 @@ pub fn notifications() -> Subscription<AppletEvent> {
                         std::thread::spawn(move || -> anyhow::Result<()> {
                             let mut msg = String::new();
                             std::io::stdin().read_line(&mut msg)?;
-                            let raw_fd =  msg.trim().parse::<RawFd>()?;
+                            let raw_fd = msg.trim().parse::<RawFd>()?;
                             if raw_fd == 0 {
                                 anyhow::bail!("Invalid fd received from panel");
                             }
                             _ = tx.send(raw_fd);
                             Ok(())
                         });
-                        
+
                         let Ok(raw_fd) = rx.await else {
                             error!("Failed to receive raw fd from panel");
                             state = State::Finished;
@@ -63,10 +63,9 @@ pub fn notifications() -> Subscription<AppletEvent> {
                             continue;
                         };
                         state = State::WaitingForDaemon(stream);
-
                     }
                     State::WaitingForDaemon(stream) => {
-                        info!("Waiting for daemon to send us a stream");
+                        info!("Waiting for panel to send us a stream");
                         if let Err(err) = stream.readable().await {
                             error!("Failed to wait for stream to be readable {}", err);
                             state = State::Finished;
@@ -79,20 +78,34 @@ pub fn notifications() -> Subscription<AppletEvent> {
 
                         match stream.recv_with_fd(&mut buf, &mut fd_buf) {
                             Ok((data_cnt, fd_cnt)) => {
-                                if data_cnt != 4 || fd_cnt != 1 {
-                                    error!("Invalid data received from panel");
+                                if data_cnt == 0 && fd_cnt == 0 {
+                                    warn!("Received EOF from panel");
                                     state = State::Finished;
 
                                     continue;
                                 }
-                                let notif_stream = unsafe { std::os::unix::net::UnixStream::from_raw_fd(fd_buf[0]) };
+                                if data_cnt != 4 || fd_cnt != 1 {
+                                    error!(
+                                        "Invalid data received from panel {} {}",
+                                        data_cnt, fd_cnt
+                                    );
+                                    state = State::Finished;
+
+                                    continue;
+                                }
+                                let notif_stream = unsafe {
+                                    std::os::unix::net::UnixStream::from_raw_fd(fd_buf[0])
+                                };
                                 let Ok(notif_stream) = UnixStream::from_std(notif_stream) else {
                                     error!("Failed to convert raw fd to unix stream");
                                     state = State::Finished;
                                     continue;
                                 };
-                                
+
                                 state = State::WaitingForNotificationEvent(notif_stream);
+                            }
+                            Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
+                                continue;
                             }
                             Err(err) => {
                                 error!("Failed to receive fd from panel: {}", err);
@@ -103,6 +116,7 @@ pub fn notifications() -> Subscription<AppletEvent> {
                         }
                     }
                     State::WaitingForNotificationEvent(stream) => {
+                        info!("Waiting for notification event");
                         let mut reader = BufReader::new(stream);
                         // todo read messages
                         let mut request_buf = String::with_capacity(1024);
@@ -124,6 +138,6 @@ pub fn notifications() -> Subscription<AppletEvent> {
                     }
                 }
             }
-        }
+        },
     )
 }
