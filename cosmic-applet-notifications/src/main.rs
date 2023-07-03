@@ -1,25 +1,32 @@
 mod subscriptions;
 
+use cosmic::cosmic_config::{config_subscription, Config, CosmicConfigEntry};
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced::{
     widget::{button, column, row, text, Row, Space},
     window, Alignment, Application, Color, Command, Length, Subscription,
 };
+use cosmic::iced_core::image;
+use cosmic::iced_widget::button::StyleSheet;
 use cosmic_applet::{applet_button_theme, CosmicAppletHelper};
 
 use cosmic::iced_style::application::{self, Appearance};
 
-use cosmic::iced_widget::Button;
-use cosmic::theme::Svg;
+use cosmic::iced_widget::{horizontal_space, scrollable, Column};
+use cosmic::theme::{Button, Svg};
 use cosmic::widget::{divider, icon};
 use cosmic::Renderer;
 use cosmic::{Element, Theme};
+use cosmic_notifications_config::NotificationsConfig;
+use cosmic_notifications_util::{AppletEvent, Notification};
 use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
-use cosmic_notifications_util::AppletEvent;
-use tracing::info;
+use std::borrow::Cow;
 use std::process;
+use tokio::sync::mpsc::Sender;
+use tracing::info;
 
-pub fn main() -> cosmic::iced::Result {
+#[tokio::main(flavor = "current_thread")]
+pub async fn main() -> cosmic::iced::Result {
     tracing_subscriber::fmt::init();
 
     info!("Notifications applet");
@@ -34,12 +41,14 @@ static DO_NOT_DISTURB: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
 struct Notifications {
     applet_helper: CosmicAppletHelper,
     theme: Theme,
+    config: NotificationsConfig,
+    config_helper: Option<Config>,
     icon_name: String,
     popup: Option<window::Id>,
     id_ctr: u128,
-    do_not_disturb: bool,
-    notifications: Vec<Vec<String>>,
+    notifications: Vec<Notification>,
     timeline: Timeline,
+    dbus_sender: Option<Sender<subscriptions::dbus::Input>>,
 }
 
 #[derive(Debug, Clone)]
@@ -50,7 +59,10 @@ enum Message {
     Ignore,
     Frame(Instant),
     Theme(Theme),
-    NotificationEvent(AppletEvent)
+    NotificationEvent(AppletEvent),
+    Config(NotificationsConfig),
+    DbusEvent(subscriptions::dbus::Output),
+    Dismissed(u32),
 }
 
 impl Application for Notifications {
@@ -62,11 +74,30 @@ impl Application for Notifications {
     fn new(_flags: ()) -> (Notifications, Command<Message>) {
         let applet_helper = CosmicAppletHelper::default();
         let theme = applet_helper.theme();
+        let helper = Config::new(
+            cosmic_notifications_config::ID,
+            NotificationsConfig::version(),
+        )
+        .ok();
+
+        let config: NotificationsConfig = helper
+            .as_ref()
+            .map(|helper| {
+                NotificationsConfig::get_entry(helper).unwrap_or_else(|(errors, config)| {
+                    for err in errors {
+                        tracing::error!("{:?}", err);
+                    }
+                    config
+                })
+            })
+            .unwrap_or_default();
         (
             Notifications {
                 applet_helper,
                 theme,
                 icon_name: "notification-alert-symbolic".to_string(),
+                config_helper: helper,
+                config,
                 ..Default::default()
             },
             Command::none(),
@@ -95,10 +126,25 @@ impl Application for Notifications {
     fn subscription(&self) -> Subscription<Message> {
         Subscription::batch(vec![
             self.applet_helper.theme_subscription(0).map(Message::Theme),
+            config_subscription::<u64, NotificationsConfig>(
+                0,
+                cosmic_notifications_config::ID.into(),
+                NotificationsConfig::version(),
+            )
+            .map(|(_, res)| match res {
+                Ok(config) => Message::Config(config),
+                Err((errors, config)) => {
+                    for err in errors {
+                        tracing::error!("{:?}", err);
+                    }
+                    Message::Config(config)
+                }
+            }),
             self.timeline
                 .as_subscription()
                 .map(|(_, now)| Message::Frame(now)),
-            subscriptions::notifications::notifications().map(Message::NotificationEvent)
+            subscriptions::dbus::proxy().map(Message::DbusEvent),
+            subscriptions::notifications::notifications().map(Message::NotificationEvent),
         ])
     }
 
@@ -132,7 +178,12 @@ impl Application for Notifications {
             }
             Message::DoNotDisturb(chain, b) => {
                 self.timeline.set_chain(chain).start();
-                self.do_not_disturb = b;
+                self.config.do_not_disturb = b;
+                if let Some(helper) = &self.config_helper {
+                    if let Err(err) = self.config.write_entry(helper) {
+                        tracing::error!("{:?}", err);
+                    }
+                }
                 Command::none()
             }
             Message::Settings => {
@@ -144,6 +195,28 @@ impl Application for Notifications {
                 Command::none()
             }
             Message::Ignore => Command::none(),
+            Message::Config(config) => {
+                self.config = config;
+                Command::none()
+            }
+            Message::Dismissed(id) => {
+                self.notifications.retain(|n| n.id != id);
+                if let Some(tx) = &self.dbus_sender {
+                    let tx = tx.clone();
+                    tokio::spawn(async move {
+                        if let Err(err) = tx.send(subscriptions::dbus::Input::Dismiss(id)).await {
+                            tracing::error!("{:?}", err);
+                        }
+                    });
+                }
+                Command::none()
+            }
+            Message::DbusEvent(e) => match e {
+                subscriptions::dbus::Output::Ready(tx) => {
+                    self.dbus_sender.replace(tx);
+                    Command::none()
+                }
+            },
         }
     }
 
@@ -158,7 +231,7 @@ impl Application for Notifications {
                 DO_NOT_DISTURB,
                 &self.timeline,
                 String::from("Do Not Disturb"),
-                self.do_not_disturb,
+                self.config.do_not_disturb,
                 Message::DoNotDisturb
             )
             .width(Length::Fill)]
@@ -176,7 +249,103 @@ impl Application for Notifications {
                 ]
                 .spacing(12)
             } else {
-                row![text("TODO: make app worky with notifications")]
+                let mut notifs = Vec::with_capacity(self.notifications.len());
+
+                for n in &self.notifications {
+                    let summary = text(if n.summary.len() > 24 {
+                        Cow::from(format!(
+                            "{:.26}...",
+                            n.summary.lines().next().unwrap_or_default()
+                        ))
+                    } else {
+                        Cow::from(&n.summary)
+                    })
+                    .size(18);
+                    let urgency = n.urgency();
+
+                    notifs.push(
+                        cosmic::widget::button(Button::Custom {
+                            active: Box::new(move |t| {
+                                let style = if urgency > 1 {
+                                    Button::Primary
+                                } else {
+                                    Button::Secondary
+                                };
+                                let cosmic = t.cosmic();
+                                let mut a = t.active(&style);
+                                a.border_radius = 8.0.into();
+                                a.background = Some(Color::from(cosmic.bg_color()).into());
+                                a.border_color = Color::from(cosmic.bg_divider());
+                                a.border_width = 1.0;
+                                a
+                            }),
+                            hover: Box::new(move |t| {
+                                let style = if urgency > 1 {
+                                    Button::Primary
+                                } else {
+                                    Button::Secondary
+                                };
+                                let cosmic = t.cosmic();
+                                let mut a = t.hovered(&style);
+                                a.border_radius = 8.0.into();
+                                a.background = Some(Color::from(cosmic.bg_color()).into());
+                                a.border_color = Color::from(cosmic.bg_divider());
+                                a.border_width = 1.0;
+                                a
+                            }),
+                        })
+                        .custom(vec![column!(
+                            match n.image() {
+                                Some(cosmic_notifications_util::Image::File(path)) => {
+                                    row![icon(path.as_path(), 32), summary]
+                                        .spacing(8)
+                                        .align_items(Alignment::Center)
+                                }
+                                Some(cosmic_notifications_util::Image::Name(name)) => {
+                                    row![icon(name.as_str(), 32), summary]
+                                        .spacing(8)
+                                        .align_items(Alignment::Center)
+                                }
+                                Some(cosmic_notifications_util::Image::Data {
+                                    width,
+                                    height,
+                                    data,
+                                }) => {
+                                    let handle =
+                                        image::Handle::from_pixels(*width, *height, data.clone());
+                                    row![icon(handle, 32), summary]
+                                        .spacing(8)
+                                        .align_items(Alignment::Center)
+                                }
+                                None => row![summary],
+                            },
+                            text(if n.body.len() > 38 {
+                                Cow::from(format!(
+                                    "{:.40}...",
+                                    n.body.lines().next().unwrap_or_default()
+                                ))
+                            } else {
+                                Cow::from(&n.summary)
+                            })
+                            .size(14),
+                            horizontal_space(Length::Fixed(300.0)),
+                        )
+                        .spacing(8)
+                        .into()])
+                        .on_press(Message::Dismissed(n.id))
+                        .into(),
+                    );
+                }
+
+                row!(scrollable(
+                    Column::with_children(notifs)
+                        .spacing(8)
+                        .width(Length::Shrink)
+                        .height(Length::Shrink),
+                )
+                .width(Length::Shrink)
+                .height(Length::Fixed(400.0)))
+                .width(Length::Shrink)
             };
 
             let main_content = column![
@@ -201,7 +370,9 @@ impl Application for Notifications {
 }
 
 // todo put into libcosmic doing so will fix the row_button's boarder radius
-fn row_button(mut content: Vec<Element<Message>>) -> Button<Message, Renderer> {
+fn row_button(
+    mut content: Vec<Element<Message>>,
+) -> cosmic::iced::widget::Button<Message, Renderer> {
     content.insert(0, Space::with_width(Length::Fixed(24.0)).into());
     content.push(Space::with_width(Length::Fixed(24.0)).into());
 
