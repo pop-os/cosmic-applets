@@ -117,21 +117,21 @@ pub fn notifications() -> Subscription<AppletEvent> {
                     }
                     State::WaitingForNotificationEvent(stream) => {
                         info!("Waiting for notification event");
-                        let mut reader = BufReader::new(stream);
+                        let reader = BufReader::new(stream);
                         // todo read messages
-                        let mut request_buf = String::with_capacity(1024);
-                        if let Err(err) = reader.read_line(&mut request_buf).await {
-                            error!("Failed to read line from stream {}", err);
-                            continue;
-                        }
-                        let Ok(event) = ron::de::from_str::<AppletEvent>(request_buf.as_str()) else {
-                            error!("Failed to deserialize event from notification stream");
-                            continue;
-                        };
 
-                        if let Err(err) = output.send(event).await {
-                            error!("Error sending event: {}", err);
+                        let mut lines = reader.lines();
+                        while let Ok(Some(line)) = lines.next_line().await {
+                            if let Ok(event) = ron::de::from_str::<AppletEvent>(line.as_str()) {
+                                if let Err(_err) = output.send(event).await {
+                                    error!("Error sending event");
+                                }
+                            } else {
+                                error!("Failed to deserialize event from notification stream");
+                            }
                         }
+                        warn!("Notification stream closed");
+                        state = State::Finished;
                     }
                     State::Finished => {
                         let () = futures::future::pending().await;

@@ -7,6 +7,7 @@ use cosmic::iced::{
     window, Alignment, Application, Color, Command, Length, Subscription,
 };
 use cosmic::iced_core::image;
+use cosmic::iced_futures::subscription;
 use cosmic::iced_widget::button::StyleSheet;
 use cosmic_applet::{applet_button_theme, CosmicAppletHelper};
 
@@ -191,7 +192,19 @@ impl Application for Notifications {
                 Command::none()
             }
             Message::NotificationEvent(e) => {
-                dbg!(e);
+                match e {
+                    AppletEvent::Notification(n) => {
+                        self.notifications.push(n);
+                    }
+                    AppletEvent::Replace(n) => {
+                        if let Some(old) = self.notifications.iter_mut().find(|n| n.id == n.id) {
+                            *old = n;
+                        }
+                    }
+                    AppletEvent::Closed(id) => {
+                        self.notifications.retain(|n| n.id != id);
+                    }
+                }
                 Command::none()
             }
             Message::Ignore => Command::none(),
