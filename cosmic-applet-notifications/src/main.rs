@@ -3,19 +3,19 @@ mod subscriptions;
 
 use cosmic::cosmic_config::{config_subscription, Config, CosmicConfigEntry};
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
+use cosmic::iced::Limits;
 use cosmic::iced::{
     widget::{button, column, row, text, Row, Space},
     window, Alignment, Application, Color, Command, Length, Subscription,
 };
 use cosmic::iced_core::alignment::Horizontal;
-use cosmic::iced_core::{image, Widget};
-use cosmic::iced_futures::subscription;
+use cosmic::iced_core::image;
 use cosmic::iced_widget::button::StyleSheet;
 use cosmic_applet::{applet_button_theme, CosmicAppletHelper};
 
 use cosmic::iced_style::application::{self, Appearance};
 
-use cosmic::iced_widget::{horizontal_space, scrollable, Column};
+use cosmic::iced_widget::{scrollable, Column};
 use cosmic::theme::{Button, Svg};
 use cosmic::widget::{container, divider, icon};
 use cosmic::Renderer;
@@ -172,13 +172,18 @@ impl Application for Notifications {
                     let new_id = window::Id(self.id_ctr);
                     self.popup.replace(new_id);
 
-                    let popup_settings = self.applet_helper.get_popup_settings(
+                    let mut popup_settings = self.applet_helper.get_popup_settings(
                         window::Id(0),
                         new_id,
                         None,
                         None,
                         None,
                     );
+                    popup_settings.positioner.size_limits = Limits::NONE
+                        .min_width(1.0)
+                        .max_width(300.0)
+                        .min_height(100.0)
+                        .max_height(600.0);
                     get_popup(popup_settings)
                 }
             }
@@ -287,9 +292,11 @@ impl Application for Notifications {
                     column![cosmic::widget::button(Button::Text)
                         .custom(vec![text(fl!("clear-all")).size(14).into()])
                         .on_press(Message::ClearAll)]
+                    .align_items(Alignment::End)
+                    .width(Length::Fill)
                     .into(),
                 );
-                for n in &self.notifications {
+                for n in self.notifications.iter().rev() {
                     let app_name = text(if n.app_name.len() > 24 {
                         Cow::from(format!(
                             "{:.26}...",
@@ -312,12 +319,8 @@ impl Application for Notifications {
                                 } else {
                                     Button::Secondary
                                 };
-                                let cosmic = t.cosmic();
                                 let mut a = t.active(&style);
                                 a.border_radius = 8.0.into();
-                                a.background = Some(Color::from(cosmic.bg_color()).into());
-                                a.border_color = Color::from(cosmic.bg_divider());
-                                a.border_width = 1.0;
                                 a
                             }),
                             hover: Box::new(move |t| {
@@ -326,12 +329,8 @@ impl Application for Notifications {
                                 } else {
                                     Button::Secondary
                                 };
-                                let cosmic = t.cosmic();
                                 let mut a = t.hovered(&style);
                                 a.border_radius = 8.0.into();
-                                a.background = Some(Color::from(cosmic.bg_color()).into());
-                                a.border_color = Color::from(cosmic.bg_divider());
-                                a.border_width = 1.0;
                                 a
                             }),
                         })
@@ -368,7 +367,8 @@ impl Application for Notifications {
                             } else {
                                 Cow::from(&n.summary)
                             })
-                            .size(14),
+                            .size(14)
+                            .width(Length::Fixed(300.0)),
                             text(if n.body.len() > 77 {
                                 Cow::from(format!(
                                     "{:.80}...",
@@ -377,11 +377,12 @@ impl Application for Notifications {
                             } else {
                                 Cow::from(&n.body)
                             })
-                            .size(12),
-                            horizontal_space(Length::Fixed(300.0)),
+                            .size(12)
+                            .width(Length::Fixed(300.0)),
                         )
                         .spacing(8)
                         .into()])
+                        .padding(16)
                         .on_press(Message::Dismissed(n.id))
                         .into(),
                     );
@@ -393,7 +394,7 @@ impl Application for Notifications {
                         .height(Length::Shrink),
                 )
                 .width(Length::Shrink)
-                .height(Length::Fixed(400.0)))
+                .height(Length::Shrink))
                 .width(Length::Shrink)
             };
 
@@ -405,13 +406,10 @@ impl Application for Notifications {
             .padding([0, 24])
             .spacing(12);
 
-            let content = column![]
+            let content = column![do_not_disturb, main_content, settings]
                 .align_items(Alignment::Start)
                 .spacing(12)
-                .padding([12, 0])
-                .push(do_not_disturb)
-                .push(main_content)
-                .push(settings);
+                .padding([12, 0]);
 
             self.applet_helper.popup_container(content).into()
         }
