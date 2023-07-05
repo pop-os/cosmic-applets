@@ -916,7 +916,7 @@ dependencies = [
 [[package]]
 name = "cosmic-notifications-config"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/cosmic-notifications#46eac27342f11b46fa2b3f25cd9b0d22bbc34eae"
+source = "git+https://github.com/pop-os/cosmic-notifications#381024d2dbd5339ba7d6e846715b7b9cbcc469ce"
 dependencies = [
  "cosmic-config",
  "serde",
@@ -925,7 +925,7 @@ dependencies = [
 [[package]]
 name = "cosmic-notifications-util"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/cosmic-notifications#46eac27342f11b46fa2b3f25cd9b0d22bbc34eae"
+source = "git+https://github.com/pop-os/cosmic-notifications#381024d2dbd5339ba7d6e846715b7b9cbcc469ce"
 dependencies = [
  "bytemuck",
  "serde",
