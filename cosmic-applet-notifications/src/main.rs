@@ -1,3 +1,4 @@
+mod localize;
 mod subscriptions;
 
 use cosmic::cosmic_config::{config_subscription, Config, CosmicConfigEntry};
@@ -6,7 +7,8 @@ use cosmic::iced::{
     widget::{button, column, row, text, Row, Space},
     window, Alignment, Application, Color, Command, Length, Subscription,
 };
-use cosmic::iced_core::image;
+use cosmic::iced_core::alignment::Horizontal;
+use cosmic::iced_core::{image, Widget};
 use cosmic::iced_futures::subscription;
 use cosmic::iced_widget::button::StyleSheet;
 use cosmic_applet::{applet_button_theme, CosmicAppletHelper};
@@ -15,13 +17,14 @@ use cosmic::iced_style::application::{self, Appearance};
 
 use cosmic::iced_widget::{horizontal_space, scrollable, Column};
 use cosmic::theme::{Button, Svg};
-use cosmic::widget::{divider, icon};
+use cosmic::widget::{container, divider, icon};
 use cosmic::Renderer;
 use cosmic::{Element, Theme};
 use cosmic_notifications_config::NotificationsConfig;
 use cosmic_notifications_util::{AppletEvent, Notification};
 use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
 use std::borrow::Cow;
+use std::collections::HashMap;
 use std::process;
 use tokio::sync::mpsc::Sender;
 use tracing::info;
@@ -29,6 +32,8 @@ use tracing::info;
 #[tokio::main(flavor = "current_thread")]
 pub async fn main() -> cosmic::iced::Result {
     tracing_subscriber::fmt::init();
+    // Prepare i18n
+    localize::localize();
 
     info!("Notifications applet");
 
@@ -37,7 +42,6 @@ pub async fn main() -> cosmic::iced::Result {
 }
 
 static DO_NOT_DISTURB: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
-
 #[derive(Default)]
 struct Notifications {
     applet_helper: CosmicAppletHelper,
@@ -64,6 +68,7 @@ enum Message {
     Config(NotificationsConfig),
     DbusEvent(subscriptions::dbus::Output),
     Dismissed(u32),
+    ClearAll,
 }
 
 impl Application for Notifications {
@@ -230,6 +235,21 @@ impl Application for Notifications {
                     Command::none()
                 }
             },
+            Message::ClearAll => {
+                for n in self.notifications.drain(..) {
+                    if let Some(tx) = &self.dbus_sender {
+                        let tx = tx.clone();
+                        tokio::spawn(async move {
+                            if let Err(err) =
+                                tx.send(subscriptions::dbus::Input::Dismiss(n.id)).await
+                            {
+                                tracing::error!("{:?}", err);
+                            }
+                        });
+                    }
+                }
+                Command::none()
+            }
         }
     }
 
@@ -254,27 +274,35 @@ impl Application for Notifications {
                 row_button(vec!["Notification Settings...".into()]).on_press(Message::Settings);
 
             let notifications = if self.notifications.len() == 0 {
-                row![
-                    Space::with_width(Length::Fill),
+                row![container(
                     column![text_icon(&self.icon_name, 40), "No Notifications"]
-                        .align_items(Alignment::Center),
-                    Space::with_width(Length::Fill)
-                ]
+                        .align_items(Alignment::Center)
+                )
+                .width(Length::Fill)
+                .align_x(Horizontal::Center)]
                 .spacing(12)
             } else {
-                let mut notifs = Vec::with_capacity(self.notifications.len());
-
+                let mut notifs: Vec<Element<_>> = Vec::with_capacity(self.notifications.len());
+                notifs.push(
+                    column![cosmic::widget::button(Button::Text)
+                        .custom(vec![text(fl!("clear-all")).size(14).into()])
+                        .on_press(Message::ClearAll)]
+                    .into(),
+                );
                 for n in &self.notifications {
-                    let summary = text(if n.summary.len() > 24 {
+                    let app_name = text(if n.app_name.len() > 24 {
                         Cow::from(format!(
                             "{:.26}...",
-                            n.summary.lines().next().unwrap_or_default()
+                            n.app_name.lines().next().unwrap_or_default()
                         ))
                     } else {
-                        Cow::from(&n.summary)
+                        Cow::from(&n.app_name)
                     })
-                    .size(18);
+                    .size(12)
+                    .width(Length::Fill);
                     let urgency = n.urgency();
+
+                    let duration_since = text(duration_ago_msg(n)).size(12);
 
                     notifs.push(
                         cosmic::widget::button(Button::Custom {
@@ -310,12 +338,12 @@ impl Application for Notifications {
                         .custom(vec![column!(
                             match n.image() {
                                 Some(cosmic_notifications_util::Image::File(path)) => {
-                                    row![icon(path.as_path(), 32), summary]
+                                    row![icon(path.as_path(), 16), app_name, duration_since]
                                         .spacing(8)
                                         .align_items(Alignment::Center)
                                 }
                                 Some(cosmic_notifications_util::Image::Name(name)) => {
-                                    row![icon(name.as_str(), 32), summary]
+                                    row![icon(name.as_str(), 16), app_name, duration_since]
                                         .spacing(8)
                                         .align_items(Alignment::Center)
                                 }
@@ -326,21 +354,30 @@ impl Application for Notifications {
                                 }) => {
                                     let handle =
                                         image::Handle::from_pixels(*width, *height, data.clone());
-                                    row![icon(handle, 32), summary]
+                                    row![icon(handle, 16), app_name, duration_since]
                                         .spacing(8)
                                         .align_items(Alignment::Center)
                                 }
-                                None => row![summary],
+                                None => row![app_name, duration_since],
                             },
-                            text(if n.body.len() > 38 {
+                            text(if n.summary.len() > 77 {
                                 Cow::from(format!(
-                                    "{:.40}...",
-                                    n.body.lines().next().unwrap_or_default()
+                                    "{:.80}...",
+                                    n.summary.lines().next().unwrap_or_default()
                                 ))
                             } else {
                                 Cow::from(&n.summary)
                             })
                             .size(14),
+                            text(if n.body.len() > 77 {
+                                Cow::from(format!(
+                                    "{:.80}...",
+                                    n.body.lines().next().unwrap_or_default()
+                                ))
+                            } else {
+                                Cow::from(&n.body)
+                            })
+                            .size(12),
                             horizontal_space(Length::Fixed(300.0)),
                         )
                         .spacing(8)
@@ -349,7 +386,6 @@ impl Application for Notifications {
                         .into(),
                     );
                 }
-
                 row!(scrollable(
                     Column::with_children(notifs)
                         .spacing(8)
@@ -401,4 +437,18 @@ fn row_button(
 
 fn text_icon(name: &str, size: u16) -> cosmic::widget::Icon {
     icon(name, size).style(Svg::Symbolic)
+}
+
+fn duration_ago_msg(notification: &Notification) -> String {
+    if let Some(d) = notification.duration_since() {
+        let min = d.as_secs() / 60;
+        let hrs = min / 60;
+        if hrs > 0 {
+            fl!("hours-ago", HashMap::from_iter(vec![("duration", hrs)]))
+        } else {
+            fl!("minutes-ago", HashMap::from_iter(vec![("duration", min)]))
+        }
+    } else {
+        format!("")
+    }
 }
