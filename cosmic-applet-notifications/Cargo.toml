@@ -19,3 +19,8 @@ sendfd = { version = "0.4", features = [ "tokio" ] }
 bytemuck = "1"
 tracing-subscriber = "0.3"
 zbus = "3.14"
+# Application i18n
+i18n-embed = { version = "0.13.4", features = ["fluent-system", "desktop-requester"] }
+i18n-embed-fl = "0.6.4"
+rust-embed = "6.3.0"
+rust-embed-utils = "7.5.0"
