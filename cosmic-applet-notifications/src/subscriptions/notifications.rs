@@ -41,12 +41,25 @@ pub fn notifications() -> Subscription<AppletEvent> {
 
                         std::thread::spawn(move || -> anyhow::Result<()> {
                             let mut msg = String::new();
-                            std::io::stdin().read_line(&mut msg)?;
-                            let raw_fd = msg.trim().parse::<RawFd>()?;
+
+                            if let Err(err) = std::io::stdin().read_line(&mut msg) {
+                                error!("Failed to read line from panel: {}", err);
+                                anyhow::bail!("Failed to read line from panel");
+                            }
+
+                            info!("Received fd from panel: {}", msg);
+                            let Ok(raw_fd) = msg.trim().parse::<RawFd>() else {
+                                error!("Failed to parse fd from panel");
+                                anyhow::bail!("Failed to parse fd from panel");
+                            };
                             if raw_fd == 0 {
+                                error!("Invalid fd received from panel");
                                 anyhow::bail!("Invalid fd received from panel");
                             }
-                            _ = tx.send(raw_fd);
+                            if let Err(err) = tx.send(raw_fd) {
+                                error!("Failed to send fd to main thread: {}", err);
+                                anyhow::bail!("Failed to send fd to main thread");
+                            }
                             Ok(())
                         });
 
@@ -122,6 +135,10 @@ pub fn notifications() -> Subscription<AppletEvent> {
 
                         let mut lines = reader.lines();
                         while let Ok(Some(line)) = lines.next_line().await {
+                            if line.is_empty() {
+                                warn!("Received empty line from notification stream. The notification daemon probably crashed, so we will exit.");
+                                std::process::exit(1);
+                            }
                             if let Ok(event) = ron::de::from_str::<AppletEvent>(line.as_str()) {
                                 if let Err(_err) = output.send(event).await {
                                     error!("Error sending event");
@@ -130,8 +147,8 @@ pub fn notifications() -> Subscription<AppletEvent> {
                                 error!("Failed to deserialize event from notification stream");
                             }
                         }
-                        warn!("Notification stream closed");
-                        state = State::Finished;
+                        warn!("Notification stream closed. The notification daemon probably crashed, so we will exit.");
+                        std::process::exit(1);
                     }
                     State::Finished => {
                         let () = futures::future::pending().await;
