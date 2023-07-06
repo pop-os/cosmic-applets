@@ -183,7 +183,7 @@ impl Application for Notifications {
                         .min_width(1.0)
                         .max_width(300.0)
                         .min_height(100.0)
-                        .max_height(600.0);
+                        .max_height(900.0);
                     get_popup(popup_settings)
                 }
             }
