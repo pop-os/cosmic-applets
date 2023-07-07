@@ -11,13 +11,12 @@ use std::os::unix::io::{FromRawFd, RawFd};
 use tokio::{
     io::{self, AsyncBufReadExt, BufReader},
     net::UnixStream,
-    sync::oneshot,
 };
 use tracing::{error, info, warn};
 
 #[derive(Debug)]
 pub enum State {
-    WaitingForPanel,
+    Ready,
     WaitingForDaemon(UnixStream),
     WaitingForNotificationEvent(UnixStream),
     Finished,
@@ -30,41 +29,16 @@ pub fn notifications() -> Subscription<AppletEvent> {
         std::any::TypeId::of::<SomeWorker>(),
         50,
         |mut output| async move {
-            let mut state = State::WaitingForPanel;
+            let mut state = State::Ready;
 
             loop {
                 match &mut state {
-                    State::WaitingForPanel => {
-                        info!("Waiting for panel to send us a stream");
-
-                        let (tx, rx) = oneshot::channel();
-
-                        std::thread::spawn(move || -> anyhow::Result<()> {
-                            let mut msg = String::new();
-
-                            if let Err(err) = std::io::stdin().read_line(&mut msg) {
-                                error!("Failed to read line from panel: {}", err);
-                                anyhow::bail!("Failed to read line from panel");
-                            }
-
-                            info!("Received fd from panel: {}", msg);
-                            let Ok(raw_fd) = msg.trim().parse::<RawFd>() else {
-                                error!("Failed to parse fd from panel");
-                                anyhow::bail!("Failed to parse fd from panel");
-                            };
-                            if raw_fd == 0 {
-                                error!("Invalid fd received from panel");
-                                anyhow::bail!("Invalid fd received from panel");
-                            }
-                            if let Err(err) = tx.send(raw_fd) {
-                                error!("Failed to send fd to main thread: {}", err);
-                                anyhow::bail!("Failed to send fd to main thread");
-                            }
-                            Ok(())
-                        });
-
-                        let Ok(raw_fd) = rx.await else {
-                            error!("Failed to receive raw fd from panel");
+                    State::Ready => {
+                        info!("Reading COSMIC_NOTIFICATIONS env var");
+                        let Ok(Some(raw_fd)) = std::env::var("COSMIC_NOTIFICATIONS")
+                            .map(|fd| fd.parse::<RawFd>().ok()) else 
+                        {
+                            error!("Failed to parse COSMIC_NOTIFICATIONS env var");
                             state = State::Finished;
                             continue;
                         };
@@ -76,6 +50,7 @@ pub fn notifications() -> Subscription<AppletEvent> {
                             continue;
                         };
                         state = State::WaitingForDaemon(stream);
+                        
                     }
                     State::WaitingForDaemon(stream) => {
                         info!("Waiting for panel to send us a stream");
