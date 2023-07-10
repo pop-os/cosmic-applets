@@ -9,7 +9,11 @@ use std::{collections::HashMap, fmt::Debug, hash::Hash, ops::Deref, time::Durati
 use cosmic::iced::{self, subscription};
 use cosmic_dbus_networkmanager::{
     device::SpecificDevice,
-    interface::{active_connection::ActiveConnectionProxy, enums, enums::DeviceType},
+    interface::{
+        active_connection::ActiveConnectionProxy,
+        enums::DeviceType,
+        enums::{self, ActiveConnectionState},
+    },
     nm::NetworkManager,
     settings::{connection::Settings, NetworkManagerSettings},
 };
@@ -27,10 +31,6 @@ use self::{
     available_wifi::{handle_wireless_device, AccessPoint},
     current_networks::{active_connections, ActiveConnectionInfo},
 };
-
-// TODO subscription for wifi list & selection of wifi
-// TODO subscription & channel for enabling / disabling wifi
-// TODO subscription for displaying active connections & devices
 
 pub fn network_manager_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
     id: I,
@@ -102,9 +102,30 @@ async fn start_listening<I: Copy + Debug>(
                         if c.id().await.unwrap_or_default() == ssid {
                             if let Ok(_) = network_manager.deactivate_connection(&c).await {
                                 success = true;
+                                if let Ok(ActiveConnectionState::Deactivated) = c.state().await {
+                                    break;
+                                } else {
+                                    let mut changed = c.receive_state_changed().await;
+                                    _ = tokio::time::timeout(Duration::from_secs(5), async move {
+                                        loop {
+                                            if let Some(next) = changed.next().await {
+                                                if let Ok(ActiveConnectionState::Deactivated) = next
+                                                    .get()
+                                                    .await
+                                                    .map(|p| ActiveConnectionState::from(p))
+                                                {
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                    })
+                                    .await;
+                                }
+                                break;
                             }
                         }
                     }
+
                     (
                         Some((
                             id,
@@ -539,7 +560,6 @@ impl NetworkManagerState {
     pub async fn new(conn: &Connection) -> anyhow::Result<Self> {
         let network_manager = NetworkManager::new(&conn).await?;
         let mut _self = Self::default();
-
         // airplane mode
         let airplaine_mode = Command::new("rfkill")
             .arg("list")
@@ -557,9 +577,8 @@ impl NetworkManagerState {
         };
 
         let s = NetworkManagerSettings::new(&conn).await?;
-
+        _ = s.load_connections(&[]).await;
         let known_conns = s.list_connections().await.unwrap_or_default();
-
         let mut active_conns = active_connections(
             network_manager
                 .active_connections()
@@ -617,7 +636,6 @@ impl NetworkManagerState {
             .cloned()
             .collect();
         wireless_access_points.sort_by(|a, b| b.strength.cmp(&a.strength));
-
         _self.wireless_access_points = wireless_access_points;
         _self.active_conns = active_conns;
         _self.known_access_points = known_access_points;

@@ -257,23 +257,21 @@ impl Application for CosmicNetworkApplet {
                     success,
                     req,
                 } => {
-                    if success {
-                        match req {
-                            NetworkManagerRequest::SelectAccessPoint(ssid)
-                            | NetworkManagerRequest::Password(ssid, _) => {
-                                if self
-                                    .new_connection
-                                    .as_ref()
-                                    .map(|c| c.ssid() == ssid)
-                                    .unwrap_or_default()
-                                {
-                                    self.new_connection.take();
-                                }
-                            }
-                            _ => {
-                                self.update_togglers(&state);
-                            }
+                    if let NetworkManagerRequest::SelectAccessPoint(ssid)
+                    | NetworkManagerRequest::Password(ssid, _)
+                    | NetworkManagerRequest::Disconnect(ssid) = &req
+                    {
+                        if self
+                            .new_connection
+                            .as_ref()
+                            .map(|c| c.ssid() == ssid)
+                            .unwrap_or_default()
+                        {
+                            self.new_connection = None;
                         }
+                    }
+                    if success {
+                        self.update_togglers(&state);
                     } else {
                         match req {
                             NetworkManagerRequest::Password(_, _) => {
