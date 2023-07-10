@@ -1,7 +1,7 @@
 use super::{NetworkManagerEvent, NetworkManagerState};
 use cosmic::iced::{self, subscription};
 use cosmic_dbus_networkmanager::nm::NetworkManager;
-use futures::StreamExt;
+use futures::{SinkExt, StreamExt};
 use log::error;
 use std::fmt::Debug;
 use std::hash::Hash;
@@ -10,13 +10,14 @@ use zbus::Connection;
 pub fn devices_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
     id: I,
     conn: Connection,
-) -> iced::Subscription<(I, NetworkManagerEvent)> {
-    subscription::unfold(id, State::Continue(conn), move |mut state| async move {
-        loop {
-            let (update, new_state) = start_listening(id, state).await;
-            state = new_state;
-            if let Some(update) = update {
-                return (update, state);
+) -> iced::Subscription<NetworkManagerEvent> {
+    let initial = State::Continue(conn.clone());
+    subscription::channel(id, 50, move |mut output| {
+        let mut state = initial.clone();
+
+        async move {
+            loop {
+                state = start_listening(state, &mut output).await;
             }
         }
     })
@@ -28,10 +29,10 @@ pub enum State {
     Error,
 }
 
-async fn start_listening<I: Copy + Debug>(
-    id: I,
+async fn start_listening(
     state: State,
-) -> (Option<(I, NetworkManagerEvent)>, State) {
+    output: &mut futures::channel::mpsc::Sender<NetworkManagerEvent>,
+) -> State {
     let conn = match state {
         State::Continue(conn) => conn,
         State::Error => iced::futures::future::pending().await,
@@ -40,7 +41,7 @@ async fn start_listening<I: Copy + Debug>(
         Ok(n) => n,
         Err(e) => {
             error!("Failed to connect to NetworkManager: {}", e);
-            return (None, State::Error);
+            return State::Error;
         }
     };
 
@@ -48,9 +49,8 @@ async fn start_listening<I: Copy + Debug>(
     devices_changed.next().await;
 
     let new_state = NetworkManagerState::new(&conn).await.unwrap_or_default();
-
-    (
-        Some((id, NetworkManagerEvent::WirelessAccessPoints(new_state))),
-        State::Continue(conn),
-    )
+    _ = output
+        .send(NetworkManagerEvent::WirelessAccessPoints(new_state))
+        .await;
+    State::Continue(conn)
 }
