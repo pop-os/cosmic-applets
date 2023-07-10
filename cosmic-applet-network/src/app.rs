@@ -725,8 +725,7 @@ impl Application for CosmicNetworkApplet {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        let network_sub =
-            network_manager_subscription(0).map(|e| Message::NetworkManagerEvent(e.1));
+        let network_sub = network_manager_subscription(0).map(|e| Message::NetworkManagerEvent(e));
         let timeline = self
             .timeline
             .as_subscription()
@@ -737,11 +736,9 @@ impl Application for CosmicNetworkApplet {
                 self.applet_helper.theme_subscription(0).map(Message::Theme),
                 timeline,
                 network_sub,
-                active_conns_subscription(0, conn.clone())
-                    .map(|e| Message::NetworkManagerEvent(e.1)),
-                devices_subscription(0, conn.clone()).map(|e| Message::NetworkManagerEvent(e.1)),
-                wireless_enabled_subscription(0, conn.clone())
-                    .map(|e| Message::NetworkManagerEvent(e.1)),
+                active_conns_subscription(0, conn.clone()).map(Message::NetworkManagerEvent),
+                devices_subscription(0, conn.clone()).map(Message::NetworkManagerEvent),
+                wireless_enabled_subscription(0, conn.clone()).map(Message::NetworkManagerEvent),
             ])
         } else {
             Subscription::batch(vec![timeline, network_sub])
