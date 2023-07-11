@@ -7,3 +7,5 @@ minutes-ago = { NUMBER($duration) ->
     *[other] {$duration} Minutes Ago
 }
 clear-all = Clear All Notifications
+do-not-disturb = Do Not Disturb
+notification-settings = Notification Settings...
