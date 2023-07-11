@@ -11,8 +11,7 @@ use std::{
     str::{self, FromStr},
 };
 
-use cosmic::iced;
-use iced::subscription;
+use cosmic::iced::{self, futures::SinkExt, subscription};
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 
 const BACKLIGHT_SYSDIR: &str = "/sys/class/backlight";
@@ -77,21 +76,14 @@ pub async fn backlight() -> io::Result<Option<Backlight>> {
 
 pub fn screen_backlight_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
     id: I,
-) -> iced::Subscription<(I, ScreenBacklightUpdate)> {
-    subscription::unfold(id, State::Ready, move |state| start_listening_loop(id, state))
-}
+) -> iced::Subscription<ScreenBacklightUpdate> {
+    subscription::channel(id, 50, move |mut output| async move {
+        let mut state = State::Ready;
 
-async fn start_listening_loop<I: Copy + Debug>(
-    id: I,
-    mut state: State,
-) -> ((I, ScreenBacklightUpdate), State) {
-    loop {
-        let (update, new_state) = start_listening(id, state).await;
-        state = new_state;
-        if let Some(update) = update {
-            return (update, state);
+        loop {
+            state = start_listening(state, &mut output).await;
         }
-    }
+    })
 }
 
 pub enum State {
@@ -104,46 +96,43 @@ pub enum State {
     Finished,
 }
 
-async fn start_listening<I: Copy>(
-    id: I,
+async fn start_listening(
     state: State,
-) -> (Option<(I, ScreenBacklightUpdate)>, State) {
+    output: &mut futures::channel::mpsc::Sender<ScreenBacklightUpdate>,
+) -> State {
     match state {
         State::Ready => {
             let conn = match zbus::Connection::system().await {
                 Ok(conn) => conn,
-                Err(_) => return (None, State::Finished),
+                Err(_) => return State::Finished,
             };
             let screen_proxy = match LogindSessionProxy::builder(&conn).build().await {
                 Ok(p) => p,
-                Err(_) => return (None, State::Finished),
+                Err(_) => return State::Finished,
             };
             let backlight = match backlight().await {
                 Ok(Some(b)) => b,
-                _ => return (None, State::Finished),
+                _ => return State::Finished,
             };
             let (tx, rx) = unbounded_channel();
 
             let b = (backlight.brightness().await.unwrap_or_default() as f64
                 / backlight.max_brightness().await.unwrap_or(1) as f64)
                 .clamp(0., 1.);
-            (
-                Some((id, ScreenBacklightUpdate::Init(tx, b))),
-                State::Waiting(backlight, screen_proxy, rx),
-            )
+            _ = output.send(ScreenBacklightUpdate::Init(tx, b)).await;
+
+            State::Waiting(backlight, screen_proxy, rx)
         }
         State::Waiting(backlight, proxy, mut rx) => match rx.recv().await {
             Some(req) => match req {
                 ScreenBacklightRequest::Get => {
-                    let msg = if let Some(max_brightness) = backlight.max_brightness().await {
+                    if let Some(max_brightness) = backlight.max_brightness().await {
                         let value = (backlight.brightness().await.unwrap_or_default() as f64
                             / max_brightness as f64)
                             .clamp(0., 1.);
-                        Some((id, ScreenBacklightUpdate::Update(value)))
-                    } else {
-                        None
-                    };
-                    (msg, State::Waiting(backlight, proxy, rx))
+                        _ = output.send(ScreenBacklightUpdate::Update(value)).await;
+                    }
+                    State::Waiting(backlight, proxy, rx)
                 }
                 ScreenBacklightRequest::Set(value) => {
                     if let Some(max_brightness) = backlight.max_brightness().await {
@@ -151,10 +140,10 @@ async fn start_listening<I: Copy>(
                         let value = value.round() as u32;
                         let _ = backlight.set_brightness(&proxy, value).await;
                     }
-                    (None, State::Waiting(backlight, proxy, rx))
+                    State::Waiting(backlight, proxy, rx)
                 }
             },
-            None => (None, State::Finished),
+            None => State::Finished,
         },
         State::Finished => iced::futures::future::pending().await,
     }
