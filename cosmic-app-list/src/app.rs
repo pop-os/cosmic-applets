@@ -1061,7 +1061,7 @@ impl Application for CosmicAppList {
     fn subscription(&self) -> Subscription<Message> {
         Subscription::batch(vec![
             self.applet_helper.theme_subscription(0).map(Message::Theme),
-            toplevel_subscription(self.subscription_ctr).map(|e| Message::Toplevel(e.1)),
+            toplevel_subscription(self.subscription_ctr).map(Message::Toplevel),
             events_with(|e, _| match e {
                 cosmic::iced_runtime::core::Event::PlatformSpecific(
                     event::PlatformSpecific::Wayland(event::wayland::Event::Seat(e, seat)),
