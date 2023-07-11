@@ -523,7 +523,7 @@ impl Application for CosmicBluetoothApplet {
     fn subscription(&self) -> Subscription<Message> {
         Subscription::batch(vec![
             self.applet_helper.theme_subscription(0).map(Message::Theme),
-            bluetooth_subscription(0).map(|(_, e)| Message::BluetoothEvent(e)),
+            bluetooth_subscription(0).map(Message::BluetoothEvent),
         ])
     }
 
