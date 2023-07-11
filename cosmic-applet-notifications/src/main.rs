@@ -359,31 +359,34 @@ impl Application for Notifications {
                                 }
                                 None => row![app_name, duration_since],
                             },
-                            text(if n.summary.len() > 77 {
-                                Cow::from(format!(
-                                    "{:.80}...",
-                                    n.summary.lines().next().unwrap_or_default()
-                                ))
-                            } else {
-                                Cow::from(&n.summary)
-                            })
-                            .size(14)
-                            .width(Length::Fixed(300.0)),
-                            text(if n.body.len() > 77 {
-                                Cow::from(format!(
-                                    "{:.80}...",
-                                    n.body.lines().next().unwrap_or_default()
-                                ))
-                            } else {
-                                Cow::from(&n.body)
-                            })
-                            .size(12)
-                            .width(Length::Fixed(300.0)),
+                            column![
+                                text(if n.summary.len() > 77 {
+                                    Cow::from(format!(
+                                        "{:.80}...",
+                                        n.summary.lines().next().unwrap_or_default()
+                                    ))
+                                } else {
+                                    Cow::from(&n.summary)
+                                })
+                                .width(Length::Fill)
+                                .size(14),
+                                text(if n.body.len() > 77 {
+                                    Cow::from(format!(
+                                        "{:.80}...",
+                                        n.body.lines().next().unwrap_or_default()
+                                    ))
+                                } else {
+                                    Cow::from(&n.body)
+                                })
+                                .width(Length::Fill)
+                                .size(12)
+                            ]
                         )
                         .spacing(8)
                         .into()])
                         .padding(16)
                         .on_press(Message::Dismissed(n.id))
+                        .width(Length::Fill)
                         .into(),
                     );
                 }
