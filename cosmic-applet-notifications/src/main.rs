@@ -5,7 +5,7 @@ use cosmic::cosmic_config::{config_subscription, Config, CosmicConfigEntry};
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced::Limits;
 use cosmic::iced::{
-    widget::{button, column, row, text, Row, Space},
+    widget::{button, column, row, text, Row},
     window, Alignment, Application, Color, Command, Length, Subscription,
 };
 use cosmic::iced_core::alignment::Horizontal;
@@ -15,9 +15,9 @@ use cosmic_applet::{applet_button_theme, CosmicAppletHelper};
 
 use cosmic::iced_style::application::{self, Appearance};
 
-use cosmic::iced_widget::{scrollable, Column};
+use cosmic::iced_widget::{horizontal_rule, scrollable, Column};
 use cosmic::theme::{Button, Svg};
-use cosmic::widget::{container, divider, icon};
+use cosmic::widget::{container, icon};
 use cosmic::Renderer;
 use cosmic::{Element, Theme};
 use cosmic_notifications_config::NotificationsConfig;
@@ -181,7 +181,7 @@ impl Application for Notifications {
                     );
                     popup_settings.positioner.size_limits = Limits::NONE
                         .min_width(1.0)
-                        .max_width(300.0)
+                        .max_width(444.0)
                         .min_height(100.0)
                         .max_height(900.0);
                     get_popup(popup_settings)
@@ -268,15 +268,15 @@ impl Application for Notifications {
             let do_not_disturb = row![anim!(
                 DO_NOT_DISTURB,
                 &self.timeline,
-                String::from("Do Not Disturb"),
+                String::from(fl!("do-not-disturb")),
                 self.config.do_not_disturb,
                 Message::DoNotDisturb
             )
             .width(Length::Fill)]
             .padding([0, 24]);
 
-            let settings =
-                row_button(vec!["Notification Settings...".into()]).on_press(Message::Settings);
+            let settings = row_button(vec![text(fl!("notification-settings")).into()])
+                .on_press(Message::Settings);
 
             let notifications = if self.notifications.len() == 0 {
                 row![container(
@@ -390,39 +390,27 @@ impl Application for Notifications {
                 row!(scrollable(
                     Column::with_children(notifs)
                         .spacing(8)
-                        .width(Length::Shrink)
                         .height(Length::Shrink),
                 )
-                .width(Length::Shrink)
                 .height(Length::Shrink))
-                .width(Length::Shrink)
             };
 
-            let main_content = column![
-                divider::horizontal::light(),
-                notifications,
-                divider::horizontal::light()
-            ]
-            .padding([0, 24])
-            .spacing(12);
+            let main_content = column![horizontal_rule(4), notifications, horizontal_rule(4)]
+                .padding([0, 24])
+                .spacing(12);
 
             let content = column![do_not_disturb, main_content, settings]
                 .align_items(Alignment::Start)
                 .spacing(12)
-                .padding([12, 0]);
+                .padding([16, 0]);
 
             self.applet_helper.popup_container(content).into()
         }
     }
 }
 
-// todo put into libcosmic doing so will fix the row_button's boarder radius
-fn row_button(
-    mut content: Vec<Element<Message>>,
-) -> cosmic::iced::widget::Button<Message, Renderer> {
-    content.insert(0, Space::with_width(Length::Fixed(24.0)).into());
-    content.push(Space::with_width(Length::Fixed(24.0)).into());
-
+// todo put into libcosmic doing so will fix the row_button's border radius
+fn row_button(content: Vec<Element<Message>>) -> cosmic::iced::widget::Button<Message, Renderer> {
     button(
         Row::with_children(content)
             .spacing(4)
@@ -430,6 +418,7 @@ fn row_button(
     )
     .width(Length::Fill)
     .height(Length::Fixed(36.0))
+    .padding([0, 24])
     .style(applet_button_theme())
 }
 
