@@ -392,31 +392,28 @@ impl Application for CosmicBatteryApplet {
         Subscription::batch(vec![
             self.applet_helper.theme_subscription(0).map(Message::Theme),
             device_subscription(0).map(
-                |(
-                    _,
-                    DeviceDbusEvent::Update {
-                        icon_name,
-                        percent,
-                        time_to_empty,
-                    },
-                )| Message::Update {
+                |DeviceDbusEvent::Update {
+                     icon_name,
+                     percent,
+                     time_to_empty,
+                 }| Message::Update {
                     icon_name,
                     percent,
                     time_to_empty,
                 },
             ),
             kbd_backlight_subscription(0).map(|event| match event {
-                (_, KeyboardBacklightUpdate::Update(b)) => Message::UpdateKbdBrightness(b),
-                (_, KeyboardBacklightUpdate::Init(tx, b)) => Message::InitKbdBacklight(tx, b),
+                KeyboardBacklightUpdate::Update(b) => Message::UpdateKbdBrightness(b),
+                KeyboardBacklightUpdate::Init(tx, b) => Message::InitKbdBacklight(tx, b),
             }),
             screen_backlight_subscription(0).map(|e| match e {
-                (_, ScreenBacklightUpdate::Update(b)) => Message::UpdateScreenBrightness(b),
-                (_, ScreenBacklightUpdate::Init(tx, b)) => Message::InitScreenBacklight(tx, b),
+                ScreenBacklightUpdate::Update(b) => Message::UpdateScreenBrightness(b),
+                ScreenBacklightUpdate::Init(tx, b) => Message::InitScreenBacklight(tx, b),
             }),
             power_profile_subscription(0).map(|event| match event {
-                (_, PowerProfileUpdate::Update { profile }) => Message::Profile(profile),
-                (_, PowerProfileUpdate::Init(tx, p)) => Message::InitProfile(p, tx),
-                (_, PowerProfileUpdate::Error(e)) => Message::Errored(e), // TODO: handle error
+                PowerProfileUpdate::Update { profile } => Message::Profile(profile),
+                PowerProfileUpdate::Init(tx, p) => Message::InitProfile(p, tx),
+                PowerProfileUpdate::Error(e) => Message::Errored(e), // TODO: handle error
             }),
             self.timeline
                 .as_subscription()
