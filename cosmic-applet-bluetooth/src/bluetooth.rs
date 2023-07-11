@@ -4,9 +4,12 @@ use bluer::{
     agent::{Agent, AgentHandle},
     Adapter, Address, DeviceProperty, Session, Uuid,
 };
-use cosmic::iced::{self, subscription};
+use cosmic::iced::{
+    self,
+    futures::{SinkExt, StreamExt},
+    subscription,
+};
 
-use futures::StreamExt;
 use rand::Rng;
 use tokio::{
     spawn,
@@ -20,8 +23,14 @@ use tokio::{
 
 pub fn bluetooth_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
     id: I,
-) -> iced::Subscription<(I, BluerEvent)> {
-    subscription::unfold(id, State::Ready, move |state| start_listening_loop(id, state))
+) -> iced::Subscription<BluerEvent> {
+    subscription::channel(id, 50, move |mut output| async move {
+        let mut state = State::Ready;
+
+        loop {
+            state = start_listening(state, &mut output).await;
+        }
+    })
 }
 
 pub enum State {
@@ -30,78 +39,77 @@ pub enum State {
     Finished,
 }
 
-async fn start_listening_loop<I: Copy + Debug>(
-    id: I,
-    mut state: State,
-) -> ((I, BluerEvent), State) {
-    loop {
-        let (update, new_state) = start_listening(id, state).await;
-        state = new_state;
-        if let Some(update) = update {
-            return (update, state);
-        }
-    }
-}
-
-async fn start_listening<I: Copy + Debug>(id: I, state: State) -> (Option<(I, BluerEvent)>, State) {
+async fn start_listening(
+    state: State,
+    output: &mut futures::channel::mpsc::Sender<BluerEvent>,
+) -> State {
     match state {
         State::Ready => {
             let session = match Session::new().await {
                 Ok(s) => s,
-                Err(_) => return (Some((id, BluerEvent::Finished)), State::Finished),
+                Err(_) => {
+                    _ = output.send(BluerEvent::Finished).await;
+                    return State::Finished;
+                }
             };
             let (tx, rx) = channel(100);
 
             let session_state = match BluerSessionState::new(session, rx).await {
                 Ok(s) => s,
-                Err(_) => return (Some((id, BluerEvent::Finished)), State::Finished),
+                Err(_) => {
+                    _ = output.send(BluerEvent::Finished).await;
+                    return State::Finished;
+                }
             };
 
             let state = session_state.bluer_state().await;
-            return (
-                Some((
-                    id,
-                    BluerEvent::Init {
-                        sender: tx,
-                        state: state.clone(),
-                    },
-                )),
-                State::Waiting { session_state },
-            );
+
+            _ = output
+                .send(BluerEvent::Init {
+                    sender: tx,
+                    state: state.clone(),
+                })
+                .await;
+            State::Waiting { session_state }
         }
         State::Waiting { mut session_state } => {
             let mut session_rx = match session_state.rx.take() {
                 Some(rx) => rx,
                 None => {
-                    return (Some((id, BluerEvent::Finished)), State::Finished); // fail if we can't get the rx
+                    _ = output.send(BluerEvent::Finished).await;
+                    return State::Finished;
                 }
             };
 
-            let event = if let Some(event) = session_rx.recv().await {
+            if let Some(event) = session_rx.recv().await {
                 match event {
                     BluerSessionEvent::ChangesProcessed(state) => {
-                        Some((id, BluerEvent::DevicesChanged { state }))
+                        _ = output.send(BluerEvent::DevicesChanged { state }).await;
                     }
                     BluerSessionEvent::RequestResponse {
                         req,
                         state,
                         err_msg,
-                    } => Some((
-                        id,
-                        BluerEvent::RequestResponse {
-                            req,
-                            state,
-                            err_msg,
-                        },
-                    )),
-                    BluerSessionEvent::AgentEvent(e) => Some((id, BluerEvent::AgentEvent(e))),
-                    _ => None,
+                    } => {
+                        _ = output
+                            .send(BluerEvent::RequestResponse {
+                                req,
+                                state,
+                                err_msg,
+                            })
+                            .await;
+                    }
+                    BluerSessionEvent::AgentEvent(e) => {
+                        _ = output.send(BluerEvent::AgentEvent(e)).await;
+                    }
+                    _ => {}
                 }
             } else {
-                return (Some((id, BluerEvent::Finished)), State::Finished);
+                _ = output.send(BluerEvent::Finished).await;
+                return State::Finished;
             };
             session_state.rx = Some(session_rx);
-            (event, State::Waiting { session_state })
+            State::Waiting { session_state }
         }
         State::Finished => iced::futures::future::pending().await,
     }
