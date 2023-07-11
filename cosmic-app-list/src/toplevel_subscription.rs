@@ -9,7 +9,7 @@ use cosmic::iced::subscription;
 use cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1;
 use futures::{
     channel::mpsc::{unbounded, UnboundedReceiver},
-    StreamExt,
+    SinkExt, StreamExt,
 };
 use std::{fmt::Debug, hash::Hash, thread::JoinHandle};
 
@@ -17,8 +17,14 @@ use crate::toplevel_handler::toplevel_handler;
 
 pub fn toplevel_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
     id: I,
-) -> iced::Subscription<(I, ToplevelUpdate)> {
-    subscription::unfold(id, State::Ready, move |state| start_listening(id, state))
+) -> iced::Subscription<ToplevelUpdate> {
+    subscription::channel(id, 50, move |mut output| async move {
+        let mut state = State::Ready;
+
+        loop {
+            state = start_listening(state, &mut output).await;
+        }
+    })
 }
 
 pub enum State {
@@ -31,40 +37,38 @@ pub enum State {
     Finished,
 }
 
-async fn start_listening<I: Copy>(id: I, mut state: State) -> ((I, ToplevelUpdate), State) {
-    loop {
-        let (update, new_state) = match state {
-            State::Ready => {
-                let (calloop_tx, calloop_rx) = calloop::channel::channel();
-                let (toplevel_tx, toplevel_rx) = unbounded();
-                let handle = std::thread::spawn(move || {
-                    toplevel_handler(toplevel_tx, calloop_rx);
-                });
-                (
-                    Some((id, ToplevelUpdate::Init(calloop_tx.clone()))),
-                    State::Waiting(toplevel_rx, calloop_tx, handle),
-                )
-            }
-            State::Waiting(mut rx, tx, handle) => {
-                if handle.is_finished() {
-                    return ((id, ToplevelUpdate::Finished), State::Finished);
-                }
-                match rx.next().await {
-                    Some(u) => (Some((id, u)), State::Waiting(rx, tx, handle)),
-                    None => {
-                        let _ = tx.send(ToplevelRequest::Exit);
-                        (Some((id, ToplevelUpdate::Finished)), State::Finished)
-                    }
-                }
-            }
-            State::Finished => iced::futures::future::pending().await,
-        };
-
-        if let Some(update) = update {
-            return (update, new_state);
-        } else {
-            state = new_state;
+async fn start_listening(
+    state: State,
+    output: &mut futures::channel::mpsc::Sender<ToplevelUpdate>,
+) -> State {
+    match state {
+        State::Ready => {
+            let (calloop_tx, calloop_rx) = calloop::channel::channel();
+            let (toplevel_tx, toplevel_rx) = unbounded();
+            let handle = std::thread::spawn(move || {
+                toplevel_handler(toplevel_tx, calloop_rx);
+            });
+            let tx = calloop_tx.clone();
+            _ = output.send(ToplevelUpdate::Init(tx)).await;
+            State::Waiting(toplevel_rx, calloop_tx, handle)
         }
+        State::Waiting(mut rx, tx, handle) => {
+            if handle.is_finished() {
+                _ = output.send(ToplevelUpdate::Finished).await;
+                return State::Finished;
+            }
+            match rx.next().await {
+                Some(u) => {
+                    _ = output.send(u).await;
+                    State::Waiting(rx, tx, handle)
+                }
+                None => {
+                    _ = output.send(ToplevelUpdate::Finished).await;
+                    return State::Finished;
+                }
+            }
+        }
+        State::Finished => iced::futures::future::pending().await,
     }
 }
 
