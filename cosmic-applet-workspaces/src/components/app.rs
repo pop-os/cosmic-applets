@@ -2,7 +2,7 @@ use calloop::channel::SyncSender;
 use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::mouse::{self, ScrollDelta};
 use cosmic::iced::wayland::actions::window::SctkWindowSettings;
-use cosmic::iced::wayland::{window::resize_window, InitialSurface};
+use cosmic::iced::wayland::InitialSurface;
 use cosmic::iced::widget::{column, container, row, text};
 use cosmic::iced::Color;
 use cosmic::iced::{
@@ -181,7 +181,7 @@ impl Application for IcedWorkspacesApplet {
         Subscription::batch(
             vec![
                 self.helper.theme_subscription(0).map(Message::Theme),
-                workspaces(0).map(|e| Message::WorkspaceUpdate(e.1)),
+                workspaces(0).map(Message::WorkspaceUpdate),
                 subscription::events_with(|e, _| match e {
                     Mouse(mouse::Event::WheelScrolled { delta }) => {
                         Some(Message::WheelScrolled(delta))
