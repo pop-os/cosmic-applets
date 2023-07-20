@@ -5,8 +5,8 @@ edition = "2021"
 
 [dependencies]
 once_cell = "1.16.0"
-libcosmic = { git = "https://github.com/pop-os/libcosmic/", default-features = false, features = ["tokio", "wayland"] }
-cosmic-time = { git = "https://github.com/pop-os/cosmic-time", rev = "39c96ac", default-features = false, features = ["libcosmic", "once_cell"] }
+libcosmic.workspace = true
+cosmic-time.workspace = true
 cosmic-applet = { path = "../applet" }
 futures = "0.3"
 zbus = { version = "3.13", default-features = false, features = ["tokio"] }

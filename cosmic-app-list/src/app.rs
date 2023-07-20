@@ -201,7 +201,7 @@ impl DockItem {
                 )
                 .on_right_release(Message::Popup(desktop_info.id.clone())),
             )
-            .on_drag(Message::StartDrag(desktop_info.id.clone()))
+            .on_drag(|_| Message::StartDrag(desktop_info.id.clone()))
             .on_cancelled(Message::DragFinished)
             .on_finished(Message::DragFinished)
         } else {

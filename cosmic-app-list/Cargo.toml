@@ -5,9 +5,9 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
-cctk = { git = "https://github.com/pop-os/cosmic-protocols", package = "cosmic-client-toolkit", rev = "f0cfe09" }
-cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols", default-features = false, features = ["client"], rev = "f0cfe09" }
-libcosmic = { git = "https://github.com/pop-os/libcosmic/", default-features = false, features = ["wayland", "tokio"] }
+cctk.workspace = true
+cosmic-protocols.workspace = true
+libcosmic.workspace = true
 cosmic-applet = { path = "../applet" }
 # libcosmic = { path = "../../libcosmic", default-features = false, features = ["wayland", "tokio"] }
 ron = "0.8"
