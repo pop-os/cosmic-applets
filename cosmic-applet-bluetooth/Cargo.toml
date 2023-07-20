@@ -8,7 +8,7 @@ license = "GPL-3.0-or-later"
 once_cell = "1.16.0"
 bluer = { version = "0.15", features = ["bluetoothd", "id"] }
 futures-util = "0.3.21"
-libcosmic = { git = "https://github.com/pop-os/libcosmic/", default-features = false, features = ["wayland", "tokio"] }
+libcosmic.workspace = true
 cosmic-applet = { path = "../applet" }
 futures = "0.3"
 log = "0.4"

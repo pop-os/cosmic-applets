@@ -1,5 +1,5 @@
 use calloop::channel::*;
-use cosmic_client_toolkit::{
+use cctk::{
     sctk::{
         self,
         output::{OutputHandler, OutputState},
@@ -273,6 +273,6 @@ impl WorkspaceHandler for State {
     }
 }
 
-cosmic_client_toolkit::delegate_workspace!(State);
+cctk::delegate_workspace!(State);
 sctk::delegate_output!(State);
 sctk::delegate_registry!(State);
