@@ -10,18 +10,17 @@ use cosmic::iced::{
 };
 use cosmic::iced_core::alignment::Horizontal;
 use cosmic::iced_core::image;
-use cosmic::iced_widget::button::StyleSheet;
 use cosmic_applet::{applet_button_theme, CosmicAppletHelper};
 
 use cosmic::iced_style::application::{self, Appearance};
 
 use cosmic::iced_widget::{horizontal_rule, scrollable, Column};
-use cosmic::theme::{Button, Svg};
+use cosmic::theme::Svg;
 use cosmic::widget::{container, icon};
 use cosmic::Renderer;
 use cosmic::{Element, Theme};
 use cosmic_notifications_config::NotificationsConfig;
-use cosmic_notifications_util::{AppletEvent, Notification};
+use cosmic_notifications_util::Notification;
 use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -51,9 +50,24 @@ struct Notifications {
     icon_name: String,
     popup: Option<window::Id>,
     id_ctr: u128,
-    notifications: Vec<Notification>,
+    // notifications: Vec<Notification>,
     timeline: Timeline,
     dbus_sender: Option<Sender<subscriptions::dbus::Input>>,
+    cards: Vec<(id::Cards, Vec<Notification>, bool, String)>,
+}
+
+impl Notifications {
+    fn update_cards(&mut self, id: id::Cards) {
+        if let Some((id, _, card_value, _)) = self.cards.iter_mut().find(|c| c.0 == id) {
+            let chain = if *card_value {
+                chain::Cards::on(id.clone(), 1.)
+            } else {
+                chain::Cards::off(id.clone(), 1.)
+            };
+            self.timeline.set_chain(chain);
+            self.timeline.start();
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -64,11 +78,12 @@ enum Message {
     Ignore,
     Frame(Instant),
     Theme(Theme),
-    NotificationEvent(AppletEvent),
+    NotificationEvent(Notification),
     Config(NotificationsConfig),
     DbusEvent(subscriptions::dbus::Output),
     Dismissed(u32),
-    ClearAll,
+    ClearAll(String),
+    CardsToggled(String, bool),
 }
 
 impl Application for Notifications {
@@ -201,20 +216,31 @@ impl Application for Notifications {
                 let _ = process::Command::new("cosmic-settings notifications").spawn();
                 Command::none()
             }
-            Message::NotificationEvent(e) => {
-                match e {
-                    AppletEvent::Notification(n) => {
-                        self.notifications.push(n);
+            Message::NotificationEvent(n) => {
+                info!("{}", &n.app_name);
+                if let Some(c) = self
+                    .cards
+                    .iter_mut()
+                    .find(|c| c.1.iter().any(|notif| n.app_name == notif.app_name))
+                {
+                    if let Some(notif) = c.1.iter_mut().find(|notif| n.id == notif.id) {
+                        *notif = n;
+                    } else {
+                        c.1.push(n);
+                        c.3 = fl!(
+                            "show-more",
+                            HashMap::from_iter(vec![("more", c.1.len().saturating_sub(1))])
+                        );
                     }
-                    AppletEvent::Replace(n) => {
-                        if let Some(old) = self.notifications.iter_mut().find(|n| n.id == n.id) {
-                            *old = n;
-                        }
-                    }
-                    AppletEvent::Closed(id) => {
-                        self.notifications.retain(|n| n.id != id);
-                    }
+                } else {
+                    self.cards.push((
+                        id::Cards::new(n.app_name.clone()),
+                        vec![n],
+                        false,
+                        fl!("show-more", HashMap::from_iter(vec![("more", "1")])),
+                    ));
                 }
+
                 Command::none()
             }
             Message::Ignore => Command::none(),
@@ -223,7 +249,10 @@ impl Application for Notifications {
                 Command::none()
             }
             Message::Dismissed(id) => {
-                self.notifications.retain(|n| n.id != id);
+                info!("dismissed {}", id);
+                for c in &mut self.cards {
+                    c.1.retain(|n| n.id != id);
+                }
                 if let Some(tx) = &self.dbus_sender {
                     let tx = tx.clone();
                     tokio::spawn(async move {
@@ -239,20 +268,51 @@ impl Application for Notifications {
                     self.dbus_sender.replace(tx);
                     Command::none()
                 }
+                subscriptions::dbus::Output::CloseEvent(id) => {
+                    for c in &mut self.cards {
+                        c.1.retain(|n| n.id != id);
+                        c.3 = fl!(
+                            "show-more",
+                            HashMap::from_iter(vec![("more", c.1.len().saturating_sub(1))])
+                        );
+                    }
+                    Command::none()
+                }
             },
-            Message::ClearAll => {
-                for n in self.notifications.drain(..) {
-                    if let Some(tx) = &self.dbus_sender {
-                        let tx = tx.clone();
-                        tokio::spawn(async move {
-                            if let Err(err) =
-                                tx.send(subscriptions::dbus::Input::Dismiss(n.id)).await
-                            {
-                                tracing::error!("{:?}", err);
-                            }
-                        });
+            Message::ClearAll(app_name) => {
+                if let Some(pos) = self
+                    .cards
+                    .iter_mut()
+                    .position(|c| c.1.iter().any(|notif| app_name == notif.app_name))
+                {
+                    for n in self.cards.remove(pos).1 {
+                        if let Some(tx) = &self.dbus_sender {
+                            let tx = tx.clone();
+                            tokio::spawn(async move {
+                                if let Err(err) =
+                                    tx.send(subscriptions::dbus::Input::Dismiss(n.id)).await
+                                {
+                                    tracing::error!("{:?}", err);
+                                }
+                            });
+                        }
                     }
                 }
+
+                Command::none()
+            }
+            Message::CardsToggled(name, expanded) => {
+                let id = if let Some((id, _, n_expanded, _)) = self
+                    .cards
+                    .iter_mut()
+                    .find(|c| c.1.iter().any(|notif| name == notif.app_name))
+                {
+                    *n_expanded = expanded;
+                    id.clone()
+                } else {
+                    return Command::none();
+                };
+                self.update_cards(id);
                 Command::none()
             }
         }
@@ -278,7 +338,7 @@ impl Application for Notifications {
             let settings = row_button(vec![text(fl!("notification-settings")).into()])
                 .on_press(Message::Settings);
 
-            let notifications = if self.notifications.len() == 0 {
+            let notifications = if self.cards.is_empty() {
                 row![container(
                     column![text_icon(&self.icon_name, 40), "No Notifications"]
                         .align_items(Alignment::Center)
@@ -287,109 +347,110 @@ impl Application for Notifications {
                 .align_x(Horizontal::Center)]
                 .spacing(12)
             } else {
-                let mut notifs: Vec<Element<_>> = Vec::with_capacity(self.notifications.len());
-                notifs.push(
-                    column![cosmic::widget::button(Button::Text)
-                        .custom(vec![text(fl!("clear-all")).size(14).into()])
-                        .on_press(Message::ClearAll)]
-                    .align_items(Alignment::End)
-                    .width(Length::Fill)
-                    .into(),
-                );
-                for n in self.notifications.iter().rev() {
-                    let app_name = text(if n.app_name.len() > 24 {
-                        Cow::from(format!(
-                            "{:.26}...",
-                            n.app_name.lines().next().unwrap_or_default()
-                        ))
-                    } else {
-                        Cow::from(&n.app_name)
-                    })
-                    .size(12)
-                    .width(Length::Fill);
-                    let urgency = n.urgency();
+                let mut notifs: Vec<Element<_>> = Vec::with_capacity(self.cards.len());
 
-                    let duration_since = text(duration_ago_msg(n)).size(12);
-
-                    notifs.push(
-                        cosmic::widget::button(Button::Custom {
-                            active: Box::new(move |t| {
-                                let style = if urgency > 1 {
-                                    Button::Primary
-                                } else {
-                                    Button::Secondary
-                                };
-                                let mut a = t.active(&style);
-                                a.border_radius = 8.0.into();
-                                a
-                            }),
-                            hover: Box::new(move |t| {
-                                let style = if urgency > 1 {
-                                    Button::Primary
-                                } else {
-                                    Button::Secondary
-                                };
-                                let mut a = t.hovered(&style);
-                                a.border_radius = 8.0.into();
-                                a
-                            }),
-                        })
-                        .custom(vec![column!(
-                            match n.image() {
-                                Some(cosmic_notifications_util::Image::File(path)) => {
-                                    row![icon(path.as_path(), 16), app_name, duration_since]
-                                        .spacing(8)
-                                        .align_items(Alignment::Center)
-                                }
-                                Some(cosmic_notifications_util::Image::Name(name)) => {
-                                    row![icon(name.as_str(), 16), app_name, duration_since]
-                                        .spacing(8)
-                                        .align_items(Alignment::Center)
-                                }
-                                Some(cosmic_notifications_util::Image::Data {
-                                    width,
-                                    height,
-                                    data,
-                                }) => {
-                                    let handle =
-                                        image::Handle::from_pixels(*width, *height, data.clone());
-                                    row![icon(handle, 16), app_name, duration_since]
-                                        .spacing(8)
-                                        .align_items(Alignment::Center)
-                                }
-                                None => row![app_name, duration_since],
-                            },
-                            column![
-                                text(if n.summary.len() > 77 {
+                for c in self.cards.iter().rev() {
+                    if c.1.is_empty() {
+                        continue;
+                    }
+                    let name = c.1[0].app_name.clone();
+                    let notif_elems: Vec<_> =
+                        c.1.iter()
+                            .rev()
+                            .map(|n| {
+                                let app_name = text(if n.app_name.len() > 24 {
                                     Cow::from(format!(
-                                        "{:.80}...",
-                                        n.summary.lines().next().unwrap_or_default()
+                                        "{:.26}...",
+                                        n.app_name.lines().next().unwrap_or_default()
                                     ))
                                 } else {
-                                    Cow::from(&n.summary)
+                                    Cow::from(&n.app_name)
                                 })
-                                .width(Length::Fill)
-                                .size(14),
-                                text(if n.body.len() > 77 {
-                                    Cow::from(format!(
-                                        "{:.80}...",
-                                        n.body.lines().next().unwrap_or_default()
-                                    ))
-                                } else {
-                                    Cow::from(&n.body)
-                                })
-                                .width(Length::Fill)
                                 .size(12)
-                            ]
-                        )
-                        .spacing(8)
-                        .into()])
-                        .padding(16)
-                        .on_press(Message::Dismissed(n.id))
-                        .width(Length::Fill)
-                        .into(),
+                                .width(Length::Fill);
+
+                                let duration_since = text(duration_ago_msg(n)).size(12);
+
+                                let close_notif =
+                                    button(icon("window-close-symbolic", 16).style(Svg::Symbolic))
+                                        .on_press(Message::Dismissed(n.id))
+                                        .style(cosmic::theme::Button::Text);
+                                Element::from(
+                                    column!(
+                                        match n.image() {
+                                            Some(cosmic_notifications_util::Image::File(path)) => {
+                                                row![
+                                                    icon(path.as_path(), 16),
+                                                    app_name,
+                                                    duration_since,
+                                                    close_notif
+                                                ]
+                                                .spacing(8)
+                                                .align_items(Alignment::Center)
+                                            }
+                                            Some(cosmic_notifications_util::Image::Name(name)) => {
+                                                row![
+                                                    icon(name.as_str(), 16),
+                                                    app_name,
+                                                    duration_since,
+                                                    close_notif
+                                                ]
+                                                .spacing(8)
+                                                .align_items(Alignment::Center)
+                                            }
+                                            Some(cosmic_notifications_util::Image::Data {
+                                                width,
+                                                height,
+                                                data,
+                                            }) => {
+                                                let handle = image::Handle::from_pixels(
+                                                    *width,
+                                                    *height,
+                                                    data.clone(),
+                                                );
+                                                row![
+                                                    icon(handle, 16),
+                                                    app_name,
+                                                    duration_since,
+                                                    close_notif
+                                                ]
+                                                .spacing(8)
+                                                .align_items(Alignment::Center)
+                                            }
+                                            None => row![app_name, duration_since, close_notif]
+                                                .spacing(8)
+                                                .align_items(Alignment::Center),
+                                        },
+                                        column![
+                                            text(n.summary.lines().next().unwrap_or_default())
+                                                .width(Length::Fill)
+                                                .size(14),
+                                            text(n.body.lines().next().unwrap_or_default())
+                                                .width(Length::Fill)
+                                                .size(12)
+                                        ]
+                                    )
+                                    .width(Length::Fill),
+                                )
+                            })
+                            .collect();
+                    let card_list = anim!(
+                        //cards
+                        c.0.clone(),
+                        &self.timeline,
+                        notif_elems,
+                        Message::ClearAll(name.clone()),
+                        move |_, e| Message::CardsToggled(name.clone(), e),
+                        &c.3,
+                        "Show Less",
+                        // &format!("Show {} More", c.1.len().saturating_sub(1)),
+                        "Clear All",
+                        None,
+                        c.2,
                     );
+                    notifs.push(card_list.into());
                 }
+
                 row!(scrollable(
                     Column::with_children(notifs)
                         .spacing(8)

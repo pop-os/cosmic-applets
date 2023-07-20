@@ -1,3 +1,3 @@
 pub mod dbus;
-mod dbus_proxy;
+mod freedesktop_proxy;
 pub mod notifications;

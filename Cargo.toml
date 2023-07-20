@@ -26,3 +26,10 @@ libcosmic = { git = "https://github.com/pop-os/libcosmic", default-features = fa
 [profile.release]
 lto = "thin"
 # lto = "fat"
+
+# [patch."https://github.com/pop-os/cosmic-time"]
+# cosmic-time = { path = "../cosmic-time" }
+# [patch."https://github.com/pop-os/libcosmic"]
+# libcosmic = { path = "../libcosmic" }
+# [patch."https://github.com/pop-os/cosmic-config"]
+# cosmic-config = { path = "../libcosmic/cosmic-config" }
