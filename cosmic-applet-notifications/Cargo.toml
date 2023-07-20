@@ -13,12 +13,14 @@ nix = "0.26"
 tokio = { version = "1.24.1", features = ["sync", "rt", "tracing", "macros", "net", "io-util", "io-std"] }
 cosmic-notifications-util = { git = "https://github.com/pop-os/cosmic-notifications" }
 cosmic-notifications-config = { git = "https://github.com/pop-os/cosmic-notifications" }
+# cosmic-notifications-util = { path = "../../cosmic-notifications-daemon/cosmic-notifications-util" }
+# cosmic-notifications-config = { path = "../../cosmic-notifications-daemon/cosmic-notifications-config" }
 tracing = "0.1"
 ron = "0.8"
 sendfd = { version = "0.4", features = [ "tokio" ] }
 bytemuck = "1"
 tracing-subscriber = "0.3"
-zbus = "3.14"
+zbus = {version = "3.14", features = [ "tokio" ]}
 # Application i18n
 i18n-embed = { version = "0.13.4", features = ["fluent-system", "desktop-requester"] }
 i18n-embed-fl = "0.6.4"
