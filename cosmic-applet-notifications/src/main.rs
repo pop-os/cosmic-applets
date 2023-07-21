@@ -249,10 +249,12 @@ impl Application for Notifications {
                 Command::none()
             }
             Message::Dismissed(id) => {
-                info!("dismissed {}", id);
+                info!("Dismissed {}", id);
                 for c in &mut self.cards {
                     c.1.retain(|n| n.id != id);
                 }
+                self.cards.retain(|c| !c.1.is_empty());
+
                 if let Some(tx) = &self.dbus_sender {
                     let tx = tx.clone();
                     tokio::spawn(async move {
