@@ -1007,6 +1007,7 @@ dependencies = [
 [[package]]
 name = "cosmic-time"
 version = "0.2.0"
+source = "git+https://github.com/pop-os/cosmic-time?branch=libcosmic#c39e737fc55f6c3cbb03a309627da5c525bddd6d"
 dependencies = [
  "float-cmp",
  "libcosmic",
