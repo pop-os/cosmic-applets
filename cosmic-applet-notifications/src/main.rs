@@ -278,6 +278,8 @@ impl Application for Notifications {
                             HashMap::from_iter(vec![("more", c.1.len().saturating_sub(1))])
                         );
                     }
+                    self.cards.retain(|c| !c.1.is_empty());
+
                     Command::none()
                 }
             },
