@@ -344,8 +344,11 @@ impl Application for Notifications {
 
             let notifications = if self.cards.is_empty() {
                 row![container(
-                    column![text_icon(&self.icon_name, 40), "No Notifications"]
-                        .align_items(Alignment::Center)
+                    column![
+                        text_icon(&self.icon_name, 40),
+                        text(&fl!("no-notifications"))
+                    ]
+                    .align_items(Alignment::Center)
                 )
                 .width(Length::Fill)
                 .align_x(Horizontal::Center)]
