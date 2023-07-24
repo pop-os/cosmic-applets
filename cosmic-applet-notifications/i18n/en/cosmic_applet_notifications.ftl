@@ -10,3 +10,4 @@ show-more = Show {$more} More
 clear-all = Clear All Notifications
 do-not-disturb = Do Not Disturb
 notification-settings = Notification Settings...
+no-notifications = No Notifications
