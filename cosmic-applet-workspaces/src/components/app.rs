@@ -1,4 +1,4 @@
-use calloop::channel::SyncSender;
+use cctk::sctk::reexports::{calloop::channel::SyncSender, client::backend::ObjectId};
 use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::mouse::{self, ScrollDelta};
 use cosmic::iced::wayland::actions::window::SctkWindowSettings;
@@ -16,7 +16,6 @@ use cosmic_applet::cosmic_panel_config::PanelAnchor;
 use cosmic_applet::CosmicAppletHelper;
 use cosmic_protocols::workspace::v1::client::zcosmic_workspace_handle_v1;
 use std::cmp::Ordering;
-use wayland_backend::client::ObjectId;
 
 use crate::config;
 use crate::wayland::{WorkspaceEvent, WorkspaceList};

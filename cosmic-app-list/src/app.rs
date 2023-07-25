@@ -5,7 +5,7 @@ use crate::fl;
 use crate::toplevel_subscription::toplevel_subscription;
 use crate::toplevel_subscription::ToplevelRequest;
 use crate::toplevel_subscription::ToplevelUpdate;
-use calloop::channel::Sender;
+use cctk::sctk::reexports::calloop::channel::Sender;
 use cctk::toplevel_info::ToplevelInfo;
 use cctk::wayland_client::protocol::wl_data_device_manager::DndAction;
 use cctk::wayland_client::protocol::wl_seat::WlSeat;

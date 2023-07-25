@@ -2,7 +2,10 @@ use crate::toplevel_subscription::{ToplevelRequest, ToplevelUpdate};
 use cctk::{
     sctk::{
         self,
-        reexports::client::{protocol::wl_seat::WlSeat, WaylandSource},
+        reexports::{
+            calloop,
+            client::{protocol::wl_seat::WlSeat, WaylandSource},
+        },
         seat::{SeatHandler, SeatState},
     },
     toplevel_info::{ToplevelInfoHandler, ToplevelInfoState},
@@ -131,13 +134,9 @@ pub(crate) fn toplevel_handler(
     let qh = event_queue.handle();
     let wayland_source = WaylandSource::new(event_queue).unwrap();
     let handle = event_loop.handle();
-
-    if handle
-        .insert_source(wayland_source, |_, q, state| q.dispatch_pending(state))
-        .is_err()
-    {
-        return;
-    };
+    wayland_source
+        .insert(handle.clone())
+        .expect("Failed to insert wayland source.");
 
     if handle
         .insert_source(rx, |event, _, state| match event {
