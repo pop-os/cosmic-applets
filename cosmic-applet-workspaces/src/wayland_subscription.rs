@@ -1,5 +1,5 @@
 use crate::wayland::{self, WorkspaceEvent, WorkspaceList};
-use calloop::channel::SyncSender;
+use cctk::sctk::reexports::calloop::channel::SyncSender;
 use cosmic::iced::{
     self,
     futures::{channel::mpsc, SinkExt, StreamExt},

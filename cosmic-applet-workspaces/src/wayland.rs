@@ -3,7 +3,10 @@ use cctk::{
     sctk::{
         self,
         output::{OutputHandler, OutputState},
-        reexports::client::WaylandSource,
+        reexports::{
+            calloop,
+            client::{self as wayland_client},
+        },
         registry::{ProvidesRegistryState, RegistryState},
     },
     workspace::{WorkspaceHandler, WorkspaceState},
@@ -11,11 +14,11 @@ use cctk::{
 use cosmic_protocols::workspace::v1::client::zcosmic_workspace_handle_v1;
 use futures::{channel::mpsc, executor::block_on, SinkExt};
 use std::{env, os::unix::net::UnixStream, path::PathBuf, time::Duration};
-use wayland_backend::client::ObjectId;
+use wayland_client::backend::ObjectId;
 use wayland_client::{
     globals::registry_queue_init,
     protocol::wl_output::{self, WlOutput},
-    ConnectError, Proxy,
+    ConnectError, Proxy, WaylandSource,
 };
 use wayland_client::{Connection, QueueHandle, WEnum};
 
