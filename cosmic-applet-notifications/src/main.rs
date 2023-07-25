@@ -10,6 +10,7 @@ use cosmic::iced::{
 };
 use cosmic::iced_core::alignment::Horizontal;
 use cosmic::iced_core::image;
+use cosmic::iced_widget::image::Handle;
 use cosmic_applet::{applet_button_theme, CosmicAppletHelper};
 
 use cosmic::iced_style::application::{self, Appearance};
@@ -20,10 +21,11 @@ use cosmic::widget::{container, icon};
 use cosmic::Renderer;
 use cosmic::{Element, Theme};
 use cosmic_notifications_config::NotificationsConfig;
-use cosmic_notifications_util::Notification;
+use cosmic_notifications_util::{Image, Notification};
 use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
 use std::borrow::Cow;
 use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 use std::process;
 use tokio::sync::mpsc::Sender;
 use tracing::info;
@@ -217,7 +219,6 @@ impl Application for Notifications {
                 Command::none()
             }
             Message::NotificationEvent(n) => {
-                info!("{}", &n.app_name);
                 if let Some(c) = self
                     .cards
                     .iter_mut()
@@ -441,6 +442,34 @@ impl Application for Notifications {
                                 )
                             })
                             .collect();
+                    let show_more_icon = c.1.last().and_then(|n| {
+                        info!("app_icon: {:?}", &n.app_icon);
+                        if n.app_icon.is_empty() {
+                            match n.image().cloned() {
+                                Some(Image::File(p)) => Some(cosmic::widget::IconSource::Path(
+                                    Cow::Owned(PathBuf::from(p)),
+                                )),
+                                Some(Image::Name(name)) => {
+                                    Some(cosmic::widget::IconSource::Name(Cow::Owned(name)))
+                                }
+                                Some(Image::Data {
+                                    width,
+                                    height,
+                                    data,
+                                }) => Some(cosmic::widget::IconSource::Handle(
+                                    icon::Handle::Image(Handle::from_pixels(width, height, data)),
+                                )),
+                                None => None,
+                            }
+                        } else if let Some(path) = url::Url::parse(&n.app_icon)
+                            .ok()
+                            .and_then(|u| u.to_file_path().ok())
+                        {
+                            Some(cosmic::widget::IconSource::Path(Cow::Owned(path)))
+                        } else {
+                            Some(cosmic::widget::IconSource::Name(Cow::Borrowed(&n.app_icon)))
+                        }
+                    });
                     let card_list = anim!(
                         //cards
                         c.0.clone(),
@@ -452,7 +481,7 @@ impl Application for Notifications {
                         "Show Less",
                         // &format!("Show {} More", c.1.len().saturating_sub(1)),
                         "Clear All",
-                        None,
+                        show_more_icon,
                         c.2,
                     );
                     notifs.push(card_list.into());
