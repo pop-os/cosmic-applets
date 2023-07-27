@@ -57,4 +57,9 @@ impl AppListConfig {
             let _ = self.write_entry(&config);
         }
     }
+
+    pub fn update_favorites(&mut self, favorites: Vec<String>, config: &Config) {
+        self.favorites = favorites;
+        let _ = self.write_entry(&config);
+    }
 }
