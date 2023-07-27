@@ -281,6 +281,7 @@ struct DesktopInfo {
 }
 
 fn desktop_info_for_app_ids(mut app_ids: Vec<String>) -> Vec<DesktopInfo> {
+    let app_ids_clone = app_ids.clone();
     let mut ret = freedesktop_desktop_entry::Iter::new(freedesktop_desktop_entry::default_paths())
         .filter_map(|path| {
             std::fs::read_to_string(&path).ok().and_then(|input| {
@@ -316,6 +317,7 @@ fn desktop_info_for_app_ids(mut app_ids: Vec<String>) -> Vec<DesktopInfo> {
             })
             .collect_vec(),
     );
+    ret.sort_by(|a, b| app_ids_clone.iter().position(|id| id == &a.id || id.eq(&a.name)).cmp(&app_ids_clone.iter().position(|id| id == &b.id || id.eq(&b.name))));
     ret
 }
 
@@ -644,10 +646,7 @@ impl Application for CosmicAppList {
                     .and_then(|o| o.dock_item.map(|i| (i, o.preview_index)))
                 {
                     self.item_ctr += 1;
-                    let _ = self.config.add_favorite(
-                        dock_item.desktop_info.id.clone(),
-                        &Config::new(APP_ID, 1).unwrap(),
-                    );
+                    
                     if let Some((pos, is_favorite)) = self
                         .active_list
                         .iter()
@@ -672,8 +671,10 @@ impl Application for CosmicAppList {
                         dock_item.toplevels = t.toplevels;
                     };
                     dock_item.id = self.item_ctr;
+
                     self.favorite_list
                         .insert(index.min(self.favorite_list.len()), dock_item);
+                    self.config.update_favorites(self.favorite_list.iter().map(|dock_item| dock_item.desktop_info.id.clone()).collect(), &Config::new(APP_ID, 1).unwrap());
                 }
                 return finish_dnd();
             }
@@ -803,48 +804,31 @@ impl Application for CosmicAppList {
             }
             Message::ConfigUpdated(config) => {
                 self.config = config;
-
-                let mut new_list: Vec<_> = desktop_info_for_app_ids(self.config.favorites.clone())
-                    .into_iter()
-                    .map(|e| {
-                        self.item_ctr += 1;
-
-                        DockItem {
-                            id: self.item_ctr,
-                            toplevels: Default::default(),
-                            desktop_info: e,
-                        }
-                    })
-                    .collect();
-
-                for item in &mut new_list {
-                    if let Some(old_item) = self
-                        .favorite_list
-                        .iter()
-                        .position(|i| i.desktop_info.id == item.desktop_info.id)
-                    {
-                        let old_item = self.favorite_list.swap_remove(old_item);
-                        *item = old_item;
-                    } else if let Some(old_item) = self
-                        .active_list
-                        .iter()
-                        .position(|i| i.desktop_info.id == item.desktop_info.id)
-                    {
-                        let old_item = self.active_list.remove(old_item);
-                        *item = old_item;
-                    }
-                }
-
+                // drain to active list
                 for item in self.favorite_list.drain(..) {
                     self.active_list.push(item);
                 }
 
-                self.favorite_list = new_list;
+                // pull back configured items into the favorites list
+                self.favorite_list = desktop_info_for_app_ids(self.config.favorites.clone()).into_iter().map(|new_dock_item| {
+                    if let Some(p) = self.active_list.iter().position(|dock_item| {
+                        dock_item.desktop_info.id == new_dock_item.id
+                    }) {
+                        self.active_list.remove(p)
+                    } else {
+                        DockItem {
+                            id: self.item_ctr,
+                            toplevels: Default::default(),
+                            desktop_info: new_dock_item,
+                        }
+                    }
+                }).collect();
             }
             Message::Theme(t) => {
                 self.theme = t;
             }
         }
+
         Command::none()
     }
 
