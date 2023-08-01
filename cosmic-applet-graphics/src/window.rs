@@ -20,6 +20,8 @@ use cosmic::{
 use cosmic_applet::{applet_button_theme, cosmic_panel_config::PanelAnchor, CosmicAppletHelper};
 use zbus::Connection;
 
+const ID: &str = "com.system76.CosmicAppletGraphics";
+
 #[derive(Clone, Copy)]
 enum GraphicsMode {
     AppliedGraphicsMode(Graphics),
@@ -198,17 +200,13 @@ impl Application for Window {
             match self.applet_helper.anchor {
                 PanelAnchor::Left | PanelAnchor::Right => self
                     .applet_helper
-                    .icon_button("input-gaming-symbolic")
+                    .icon_button(ID)
                     .on_press(Message::TogglePopup)
                     .style(Button::Text)
                     .into(),
                 PanelAnchor::Top | PanelAnchor::Bottom => button(Button::Text)
                     .custom(vec![row![
-                        icon(
-                            "input-gaming-symbolic",
-                            self.applet_helper.suggested_size().0,
-                        )
-                        .style(Svg::Symbolic),
+                        icon(ID, self.applet_helper.suggested_size().0,).style(Svg::Symbolic),
                         text(match self.graphics_mode.map(|g| g.inner()) {
                             Some(Graphics::Integrated) => fl!("integrated"),
                             Some(Graphics::Nvidia) => fl!("nvidia"),
