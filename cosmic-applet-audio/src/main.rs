@@ -49,11 +49,68 @@ struct Audio {
     pulse_state: PulseState,
     applet_helper: CosmicAppletHelper,
     icon_name: String,
+    input_icon_name: String,
     theme: Theme,
     popup: Option<window::Id>,
     show_media_controls_in_top_panel: bool,
     id_ctr: u128,
     timeline: Timeline,
+}
+
+impl Audio {
+    fn update_output(&mut self, output: Option<DeviceInfo>) {
+        self.current_output = output;
+        self.apply_output_volume();
+    }
+
+    fn apply_output_volume(&mut self) {
+        let Some(output) = self.current_output.as_ref() else {
+            self.icon_name = "audio-volume-muted-symbolic".to_string();
+            return;
+        };
+
+        let volume = output.volume.avg();
+        let output_volume = VolumeLinear::from(volume).0;
+        if volume.is_muted() {
+            self.icon_name = "audio-volume-muted-symbolic".to_string();
+        } else if output_volume < 0.25 {
+            self.icon_name = "audio-volume-low-symbolic".to_string();
+        } else if output_volume < 0.5 {
+            self.icon_name = "audio-volume-medium-symbolic".to_string();
+        } else if output_volume < 0.75 {
+            self.icon_name = "audio-volume-high-symbolic".to_string();
+        } else {
+            self.icon_name = "cosmic-applet-audio-volume-overamplified-symbolic".to_string();
+        }
+    }
+
+    fn update_input(&mut self, input: Option<DeviceInfo>) {
+        self.current_input = input;
+        self.apply_input_volume();
+    }
+
+    fn apply_input_volume(&mut self) {
+        let Some(input) = self.current_input.as_ref() else {
+            self.input_icon_name = "cosmic-applet-audio-microphone-sensitivity-muted-symbolic".to_string();
+            return;
+        };
+
+        let volume = input.volume.avg();
+        let input_volume = VolumeLinear::from(volume).0;
+        if volume.is_muted() {
+            self.input_icon_name =
+                "cosmic-applet-audio-microphone-sensitivity-muted-symbolic".to_string();
+        } else if input_volume < 0.33 {
+            self.input_icon_name =
+                "cosmic-applet-audio-microphone-sensitivity-low-symbolic".to_string();
+        } else if input_volume < 0.66 {
+            self.input_icon_name =
+                "cosmic-applet-audio-microphone-sensitivity-medium-symbolic".to_string();
+        } else {
+            self.input_icon_name =
+                "cosmic-applet-audio-microphone-sensitivity-high-symbolic".to_string();
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -96,6 +153,7 @@ impl Application for Audio {
                 outputs: vec![],
                 inputs: vec![],
                 icon_name: "audio-volume-high-symbolic".to_string(),
+                input_icon_name: "audio-input-microphone-symbolic".to_string(),
                 applet_helper,
                 theme,
                 ..Default::default()
@@ -165,6 +223,7 @@ impl Application for Audio {
                     o.volume
                         .set(o.volume.len(), VolumeLinear(vol / 100.0).into())
                 });
+                self.apply_output_volume();
                 if let PulseState::Connected(connection) = &mut self.pulse_state {
                     if let Some(device) = &self.current_output {
                         if let Some(name) = &device.name {
@@ -181,6 +240,7 @@ impl Application for Audio {
                     i.volume
                         .set(i.volume.len(), VolumeLinear(vol / 100.0).into())
                 });
+                self.apply_input_volume();
                 if let PulseState::Connected(connection) = &mut self.pulse_state {
                     if let Some(device) = &self.current_input {
                         if let Some(name) = &device.name {
@@ -256,10 +316,10 @@ impl Application for Audio {
                                 .collect()
                         }
                         pulse::Message::SetDefaultSink(sink) => {
-                            self.current_output = Some(sink);
+                            self.update_output(Some(sink));
                         }
                         pulse::Message::SetDefaultSource(source) => {
-                            self.current_input = Some(source)
+                            self.update_input(Some(source));
                         }
                         pulse::Message::Disconnected => {
                             panic!("Subscriton error handling is bad. This should never happen.")
@@ -325,7 +385,7 @@ impl Application for Audio {
             } else {
                 column![
                     row![
-                        icon("audio-volume-high-symbolic", 24).style(Svg::Symbolic),
+                        icon(self.icon_name.as_str(), 24).style(Svg::Symbolic),
                         slider(0.0..=100.0, out_f64, Message::SetOutputVolume)
                             .width(Length::FillPortion(5)),
                         text(format!("{}%", out_f64.round()))
@@ -337,7 +397,7 @@ impl Application for Audio {
                     .align_items(Alignment::Center)
                     .padding([8, 24]),
                     row![
-                        icon("audio-input-microphone-symbolic", 24).style(Svg::Symbolic),
+                        icon(self.input_icon_name.as_str(), 24).style(Svg::Symbolic),
                         slider(0.0..=100.0, in_f64, Message::SetInputVolume)
                             .width(Length::FillPortion(5)),
                         text(format!("{}%", in_f64.round()))
