@@ -168,19 +168,20 @@ pub fn device_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
 #[derive(Debug)]
 pub enum State {
     Ready,
-    Waiting(DeviceProxy<'static>),
+    Waiting(UPowerProxy<'static>, DeviceProxy<'static>),
     Finished,
 }
 
-async fn display_device() -> zbus::Result<DeviceProxy<'static>> {
+async fn display_device() -> zbus::Result<(UPowerProxy<'static>, DeviceProxy<'static>)> {
     let connection = zbus::Connection::system().await?;
-    let upower = UPowerProxy::new(&connection).await?;
+    let upower: UPowerProxy<'_> = UPowerProxy::new(&connection).await?;
     let device_path = upower.get_display_device().await?;
     DeviceProxy::builder(&connection)
         .path(device_path)?
         .cache_properties(zbus::CacheProperties::Yes)
         .build()
         .await
+        .map(|dp| (upower, dp))
 }
 
 async fn start_listening(
@@ -189,11 +190,11 @@ async fn start_listening(
 ) -> State {
     match state {
         State::Ready => {
-            if let Ok(device) = display_device().await {
+            if let Ok((upower, device)) = display_device().await {
                 _ = output
                     .send(DeviceDbusEvent::Update {
-                        icon_name: device
-                            .cached_icon_name()
+                        on_battery: upower
+                            .cached_on_battery()
                             .unwrap_or_default()
                             .unwrap_or_default(),
                         percent: device
@@ -206,13 +207,13 @@ async fn start_listening(
                             .unwrap_or_default(),
                     })
                     .await;
-                return State::Waiting(device);
+                return State::Waiting(upower, device);
             }
             State::Finished
         }
-        State::Waiting(device) => {
+        State::Waiting(upower, device) => {
             let mut stream = futures::stream_select!(
-                device.receive_icon_name_changed().await.map(|_| ()),
+                upower.receive_on_battery_changed().await.map(|_| ()),
                 device.receive_percentage_changed().await.map(|_| ()),
                 device.receive_time_to_empty_changed().await.map(|_| ()),
             );
@@ -220,8 +221,8 @@ async fn start_listening(
                 Some(_) => {
                     _ = output
                         .send(DeviceDbusEvent::Update {
-                            icon_name: device
-                                .cached_icon_name()
+                            on_battery: upower
+                                .cached_on_battery()
                                 .unwrap_or_default()
                                 .unwrap_or_default(),
                             percent: device
@@ -235,7 +236,7 @@ async fn start_listening(
                         })
                         .await;
 
-                    State::Waiting(device)
+                    State::Waiting(upower, device)
                 }
                 None => State::Finished,
             }
@@ -247,7 +248,7 @@ async fn start_listening(
 #[derive(Debug, Clone)]
 pub enum DeviceDbusEvent {
     Update {
-        icon_name: String,
+        on_battery: bool,
         percent: f64,
         time_to_empty: i64,
     },
