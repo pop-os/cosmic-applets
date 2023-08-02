@@ -198,7 +198,6 @@ async fn start_listening(
                         };
                         if let Some(s) = secrets.get_mut("802-11-wireless-security") {
                             s.insert("psk".into(), Value::Str(password.clone().into()).to_owned());
-                            drop(s);
                             settings.extend(secrets.into_iter());
                             let settings: HashMap<_, _> = settings
                                 .iter()
