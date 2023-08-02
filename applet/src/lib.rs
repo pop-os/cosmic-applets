@@ -120,7 +120,7 @@ impl CosmicAppletHelper {
                 resizable: None,
                 ..Default::default()
             }),
-            ..cosmic::settings_with_flags(flags)
+            ..Settings::with_flags(flags)
         }
     }
 
