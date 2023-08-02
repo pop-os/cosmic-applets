@@ -80,7 +80,7 @@ impl Audio {
         } else if output_volume < 0.75 {
             self.icon_name = "audio-volume-high-symbolic".to_string();
         } else {
-            self.icon_name = "cosmic-applet-audio-volume-overamplified-symbolic".to_string();
+            self.icon_name = "audio-volume-overamplified-symbolic".to_string();
         }
     }
 
@@ -91,24 +91,20 @@ impl Audio {
 
     fn apply_input_volume(&mut self) {
         let Some(input) = self.current_input.as_ref() else {
-            self.input_icon_name = "cosmic-applet-audio-microphone-sensitivity-muted-symbolic".to_string();
+            self.input_icon_name = "microphone-sensitivity-muted-symbolic".to_string();
             return;
         };
 
         let volume = input.volume.avg();
         let input_volume = VolumeLinear::from(volume).0;
         if volume.is_muted() {
-            self.input_icon_name =
-                "cosmic-applet-audio-microphone-sensitivity-muted-symbolic".to_string();
+            self.input_icon_name = "microphone-sensitivity-muted-symbolic".to_string();
         } else if input_volume < 0.33 {
-            self.input_icon_name =
-                "cosmic-applet-audio-microphone-sensitivity-low-symbolic".to_string();
+            self.input_icon_name = "microphone-sensitivity-low-symbolic".to_string();
         } else if input_volume < 0.66 {
-            self.input_icon_name =
-                "cosmic-applet-audio-microphone-sensitivity-medium-symbolic".to_string();
+            self.input_icon_name = "microphone-sensitivity-medium-symbolic".to_string();
         } else {
-            self.input_icon_name =
-                "cosmic-applet-audio-microphone-sensitivity-high-symbolic".to_string();
+            self.input_icon_name = "microphone-sensitivity-high-symbolic".to_string();
         }
     }
 }
