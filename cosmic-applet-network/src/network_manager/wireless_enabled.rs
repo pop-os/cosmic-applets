@@ -18,6 +18,7 @@ pub fn wireless_enabled_subscription<I: 'static + Hash + Copy + Send + Sync + De
         async move {
             loop {
                 state = start_listening(state, &mut output).await;
+                _ = tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
             }
         }
     })
