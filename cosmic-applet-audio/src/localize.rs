@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MPL-2.0-only
 
+use cosmic_time::once_cell::sync::Lazy;
 use i18n_embed::{
     fluent::{fluent_language_loader, FluentLanguageLoader},
     DefaultLocalizer, LanguageLoader, Localizer,
 };
-use cosmic_time::once_cell::sync::Lazy;
 use rust_embed::RustEmbed;
 
 #[derive(RustEmbed)]

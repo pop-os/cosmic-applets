@@ -7,6 +7,5 @@ license = "GPL-3.0-or-later"
 [dependencies]
 icon-loader = { version = "0.3.6", features = ["gtk"] }
 libcosmic.workspace = true
-cosmic-applet = { path = "../applet" }
 nix = "0.26.2"
 chrono = { version = "0.4.23", features = ["clock"] }

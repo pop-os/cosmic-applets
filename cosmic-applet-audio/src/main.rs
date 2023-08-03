@@ -1,26 +1,26 @@
 mod localize;
 
+use cosmic::app::Command;
 use cosmic::iced::widget;
 use cosmic::iced::Limits;
 use cosmic::iced_runtime::core::alignment::Horizontal;
 use cosmic::theme::Svg;
 
+use cosmic::app::applet::applet_button_theme;
 use cosmic::widget::{button, divider, icon};
 use cosmic::Renderer;
-use cosmic_applet::{applet_button_theme, CosmicAppletHelper};
 
 use cosmic::iced::{
     self,
     widget::{column, row, slider, text},
-    window, Alignment, Application, Command, Length, Subscription,
+    window, Alignment, Length, Subscription,
 };
-use cosmic::iced_style::application::{self, Appearance};
+use cosmic::iced_style::application;
 use cosmic::{Element, Theme};
 use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
 
 use iced::wayland::popup::{destroy_popup, get_popup};
 use iced::widget::container;
-use iced::Color;
 
 mod pulse;
 use crate::localize::localize;
@@ -33,24 +33,22 @@ pub fn main() -> cosmic::iced::Result {
     // Prepare i18n
     localize();
 
-    let helper = CosmicAppletHelper::default();
-    Audio::run(helper.window_settings())
+    cosmic::app::applet::run::<Audio>(false, ())
 }
 
 static SHOW_MEDIA_CONTROLS: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
 
 #[derive(Default)]
 struct Audio {
+    core: cosmic::app::Core,
     is_open: IsOpen,
     current_output: Option<DeviceInfo>,
     current_input: Option<DeviceInfo>,
     outputs: Vec<DeviceInfo>,
     inputs: Vec<DeviceInfo>,
     pulse_state: PulseState,
-    applet_helper: CosmicAppletHelper,
     icon_name: String,
     input_icon_name: String,
-    theme: Theme,
     popup: Option<window::Id>,
     show_media_controls_in_top_panel: bool,
     id_ctr: u128,
@@ -125,24 +123,21 @@ enum Message {
     OutputChanged(String),
     InputChanged(String),
     Pulse(pulse::Event),
-    Ignore,
     TogglePopup,
     ToggleMediaControlsInTopPanel(chain::Toggler, bool),
     Frame(Instant),
-    Theme(Theme),
 }
 
-impl Application for Audio {
+impl cosmic::Application for Audio {
     type Message = Message;
-    type Theme = Theme;
     type Executor = cosmic::SingleThreadExecutor;
     type Flags = ();
+    const APP_ID: &'static str = "com.system76.CosmicAppletAudio";
 
-    fn new(_flags: ()) -> (Audio, Command<Message>) {
-        let applet_helper = CosmicAppletHelper::default();
-        let theme = applet_helper.theme();
+    fn init(core: cosmic::app::Core, _flags: ()) -> (Audio, Command<Message>) {
         (
             Audio {
+                core,
                 is_open: IsOpen::None,
                 current_output: None,
                 current_input: None,
@@ -150,31 +145,22 @@ impl Application for Audio {
                 inputs: vec![],
                 icon_name: "audio-volume-high-symbolic".to_string(),
                 input_icon_name: "audio-input-microphone-symbolic".to_string(),
-                applet_helper,
-                theme,
                 ..Default::default()
             },
             Command::none(),
         )
     }
 
-    fn title(&self) -> String {
-        String::from("Audio")
+    fn core(&self) -> &cosmic::app::Core {
+        &self.core
     }
 
-    fn theme(&self) -> Theme {
-        self.theme.clone()
+    fn core_mut(&mut self) -> &mut cosmic::app::Core {
+        &mut self.core
     }
 
-    fn close_requested(&self, _id: window::Id) -> Self::Message {
-        Message::Ignore
-    }
-
-    fn style(&self) -> <Self::Theme as application::StyleSheet>::Style {
-        <Self::Theme as application::StyleSheet>::Style::Custom(Box::new(|theme| Appearance {
-            background_color: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
-            text_color: theme.cosmic().on_bg_color().into(),
-        }))
+    fn style(&self) -> Option<<Theme as application::StyleSheet>::Style> {
+        Some(cosmic::app::applet::style())
     }
 
     fn update(&mut self, message: Message) -> Command<Message> {
@@ -191,7 +177,7 @@ impl Application for Audio {
                     let new_id = window::Id(self.id_ctr);
                     self.popup.replace(new_id);
 
-                    let mut popup_settings = self.applet_helper.get_popup_settings(
+                    let mut popup_settings = self.core.applet_helper.get_popup_settings(
                         window::Id(0),
                         new_id,
                         None,
@@ -327,13 +313,9 @@ impl Application for Audio {
                 }
                 pulse::Event::Disconnected => self.pulse_state.disconnected(),
             },
-            Message::Ignore => {}
             Message::ToggleMediaControlsInTopPanel(chain, enabled) => {
                 self.timeline.set_chain(chain).start();
                 self.show_media_controls_in_top_panel = enabled;
-            }
-            Message::Theme(t) => {
-                self.theme = t;
             }
         };
 
@@ -342,7 +324,6 @@ impl Application for Audio {
 
     fn subscription(&self) -> Subscription<Message> {
         Subscription::batch(vec![
-            self.applet_helper.theme_subscription(0).map(Message::Theme),
             pulse::connect().map(Message::Pulse),
             self.timeline
                 .as_subscription()
@@ -350,134 +331,136 @@ impl Application for Audio {
         ])
     }
 
-    fn view(&self, id: window::Id) -> Element<Message> {
-        if id == window::Id(0) {
-            self.applet_helper
-                .icon_button(&self.icon_name)
-                .on_press(Message::TogglePopup)
-                .into()
-        } else {
-            let audio_disabled = matches!(self.pulse_state, PulseState::Disconnected(_));
-            let out_f64 = VolumeLinear::from(
-                self.current_output
-                    .as_ref()
-                    .map(|o| o.volume.avg())
-                    .unwrap_or_default(),
-            )
-            .0 * 100.0;
-            let in_f64 = VolumeLinear::from(
-                self.current_input
-                    .as_ref()
-                    .map(|o| o.volume.avg())
-                    .unwrap_or_default(),
-            )
-            .0 * 100.0;
+    fn view(&self) -> Element<Message> {
+        self.core
+            .applet_helper
+            .icon_button(&self.icon_name)
+            .on_press(Message::TogglePopup)
+            .into()
+    }
 
-            let audio_content = if audio_disabled {
-                column![text(fl!("disconnected"))
-                    .width(Length::Fill)
-                    .horizontal_alignment(Horizontal::Center)
-                    .size(24),]
-            } else {
-                column![
-                    row![
-                        icon(self.icon_name.as_str(), 24).style(Svg::Symbolic),
-                        slider(0.0..=100.0, out_f64, Message::SetOutputVolume)
-                            .width(Length::FillPortion(5)),
-                        text(format!("{}%", out_f64.round()))
-                            .size(16)
-                            .width(Length::FillPortion(1))
-                            .horizontal_alignment(Horizontal::Right)
-                    ]
-                    .spacing(12)
-                    .align_items(Alignment::Center)
-                    .padding([8, 24]),
-                    row![
-                        icon(self.input_icon_name.as_str(), 24).style(Svg::Symbolic),
-                        slider(0.0..=100.0, in_f64, Message::SetInputVolume)
-                            .width(Length::FillPortion(5)),
-                        text(format!("{}%", in_f64.round()))
-                            .size(16)
-                            .width(Length::FillPortion(1))
-                            .horizontal_alignment(Horizontal::Right)
-                    ]
-                    .spacing(12)
-                    .align_items(Alignment::Center)
-                    .padding([8, 24]),
-                    container(divider::horizontal::light())
-                        .padding([12, 24])
-                        .width(Length::Fill),
-                    revealer(
-                        self.is_open == IsOpen::Output,
-                        fl!("output"),
-                        match &self.current_output {
-                            Some(output) => pretty_name(output.description.clone()),
-                            None => String::from("No device selected"),
-                        },
-                        self.outputs
-                            .clone()
-                            .into_iter()
-                            .map(|output| (
-                                output.name.clone().unwrap_or_default(),
-                                pretty_name(output.description)
-                            ))
-                            .collect(),
-                        Message::OutputToggle,
-                        Message::OutputChanged,
-                    ),
-                    revealer(
-                        self.is_open == IsOpen::Input,
-                        fl!("input"),
-                        match &self.current_input {
-                            Some(input) => pretty_name(input.description.clone()),
-                            None => fl!("no-device"),
-                        },
-                        self.inputs
-                            .clone()
-                            .into_iter()
-                            .map(|input| (
-                                input.name.clone().unwrap_or_default(),
-                                pretty_name(input.description)
-                            ))
-                            .collect(),
-                        Message::InputToggle,
-                        Message::InputChanged,
-                    )
+    fn view_window(&self, _id: window::Id) -> Element<Message> {
+        let audio_disabled = matches!(self.pulse_state, PulseState::Disconnected(_));
+        let out_f64 = VolumeLinear::from(
+            self.current_output
+                .as_ref()
+                .map(|o| o.volume.avg())
+                .unwrap_or_default(),
+        )
+        .0 * 100.0;
+        let in_f64 = VolumeLinear::from(
+            self.current_input
+                .as_ref()
+                .map(|o| o.volume.avg())
+                .unwrap_or_default(),
+        )
+        .0 * 100.0;
+
+        let audio_content = if audio_disabled {
+            column![text(fl!("disconnected"))
+                .width(Length::Fill)
+                .horizontal_alignment(Horizontal::Center)
+                .size(24),]
+        } else {
+            column![
+                row![
+                    icon(self.icon_name.as_str(), 24).style(Svg::Symbolic),
+                    slider(0.0..=100.0, out_f64, Message::SetOutputVolume)
+                        .width(Length::FillPortion(5)),
+                    text(format!("{}%", out_f64.round()))
+                        .size(16)
+                        .width(Length::FillPortion(1))
+                        .horizontal_alignment(Horizontal::Right)
                 ]
-                .align_items(Alignment::Start)
-            };
-            let content = column![
-                audio_content,
+                .spacing(12)
+                .align_items(Alignment::Center)
+                .padding([8, 24]),
+                row![
+                    icon(self.input_icon_name.as_str(), 24).style(Svg::Symbolic),
+                    slider(0.0..=100.0, in_f64, Message::SetInputVolume)
+                        .width(Length::FillPortion(5)),
+                    text(format!("{}%", in_f64.round()))
+                        .size(16)
+                        .width(Length::FillPortion(1))
+                        .horizontal_alignment(Horizontal::Right)
+                ]
+                .spacing(12)
+                .align_items(Alignment::Center)
+                .padding([8, 24]),
                 container(divider::horizontal::light())
                     .padding([12, 24])
                     .width(Length::Fill),
-                container(
-                    anim!(
-                        // toggler
-                        SHOW_MEDIA_CONTROLS,
-                        &self.timeline,
-                        Some(fl!("show-media-controls")),
-                        self.show_media_controls_in_top_panel,
-                        Message::ToggleMediaControlsInTopPanel,
-                    )
-                    .text_size(14)
+                revealer(
+                    self.is_open == IsOpen::Output,
+                    fl!("output"),
+                    match &self.current_output {
+                        Some(output) => pretty_name(output.description.clone()),
+                        None => String::from("No device selected"),
+                    },
+                    self.outputs
+                        .clone()
+                        .into_iter()
+                        .map(|output| (
+                            output.name.clone().unwrap_or_default(),
+                            pretty_name(output.description)
+                        ))
+                        .collect(),
+                    Message::OutputToggle,
+                    Message::OutputChanged,
+                ),
+                revealer(
+                    self.is_open == IsOpen::Input,
+                    fl!("input"),
+                    match &self.current_input {
+                        Some(input) => pretty_name(input.description.clone()),
+                        None => fl!("no-device"),
+                    },
+                    self.inputs
+                        .clone()
+                        .into_iter()
+                        .map(|input| (
+                            input.name.clone().unwrap_or_default(),
+                            pretty_name(input.description)
+                        ))
+                        .collect(),
+                    Message::InputToggle,
+                    Message::InputChanged,
                 )
-                .padding([0, 24]),
-                container(divider::horizontal::light())
-                    .padding([12, 24])
-                    .width(Length::Fill),
-                button(applet_button_theme())
-                    .custom(vec![text(fl!("sound-settings")).size(14).into()])
-                    .padding([8, 24])
-                    .width(Length::Fill)
             ]
             .align_items(Alignment::Start)
-            .padding([8, 0]);
+        };
+        let content = column![
+            audio_content,
+            container(divider::horizontal::light())
+                .padding([12, 24])
+                .width(Length::Fill),
+            container(
+                anim!(
+                    // toggler
+                    SHOW_MEDIA_CONTROLS,
+                    &self.timeline,
+                    Some(fl!("show-media-controls")),
+                    self.show_media_controls_in_top_panel,
+                    Message::ToggleMediaControlsInTopPanel,
+                )
+                .text_size(14)
+            )
+            .padding([0, 24]),
+            container(divider::horizontal::light())
+                .padding([12, 24])
+                .width(Length::Fill),
+            button(applet_button_theme())
+                .custom(vec![text(fl!("sound-settings")).size(14).into()])
+                .padding([8, 24])
+                .width(Length::Fill)
+        ]
+        .align_items(Alignment::Start)
+        .padding([8, 0]);
 
-            self.applet_helper
-                .popup_container(container(content))
-                .into()
-        }
+        self.core
+            .applet_helper
+            .popup_container(container(content))
+            .into()
     }
 }
 

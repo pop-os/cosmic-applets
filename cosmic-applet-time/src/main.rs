@@ -1,39 +1,26 @@
+use cosmic::app::{self, applet::cosmic_panel_config::PanelAnchor, Command};
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
-use cosmic::iced::Limits;
 use cosmic::iced::{
     time,
-    wayland::InitialSurface,
     widget::{button, column, text, vertical_space},
-    window, Alignment, Application, Color, Command, Length, Rectangle, Subscription,
+    window, Alignment, Length, Rectangle, Subscription,
 };
-use cosmic::iced_style::application::{self, Appearance};
+use cosmic::iced_style::application;
 use cosmic::theme;
 use cosmic::{
     widget::{icon, rectangle_tracker::*},
     Element, Theme,
 };
-use cosmic_applet::{cosmic_panel_config::PanelAnchor, CosmicAppletHelper};
 
 use chrono::{DateTime, Local, Timelike};
 use std::time::Duration;
 
 pub fn main() -> cosmic::iced::Result {
-    let helper = CosmicAppletHelper::default();
-    let mut settings = helper.window_settings();
-    match &mut settings.initial_surface {
-        InitialSurface::XdgWindow(s) => {
-            s.autosize = true;
-            s.resizable = None;
-            s.size_limits = Limits::NONE.min_height(1.0).min_width(1.0);
-        }
-        _ => {}
-    };
-    Time::run(settings)
+    cosmic::app::applet::run::<Time>(true, ())
 }
 
 struct Time {
-    applet_helper: CosmicAppletHelper,
-    theme: Theme,
+    core: cosmic::app::Core,
     popup: Option<window::Id>,
     id_ctr: u128,
     update_at: Every,
@@ -41,22 +28,6 @@ struct Time {
     msg: String,
     rectangle_tracker: Option<RectangleTracker<u32>>,
     rectangle: Rectangle,
-}
-
-impl Default for Time {
-    fn default() -> Self {
-        Time {
-            applet_helper: CosmicAppletHelper::default(),
-            theme: Theme::default(),
-            popup: None,
-            id_ctr: 0,
-            update_at: Every::Minute,
-            now: Local::now(),
-            msg: String::new(),
-            rectangle_tracker: None,
-            rectangle: Rectangle::default(),
-        }
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -70,47 +41,41 @@ enum Every {
 enum Message {
     TogglePopup,
     Tick,
-    Ignore,
     Rectangle(RectangleUpdate<u32>),
-    Theme(Theme),
 }
 
-impl Application for Time {
+impl cosmic::Application for Time {
     type Message = Message;
-    type Theme = Theme;
     type Executor = cosmic::SingleThreadExecutor;
     type Flags = ();
+    const APP_ID: &'static str = "com.system76.CosmicAppletTime";
 
-    fn new(_flags: ()) -> (Time, Command<Message>) {
-        let applet_helper = CosmicAppletHelper::default();
-        let theme = applet_helper.theme();
+    fn init(core: cosmic::app::Core, _flags: ()) -> (Self, app::Command<Message>) {
         (
             Time {
-                applet_helper,
-                theme,
-                ..Default::default()
+                core,
+                popup: None,
+                id_ctr: 0,
+                update_at: Every::Minute,
+                now: Local::now(),
+                msg: String::new(),
+                rectangle_tracker: None,
+                rectangle: Rectangle::default(),
             },
             Command::none(),
         )
     }
 
-    fn title(&self) -> String {
-        String::from("Time")
+    fn core(&self) -> &cosmic::app::Core {
+        &self.core
     }
 
-    fn theme(&self) -> Theme {
-        self.theme.clone()
+    fn core_mut(&mut self) -> &mut cosmic::app::Core {
+        &mut self.core
     }
 
-    fn close_requested(&self, _id: window::Id) -> Self::Message {
-        Message::Ignore
-    }
-
-    fn style(&self) -> <Self::Theme as application::StyleSheet>::Style {
-        <Self::Theme as application::StyleSheet>::Style::Custom(Box::new(|theme| Appearance {
-            background_color: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
-            text_color: theme.cosmic().on_bg_color().into(),
-        }))
+    fn style(&self) -> Option<<Theme as application::StyleSheet>::Style> {
+        Some(cosmic::app::applet::style())
     }
 
     fn subscription(&self) -> Subscription<Message> {
@@ -129,7 +94,6 @@ impl Application for Time {
             .expect("Setting nanoseconds to 0 should always be possible.");
         let wait = 1.max((next - now).num_milliseconds());
         Subscription::batch(vec![
-            self.applet_helper.theme_subscription(0).map(Message::Theme),
             rectangle_tracker_subscription(0).map(|e| Message::Rectangle(e.1)),
             time::every(Duration::from_millis(
                 wait.try_into().unwrap_or(FALLBACK_DELAY),
@@ -140,10 +104,6 @@ impl Application for Time {
 
     fn update(&mut self, message: Message) -> Command<Message> {
         match message {
-            Message::Theme(t) => {
-                self.theme = t;
-                Command::none()
-            }
             Message::TogglePopup => {
                 if let Some(p) = self.popup.take() {
                     destroy_popup(p)
@@ -166,7 +126,7 @@ impl Application for Time {
                     let new_id = window::Id(self.id_ctr);
                     self.popup.replace(new_id);
 
-                    let mut popup_settings = self.applet_helper.get_popup_settings(
+                    let mut popup_settings = self.core.applet_helper.get_popup_settings(
                         window::Id(0),
                         new_id,
                         None,
@@ -192,7 +152,6 @@ impl Application for Time {
                 self.now = Local::now();
                 Command::none()
             }
-            Message::Ignore => Command::none(),
             Message::Rectangle(u) => {
                 match u {
                     RectangleUpdate::Rectangle(r) => {
@@ -207,57 +166,57 @@ impl Application for Time {
         }
     }
 
-    fn view(&self, id: window::Id) -> Element<Message> {
-        if id == window::Id(0) {
-            let button = button(
-                if matches!(
-                    self.applet_helper.anchor,
-                    PanelAnchor::Top | PanelAnchor::Bottom
-                ) {
-                    column![text(self.now.format("%b %-d %-I:%M %p").to_string()).size(14)]
-                } else {
-                    let mut date_time_col = column![
-                        icon(
-                            "emoji-recent-symbolic",
-                            self.applet_helper.suggested_size().0
-                        )
-                        .style(theme::Svg::Symbolic),
-                        text(self.now.format("%I").to_string()).size(14),
-                        text(self.now.format("%M").to_string()).size(14),
-                        text(self.now.format("%p").to_string()).size(14),
-                        vertical_space(Length::Fixed(4.0)),
-                        // TODO better calendar icon?
-                        icon(
-                            "calendar-go-today-symbolic",
-                            self.applet_helper.suggested_size().0
-                        )
-                        .style(theme::Svg::Symbolic),
-                    ]
-                    .align_items(Alignment::Center)
-                    .spacing(4);
-                    for d in self.now.format("%x").to_string().split("/") {
-                        date_time_col = date_time_col.push(text(d.to_string()).size(14));
-                    }
-                    date_time_col
-                },
-            )
-            .on_press(Message::TogglePopup)
-            .style(theme::Button::Text);
-
-            if let Some(tracker) = self.rectangle_tracker.as_ref() {
-                tracker.container(0, button).into()
+    fn view(&self) -> Element<Message> {
+        let button = button(
+            if matches!(
+                self.core.applet_helper.anchor,
+                PanelAnchor::Top | PanelAnchor::Bottom
+            ) {
+                column![text(self.now.format("%b %-d %-I:%M %p").to_string()).size(14)]
             } else {
-                button.into()
-            }
-        } else {
-            let content = column![]
-                .align_items(Alignment::Start)
-                .spacing(12)
-                .padding([24, 0])
-                .push(text(&self.msg).size(14))
-                .padding(8);
+                let mut date_time_col = column![
+                    icon(
+                        "emoji-recent-symbolic",
+                        self.core.applet_helper.suggested_size().0
+                    )
+                    .style(theme::Svg::Symbolic),
+                    text(self.now.format("%I").to_string()).size(14),
+                    text(self.now.format("%M").to_string()).size(14),
+                    text(self.now.format("%p").to_string()).size(14),
+                    vertical_space(Length::Fixed(4.0)),
+                    // TODO better calendar icon?
+                    icon(
+                        "calendar-go-today-symbolic",
+                        self.core.applet_helper.suggested_size().0
+                    )
+                    .style(theme::Svg::Symbolic),
+                ]
+                .align_items(Alignment::Center)
+                .spacing(4);
+                for d in self.now.format("%x").to_string().split("/") {
+                    date_time_col = date_time_col.push(text(d.to_string()).size(14));
+                }
+                date_time_col
+            },
+        )
+        .on_press(Message::TogglePopup)
+        .style(theme::Button::Text);
 
-            self.applet_helper.popup_container(content).into()
+        if let Some(tracker) = self.rectangle_tracker.as_ref() {
+            tracker.container(0, button).into()
+        } else {
+            button.into()
         }
+    }
+
+    fn view_window(&self, _id: window::Id) -> Element<Message> {
+        let content = column![]
+            .align_items(Alignment::Start)
+            .spacing(12)
+            .padding([24, 0])
+            .push(text(&self.msg).size(14))
+            .padding(8);
+
+        self.core.applet_helper.popup_container(content).into()
     }
 }

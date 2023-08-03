@@ -7,7 +7,6 @@ edition = "2021"
 once_cell = "1.16.0"
 libcosmic.workspace = true
 cosmic-time.workspace = true
-cosmic-applet = { path = "../applet" }
 futures = "0.3"
 zbus = { version = "3.13", default-features = false, features = ["tokio"] }
 log = "0.4"

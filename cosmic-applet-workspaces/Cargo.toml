@@ -6,7 +6,6 @@ edition = "2021"
 
 [dependencies]
 libcosmic.workspace = true
-cosmic-applet = { path = "../applet" }
 cctk.workspace = true
 cosmic-protocols.workspace = true
 nix = "0.26.1"
