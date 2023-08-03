@@ -120,6 +120,8 @@ impl CosmicAppletHelper {
                 resizable: None,
                 ..Default::default()
             }),
+            default_text_size: 18.0,
+            default_font: cosmic::font::FONT,
             ..Settings::with_flags(flags)
         }
     }
