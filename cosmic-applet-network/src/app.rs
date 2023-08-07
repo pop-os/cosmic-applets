@@ -509,59 +509,7 @@ impl Application for CosmicNetworkApplet {
                     }
                 };
             }
-            for known in &self.nm_state.known_access_points {
-                let mut btn_content = Vec::with_capacity(2);
 
-                let ssid = text(&known.ssid).size(14).width(Length::Fill);
-                if known.working {
-                    btn_content.push(
-                        icon("network-wireless-acquiring-symbolic", 24)
-                            .style(Svg::Symbolic)
-                            .into(),
-                    );
-                    btn_content.push(ssid.into());
-                    btn_content.push(
-                        icon("process-working-symbolic", 24)
-                            .style(Svg::Symbolic)
-                            .into(),
-                    );
-                } else if matches!(known.state, DeviceState::Unavailable) {
-                    btn_content.push(
-                        icon("network-wireless-disconnected-symbolic", 24)
-                            .style(Svg::Symbolic)
-                            .into(),
-                    );
-                    btn_content.push(ssid.into());
-                } else {
-                    btn_content.push(
-                        icon(wifi_icon(known.strength), 24)
-                            .style(Svg::Symbolic)
-                            .into(),
-                    );
-                    btn_content.push(ssid.into());
-                }
-
-                let mut btn = button(Button::Secondary)
-                    .custom(vec![Row::with_children(btn_content)
-                        .align_items(Alignment::Center)
-                        .spacing(8)
-                        .into()])
-                    .padding([8, 24])
-                    .width(Length::Fill)
-                    .style(button_style());
-                btn = match known.state {
-                    DeviceState::Failed
-                    | DeviceState::Unknown
-                    | DeviceState::Unmanaged
-                    | DeviceState::Disconnected
-                    | DeviceState::NeedAuth => {
-                        btn.on_press(Message::ActivateKnownWifi(known.ssid.clone()))
-                    }
-                    DeviceState::Activated => btn.on_press(Message::Disconnect(known.ssid.clone())),
-                    _ => btn,
-                };
-                known_wifi = known_wifi.push(row![btn].align_items(Alignment::Center));
-            }
             let mut content = column![
                 vpn_ethernet_col,
                 container(
@@ -592,38 +540,106 @@ impl Application for CosmicNetworkApplet {
                 )
                 .padding([0, 12]),
                 divider::horizontal::light(),
-                known_wifi,
             ]
             .align_items(Alignment::Center)
             .spacing(8)
             .padding([8, 0]);
-            let dropdown_icon = if self.show_visible_networks {
-                "go-down-symbolic"
+            if self.nm_state.airplane_mode {
+                content = content.push(
+                    column!(
+                        icon("airplane-mode-symbolic", 48).style(Svg::Symbolic),
+                        text(fl!("airplane-mode-on")).size(14),
+                        text(fl!("turn-off-airplane-mode")).size(12)
+                    )
+                    .spacing(8)
+                    .align_items(Alignment::Center)
+                    .width(Length::Fill),
+                );
             } else {
-                "go-next-symbolic"
-            };
-            let available_connections_btn = button(Button::Secondary)
-                .custom(
-                    vec![
-                        text(fl!("visible-wireless-networks"))
-                            .size(14)
-                            .width(Length::Fill)
-                            .height(Length::Fixed(24.0))
-                            .vertical_alignment(Vertical::Center)
-                            .into(),
-                        container(icon(dropdown_icon, 14).style(Svg::Symbolic))
-                            .align_x(Horizontal::Center)
-                            .align_y(Vertical::Center)
-                            .width(Length::Fixed(24.0))
-                            .height(Length::Fixed(24.0))
-                            .into(),
-                    ]
-                    .into(),
-                )
-                .padding([8, 24])
-                .style(button_style())
-                .on_press(Message::ToggleVisibleNetworks);
-            content = content.push(available_connections_btn);
+                for known in &self.nm_state.known_access_points {
+                    let mut btn_content = Vec::with_capacity(2);
+
+                    let ssid = text(&known.ssid).size(14).width(Length::Fill);
+                    if known.working {
+                        btn_content.push(
+                            icon("network-wireless-acquiring-symbolic", 24)
+                                .style(Svg::Symbolic)
+                                .into(),
+                        );
+                        btn_content.push(ssid.into());
+                        btn_content.push(
+                            icon("process-working-symbolic", 24)
+                                .style(Svg::Symbolic)
+                                .into(),
+                        );
+                    } else if matches!(known.state, DeviceState::Unavailable) {
+                        btn_content.push(
+                            icon("network-wireless-disconnected-symbolic", 24)
+                                .style(Svg::Symbolic)
+                                .into(),
+                        );
+                        btn_content.push(ssid.into());
+                    } else {
+                        btn_content.push(
+                            icon(wifi_icon(known.strength), 24)
+                                .style(Svg::Symbolic)
+                                .into(),
+                        );
+                        btn_content.push(ssid.into());
+                    }
+
+                    let mut btn = button(Button::Secondary)
+                        .custom(vec![Row::with_children(btn_content)
+                            .align_items(Alignment::Center)
+                            .spacing(8)
+                            .into()])
+                        .padding([8, 24])
+                        .width(Length::Fill)
+                        .style(button_style());
+                    btn = match known.state {
+                        DeviceState::Failed
+                        | DeviceState::Unknown
+                        | DeviceState::Unmanaged
+                        | DeviceState::Disconnected
+                        | DeviceState::NeedAuth => {
+                            btn.on_press(Message::ActivateKnownWifi(known.ssid.clone()))
+                        }
+                        DeviceState::Activated => {
+                            btn.on_press(Message::Disconnect(known.ssid.clone()))
+                        }
+                        _ => btn,
+                    };
+                    known_wifi = known_wifi.push(row![btn].align_items(Alignment::Center));
+                }
+                content = content.push(known_wifi);
+                let dropdown_icon = if self.show_visible_networks {
+                    "go-down-symbolic"
+                } else {
+                    "go-next-symbolic"
+                };
+                let available_connections_btn = button(Button::Secondary)
+                    .custom(
+                        vec![
+                            text(fl!("visible-wireless-networks"))
+                                .size(14)
+                                .width(Length::Fill)
+                                .height(Length::Fixed(24.0))
+                                .vertical_alignment(Vertical::Center)
+                                .into(),
+                            container(icon(dropdown_icon, 14).style(Svg::Symbolic))
+                                .align_x(Horizontal::Center)
+                                .align_y(Vertical::Center)
+                                .width(Length::Fixed(24.0))
+                                .height(Length::Fixed(24.0))
+                                .into(),
+                        ]
+                        .into(),
+                    )
+                    .padding([8, 24])
+                    .style(button_style())
+                    .on_press(Message::ToggleVisibleNetworks);
+                content = content.push(available_connections_btn);
+            }
             if self.show_visible_networks {
                 if let Some(new_conn_state) = self.new_connection.as_ref() {
                     match new_conn_state {

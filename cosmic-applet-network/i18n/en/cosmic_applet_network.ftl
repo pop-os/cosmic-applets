@@ -1,5 +1,7 @@
 network = Network
 airplane-mode = Airplane mode
+airplane-mode-on = Airplane Mode is on
+turn-off-airplane-mode = Turn on to enable Wi-Fi, Bluetooth and mobile broadband.
 wifi = Wi-Fi
 ipv4 = IPv4 Address
 ipv6 = IPv6 Address
