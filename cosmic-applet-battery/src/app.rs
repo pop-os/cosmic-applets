@@ -55,6 +55,7 @@ static MAX_CHARGE: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
 #[derive(Clone, Default)]
 struct CosmicBatteryApplet {
     icon_name: String,
+    display_icon_name: String,
     theme: Theme,
     charging_limit: bool,
     battery_percent: f64,
@@ -82,6 +83,24 @@ impl CosmicBatteryApplet {
         let charging = if on_battery { "" } else { "charging-" };
         self.icon_name =
             format!("cosmic-applet-battery-level-{battery_percent}-{limited}{charging}symbolic",);
+    }
+
+    fn update_display(&mut self, mut percent: f64) {
+        percent = percent.clamp(0.01, 1.0);
+        self.screen_brightness = percent;
+        let screen_brightness = if self.screen_brightness < 0.011 {
+            "off"
+        } else if self.screen_brightness < 0.333 {
+            "low"
+        } else if self.screen_brightness < 0.666 {
+            "medium"
+        } else {
+            "high"
+        }
+        .to_string();
+
+        self.display_icon_name =
+            format!("cosmic-applet-battery-display-brightness-{screen_brightness}-symbolic",);
     }
 
     fn set_charging_limit(&mut self, limit: bool) {
@@ -127,6 +146,7 @@ impl Application for CosmicBatteryApplet {
         (
             CosmicBatteryApplet {
                 icon_name: "battery-symbolic".to_string(),
+                display_icon_name: "display-brightness-symbolic".to_string(),
                 applet_helper,
                 theme,
                 ..Default::default()
@@ -149,7 +169,7 @@ impl Application for CosmicBatteryApplet {
                 }
             }
             Message::SetScreenBrightness(brightness) => {
-                self.screen_brightness = (brightness as f64 / 100.0).clamp(0.01, 1.0);
+                self.update_display((brightness as f64 / 100.0).clamp(0.01, 1.0));
                 if let Some(tx) = &self.screen_sender {
                     let _ = tx.send(ScreenBacklightRequest::Set(self.screen_brightness));
                 }
@@ -217,10 +237,10 @@ impl Application for CosmicBatteryApplet {
             Message::InitScreenBacklight(tx, brightness) => {
                 let _ = tx.send(ScreenBacklightRequest::Get);
                 self.screen_sender = Some(tx);
-                self.screen_brightness = brightness;
+                self.update_display(brightness);
             }
             Message::UpdateScreenBrightness(b) => {
-                self.screen_brightness = b;
+                self.update_display(b);
             }
             Message::InitProfile(tx, profile) => {
                 self.power_profile_sender.replace(tx);
@@ -356,7 +376,7 @@ impl Application for CosmicBatteryApplet {
                             .width(Length::Fill)
                             .padding([0, 12]),
                         row![
-                            icon("display-brightness-symbolic", 24).style(Svg::Symbolic),
+                            icon(self.display_icon_name.as_str(), 24).style(Svg::Symbolic),
                             slider(
                                 1..=100,
                                 (self.screen_brightness * 100.0) as i32,
