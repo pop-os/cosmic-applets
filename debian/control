@@ -19,6 +19,7 @@ Homepage: https://github.com/pop-os/cosmic-applets
 Package: cosmic-applets
 Architecture: amd64 arm64
 Depends:
+  cosmic-icons,
   ${misc:Depends},
   ${shlibs:Depends}
 Recommends:

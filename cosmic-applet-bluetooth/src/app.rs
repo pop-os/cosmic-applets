@@ -43,11 +43,21 @@ struct CosmicBluetoothApplet {
     request_confirmation: Option<(BluerDevice, String, Sender<bool>)>,
 }
 
+impl CosmicBluetoothApplet {
+    fn update_icon(&mut self) {
+        self.icon_name = if self.bluer_state.bluetooth_enabled {
+            "cosmic-applet-bluetooth-active-symbolic"
+        } else {
+            "cosmic-applet-bluetooth-disabled-symbolic"
+        }
+        .to_string();
+    }
+}
+
 #[derive(Debug, Clone)]
 enum Message {
     TogglePopup,
     ToggleVisibleDevices(bool),
-    Errored(String),
     Ignore,
     BluetoothEvent(BluerEvent),
     Request(BluerRequest),
@@ -118,7 +128,6 @@ impl Application for CosmicBluetoothApplet {
                     ]);
                 }
             }
-            Message::Errored(_) => todo!(),
             Message::Ignore => {}
             Message::ToggleVisibleDevices(enabled) => {
                 self.show_visible_devices = enabled;
@@ -165,29 +174,19 @@ impl Application for CosmicBluetoothApplet {
                 }
                 // TODO handle agent events
                 BluerEvent::AgentEvent(event) => match event {
-                    crate::bluetooth::BluerAgentEvent::DisplayPinCode(_d, _code) => {
-                        // dbg!((d.name, code));
-                    }
-                    crate::bluetooth::BluerAgentEvent::DisplayPasskey(_d, _code) => {
-                        // dbg!((d.name, code));
-                    }
+                    crate::bluetooth::BluerAgentEvent::DisplayPinCode(_d, _code) => {}
+                    crate::bluetooth::BluerAgentEvent::DisplayPasskey(_d, _code) => {}
                     crate::bluetooth::BluerAgentEvent::RequestPinCode(_d) => {
                         // TODO anything to be done here?
-                        // dbg!("request pin code", d.name);
                     }
                     crate::bluetooth::BluerAgentEvent::RequestPasskey(_d) => {
                         // TODO anything to be done here?
-                        // dbg!("request passkey", d.name);
                     }
                     crate::bluetooth::BluerAgentEvent::RequestConfirmation(d, code, tx) => {
-                        // dbg!("request confirmation", &d.name, &code);
                         self.request_confirmation.replace((d, code, tx));
-                        // let _ = tx.send(false);
                     }
                     crate::bluetooth::BluerAgentEvent::RequestDeviceAuthorization(_d, _tx) => {
                         // TODO anything to be done here?
-                        // dbg!("request device authorization", d.name);
-                        // let_ = tx.send(false);
                     }
                     crate::bluetooth::BluerAgentEvent::RequestServiceAuthorization(
                         _d,
@@ -276,6 +275,7 @@ impl Application for CosmicBluetoothApplet {
                 self.theme = t;
             }
         }
+        self.update_icon();
         Command::none()
     }
     fn view(&self, id: window::Id) -> Element<Message> {

@@ -56,6 +56,7 @@ pub async fn active_connections(
                             rsn_flags: access_point.rsn_flags().await?,
                             wpa_flags: access_point.wpa_flags().await?,
                             state,
+                            strength: access_point.strength().await.unwrap_or_default(),
                         });
                     }
                 }
@@ -98,6 +99,7 @@ pub enum ActiveConnectionInfo {
         rsn_flags: ApSecurityFlags,
         wpa_flags: ApSecurityFlags,
         state: ActiveConnectionState,
+        strength: u8,
     },
     Vpn {
         name: String,

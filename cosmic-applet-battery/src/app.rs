@@ -55,9 +55,11 @@ static MAX_CHARGE: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
 #[derive(Clone, Default)]
 struct CosmicBatteryApplet {
     icon_name: String,
+    display_icon_name: String,
     theme: Theme,
     charging_limit: bool,
     battery_percent: f64,
+    on_battery: bool,
     time_remaining: Duration,
     kbd_brightness: f64,
     screen_brightness: f64,
@@ -71,11 +73,65 @@ struct CosmicBatteryApplet {
     timeline: Timeline,
 }
 
+impl CosmicBatteryApplet {
+    fn update_battery(&mut self, mut percent: f64, on_battery: bool) {
+        percent = percent.clamp(0.0, 100.0);
+        self.on_battery = on_battery;
+        self.battery_percent = percent;
+        let battery_percent = if self.battery_percent > 95.0 && !self.charging_limit {
+            100
+        } else if self.battery_percent > 80.0 && !self.charging_limit {
+            90
+        } else if self.battery_percent > 65.0 {
+            80
+        } else if self.battery_percent > 35.0 {
+            50
+        } else if self.battery_percent > 20.0 {
+            35
+        } else if self.battery_percent > 14.0 {
+            20
+        } else if self.battery_percent > 9.0 {
+            10
+        } else if self.battery_percent > 5.0 {
+            5
+        } else {
+            0
+        };
+        let limited = if self.charging_limit { "limited-" } else { "" };
+        let charging = if on_battery { "" } else { "charging-" };
+        self.icon_name =
+            format!("cosmic-applet-battery-level-{battery_percent}-{limited}{charging}symbolic",);
+    }
+
+    fn update_display(&mut self, mut percent: f64) {
+        percent = percent.clamp(0.01, 1.0);
+        self.screen_brightness = percent;
+        let screen_brightness = if self.screen_brightness < 0.011 {
+            "off"
+        } else if self.screen_brightness < 0.333 {
+            "low"
+        } else if self.screen_brightness < 0.666 {
+            "medium"
+        } else {
+            "high"
+        }
+        .to_string();
+
+        self.display_icon_name =
+            format!("cosmic-applet-battery-display-brightness-{screen_brightness}-symbolic",);
+    }
+
+    fn set_charging_limit(&mut self, limit: bool) {
+        self.charging_limit = limit;
+        self.update_battery(self.battery_percent, self.on_battery);
+    }
+}
+
 #[derive(Debug, Clone)]
 enum Message {
     TogglePopup,
     Update {
-        icon_name: String,
+        on_battery: bool,
         percent: f64,
         time_to_empty: i64,
     },
@@ -108,6 +164,7 @@ impl Application for CosmicBatteryApplet {
         (
             CosmicBatteryApplet {
                 icon_name: "battery-symbolic".to_string(),
+                display_icon_name: "display-brightness-symbolic".to_string(),
                 applet_helper,
                 theme,
                 ..Default::default()
@@ -130,14 +187,14 @@ impl Application for CosmicBatteryApplet {
                 }
             }
             Message::SetScreenBrightness(brightness) => {
-                self.screen_brightness = (brightness as f64 / 100.0).clamp(0.01, 1.0);
+                self.update_display((brightness as f64 / 100.0).clamp(0.01, 1.0));
                 if let Some(tx) = &self.screen_sender {
                     let _ = tx.send(ScreenBacklightRequest::Set(self.screen_brightness));
                 }
             }
             Message::SetChargingLimit(chain, enable) => {
                 self.timeline.set_chain(chain).start();
-                self.charging_limit = enable;
+                self.set_charging_limit(enable);
             }
             Message::OpenBatterySettings => {
                 // TODO Ashley
@@ -179,12 +236,11 @@ impl Application for CosmicBatteryApplet {
                 }
             }
             Message::Update {
-                icon_name,
+                on_battery,
                 percent,
                 time_to_empty,
             } => {
-                self.icon_name = icon_name;
-                self.battery_percent = percent;
+                self.update_battery(percent, on_battery);
                 self.time_remaining = Duration::from_secs(time_to_empty as u64);
             }
             Message::UpdateKbdBrightness(b) => {
@@ -199,10 +255,10 @@ impl Application for CosmicBatteryApplet {
             Message::InitScreenBacklight(tx, brightness) => {
                 let _ = tx.send(ScreenBacklightRequest::Get);
                 self.screen_sender = Some(tx);
-                self.screen_brightness = brightness;
+                self.update_display(brightness);
             }
             Message::UpdateScreenBrightness(b) => {
-                self.screen_brightness = b;
+                self.update_display(b);
             }
             Message::InitProfile(tx, profile) => {
                 self.power_profile_sender.replace(tx);
@@ -236,20 +292,16 @@ impl Application for CosmicBatteryApplet {
                 .into()
         } else {
             let name = text(fl!("battery")).size(14);
-            let description = text(
-                if "battery-full-charging-symbolic" == self.icon_name
-                    || "battery-full-charged-symbolic" == self.icon_name
-                {
-                    format!("{}%", self.battery_percent)
-                } else {
-                    format!(
-                        "{} {} ({:.0}%)",
-                        format_duration(self.time_remaining),
-                        fl!("until-empty"),
-                        self.battery_percent
-                    )
-                },
-            )
+            let description = text(if !self.on_battery {
+                format!("{}%", self.battery_percent)
+            } else {
+                format!(
+                    "{} {} ({:.0}%)",
+                    format_duration(self.time_remaining),
+                    fl!("until-empty"),
+                    self.battery_percent
+                )
+            })
             .size(10);
             self.applet_helper
                 .popup_container(
@@ -342,7 +394,7 @@ impl Application for CosmicBatteryApplet {
                             .width(Length::Fill)
                             .padding([0, 12]),
                         row![
-                            icon("display-brightness-symbolic", 24).style(Svg::Symbolic),
+                            icon(self.display_icon_name.as_str(), 24).style(Svg::Symbolic),
                             slider(
                                 1..=100,
                                 (self.screen_brightness * 100.0) as i32,
@@ -393,11 +445,11 @@ impl Application for CosmicBatteryApplet {
             self.applet_helper.theme_subscription(0).map(Message::Theme),
             device_subscription(0).map(
                 |DeviceDbusEvent::Update {
-                     icon_name,
+                     on_battery,
                      percent,
                      time_to_empty,
                  }| Message::Update {
-                    icon_name,
+                    on_battery,
                     percent,
                     time_to_empty,
                 },

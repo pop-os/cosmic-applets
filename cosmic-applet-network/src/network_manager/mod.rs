@@ -140,20 +140,31 @@ async fn start_listening(
                             .output()
                             .await
                             .is_ok();
+                    let mut state = NetworkManagerState::new(&conn).await.unwrap_or_default();
+                    state.airplane_mode = if success {
+                        airplane_mode
+                    } else {
+                        !airplane_mode
+                    };
+                    if state.airplane_mode {
+                        state.wifi_enabled = false;
+                    }
                     _ = output
                         .send(NetworkManagerEvent::RequestResponse {
                             req: NetworkManagerRequest::SetAirplaneMode(airplane_mode),
                             success,
-                            state: NetworkManagerState::new(&conn).await.unwrap_or_default(),
+                            state,
                         })
                         .await;
                 }
                 Some(NetworkManagerRequest::SetWiFi(enabled)) => {
                     let success = network_manager.set_wireless_enabled(enabled).await.is_ok();
+                    let mut state = NetworkManagerState::new(&conn).await.unwrap_or_default();
+                    state.wifi_enabled = if success { enabled } else { !enabled };
                     let response = NetworkManagerEvent::RequestResponse {
                         req: NetworkManagerRequest::SetWiFi(enabled),
                         success,
-                        state: NetworkManagerState::new(&conn).await.unwrap_or_default(),
+                        state,
                     };
                     _ = output.send(response).await;
                 }
@@ -198,7 +209,6 @@ async fn start_listening(
                         };
                         if let Some(s) = secrets.get_mut("802-11-wireless-security") {
                             s.insert("psk".into(), Value::Str(password.clone().into()).to_owned());
-                            drop(s);
                             settings.extend(secrets.into_iter());
                             let settings: HashMap<_, _> = settings
                                 .iter()
@@ -519,14 +529,8 @@ impl NetworkManagerState {
             .output()
             .await?;
         let airplane_mode = std::str::from_utf8(&airplaine_mode.stdout).unwrap_or_default();
-        let bluetooth_disabled = airplane_mode.contains("Soft blocked: yes");
-
-        if !network_manager.wireless_enabled().await.unwrap_or_default() {
-            _self.airplane_mode = bluetooth_disabled;
-            return Ok(_self);
-        } else {
-            _self.wifi_enabled = true;
-        };
+        _self.wifi_enabled = network_manager.wireless_enabled().await.unwrap_or_default();
+        _self.airplane_mode = airplane_mode.contains("Soft blocked: yes") && !_self.wifi_enabled;
 
         let s = NetworkManagerSettings::new(&conn).await?;
         _ = s.load_connections(&[]).await;

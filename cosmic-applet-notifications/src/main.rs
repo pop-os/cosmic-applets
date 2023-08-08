@@ -70,6 +70,17 @@ impl Notifications {
             self.timeline.start();
         }
     }
+
+    fn update_icon(&mut self) {
+        self.icon_name = if self.config.do_not_disturb {
+            "cosmic-applet-notification-disabled-symbolic"
+        } else if self.cards.is_empty() {
+            "cosmic-applet-notification-symbolic"
+        } else {
+            "cosmic-applet-notification-new-symbolic"
+        }
+        .to_string();
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -114,17 +125,15 @@ impl Application for Notifications {
                 })
             })
             .unwrap_or_default();
-        (
-            Notifications {
-                applet_helper,
-                theme,
-                icon_name: "notification-alert-symbolic".to_string(),
-                config_helper: helper,
-                config,
-                ..Default::default()
-            },
-            Command::none(),
-        )
+        let mut _self = Notifications {
+            applet_helper,
+            theme,
+            config_helper: helper,
+            config,
+            ..Default::default()
+        };
+        _self.update_icon();
+        (_self, Command::none())
     }
 
     fn title(&self) -> String {
@@ -175,15 +184,13 @@ impl Application for Notifications {
         match message {
             Message::Theme(t) => {
                 self.theme = t;
-                Command::none()
             }
             Message::Frame(now) => {
                 self.timeline.now(now);
-                Command::none()
             }
             Message::TogglePopup => {
                 if let Some(p) = self.popup.take() {
-                    destroy_popup(p)
+                    return destroy_popup(p);
                 } else {
                     self.id_ctr += 1;
                     let new_id = window::Id(self.id_ctr);
@@ -201,7 +208,7 @@ impl Application for Notifications {
                         .max_width(444.0)
                         .min_height(100.0)
                         .max_height(900.0);
-                    get_popup(popup_settings)
+                    return get_popup(popup_settings);
                 }
             }
             Message::DoNotDisturb(chain, b) => {
@@ -212,11 +219,9 @@ impl Application for Notifications {
                         tracing::error!("{:?}", err);
                     }
                 }
-                Command::none()
             }
             Message::Settings => {
                 let _ = process::Command::new("cosmic-settings notifications").spawn();
-                Command::none()
             }
             Message::NotificationEvent(n) => {
                 if let Some(c) = self
@@ -241,13 +246,10 @@ impl Application for Notifications {
                         fl!("show-more", HashMap::from_iter(vec![("more", "1")])),
                     ));
                 }
-
-                Command::none()
             }
-            Message::Ignore => Command::none(),
+            Message::Ignore => {}
             Message::Config(config) => {
                 self.config = config;
-                Command::none()
             }
             Message::Dismissed(id) => {
                 info!("Dismissed {}", id);
@@ -264,12 +266,10 @@ impl Application for Notifications {
                         }
                     });
                 }
-                Command::none()
             }
             Message::DbusEvent(e) => match e {
                 subscriptions::dbus::Output::Ready(tx) => {
                     self.dbus_sender.replace(tx);
-                    Command::none()
                 }
                 subscriptions::dbus::Output::CloseEvent(id) => {
                     for c in &mut self.cards {
@@ -280,8 +280,6 @@ impl Application for Notifications {
                         );
                     }
                     self.cards.retain(|c| !c.1.is_empty());
-
-                    Command::none()
                 }
             },
             Message::ClearAll(app_name) => {
@@ -303,8 +301,6 @@ impl Application for Notifications {
                         }
                     }
                 }
-
-                Command::none()
             }
             Message::CardsToggled(name, expanded) => {
                 let id = if let Some((id, _, n_expanded, _)) = self
@@ -318,9 +314,10 @@ impl Application for Notifications {
                     return Command::none();
                 };
                 self.update_cards(id);
-                Command::none()
             }
-        }
+        };
+        self.update_icon();
+        Command::none()
     }
 
     fn view(&self, id: window::Id) -> Element<Message> {
@@ -346,7 +343,7 @@ impl Application for Notifications {
             let notifications = if self.cards.is_empty() {
                 row![container(
                     column![
-                        text_icon(&self.icon_name, 40),
+                        text_icon("cosmic-applet-notification-symbolic", 40),
                         text(&fl!("no-notifications"))
                     ]
                     .align_items(Alignment::Center)

@@ -10,7 +10,7 @@ cargo_args := vendor_args + ' ' + debug_args
 
 
 sharedir := rootdir + prefix + '/share'
-iconsdir := sharedir + '/icons/hicolor/scalable/apps'
+iconsdir := sharedir + '/icons/hicolor'
 bindir := rootdir + prefix + '/bin'
 
 build: _extract_vendor
@@ -24,8 +24,8 @@ build-debug *args:
 # Compiles with release profile
 build-release *args: (build-debug '--release' args)
 
-_install_icon path:
-    install -Dm0644 {{path}} {{iconsdir}}/{{file_name(path)}}
+_install_icons name:
+    find {{name}}/'data'/'icons' -type f -exec echo {} \; | rev | cut -d'/' -f-3 | rev | xargs -d '\n' -I {} install -Dm0644 {{name}}/'data'/'icons'/{} {{iconsdir}}/{}
 
 _install_desktop path:
     install -Dm0644 {{path}} {{sharedir}}/applications/{{file_name(path)}}
@@ -33,7 +33,7 @@ _install_desktop path:
 _install_bin name:
     install -Dm0755 target/release/{{name}} {{bindir}}/{{name}}
 
-_install id name: (_install_icon name + '/data/icons/' + id + '.svg') (_install_desktop name + '/data/' + id + '.desktop') (_install_bin name)
+_install id name: (_install_icons name) (_install_desktop name + '/data/' + id + '.desktop') (_install_bin name)
 
 _install_app_list: (_install 'com.system76.CosmicAppList' 'cosmic-app-list')
 _install_audio: (_install 'com.system76.CosmicAppletAudio' 'cosmic-applet-audio')
@@ -48,7 +48,7 @@ _install_time: (_install 'com.system76.CosmicAppletTime' 'cosmic-applet-time')
 
 # TODO: Turn this into one configurable applet?
 _install_panel_button: (_install_bin 'cosmic-panel-button')
-_install_button id name: (_install_icon name + '/data/icons/' + id + '.svg') (_install_desktop name + '/data/' + id + '.desktop')
+_install_button id name: (_install_icons name) (_install_desktop name + '/data/' + id + '.desktop')
 _install_app_button: (_install_button 'com.system76.CosmicPanelAppButton' 'cosmic-panel-app-button')
 _install_workspaces_button: (_install_button 'com.system76.CosmicPanelWorkspacesButton' 'cosmic-panel-workspaces-button')
 
