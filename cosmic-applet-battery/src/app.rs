@@ -78,7 +78,25 @@ impl CosmicBatteryApplet {
         percent = percent.clamp(0.0, 100.0);
         self.on_battery = on_battery;
         self.battery_percent = percent;
-        let battery_percent = (self.battery_percent / 5.0).round() as u8 * 5;
+        let battery_percent = if self.battery_percent > 95.0 && !self.charging_limit {
+            100
+        } else if self.battery_percent > 80.0 && !self.charging_limit {
+            90
+        } else if self.battery_percent > 65.0 {
+            80
+        } else if self.battery_percent > 35.0 {
+            50
+        } else if self.battery_percent > 20.0 {
+            35
+        } else if self.battery_percent > 14.0 {
+            20
+        } else if self.battery_percent > 9.0 {
+            10
+        } else if self.battery_percent > 5.0 {
+            5
+        } else {
+            0
+        };
         let limited = if self.charging_limit { "limited-" } else { "" };
         let charging = if on_battery { "" } else { "charging-" };
         self.icon_name =
