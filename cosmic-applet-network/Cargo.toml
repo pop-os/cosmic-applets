@@ -10,7 +10,6 @@ cosmic-dbus-networkmanager = { git = "https://github.com/pop-os/dbus-settings-bi
 futures-util = "0.3.21"
 libcosmic.workspace = true
 cosmic-time.workspace = true
-cosmic-applet = { path = "../applet" }
 futures = "0.3"
 zbus = { version = "3.13", default-features = false }
 log = "0.4"

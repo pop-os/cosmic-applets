@@ -8,7 +8,6 @@ edition = "2021"
 cctk.workspace = true
 cosmic-protocols.workspace = true
 libcosmic.workspace = true
-cosmic-applet = { path = "../applet" }
 # libcosmic = { path = "../../libcosmic", default-features = false, features = ["wayland", "tokio"] }
 ron = "0.8"
 futures = "0.3"

@@ -12,7 +12,6 @@ libpulse-glib-binding = "2.25.0"
 tokio = { version = "1.20.1", features=["full"] }
 libcosmic.workspace = true
 cosmic-time.workspace = true
-cosmic-applet = { path = "../applet" }
 log = "0.4.14"
 pretty_env_logger = "0.4.0"
 # Application i18n

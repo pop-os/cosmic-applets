@@ -7,4 +7,3 @@ license = "GPL-3.0-or-later"
 [dependencies]
 freedesktop-desktop-entry = "0.5.0"
 libcosmic.workspace = true
-cosmic-applet = { path = "../applet" }

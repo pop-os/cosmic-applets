@@ -2,6 +2,8 @@ use std::collections::HashMap;
 use std::process;
 use std::time::Duration;
 
+use cosmic::app::applet::applet_button_theme;
+use cosmic::iced;
 use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::event::wayland::{self, LayerEvent};
 use cosmic::iced::event::PlatformSpecific;
@@ -15,16 +17,15 @@ use cosmic::iced_sctk::commands::layer_surface::{
 use cosmic::iced_widget::mouse_area;
 use cosmic::widget::{button, divider, icon};
 use cosmic::Renderer;
-use cosmic_applet::{applet_button_theme, CosmicAppletHelper};
 
 use cosmic::iced::Color;
 use cosmic::iced::{
     widget::{self, column, container, row, space::Space, text, Row},
-    window, Alignment, Application, Command, Length, Subscription,
+    window, Alignment, Length, Subscription,
 };
-use cosmic::iced_style::application::{self, Appearance};
+use cosmic::iced_style::application;
 use cosmic::theme::{self, Svg};
-use cosmic::{Element, Theme};
+use cosmic::{app::Command, Element, Theme};
 
 use logind_zbus::manager::ManagerProxy;
 use logind_zbus::session::{SessionProxy, SessionType};
@@ -41,15 +42,13 @@ use crate::cosmic_session::CosmicSessionProxy;
 use crate::session_manager::SessionManagerProxy;
 
 pub fn main() -> cosmic::iced::Result {
-    let helper = CosmicAppletHelper::default();
-    Power::run(helper.window_settings())
+    cosmic::app::applet::run::<Power>(false, ())
 }
 
 #[derive(Default)]
 struct Power {
-    applet_helper: CosmicAppletHelper,
+    core: cosmic::app::Core,
     icon_name: String,
-    theme: Theme,
     popup: Option<window::Id>,
     id_ctr: u128,
     action_to_confirm: Option<(window::Id, PowerAction)>,
@@ -72,24 +71,19 @@ enum Message {
     Settings,
     Confirm,
     Cancel,
-    Closed(window::Id),
     Zbus(Result<(), zbus::Error>),
-    Theme(Theme),
 }
 
-impl Application for Power {
+impl cosmic::Application for Power {
     type Message = Message;
-    type Theme = Theme;
     type Executor = cosmic::SingleThreadExecutor;
     type Flags = ();
+    const APP_ID: &'static str = "com.system76.CosmicAppletPower";
 
-    fn new(_flags: ()) -> (Power, Command<Message>) {
-        let applet_helper = CosmicAppletHelper::default();
-        let theme = applet_helper.theme();
+    fn init(core: cosmic::app::Core, _flags: ()) -> (Power, Command<Message>) {
         (
             Power {
-                applet_helper,
-                theme,
+                core,
                 icon_name: "system-shutdown-symbolic".to_string(),
                 ..Default::default()
             },
@@ -97,46 +91,32 @@ impl Application for Power {
         )
     }
 
-    fn title(&self) -> String {
-        fl!("power")
+    fn core(&self) -> &cosmic::app::Core {
+        &self.core
     }
 
-    fn theme(&self) -> Theme {
-        self.theme.clone()
+    fn core_mut(&mut self) -> &mut cosmic::app::Core {
+        &mut self.core
     }
 
-    fn close_requested(&self, id: window::Id) -> Self::Message {
-        Message::Closed(id)
-    }
-
-    fn style(&self) -> <Self::Theme as application::StyleSheet>::Style {
-        <Self::Theme as application::StyleSheet>::Style::Custom(Box::new(|theme| Appearance {
-            background_color: Color::from_rgba(0.0, 0.0, 0.0, 0.0),
-            text_color: theme.cosmic().on_bg_color().into(),
-        }))
+    fn style(&self) -> Option<<Theme as application::StyleSheet>::Style> {
+        Some(cosmic::app::applet::style())
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        Subscription::batch(vec![
-            self.applet_helper.theme_subscription(0).map(Message::Theme),
-            events_with(|e, _status| match e {
-                cosmic::iced::Event::PlatformSpecific(PlatformSpecific::Wayland(
-                    wayland::Event::Layer(LayerEvent::Unfocused, ..),
-                )) => Some(Message::Cancel),
-                // cosmic::iced::Event::PlatformSpecific(PlatformSpecific::Wayland(
-                //     wayland::Event::Seat(wayland::SeatEvent::Leave, _),
-                // )) => Some(Message::Cancel),
-                _ => None,
-            }),
-        ])
+        events_with(|e, _status| match e {
+            cosmic::iced::Event::PlatformSpecific(PlatformSpecific::Wayland(
+                wayland::Event::Layer(LayerEvent::Unfocused, ..),
+            )) => Some(Message::Cancel),
+            // cosmic::iced::Event::PlatformSpecific(PlatformSpecific::Wayland(
+            //     wayland::Event::Seat(wayland::SeatEvent::Leave, _),
+            // )) => Some(Message::Cancel),
+            _ => None,
+        })
     }
 
     fn update(&mut self, message: Message) -> Command<Message> {
         match message {
-            Message::Theme(t) => {
-                self.theme = t;
-                Command::none()
-            }
             Message::TogglePopup => {
                 if let Some(p) = self.popup.take() {
                     destroy_popup(p)
@@ -145,7 +125,7 @@ impl Application for Power {
                     let new_id = window::Id(self.id_ctr);
                     self.popup.replace(new_id);
 
-                    let mut popup_settings = self.applet_helper.get_popup_settings(
+                    let mut popup_settings = self.core.applet_helper.get_popup_settings(
                         window::Id(0),
                         new_id,
                         None,
@@ -169,8 +149,8 @@ impl Application for Power {
                 let id = window::Id(self.id_ctr);
                 self.action_to_confirm = Some((id, action));
                 return Command::batch(vec![
-                    Command::perform(sleep(Duration::from_secs(60)), move |_| {
-                        Message::Timeout(id)
+                    iced::Command::perform(sleep(Duration::from_secs(60)), move |_| {
+                        cosmic::app::message::app(Message::Timeout(id))
                     }),
                     get_layer_surface(SctkLayerSurfaceSettings {
                         id,
@@ -191,14 +171,15 @@ impl Application for Power {
             }
             Message::Confirm => {
                 if let Some((id, a)) = self.action_to_confirm.take() {
+                    let msg = |m| cosmic::app::message::app(Message::Zbus(m));
                     Command::batch(vec![
                         destroy_layer_surface(id),
                         match a {
-                            PowerAction::Lock => Command::perform(lock(), Message::Zbus),
-                            PowerAction::LogOut => Command::perform(log_out(), Message::Zbus),
-                            PowerAction::Suspend => Command::perform(suspend(), Message::Zbus),
-                            PowerAction::Restart => Command::perform(restart(), Message::Zbus),
-                            PowerAction::Shutdown => Command::perform(shutdown(), Message::Zbus),
+                            PowerAction::Lock => iced::Command::perform(lock(), msg),
+                            PowerAction::LogOut => iced::Command::perform(log_out(), msg),
+                            PowerAction::Suspend => iced::Command::perform(suspend(), msg),
+                            PowerAction::Restart => iced::Command::perform(restart(), msg),
+                            PowerAction::Shutdown => iced::Command::perform(shutdown(), msg),
                         },
                     ])
                 } else {
@@ -211,32 +192,19 @@ impl Application for Power {
                 }
                 Command::none()
             }
-            Message::Closed(id) => {
-                if let Some((surface_id, _)) = self.action_to_confirm {
-                    if id == surface_id {
-                        self.action_to_confirm = None;
-                        return destroy_layer_surface(id);
-                    }
-                }
-                if id == window::Id(0) {
-                    process::exit(0);
-                }
-                Command::none()
-            }
             Message::Timeout(id) => {
                 if let Some((surface_id, a)) = self.action_to_confirm {
                     if id == surface_id {
                         self.action_to_confirm = None;
+                        let msg = |m: zbus::Result<()>| cosmic::app::message::app(Message::Zbus(m));
                         return Command::batch(vec![
                             destroy_layer_surface(id),
                             match a {
-                                PowerAction::Lock => Command::perform(lock(), Message::Zbus),
-                                PowerAction::LogOut => Command::perform(log_out(), Message::Zbus),
-                                PowerAction::Suspend => Command::perform(suspend(), Message::Zbus),
-                                PowerAction::Restart => Command::perform(restart(), Message::Zbus),
-                                PowerAction::Shutdown => {
-                                    Command::perform(shutdown(), Message::Zbus)
-                                }
+                                PowerAction::Lock => iced::Command::perform(lock(), msg),
+                                PowerAction::LogOut => iced::Command::perform(log_out(), msg),
+                                PowerAction::Suspend => iced::Command::perform(suspend(), msg),
+                                PowerAction::Restart => iced::Command::perform(restart(), msg),
+                                PowerAction::Shutdown => iced::Command::perform(shutdown(), msg),
                             },
                         ]);
                     }
@@ -246,7 +214,15 @@ impl Application for Power {
         }
     }
 
-    fn view(&self, id: window::Id) -> Element<Message> {
+    fn view(&self) -> Element<Message> {
+        self.core
+            .applet_helper
+            .icon_button(&self.icon_name)
+            .on_press(Message::TogglePopup)
+            .into()
+    }
+
+    fn view_window(&self, id: window::Id) -> Element<Message> {
         if matches!(self.popup, Some(p) if p == id) {
             let settings =
                 row_button(vec![text(fl!("settings")).size(14).into()]).on_press(Message::Settings);
@@ -294,7 +270,7 @@ impl Application for Power {
             .spacing(12)
             .padding([8, 0]);
 
-            self.applet_helper.popup_container(content).into()
+            self.core.applet_helper.popup_container(content).into()
         } else if matches!(self.action_to_confirm, Some((c_id, _)) if c_id == id) {
             let action = match self.action_to_confirm.as_ref().unwrap().1 {
                 PowerAction::Lock => "lock-screen",
@@ -350,10 +326,8 @@ impl Application for Power {
             .on_middle_press(Message::Cancel)
             .into()
         } else {
-            self.applet_helper
-                .icon_button(&self.icon_name)
-                .on_press(Message::TogglePopup)
-                .into()
+            //panic!("no view for window {}", id.0)
+            widget::text("").into()
         }
     }
 }
