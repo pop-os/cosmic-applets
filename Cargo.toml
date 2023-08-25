@@ -9,6 +9,7 @@ members = [
     "cosmic-applet-network",
     "cosmic-applet-notifications",
     "cosmic-applet-power",
+    "cosmic-applet-status-area",
     "cosmic-applet-time",
     "cosmic-applet-workspaces",
     "cosmic-panel-button",

@@ -842,6 +842,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "cosmic-applet-status-area"
+version = "0.1.0"
+dependencies = [
+ "futures",
+ "libcosmic",
+ "serde",
+ "tokio",
+ "zbus",
+]
+
+[[package]]
 name = "cosmic-applet-time"
 version = "0.1.0"
 dependencies = [
