@@ -72,6 +72,7 @@ enum Message {
     Confirm,
     Cancel,
     Zbus(Result<(), zbus::Error>),
+    Closed(window::Id),
 }
 
 impl cosmic::Application for Power {
@@ -211,6 +212,12 @@ impl cosmic::Application for Power {
                 }
                 Command::none()
             }
+            Message::Closed(id) => {
+                if self.popup == Some(id) {
+                    self.popup = None;
+                }
+                Command::none()
+            }
         }
     }
 
@@ -329,6 +336,10 @@ impl cosmic::Application for Power {
             //panic!("no view for window {}", id.0)
             widget::text("").into()
         }
+    }
+
+    fn on_close_requested(&self, id: window::Id) -> Option<Message> {
+        Some(Message::Closed(id))
     }
 }
 
