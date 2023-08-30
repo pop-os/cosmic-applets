@@ -132,6 +132,10 @@ impl cosmic::Application for Window {
                 }
             }
             Message::DBusInit(dbus) => {
+                if dbus.is_none() {
+                    eprintln!("Could not connect to com.system76.PowerDaemon. Exiting.");
+                    std::process::exit(0);
+                } 
                 self.dbus = dbus;
                 return iced::Command::perform(
                     get_current_graphics(self.dbus.as_ref().unwrap().1.clone()),
@@ -139,7 +143,7 @@ impl cosmic::Application for Window {
                         Message::CurrentGraphics(match cur_graphics {
                             Ok(g) => Some(g),
                             Err(err) => {
-                                eprintln!("{err}");
+                                eprintln!("{err:?}");
                                 None
                             }
                         })
