@@ -31,7 +31,7 @@ _install_desktop path:
     install -Dm0644 {{path}} {{sharedir}}/applications/{{file_name(path)}}
 
 _install_bin name:
-    install -Dm0755 target/release/{{name}} {{bindir}}/{{name}}
+    install -Dm0755 target/{{target}}/{{name}} {{bindir}}/{{name}}
 
 _install id name: (_install_icons name) (_install_desktop name + '/data/' + id + '.desktop') (_install_bin name)
 
