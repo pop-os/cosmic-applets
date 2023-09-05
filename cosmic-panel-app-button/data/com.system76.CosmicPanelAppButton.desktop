@@ -1,6 +1,8 @@
 [Desktop Entry]
 Name=Cosmic Panel App Library Button
+Name[ko]=코스믹 패널 앱 라이브러리 단추
 Comment=Applet for Cosmic Panel
+Comment[ko]=코스믹 패널용 애플릿
 Type=Application
 Exec=cosmic-panel-button com.system76.CosmicAppLibrary
 Terminal=false
