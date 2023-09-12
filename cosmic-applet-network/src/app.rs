@@ -169,6 +169,7 @@ pub(crate) enum Message {
     ActivateKnownWifi(String),
     Disconnect(String),
     TogglePopup,
+    CloseRequested(window::Id),
     ToggleAirplaneMode(bool),
     ToggleWiFi(bool),
     ToggleVisibleNetworks,
@@ -385,6 +386,11 @@ impl cosmic::Application for CosmicNetworkApplet {
                     return Command::none();
                 };
                 let _ = tx.unbounded_send(NetworkManagerRequest::Disconnect(ssid));
+            }
+            Message::CloseRequested(id) => {
+                if Some(id) == self.popup {
+                    self.popup = None;
+                }
             }
         }
         Command::none()
@@ -783,5 +789,9 @@ impl cosmic::Application for CosmicNetworkApplet {
 
     fn style(&self) -> Option<<Theme as application::StyleSheet>::Style> {
         Some(cosmic::app::applet::style())
+    }
+
+    fn on_close_requested(&self, id: window::Id) -> Option<Message> {
+        Some(Message::CloseRequested(id))
     }
 }

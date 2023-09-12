@@ -84,6 +84,7 @@ impl Notifications {
 #[derive(Debug, Clone)]
 enum Message {
     TogglePopup,
+    CloseRequested(window::Id),
     DoNotDisturb(chain::Toggler, bool),
     Settings,
     Frame(Instant),
@@ -296,6 +297,11 @@ impl cosmic::Application for Notifications {
                 };
                 self.update_cards(id);
             }
+            Message::CloseRequested(id) => {
+                if Some(id) == self.popup {
+                    self.popup = None;
+                }
+            }
         };
         self.update_icon();
         Command::none()
@@ -485,6 +491,10 @@ impl cosmic::Application for Notifications {
             .padding([16, 0]);
 
         self.core.applet_helper.popup_container(content).into()
+    }
+
+    fn on_close_requested(&self, id: window::Id) -> Option<Message> {
+        Some(Message::CloseRequested(id))
     }
 }
 
