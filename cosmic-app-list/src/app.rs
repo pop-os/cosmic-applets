@@ -223,6 +223,7 @@ enum Message {
     Favorite(String),
     UnFavorite(String),
     Popup(String),
+    CloseRequested(window::Id),
     ClosePopup,
     Activate(ZcosmicToplevelHandleV1),
     Exec(String),
@@ -819,6 +820,11 @@ impl cosmic::Application for CosmicAppList {
                     })
                     .collect();
             }
+            Message::CloseRequested(id) => {
+                if Some(id) == self.popup.as_ref().map(|p| p.0) {
+                    self.popup = None;
+                }
+            }
         }
 
         Command::none()
@@ -1091,5 +1097,9 @@ impl cosmic::Application for CosmicAppList {
 
     fn style(&self) -> Option<<Theme as application::StyleSheet>::Style> {
         Some(cosmic::app::applet::style())
+    }
+
+    fn on_close_requested(&self, id: window::Id) -> Option<Message> {
+        Some(Message::CloseRequested(id))
     }
 }

@@ -127,6 +127,7 @@ impl CosmicBatteryApplet {
 #[derive(Debug, Clone)]
 enum Message {
     TogglePopup,
+    CloseRequested(window::Id),
     Update {
         on_battery: bool,
         percent: f64,
@@ -271,6 +272,11 @@ impl cosmic::Application for CosmicBatteryApplet {
             Message::SelectProfile(profile) => {
                 if let Some(tx) = self.power_profile_sender.as_ref() {
                     let _ = tx.send(PowerProfileRequest::Set(profile));
+                }
+            }
+            Message::CloseRequested(id) => {
+                if Some(id) == self.popup {
+                    self.popup = None;
                 }
             }
         }
@@ -465,6 +471,10 @@ impl cosmic::Application for CosmicBatteryApplet {
                 .as_subscription()
                 .map(|(_, now)| Message::Frame(now)),
         ])
+    }
+
+    fn on_close_requested(&self, id: window::Id) -> Option<Message> {
+        Some(Message::CloseRequested(id))
     }
 
     fn style(&self) -> Option<<Theme as application::StyleSheet>::Style> {

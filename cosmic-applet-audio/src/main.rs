@@ -124,6 +124,7 @@ enum Message {
     InputChanged(String),
     Pulse(pulse::Event),
     TogglePopup,
+    CloseRequested(window::Id),
     ToggleMediaControlsInTopPanel(chain::Toggler, bool),
     Frame(Instant),
 }
@@ -317,6 +318,11 @@ impl cosmic::Application for Audio {
                 self.timeline.set_chain(chain).start();
                 self.show_media_controls_in_top_panel = enabled;
             }
+            Message::CloseRequested(id) => {
+                if Some(id) == self.popup {
+                    self.popup = None;
+                }
+            }
         };
 
         Command::none()
@@ -461,6 +467,10 @@ impl cosmic::Application for Audio {
             .applet_helper
             .popup_container(container(content))
             .into()
+    }
+
+    fn on_close_requested(&self, id: window::Id) -> Option<Message> {
+        Some(Message::CloseRequested(id))
     }
 }
 

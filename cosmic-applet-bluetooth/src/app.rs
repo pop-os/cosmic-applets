@@ -56,6 +56,7 @@ impl CosmicBluetoothApplet {
 #[derive(Debug, Clone)]
 enum Message {
     TogglePopup,
+    CloseRequested(window::Id),
     ToggleVisibleDevices(bool),
     Ignore,
     BluetoothEvent(BluerEvent),
@@ -268,6 +269,11 @@ impl cosmic::Application for CosmicBluetoothApplet {
                         },
                         |_| cosmic::app::message::app(Message::Ignore),
                     );
+                }
+            }
+            Message::CloseRequested(id) => {
+                if Some(id) == self.popup {
+                    self.popup = None;
                 }
             }
         }
@@ -523,5 +529,9 @@ impl cosmic::Application for CosmicBluetoothApplet {
 
     fn style(&self) -> Option<<Theme as application::StyleSheet>::Style> {
         Some(cosmic::app::applet::style())
+    }
+
+    fn on_close_requested(&self, id: window::Id) -> Option<Message> {
+        Some(Message::CloseRequested(id))
     }
 }

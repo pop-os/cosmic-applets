@@ -40,6 +40,7 @@ enum Every {
 #[derive(Debug, Clone)]
 enum Message {
     TogglePopup,
+    CloseRequested(window::Id),
     Tick,
     Rectangle(RectangleUpdate<u32>),
 }
@@ -163,6 +164,12 @@ impl cosmic::Application for Time {
                 }
                 Command::none()
             }
+            Message::CloseRequested(id) => {
+                if Some(id) == self.popup {
+                    self.popup = None;
+                }
+                Command::none()
+            }
         }
     }
 
@@ -218,5 +225,9 @@ impl cosmic::Application for Time {
             .padding(8);
 
         self.core.applet_helper.popup_container(content).into()
+    }
+
+    fn on_close_requested(&self, id: window::Id) -> Option<Message> {
+        Some(Message::CloseRequested(id))
     }
 }
