@@ -45,6 +45,7 @@ _install_notifications: (_install 'com.system76.CosmicAppletNotifications' 'cosm
 _install_power: (_install 'com.system76.CosmicAppletPower' 'cosmic-applet-power')
 _install_workspace: (_install 'com.system76.CosmicAppletWorkspaces' 'cosmic-applet-workspaces')
 _install_time: (_install 'com.system76.CosmicAppletTime' 'cosmic-applet-time')
+_install_tiling: (_install 'com.system76.CosmicAppletTiling' 'cosmic-applet-tiling')
 _install_status_area: (_install 'com.system76.CosmicAppletStatusArea' 'cosmic-applet-status-area')
 
 # TODO: Turn this into one configurable applet?
@@ -54,7 +55,7 @@ _install_app_button: (_install_button 'com.system76.CosmicPanelAppButton' 'cosmi
 _install_workspaces_button: (_install_button 'com.system76.CosmicPanelWorkspacesButton' 'cosmic-panel-workspaces-button')
 
 # Installs files into the system
-install: _install_app_list _install_audio _install_battery _install_bluetooth _install_graphics _install_network _install_notifications _install_power _install_workspace _install_time _install_panel_button _install_app_button _install_workspaces_button _install_status_area
+install: _install_app_list _install_audio _install_battery _install_bluetooth _install_graphics _install_network _install_notifications _install_power _install_workspace _install_time _install_tiling _install_panel_button _install_app_button _install_workspaces_button _install_status_area
 
 # Extracts vendored dependencies if vendor=1
 _extract_vendor:

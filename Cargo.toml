@@ -10,18 +10,28 @@ members = [
     "cosmic-applet-notifications",
     "cosmic-applet-power",
     "cosmic-applet-status-area",
+    "cosmic-applet-tiling",
     "cosmic-applet-time",
     "cosmic-applet-workspaces",
     "cosmic-panel-button",
 ]
 
-resolver="2"
+resolver = "2"
 
 [workspace.dependencies]
 cctk = { git = "https://github.com/pop-os/cosmic-protocols", package = "cosmic-client-toolkit", rev = "e39748e" }
-cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols", default-features = false, features = ["client"], rev = "e39748e" }
-cosmic-time = { git = "https://github.com/pop-os/cosmic-time", default-features = false, features = ["libcosmic", "once_cell"] }
-libcosmic = { git = "https://github.com/pop-os/libcosmic", default-features = false, features = ["applet", "tokio", "wayland"] }
+cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols", default-features = false, features = [
+    "client",
+], rev = "e39748e" }
+cosmic-time = { git = "https://github.com/pop-os/cosmic-time", default-features = false, features = [
+    "libcosmic",
+    "once_cell",
+] }
+libcosmic = { git = "https://github.com/pop-os/libcosmic", default-features = false, features = [
+    "applet",
+    "tokio",
+    "wayland",
+] }
 
 [profile.release]
 lto = "thin"
