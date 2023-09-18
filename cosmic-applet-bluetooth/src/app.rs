@@ -1,6 +1,6 @@
 use crate::bluetooth::{BluerDeviceStatus, BluerRequest, BluerState};
-use cosmic::app::{applet::applet_button_theme, Command};
 use cosmic::widget::button::StyleSheet;
+use cosmic::{applet::button_theme, Command};
 use cosmic::{
     iced::{
         self,
@@ -26,7 +26,7 @@ use crate::bluetooth::{bluetooth_subscription, BluerDevice, BluerEvent};
 use crate::{config, fl};
 
 pub fn run() -> cosmic::iced::Result {
-    cosmic::app::applet::run::<CosmicBluetoothApplet>(false, ())
+    cosmic::applet::run::<CosmicBluetoothApplet>(false, ())
 }
 
 #[derive(Default)]
@@ -71,7 +71,10 @@ impl cosmic::Application for CosmicBluetoothApplet {
     type Flags = ();
     const APP_ID: &'static str = config::APP_ID;
 
-    fn init(core: cosmic::app::Core, _flags: ()) -> (Self, Command<Message>) {
+    fn init(
+        core: cosmic::app::Core,
+        _flags: Self::Flags,
+    ) -> (Self, iced::Command<cosmic::app::Message<Self::Message>>) {
         (
             CosmicBluetoothApplet {
                 core,
@@ -90,7 +93,10 @@ impl cosmic::Application for CosmicBluetoothApplet {
         &mut self.core
     }
 
-    fn update(&mut self, message: Message) -> Command<Message> {
+    fn update(
+        &mut self,
+        message: Self::Message,
+    ) -> iced::Command<cosmic::app::Message<Self::Message>> {
         match message {
             Message::TogglePopup => {
                 if let Some(p) = self.popup.take() {
@@ -101,7 +107,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
                     let new_id = window::Id(self.id_ctr);
                     self.popup.replace(new_id);
 
-                    let mut popup_settings = self.core.applet_helper.get_popup_settings(
+                    let mut popup_settings = self.core.applet.get_popup_settings(
                         window::Id(0),
                         new_id,
                         None,
@@ -283,7 +289,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
 
     fn view(&self) -> Element<Message> {
         self.core
-            .applet_helper
+            .applet
             .icon_button(&self.icon_name)
             .on_press(Message::TogglePopup)
             .into()
@@ -348,7 +354,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
 
             known_bluetooth = known_bluetooth.push(
                 button(row)
-                    .style(applet_button_theme())
+                    .style(button_theme())
                     .on_press(match dev.status {
                         BluerDeviceStatus::Connected => {
                             Message::Request(BluerRequest::DisconnectDevice(dev.address))
@@ -496,7 +502,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
                 .spacing(12);
                 visible_devices = visible_devices.push(
                     button(row.width(Length::Fill))
-                        .style(applet_button_theme())
+                        .style(button_theme())
                         .on_press(Message::Request(BluerRequest::PairDevice(
                             dev.address.clone(),
                         )))
@@ -520,7 +526,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
         } else {
             content = content.push(Column::with_children(list_column));
         }
-        self.core.applet_helper.popup_container(content).into()
+        self.core.applet.popup_container(content).into()
     }
 
     fn subscription(&self) -> Subscription<Message> {
@@ -528,7 +534,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
     }
 
     fn style(&self) -> Option<<Theme as application::StyleSheet>::Style> {
-        Some(cosmic::app::applet::style())
+        Some(cosmic::applet::style())
     }
 
     fn on_close_requested(&self, id: window::Id) -> Option<Message> {

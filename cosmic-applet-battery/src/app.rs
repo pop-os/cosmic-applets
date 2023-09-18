@@ -10,7 +10,6 @@ use crate::upower_device::{device_subscription, DeviceDbusEvent};
 use crate::upower_kbdbacklight::{
     kbd_backlight_subscription, KeyboardBacklightRequest, KeyboardBacklightUpdate,
 };
-use cosmic::app::{applet::applet_button_theme, Command};
 use cosmic::iced::alignment::Horizontal;
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced::{
@@ -20,6 +19,7 @@ use cosmic::iced::{
 use cosmic::iced_runtime::core::layout::Limits;
 use cosmic::iced_style::application;
 use cosmic::widget::{button, divider, icon};
+use cosmic::{applet::button_theme, Command};
 use cosmic::{Element, Theme};
 use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
 
@@ -44,7 +44,7 @@ fn format_duration(duration: Duration) -> String {
 }
 
 pub fn run() -> cosmic::iced::Result {
-    cosmic::app::applet::run::<CosmicBatteryApplet>(false, ())
+    cosmic::applet::run::<CosmicBatteryApplet>(false, ())
 }
 
 static MAX_CHARGE: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
@@ -153,7 +153,13 @@ impl cosmic::Application for CosmicBatteryApplet {
     type Flags = ();
     const APP_ID: &'static str = config::APP_ID;
 
-    fn init(core: cosmic::app::Core, _flags: ()) -> (Self, Command<Message>) {
+    fn init(
+        core: cosmic::app::Core,
+        _flags: Self::Flags,
+    ) -> (
+        Self,
+        cosmic::iced::Command<cosmic::app::Message<Self::Message>>,
+    ) {
         (
             CosmicBatteryApplet {
                 core,
@@ -173,7 +179,10 @@ impl cosmic::Application for CosmicBatteryApplet {
         &mut self.core
     }
 
-    fn update(&mut self, message: Message) -> Command<Message> {
+    fn update(
+        &mut self,
+        message: Self::Message,
+    ) -> cosmic::iced::Command<cosmic::app::Message<Self::Message>> {
         match message {
             Message::Frame(now) => self.timeline.now(now),
             Message::SetKbdBrightness(brightness) => {
@@ -213,7 +222,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                     let new_id = window::Id(self.id_ctr);
                     self.popup.replace(new_id);
 
-                    let mut popup_settings = self.core.applet_helper.get_popup_settings(
+                    let mut popup_settings = self.core.applet.get_popup_settings(
                         window::Id(0),
                         new_id,
                         None,
@@ -284,7 +293,7 @@ impl cosmic::Application for CosmicBatteryApplet {
 
     fn view(&self) -> Element<Message> {
         self.core
-            .applet_helper
+            .applet
             .icon_button(&self.icon_name)
             .on_press(Message::TogglePopup)
             .into()
@@ -304,7 +313,7 @@ impl cosmic::Application for CosmicBatteryApplet {
         })
         .size(10);
         self.core
-            .applet_helper
+            .applet
             .popup_container(
                 column![
                     row![
@@ -330,7 +339,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                         ]
                         .align_items(Alignment::Center)
                     )
-                    .style(applet_button_theme())
+                    .style(button_theme())
                     .padding([8, 24])
                     .on_press(Message::SelectProfile(Power::Battery))
                     .width(Length::Fill),
@@ -347,7 +356,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                         ]
                         .align_items(Alignment::Center)
                     )
-                    .style(applet_button_theme())
+                    .style(button_theme())
                     .padding([8, 24])
                     .on_press(Message::SelectProfile(Power::Balanced))
                     .width(Length::Fill),
@@ -364,7 +373,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                         ]
                         .align_items(Alignment::Center)
                     )
-                    .style(applet_button_theme())
+                    .style(button_theme())
                     .padding([8, 24])
                     .on_press(Message::SelectProfile(Power::Performance))
                     .width(Length::Fill),
@@ -424,7 +433,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                         .width(Length::Fill)
                         .padding([0, 12]),
                     button(text(fl!("power-settings")).size(14).width(Length::Fill))
-                        .style(applet_button_theme())
+                        .style(button_theme())
                         .on_press(Message::OpenBatterySettings)
                         .width(Length::Fill)
                         .padding([8, 24])
@@ -472,6 +481,6 @@ impl cosmic::Application for CosmicBatteryApplet {
     }
 
     fn style(&self) -> Option<<Theme as application::StyleSheet>::Style> {
-        Some(cosmic::app::applet::style())
+        Some(cosmic::applet::style())
     }
 }

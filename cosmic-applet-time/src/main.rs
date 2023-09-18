@@ -1,12 +1,11 @@
-use cosmic::app::{self, applet::cosmic_panel_config::PanelAnchor, Command};
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced::{
     time,
-    widget::{button, column, text, vertical_space},
+    widget::{column, text, vertical_space},
     window, Alignment, Length, Rectangle, Subscription,
 };
 use cosmic::iced_style::application;
-use cosmic::theme;
+use cosmic::{app, applet::cosmic_panel_config::PanelAnchor, Command};
 use cosmic::{
     widget::{icon, rectangle_tracker::*},
     Element, Theme,
@@ -16,7 +15,7 @@ use chrono::{DateTime, Local, Timelike};
 use std::time::Duration;
 
 pub fn main() -> cosmic::iced::Result {
-    cosmic::app::applet::run::<Time>(true, ())
+    cosmic::applet::run::<Time>(true, ())
 }
 
 struct Time {
@@ -51,7 +50,10 @@ impl cosmic::Application for Time {
     type Flags = ();
     const APP_ID: &'static str = "com.system76.CosmicAppletTime";
 
-    fn init(core: cosmic::app::Core, _flags: ()) -> (Self, app::Command<Message>) {
+    fn init(
+        core: app::Core,
+        _flags: Self::Flags,
+    ) -> (Self, cosmic::iced::Command<app::Message<Self::Message>>) {
         (
             Time {
                 core,
@@ -76,7 +78,7 @@ impl cosmic::Application for Time {
     }
 
     fn style(&self) -> Option<<Theme as application::StyleSheet>::Style> {
-        Some(cosmic::app::applet::style())
+        Some(cosmic::applet::style())
     }
 
     fn subscription(&self) -> Subscription<Message> {
@@ -103,7 +105,10 @@ impl cosmic::Application for Time {
         ])
     }
 
-    fn update(&mut self, message: Message) -> Command<Message> {
+    fn update(
+        &mut self,
+        message: Self::Message,
+    ) -> cosmic::iced::Command<app::Message<Self::Message>> {
         match message {
             Message::TogglePopup => {
                 if let Some(p) = self.popup.take() {
@@ -127,7 +132,7 @@ impl cosmic::Application for Time {
                     let new_id = window::Id(self.id_ctr);
                     self.popup.replace(new_id);
 
-                    let mut popup_settings = self.core.applet_helper.get_popup_settings(
+                    let mut popup_settings = self.core.applet.get_popup_settings(
                         window::Id(0),
                         new_id,
                         None,
@@ -174,16 +179,18 @@ impl cosmic::Application for Time {
     }
 
     fn view(&self) -> Element<Message> {
-        let button = button(
+        let button = cosmic::widget::button(
             if matches!(
-                self.core.applet_helper.anchor,
+                self.core.applet.anchor,
                 PanelAnchor::Top | PanelAnchor::Bottom
             ) {
-                column![cosmic::widget::text(self.now.format("%b %-d %-I:%M %p").to_string()).size(14)]
+                column![
+                    cosmic::widget::text(self.now.format("%b %-d %-I:%M %p").to_string()).size(14)
+                ]
             } else {
                 let mut date_time_col = column![
                     icon::from_name("emoji-recent-symbolic")
-                        .size(self.core.applet_helper.suggested_size().0)
+                        .size(self.core.applet.suggested_size().0)
                         .symbolic(true),
                     text(self.now.format("%I").to_string()).size(14),
                     text(self.now.format("%M").to_string()).size(14),
@@ -191,7 +198,7 @@ impl cosmic::Application for Time {
                     vertical_space(Length::Fixed(4.0)),
                     // TODO better calendar icon?
                     icon::from_name("calendar-go-today-symbolic")
-                        .size(self.core.applet_helper.suggested_size().0)
+                        .size(self.core.applet.suggested_size().0)
                         .symbolic(true),
                 ]
                 .align_items(Alignment::Center)
@@ -203,7 +210,7 @@ impl cosmic::Application for Time {
             },
         )
         .on_press(Message::TogglePopup)
-        .style(theme::iced::Button::Text);
+        .style(cosmic::theme::Button::Standard);
 
         if let Some(tracker) = self.rectangle_tracker.as_ref() {
             tracker.container(0, button).into()
@@ -220,7 +227,7 @@ impl cosmic::Application for Time {
             .push(text(&self.msg).size(14))
             .padding(8);
 
-        self.core.applet_helper.popup_container(content).into()
+        self.core.applet.popup_container(content).into()
     }
 
     fn on_close_requested(&self, id: window::Id) -> Option<Message> {

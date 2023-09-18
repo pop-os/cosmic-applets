@@ -1,16 +1,16 @@
 use crate::dbus::{self, PowerDaemonProxy};
 use crate::fl;
 use crate::graphics::{get_current_graphics, set_graphics, Graphics};
-use cosmic::app::{
-    applet::{applet_button_theme, cosmic_panel_config::PanelAnchor},
-    Command,
-};
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced_runtime::core::alignment::Horizontal;
 use cosmic::iced_runtime::core::Alignment;
 use cosmic::iced_style::application;
 use cosmic::theme::Button;
 use cosmic::widget::icon;
+use cosmic::{
+    applet::{button_theme, cosmic_panel_config::PanelAnchor},
+    Command,
+};
 use cosmic::{
     iced::widget::{column, container, row, text},
     iced::{self, Length},
@@ -66,7 +66,10 @@ impl cosmic::Application for Window {
     type Message = Message;
     const APP_ID: &'static str = ID;
 
-    fn init(core: cosmic::app::Core, _flags: ()) -> (Self, Command<Message>) {
+    fn init(
+        core: cosmic::app::Core,
+        _flags: Self::Flags,
+    ) -> (Self, iced::Command<cosmic::app::Message<Self::Message>>) {
         let window = Window {
             core,
             ..Default::default()
@@ -87,7 +90,10 @@ impl cosmic::Application for Window {
         &mut self.core
     }
 
-    fn update(&mut self, message: Message) -> Command<Self::Message> {
+    fn update(
+        &mut self,
+        message: Self::Message,
+    ) -> iced::Command<cosmic::app::Message<Self::Message>> {
         match message {
             Message::SelectGraphicsMode(new) => {
                 if let Some((_, proxy)) = self.dbus.as_ref() {
@@ -120,7 +126,7 @@ impl cosmic::Application for Window {
                             |cur_graphics| Message::CurrentGraphics(cur_graphics.ok()),
                         ));
                     }
-                    let popup_settings = self.core.applet_helper.get_popup_settings(
+                    let popup_settings = self.core.applet.get_popup_settings(
                         window::Id(0),
                         new_id,
                         None,
@@ -210,10 +216,10 @@ impl cosmic::Application for Window {
     }
 
     fn view(&self) -> Element<Message> {
-        match self.core.applet_helper.anchor {
+        match self.core.applet.anchor {
             PanelAnchor::Left | PanelAnchor::Right => self
                 .core
-                .applet_helper
+                .applet
                 .icon_button(ID)
                 .on_press(Message::TogglePopup)
                 .style(Button::Text)
@@ -221,7 +227,7 @@ impl cosmic::Application for Window {
             PanelAnchor::Top | PanelAnchor::Bottom => button(
                 row![
                     icon::from_name(ID)
-                        .size(self.core.applet_helper.suggested_size().0)
+                        .size(self.core.applet.suggested_size().0)
                         .symbolic(true),
                     text(match self.graphics_mode.map(|g| g.inner()) {
                         Some(Graphics::Integrated) => fl!("integrated"),
@@ -233,7 +239,7 @@ impl cosmic::Application for Window {
                     .size(14)
                 ]
                 .spacing(8)
-                .padding([0, self.core.applet_helper.suggested_size().0 / 2])
+                .padding([0, self.core.applet.suggested_size().0 / 2])
                 .align_items(Alignment::Center),
             )
             .style(Button::Standard)
@@ -276,7 +282,7 @@ impl cosmic::Application for Window {
                 ]
                 .align_items(Alignment::Center),
             )
-            .style(applet_button_theme())
+            .style(button_theme())
             .padding([8, 24])
             .on_press(Message::SelectGraphicsMode(Graphics::Integrated))
             .width(Length::Fill)
@@ -298,7 +304,7 @@ impl cosmic::Application for Window {
                 ]
                 .align_items(Alignment::Center),
             )
-            .style(applet_button_theme())
+            .style(button_theme())
             .padding([8, 24])
             .on_press(Message::SelectGraphicsMode(Graphics::Nvidia))
             .width(Length::Fill)
@@ -323,7 +329,7 @@ impl cosmic::Application for Window {
                 ]
                 .align_items(Alignment::Center),
             )
-            .style(applet_button_theme())
+            .style(button_theme())
             .padding([8, 24])
             .on_press(Message::SelectGraphicsMode(Graphics::Hybrid))
             .width(Length::Fill)
@@ -348,7 +354,7 @@ impl cosmic::Application for Window {
                 ]
                 .align_items(Alignment::Center),
             )
-            .style(applet_button_theme())
+            .style(button_theme())
             .padding([8, 24])
             .on_press(Message::SelectGraphicsMode(Graphics::Compute))
             .width(Length::Fill)
@@ -356,7 +362,7 @@ impl cosmic::Application for Window {
         ];
 
         self.core
-            .applet_helper
+            .applet
             .popup_container(
                 column(vec![
                     text(fl!("graphics-mode"))
@@ -377,7 +383,7 @@ impl cosmic::Application for Window {
     }
 
     fn style(&self) -> Option<<Theme as application::StyleSheet>::Style> {
-        Some(cosmic::app::applet::style())
+        Some(cosmic::applet::style())
     }
 
     fn on_close_requested(&self, id: window::Id) -> Option<Message> {

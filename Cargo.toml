@@ -23,11 +23,11 @@ cctk = { git = "https://github.com/pop-os/cosmic-protocols", package = "cosmic-c
 cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols", default-features = false, features = [
     "client",
 ], rev = "e39748e" }
-cosmic-time = { git = "https://github.com/edfloreshz/cosmic-time", default-features = false, features = [
+cosmic-time = { git = "https://github.com/pop-os/cosmic-time", default-features = false, features = [
     "libcosmic",
     "once_cell",
 ] }
-libcosmic = { git = "https://github.com/edfloreshz/libcosmic", default-features = false, features = [
+libcosmic = { git = "https://github.com/pop-os/libcosmic", default-features = false, features = [
     "applet",
     "tokio",
     "wayland",

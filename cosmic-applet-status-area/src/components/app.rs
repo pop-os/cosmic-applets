@@ -50,7 +50,7 @@ impl App {
     }
 
     fn resize_window(&self) -> Command<Msg> {
-        let icon_size = self.core.applet_helper.suggested_size().0 as u32 + APPLET_PADDING * 2;
+        let icon_size = self.core.applet.suggested_size().0 as u32 + APPLET_PADDING * 2;
         let n = self.menus.len() as u32;
         resize_window(window::Id(0), 1.max(icon_size * n), icon_size)
     }
@@ -81,7 +81,7 @@ impl cosmic::Application for App {
     }
 
     fn style(&self) -> Option<<Theme as application::StyleSheet>::Style> {
-        Some(app::applet::style())
+        Some(cosmic::applet::style())
     }
 
     fn update(&mut self, message: Msg) -> Command<Msg> {
@@ -144,7 +144,7 @@ impl cosmic::Application for App {
                 if self.open_menu.is_some() {
                     if self.popup.is_none() {
                         let id = self.next_popup_id();
-                        let popup_settings = self.core.applet_helper.get_popup_settings(
+                        let popup_settings = self.core.applet.get_popup_settings(
                             window::Id(0),
                             id,
                             None,
@@ -181,7 +181,7 @@ impl cosmic::Application for App {
                 .iter()
                 .map(|(id, menu)| {
                     self.core
-                        .applet_helper
+                        .applet
                         .icon_button(menu.icon_name())
                         .on_press(Msg::TogglePopup(*id))
                         .into()
@@ -196,7 +196,7 @@ impl cosmic::Application for App {
             Some(id) => match self.menus.get(&id) {
                 Some(menu) => self
                     .core
-                    .applet_helper
+                    .applet
                     .popup_container(menu.popup_view().map(move |msg| Msg::StatusMenu((id, msg))))
                     .into(),
                 None => unreachable!(),
@@ -211,5 +211,5 @@ impl cosmic::Application for App {
 }
 
 pub fn main() -> iced::Result {
-    app::applet::run::<App>(true, ())
+    cosmic::applet::run::<App>(true, ())
 }
