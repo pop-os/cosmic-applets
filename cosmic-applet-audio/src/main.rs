@@ -5,7 +5,7 @@ use cosmic::iced::widget;
 use cosmic::iced::Limits;
 use cosmic::iced_runtime::core::alignment::Horizontal;
 
-use cosmic::app::applet::applet_button_theme;
+use cosmic::applet::button_theme;
 use cosmic::widget::{button, divider, icon};
 use cosmic::Renderer;
 
@@ -32,7 +32,7 @@ pub fn main() -> cosmic::iced::Result {
     // Prepare i18n
     localize();
 
-    cosmic::app::applet::run::<Audio>(false, ())
+    cosmic::applet::run::<Audio>(false, ())
 }
 
 static SHOW_MEDIA_CONTROLS: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
@@ -160,7 +160,7 @@ impl cosmic::Application for Audio {
     }
 
     fn style(&self) -> Option<<Theme as application::StyleSheet>::Style> {
-        Some(cosmic::app::applet::style())
+        Some(cosmic::applet::style())
     }
 
     fn update(&mut self, message: Message) -> Command<Message> {
@@ -177,7 +177,7 @@ impl cosmic::Application for Audio {
                     let new_id = window::Id(self.id_ctr);
                     self.popup.replace(new_id);
 
-                    let mut popup_settings = self.core.applet_helper.get_popup_settings(
+                    let mut popup_settings = self.core.applet.get_popup_settings(
                         window::Id(0),
                         new_id,
                         None,
@@ -338,7 +338,7 @@ impl cosmic::Application for Audio {
 
     fn view(&self) -> Element<Message> {
         self.core
-            .applet_helper
+            .applet
             .icon_button(&self.icon_name)
             .on_press(Message::TogglePopup)
             .into()
@@ -459,17 +459,14 @@ impl cosmic::Application for Audio {
                 .padding([12, 24])
                 .width(Length::Fill),
             button(text(fl!("sound-settings")).size(14))
-                .style(applet_button_theme())
+                .style(button_theme())
                 .padding([8, 24])
                 .width(Length::Fill)
         ]
         .align_items(Alignment::Start)
         .padding([8, 0]);
 
-        self.core
-            .applet_helper
-            .popup_container(container(content))
-            .into()
+        self.core.applet.popup_container(container(content)).into()
     }
 
     fn on_close_requested(&self, id: window::Id) -> Option<Message> {
@@ -491,7 +488,7 @@ fn revealer(
             |col, (id, name)| {
                 col.push(
                     button(text(name).size(14))
-                        .style(applet_button_theme())
+                        .style(button_theme())
                         .on_press(change(id.clone()))
                         .width(Length::Fill)
                         .padding([8, 48]),
@@ -513,7 +510,7 @@ fn revealer_head(
         text(title).width(Length::Fill).size(14),
         text(selected).size(10),
     ])
-    .style(applet_button_theme())
+    .style(button_theme())
     .padding([8, 24])
     .width(Length::Fill)
     .on_press(toggle)

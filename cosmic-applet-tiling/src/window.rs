@@ -3,14 +3,13 @@ use cosmic::app::Core;
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced::window::Id;
 use cosmic::iced::{Command, Length, Limits, Subscription};
-use cosmic::iced_runtime::core::window;
 use cosmic::iced_style::application;
+use cosmic::iced_widget::row;
 use cosmic::widget::{column, container, divider, spin_button, text};
 use cosmic::{Element, Theme};
 use cosmic_time::{anim, chain, id, Timeline};
 use once_cell::sync::Lazy;
 use std::time::Instant;
-use cosmic::iced_widget::row;
 
 const ID: &str = "com.system76.CosmicAppletTiling";
 const ON: &str = "com.system76.CosmicAppletTiling.On";
@@ -89,7 +88,7 @@ impl cosmic::Application for Window {
                     self.popup.replace(new_id);
                     let mut popup_settings =
                         self.core
-                            .applet_helper
+                            .applet
                             .get_popup_settings(Id(0), new_id, None, None, None);
                     popup_settings.positioner.size_limits = Limits::NONE
                         .max_width(372.0)
@@ -127,7 +126,7 @@ impl cosmic::Application for Window {
 
     fn view(&self) -> Element<Self::Message> {
         self.core
-            .applet_helper
+            .applet
             .icon_button(OFF)
             .on_press(Message::TogglePopup)
             .into()
@@ -184,15 +183,18 @@ impl cosmic::Application for Window {
                 )
                 .padding([0, 12]),
             )
-            .push(row!(
-                text(fl!("gaps")).size(14).width(Length::Fill),
-                spin_button(self.gaps.value.to_string(), Message::HandleGaps),
-            ).padding([0, 10, 0, 10]));
+            .push(
+                row!(
+                    text(fl!("gaps")).size(14).width(Length::Fill),
+                    spin_button(self.gaps.value.to_string(), Message::HandleGaps),
+                )
+                .padding([0, 10, 0, 10]),
+            );
 
-        self.core.applet_helper.popup_container(content_list).into()
+        self.core.applet.popup_container(content_list).into()
     }
 
     fn style(&self) -> Option<<Theme as application::StyleSheet>::Style> {
-        Some(cosmic::app::applet::style())
+        Some(cosmic::applet::style())
     }
 }

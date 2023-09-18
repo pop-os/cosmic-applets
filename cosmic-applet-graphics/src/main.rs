@@ -8,5 +8,5 @@ use window::*;
 pub fn main() -> cosmic::iced::Result {
     localize::localize();
 
-    cosmic::app::applet::run::<Window>(true, ())
+    cosmic::applet::run::<Window>(true, ())
 }

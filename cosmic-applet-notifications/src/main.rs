@@ -1,7 +1,6 @@
 mod localize;
 mod subscriptions;
 
-use cosmic::app::{applet::applet_button_theme, Command};
 use cosmic::cosmic_config::{config_subscription, Config, CosmicConfigEntry};
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced::Limits;
@@ -10,6 +9,7 @@ use cosmic::iced::{
     window, Alignment, Length, Subscription,
 };
 use cosmic::iced_core::alignment::Horizontal;
+use cosmic::{applet::button_theme, Command};
 
 use cosmic::iced_style::application;
 
@@ -35,7 +35,7 @@ pub async fn main() -> cosmic::iced::Result {
 
     info!("Notifications applet");
 
-    cosmic::app::applet::run::<Notifications>(false, ())
+    cosmic::applet::run::<Notifications>(false, ())
 }
 
 static DO_NOT_DISTURB: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
@@ -99,7 +99,13 @@ impl cosmic::Application for Notifications {
     type Flags = ();
     const APP_ID: &'static str = "com.system76.CosmicAppletNotifications";
 
-    fn init(core: cosmic::app::Core, _flags: ()) -> (Self, Command<Message>) {
+    fn init(
+        core: cosmic::app::Core,
+        _flags: Self::Flags,
+    ) -> (
+        Self,
+        cosmic::iced::Command<cosmic::app::Message<Self::Message>>,
+    ) {
         let helper = Config::new(
             cosmic_notifications_config::ID,
             NotificationsConfig::version(),
@@ -136,7 +142,7 @@ impl cosmic::Application for Notifications {
     }
 
     fn style(&self) -> Option<<Theme as application::StyleSheet>::Style> {
-        Some(cosmic::app::applet::style())
+        Some(cosmic::applet::style())
     }
 
     fn subscription(&self) -> Subscription<Message> {
@@ -163,7 +169,10 @@ impl cosmic::Application for Notifications {
         ])
     }
 
-    fn update(&mut self, message: Message) -> Command<Message> {
+    fn update(
+        &mut self,
+        message: Self::Message,
+    ) -> cosmic::iced::Command<cosmic::app::Message<Self::Message>> {
         match message {
             Message::Frame(now) => {
                 self.timeline.now(now);
@@ -176,7 +185,7 @@ impl cosmic::Application for Notifications {
                     let new_id = window::Id(self.id_ctr);
                     self.popup.replace(new_id);
 
-                    let mut popup_settings = self.core.applet_helper.get_popup_settings(
+                    let mut popup_settings = self.core.applet.get_popup_settings(
                         window::Id(0),
                         new_id,
                         None,
@@ -306,7 +315,7 @@ impl cosmic::Application for Notifications {
 
     fn view(&self) -> Element<Message> {
         self.core
-            .applet_helper
+            .applet
             .icon_button(&self.icon_name)
             .on_press(Message::TogglePopup)
             .into()
@@ -488,7 +497,7 @@ impl cosmic::Application for Notifications {
             .spacing(12)
             .padding([16, 0]);
 
-        self.core.applet_helper.popup_container(content).into()
+        self.core.applet.popup_container(content).into()
     }
 
     fn on_close_requested(&self, id: window::Id) -> Option<Message> {
@@ -506,7 +515,7 @@ fn row_button(content: Vec<Element<Message>>) -> cosmic::widget::Button<Message,
     .width(Length::Fill)
     .height(Length::Fixed(36.0))
     .padding([0, 24])
-    .style(applet_button_theme())
+    .style(button_theme())
 }
 
 fn text_icon(name: &str, size: u16) -> cosmic::widget::Icon {
