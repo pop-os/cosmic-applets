@@ -24,7 +24,7 @@ use cosmic::iced::{
     window, Alignment, Length, Subscription,
 };
 use cosmic::iced_style::application;
-use cosmic::theme::{self, Svg};
+use cosmic::theme;
 use cosmic::{app::Command, Element, Theme};
 
 use logind_zbus::manager::ManagerProxy;
@@ -42,6 +42,8 @@ use crate::cosmic_session::CosmicSessionProxy;
 use crate::session_manager::SessionManagerProxy;
 
 pub fn main() -> cosmic::iced::Result {
+    localize::localize();
+
     cosmic::app::applet::run::<Power>(false, ())
 }
 
@@ -76,10 +78,18 @@ enum Message {
 }
 
 impl cosmic::Application for Power {
-    type Message = Message;
     type Executor = cosmic::SingleThreadExecutor;
     type Flags = ();
+    type Message = Message;
     const APP_ID: &'static str = "com.system76.CosmicAppletPower";
+
+    fn core(&self) -> &cosmic::app::Core {
+        &self.core
+    }
+
+    fn core_mut(&mut self) -> &mut cosmic::app::Core {
+        &mut self.core
+    }
 
     fn init(core: cosmic::app::Core, _flags: ()) -> (Power, Command<Message>) {
         (
@@ -92,16 +102,8 @@ impl cosmic::Application for Power {
         )
     }
 
-    fn core(&self) -> &cosmic::app::Core {
-        &self.core
-    }
-
-    fn core_mut(&mut self) -> &mut cosmic::app::Core {
-        &mut self.core
-    }
-
-    fn style(&self) -> Option<<Theme as application::StyleSheet>::Style> {
-        Some(cosmic::app::applet::style())
+    fn on_close_requested(&self, id: window::Id) -> Option<Message> {
+        Some(Message::Closed(id))
     }
 
     fn subscription(&self) -> Subscription<Message> {
@@ -294,11 +296,13 @@ impl cosmic::Application for Power {
                 ))
                 .size(16),
                 row![
-                    button(theme::Button::Primary)
-                        .custom(vec![text(fl!("confirm")).size(14).into()])
+                    button(text(fl!("confirm")).size(14))
+                        .padding(2)
+                        .style(theme::Button::Suggested)
                         .on_press(Message::Confirm),
-                    button(theme::Button::Primary)
-                        .custom(vec![text(fl!("cancel")).size(14).into()])
+                    button(text(fl!("cancel")).size(14))
+                        .padding(2)
+                        .style(theme::Button::Standard)
                         .on_press(Message::Cancel),
                 ]
                 .spacing(24)
@@ -310,7 +314,8 @@ impl cosmic::Application for Power {
                 container(
                     container(content)
                         .style(cosmic::theme::Container::custom(|theme| {
-                            cosmic::iced_style::container::Appearance {
+                            container::Appearance {
+                                icon_color: Some(theme.cosmic().background.on.into()),
                                 text_color: Some(theme.cosmic().background.on.into()),
                                 background: Some(
                                     Color::from(theme.cosmic().background.base).into(),
@@ -338,36 +343,37 @@ impl cosmic::Application for Power {
         }
     }
 
-    fn on_close_requested(&self, id: window::Id) -> Option<Message> {
-        Some(Message::Closed(id))
+    fn style(&self) -> Option<<Theme as application::StyleSheet>::Style> {
+        Some(cosmic::app::applet::style())
     }
 }
 
 // ### UI Helplers
 
-fn row_button(content: Vec<Element<Message>>) -> widget::Button<Message, Renderer> {
-    button(applet_button_theme())
-        .custom(vec![Row::with_children(content)
+fn row_button(content: Vec<Element<Message>>) -> cosmic::widget::Button<Message, Renderer> {
+    button(
+        Row::with_children(content)
             .spacing(4)
-            .align_items(Alignment::Center)
-            .into()])
-        .width(Length::Fill)
-        .padding([8, 24])
+            .align_items(Alignment::Center),
+    )
+    .style(applet_button_theme())
+    .width(Length::Fill)
+    .padding([8, 24])
 }
 
-fn power_buttons<'a>(name: &'a str, msg: String) -> widget::Button<'a, Message, Renderer> {
-    widget::button(
+fn power_buttons(name: &str, msg: String) -> cosmic::widget::Button<Message, Renderer> {
+    cosmic::widget::button(
         column![text_icon(name, 40), text(msg).size(14)]
             .spacing(4)
             .align_items(Alignment::Center),
     )
     .width(Length::Fill)
     .height(Length::Fixed(76.0))
-    .style(theme::Button::Text)
+    .style(theme::Button::Standard)
 }
 
 fn text_icon(name: &str, size: u16) -> cosmic::widget::Icon {
-    icon(name, size).style(Svg::Symbolic)
+    icon::from_name(name).size(size).symbolic(true).icon()
 }
 
 // ### System helpers

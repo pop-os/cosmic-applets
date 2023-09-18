@@ -5,7 +5,6 @@ use cosmic::iced::mouse::{self, ScrollDelta};
 use cosmic::iced::widget::{column, container, row, text};
 use cosmic::iced::{subscription, widget::button, Event::Mouse, Length, Subscription};
 use cosmic::iced_style::application;
-use cosmic::theme::Button;
 use cosmic::{Element, Theme};
 
 use cosmic_protocols::workspace::v1::client::zcosmic_workspace_handle_v1;
@@ -135,9 +134,13 @@ impl cosmic::Application for IcedWorkspacesApplet {
                 .padding(0);
                 Some(
                     btn.style(match w.1 {
-                        Some(zcosmic_workspace_handle_v1::State::Active) => Button::Primary,
-                        Some(zcosmic_workspace_handle_v1::State::Urgent) => Button::Destructive,
-                        None => Button::Secondary,
+                        Some(zcosmic_workspace_handle_v1::State::Active) => {
+                            cosmic::theme::iced::Button::Primary
+                        }
+                        Some(zcosmic_workspace_handle_v1::State::Urgent) => {
+                            cosmic::theme::iced::Button::Destructive
+                        }
+                        None => cosmic::theme::iced::Button::Secondary,
                         _ => return None,
                     })
                     .into(),

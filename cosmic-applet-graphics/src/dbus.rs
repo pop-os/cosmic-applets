@@ -89,7 +89,10 @@ pub async fn init() -> Option<(Connection, PowerDaemonProxy<'static>)> {
         _ => return None,
     };
 
-    if matches!(proxy.introspect().await, Err(zbus::fdo::Error::ServiceUnknown(_))) {
+    if matches!(
+        proxy.introspect().await,
+        Err(zbus::fdo::Error::ServiceUnknown(_))
+    ) {
         return None;
     }
 

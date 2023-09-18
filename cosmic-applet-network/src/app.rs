@@ -1,6 +1,6 @@
 use cosmic::app::Command;
-use cosmic::iced_style;
 use cosmic::iced_widget::Row;
+use cosmic::widget::button::StyleSheet;
 use cosmic::{
     iced::{
         wayland::popup::{destroy_popup, get_popup},
@@ -12,8 +12,8 @@ use cosmic::{
         layout::Limits,
         window,
     },
-    iced_style::{application, button::StyleSheet},
-    theme::{Button, Svg},
+    iced_style::application,
+    theme::Button,
     widget::{button, divider, icon},
     Element, Theme,
 };
@@ -406,13 +406,21 @@ impl cosmic::Application for CosmicNetworkApplet {
 
     fn view_window(&self, _id: window::Id) -> Element<Message> {
         let button_style = || Button::Custom {
-            active: Box::new(|t| iced_style::button::Appearance {
+            active: Box::new(|active, t| button::Appearance {
                 border_radius: 0.0.into(),
-                ..t.active(&Button::Text)
+                ..t.active(active, &Button::Standard)
             }),
-            hover: Box::new(|t| iced_style::button::Appearance {
+            disabled: Box::new(|t| button::Appearance {
                 border_radius: 0.0.into(),
-                ..t.hovered(&Button::Text)
+                ..t.disabled(&Button::Text)
+            }),
+            hovered: Box::new(|hovered, t| button::Appearance {
+                border_radius: 0.0.into(),
+                ..t.hovered(hovered, &Button::Text)
+            }),
+            pressed: Box::new(|pressed, t| button::Appearance {
+                border_radius: 0.0.into(),
+                ..t.pressed(pressed, &Button::Text)
             }),
         };
         let mut vpn_ethernet_col = column![];
@@ -473,7 +481,10 @@ impl cosmic::Application for CosmicNetworkApplet {
                         );
                     }
                     let mut btn_content = vec![
-                        icon(wifi_icon(*strength), 24).style(Svg::Symbolic).into(),
+                        icon::from_name(wifi_icon(*strength))
+                            .size(24)
+                            .symbolic(true)
+                            .into(),
                         column![text(name).size(14), Column::with_children(ipv4)]
                             .width(Length::Fill)
                             .into(),
@@ -481,8 +492,9 @@ impl cosmic::Application for CosmicNetworkApplet {
                     match state {
                         ActiveConnectionState::Activating | ActiveConnectionState::Deactivating => {
                             btn_content.push(
-                                icon("process-working-symbolic", 24)
-                                    .style(Svg::Symbolic)
+                                icon::from_name("process-working-symbolic")
+                                    .size(24)
+                                    .symbolic(true)
                                     .into(),
                             );
                         }
@@ -496,14 +508,15 @@ impl cosmic::Application for CosmicNetworkApplet {
                         _ => {}
                     };
                     known_wifi = known_wifi.push(
-                        column![button(Button::Secondary)
-                            .custom(vec![Row::with_children(btn_content)
+                        column![button(
+                            Row::with_children(btn_content)
                                 .align_items(Alignment::Center)
                                 .spacing(8)
-                                .into()])
-                            .padding([8, 24])
-                            .style(button_style())
-                            .on_press(Message::Disconnect(name.clone()))]
+                        )
+                        .style(Button::Standard)
+                        .padding([8, 24])
+                        .style(button_style())
+                        .on_press(Message::Disconnect(name.clone()))]
                         .align_items(Alignment::Center),
                     );
                 }
@@ -547,7 +560,9 @@ impl cosmic::Application for CosmicNetworkApplet {
         if self.nm_state.airplane_mode {
             content = content.push(
                 column!(
-                    icon("airplane-mode-symbolic", 48).style(Svg::Symbolic),
+                    icon::from_name("airplane-mode-symbolic")
+                        .size(48)
+                        .symbolic(true),
                     text(fl!("airplane-mode-on")).size(14),
                     text(fl!("turn-off-airplane-mode")).size(12)
                 )
@@ -562,40 +577,45 @@ impl cosmic::Application for CosmicNetworkApplet {
                 let ssid = text(&known.ssid).size(14).width(Length::Fill);
                 if known.working {
                     btn_content.push(
-                        icon("network-wireless-acquiring-symbolic", 24)
-                            .style(Svg::Symbolic)
+                        icon::from_name("network-wireless-acquiring-symbolic")
+                            .size(24)
+                            .symbolic(true)
                             .into(),
                     );
                     btn_content.push(ssid.into());
                     btn_content.push(
-                        icon("process-working-symbolic", 24)
-                            .style(Svg::Symbolic)
+                        icon::from_name("process-working-symbolic")
+                            .size(24)
+                            .symbolic(true)
                             .into(),
                     );
                 } else if matches!(known.state, DeviceState::Unavailable) {
                     btn_content.push(
-                        icon("network-wireless-disconnected-symbolic", 24)
-                            .style(Svg::Symbolic)
+                        icon::from_name("network-wireless-disconnected-symbolic")
+                            .size(24)
+                            .symbolic(true)
                             .into(),
                     );
                     btn_content.push(ssid.into());
                 } else {
                     btn_content.push(
-                        icon(wifi_icon(known.strength), 24)
-                            .style(Svg::Symbolic)
+                        icon::from_name(wifi_icon(known.strength))
+                            .size(24)
+                            .symbolic(true)
                             .into(),
                     );
                     btn_content.push(ssid.into());
                 }
 
-                let mut btn = button(Button::Secondary)
-                    .custom(vec![Row::with_children(btn_content)
+                let mut btn = button(
+                    Row::with_children(btn_content)
                         .align_items(Alignment::Center)
-                        .spacing(8)
-                        .into()])
-                    .padding([8, 24])
-                    .width(Length::Fill)
-                    .style(button_style());
+                        .spacing(8),
+                )
+                .style(Button::Suggested)
+                .padding([8, 24])
+                .width(Length::Fill)
+                .style(button_style());
                 btn = match known.state {
                     DeviceState::Failed
                     | DeviceState::Unknown
@@ -615,27 +635,22 @@ impl cosmic::Application for CosmicNetworkApplet {
             } else {
                 "go-next-symbolic"
             };
-            let available_connections_btn = button(Button::Secondary)
-                .custom(
-                    vec![
-                        text(fl!("visible-wireless-networks"))
-                            .size(14)
-                            .width(Length::Fill)
-                            .height(Length::Fixed(24.0))
-                            .vertical_alignment(Vertical::Center)
-                            .into(),
-                        container(icon(dropdown_icon, 14).style(Svg::Symbolic))
-                            .align_x(Horizontal::Center)
-                            .align_y(Vertical::Center)
-                            .width(Length::Fixed(24.0))
-                            .height(Length::Fixed(24.0))
-                            .into(),
-                    ]
-                    .into(),
-                )
-                .padding([8, 24])
-                .style(button_style())
-                .on_press(Message::ToggleVisibleNetworks);
+            let available_connections_btn = button(row![
+                text(fl!("visible-wireless-networks"))
+                    .size(14)
+                    .width(Length::Fill)
+                    .height(Length::Fixed(24.0))
+                    .vertical_alignment(Vertical::Center),
+                container(icon::from_name(dropdown_icon).size(14).symbolic(true))
+                    .align_x(Horizontal::Center)
+                    .align_y(Vertical::Center)
+                    .width(Length::Fixed(24.0))
+                    .height(Length::Fixed(24.0)),
+            ])
+            .style(Button::Text)
+            .padding([8, 24])
+            .style(button_style())
+            .on_press(Message::ToggleVisibleNetworks);
             content = content.push(available_connections_btn);
         }
         if self.show_visible_networks {
@@ -646,7 +661,9 @@ impl cosmic::Application for CosmicNetworkApplet {
                         password,
                     } => {
                         let id = row![
-                            icon("network-wireless-acquiring-symbolic", 24).style(Svg::Symbolic),
+                            icon::from_name("network-wireless-acquiring-symbolic")
+                                .size(24)
+                                .symbolic(true),
                             text(&access_point.ssid).size(14),
                         ]
                         .align_items(Alignment::Center)
@@ -663,15 +680,11 @@ impl cosmic::Application for CosmicNetworkApplet {
                                 .password(),
                             container(text(fl!("router-wps-button"))).padding(8),
                             row![
-                                button(Button::Secondary)
-                                    .custom(vec![container(text(fl!("cancel")))
-                                        .padding([0, 24])
-                                        .into()])
+                                button(container(text(fl!("cancel"))).padding([0, 24]))
+                                    .style(Button::Suggested)
                                     .on_press(Message::CancelNewConnection),
-                                button(Button::Secondary)
-                                    .custom(vec![container(text(fl!("connect")))
-                                        .padding([0, 24])
-                                        .into()])
+                                button(container(text(fl!("connect"))).padding([0, 24]))
+                                    .style(Button::Suggested)
                                     .on_press(Message::SubmitPassword)
                             ]
                             .spacing(24)
@@ -683,7 +696,9 @@ impl cosmic::Application for CosmicNetworkApplet {
                     }
                     NewConnectionState::Waiting(access_point) => {
                         let id = row![
-                            icon("network-wireless-acquiring-symbolic", 24).style(Svg::Symbolic),
+                            icon::from_name("network-wireless-acquiring-symbolic")
+                                .size(24)
+                                .symbolic(true),
                             text(&access_point.ssid).size(14),
                         ]
                         .align_items(Alignment::Center)
@@ -691,7 +706,9 @@ impl cosmic::Application for CosmicNetworkApplet {
                         .spacing(12);
                         let connecting = row![
                             id,
-                            icon("process-working-symbolic", 24).style(Svg::Symbolic),
+                            icon::from_name("process-working-symbolic")
+                                .size(24)
+                                .symbolic(true),
                         ]
                         .spacing(8)
                         .padding([0, 24]);
@@ -699,7 +716,9 @@ impl cosmic::Application for CosmicNetworkApplet {
                     }
                     NewConnectionState::Failure(access_point) => {
                         let id = row![
-                            icon("network-wireless-error-symbolic", 24).style(Svg::Symbolic),
+                            icon::from_name("network-wireless-error-symbolic")
+                                .size(24)
+                                .symbolic(true),
                             text(&access_point.ssid).size(14),
                         ]
                         .align_items(Alignment::Center)
@@ -711,13 +730,11 @@ impl cosmic::Application for CosmicNetworkApplet {
                             text(fl!("unable-to-connect")),
                             text(fl!("check-wifi-connection")),
                             row![
-                                button(Button::Secondary)
-                                    .custom(vec![container(text("Cancel")).padding([0, 24]).into()])
+                                button(container(text("Cancel")).padding([0, 24]))
+                                    .style(Button::Suggested)
                                     .on_press(Message::CancelNewConnection),
-                                button(Button::Secondary)
-                                    .custom(vec![container(text("Connect"))
-                                        .padding([0, 24])
-                                        .into()])
+                                button(container(text("Connect")).padding([0, 24]))
+                                    .style(Button::Suggested)
                                     .on_press(Message::SelectWirelessAccessPoint(
                                         access_point.clone()
                                     ))
@@ -741,20 +758,23 @@ impl cosmic::Application for CosmicNetworkApplet {
                     {
                         continue;
                     }
-                    let button = button(button_style())
-                        .custom(vec![row![
-                            icon(wifi_icon(ap.strength), 16).style(Svg::Symbolic),
+                    let button = button(
+                        row![
+                            icon::from_name(wifi_icon(ap.strength))
+                                .size(16)
+                                .symbolic(true),
                             text(&ap.ssid)
                                 .size(14)
                                 .height(Length::Fixed(24.0))
                                 .vertical_alignment(Vertical::Center)
                         ]
                         .align_items(Alignment::Center)
-                        .spacing(12)
-                        .into()])
-                        .on_press(Message::SelectWirelessAccessPoint(ap.clone()))
-                        .width(Length::Fill)
-                        .padding([8, 24]);
+                        .spacing(12),
+                    )
+                    .style(button_style())
+                    .on_press(Message::SelectWirelessAccessPoint(ap.clone()))
+                    .width(Length::Fill)
+                    .padding([8, 24]);
                     list_col.push(button.into());
                 }
                 content = content

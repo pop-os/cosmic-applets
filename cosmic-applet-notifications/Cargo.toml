@@ -10,8 +10,8 @@ libcosmic.workspace = true
 cosmic-time.workspace = true
 nix = "0.26"
 tokio = { version = "1.24.1", features = ["sync", "rt", "tracing", "macros", "net", "io-util", "io-std"] }
-cosmic-notifications-util = { git = "https://github.com/pop-os/cosmic-notifications" }
-cosmic-notifications-config = { git = "https://github.com/pop-os/cosmic-notifications" }
+cosmic-notifications-util = { git = "https://github.com/edfloreshz/cosmic-notifications" }
+cosmic-notifications-config = { git = "https://github.com/edfloreshz/cosmic-notifications" }
 # cosmic-notifications-util = { path = "../../cosmic-notifications-daemon/cosmic-notifications-util" }
 # cosmic-notifications-config = { path = "../../cosmic-notifications-daemon/cosmic-notifications-config" }
 tracing = "0.1"

@@ -1,6 +1,6 @@
 use crate::bluetooth::{BluerDeviceStatus, BluerRequest, BluerState};
 use cosmic::app::{applet::applet_button_theme, Command};
-use cosmic::iced_style;
+use cosmic::widget::button::StyleSheet;
 use cosmic::{
     iced::{
         self,
@@ -13,8 +13,8 @@ use cosmic::{
         layout::Limits,
         window,
     },
-    iced_style::{application, button::StyleSheet},
-    theme::{Button, Svg},
+    iced_style::application,
+    theme::Button,
     widget::{button, divider, icon, toggler},
     Element, Theme,
 };
@@ -291,13 +291,21 @@ impl cosmic::Application for CosmicBluetoothApplet {
 
     fn view_window(&self, _id: window::Id) -> Element<Message> {
         let button_style = || Button::Custom {
-            active: Box::new(|t| iced_style::button::Appearance {
+            active: Box::new(|active, t| button::Appearance {
                 border_radius: 0.0.into(),
-                ..t.active(&Button::Text)
+                ..t.active(active, &Button::Standard)
             }),
-            hover: Box::new(|t| iced_style::button::Appearance {
+            disabled: Box::new(|t| button::Appearance {
                 border_radius: 0.0.into(),
-                ..t.hovered(&Button::Text)
+                ..t.disabled(&Button::Text)
+            }),
+            hovered: Box::new(|hovered, t| button::Appearance {
+                border_radius: 0.0.into(),
+                ..t.hovered(hovered, &Button::Text)
+            }),
+            pressed: Box::new(|pressed, t| button::Appearance {
+                border_radius: 0.0.into(),
+                ..t.pressed(pressed, &Button::Text)
             }),
         };
         let mut known_bluetooth = column![];
@@ -308,7 +316,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
                 .map_or(false, |(dev, _, _)| d.address == dev.address)
         }) {
             let mut row = row![
-                icon(dev.icon.as_str(), 16).style(Svg::Symbolic),
+                icon::from_name(dev.icon.as_str()).size(16).symbolic(true),
                 text(dev.name.clone())
                     .size(14)
                     .horizontal_alignment(Horizontal::Left)
@@ -329,14 +337,17 @@ impl cosmic::Application for CosmicBluetoothApplet {
                 }
                 BluerDeviceStatus::Paired => {}
                 BluerDeviceStatus::Connecting | BluerDeviceStatus::Disconnecting => {
-                    row = row.push(icon("process-working-symbolic", 24).style(Svg::Symbolic));
+                    row = row.push(
+                        icon::from_name("process-working-symbolic")
+                            .size(24)
+                            .symbolic(true),
+                    );
                 }
                 BluerDeviceStatus::Disconnected | BluerDeviceStatus::Pairing => continue,
             };
 
             known_bluetooth = known_bluetooth.push(
-                button(applet_button_theme())
-                    .custom(vec![row.into()])
+                button(row)
                     .style(applet_button_theme())
                     .on_press(match dev.status {
                         BluerDeviceStatus::Connected => {
@@ -390,34 +401,31 @@ impl cosmic::Application for CosmicBluetoothApplet {
         } else {
             "go-next-symbolic"
         };
-        let available_connections_btn = button(Button::Secondary)
-            .custom(
-                vec![
-                    text(fl!("other-devices"))
-                        .size(14)
-                        .width(Length::Fill)
-                        .height(Length::Fixed(24.0))
-                        .vertical_alignment(Vertical::Center)
-                        .into(),
-                    container(icon(dropdown_icon, 14).style(Svg::Symbolic))
-                        .align_x(Horizontal::Center)
-                        .align_y(Vertical::Center)
-                        .width(Length::Fixed(24.0))
-                        .height(Length::Fixed(24.0))
-                        .into(),
-                ]
-                .into(),
-            )
-            .padding([8, 24])
-            .style(button_style())
-            .on_press(Message::ToggleVisibleDevices(!self.show_visible_devices));
+        let available_connections_btn = button(row![
+            text(fl!("other-devices"))
+                .size(14)
+                .width(Length::Fill)
+                .height(Length::Fixed(24.0))
+                .vertical_alignment(Vertical::Center),
+            container(icon::from_name(dropdown_icon).size(14).symbolic(true))
+                .align_x(Horizontal::Center)
+                .align_y(Vertical::Center)
+                .width(Length::Fixed(24.0))
+                .height(Length::Fixed(24.0))
+        ])
+        .style(Button::Standard)
+        .padding([8, 24])
+        .style(button_style())
+        .on_press(Message::ToggleVisibleDevices(!self.show_visible_devices));
         content = content.push(available_connections_btn);
         let mut list_column: Vec<Element<'_, Message>> =
             Vec::with_capacity(self.bluer_state.devices.len());
 
         if let Some((device, pin, _)) = self.request_confirmation.as_ref() {
             let row = column![
-                icon(device.icon.as_str(), 16).style(Svg::Symbolic),
+                icon::from_name(device.icon.as_str())
+                    .size(16)
+                    .symbolic(true),
                 text(&device.name)
                     .size(14)
                     .horizontal_alignment(Horizontal::Left)
@@ -437,34 +445,28 @@ impl cosmic::Application for CosmicBluetoothApplet {
                     .width(Length::Fill)
                     .size(22),
                 row![
-                    button(Button::Secondary)
-                        .custom(
-                            vec![text(fl!("cancel"))
-                                .size(14)
-                                .width(Length::Fill)
-                                .height(Length::Fixed(24.0))
-                                .vertical_alignment(Vertical::Center)
-                                .into(),]
-                            .into(),
-                        )
-                        .padding([8, 24])
-                        .style(button_style())
-                        .on_press(Message::Cancel)
-                        .width(Length::Fill),
-                    button(Button::Secondary)
-                        .custom(
-                            vec![text(fl!("confirm"))
-                                .size(14)
-                                .width(Length::Fill)
-                                .height(Length::Fixed(24.0))
-                                .vertical_alignment(Vertical::Center)
-                                .into(),]
-                            .into(),
-                        )
-                        .padding([8, 24])
-                        .style(button_style())
-                        .on_press(Message::Confirm)
-                        .width(Length::Fill),
+                    button(
+                        text(fl!("cancel"))
+                            .size(14)
+                            .width(Length::Fill)
+                            .height(Length::Fixed(24.0))
+                            .vertical_alignment(Vertical::Center)
+                    )
+                    .padding([8, 24])
+                    .style(button_style())
+                    .on_press(Message::Cancel)
+                    .width(Length::Fill),
+                    button(
+                        text(fl!("confirm"))
+                            .size(14)
+                            .width(Length::Fill)
+                            .height(Length::Fixed(24.0))
+                            .vertical_alignment(Vertical::Center)
+                    )
+                    .padding([8, 24])
+                    .style(button_style())
+                    .on_press(Message::Confirm)
+                    .width(Length::Fill),
                 ]
             ]
             .padding([0, 24])
@@ -472,39 +474,37 @@ impl cosmic::Application for CosmicBluetoothApplet {
             list_column.push(row.into());
         }
         let mut visible_devices_count = 0;
-        if self.show_visible_devices {
-            if self.bluer_state.bluetooth_enabled {
-                let mut visible_devices = column![];
-                for dev in self.bluer_state.devices.iter().filter(|d| {
-                    matches!(
-                        d.status,
-                        BluerDeviceStatus::Disconnected | BluerDeviceStatus::Pairing
-                    ) && !self
-                        .request_confirmation
-                        .as_ref()
-                        .map_or(false, |(dev, _, _)| d.address == dev.address)
-                }) {
-                    let row = row![
-                        icon(dev.icon.as_str(), 16).style(Svg::Symbolic),
-                        text(dev.name.clone())
-                            .horizontal_alignment(Horizontal::Left)
-                            .size(14),
-                    ]
-                    .width(Length::Fill)
-                    .align_items(Alignment::Center)
-                    .spacing(12);
-                    visible_devices = visible_devices.push(
-                        button(applet_button_theme())
-                            .custom(vec![row.width(Length::Fill).into()])
-                            .on_press(Message::Request(BluerRequest::PairDevice(
-                                dev.address.clone(),
-                            )))
-                            .width(Length::Fill),
-                    );
-                    visible_devices_count += 1;
-                }
-                list_column.push(visible_devices.into());
+        if self.show_visible_devices && self.bluer_state.bluetooth_enabled {
+            let mut visible_devices = column![];
+            for dev in self.bluer_state.devices.iter().filter(|d| {
+                matches!(
+                    d.status,
+                    BluerDeviceStatus::Disconnected | BluerDeviceStatus::Pairing
+                ) && !self
+                    .request_confirmation
+                    .as_ref()
+                    .map_or(false, |(dev, _, _)| d.address == dev.address)
+            }) {
+                let row = row![
+                    icon::from_name(dev.icon.as_str()).size(16).symbolic(true),
+                    text(dev.name.clone())
+                        .horizontal_alignment(Horizontal::Left)
+                        .size(14),
+                ]
+                .width(Length::Fill)
+                .align_items(Alignment::Center)
+                .spacing(12);
+                visible_devices = visible_devices.push(
+                    button(row.width(Length::Fill))
+                        .style(applet_button_theme())
+                        .on_press(Message::Request(BluerRequest::PairDevice(
+                            dev.address.clone(),
+                        )))
+                        .width(Length::Fill),
+                );
+                visible_devices_count += 1;
             }
+            list_column.push(visible_devices.into());
         }
         let item_counter = visible_devices_count
                 // request confirmation is pretty big

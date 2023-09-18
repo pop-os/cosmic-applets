@@ -52,7 +52,6 @@ use itertools::Itertools;
 use rand::{thread_rng, Rng};
 use std::borrow::Cow;
 use std::collections::HashMap;
-use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::Duration;
@@ -114,10 +113,9 @@ impl DockItem {
             ..
         } = self;
 
-        let cosmic_icon = cosmic::widget::icon(
-            Path::new(&desktop_info.icon),
-            applet_helper.suggested_size().0,
-        );
+        let cosmic_icon = cosmic::widget::icon::from_path(PathBuf::from(&desktop_info.icon))
+            .icon()
+            .size(applet_helper.suggested_size().0);
 
         let dot_radius = 2;
         let dots = (0..toplevels.len())
@@ -134,12 +132,13 @@ impl DockItem {
                             border_radius: 4.0.into(),
                             border_width: 0.0,
                             border_color: Color::TRANSPARENT,
+                            icon_color: Some(Color::TRANSPARENT),
                         },
                     )))
                     .into()
             })
             .collect_vec();
-        let icon_wrapper = match applet_helper.anchor {
+        let icon_wrapper: Element<_> = match applet_helper.anchor {
             PanelAnchor::Left => row(vec![column(dots).spacing(4).into(), cosmic_icon.into()])
                 .align_items(iced::Alignment::Center)
                 .spacing(4)
@@ -158,8 +157,8 @@ impl DockItem {
                 .into(),
         };
 
-        let icon_button = cosmic::widget::button(Button::Text)
-            .custom(vec![icon_wrapper])
+        let icon_button = cosmic::widget::button(icon_wrapper)
+            .style(Button::Text)
             .padding(8);
         let icon_button = if interaction_enabled {
             dnd_source(
@@ -879,10 +878,10 @@ impl cosmic::Application for CosmicAppList {
         } else if self.is_listening_for_dnd && self.favorite_list.is_empty() {
             // show star indicating favorite_list is drag target
             favorites.push(
-                container(cosmic::widget::icon(
-                    "starred-symbolic.symbolic",
-                    self.core.applet_helper.suggested_size().0,
-                ))
+                container(
+                    cosmic::widget::icon::from_name("starred-symbolic.symbolic")
+                        .size(self.core.applet_helper.suggested_size().0),
+                )
                 .padding(8)
                 .into(),
             );
@@ -962,11 +961,11 @@ impl cosmic::Application for CosmicAppList {
         } else if !self.active_list.is_empty() {
             vec![active]
         } else {
-            vec![cosmic::widget::icon(
-                "com.system76.CosmicAppList",
-                self.core.applet_helper.suggested_size().0,
-            )
-            .into()]
+            vec![
+                cosmic::widget::icon::from_name("com.system76.CosmicAppList")
+                    .size(self.core.applet_helper.suggested_size().0)
+                    .into(),
+            ]
         };
 
         let content = match &self.core.applet_helper.anchor {
@@ -997,11 +996,10 @@ impl cosmic::Application for CosmicAppList {
 
     fn view_window(&self, id: window::Id) -> Element<Message> {
         if let Some((_, item, _)) = self.dnd_source.as_ref().filter(|s| s.0 == id) {
-            cosmic::widget::icon(
-                Path::new(&item.desktop_info.icon),
-                self.core.applet_helper.suggested_size().0,
-            )
-            .into()
+            cosmic::widget::icon::from_path(PathBuf::from(&item.desktop_info.icon))
+                .icon()
+                .size(self.core.applet_helper.suggested_size().0)
+                .into()
         } else if let Some((
             _popup_id,
             DockItem {
@@ -1019,8 +1017,8 @@ impl cosmic::Application for CosmicAppList {
 
             let mut content = column![
                 iced::widget::text(&desktop_info.name).horizontal_alignment(Horizontal::Center),
-                cosmic::widget::button(Button::Text)
-                    .custom(vec![iced::widget::text(fl!("new-window")).into()])
+                cosmic::widget::button(iced::widget::text(fl!("new-window")))
+                    .style(Button::Text)
                     .on_press(Message::Exec(desktop_info.exec.clone())),
             ]
             .padding(8)
@@ -1035,8 +1033,8 @@ impl cosmic::Application for CosmicAppList {
                         info.title.clone()
                     };
                     list_col = list_col.push(
-                        cosmic::widget::button(Button::Text)
-                            .custom(vec![iced::widget::text(title).into()])
+                        cosmic::widget::button(iced::widget::text(title))
+                            .style(Button::Text)
                             .on_press(Message::Activate(handle.clone())),
                     );
                 }
@@ -1045,25 +1043,25 @@ impl cosmic::Application for CosmicAppList {
                 content = content.push(divider::horizontal::light());
             }
             content = content.push(if is_favorite {
-                cosmic::widget::button(Button::Text)
-                    .custom(vec![iced::widget::text(fl!("unfavorite")).into()])
+                cosmic::widget::button(iced::widget::text(fl!("unfavorite")))
+                    .style(Button::Text)
                     .on_press(Message::UnFavorite(desktop_info.id.clone()))
             } else {
-                cosmic::widget::button(Button::Text)
-                    .custom(vec![iced::widget::text(fl!("favorite")).into()])
+                cosmic::widget::button(iced::widget::text(fl!("favorite")))
+                    .style(Button::Text)
                     .on_press(Message::Favorite(desktop_info.id.clone()))
             });
 
             content = match toplevels.len() {
                 0 => content,
                 1 => content.push(
-                    cosmic::widget::button(Button::Text)
-                        .custom(vec![iced::widget::text(fl!("quit")).into()])
+                    cosmic::widget::button(iced::widget::text(fl!("quit")))
+                        .style(Button::Text)
                         .on_press(Message::Quit(desktop_info.id.clone())),
                 ),
                 _ => content.push(
-                    cosmic::widget::button(Button::Text)
-                        .custom(vec![iced::widget::text(&fl!("quit-all")).into()])
+                    cosmic::widget::button(iced::widget::text(&fl!("quit-all")))
+                        .style(Button::Text)
                         .on_press(Message::Quit(desktop_info.id.clone())),
                 ),
             };
