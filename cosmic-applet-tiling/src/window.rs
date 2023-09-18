@@ -1,11 +1,14 @@
 use crate::fl;
 use cosmic::app::Core;
+use cosmic::applet::button_theme;
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced::window::Id;
 use cosmic::iced::{Command, Length, Limits, Subscription};
+use cosmic::iced_core::{Alignment, Color};
 use cosmic::iced_style::application;
 use cosmic::iced_widget::row;
-use cosmic::widget::{column, container, divider, spin_button, text};
+use cosmic::widget::button::StyleSheet;
+use cosmic::widget::{button, container, spin_button, text};
 use cosmic::{Element, Theme};
 use cosmic_time::{anim, chain, id, Timeline};
 use once_cell::sync::Lazy;
@@ -37,6 +40,9 @@ pub enum Message {
     ToggleTileWindows(chain::Toggler, bool),
     ToggleShowActiveHint(chain::Toggler, bool),
     HandleGaps(spin_button::Message),
+    ViewAllShortcuts,
+    OpenFloatingWindowExceptions,
+    OpenWindowManagementSettings,
 }
 
 impl cosmic::Application for Window {
@@ -120,6 +126,9 @@ impl cosmic::Application for Window {
                     self.gaps.update(spin_button::Message::Decrement)
                 }
             },
+            Message::ViewAllShortcuts => println!("View all shortcuts..."),
+            Message::OpenFloatingWindowExceptions => println!("Floating window exceptions..."),
+            Message::OpenWindowManagementSettings => println!("Window management settings..."),
         }
         Command::none()
     }
@@ -133,10 +142,10 @@ impl cosmic::Application for Window {
     }
 
     fn view_window(&self, _id: Id) -> Element<Self::Message> {
-        let content_list = cosmic::widget::column()
-            .padding(20)
-            .spacing(10)
-            .push(
+        let content_list = cosmic::widget::list_column()
+            .padding(0)
+            .spacing(5)
+            .add(
                 container(
                     anim!(
                         TILE_WINDOWS,
@@ -148,28 +157,49 @@ impl cosmic::Application for Window {
                     .text_size(14)
                     .width(Length::Fill),
                 )
-                .padding([0, 12]),
+                .padding([0, 15, 5, 15]),
             )
-            .push(divider::horizontal::light())
-            .push(
-                column()
-                    .push(row!(
-                        text(fl!("launcher")).size(14).width(Length::Fill),
-                        text(format!("{} + /", fl!("super"))).size(14),
-                    ))
-                    .push(row!(
-                        text(fl!("navigate-windows")).size(14).width(Length::Fill),
-                        text(format!("{} + {}", fl!("super"), fl!("arrow-keys"))).size(14),
-                    ))
-                    .push(row!(
-                        text(fl!("toggle-tiling")).size(14).width(Length::Fill),
-                        text(format!("{} + Y", fl!("super"))).size(14),
-                    ))
-                    .spacing(10)
-                    .padding([0, 20, 0, 20]),
+            .add(
+                row!(
+                    text(fl!("navigate-windows")).size(14).width(Length::Fill),
+                    text(format!("{} + {}", fl!("super"), fl!("arrow-keys"))).size(14),
+                )
+                .padding([5, 15, 5, 15]),
             )
-            .push(divider::horizontal::light())
-            .push(
+            .add(
+                row!(
+                    text(fl!("move-window")).size(14).width(Length::Fill),
+                    text(format!(
+                        "{} + {} + {}",
+                        fl!("shift"),
+                        fl!("super"),
+                        fl!("arrow-keys")
+                    ))
+                    .size(14),
+                )
+                .padding([5, 15, 5, 15]),
+            )
+            .add(
+                row!(
+                    text(fl!("toggle-floating-window"))
+                        .size(14)
+                        .width(Length::Fill),
+                    text(format!("{} + G", fl!("super"))).size(14),
+                )
+                .padding([5, 15, 5, 15]),
+            )
+            .add(
+                container(
+                    button(text(fl!("view-all-shortcuts")).size(14))
+                        .width(Length::Fill)
+                        .style(popup_button_style())
+                        .padding(10)
+                        .on_press(Message::ViewAllShortcuts),
+                )
+                .width(Length::Fill)
+                .padding([0, 5, 0, 5]),
+            )
+            .add(
                 container(
                     anim!(
                         SHOW_ACTIVE_HINTS,
@@ -181,20 +211,82 @@ impl cosmic::Application for Window {
                     .text_size(14)
                     .width(Length::Fill),
                 )
-                .padding([0, 12]),
+                .padding([5, 15, 5, 15]),
             )
-            .push(
+            .add(
                 row!(
                     text(fl!("gaps")).size(14).width(Length::Fill),
                     spin_button(self.gaps.value.to_string(), Message::HandleGaps),
                 )
-                .padding([0, 10, 0, 10]),
+                .padding([0, 15, 0, 15])
+                .align_items(Alignment::Center),
+            )
+            .add(
+                container(
+                    button(text(fl!("floating-window-exceptions")).size(14))
+                        .width(Length::Fill)
+                        .padding(10)
+                        .style(popup_button_style())
+                        .on_press(Message::OpenFloatingWindowExceptions),
+                )
+                .width(Length::Fill)
+                .padding([0, 5, 0, 5]),
+            )
+            .add(
+                container(
+                    button(text(fl!("window-management-settings")).size(14))
+                        .width(Length::Fill)
+                        .padding(10)
+                        .style(popup_button_style())
+                        .on_press(Message::OpenWindowManagementSettings),
+                )
+                .width(Length::Fill)
+                .padding([0, 5, 0, 5]),
             );
 
-        self.core.applet.popup_container(content_list).into()
+        self.core
+            .applet
+            .popup_container(content_list)
+            .padding(1)
+            .style(popup_style())
+            .into()
     }
 
     fn style(&self) -> Option<<Theme as application::StyleSheet>::Style> {
         Some(cosmic::applet::style())
     }
+}
+
+fn popup_button_style() -> cosmic::theme::Button {
+    cosmic::theme::Button::Custom {
+        active: Box::new(|active, t| cosmic::widget::button::Appearance {
+            border_radius: 8.0.into(),
+            ..t.active(active, &cosmic::theme::Button::Icon)
+        }),
+        hovered: Box::new(|hovered, t| cosmic::widget::button::Appearance {
+            border_radius: 8.0.into(),
+            ..t.hovered(hovered, &cosmic::theme::Button::Text)
+        }),
+        pressed: Box::new(|pressed, t| cosmic::widget::button::Appearance {
+            border_radius: 8.0.into(),
+            ..t.pressed(pressed, &cosmic::theme::Button::Text)
+        }),
+        disabled: Box::new(|t| cosmic::widget::button::Appearance {
+            border_radius: 8.0.into(),
+            ..t.disabled(&cosmic::theme::Button::Standard)
+        }),
+    }
+}
+
+fn popup_style() -> cosmic::theme::Container {
+    cosmic::theme::Container::Custom(Box::new(|theme| {
+        cosmic::iced_style::container::Appearance {
+            icon_color: Some(theme.cosmic().background.on.into()),
+            text_color: Some(theme.cosmic().background.on.into()),
+            background: Some(Color::from(theme.cosmic().background.base).into()),
+            border_radius: 8.0.into(),
+            border_width: 2.0,
+            border_color: theme.cosmic().bg_divider().into(),
+        }
+    }))
 }
