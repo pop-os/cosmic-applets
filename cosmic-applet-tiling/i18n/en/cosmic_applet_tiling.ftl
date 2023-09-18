@@ -1,16 +1,15 @@
-tile-windows = Tile Windows
-floating-window-exceptions = Floating Window Exceptions
+tile-windows = Automatically tile windows
 shortcuts = Shortcuts
-launcher = Launcher
-navigate-windows = Navigate Windows
-toggle-tiling = Toggle Tiling
-view-all = View All
-show-window-titles = Show Window Titles
-show-active-hint = Show Active Hint
-active-border-radius = Active Border Radius
-active-hint-color = Active Hint Color
+navigate-windows = Navigate windows
+move-window = Move window
+toggle-floating-window = Toggle floating window
+view-all-shortcuts = View all shortcuts...
+show-active-hint = Show active hint
 gaps = Gaps
+floating-window-exceptions = Floating window exceptions...
+window-management-settings = Window management settings...
 
 // Commands
 super = Super
-arrow-keys = Arrow keys
+shift = Shift
+arrow-keys = arrows
