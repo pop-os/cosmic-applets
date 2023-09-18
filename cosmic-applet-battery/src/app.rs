@@ -19,7 +19,6 @@ use cosmic::iced::{
 };
 use cosmic::iced_runtime::core::layout::Limits;
 use cosmic::iced_style::application;
-use cosmic::theme::Svg;
 use cosmic::widget::{button, divider, icon};
 use cosmic::{Element, Theme};
 use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
@@ -309,7 +308,7 @@ impl cosmic::Application for CosmicBatteryApplet {
             .popup_container(
                 column![
                     row![
-                        icon(&*self.icon_name, 24).style(Svg::Symbolic),
+                        icon::from_name(&*self.icon_name).size(24).symbolic(true),
                         column![name, description]
                     ]
                     .padding([0, 24])
@@ -318,63 +317,57 @@ impl cosmic::Application for CosmicBatteryApplet {
                     container(divider::horizontal::light())
                         .width(Length::Fill)
                         .padding([0, 12]),
-                    button(applet_button_theme())
-                        .custom(vec![row![
+                    button(
+                        row![
                             column![
                                 text(fl!("battery")).size(14),
                                 text(fl!("battery-desc")).size(10)
                             ]
                             .width(Length::Fill),
-                            icon("emblem-ok-symbolic", 12).size(12).style(
-                                match self.power_profile {
-                                    Power::Battery => Svg::SymbolicActive,
-                                    _ => Svg::Default,
-                                }
-                            ),
+                            icon::from_name("emblem-ok-symbolic")
+                                .size(12)
+                                .symbolic(matches!(self.power_profile, Power::Battery)),
                         ]
                         .align_items(Alignment::Center)
-                        .into()])
-                        .padding([8, 24])
-                        .on_press(Message::SelectProfile(Power::Battery))
-                        .width(Length::Fill),
-                    button(applet_button_theme())
-                        .custom(vec![row![
+                    )
+                    .style(applet_button_theme())
+                    .padding([8, 24])
+                    .on_press(Message::SelectProfile(Power::Battery))
+                    .width(Length::Fill),
+                    button(
+                        row![
                             column![
                                 text(fl!("balanced")).size(14),
                                 text(fl!("balanced-desc")).size(10)
                             ]
                             .width(Length::Fill),
-                            icon("emblem-ok-symbolic", 12).size(12).style(
-                                match self.power_profile {
-                                    Power::Balanced => Svg::SymbolicActive,
-                                    _ => Svg::Default,
-                                }
-                            ),
+                            icon::from_name("emblem-ok-symbolic")
+                                .size(12)
+                                .symbolic(matches!(self.power_profile, Power::Balanced)),
                         ]
                         .align_items(Alignment::Center)
-                        .into()])
-                        .padding([8, 24])
-                        .on_press(Message::SelectProfile(Power::Balanced))
-                        .width(Length::Fill),
-                    button(applet_button_theme())
-                        .custom(vec![row![
+                    )
+                    .style(applet_button_theme())
+                    .padding([8, 24])
+                    .on_press(Message::SelectProfile(Power::Balanced))
+                    .width(Length::Fill),
+                    button(
+                        row![
                             column![
                                 text(fl!("performance")).size(14),
                                 text(fl!("performance-desc")).size(10)
                             ]
                             .width(Length::Fill),
-                            icon("emblem-ok-symbolic", 12).size(12).style(
-                                match self.power_profile {
-                                    Power::Performance => Svg::SymbolicActive,
-                                    _ => Svg::Default,
-                                }
-                            ),
+                            icon::from_name("emblem-ok-symbolic")
+                                .size(12)
+                                .symbolic(matches!(self.power_profile, Power::Performance)),
                         ]
                         .align_items(Alignment::Center)
-                        .into()])
-                        .padding([8, 24])
-                        .on_press(Message::SelectProfile(Power::Performance))
-                        .width(Length::Fill),
+                    )
+                    .style(applet_button_theme())
+                    .padding([8, 24])
+                    .on_press(Message::SelectProfile(Power::Performance))
+                    .width(Length::Fill),
                     container(divider::horizontal::light())
                         .width(Length::Fill)
                         .padding([0, 12]),
@@ -396,7 +389,9 @@ impl cosmic::Application for CosmicBatteryApplet {
                         .width(Length::Fill)
                         .padding([0, 12]),
                     row![
-                        icon(self.display_icon_name.as_str(), 24).style(Svg::Symbolic),
+                        icon::from_name(self.display_icon_name.as_str())
+                            .size(24)
+                            .symbolic(true),
                         slider(
                             1..=100,
                             (self.screen_brightness * 100.0) as i32,
@@ -410,7 +405,9 @@ impl cosmic::Application for CosmicBatteryApplet {
                     .padding([0, 24])
                     .spacing(12),
                     row![
-                        icon("keyboard-brightness-symbolic", 24).style(Svg::Symbolic),
+                        icon::from_name("keyboard-brightness-symbolic")
+                            .size(24)
+                            .symbolic(true),
                         slider(
                             0..=100,
                             (self.kbd_brightness * 100.0) as i32,
@@ -426,11 +423,8 @@ impl cosmic::Application for CosmicBatteryApplet {
                     container(divider::horizontal::light())
                         .width(Length::Fill)
                         .padding([0, 12]),
-                    button(applet_button_theme())
-                        .custom(vec![text(fl!("power-settings"))
-                            .size(14)
-                            .width(Length::Fill)
-                            .into()])
+                    button(text(fl!("power-settings")).size(14).width(Length::Fill))
+                        .style(applet_button_theme())
                         .on_press(Message::OpenBatterySettings)
                         .width(Length::Fill)
                         .padding([8, 24])

@@ -4,7 +4,6 @@ use cosmic::app::Command;
 use cosmic::iced::widget;
 use cosmic::iced::Limits;
 use cosmic::iced_runtime::core::alignment::Horizontal;
-use cosmic::theme::Svg;
 
 use cosmic::app::applet::applet_button_theme;
 use cosmic::widget::{button, divider, icon};
@@ -370,7 +369,9 @@ impl cosmic::Application for Audio {
         } else {
             column![
                 row![
-                    icon(self.icon_name.as_str(), 24).style(Svg::Symbolic),
+                    icon::from_name(self.icon_name.as_str())
+                        .size(24)
+                        .symbolic(true),
                     slider(0.0..=100.0, out_f64, Message::SetOutputVolume)
                         .width(Length::FillPortion(5)),
                     text(format!("{}%", out_f64.round()))
@@ -382,7 +383,9 @@ impl cosmic::Application for Audio {
                 .align_items(Alignment::Center)
                 .padding([8, 24]),
                 row![
-                    icon(self.input_icon_name.as_str(), 24).style(Svg::Symbolic),
+                    icon::from_name(self.input_icon_name.as_str())
+                        .size(24)
+                        .symbolic(true),
                     slider(0.0..=100.0, in_f64, Message::SetInputVolume)
                         .width(Length::FillPortion(5)),
                     text(format!("{}%", in_f64.round()))
@@ -455,8 +458,8 @@ impl cosmic::Application for Audio {
             container(divider::horizontal::light())
                 .padding([12, 24])
                 .width(Length::Fill),
-            button(applet_button_theme())
-                .custom(vec![text(fl!("sound-settings")).size(14).into()])
+            button(text(fl!("sound-settings")).size(14))
+                .style(applet_button_theme())
                 .padding([8, 24])
                 .width(Length::Fill)
         ]
@@ -487,8 +490,8 @@ fn revealer(
             column![revealer_head(open, title, selected, toggle)].width(Length::Fill),
             |col, (id, name)| {
                 col.push(
-                    button(applet_button_theme())
-                        .custom(vec![text(name).size(14).into()])
+                    button(text(name).size(14))
+                        .style(applet_button_theme())
                         .on_press(change(id.clone()))
                         .width(Length::Fill)
                         .padding([8, 48]),
@@ -505,15 +508,15 @@ fn revealer_head(
     title: String,
     selected: String,
     toggle: Message,
-) -> widget::Button<'static, Message, Renderer> {
-    button(applet_button_theme())
-        .custom(vec![
-            text(title).width(Length::Fill).size(14).into(),
-            text(selected).size(10).into(),
-        ])
-        .padding([8, 24])
-        .width(Length::Fill)
-        .on_press(toggle)
+) -> cosmic::widget::Button<'static, Message, Renderer> {
+    button(column![
+        text(title).width(Length::Fill).size(14),
+        text(selected).size(10),
+    ])
+    .style(applet_button_theme())
+    .padding([8, 24])
+    .width(Length::Fill)
+    .on_press(toggle)
 }
 
 fn pretty_name(name: Option<String>) -> String {

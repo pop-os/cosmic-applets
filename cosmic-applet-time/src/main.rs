@@ -179,24 +179,20 @@ impl cosmic::Application for Time {
                 self.core.applet_helper.anchor,
                 PanelAnchor::Top | PanelAnchor::Bottom
             ) {
-                column![text(self.now.format("%b %-d %-I:%M %p").to_string()).size(14)]
+                column![cosmic::widget::text(self.now.format("%b %-d %-I:%M %p").to_string()).size(14)]
             } else {
                 let mut date_time_col = column![
-                    icon(
-                        "emoji-recent-symbolic",
-                        self.core.applet_helper.suggested_size().0
-                    )
-                    .style(theme::Svg::Symbolic),
+                    icon::from_name("emoji-recent-symbolic")
+                        .size(self.core.applet_helper.suggested_size().0)
+                        .symbolic(true),
                     text(self.now.format("%I").to_string()).size(14),
                     text(self.now.format("%M").to_string()).size(14),
                     text(self.now.format("%p").to_string()).size(14),
                     vertical_space(Length::Fixed(4.0)),
                     // TODO better calendar icon?
-                    icon(
-                        "calendar-go-today-symbolic",
-                        self.core.applet_helper.suggested_size().0
-                    )
-                    .style(theme::Svg::Symbolic),
+                    icon::from_name("calendar-go-today-symbolic")
+                        .size(self.core.applet_helper.suggested_size().0)
+                        .symbolic(true),
                 ]
                 .align_items(Alignment::Center)
                 .spacing(4);
@@ -207,7 +203,7 @@ impl cosmic::Application for Time {
             },
         )
         .on_press(Message::TogglePopup)
-        .style(theme::Button::Text);
+        .style(theme::iced::Button::Text);
 
         if let Some(tracker) = self.rectangle_tracker.as_ref() {
             tracker.container(0, button).into()

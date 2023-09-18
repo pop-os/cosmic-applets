@@ -8,6 +8,7 @@ edition = "2021"
 
 [dependencies]
 libcosmic.workspace = true
+cosmic-time.workspace = true
 once_cell = "1"
 i18n-embed = { version = "0.14.0", features = ["fluent-system", "desktop-requester"] }
 i18n-embed-fl = "0.7.0"
