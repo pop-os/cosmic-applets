@@ -1,4 +1,4 @@
-use cosmic::app::applet::applet_button_theme;
+use cosmic::applet::button_theme;
 use cosmic::iced;
 
 use crate::subscriptions::status_notifier_item::{Layout, StatusNotifierItem};
@@ -167,7 +167,7 @@ fn row_button(content: Vec<cosmic::Element<Msg>>) -> cosmic::widget::Button<Msg,
             .align_items(iced::Alignment::Center)
             .width(iced::Length::Fill),
     )
-    .style(applet_button_theme())
+    .style(button_theme())
     .width(iced::Length::Fill)
     .padding([8, 24])
 }

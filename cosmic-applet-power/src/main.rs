@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::process;
 use std::time::Duration;
 
-use cosmic::app::applet::applet_button_theme;
+use cosmic::applet::button_theme;
 use cosmic::iced;
 use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::event::wayland::{self, LayerEvent};
@@ -44,7 +44,7 @@ use crate::session_manager::SessionManagerProxy;
 pub fn main() -> cosmic::iced::Result {
     localize::localize();
 
-    cosmic::app::applet::run::<Power>(false, ())
+    cosmic::applet::run::<Power>(false, ())
 }
 
 #[derive(Default)]
@@ -128,7 +128,7 @@ impl cosmic::Application for Power {
                     let new_id = window::Id(self.id_ctr);
                     self.popup.replace(new_id);
 
-                    let mut popup_settings = self.core.applet_helper.get_popup_settings(
+                    let mut popup_settings = self.core.applet.get_popup_settings(
                         window::Id(0),
                         new_id,
                         None,
@@ -225,7 +225,7 @@ impl cosmic::Application for Power {
 
     fn view(&self) -> Element<Message> {
         self.core
-            .applet_helper
+            .applet
             .icon_button(&self.icon_name)
             .on_press(Message::TogglePopup)
             .into()
@@ -279,7 +279,7 @@ impl cosmic::Application for Power {
             .spacing(12)
             .padding([8, 0]);
 
-            self.core.applet_helper.popup_container(content).into()
+            self.core.applet.popup_container(content).into()
         } else if matches!(self.action_to_confirm, Some((c_id, _)) if c_id == id) {
             let action = match self.action_to_confirm.as_ref().unwrap().1 {
                 PowerAction::Lock => "lock-screen",
@@ -344,7 +344,7 @@ impl cosmic::Application for Power {
     }
 
     fn style(&self) -> Option<<Theme as application::StyleSheet>::Style> {
-        Some(cosmic::app::applet::style())
+        Some(cosmic::applet::style())
     }
 }
 
@@ -356,7 +356,7 @@ fn row_button(content: Vec<Element<Message>>) -> cosmic::widget::Button<Message,
             .spacing(4)
             .align_items(Alignment::Center),
     )
-    .style(applet_button_theme())
+    .style(button_theme())
     .width(Length::Fill)
     .padding([8, 24])
 }

@@ -1,10 +1,10 @@
 use cctk::sctk::reexports::{calloop::channel::SyncSender, client::backend::ObjectId};
-use cosmic::app::{applet::cosmic_panel_config::PanelAnchor, Command};
 use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::mouse::{self, ScrollDelta};
 use cosmic::iced::widget::{column, container, row, text};
 use cosmic::iced::{subscription, widget::button, Event::Mouse, Length, Subscription};
 use cosmic::iced_style::application;
+use cosmic::{applet::cosmic_panel_config::PanelAnchor, Command};
 use cosmic::{Element, Theme};
 
 use cosmic_protocols::workspace::v1::client::zcosmic_workspace_handle_v1;
@@ -15,7 +15,7 @@ use crate::wayland::{WorkspaceEvent, WorkspaceList};
 use crate::wayland_subscription::{workspaces, WorkspacesUpdate};
 
 pub fn run() -> cosmic::iced::Result {
-    cosmic::app::applet::run::<IcedWorkspacesApplet>(true, ())
+    cosmic::applet::run::<IcedWorkspacesApplet>(true, ())
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -45,10 +45,16 @@ impl cosmic::Application for IcedWorkspacesApplet {
     type Flags = ();
     const APP_ID: &'static str = config::APP_ID;
 
-    fn init(core: cosmic::app::Core, _flags: ()) -> (Self, Command<Message>) {
+    fn init(
+        core: cosmic::app::Core,
+        _flags: Self::Flags,
+    ) -> (
+        Self,
+        cosmic::iced::Command<cosmic::app::Message<Self::Message>>,
+    ) {
         (
             IcedWorkspacesApplet {
-                layout: match &core.applet_helper.anchor {
+                layout: match &core.applet.anchor {
                     PanelAnchor::Left | PanelAnchor::Right => Layout::Column,
                     PanelAnchor::Top | PanelAnchor::Bottom => Layout::Row,
                 },
@@ -68,7 +74,10 @@ impl cosmic::Application for IcedWorkspacesApplet {
         &mut self.core
     }
 
-    fn update(&mut self, message: Message) -> Command<Message> {
+    fn update(
+        &mut self,
+        message: Self::Message,
+    ) -> cosmic::iced::Command<cosmic::app::Message<Self::Message>> {
         match message {
             Message::WorkspaceUpdate(msg) => match msg {
                 WorkspacesUpdate::Workspaces(mut list) => {
@@ -125,10 +134,10 @@ impl cosmic::Application for IcedWorkspacesApplet {
                         .height(Length::Fill),
                 )
                 .width(Length::Fixed(
-                    self.core.applet_helper.suggested_size().0 as f32 + 16.0,
+                    self.core.applet.suggested_size().0 as f32 + 16.0,
                 ))
                 .height(Length::Fixed(
-                    self.core.applet_helper.suggested_size().0 as f32 + 16.0,
+                    self.core.applet.suggested_size().0 as f32 + 16.0,
                 ))
                 .on_press(Message::WorkspacePressed(w.2.clone()))
                 .padding(0);
@@ -183,6 +192,6 @@ impl cosmic::Application for IcedWorkspacesApplet {
     }
 
     fn style(&self) -> Option<<Theme as application::StyleSheet>::Style> {
-        Some(cosmic::app::applet::style())
+        Some(cosmic::applet::style())
     }
 }

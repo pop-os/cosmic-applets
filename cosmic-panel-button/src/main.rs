@@ -39,7 +39,7 @@ impl cosmic::Application for Button {
     }
 
     fn style(&self) -> Option<<Theme as application::StyleSheet>::Style> {
-        Some(cosmic::app::applet::style())
+        Some(cosmic::applet::style())
     }
 
     fn update(&mut self, message: Msg) -> app::Command<Msg> {
@@ -89,5 +89,5 @@ pub fn main() -> iced::Result {
     let desktop = desktop.expect(&format!(
         "Failed to find valid desktop file '{filename}' in search paths"
     ));
-    cosmic::app::applet::run::<Button>(true, desktop)
+    cosmic::applet::run::<Button>(true, desktop)
 }

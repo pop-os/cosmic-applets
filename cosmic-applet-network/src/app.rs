@@ -36,7 +36,7 @@ use crate::{
 };
 
 pub fn run() -> cosmic::iced::Result {
-    cosmic::app::applet::run::<CosmicNetworkApplet>(false, ())
+    cosmic::applet::run::<CosmicNetworkApplet>(false, ())
 }
 
 #[derive(Debug)]
@@ -220,7 +220,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                     let new_id = window::Id(self.id_ctr);
                     self.popup.replace(new_id);
 
-                    let mut popup_settings = self.core.applet_helper.get_popup_settings(
+                    let mut popup_settings = self.core.applet.get_popup_settings(
                         window::Id(0),
                         new_id,
                         None,
@@ -398,7 +398,7 @@ impl cosmic::Application for CosmicNetworkApplet {
 
     fn view(&self) -> Element<Message> {
         self.core
-            .applet_helper
+            .applet
             .icon_button(&self.icon_name)
             .on_press(Message::TogglePopup)
             .into()
@@ -781,7 +781,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                     .push(scrollable(Column::with_children(list_col)).height(Length::Fixed(300.0)));
             }
         }
-        self.core.applet_helper.popup_container(content).into()
+        self.core.applet.popup_container(content).into()
     }
 
     fn subscription(&self) -> Subscription<Message> {
@@ -808,7 +808,7 @@ impl cosmic::Application for CosmicNetworkApplet {
     }
 
     fn style(&self) -> Option<<Theme as application::StyleSheet>::Style> {
-        Some(cosmic::app::applet::style())
+        Some(cosmic::applet::style())
     }
 
     fn on_close_requested(&self, id: window::Id) -> Option<Message> {
