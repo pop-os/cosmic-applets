@@ -6,18 +6,15 @@ use cosmic::cosmic_config::{config_subscription, Config, CosmicConfigEntry};
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced::Limits;
 use cosmic::iced::{
-    widget::{button, column, row, text, Row},
+    widget::{column, row, text, Row},
     window, Alignment, Length, Subscription,
 };
 use cosmic::iced_core::alignment::Horizontal;
-use cosmic::iced_core::image;
-use cosmic::iced_widget::image::Handle;
 
 use cosmic::iced_style::application;
 
 use cosmic::iced_widget::{horizontal_rule, scrollable, Column};
-use cosmic::theme::Svg;
-use cosmic::widget::{container, icon};
+use cosmic::widget::{button, container, icon};
 use cosmic::Renderer;
 use cosmic::{Element, Theme};
 use cosmic_notifications_config::NotificationsConfig;
@@ -348,112 +345,113 @@ impl cosmic::Application for Notifications {
                     continue;
                 }
                 let name = c.1[0].app_name.clone();
-                let notif_elems: Vec<_> =
-                    c.1.iter()
-                        .rev()
-                        .map(|n| {
-                            let app_name = text(if n.app_name.len() > 24 {
-                                Cow::from(format!(
-                                    "{:.26}...",
-                                    n.app_name.lines().next().unwrap_or_default()
-                                ))
-                            } else {
-                                Cow::from(&n.app_name)
-                            })
-                            .size(12)
-                            .width(Length::Fill);
-
-                            let duration_since = text(duration_ago_msg(n)).size(12);
-
-                            let close_notif =
-                                button(icon("window-close-symbolic", 16).style(Svg::Symbolic))
-                                    .on_press(Message::Dismissed(n.id))
-                                    .style(cosmic::theme::Button::Text);
-                            Element::from(
-                                column!(
-                                    match n.image() {
-                                        Some(cosmic_notifications_util::Image::File(path)) => {
-                                            row![
-                                                icon(path.as_path(), 16),
-                                                app_name,
-                                                duration_since,
-                                                close_notif
-                                            ]
-                                            .spacing(8)
-                                            .align_items(Alignment::Center)
-                                        }
-                                        Some(cosmic_notifications_util::Image::Name(name)) => {
-                                            row![
-                                                icon(name.as_str(), 16),
-                                                app_name,
-                                                duration_since,
-                                                close_notif
-                                            ]
-                                            .spacing(8)
-                                            .align_items(Alignment::Center)
-                                        }
-                                        Some(cosmic_notifications_util::Image::Data {
-                                            width,
-                                            height,
-                                            data,
-                                        }) => {
-                                            let handle = image::Handle::from_pixels(
-                                                *width,
-                                                *height,
-                                                data.clone(),
-                                            );
-                                            row![
-                                                icon(handle, 16),
-                                                app_name,
-                                                duration_since,
-                                                close_notif
-                                            ]
-                                            .spacing(8)
-                                            .align_items(Alignment::Center)
-                                        }
-                                        None => row![app_name, duration_since, close_notif]
-                                            .spacing(8)
-                                            .align_items(Alignment::Center),
-                                    },
-                                    column![
-                                        text(n.summary.lines().next().unwrap_or_default())
-                                            .width(Length::Fill)
-                                            .size(14),
-                                        text(n.body.lines().next().unwrap_or_default())
-                                            .width(Length::Fill)
-                                            .size(12)
-                                    ]
-                                )
-                                .width(Length::Fill),
-                            )
+                let notif_elems: Vec<_> = c
+                    .1
+                    .iter()
+                    .rev()
+                    .map(|n| {
+                        let app_name = text(if n.app_name.len() > 24 {
+                            Cow::from(format!(
+                                "{:.26}...",
+                                n.app_name.lines().next().unwrap_or_default()
+                            ))
+                        } else {
+                            Cow::from(&n.app_name)
                         })
-                        .collect();
+                        .size(12)
+                        .width(Length::Fill);
+
+                        let duration_since = text(duration_ago_msg(n)).size(12);
+
+                        let close_notif = button(
+                            icon::from_name("window-close-symbolic")
+                                .size(16)
+                                .symbolic(true),
+                        )
+                        .on_press(Message::Dismissed(n.id))
+                        .style(cosmic::theme::Button::Text);
+                        Element::from(
+                            column!(
+                                match n.image() {
+                                    Some(cosmic_notifications_util::Image::File(path)) => {
+                                        row![
+                                            icon::from_path(PathBuf::from(path)).icon().size(16),
+                                            app_name,
+                                            duration_since,
+                                            close_notif
+                                        ]
+                                        .spacing(8)
+                                        .align_items(Alignment::Center)
+                                    }
+                                    Some(cosmic_notifications_util::Image::Name(name)) => {
+                                        row![
+                                            icon::from_name(name.as_str()).size(16),
+                                            app_name,
+                                            duration_since,
+                                            close_notif
+                                        ]
+                                        .spacing(8)
+                                        .align_items(Alignment::Center)
+                                    }
+                                    Some(cosmic_notifications_util::Image::Data {
+                                        width,
+                                        height,
+                                        data,
+                                    }) => {
+                                        row![
+                                            icon::from_raster_pixels(*width, *height, data.clone())
+                                                .icon()
+                                                .size(16),
+                                            app_name,
+                                            duration_since,
+                                            close_notif
+                                        ]
+                                        .spacing(8)
+                                        .align_items(Alignment::Center)
+                                    }
+                                    None => row![app_name, duration_since, close_notif]
+                                        .spacing(8)
+                                        .align_items(Alignment::Center),
+                                },
+                                column![
+                                    text(n.summary.lines().next().unwrap_or_default())
+                                        .width(Length::Fill)
+                                        .size(14),
+                                    text(n.body.lines().next().unwrap_or_default())
+                                        .width(Length::Fill)
+                                        .size(12)
+                                ]
+                            )
+                            .width(Length::Fill),
+                        )
+                    })
+                    .collect();
                 let show_more_icon = c.1.last().and_then(|n| {
                     info!("app_icon: {:?}", &n.app_icon);
                     if n.app_icon.is_empty() {
                         match n.image().cloned() {
-                            Some(Image::File(p)) => Some(cosmic::widget::IconSource::Path(
-                                Cow::Owned(PathBuf::from(p)),
-                            )),
+                            Some(Image::File(p)) => {
+                                Some(cosmic::widget::icon::from_path(PathBuf::from(p)))
+                            }
                             Some(Image::Name(name)) => {
-                                Some(cosmic::widget::IconSource::Name(Cow::Owned(name)))
+                                Some(cosmic::widget::icon::from_name(name).handle())
                             }
                             Some(Image::Data {
                                 width,
                                 height,
                                 data,
-                            }) => Some(cosmic::widget::IconSource::Handle(icon::Handle::Image(
-                                Handle::from_pixels(width, height, data),
-                            ))),
+                            }) => Some(cosmic::widget::icon::from_raster_pixels(
+                                width, height, data,
+                            )),
                             None => None,
                         }
                     } else if let Some(path) = url::Url::parse(&n.app_icon)
                         .ok()
                         .and_then(|u| u.to_file_path().ok())
                     {
-                        Some(cosmic::widget::IconSource::Path(Cow::Owned(path)))
+                        Some(cosmic::widget::icon::from_path(path))
                     } else {
-                        Some(cosmic::widget::IconSource::Name(Cow::Borrowed(&n.app_icon)))
+                        Some(cosmic::widget::icon::from_name(n.app_icon.clone()).handle())
                     }
                 });
                 let card_list = anim!(
@@ -499,7 +497,7 @@ impl cosmic::Application for Notifications {
 }
 
 // todo put into libcosmic doing so will fix the row_button's border radius
-fn row_button(content: Vec<Element<Message>>) -> cosmic::iced::widget::Button<Message, Renderer> {
+fn row_button(content: Vec<Element<Message>>) -> cosmic::widget::Button<Message, Renderer> {
     button(
         Row::with_children(content)
             .spacing(4)
@@ -512,7 +510,7 @@ fn row_button(content: Vec<Element<Message>>) -> cosmic::iced::widget::Button<Me
 }
 
 fn text_icon(name: &str, size: u16) -> cosmic::widget::Icon {
-    icon(name, size).style(Svg::Symbolic)
+    icon::from_name(name).size(size).symbolic(true).icon()
 }
 
 fn duration_ago_msg(notification: &Notification) -> String {

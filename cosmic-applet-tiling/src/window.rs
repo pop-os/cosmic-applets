@@ -1,27 +1,32 @@
 use crate::fl;
 use cosmic::app::Core;
-use cosmic::cosmic_theme::palette::rgb::Rgb;
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced::window::Id;
-use cosmic::iced::{Command, Limits};
+use cosmic::iced::{Command, Length, Limits, Subscription};
 use cosmic::iced_runtime::core::window;
 use cosmic::iced_style::application;
-use cosmic::theme::{Button, Svg};
-use cosmic::widget::{button, list_column, settings, spin_button, text, toggler};
+use cosmic::widget::{column, container, divider, spin_button, text};
 use cosmic::{Element, Theme};
+use cosmic_time::{anim, chain, id, Timeline};
+use once_cell::sync::Lazy;
+use std::time::Instant;
+use cosmic::iced_widget::row;
 
 const ID: &str = "com.system76.CosmicAppletTiling";
+const ON: &str = "com.system76.CosmicAppletTiling.On";
+const OFF: &str = "com.system76.CosmicAppletTiling.Off";
+
+static TILE_WINDOWS: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
+static SHOW_ACTIVE_HINTS: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
 
 #[derive(Default)]
 pub struct Window {
     core: Core,
     popup: Option<Id>,
+    timeline: Timeline,
     id_ctr: u128,
     tile_windows: bool,
-    show_window_titles: bool,
     show_active_hint: bool,
-    active_border_radius: spin_button::Model<i32>,
-    active_hint_color: Rgb,
     gaps: spin_button::Model<i32>,
 }
 
@@ -29,11 +34,9 @@ pub struct Window {
 pub enum Message {
     TogglePopup,
     PopupClosed(Id),
-    ToggleTileWindows(bool),
-    ToggleShowWindowTitles(bool),
-    ToggleShowActiveHint(bool),
-    HandleActiveBorderRadius(spin_button::Message),
-    SetActiveHintColor(Rgb),
+    Frame(Instant),
+    ToggleTileWindows(chain::Toggler, bool),
+    ToggleShowActiveHint(chain::Toggler, bool),
     HandleGaps(spin_button::Message),
 }
 
@@ -57,15 +60,22 @@ impl cosmic::Application for Window {
     ) -> (Self, Command<cosmic::app::Message<Self::Message>>) {
         let window = Window {
             core,
-            active_border_radius: spin_button::Model::default().max(99).min(0).step(1),
             gaps: spin_button::Model::default().max(99).min(0).step(1),
             ..Default::default()
         };
         (window, Command::none())
     }
 
-    fn on_close_requested(&self, id: window::Id) -> Option<Message> {
+    fn on_close_requested(&self, id: Id) -> Option<Message> {
         Some(Message::PopupClosed(id))
+    }
+
+    fn subscription(&self) -> Subscription<Self::Message> {
+        let timeline = self
+            .timeline
+            .as_subscription()
+            .map(|(_, now)| Message::Frame(now));
+        Subscription::batch(vec![timeline])
     }
 
     fn update(&mut self, message: Self::Message) -> Command<cosmic::app::Message<Self::Message>> {
@@ -94,18 +104,15 @@ impl cosmic::Application for Window {
                     self.popup = None;
                 }
             }
-            Message::ToggleTileWindows(toggled) => self.tile_windows = toggled,
-            Message::ToggleShowWindowTitles(toggled) => self.show_window_titles = toggled,
-            Message::ToggleShowActiveHint(toggled) => self.show_active_hint = toggled,
-            Message::HandleActiveBorderRadius(msg) => match msg {
-                spin_button::Message::Increment => self
-                    .active_border_radius
-                    .update(spin_button::Message::Increment),
-                spin_button::Message::Decrement => self
-                    .active_border_radius
-                    .update(spin_button::Message::Decrement),
-            },
-            Message::SetActiveHintColor(_) => {}
+            Message::Frame(now) => self.timeline.now(now),
+            Message::ToggleTileWindows(chain, toggled) => {
+                self.timeline.set_chain(chain).start();
+                self.tile_windows = toggled
+            }
+            Message::ToggleShowActiveHint(chain, toggled) => {
+                self.timeline.set_chain(chain).start();
+                self.show_active_hint = toggled
+            }
             Message::HandleGaps(msg) => match msg {
                 spin_button::Message::Increment => {
                     self.gaps.update(spin_button::Message::Increment)
@@ -121,64 +128,66 @@ impl cosmic::Application for Window {
     fn view(&self) -> Element<Self::Message> {
         self.core
             .applet_helper
-            .icon_button(ID)
+            .icon_button(OFF)
             .on_press(Message::TogglePopup)
-            .style(Button::Text)
             .into()
     }
 
     fn view_window(&self, _id: Id) -> Element<Self::Message> {
-        let content_list = list_column()
-            .add(settings::item(
-                fl!("tile-windows"),
-                toggler(None, self.tile_windows, |value| {
-                    Message::ToggleTileWindows(value)
-                }),
-            ))
-            .add(settings::item(
-                fl!("floating-window-exceptions"),
-                button(Button::Card).icon(Svg::Symbolic, "arrow-right", 16),
-            ))
-            .add(
-                settings::view_section(fl!("shortcuts"))
-                    .add(settings::item(
-                        fl!("launcher"),
-                        text(format!("{} + /", fl!("super"))),
-                    ))
-                    .add(settings::item(
-                        fl!("navigate-windows"),
-                        text(format!("{} + {}", fl!("super"), fl!("arrow-keys"))),
-                    ))
-                    .add(settings::item(
-                        fl!("toggle-tiling"),
-                        text(format!("{} + Y", fl!("super"))),
-                    ))
-                    .add(settings::item(fl!("view-all"), text(""))),
+        let content_list = cosmic::widget::column()
+            .padding(20)
+            .spacing(10)
+            .push(
+                container(
+                    anim!(
+                        TILE_WINDOWS,
+                        &self.timeline,
+                        fl!("tile-windows"),
+                        self.tile_windows,
+                        |chain, enable| { Message::ToggleTileWindows(chain, enable) },
+                    )
+                    .text_size(14)
+                    .width(Length::Fill),
+                )
+                .padding([0, 12]),
             )
-            .add(settings::item(
-                fl!("show-window-titles"),
-                toggler(None, self.show_window_titles, |value| {
-                    Message::ToggleShowWindowTitles(value)
-                }),
-            ))
-            .add(settings::item(
-                fl!("show-active-hint"),
-                toggler(None, self.show_active_hint, |value| {
-                    Message::ToggleShowActiveHint(value)
-                }),
-            ))
-            .add(settings::item(
-                fl!("active-border-radius"),
-                spin_button(
-                    self.active_border_radius.value.to_string(),
-                    Message::HandleActiveBorderRadius,
-                ),
-            ))
-            .add(settings::item(fl!("active-hint-color"), text("TODO")))
-            .add(settings::item(
-                fl!("gaps"),
+            .push(divider::horizontal::light())
+            .push(
+                column()
+                    .push(row!(
+                        text(fl!("launcher")).size(14).width(Length::Fill),
+                        text(format!("{} + /", fl!("super"))).size(14),
+                    ))
+                    .push(row!(
+                        text(fl!("navigate-windows")).size(14).width(Length::Fill),
+                        text(format!("{} + {}", fl!("super"), fl!("arrow-keys"))).size(14),
+                    ))
+                    .push(row!(
+                        text(fl!("toggle-tiling")).size(14).width(Length::Fill),
+                        text(format!("{} + Y", fl!("super"))).size(14),
+                    ))
+                    .spacing(10)
+                    .padding([0, 20, 0, 20]),
+            )
+            .push(divider::horizontal::light())
+            .push(
+                container(
+                    anim!(
+                        SHOW_ACTIVE_HINTS,
+                        &self.timeline,
+                        fl!("show-active-hint"),
+                        self.show_active_hint,
+                        |chain, enable| { Message::ToggleShowActiveHint(chain, enable) },
+                    )
+                    .text_size(14)
+                    .width(Length::Fill),
+                )
+                .padding([0, 12]),
+            )
+            .push(row!(
+                text(fl!("gaps")).size(14).width(Length::Fill),
                 spin_button(self.gaps.value.to_string(), Message::HandleGaps),
-            ));
+            ).padding([0, 10, 0, 10]));
 
         self.core.applet_helper.popup_container(content_list).into()
     }

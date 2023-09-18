@@ -1,3 +1,4 @@
+use cosmic::iced_widget::text;
 use cosmic::{app, iced, iced_style::application, theme::Theme};
 use freedesktop_desktop_entry::DesktopEntry;
 use std::{env, fs, process::Command};
@@ -52,8 +53,8 @@ impl cosmic::Application for Button {
 
     fn view(&self) -> cosmic::Element<Msg> {
         // TODO icon?
-        cosmic::widget::button(cosmic::theme::Button::Text)
-            .text(&self.desktop.name)
+        cosmic::widget::button(text(&self.desktop.name))
+            .style(cosmic::theme::Button::Text)
             .on_press(Msg::Press)
             .into()
     }
@@ -61,8 +62,7 @@ impl cosmic::Application for Button {
 
 pub fn main() -> iced::Result {
     let id = env::args()
-        .skip(1)
-        .next()
+        .nth(1)
         .expect("Requires desktop file id as argument.");
 
     let filename = format!("{id}.desktop");
