@@ -62,7 +62,7 @@ use url::Url;
 static MIME_TYPE: &str = "text/uri-list";
 
 pub fn run() -> cosmic::iced::Result {
-    cosmic::app::applet::run::<CosmicAppList>(false, ())
+    cosmic::app::applet::run::<CosmicAppList>(true, ())
 }
 
 #[derive(Debug, Clone, Default)]
@@ -883,7 +883,9 @@ impl cosmic::Application for CosmicAppList {
                 Length::Shrink,
                 dnd_listener(row(favorites)),
                 row(active).into(),
-                vertical_rule(1).into(),
+                container(vertical_rule(1))
+                    .height(self.core.applet_helper.suggested_size().1)
+                    .into(),
             )
         } else {
             (
@@ -891,7 +893,9 @@ impl cosmic::Application for CosmicAppList {
                 Length::Fill,
                 dnd_listener(column(favorites)),
                 column(active).into(),
-                divider::horizontal::light().into(),
+                container(divider::horizontal::light())
+                    .width(self.core.applet_helper.suggested_size().1)
+                    .into(),
             )
         };
 
