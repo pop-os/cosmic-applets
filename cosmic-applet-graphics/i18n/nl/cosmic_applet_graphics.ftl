@@ -1,0 +1,9 @@
+graphics-mode = Grafische Modus
+graphics = Grafisch
+integrated = Geïntegreerd
+integrated-desc = Zet alle externe schermen af. Herstart vereist.
+nvidia = NVIDIA
+hybrid = Hybride
+hybrid-desc = Hertart vereist.
+compute = Bereken
+compute-desc = Zet alle externe schermen af. Herstart vereist.

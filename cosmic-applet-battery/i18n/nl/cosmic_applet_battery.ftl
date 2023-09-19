@@ -1,0 +1,13 @@
+cosmic-applet-button = Cosmic Knop
+battery = Batterij
+battery-desc = Verminderd stroom verbruik en prestatie.
+balanced = Gebalanceerd
+balanced-desc = Standaard stroom verbruik en batterij verbruik.
+performance = Hoge Prestatie
+performance-desc = Hoge prestatie en batterij verbruik.
+max-charge = Verleng de levensduur van je batterij door een maximum lading van 80% in te stellen
+seconds = s
+minutes = m
+hours = u
+until-empty = tot leeg
+power-settings = Stroom verbruik en batterij instellingen...
