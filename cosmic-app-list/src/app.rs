@@ -811,6 +811,7 @@ impl cosmic::Application for CosmicAppList {
                         {
                             self.active_list.remove(p)
                         } else {
+                            self.item_ctr += 1;
                             DockItem {
                                 id: self.item_ctr,
                                 toplevels: Default::default(),
