@@ -1773,9 +1773,9 @@ dependencies = [
 
 [[package]]
 name = "freedesktop-icons"
-version = "0.2.3"
+version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "00e61ac115df4632b592d36b71fda3c259f4c8061c70b7fa429bac145890e880"
+checksum = "3f9d46a9ae065c46efb83854bb10315de6d333bb6f4526ebe320c004dab7857e"
 dependencies = [
  "dirs 4.0.0",
  "once_cell",
