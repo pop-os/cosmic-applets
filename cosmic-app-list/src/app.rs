@@ -254,6 +254,14 @@ struct DesktopInfo {
     path: PathBuf,
 }
 
+fn default_app_icon() -> PathBuf {
+  freedesktop_icons::lookup("application-default")
+      .with_size(128)
+      .with_cache()
+      .find()
+      .unwrap_or_default()
+}
+
 fn desktop_info_for_app_ids(mut app_ids: Vec<String>) -> Vec<DesktopInfo> {
     let app_ids_clone = app_ids.clone();
     let mut ret = freedesktop_desktop_entry::Iter::new(freedesktop_desktop_entry::default_paths())
@@ -264,17 +272,19 @@ fn desktop_info_for_app_ids(mut app_ids: Vec<String>) -> Vec<DesktopInfo> {
                         .iter()
                         .position(|s| s == de.appid || s.eq(&de.name(None).unwrap_or_default()))
                     {
-                        freedesktop_icons::lookup(de.icon().unwrap_or(de.appid))
+                        let icon = freedesktop_icons::lookup(de.icon().unwrap_or(de.appid))
                             .with_size(128)
                             .with_cache()
                             .find()
-                            .map(|buf| DesktopInfo {
-                                id: app_ids.remove(i),
-                                icon: buf,
-                                exec: de.exec().unwrap_or_default().to_string(),
-                                name: de.name(None).unwrap_or_default().to_string(),
-                                path: path.clone(),
-                            })
+                            .unwrap_or_else(default_app_icon);
+
+                        Some(DesktopInfo {
+                            id: app_ids.remove(i),
+                            icon,
+                            exec: de.exec().unwrap_or_default().to_string(),
+                            name: de.name(None).unwrap_or_default().to_string(),
+                            path: path.clone(),
+                        })
                     } else {
                         None
                     }
@@ -287,6 +297,7 @@ fn desktop_info_for_app_ids(mut app_ids: Vec<String>) -> Vec<DesktopInfo> {
             .into_iter()
             .map(|id| DesktopInfo {
                 id,
+                icon: default_app_icon(),
                 ..Default::default()
             })
             .collect_vec(),
@@ -603,17 +614,18 @@ impl cosmic::Application for CosmicAppList {
                         DesktopEntry::decode(&file_path, &input)
                             .ok()
                             .and_then(|de| {
-                                freedesktop_icons::lookup(de.icon().unwrap_or(de.appid))
+                                let icon = freedesktop_icons::lookup(de.icon().unwrap_or(de.appid))
                                     .with_size(128)
                                     .with_cache()
                                     .find()
-                                    .map(|buf| DesktopInfo {
-                                        id: de.id().to_string(),
-                                        icon: buf,
-                                        exec: de.exec().unwrap_or_default().to_string(),
-                                        name: de.name(None).unwrap_or_default().to_string(),
-                                        path: file_path.clone(),
-                                    })
+                                    .unwrap_or_else(default_app_icon);
+                                Some(DesktopInfo {
+                                    id: de.id().to_string(),
+                                    icon,
+                                    exec: de.exec().unwrap_or_default().to_string(),
+                                    name: de.name(None).unwrap_or_default().to_string(),
+                                    path: file_path.clone(),
+                                })
                             })
                     }) {
                         self.item_ctr += 1;
