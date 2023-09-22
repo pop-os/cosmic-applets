@@ -7,7 +7,6 @@ use cosmic::iced::{Command, Length, Limits, Subscription};
 use cosmic::iced_core::{Alignment, Color};
 use cosmic::iced_style::application;
 use cosmic::iced_widget::row;
-use cosmic::widget::button::StyleSheet;
 use cosmic::widget::{button, container, spin_button, text};
 use cosmic::{Element, Theme};
 use cosmic_time::{anim, chain, id, Timeline};
@@ -192,7 +191,7 @@ impl cosmic::Application for Window {
                 container(
                     button(text(fl!("view-all-shortcuts")).size(14))
                         .width(Length::Fill)
-                        .style(popup_button_style())
+                        .style(button_theme())
                         .padding(10)
                         .on_press(Message::ViewAllShortcuts),
                 )
@@ -226,7 +225,7 @@ impl cosmic::Application for Window {
                     button(text(fl!("floating-window-exceptions")).size(14))
                         .width(Length::Fill)
                         .padding(10)
-                        .style(popup_button_style())
+                        .style(button_theme())
                         .on_press(Message::OpenFloatingWindowExceptions),
                 )
                 .width(Length::Fill)
@@ -237,7 +236,7 @@ impl cosmic::Application for Window {
                     button(text(fl!("window-management-settings")).size(14))
                         .width(Length::Fill)
                         .padding(10)
-                        .style(popup_button_style())
+                        .style(button_theme())
                         .on_press(Message::OpenWindowManagementSettings),
                 )
                 .width(Length::Fill)
@@ -254,27 +253,6 @@ impl cosmic::Application for Window {
 
     fn style(&self) -> Option<<Theme as application::StyleSheet>::Style> {
         Some(cosmic::applet::style())
-    }
-}
-
-fn popup_button_style() -> cosmic::theme::Button {
-    cosmic::theme::Button::Custom {
-        active: Box::new(|active, t| cosmic::widget::button::Appearance {
-            border_radius: 8.0.into(),
-            ..t.active(active, &cosmic::theme::Button::Icon)
-        }),
-        hovered: Box::new(|hovered, t| cosmic::widget::button::Appearance {
-            border_radius: 8.0.into(),
-            ..t.hovered(hovered, &cosmic::theme::Button::Text)
-        }),
-        pressed: Box::new(|pressed, t| cosmic::widget::button::Appearance {
-            border_radius: 8.0.into(),
-            ..t.pressed(pressed, &cosmic::theme::Button::Text)
-        }),
-        disabled: Box::new(|t| cosmic::widget::button::Appearance {
-            border_radius: 8.0.into(),
-            ..t.disabled(&cosmic::theme::Button::Standard)
-        }),
     }
 }
 
