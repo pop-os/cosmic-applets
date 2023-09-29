@@ -248,6 +248,7 @@ enum Message {
 #[derive(Debug, Clone, Default)]
 struct DesktopInfo {
     id: String,
+    wm_class: Option<String>,
     icon: PathBuf,
     exec: String,
     name: String,
@@ -276,18 +277,19 @@ fn desktop_info_for_app_ids(mut app_ids: Vec<String>) -> Vec<DesktopInfo> {
         .filter_map(|path| {
             std::fs::read_to_string(&path).ok().and_then(|input| {
                 DesktopEntry::decode(&path, &input).ok().and_then(|de| {
-                    if let Some(i) = app_ids
-                        .iter()
-                        .position(|s| s == de.appid || s.eq(&de.startup_wm_class().unwrap_or_default()))
-                    {
+                    if let Some(i) = app_ids.iter().position(|s| {
+                        s == de.appid || s.eq(&de.startup_wm_class().unwrap_or_default())
+                    }) {
                         let icon = freedesktop_icons::lookup(de.icon().unwrap_or(de.appid))
                             .with_size(128)
                             .with_cache()
                             .find()
                             .unwrap_or_else(default_app_icon);
+                        app_ids.remove(i);
 
                         Some(DesktopInfo {
-                            id: app_ids.remove(i),
+                            id: de.appid.to_string(),
+                            wm_class: de.startup_wm_class().map(ToString::to_string),
                             icon,
                             exec: de.exec().unwrap_or_default().to_string(),
                             name: de.name(None).unwrap_or_default().to_string(),
@@ -313,11 +315,11 @@ fn desktop_info_for_app_ids(mut app_ids: Vec<String>) -> Vec<DesktopInfo> {
     ret.sort_by(|a, b| {
         app_ids_clone
             .iter()
-            .position(|id| id == &a.id || id.eq(&a.name))
+            .position(|id| id == &a.id || Some(id) == a.wm_class.as_ref())
             .cmp(
                 &app_ids_clone
                     .iter()
-                    .position(|id| id == &b.id || id.eq(&b.name)),
+                    .position(|id| id == &b.id || Some(id) == b.wm_class.as_ref()),
             )
     });
     ret
@@ -445,11 +447,9 @@ impl cosmic::Application for CosmicAppList {
                 }
             }
             Message::Favorite(id) => {
-                if let Some(i) = self
-                    .active_list
-                    .iter()
-                    .position(|t| t.desktop_info.id == id || t.desktop_info.name == id)
-                {
+                if let Some(i) = self.active_list.iter().position(|t| {
+                    t.desktop_info.id == id
+                }) {
                     let entry = self.active_list.remove(i);
                     self.favorite_list.push(entry);
                 }
@@ -629,6 +629,7 @@ impl cosmic::Application for CosmicAppList {
                                     .unwrap_or_else(default_app_icon);
                                 Some(DesktopInfo {
                                     id: de.id().to_string(),
+                                    wm_class: de.startup_wm_class().map(ToString::to_string),
                                     icon,
                                     exec: de.exec().unwrap_or_default().to_string(),
                                     name: de.name(None).unwrap_or_default().to_string(),
@@ -699,7 +700,8 @@ impl cosmic::Application for CosmicAppList {
                             .iter_mut()
                             .chain(self.favorite_list.iter_mut())
                             .find(|DockItem { desktop_info, .. }| {
-                                desktop_info.id == info.app_id || desktop_info.name == info.app_id
+                                desktop_info.id == info.app_id
+                                    || desktop_info.wm_class.as_ref() == Some(&info.app_id)
                             })
                         {
                             t.toplevels.push((handle, info));
@@ -1010,7 +1012,10 @@ impl cosmic::Application for CosmicAppList {
         )) = self.popup.as_ref().filter(|p| id == p.0)
         {
             let is_favorite = self.config.favorites.contains(&desktop_info.id)
-                || self.config.favorites.contains(&desktop_info.name);
+                || desktop_info
+                    .wm_class
+                    .as_ref()
+                    .is_some_and(|wm_class| self.config.favorites.contains(wm_class));
 
             let mut content = column![
                 iced::widget::text(&desktop_info.name).horizontal_alignment(Horizontal::Center),
