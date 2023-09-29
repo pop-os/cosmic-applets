@@ -270,7 +270,7 @@ fn desktop_info_for_app_ids(mut app_ids: Vec<String>) -> Vec<DesktopInfo> {
                 DesktopEntry::decode(&path, &input).ok().and_then(|de| {
                     if let Some(i) = app_ids
                         .iter()
-                        .position(|s| s == de.appid || s.eq(&de.name(None).unwrap_or_default()))
+                        .position(|s| s == de.appid || s.eq(&de.startup_wm_class().unwrap_or_default()))
                     {
                         let icon = freedesktop_icons::lookup(de.icon().unwrap_or(de.appid))
                             .with_size(128)
