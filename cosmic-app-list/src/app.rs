@@ -255,11 +255,19 @@ struct DesktopInfo {
 }
 
 fn default_app_icon() -> PathBuf {
-  freedesktop_icons::lookup("application-default")
-      .with_size(128)
-      .with_cache()
-      .find()
-      .unwrap_or_default()
+    freedesktop_icons::lookup("application-default")
+        .with_theme("Pop")
+        .with_size(128)
+        .with_cache()
+        .find()
+        .or_else(|| {
+            freedesktop_icons::lookup("application-x-executable")
+                .with_theme("default")
+                .with_size(128)
+                .with_cache()
+                .find()
+        })
+        .unwrap_or_default()
 }
 
 fn desktop_info_for_app_ids(mut app_ids: Vec<String>) -> Vec<DesktopInfo> {
