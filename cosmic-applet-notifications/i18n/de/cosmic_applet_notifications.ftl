@@ -9,5 +9,5 @@ minutes-ago = { NUMBER($duration) ->
 show-more = Zeige {$more} Mehr
 clear-all = Alle Benachrichtigungen leeren
 do-not-disturb = Nicht stören
-notification-settings = Benachrichtigungseinstellungen...
+notification-settings = Benachrichtigungs-Einstellungen...
 no-notifications = Keine Benachrichtigungen
