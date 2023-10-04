@@ -242,7 +242,7 @@ impl cosmic::Application for Window {
                 .padding([0, self.core.applet.suggested_size().0 / 2])
                 .align_items(Alignment::Center),
             )
-            .style(Button::Standard)
+            .style(Button::Text)
             .on_press(Message::TogglePopup)
             .padding(8)
             .width(Length::Shrink)
