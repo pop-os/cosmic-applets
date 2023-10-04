@@ -369,7 +369,7 @@ fn power_buttons(name: &str, msg: String) -> cosmic::widget::Button<Message, Ren
     )
     .width(Length::Fill)
     .height(Length::Fixed(76.0))
-    .style(theme::Button::Standard)
+    .style(theme::Button::Text)
 }
 
 fn text_icon(name: &str, size: u16) -> cosmic::widget::Icon {

@@ -299,7 +299,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
         let button_style = || Button::Custom {
             active: Box::new(|active, t| button::Appearance {
                 border_radius: 0.0.into(),
-                ..t.active(active, &Button::Standard)
+                ..t.active(active, &Button::Text)
             }),
             disabled: Box::new(|t| button::Appearance {
                 border_radius: 0.0.into(),
@@ -419,7 +419,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
                 .width(Length::Fixed(24.0))
                 .height(Length::Fixed(24.0))
         ])
-        .style(Button::Standard)
+        .style(Button::Text)
         .padding([8, 24])
         .style(button_style())
         .on_press(Message::ToggleVisibleDevices(!self.show_visible_devices));
