@@ -513,7 +513,6 @@ impl cosmic::Application for CosmicNetworkApplet {
                                 .align_items(Alignment::Center)
                                 .spacing(8)
                         )
-                        .style(Button::Text)
                         .padding([8, 24])
                         .style(button_style())
                         .on_press(Message::Disconnect(name.clone()))]
@@ -612,7 +611,6 @@ impl cosmic::Application for CosmicNetworkApplet {
                         .align_items(Alignment::Center)
                         .spacing(8),
                 )
-                .style(Button::Suggested)
                 .padding([8, 24])
                 .width(Length::Fill)
                 .style(button_style());
@@ -647,7 +645,6 @@ impl cosmic::Application for CosmicNetworkApplet {
                     .width(Length::Fixed(24.0))
                     .height(Length::Fixed(24.0)),
             ])
-            .style(Button::Text)
             .padding([8, 24])
             .style(button_style())
             .on_press(Message::ToggleVisibleNetworks);
@@ -681,7 +678,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                             container(text(fl!("router-wps-button"))).padding(8),
                             row![
                                 button(container(text(fl!("cancel"))).padding([0, 24]))
-                                    .style(Button::Suggested)
+                                    .style(Button::Destructive)
                                     .on_press(Message::CancelNewConnection),
                                 button(container(text(fl!("connect"))).padding([0, 24]))
                                     .style(Button::Suggested)
@@ -731,7 +728,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                             text(fl!("check-wifi-connection")),
                             row![
                                 button(container(text("Cancel")).padding([0, 24]))
-                                    .style(Button::Suggested)
+                                    .style(Button::Destructive)
                                     .on_press(Message::CancelNewConnection),
                                 button(container(text("Connect")).padding([0, 24]))
                                     .style(Button::Suggested)

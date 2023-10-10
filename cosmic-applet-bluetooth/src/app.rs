@@ -421,7 +421,6 @@ impl cosmic::Application for CosmicBluetoothApplet {
         ])
         .style(Button::Text)
         .padding([8, 24])
-        .style(button_style())
         .on_press(Message::ToggleVisibleDevices(!self.show_visible_devices));
         content = content.push(available_connections_btn);
         let mut list_column: Vec<Element<'_, Message>> =

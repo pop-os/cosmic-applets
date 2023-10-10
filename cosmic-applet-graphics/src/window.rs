@@ -1,12 +1,13 @@
 use crate::dbus::{self, PowerDaemonProxy};
 use crate::fl;
 use crate::graphics::{get_current_graphics, set_graphics, Graphics};
+use cosmic::app::command::message::cosmic;
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced_runtime::core::alignment::Horizontal;
 use cosmic::iced_runtime::core::Alignment;
 use cosmic::iced_style::application;
 use cosmic::theme::Button;
-use cosmic::widget::icon;
+use cosmic::widget::{icon, Icon};
 use cosmic::{
     applet::{button_theme, cosmic_panel_config::PanelAnchor},
     Command,
@@ -222,13 +223,21 @@ impl cosmic::Application for Window {
                 .applet
                 .icon_button(ID)
                 .on_press(Message::TogglePopup)
-                .style(Button::Text)
                 .into(),
             PanelAnchor::Top | PanelAnchor::Bottom => button(
                 row![
-                    icon::from_name(ID)
-                        .size(self.core.applet.suggested_size().0)
-                        .symbolic(true),
+                    Icon::from(
+                        icon::from_name(ID)
+                            .size(self.core.applet.suggested_size().0)
+                            .symbolic(true)
+                    )
+                    .style(cosmic::theme::Svg::Custom(std::rc::Rc::new(
+                        |theme| {
+                            cosmic::iced_style::svg::Appearance {
+                                color: Some(theme.cosmic().background.on.into()),
+                            }
+                        }
+                    ))),
                     text(match self.graphics_mode.map(|g| g.inner()) {
                         Some(Graphics::Integrated) => fl!("integrated"),
                         Some(Graphics::Nvidia) => fl!("nvidia"),
