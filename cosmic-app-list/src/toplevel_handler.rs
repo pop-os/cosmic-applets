@@ -3,8 +3,7 @@ use cctk::{
     sctk::{
         self,
         reexports::{
-            calloop,
-            client::{protocol::wl_seat::WlSeat, WaylandSource},
+            calloop, calloop_wayland_source::WaylandSource, client::protocol::wl_seat::WlSeat,
         },
         seat::{SeatHandler, SeatState},
     },
@@ -132,7 +131,7 @@ pub(crate) fn toplevel_handler(
     let (globals, event_queue) = registry_queue_init(&conn).unwrap();
     let mut event_loop = calloop::EventLoop::<AppData>::try_new().unwrap();
     let qh = event_queue.handle();
-    let wayland_source = WaylandSource::new(event_queue).unwrap();
+    let wayland_source = WaylandSource::new(conn, event_queue);
     let handle = event_loop.handle();
     wayland_source
         .insert(handle.clone())
@@ -141,9 +140,11 @@ pub(crate) fn toplevel_handler(
     if handle
         .insert_source(rx, |event, _, state| match event {
             calloop::channel::Event::Msg(req) => match req {
-                ToplevelRequest::Activate(handle, seat) => {
-                    let manager = &state.toplevel_manager_state.manager;
-                    manager.activate(&handle, &seat);
+                ToplevelRequest::Activate(handle) => {
+                    if let Some(seat) = state.seat_state.seats().next() {
+                        let manager = &state.toplevel_manager_state.manager;
+                        manager.activate(&handle, &seat);
+                    }
                 }
                 ToplevelRequest::Quit(handle) => {
                     let manager = &state.toplevel_manager_state.manager;
