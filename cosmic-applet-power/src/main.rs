@@ -297,11 +297,11 @@ impl cosmic::Application for Power {
                 .size(16),
                 row![
                     button(text(fl!("confirm")).size(14))
-                        .padding(2)
+                        .padding(8)
                         .style(theme::Button::Suggested)
                         .on_press(Message::Confirm),
                     button(text(fl!("cancel")).size(14))
-                        .padding(2)
+                        .padding(8)
                         .style(theme::Button::Standard)
                         .on_press(Message::Cancel),
                 ]
