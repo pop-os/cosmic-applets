@@ -5,6 +5,7 @@ use cctk::{
         output::{OutputHandler, OutputState},
         reexports::{
             calloop,
+            calloop_wayland_source::WaylandSource,
             client::{self as wayland_client},
         },
         registry::{ProvidesRegistryState, RegistryState},
@@ -18,7 +19,7 @@ use wayland_client::backend::ObjectId;
 use wayland_client::{
     globals::registry_queue_init,
     protocol::wl_output::{self, WlOutput},
-    ConnectError, Proxy, WaylandSource,
+    ConnectError, Proxy,
 };
 use wayland_client::{Connection, QueueHandle, WEnum};
 
@@ -53,8 +54,7 @@ pub fn spawn_workspaces(tx: mpsc::Sender<WorkspaceList>) -> SyncSender<Workspace
             let (globals, event_queue) = registry_queue_init(&conn).unwrap();
             let qhandle = event_queue.handle();
 
-            WaylandSource::new(event_queue)
-                .expect("Failed to create wayland source")
+            WaylandSource::new(conn, event_queue)
                 .insert(loop_handle)
                 .unwrap();
 

@@ -5,6 +5,7 @@ use cosmic::iced::{
     window, Alignment, Length, Rectangle, Subscription,
 };
 use cosmic::iced_style::application;
+use cosmic::theme;
 use cosmic::{app, applet::cosmic_panel_config::PanelAnchor, Command};
 use cosmic::{
     widget::{icon, rectangle_tracker::*},

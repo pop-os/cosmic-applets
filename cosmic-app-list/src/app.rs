@@ -452,9 +452,11 @@ impl cosmic::Application for CosmicAppList {
                 }
             }
             Message::Favorite(id) => {
-                if let Some(i) = self.active_list.iter().position(|t| {
-                    t.desktop_info.id == id
-                }) {
+                if let Some(i) = self
+                    .active_list
+                    .iter()
+                    .position(|t| t.desktop_info.id == id)
+                {
                     let entry = self.active_list.remove(i);
                     self.favorite_list.push(entry);
                 }
@@ -488,9 +490,8 @@ impl cosmic::Application for CosmicAppList {
                 if let Some(p) = self.popup.take() {
                     return destroy_popup(p.0);
                 }
-                if let (Some(tx), Some(seat)) = (self.toplevel_sender.as_ref(), self.seat.as_ref())
-                {
-                    let _ = tx.send(ToplevelRequest::Activate(handle, seat.clone()));
+                if let Some(tx) = self.toplevel_sender.as_ref() {
+                    let _ = tx.send(ToplevelRequest::Activate(handle));
                 }
             }
             Message::Quit(id) => {

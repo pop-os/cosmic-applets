@@ -83,7 +83,7 @@ pub enum ToplevelUpdate {
 
 #[derive(Debug, Clone)]
 pub enum ToplevelRequest {
-    Activate(ZcosmicToplevelHandleV1, WlSeat),
+    Activate(ZcosmicToplevelHandleV1),
     Quit(ZcosmicToplevelHandleV1),
     Exit,
 }
