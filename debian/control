@@ -11,6 +11,7 @@ Build-Depends:
   libegl-dev,
   libpulse-dev,
   libxkbcommon-dev,
+  libwayland-dev,
   just,
   pkg-config,
 Standards-Version: 4.3.0
