@@ -39,9 +39,8 @@ lto = "thin"
 
 # [patch."https://github.com/pop-os/cosmic-time"]
 # cosmic-time = { path = "../cosmic-time" }
-# [patch."https://github.com/pop-os/libcosmic"]
-# libcosmic = { path = "../libcosmic" }
-# [patch."https://github.com/pop-os/cosmic-config"]
-# cosmic-config = { path = "../libcosmic/cosmic-config" }
+[patch."https://github.com/pop-os/libcosmic"]
+libcosmic = { git = "https://github.com/pop-os/libcosmic//", branch = "theme-dark-light-switching"}
+cosmic-config = { git = "https://github.com/pop-os/libcosmic//", branch = "theme-dark-light-switching"}
 [patch."https://github.com/Smithay/client-toolkit"]
 sctk = { git = "https://github.com/smithay/client-toolkit//", package = "smithay-client-toolkit", rev = "dc8c4a0" }
