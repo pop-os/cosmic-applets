@@ -18,7 +18,7 @@ use cosmic::iced::{
 };
 use cosmic::iced_runtime::core::layout::Limits;
 use cosmic::iced_style::application;
-use cosmic::widget::{button, divider, icon};
+use cosmic::widget::{button, divider, horizontal_space, icon};
 use cosmic::{applet::button_theme, Command};
 use cosmic::{Element, Theme};
 use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
@@ -333,9 +333,15 @@ impl cosmic::Application for CosmicBatteryApplet {
                                 text(fl!("battery-desc")).size(10)
                             ]
                             .width(Length::Fill),
-                            icon::from_name("emblem-ok-symbolic")
-                                .size(12)
-                                .symbolic(matches!(self.power_profile, Power::Battery)),
+                            if matches!(self.power_profile, Power::Battery) {
+                                container(
+                                    icon::from_name("emblem-ok-symbolic")
+                                        .size(12)
+                                        .symbolic(true),
+                                )
+                            } else {
+                                container(horizontal_space(1.0))
+                            }
                         ]
                         .align_items(Alignment::Center)
                     )
@@ -350,9 +356,15 @@ impl cosmic::Application for CosmicBatteryApplet {
                                 text(fl!("balanced-desc")).size(10)
                             ]
                             .width(Length::Fill),
-                            icon::from_name("emblem-ok-symbolic")
-                                .size(12)
-                                .symbolic(matches!(self.power_profile, Power::Balanced)),
+                            if matches!(self.power_profile, Power::Balanced) {
+                                container(
+                                    icon::from_name("emblem-ok-symbolic")
+                                        .size(12)
+                                        .symbolic(true),
+                                )
+                            } else {
+                                container(horizontal_space(1.0))
+                            }
                         ]
                         .align_items(Alignment::Center)
                     )
@@ -367,9 +379,15 @@ impl cosmic::Application for CosmicBatteryApplet {
                                 text(fl!("performance-desc")).size(10)
                             ]
                             .width(Length::Fill),
-                            icon::from_name("emblem-ok-symbolic")
-                                .size(12)
-                                .symbolic(matches!(self.power_profile, Power::Performance)),
+                            if matches!(self.power_profile, Power::Performance) {
+                                container(
+                                    icon::from_name("emblem-ok-symbolic")
+                                        .size(12)
+                                        .symbolic(true),
+                                )
+                            } else {
+                                container(horizontal_space(1.0))
+                            }
                         ]
                         .align_items(Alignment::Center)
                     )
