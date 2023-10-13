@@ -7,7 +7,8 @@ use cosmic::iced_runtime::core::alignment::Horizontal;
 use cosmic::iced_runtime::core::Alignment;
 use cosmic::iced_style::application;
 use cosmic::theme::Button;
-use cosmic::widget::{icon, Icon};
+use cosmic::widget::divider::horizontal;
+use cosmic::widget::{horizontal_space, icon, Container, Icon};
 use cosmic::{
     applet::{button_theme, cosmic_panel_config::PanelAnchor},
     Command,
@@ -261,15 +262,6 @@ impl cosmic::Application for Window {
     }
 
     fn view_window(&self, _id: window::Id) -> Element<Message> {
-        let symbolic = matches!(
-            self.graphics_mode,
-            Some(GraphicsMode::CurrentGraphicsMode(Graphics::Integrated))
-                | Some(GraphicsMode::AppliedGraphicsMode(Graphics::Integrated))
-                | Some(GraphicsMode::SelectedGraphicsMode {
-                    new: Graphics::Integrated,
-                    ..
-                })
-        );
         let content_list = vec![
             button(
                 row![
@@ -278,16 +270,7 @@ impl cosmic::Application for Window {
                         text(fl!("integrated-desc")).size(12)
                     ]
                     .width(Length::Fill),
-                    icon::from_name(match self.graphics_mode {
-                        Some(GraphicsMode::SelectedGraphicsMode {
-                            new: Graphics::Integrated,
-                            ..
-                        }) => "process-working-symbolic",
-                        _ => "emblem-ok-symbolic",
-                    })
-                    .size(12)
-                    .symbolic(symbolic)
-                    .prefer_svg(!symbolic)
+                    button_icon(self.graphics_mode, Graphics::Integrated)
                 ]
                 .align_items(Alignment::Center),
             )
@@ -300,16 +283,7 @@ impl cosmic::Application for Window {
                 row![
                     column![text(format!("{} {}", fl!("nvidia"), fl!("graphics"))).size(14)]
                         .width(Length::Fill),
-                    icon::from_name(match self.graphics_mode {
-                        Some(GraphicsMode::SelectedGraphicsMode {
-                            new: Graphics::Nvidia,
-                            ..
-                        }) => "process-working-symbolic",
-                        _ => "emblem-ok-symbolic",
-                    },)
-                    .size(12)
-                    .symbolic(symbolic)
-                    .prefer_svg(!symbolic),
+                    button_icon(self.graphics_mode, Graphics::Nvidia)
                 ]
                 .align_items(Alignment::Center),
             )
@@ -325,16 +299,7 @@ impl cosmic::Application for Window {
                         text(fl!("hybrid-desc")).size(12)
                     ]
                     .width(Length::Fill),
-                    icon::from_name(match self.graphics_mode {
-                        Some(GraphicsMode::SelectedGraphicsMode {
-                            new: Graphics::Hybrid,
-                            ..
-                        }) => "process-working-symbolic",
-                        _ => "emblem-ok-symbolic",
-                    },)
-                    .size(12)
-                    .symbolic(symbolic)
-                    .prefer_svg(!symbolic),
+                    button_icon(self.graphics_mode, Graphics::Hybrid)
                 ]
                 .align_items(Alignment::Center),
             )
@@ -350,16 +315,7 @@ impl cosmic::Application for Window {
                         text(fl!("compute-desc")).size(12)
                     ]
                     .width(Length::Fill),
-                    icon::from_name(match self.graphics_mode {
-                        Some(GraphicsMode::SelectedGraphicsMode {
-                            new: Graphics::Compute,
-                            ..
-                        }) => "process-working-symbolic",
-                        _ => "emblem-ok-symbolic",
-                    },)
-                    .size(12)
-                    .symbolic(symbolic)
-                    .prefer_svg(!symbolic)
+                    button_icon(self.graphics_mode, Graphics::Compute)
                 ]
                 .align_items(Alignment::Center),
             )
@@ -397,5 +353,32 @@ impl cosmic::Application for Window {
 
     fn on_close_requested(&self, id: window::Id) -> Option<Message> {
         Some(Message::PopupClosed(id))
+    }
+}
+
+fn button_icon<'a>(
+    cur_mode: Option<GraphicsMode>,
+    button_mode: Graphics,
+) -> Container<'a, Message, cosmic::Renderer> {
+    match cur_mode {
+        Some(GraphicsMode::SelectedGraphicsMode { prev: _, new }) if new == button_mode => {
+            cosmic::widget::container(
+                icon::from_name("process-working-symbolic")
+                    .size(12)
+                    .symbolic(true)
+                    .prefer_svg(true),
+            )
+        }
+        Some(GraphicsMode::AppliedGraphicsMode(g) | GraphicsMode::CurrentGraphicsMode(g))
+            if g == button_mode =>
+        {
+            cosmic::widget::container(
+                icon::from_name("emblem-ok-symbolic")
+                    .size(12)
+                    .symbolic(true)
+                    .prefer_svg(true),
+            )
+        }
+        _ => cosmic::widget::container(horizontal_space(1.0)),
     }
 }
