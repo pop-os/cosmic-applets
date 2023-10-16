@@ -1,0 +1,12 @@
+bluetooth = Bluetooth
+other-devices = Toiset Bluetooth Laitteet
+settings = Bluetooth Asetukset...
+connected = Yhteydessä
+confirm-pin = Varmista, että seuraava PIN-koodi vastaa PIN-koodia, joka näkyy {$deviceName} laitteessa
+confirm = Vahvista
+cancel = Peruuta
+unsuccessful = Yhdistäminen Ei Onnistunut
+check-device = Varmista, että {$deviceName} on päällä, lähelläsi ja valmis muodostamaan yhteys.
+try-again = Yritä Uudelleen
+discoverable = Löydettävissä
+pairable = Yhdistettävissä

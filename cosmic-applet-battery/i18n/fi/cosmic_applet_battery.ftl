@@ -1,0 +1,13 @@
+cosmic-applet-button = Cosmic Painike
+battery = Akku
+battery-desc = Vähentynyt virrankulutus ja suorituskyky.
+balanced = Tasapainoitettu
+balanced-desc = Normaali suorituskyky ja akun käyttö.
+performance = Korkea suorituskyky
+performance-desc = Korkea suorituskyky ja akun käyttö.
+max-charge = Pidennä akun käyttöikää asettamalla enimmäislatausarvoksi 80 %
+seconds = s
+minutes = m
+hours = t
+until-empty = kunnes tyhjä
+power-settings = Virta- ja akkuasetukset...
