@@ -1,6 +1,11 @@
 cosmic-applet-button = Bouton Cosmic
 battery = Batterie
-max-charge = Augmenter la durée de vie de votre batterie en mettant la charge maximale à 80%
+battery-desc = Performance et consommation réduites.
+balanced = Équilibré
+balanced-desc = Performance et usage de la batterie standard.
+performance = Hautes performances
+performance-desc = Performances et consommation élevées.
+max-charge = Augmente la durée de vie de votre batterie en mettant la charge maximale à 80%
 seconds = s
 minutes = m
 hours = h
