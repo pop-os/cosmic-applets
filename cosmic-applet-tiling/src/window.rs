@@ -1,17 +1,23 @@
 use crate::fl;
 use cosmic::app::Core;
 use cosmic::applet::button_theme;
+use cosmic::cosmic_config::{ConfigGet, ConfigSet, CosmicConfigEntry};
+use cosmic::cosmic_theme::ThemeBuilder;
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced::window::Id;
 use cosmic::iced::{Command, Length, Limits, Subscription};
-use cosmic::iced_core::{Alignment, Color};
+use cosmic::iced_core::Alignment;
+use cosmic::iced_futures::backend::native::tokio;
 use cosmic::iced_style::application;
+use cosmic::iced_widget::canvas::path::lyon_path::builder;
+use cosmic::iced_widget::graphics::image::image_rs::error;
 use cosmic::iced_widget::row;
 use cosmic::widget::{button, container, spin_button, text};
 use cosmic::{Element, Theme};
 use cosmic_time::{anim, chain, id, Timeline};
 use once_cell::sync::Lazy;
 use std::time::Instant;
+use tracing::error;
 
 const ID: &str = "com.system76.CosmicAppletTiling";
 const ON: &str = "com.system76.CosmicAppletTiling.On";
@@ -27,7 +33,7 @@ pub struct Window {
     timeline: Timeline,
     id_ctr: u128,
     tile_windows: bool,
-    show_active_hint: bool,
+    active_hint: spin_button::Model<i32>,
     gaps: spin_button::Model<i32>,
 }
 
@@ -37,11 +43,12 @@ pub enum Message {
     PopupClosed(Id),
     Frame(Instant),
     ToggleTileWindows(chain::Toggler, bool),
-    ToggleShowActiveHint(chain::Toggler, bool),
+    HandleActiveHint(spin_button::Message),
     HandleGaps(spin_button::Message),
     ViewAllShortcuts,
     OpenFloatingWindowExceptions,
     OpenWindowManagementSettings,
+    Ignore,
 }
 
 impl cosmic::Application for Window {
@@ -62,9 +69,14 @@ impl cosmic::Application for Window {
         core: Core,
         _flags: Self::Flags,
     ) -> (Self, Command<cosmic::app::Message<Self::Message>>) {
+        let mut gaps = spin_button::Model::default().max(99).min(0).step(1);
+        gaps.value = core.system_theme().cosmic().gaps.1 as i32;
+        let mut active_hint = spin_button::Model::default().max(99).min(0).step(1);
+        active_hint.value = core.system_theme().cosmic().active_hint as i32;
         let window = Window {
             core,
-            gaps: spin_button::Model::default().max(99).min(0).step(1),
+            gaps,
+            active_hint,
             ..Default::default()
         };
         (window, Command::none())
@@ -113,21 +125,108 @@ impl cosmic::Application for Window {
                 self.timeline.set_chain(chain).start();
                 self.tile_windows = toggled
             }
-            Message::ToggleShowActiveHint(chain, toggled) => {
-                self.timeline.set_chain(chain).start();
-                self.show_active_hint = toggled
+            Message::HandleActiveHint(msg) => {
+                match msg {
+                    spin_button::Message::Increment => {
+                        self.active_hint.update(spin_button::Message::Increment)
+                    }
+                    spin_button::Message::Decrement => {
+                        self.active_hint.update(spin_button::Message::Decrement)
+                    }
+                };
+                let is_dark = self.core.system_theme().cosmic().is_dark;
+                let active_hint = self.active_hint.value;
+                return Command::perform(
+                    async move {
+                        let config = if is_dark {
+                            cosmic::cosmic_theme::ThemeBuilder::dark_config()
+                        } else {
+                            cosmic::cosmic_theme::ThemeBuilder::light_config()
+                        };
+                        let Ok(config) = config else {
+                            return;
+                        };
+
+                        let Ok(mut c_active_hint) = ConfigGet::get::<(u32, u32)>(&config, "active_hint") else {
+                            error!("Error getting active_hint");
+                            return;
+                        };
+
+                        c_active_hint.1 = active_hint as u32;
+
+                        if let Err(err) = ConfigSet::set(&config, "active_hint", c_active_hint) {
+                            error!(?err, "Error setting active_hint");
+                        }
+
+                        let config = if is_dark {
+                            cosmic::theme::CosmicTheme::dark_config()
+                        } else {
+                            cosmic::theme::CosmicTheme::light_config()
+                        };
+                        let Ok(config) = config else {
+                            return;
+                        };
+
+                        if let Err(err) = ConfigSet::set(&config, "active_hint", c_active_hint) {
+                            error!(?err, "Error setting active_hint");
+                        }
+                    },
+                    |_| cosmic::app::Message::App(Message::Ignore),
+                );
             }
-            Message::HandleGaps(msg) => match msg {
-                spin_button::Message::Increment => {
-                    self.gaps.update(spin_button::Message::Increment)
-                }
-                spin_button::Message::Decrement => {
-                    self.gaps.update(spin_button::Message::Decrement)
-                }
-            },
+            Message::HandleGaps(msg) => {
+                match msg {
+                    spin_button::Message::Increment => {
+                        self.gaps.update(spin_button::Message::Increment)
+                    }
+                    spin_button::Message::Decrement => {
+                        self.gaps.update(spin_button::Message::Decrement)
+                    }
+                };
+                let is_dark = self.core.system_theme().cosmic().is_dark;
+                let gaps = self.gaps.value;
+                return Command::perform(
+                    async move {
+                        let config = if is_dark {
+                            cosmic::cosmic_theme::ThemeBuilder::dark_config()
+                        } else {
+                            cosmic::cosmic_theme::ThemeBuilder::light_config()
+                        };
+                        let Ok(config) = config else {
+                            return;
+                        };
+
+                        let Ok(mut c_gaps) = ConfigGet::get::<(u32, u32)>(&config, "gaps") else {
+                            error!("Error getting gaps");
+                            return;
+                        };
+
+                        c_gaps.1 = gaps as u32;
+
+                        if let Err(err) = ConfigSet::set(&config, "gaps", c_gaps) {
+                            error!(?err, "Error setting gaps");
+                        }
+
+                        let config = if is_dark {
+                            cosmic::theme::CosmicTheme::dark_config()
+                        } else {
+                            cosmic::theme::CosmicTheme::light_config()
+                        };
+                        let Ok(config) = config else {
+                            return;
+                        };
+
+                        if let Err(err) = ConfigSet::set(&config, "gaps", c_gaps) {
+                            error!(?err, "Error setting gaps");
+                        }
+                    },
+                    |_| cosmic::app::Message::App(Message::Ignore),
+                );
+            }
             Message::ViewAllShortcuts => println!("View all shortcuts..."),
             Message::OpenFloatingWindowExceptions => println!("Floating window exceptions..."),
             Message::OpenWindowManagementSettings => println!("Window management settings..."),
+            Message::Ignore => {}
         }
         Command::none()
     }
@@ -141,10 +240,13 @@ impl cosmic::Application for Window {
     }
 
     fn view_window(&self, _id: Id) -> Element<Self::Message> {
-        let content_list = cosmic::widget::list_column()
-            .padding(0)
-            .spacing(5)
-            .add(
+        let cosmic = self.core.system_theme().cosmic();
+        let active_hint = cosmic.active_hint;
+        let gaps = cosmic.gaps.1;
+        let content_list = cosmic::widget::column()
+            .padding([8, 0])
+            .spacing(4)
+            .push(
                 container(
                     anim!(
                         TILE_WINDOWS,
@@ -156,16 +258,16 @@ impl cosmic::Application for Window {
                     .text_size(14)
                     .width(Length::Fill),
                 )
-                .padding([0, 15, 5, 15]),
+                .padding([0, 16, 4, 16]),
             )
-            .add(
+            .push(
                 row!(
                     text(fl!("navigate-windows")).size(14).width(Length::Fill),
                     text(format!("{} + {}", fl!("super"), fl!("arrow-keys"))).size(14),
                 )
-                .padding([5, 15, 5, 15]),
+                .padding([4, 16, 4, 16]),
             )
-            .add(
+            .push(
                 row!(
                     text(fl!("move-window")).size(14).width(Length::Fill),
                     text(format!(
@@ -176,95 +278,71 @@ impl cosmic::Application for Window {
                     ))
                     .size(14),
                 )
-                .padding([5, 15, 5, 15]),
+                .padding([4, 16, 4, 16]),
             )
-            .add(
+            .push(
                 row!(
                     text(fl!("toggle-floating-window"))
                         .size(14)
                         .width(Length::Fill),
                     text(format!("{} + G", fl!("super"))).size(14),
                 )
-                .padding([5, 15, 5, 15]),
+                .padding([4, 16, 4, 16]),
             )
-            .add(
+            .push(
                 container(
                     button(text(fl!("view-all-shortcuts")).size(14))
                         .width(Length::Fill)
                         .style(button_theme())
-                        .padding(10)
+                        .padding(8)
                         .on_press(Message::ViewAllShortcuts),
                 )
                 .width(Length::Fill)
-                .padding([0, 5, 0, 5]),
+                .padding(0),
             )
-            .add(
-                container(
-                    anim!(
-                        SHOW_ACTIVE_HINTS,
-                        &self.timeline,
-                        fl!("show-active-hint"),
-                        self.show_active_hint,
-                        |chain, enable| { Message::ToggleShowActiveHint(chain, enable) },
-                    )
-                    .text_size(14)
-                    .width(Length::Fill),
-                )
-                .padding([5, 15, 5, 15]),
-            )
-            .add(
+            .push(
                 row!(
-                    text(fl!("gaps")).size(14).width(Length::Fill),
-                    spin_button(self.gaps.value.to_string(), Message::HandleGaps),
+                    text(fl!("active-hint")).size(14).width(Length::Fill),
+                    spin_button(active_hint.to_string(), Message::HandleActiveHint),
                 )
-                .padding([0, 15, 0, 15])
+                .padding([0, 16, 0, 16])
                 .align_items(Alignment::Center),
             )
-            .add(
+            .push(
+                row!(
+                    text(fl!("gaps")).size(14).width(Length::Fill),
+                    spin_button(gaps.to_string(), Message::HandleGaps),
+                )
+                .padding([0, 16, 0, 16])
+                .align_items(Alignment::Center),
+            )
+            .push(
                 container(
                     button(text(fl!("floating-window-exceptions")).size(14))
                         .width(Length::Fill)
-                        .padding(10)
+                        .padding(8)
                         .style(button_theme())
                         .on_press(Message::OpenFloatingWindowExceptions),
                 )
                 .width(Length::Fill)
-                .padding([0, 5, 0, 5]),
+                .padding(0),
             )
-            .add(
+            .push(
                 container(
                     button(text(fl!("window-management-settings")).size(14))
                         .width(Length::Fill)
-                        .padding(10)
+                        .padding(8)
                         .style(button_theme())
                         .on_press(Message::OpenWindowManagementSettings),
                 )
                 .width(Length::Fill)
-                .padding([0, 5, 0, 5]),
+                .padding(0),
             );
 
-        self.core
-            .applet
-            .popup_container(content_list)
-            .padding(1)
-            .style(popup_style())
-            .into()
+        self.core.applet.popup_container(content_list).into()
     }
 
     fn style(&self) -> Option<<Theme as application::StyleSheet>::Style> {
         Some(cosmic::applet::style())
     }
-}
-
-fn popup_style() -> cosmic::theme::Container {
-    cosmic::theme::Container::Custom(Box::new(|theme| {
-        cosmic::iced_style::container::Appearance {
-            icon_color: Some(theme.cosmic().background.on.into()),
-            text_color: Some(theme.cosmic().background.on.into()),
-            background: Some(Color::from(theme.cosmic().background.base).into()),
-            border_radius: 8.0.into(),
-            border_width: 2.0,
-            border_color: theme.cosmic().bg_divider().into(),
-        }
-    }))
 }
