@@ -2,11 +2,12 @@ mod localize;
 
 use cosmic::app::Command;
 use cosmic::applet::menu_button;
+use cosmic::applet::padded_control;
 use cosmic::iced::widget;
 use cosmic::iced::Limits;
 use cosmic::iced_runtime::core::alignment::Horizontal;
 
-use cosmic::widget::{button, divider, icon};
+use cosmic::widget::{divider, icon};
 use cosmic::Renderer;
 
 use cosmic::iced::{
@@ -362,43 +363,45 @@ impl cosmic::Application for Audio {
         .0 * 100.0;
 
         let audio_content = if audio_disabled {
-            column![text(fl!("disconnected"))
-                .width(Length::Fill)
-                .horizontal_alignment(Horizontal::Center)
-                .size(24),]
+            column![padded_control(
+                text(fl!("disconnected"))
+                    .width(Length::Fill)
+                    .horizontal_alignment(Horizontal::Center)
+                    .size(24)
+            )]
         } else {
             column![
-                row![
-                    icon::from_name(self.icon_name.as_str())
-                        .size(24)
-                        .symbolic(true),
-                    slider(0.0..=100.0, out_f64, Message::SetOutputVolume)
-                        .width(Length::FillPortion(5)),
-                    text(format!("{}%", out_f64.round()))
-                        .size(16)
-                        .width(Length::FillPortion(1))
-                        .horizontal_alignment(Horizontal::Right)
-                ]
-                .spacing(12)
-                .align_items(Alignment::Center)
-                .padding([8, 24]),
-                row![
-                    icon::from_name(self.input_icon_name.as_str())
-                        .size(24)
-                        .symbolic(true),
-                    slider(0.0..=100.0, in_f64, Message::SetInputVolume)
-                        .width(Length::FillPortion(5)),
-                    text(format!("{}%", in_f64.round()))
-                        .size(16)
-                        .width(Length::FillPortion(1))
-                        .horizontal_alignment(Horizontal::Right)
-                ]
-                .spacing(12)
-                .align_items(Alignment::Center)
-                .padding([8, 24]),
-                container(divider::horizontal::light())
-                    .padding([12, 24])
-                    .width(Length::Fill),
+                padded_control(
+                    row![
+                        icon::from_name(self.icon_name.as_str())
+                            .size(24)
+                            .symbolic(true),
+                        slider(0.0..=100.0, out_f64, Message::SetOutputVolume)
+                            .width(Length::FillPortion(5)),
+                        text(format!("{}%", out_f64.round()))
+                            .size(16)
+                            .width(Length::FillPortion(1))
+                            .horizontal_alignment(Horizontal::Right)
+                    ]
+                    .spacing(12)
+                    .align_items(Alignment::Center)
+                ),
+                padded_control(
+                    row![
+                        icon::from_name(self.input_icon_name.as_str())
+                            .size(24)
+                            .symbolic(true),
+                        slider(0.0..=100.0, in_f64, Message::SetInputVolume)
+                            .width(Length::FillPortion(5)),
+                        text(format!("{}%", in_f64.round()))
+                            .size(16)
+                            .width(Length::FillPortion(1))
+                            .horizontal_alignment(Horizontal::Right)
+                    ]
+                    .spacing(12)
+                    .align_items(Alignment::Center)
+                ),
+                padded_control(divider::horizontal::default()),
                 revealer(
                     self.is_open == IsOpen::Output,
                     fl!("output"),
@@ -440,9 +443,7 @@ impl cosmic::Application for Audio {
         };
         let content = column![
             audio_content,
-            container(divider::horizontal::light())
-                .padding([12, 24])
-                .width(Length::Fill),
+            padded_control(divider::horizontal::default()),
             container(
                 anim!(
                     // toggler
@@ -455,9 +456,7 @@ impl cosmic::Application for Audio {
                 .text_size(14)
             )
             .padding([0, 24]),
-            container(divider::horizontal::light())
-                .padding([12, 24])
-                .width(Length::Fill),
+            padded_control(divider::horizontal::default()),
             menu_button(text(fl!("sound-settings")).size(14))
         ]
         .align_items(Alignment::Start)
