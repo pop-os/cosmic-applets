@@ -7,10 +7,7 @@ use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced::window::Id;
 use cosmic::iced::{Command, Length, Limits, Subscription};
 use cosmic::iced_core::Alignment;
-use cosmic::iced_futures::backend::native::tokio;
 use cosmic::iced_style::application;
-use cosmic::iced_widget::canvas::path::lyon_path::builder;
-use cosmic::iced_widget::graphics::image::image_rs::error;
 use cosmic::iced_widget::row;
 use cosmic::widget::{button, container, spin_button, text};
 use cosmic::{Element, Theme};
@@ -24,7 +21,6 @@ const ON: &str = "com.system76.CosmicAppletTiling.On";
 const OFF: &str = "com.system76.CosmicAppletTiling.Off";
 
 static TILE_WINDOWS: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
-static SHOW_ACTIVE_HINTS: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
 
 #[derive(Default)]
 pub struct Window {
