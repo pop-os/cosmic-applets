@@ -5,7 +5,6 @@ use cosmic::iced::{
     window, Alignment, Length, Rectangle, Subscription,
 };
 use cosmic::iced_style::application;
-use cosmic::theme;
 use cosmic::{app, applet::cosmic_panel_config::PanelAnchor, Command};
 use cosmic::{
     widget::{icon, rectangle_tracker::*},
@@ -210,6 +209,7 @@ impl cosmic::Application for Time {
                 date_time_col
             },
         )
+        .style(cosmic::theme::Button::AppletIcon)
         .on_press(Message::TogglePopup);
 
         if let Some(tracker) = self.rectangle_tracker.as_ref() {

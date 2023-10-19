@@ -1,18 +1,15 @@
 use crate::dbus::{self, PowerDaemonProxy};
 use crate::fl;
 use crate::graphics::{get_current_graphics, set_graphics, Graphics};
-use cosmic::app::command::message::cosmic;
-use cosmic::applet::menu_button;
+use cosmic::applet::{menu_button, padded_control};
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced_runtime::core::alignment::Horizontal;
 use cosmic::iced_runtime::core::Alignment;
 use cosmic::iced_style::application;
-use cosmic::theme::Button;
-use cosmic::widget::divider::horizontal;
 use cosmic::widget::{horizontal_space, icon, Container, Icon};
 use cosmic::{applet::cosmic_panel_config::PanelAnchor, Command};
 use cosmic::{
-    iced::widget::{column, container, row, text},
+    iced::widget::{column, row, text},
     iced::{self, Length},
     iced_runtime::core::window,
     theme::Theme,
@@ -254,6 +251,7 @@ impl cosmic::Application for Window {
             .padding(8)
             .width(Length::Shrink)
             .height(Length::Shrink)
+            .style(cosmic::theme::Button::AppletIcon)
             .into(),
         }
     }
@@ -313,22 +311,17 @@ impl cosmic::Application for Window {
 
         self.core
             .applet
-            .popup_container(
-                column(vec![
+            .popup_container(column(vec![
+                padded_control(
                     text(fl!("graphics-mode"))
                         .width(Length::Fill)
                         .horizontal_alignment(Horizontal::Center)
-                        .size(14)
-                        .into(),
-                    container(divider::horizontal::light())
-                        .padding([0, 12])
-                        .width(Length::Fill)
-                        .into(),
-                    column(content_list).into(),
-                ])
-                .padding([8, 0])
-                .spacing(12),
-            )
+                        .size(14),
+                )
+                .into(),
+                padded_control(divider::horizontal::default()).into(),
+                column(content_list).padding([8, 0]).into(),
+            ]))
             .into()
     }
 

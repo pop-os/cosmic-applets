@@ -1,12 +1,12 @@
 mod localize;
 mod subscriptions;
 
-use cosmic::applet::menu_button;
+use cosmic::applet::{menu_button, padded_control};
 use cosmic::cosmic_config::{config_subscription, Config, CosmicConfigEntry};
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced::Limits;
 use cosmic::iced::{
-    widget::{column, row, text, Row},
+    widget::{column, row, text},
     window, Alignment, Length, Subscription,
 };
 use cosmic::iced_core::alignment::Horizontal;
@@ -14,9 +14,8 @@ use cosmic::Command;
 
 use cosmic::iced_style::application;
 
-use cosmic::iced_widget::{horizontal_rule, scrollable, Column};
-use cosmic::widget::{button, container, icon};
-use cosmic::Renderer;
+use cosmic::iced_widget::{scrollable, Column};
+use cosmic::widget::{button, container, divider, icon};
 use cosmic::{Element, Theme};
 use cosmic_notifications_config::NotificationsConfig;
 use cosmic_notifications_util::{Image, Notification};
@@ -323,18 +322,16 @@ impl cosmic::Application for Notifications {
     }
 
     fn view_window(&self, _id: window::Id) -> Element<Message> {
-        let do_not_disturb = row![anim!(
+        let do_not_disturb = padded_control(row![anim!(
             DO_NOT_DISTURB,
             &self.timeline,
             String::from(fl!("do-not-disturb")),
             self.config.do_not_disturb,
             Message::DoNotDisturb
         )
-        .width(Length::Fill)]
-        .padding([0, 24]);
+        .width(Length::Fill)]);
 
-        let settings =
-            row_button(vec![text(fl!("notification-settings")).into()]).on_press(Message::Settings);
+        let settings = menu_button(text(fl!("notification-settings"))).on_press(Message::Settings);
 
         let notifications = if self.cards.is_empty() {
             row![container(
@@ -489,14 +486,17 @@ impl cosmic::Application for Notifications {
             .height(Length::Shrink))
         };
 
-        let main_content = column![horizontal_rule(4), notifications, horizontal_rule(4)]
-            .padding([0, 24])
-            .spacing(12);
+        let main_content = column![
+            padded_control(divider::horizontal::default()),
+            notifications,
+            padded_control(divider::horizontal::default())
+        ]
+        .spacing(12);
 
         let content = column![do_not_disturb, main_content, settings]
             .align_items(Alignment::Start)
             .spacing(12)
-            .padding([16, 0]);
+            .padding([8, 0]);
 
         self.core.applet.popup_container(content).into()
     }
@@ -504,15 +504,6 @@ impl cosmic::Application for Notifications {
     fn on_close_requested(&self, id: window::Id) -> Option<Message> {
         Some(Message::CloseRequested(id))
     }
-}
-
-fn row_button(content: Vec<Element<Message>>) -> cosmic::widget::Button<Message, Renderer> {
-    menu_button(
-        Row::with_children(content)
-            .spacing(4)
-            .align_items(Alignment::Center),
-    )
-    .height(Length::Fixed(36.0))
 }
 
 fn text_icon(name: &str, size: u16) -> cosmic::widget::Icon {

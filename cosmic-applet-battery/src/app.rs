@@ -10,7 +10,7 @@ use crate::upower_device::{device_subscription, DeviceDbusEvent};
 use crate::upower_kbdbacklight::{
     kbd_backlight_subscription, KeyboardBacklightRequest, KeyboardBacklightUpdate,
 };
-use cosmic::applet::menu_button;
+use cosmic::applet::{menu_button, padded_control};
 use cosmic::iced::alignment::Horizontal;
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced::{
@@ -19,7 +19,7 @@ use cosmic::iced::{
 };
 use cosmic::iced_runtime::core::layout::Limits;
 use cosmic::iced_style::application;
-use cosmic::widget::{button, divider, horizontal_space, icon};
+use cosmic::widget::{divider, horizontal_space, icon};
 use cosmic::Command;
 use cosmic::{Element, Theme};
 use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
@@ -317,16 +317,15 @@ impl cosmic::Application for CosmicBatteryApplet {
             .applet
             .popup_container(
                 column![
-                    row![
-                        icon::from_name(&*self.icon_name).size(24).symbolic(true),
-                        column![name, description]
-                    ]
-                    .padding([0, 24])
-                    .spacing(8)
-                    .align_items(Alignment::Center),
-                    container(divider::horizontal::light())
-                        .width(Length::Fill)
-                        .padding([0, 12]),
+                    padded_control(
+                        row![
+                            icon::from_name(&*self.icon_name).size(24).symbolic(true),
+                            column![name, description]
+                        ]
+                        .spacing(8)
+                        .align_items(Alignment::Center)
+                    ),
+                    padded_control(divider::horizontal::default()),
                     menu_button(
                         row![
                             column![
@@ -387,10 +386,8 @@ impl cosmic::Application for CosmicBatteryApplet {
                         .align_items(Alignment::Center)
                     )
                     .on_press(Message::SelectProfile(Power::Performance)),
-                    container(divider::horizontal::light())
-                        .width(Length::Fill)
-                        .padding([0, 12]),
-                    container(
+                    padded_control(divider::horizontal::default()),
+                    padded_control(
                         anim!(
                             //toggler
                             MAX_CHARGE,
@@ -401,47 +398,43 @@ impl cosmic::Application for CosmicBatteryApplet {
                         )
                         .text_size(14)
                         .width(Length::Fill)
-                    )
-                    .padding([0, 24])
-                    .width(Length::Fill),
-                    container(divider::horizontal::light())
-                        .width(Length::Fill)
-                        .padding([0, 12]),
-                    row![
-                        icon::from_name(self.display_icon_name.as_str())
-                            .size(24)
-                            .symbolic(true),
-                        slider(
-                            1..=100,
-                            (self.screen_brightness * 100.0) as i32,
-                            Message::SetScreenBrightness
-                        ),
-                        text(format!("{:.0}%", self.screen_brightness * 100.0))
-                            .size(16)
-                            .width(Length::Fixed(40.0))
-                            .horizontal_alignment(Horizontal::Right)
-                    ]
-                    .padding([0, 24])
-                    .spacing(12),
-                    row![
-                        icon::from_name("keyboard-brightness-symbolic")
-                            .size(24)
-                            .symbolic(true),
-                        slider(
-                            0..=100,
-                            (self.kbd_brightness * 100.0) as i32,
-                            Message::SetKbdBrightness
-                        ),
-                        text(format!("{:.0}%", self.kbd_brightness * 100.0))
-                            .size(16)
-                            .width(Length::Fixed(40.0))
-                            .horizontal_alignment(Horizontal::Right)
-                    ]
-                    .padding([0, 24])
-                    .spacing(12),
-                    container(divider::horizontal::light())
-                        .width(Length::Fill)
-                        .padding([0, 12]),
+                    ),
+                    padded_control(divider::horizontal::default()),
+                    padded_control(
+                        row![
+                            icon::from_name(self.display_icon_name.as_str())
+                                .size(24)
+                                .symbolic(true),
+                            slider(
+                                1..=100,
+                                (self.screen_brightness * 100.0) as i32,
+                                Message::SetScreenBrightness
+                            ),
+                            text(format!("{:.0}%", self.screen_brightness * 100.0))
+                                .size(16)
+                                .width(Length::Fixed(40.0))
+                                .horizontal_alignment(Horizontal::Right)
+                        ]
+                        .spacing(12)
+                    ),
+                    padded_control(
+                        row![
+                            icon::from_name("keyboard-brightness-symbolic")
+                                .size(24)
+                                .symbolic(true),
+                            slider(
+                                0..=100,
+                                (self.kbd_brightness * 100.0) as i32,
+                                Message::SetKbdBrightness
+                            ),
+                            text(format!("{:.0}%", self.kbd_brightness * 100.0))
+                                .size(16)
+                                .width(Length::Fixed(40.0))
+                                .horizontal_alignment(Horizontal::Right)
+                        ]
+                        .spacing(12)
+                    ),
+                    padded_control(divider::horizontal::default()),
                     menu_button(text(fl!("power-settings")).size(14).width(Length::Fill))
                         .on_press(Message::OpenBatterySettings)
                 ]

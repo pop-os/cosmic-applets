@@ -922,7 +922,7 @@ impl cosmic::Application for CosmicAppList {
                 Length::Fill,
                 dnd_listener(column(favorites)),
                 column(active).into(),
-                container(divider::horizontal::light())
+                container(divider::horizontal::default())
                     .width(self.core.applet.suggested_size().1)
                     .into(),
             )
@@ -1045,9 +1045,9 @@ impl cosmic::Application for CosmicAppList {
                             .on_press(Message::Activate(handle.clone())),
                     );
                 }
-                content = content.push(divider::horizontal::light());
+                content = content.push(divider::horizontal::default());
                 content = content.push(list_col);
-                content = content.push(divider::horizontal::light());
+                content = content.push(divider::horizontal::default());
             }
             content = content.push(if is_favorite {
                 cosmic::widget::button(iced::widget::text(fl!("unfavorite")))

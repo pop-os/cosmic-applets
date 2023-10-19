@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::process;
 use std::time::Duration;
 
-use cosmic::applet::menu_button;
+use cosmic::applet::{menu_button, padded_control};
 use cosmic::iced;
 use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::event::wayland::{self, LayerEvent};
@@ -20,7 +20,7 @@ use cosmic::Renderer;
 
 use cosmic::iced::Color;
 use cosmic::iced::{
-    widget::{self, column, container, row, space::Space, text, Row},
+    widget::{self, column, container, row, space::Space, text},
     window, Alignment, Length, Subscription,
 };
 use cosmic::iced_style::application;
@@ -233,23 +233,28 @@ impl cosmic::Application for Power {
 
     fn view_window(&self, id: window::Id) -> Element<Message> {
         if matches!(self.popup, Some(p) if p == id) {
-            let settings =
-                row_button(vec![text(fl!("settings")).size(14).into()]).on_press(Message::Settings);
+            let settings = menu_button(text(fl!("settings")).size(14)).on_press(Message::Settings);
 
             let session = column![
-                row_button(vec![
-                    text_icon("system-lock-screen-symbolic", 24).into(),
-                    text(fl!("lock-screen")).size(14).into(),
-                    Space::with_width(Length::Fill).into(),
-                    text(fl!("lock-screen-shortcut")).size(14).into(),
-                ])
+                menu_button(
+                    row![
+                        text_icon("system-lock-screen-symbolic", 24),
+                        text(fl!("lock-screen")).size(14),
+                        Space::with_width(Length::Fill),
+                        text(fl!("lock-screen-shortcut")).size(14),
+                    ]
+                    .spacing(8)
+                )
                 .on_press(Message::Action(PowerAction::Lock)),
-                row_button(vec![
-                    text_icon("system-log-out-symbolic", 24).into(),
-                    text(fl!("log-out")).size(14).into(),
-                    Space::with_width(Length::Fill).into(),
-                    text(fl!("log-out-shortcut")).size(14).into(),
-                ])
+                menu_button(
+                    row![
+                        text_icon("system-log-out-symbolic", 24),
+                        text(fl!("log-out")).size(14),
+                        Space::with_width(Length::Fill),
+                        text(fl!("log-out-shortcut")).size(14),
+                    ]
+                    .spacing(8)
+                )
                 .on_press(Message::Action(PowerAction::LogOut)),
             ];
 
@@ -266,13 +271,9 @@ impl cosmic::Application for Power {
 
             let content = column![
                 settings,
-                container(divider::horizontal::light())
-                    .padding([0, 12])
-                    .width(Length::Fill),
+                padded_control(divider::horizontal::default()),
                 session,
-                container(divider::horizontal::light())
-                    .padding([0, 12])
-                    .width(Length::Fill),
+                padded_control(divider::horizontal::default()),
                 power
             ]
             .align_items(Alignment::Start)
@@ -346,16 +347,6 @@ impl cosmic::Application for Power {
     fn style(&self) -> Option<<Theme as application::StyleSheet>::Style> {
         Some(cosmic::applet::style())
     }
-}
-
-// ### UI Helplers
-
-fn row_button(content: Vec<Element<Message>>) -> cosmic::widget::Button<Message, Renderer> {
-    menu_button(
-        Row::with_children(content)
-            .spacing(4)
-            .align_items(Alignment::Center),
-    )
 }
 
 fn power_buttons(name: &str, msg: String) -> cosmic::widget::Button<Message, Renderer> {

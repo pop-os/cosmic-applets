@@ -1,15 +1,14 @@
 use crate::fl;
 use cosmic::app::Core;
-use cosmic::applet::menu_button;
-use cosmic::cosmic_config::{ConfigGet, ConfigSet, CosmicConfigEntry};
-use cosmic::cosmic_theme::ThemeBuilder;
+use cosmic::applet::{menu_button, padded_control};
+use cosmic::cosmic_config::{ConfigGet, ConfigSet};
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced::window::Id;
 use cosmic::iced::{Command, Length, Limits, Subscription};
 use cosmic::iced_core::Alignment;
 use cosmic::iced_style::application;
-use cosmic::iced_widget::row;
-use cosmic::widget::{button, container, spin_button, text};
+use cosmic::iced_widget::{column, row};
+use cosmic::widget::{container, divider, spin_button, text};
 use cosmic::{Element, Theme};
 use cosmic_time::{anim, chain, id, Timeline};
 use once_cell::sync::Lazy;
@@ -232,92 +231,62 @@ impl cosmic::Application for Window {
         let cosmic = self.core.system_theme().cosmic();
         let active_hint = cosmic.active_hint;
         let gaps = cosmic.gaps.1;
-        let content_list = cosmic::widget::column()
-            .padding([8, 0])
-            .spacing(4)
-            .push(
-                container(
-                    anim!(
-                        TILE_WINDOWS,
-                        &self.timeline,
-                        fl!("tile-windows"),
-                        self.tile_windows,
-                        |chain, enable| { Message::ToggleTileWindows(chain, enable) },
-                    )
-                    .text_size(14)
+        let content_list = column![
+            padded_control(container(
+                anim!(
+                    TILE_WINDOWS,
+                    &self.timeline,
+                    fl!("tile-windows"),
+                    self.tile_windows,
+                    |chain, enable| { Message::ToggleTileWindows(chain, enable) },
+                )
+                .text_size(14)
+                .width(Length::Fill),
+            )),
+            padded_control(row!(
+                text(fl!("navigate-windows")).size(14).width(Length::Fill),
+                text(format!("{} + {}", fl!("super"), fl!("arrow-keys"))).size(14),
+            )),
+            padded_control(row!(
+                text(fl!("move-window")).size(14).width(Length::Fill),
+                text(format!(
+                    "{} + {} + {}",
+                    fl!("shift"),
+                    fl!("super"),
+                    fl!("arrow-keys")
+                ))
+                .size(14),
+            )),
+            padded_control(row!(
+                text(fl!("toggle-floating-window"))
+                    .size(14)
                     .width(Length::Fill),
-                )
-                .padding([0, 16, 4, 16]),
-            )
-            .push(
-                row!(
-                    text(fl!("navigate-windows")).size(14).width(Length::Fill),
-                    text(format!("{} + {}", fl!("super"), fl!("arrow-keys"))).size(14),
-                )
-                .padding([4, 16, 4, 16]),
-            )
-            .push(
-                row!(
-                    text(fl!("move-window")).size(14).width(Length::Fill),
-                    text(format!(
-                        "{} + {} + {}",
-                        fl!("shift"),
-                        fl!("super"),
-                        fl!("arrow-keys")
-                    ))
-                    .size(14),
-                )
-                .padding([4, 16, 4, 16]),
-            )
-            .push(
-                row!(
-                    text(fl!("toggle-floating-window"))
-                        .size(14)
-                        .width(Length::Fill),
-                    text(format!("{} + G", fl!("super"))).size(14),
-                )
-                .padding([4, 16, 4, 16]),
-            )
-            .push(
-                container(
-                    menu_button(text(fl!("view-all-shortcuts")).size(14))
-                        .on_press(Message::ViewAllShortcuts),
-                )
-                .width(Length::Fill)
-                .padding(0),
-            )
-            .push(
+                text(format!("{} + G", fl!("super"))).size(14),
+            )),
+            padded_control(divider::horizontal::default()),
+            padded_control(
                 row!(
                     text(fl!("active-hint")).size(14).width(Length::Fill),
                     spin_button(active_hint.to_string(), Message::HandleActiveHint),
                 )
-                .padding([0, 16, 0, 16])
                 .align_items(Alignment::Center),
-            )
-            .push(
+            ),
+            padded_control(
                 row!(
                     text(fl!("gaps")).size(14).width(Length::Fill),
                     spin_button(gaps.to_string(), Message::HandleGaps),
                 )
-                .padding([0, 16, 0, 16])
                 .align_items(Alignment::Center),
-            )
-            .push(
-                container(
-                    menu_button(text(fl!("floating-window-exceptions")).size(14))
-                        .on_press(Message::OpenFloatingWindowExceptions),
-                )
-                .width(Length::Fill)
-                .padding(0),
-            )
-            .push(
-                container(
-                    menu_button(text(fl!("window-management-settings")).size(14))
-                        .on_press(Message::OpenWindowManagementSettings),
-                )
-                .width(Length::Fill)
-                .padding(0),
-            );
+            ),
+            padded_control(divider::horizontal::default()),
+            menu_button(text(fl!("view-all-shortcuts")).size(14))
+                .on_press(Message::ViewAllShortcuts),
+            menu_button(text(fl!("floating-window-exceptions")).size(14))
+                .on_press(Message::OpenFloatingWindowExceptions),
+            menu_button(text(fl!("window-management-settings")).size(14))
+                .on_press(Message::OpenWindowManagementSettings)
+        ]
+        .padding([8, 0]);
 
         self.core.applet.popup_container(content_list).into()
     }
