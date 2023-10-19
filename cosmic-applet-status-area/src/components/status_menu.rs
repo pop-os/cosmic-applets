@@ -1,4 +1,4 @@
-use cosmic::applet::button_theme;
+use cosmic::applet::menu_button;
 use cosmic::iced;
 
 use crate::subscriptions::status_notifier_item::{Layout, StatusNotifierItem};
@@ -161,13 +161,10 @@ fn layout_view(layout: &Layout, expanded: Option<i32>) -> cosmic::Element<Msg> {
 }
 
 fn row_button(content: Vec<cosmic::Element<Msg>>) -> cosmic::widget::Button<Msg, cosmic::Renderer> {
-    cosmic::widget::button(
+    menu_button(
         iced::widget::Row::with_children(content)
             .spacing(8)
             .align_items(iced::Alignment::Center)
             .width(iced::Length::Fill),
     )
-    .style(button_theme())
-    .width(iced::Length::Fill)
-    .padding([8, 24])
 }

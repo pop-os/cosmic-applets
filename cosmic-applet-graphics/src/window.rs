@@ -2,6 +2,7 @@ use crate::dbus::{self, PowerDaemonProxy};
 use crate::fl;
 use crate::graphics::{get_current_graphics, set_graphics, Graphics};
 use cosmic::app::command::message::cosmic;
+use cosmic::applet::menu_button;
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced_runtime::core::alignment::Horizontal;
 use cosmic::iced_runtime::core::Alignment;
@@ -9,10 +10,7 @@ use cosmic::iced_style::application;
 use cosmic::theme::Button;
 use cosmic::widget::divider::horizontal;
 use cosmic::widget::{horizontal_space, icon, Container, Icon};
-use cosmic::{
-    applet::{button_theme, cosmic_panel_config::PanelAnchor},
-    Command,
-};
+use cosmic::{applet::cosmic_panel_config::PanelAnchor, Command};
 use cosmic::{
     iced::widget::{column, container, row, text},
     iced::{self, Length},
@@ -252,7 +250,6 @@ impl cosmic::Application for Window {
                 .padding([0, self.core.applet.suggested_size().0 / 2])
                 .align_items(Alignment::Center),
             )
-            .style(Button::Text)
             .on_press(Message::TogglePopup)
             .padding(8)
             .width(Length::Shrink)
@@ -263,7 +260,7 @@ impl cosmic::Application for Window {
 
     fn view_window(&self, _id: window::Id) -> Element<Message> {
         let content_list = vec![
-            button(
+            menu_button(
                 row![
                     column![
                         text(format!("{} {}", fl!("integrated"), fl!("graphics"))).size(14),
@@ -274,12 +271,9 @@ impl cosmic::Application for Window {
                 ]
                 .align_items(Alignment::Center),
             )
-            .style(button_theme())
-            .padding([8, 24])
             .on_press(Message::SelectGraphicsMode(Graphics::Integrated))
-            .width(Length::Fill)
             .into(),
-            button(
+            menu_button(
                 row![
                     column![text(format!("{} {}", fl!("nvidia"), fl!("graphics"))).size(14)]
                         .width(Length::Fill),
@@ -287,12 +281,9 @@ impl cosmic::Application for Window {
                 ]
                 .align_items(Alignment::Center),
             )
-            .style(button_theme())
-            .padding([8, 24])
             .on_press(Message::SelectGraphicsMode(Graphics::Nvidia))
-            .width(Length::Fill)
             .into(),
-            button(
+            menu_button(
                 row![
                     column![
                         text(format!("{} {}", fl!("hybrid"), fl!("graphics"))).size(14),
@@ -303,12 +294,9 @@ impl cosmic::Application for Window {
                 ]
                 .align_items(Alignment::Center),
             )
-            .style(button_theme())
-            .padding([8, 24])
             .on_press(Message::SelectGraphicsMode(Graphics::Hybrid))
-            .width(Length::Fill)
             .into(),
-            button(
+            menu_button(
                 row![
                     column![
                         text(format!("{} {}", fl!("compute"), fl!("graphics"))).size(14),
@@ -319,10 +307,7 @@ impl cosmic::Application for Window {
                 ]
                 .align_items(Alignment::Center),
             )
-            .style(button_theme())
-            .padding([8, 24])
             .on_press(Message::SelectGraphicsMode(Graphics::Compute))
-            .width(Length::Fill)
             .into(),
         ];
 

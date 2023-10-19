@@ -210,8 +210,7 @@ impl cosmic::Application for Time {
                 date_time_col
             },
         )
-        .on_press(Message::TogglePopup)
-        .style(theme::Button::Text);
+        .on_press(Message::TogglePopup);
 
         if let Some(tracker) = self.rectangle_tracker.as_ref() {
             tracker.container(0, button).into()

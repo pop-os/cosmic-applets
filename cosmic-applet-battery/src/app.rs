@@ -10,6 +10,7 @@ use crate::upower_device::{device_subscription, DeviceDbusEvent};
 use crate::upower_kbdbacklight::{
     kbd_backlight_subscription, KeyboardBacklightRequest, KeyboardBacklightUpdate,
 };
+use cosmic::applet::menu_button;
 use cosmic::iced::alignment::Horizontal;
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced::{
@@ -19,7 +20,7 @@ use cosmic::iced::{
 use cosmic::iced_runtime::core::layout::Limits;
 use cosmic::iced_style::application;
 use cosmic::widget::{button, divider, horizontal_space, icon};
-use cosmic::{applet::button_theme, Command};
+use cosmic::Command;
 use cosmic::{Element, Theme};
 use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
 
@@ -326,7 +327,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                     container(divider::horizontal::light())
                         .width(Length::Fill)
                         .padding([0, 12]),
-                    button(
+                    menu_button(
                         row![
                             column![
                                 text(fl!("battery")).size(14),
@@ -345,11 +346,8 @@ impl cosmic::Application for CosmicBatteryApplet {
                         ]
                         .align_items(Alignment::Center)
                     )
-                    .style(button_theme())
-                    .padding([8, 24])
-                    .on_press(Message::SelectProfile(Power::Battery))
-                    .width(Length::Fill),
-                    button(
+                    .on_press(Message::SelectProfile(Power::Battery)),
+                    menu_button(
                         row![
                             column![
                                 text(fl!("balanced")).size(14),
@@ -368,11 +366,8 @@ impl cosmic::Application for CosmicBatteryApplet {
                         ]
                         .align_items(Alignment::Center)
                     )
-                    .style(button_theme())
-                    .padding([8, 24])
-                    .on_press(Message::SelectProfile(Power::Balanced))
-                    .width(Length::Fill),
-                    button(
+                    .on_press(Message::SelectProfile(Power::Balanced)),
+                    menu_button(
                         row![
                             column![
                                 text(fl!("performance")).size(14),
@@ -391,10 +386,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                         ]
                         .align_items(Alignment::Center)
                     )
-                    .style(button_theme())
-                    .padding([8, 24])
-                    .on_press(Message::SelectProfile(Power::Performance))
-                    .width(Length::Fill),
+                    .on_press(Message::SelectProfile(Power::Performance)),
                     container(divider::horizontal::light())
                         .width(Length::Fill)
                         .padding([0, 12]),
@@ -450,11 +442,8 @@ impl cosmic::Application for CosmicBatteryApplet {
                     container(divider::horizontal::light())
                         .width(Length::Fill)
                         .padding([0, 12]),
-                    button(text(fl!("power-settings")).size(14).width(Length::Fill))
-                        .style(button_theme())
+                    menu_button(text(fl!("power-settings")).size(14).width(Length::Fill))
                         .on_press(Message::OpenBatterySettings)
-                        .width(Length::Fill)
-                        .padding([8, 24])
                 ]
                 .spacing(8)
                 .padding([8, 0]),

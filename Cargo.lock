@@ -935,7 +935,6 @@ dependencies = [
 [[package]]
 name = "cosmic-config"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic#589b66175242e8f82f60a116e76f2c51783b70a2"
 dependencies = [
  "atomicwrites",
  "cosmic-config-derive",
@@ -949,7 +948,6 @@ dependencies = [
 [[package]]
 name = "cosmic-config-derive"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic#589b66175242e8f82f60a116e76f2c51783b70a2"
 dependencies = [
  "quote",
  "syn 1.0.109",
@@ -1048,7 +1046,6 @@ dependencies = [
 [[package]]
 name = "cosmic-theme"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic#589b66175242e8f82f60a116e76f2c51783b70a2"
 dependencies = [
  "almost",
  "cosmic-config",
@@ -1062,7 +1059,6 @@ dependencies = [
 [[package]]
 name = "cosmic-time"
 version = "0.3.0"
-source = "git+https://github.com/pop-os/cosmic-time#71116b2eefb536bedbd3438e70cba49d54c3a5d5"
 dependencies = [
  "float-cmp",
  "libcosmic",
@@ -2412,7 +2408,6 @@ dependencies = [
 [[package]]
 name = "iced"
 version = "0.10.0"
-source = "git+https://github.com/pop-os/libcosmic#589b66175242e8f82f60a116e76f2c51783b70a2"
 dependencies = [
  "iced_accessibility",
  "iced_core",
@@ -2427,7 +2422,6 @@ dependencies = [
 [[package]]
 name = "iced_accessibility"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic#589b66175242e8f82f60a116e76f2c51783b70a2"
 dependencies = [
  "accesskit",
  "accesskit_unix",
@@ -2436,7 +2430,6 @@ dependencies = [
 [[package]]
 name = "iced_core"
 version = "0.10.0"
-source = "git+https://github.com/pop-os/libcosmic#589b66175242e8f82f60a116e76f2c51783b70a2"
 dependencies = [
  "bitflags 1.3.2",
  "iced_accessibility",
@@ -2451,7 +2444,6 @@ dependencies = [
 [[package]]
 name = "iced_futures"
 version = "0.7.0"
-source = "git+https://github.com/pop-os/libcosmic#589b66175242e8f82f60a116e76f2c51783b70a2"
 dependencies = [
  "futures",
  "iced_core",
@@ -2464,7 +2456,6 @@ dependencies = [
 [[package]]
 name = "iced_graphics"
 version = "0.9.0"
-source = "git+https://github.com/pop-os/libcosmic#589b66175242e8f82f60a116e76f2c51783b70a2"
 dependencies = [
  "bitflags 1.3.2",
  "bytemuck",
@@ -2482,7 +2473,6 @@ dependencies = [
 [[package]]
 name = "iced_renderer"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic#589b66175242e8f82f60a116e76f2c51783b70a2"
 dependencies = [
  "iced_graphics",
  "iced_tiny_skia",
@@ -2495,7 +2485,6 @@ dependencies = [
 [[package]]
 name = "iced_runtime"
 version = "0.1.1"
-source = "git+https://github.com/pop-os/libcosmic#589b66175242e8f82f60a116e76f2c51783b70a2"
 dependencies = [
  "iced_accessibility",
  "iced_core",
@@ -2507,7 +2496,6 @@ dependencies = [
 [[package]]
 name = "iced_sctk"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic#589b66175242e8f82f60a116e76f2c51783b70a2"
 dependencies = [
  "enum-repr",
  "float-cmp",
@@ -2531,7 +2519,6 @@ dependencies = [
 [[package]]
 name = "iced_style"
 version = "0.9.0"
-source = "git+https://github.com/pop-os/libcosmic#589b66175242e8f82f60a116e76f2c51783b70a2"
 dependencies = [
  "iced_core",
  "once_cell",
@@ -2541,7 +2528,6 @@ dependencies = [
 [[package]]
 name = "iced_tiny_skia"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic#589b66175242e8f82f60a116e76f2c51783b70a2"
 dependencies = [
  "bytemuck",
  "cosmic-text",
@@ -2559,7 +2545,6 @@ dependencies = [
 [[package]]
 name = "iced_wgpu"
 version = "0.11.1"
-source = "git+https://github.com/pop-os/libcosmic#589b66175242e8f82f60a116e76f2c51783b70a2"
 dependencies = [
  "bitflags 1.3.2",
  "bytemuck",
@@ -2581,7 +2566,6 @@ dependencies = [
 [[package]]
 name = "iced_widget"
 version = "0.1.3"
-source = "git+https://github.com/pop-os/libcosmic#589b66175242e8f82f60a116e76f2c51783b70a2"
 dependencies = [
  "iced_renderer",
  "iced_runtime",
@@ -2853,7 +2837,6 @@ checksum = "a08173bc88b7955d1b3145aa561539096c421ac8debde8cbc3612ec635fee29b"
 [[package]]
 name = "libcosmic"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic#589b66175242e8f82f60a116e76f2c51783b70a2"
 dependencies = [
  "apply",
  "ashpd",

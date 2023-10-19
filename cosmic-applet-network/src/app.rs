@@ -550,7 +550,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                 .text_size(14)
                 .width(Length::Fill)
             )
-            .padding([0, 12]),
+            .padding([0, 24]),
             divider::horizontal::light(),
         ]
         .align_items(Alignment::Center)

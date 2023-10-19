@@ -1,6 +1,6 @@
 use crate::fl;
 use cosmic::app::Core;
-use cosmic::applet::button_theme;
+use cosmic::applet::menu_button;
 use cosmic::cosmic_config::{ConfigGet, ConfigSet, CosmicConfigEntry};
 use cosmic::cosmic_theme::ThemeBuilder;
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
@@ -280,10 +280,7 @@ impl cosmic::Application for Window {
             )
             .push(
                 container(
-                    button(text(fl!("view-all-shortcuts")).size(14))
-                        .width(Length::Fill)
-                        .style(button_theme())
-                        .padding(8)
+                    menu_button(text(fl!("view-all-shortcuts")).size(14))
                         .on_press(Message::ViewAllShortcuts),
                 )
                 .width(Length::Fill)
@@ -307,10 +304,7 @@ impl cosmic::Application for Window {
             )
             .push(
                 container(
-                    button(text(fl!("floating-window-exceptions")).size(14))
-                        .width(Length::Fill)
-                        .padding(8)
-                        .style(button_theme())
+                    menu_button(text(fl!("floating-window-exceptions")).size(14))
                         .on_press(Message::OpenFloatingWindowExceptions),
                 )
                 .width(Length::Fill)
@@ -318,10 +312,7 @@ impl cosmic::Application for Window {
             )
             .push(
                 container(
-                    button(text(fl!("window-management-settings")).size(14))
-                        .width(Length::Fill)
-                        .padding(8)
-                        .style(button_theme())
+                    menu_button(text(fl!("window-management-settings")).size(14))
                         .on_press(Message::OpenWindowManagementSettings),
                 )
                 .width(Length::Fill)

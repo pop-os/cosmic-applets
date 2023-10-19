@@ -1,6 +1,7 @@
 use crate::bluetooth::{BluerDeviceStatus, BluerRequest, BluerState};
+use cosmic::applet::menu_button;
 use cosmic::widget::button::StyleSheet;
-use cosmic::{applet::button_theme, Command};
+use cosmic::Command;
 use cosmic::{
     iced::{
         self,
@@ -352,27 +353,22 @@ impl cosmic::Application for CosmicBluetoothApplet {
                 BluerDeviceStatus::Disconnected | BluerDeviceStatus::Pairing => continue,
             };
 
-            known_bluetooth = known_bluetooth.push(
-                button(row)
-                    .style(button_theme())
-                    .on_press(match dev.status {
-                        BluerDeviceStatus::Connected => {
-                            Message::Request(BluerRequest::DisconnectDevice(dev.address))
-                        }
-                        BluerDeviceStatus::Disconnected => {
-                            Message::Request(BluerRequest::PairDevice(dev.address))
-                        }
-                        BluerDeviceStatus::Paired => {
-                            Message::Request(BluerRequest::ConnectDevice(dev.address))
-                        }
-                        BluerDeviceStatus::Connecting => {
-                            Message::Request(BluerRequest::CancelConnect(dev.address))
-                        }
-                        BluerDeviceStatus::Disconnecting => Message::Ignore, // Start connecting?
-                        BluerDeviceStatus::Pairing => Message::Ignore,       // Cancel pairing?
-                    })
-                    .width(Length::Fill),
-            );
+            known_bluetooth = known_bluetooth.push(menu_button(row).on_press(match dev.status {
+                BluerDeviceStatus::Connected => {
+                    Message::Request(BluerRequest::DisconnectDevice(dev.address))
+                }
+                BluerDeviceStatus::Disconnected => {
+                    Message::Request(BluerRequest::PairDevice(dev.address))
+                }
+                BluerDeviceStatus::Paired => {
+                    Message::Request(BluerRequest::ConnectDevice(dev.address))
+                }
+                BluerDeviceStatus::Connecting => {
+                    Message::Request(BluerRequest::CancelConnect(dev.address))
+                }
+                BluerDeviceStatus::Disconnecting => Message::Ignore, // Start connecting?
+                BluerDeviceStatus::Pairing => Message::Ignore,       // Cancel pairing?
+            }));
         }
 
         let mut content = column![
@@ -407,7 +403,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
         } else {
             "go-next-symbolic"
         };
-        let available_connections_btn = button(row![
+        let available_connections_btn = menu_button(row![
             text(fl!("other-devices"))
                 .size(14)
                 .width(Length::Fill)
@@ -419,7 +415,6 @@ impl cosmic::Application for CosmicBluetoothApplet {
                 .width(Length::Fixed(24.0))
                 .height(Length::Fixed(24.0))
         ])
-        .style(Button::Text)
         .padding([8, 24])
         .on_press(Message::ToggleVisibleDevices(!self.show_visible_devices));
         content = content.push(available_connections_btn);
@@ -499,14 +494,10 @@ impl cosmic::Application for CosmicBluetoothApplet {
                 .width(Length::Fill)
                 .align_items(Alignment::Center)
                 .spacing(12);
-                visible_devices = visible_devices.push(
-                    button(row.width(Length::Fill))
-                        .style(button_theme())
-                        .on_press(Message::Request(BluerRequest::PairDevice(
-                            dev.address.clone(),
-                        )))
-                        .width(Length::Fill),
-                );
+                visible_devices =
+                    visible_devices.push(menu_button(row.width(Length::Fill)).on_press(
+                        Message::Request(BluerRequest::PairDevice(dev.address.clone())),
+                    ));
                 visible_devices_count += 1;
             }
             list_column.push(visible_devices.into());
