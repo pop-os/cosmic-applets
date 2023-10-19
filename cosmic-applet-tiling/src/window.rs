@@ -143,14 +143,7 @@ impl cosmic::Application for Window {
                             return;
                         };
 
-                        let Ok(mut c_active_hint) = ConfigGet::get::<(u32, u32)>(&config, "active_hint") else {
-                            error!("Error getting active_hint");
-                            return;
-                        };
-
-                        c_active_hint.1 = active_hint as u32;
-
-                        if let Err(err) = ConfigSet::set(&config, "active_hint", c_active_hint) {
+                        if let Err(err) = ConfigSet::set(&config, "active_hint", active_hint) {
                             error!(?err, "Error setting active_hint");
                         }
 
@@ -163,7 +156,7 @@ impl cosmic::Application for Window {
                             return;
                         };
 
-                        if let Err(err) = ConfigSet::set(&config, "active_hint", c_active_hint) {
+                        if let Err(err) = ConfigSet::set(&config, "active_hint", active_hint) {
                             error!(?err, "Error setting active_hint");
                         }
                     },
