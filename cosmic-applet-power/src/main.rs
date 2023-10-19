@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::process;
 use std::time::Duration;
 
-use cosmic::applet::button_theme;
+use cosmic::applet::menu_button;
 use cosmic::iced;
 use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::event::wayland::{self, LayerEvent};
@@ -351,14 +351,11 @@ impl cosmic::Application for Power {
 // ### UI Helplers
 
 fn row_button(content: Vec<Element<Message>>) -> cosmic::widget::Button<Message, Renderer> {
-    button(
+    menu_button(
         Row::with_children(content)
             .spacing(4)
             .align_items(Alignment::Center),
     )
-    .style(button_theme())
-    .width(Length::Fill)
-    .padding([8, 24])
 }
 
 fn power_buttons(name: &str, msg: String) -> cosmic::widget::Button<Message, Renderer> {

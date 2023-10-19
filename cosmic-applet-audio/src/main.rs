@@ -1,11 +1,11 @@
 mod localize;
 
 use cosmic::app::Command;
+use cosmic::applet::menu_button;
 use cosmic::iced::widget;
 use cosmic::iced::Limits;
 use cosmic::iced_runtime::core::alignment::Horizontal;
 
-use cosmic::applet::button_theme;
 use cosmic::widget::{button, divider, icon};
 use cosmic::Renderer;
 
@@ -458,10 +458,7 @@ impl cosmic::Application for Audio {
             container(divider::horizontal::light())
                 .padding([12, 24])
                 .width(Length::Fill),
-            button(text(fl!("sound-settings")).size(14))
-                .style(button_theme())
-                .padding([8, 24])
-                .width(Length::Fill)
+            menu_button(text(fl!("sound-settings")).size(14))
         ]
         .align_items(Alignment::Start)
         .padding([8, 0]);
@@ -487,8 +484,7 @@ fn revealer(
             column![revealer_head(open, title, selected, toggle)].width(Length::Fill),
             |col, (id, name)| {
                 col.push(
-                    button(text(name).size(14))
-                        .style(button_theme())
+                    menu_button(text(name).size(14))
                         .on_press(change(id.clone()))
                         .width(Length::Fill)
                         .padding([8, 48]),
@@ -506,13 +502,10 @@ fn revealer_head(
     selected: String,
     toggle: Message,
 ) -> cosmic::widget::Button<'static, Message, Renderer> {
-    button(column![
+    menu_button(column![
         text(title).width(Length::Fill).size(14),
         text(selected).size(10),
     ])
-    .style(button_theme())
-    .padding([8, 24])
-    .width(Length::Fill)
     .on_press(toggle)
 }
 

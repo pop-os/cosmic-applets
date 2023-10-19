@@ -1,6 +1,7 @@
 mod localize;
 mod subscriptions;
 
+use cosmic::applet::menu_button;
 use cosmic::cosmic_config::{config_subscription, Config, CosmicConfigEntry};
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced::Limits;
@@ -9,7 +10,7 @@ use cosmic::iced::{
     window, Alignment, Length, Subscription,
 };
 use cosmic::iced_core::alignment::Horizontal;
-use cosmic::{applet::button_theme, Command};
+use cosmic::Command;
 
 use cosmic::iced_style::application;
 
@@ -505,17 +506,13 @@ impl cosmic::Application for Notifications {
     }
 }
 
-// todo put into libcosmic doing so will fix the row_button's border radius
 fn row_button(content: Vec<Element<Message>>) -> cosmic::widget::Button<Message, Renderer> {
-    button(
+    menu_button(
         Row::with_children(content)
             .spacing(4)
             .align_items(Alignment::Center),
     )
-    .width(Length::Fill)
     .height(Length::Fixed(36.0))
-    .padding([0, 24])
-    .style(button_theme())
 }
 
 fn text_icon(name: &str, size: u16) -> cosmic::widget::Icon {
