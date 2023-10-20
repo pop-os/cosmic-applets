@@ -751,7 +751,10 @@ impl cosmic::Application for CosmicNetworkApplet {
                     .push(scrollable(Column::with_children(list_col)).height(Length::Fixed(300.0)));
             }
         }
-        self.core.applet.popup_container(content).into()
+        self.core
+            .applet
+            .popup_container(content.padding([16, 0, 8, 0]))
+            .into()
     }
 
     fn subscription(&self) -> Subscription<Message> {

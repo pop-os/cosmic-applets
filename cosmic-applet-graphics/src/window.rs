@@ -311,17 +311,18 @@ impl cosmic::Application for Window {
 
         self.core
             .applet
-            .popup_container(column(vec![
-                padded_control(
+            .popup_container(
+                column(vec![
                     text(fl!("graphics-mode"))
                         .width(Length::Fill)
                         .horizontal_alignment(Horizontal::Center)
-                        .size(14),
-                )
-                .into(),
-                padded_control(divider::horizontal::default()).into(),
-                column(content_list).padding([8, 0]).into(),
-            ]))
+                        .size(14)
+                        .into(),
+                    padded_control(divider::horizontal::default()).into(),
+                    column(content_list).into(),
+                ])
+                .padding([16, 0, 8, 0]),
+            )
             .into()
     }
 
