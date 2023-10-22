@@ -13,6 +13,6 @@ connect = Se connecter
 cancel = Annuler
 visible-wireless-networks = Réseaux sans-fil visibles
 enter-password = Entrez le mot de passe ou la clé de cryptage
-router-wps-button = Vous pouvez aussi vous connecter en appuyant sur le boutton "WPS" du routeur
+router-wps-button = Vous pouvez aussi vous connecter en appuyant sur le bouton "WPS" du routeur
 unable-to-connect = Impossible de se connecter au réseau
 check-wifi-connection = Vérifiez que le Wi-Fi est relié à internet et que le mot de passe est correct

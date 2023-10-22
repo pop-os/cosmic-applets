@@ -4,18 +4,18 @@ lock-screen = Vérouiller la session
 lock-screen-shortcut = Super + Échap
 log-out = Se déconnecter
 log-out-shortcut = Ctrl + Alt + Supprimer
-suspend = Suspendre
+suspend = Veille
 restart = Redémarrer
 shutdown = Éteindre
 confirm = Confirmer
 cancel = Annuler
 confirm-question = 
-    Êtes vous sûr ? { $action ->
+    Êtes vous sûr ? L'ordinateur va { $action ->
         [restart] { restart }
-        [suspend] { suspend }
-        [shutdown] { shutdown }
-        [lock-screen] Vérouiller la session
-        [log-out] Se déconnecter
-        *[other] L'option choisie.
-    } Va continuer { $countdown } secondes.
+        [suspend] se mettre en veille
+        [shutdown] s'éteindre
+        [lock-screen] verrouiller la session
+        [log-out] déconnecter l'utilisateur
+        *[other] appliquer l'option choisie.
+    } dans { $countdown } secondes.
 
