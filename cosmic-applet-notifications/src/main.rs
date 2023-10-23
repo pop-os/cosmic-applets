@@ -1,7 +1,7 @@
 mod localize;
 mod subscriptions;
 
-use cosmic::applet::{menu_button, padded_control};
+use cosmic::applet::{menu_button, menu_control_padding, padded_control};
 use cosmic::cosmic_config::{config_subscription, Config, CosmicConfigEntry};
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced::Limits;
@@ -484,6 +484,7 @@ impl cosmic::Application for Notifications {
                     .height(Length::Shrink),
             )
             .height(Length::Shrink))
+            .padding(menu_control_padding())
         };
 
         let main_content = column![
