@@ -33,7 +33,6 @@ pub struct Window {
     id_ctr: u128,
     update_at: Every,
     now: DateTime<Local>,
-    msg: String,
     rectangle_tracker: Option<RectangleTracker<u32>>,
     rectangle: Rectangle,
 }
@@ -47,6 +46,7 @@ pub enum Message {
     SelectDay(u32),
     PreviousMonth,
     NextMonth,
+    OpenDateTimeSettings,
 }
 
 impl cosmic::Application for Window {
@@ -66,7 +66,6 @@ impl cosmic::Application for Window {
                 id_ctr: 0,
                 update_at: Every::Minute,
                 now: Local::now(),
-                msg: String::new(),
                 rectangle_tracker: None,
                 rectangle: Rectangle::default(),
             },
@@ -119,20 +118,6 @@ impl cosmic::Application for Window {
                 if let Some(p) = self.popup.take() {
                     destroy_popup(p)
                 } else {
-                    use std::os::unix::process::ExitStatusExt;
-                    let calendar = std::str::from_utf8(
-                        &std::process::Command::new("happiness")
-                            .output()
-                            .unwrap_or(std::process::Output {
-                                stdout: "`sudo apt install happiness`".as_bytes().to_vec(),
-                                stderr: Vec::new(),
-                                status: std::process::ExitStatus::from_raw(0),
-                            })
-                            .stdout,
-                    )
-                    .unwrap()
-                    .to_string();
-                    self.msg = calendar;
                     self.id_ctr += 1;
                     let new_id = window::Id(self.id_ctr);
                     self.popup.replace(new_id);
@@ -192,6 +177,10 @@ impl cosmic::Application for Window {
                 // TODO
                 Command::none()
             }
+            Message::OpenDateTimeSettings => {
+                // TODO
+                Command::none()
+            }
         }
     }
 
@@ -241,104 +230,63 @@ impl cosmic::Application for Window {
         let day_of_week = text(self.now.format("%A").to_string()).size(14);
 
         let month_controls = row![
-            button::text("<").on_press(Message::PreviousMonth),
-            button::text(">").on_press(Message::NextMonth)
+            button::icon(icon::from_name("go-previous-symbolic"))
+                .padding([0, 12])
+                .on_press(Message::PreviousMonth),
+            button::icon(icon::from_name("go-next-symbolic"))
+                .padding([0, 12])
+                .on_press(Message::NextMonth)
         ];
 
         // Calender
-        let monday = get_sunday(self.now.year(), self.now.month());
-        let mut day_iter = monday.iter_days();
         let mut calender: Grid<'_, Message> = grid().width(Length::Fill);
-        calender = calender.push(
-            text("Sun")
-                .size(12)
-                .width(Length::Fixed(36.0))
-                .horizontal_alignment(Horizontal::Center),
-        );
-        calender = calender.push(
-            text("Mon")
-                .size(12)
-                .width(Length::Fixed(36.0))
-                .horizontal_alignment(Horizontal::Center),
-        );
-        calender = calender.push(
-            text("Tue")
-                .size(12)
-                .width(Length::Fixed(36.0))
-                .horizontal_alignment(Horizontal::Center),
-        );
-        calender = calender.push(
-            text("Wed")
-                .size(12)
-                .width(Length::Fixed(36.0))
-                .horizontal_alignment(Horizontal::Center),
-        );
-        calender = calender.push(
-            text("Thu")
-                .size(12)
-                .width(Length::Fixed(36.0))
-                .horizontal_alignment(Horizontal::Center),
-        );
-        calender = calender.push(
-            text("Fri")
-                .size(12)
-                .width(Length::Fixed(36.0))
-                .horizontal_alignment(Horizontal::Center),
-        );
-        calender = calender.push(
-            text("Sat")
-                .size(12)
-                .width(Length::Fixed(36.0))
-                .horizontal_alignment(Horizontal::Center),
-        );
+        for day_of_week in ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] {
+            calender = calender.push(
+                text(day_of_week)
+                    .size(12)
+                    .width(Length::Fixed(36.0))
+                    .horizontal_alignment(Horizontal::Center),
+            );
+        }
         calender = calender.insert_row();
 
+        let monday = get_sunday(self.now.year(), self.now.month());
+        let mut day_iter = monday.iter_days();
         for i in 0..35 {
             if i > 0 && i % 7 == 0 {
                 calender = calender.insert_row();
             }
 
             let date = day_iter.next().unwrap();
-            let day = date.day();
-            let month = date.month();
-            calender = calender.push(date_button(
-                day,
-                month == self.now.month(),
-                day == self.now.day(),
-            ));
+            let is_month = date.month() == self.now.month() && date.year_ce() == self.now.year_ce();
+            let is_day = date.day() == self.now.day() && is_month;
+
+            calender = calender.push(date_button(date.day(), is_month, is_day));
         }
 
-        let events = text("No Events this Day")
-            .size(12)
-            .width(Length::Fill)
-            .horizontal_alignment(Horizontal::Center);
+        // content
+        let content_list = column![
+            row![
+                column![date, day_of_week],
+                Space::with_width(Length::Fill),
+                month_controls,
+            ]
+            .padding([12, 20]),
+            calender.padding([0, 12].into()),
+            container(divider::horizontal::light())
+                .padding([12, 12])
+                .width(Length::Fill),
+            button(text(fl!("datetime-settings")).size(14))
+                .style(button_theme())
+                .padding([8, 24])
+                .width(Length::Fill)
+                .on_press(Message::OpenDateTimeSettings),
+        ]
+        .padding([8, 0]);
 
         self.core
             .applet
-            .popup_container(
-                column![
-                    row![
-                        column![date, day_of_week],
-                        Space::with_width(Length::Fill),
-                        month_controls,
-                    ],
-                    calender,
-                    container(divider::horizontal::light())
-                        .padding([0, 0])
-                        .width(Length::Fill),
-                    events,
-                    container(divider::horizontal::light())
-                        .padding([0, 0])
-                        .width(Length::Fill),
-                    button(text(fl!("datetime-settings")).size(14))
-                        .style(button_theme())
-                        .padding([8, 24])
-                        .width(Length::Fill)
-                ]
-                .padding([12, 12])
-                .spacing(12)
-                .align_items(Alignment::Center),
-            )
+            .popup_container(container(content_list))
             .into()
     }
 

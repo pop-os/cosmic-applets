@@ -902,9 +902,13 @@ name = "cosmic-applet-time"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "i18n-embed 0.13.9",
+ "i18n-embed-fl 0.6.7",
  "icon-loader",
  "libcosmic",
  "nix 0.26.4",
+ "once_cell",
+ "rust-embed 6.8.1",
 ]
 
 [[package]]
