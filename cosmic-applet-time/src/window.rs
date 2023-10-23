@@ -15,10 +15,11 @@ use cosmic::{
     Element, Theme,
 };
 
-use chrono::{DateTime, Datelike, Days, Local, NaiveDate, Timelike};
+use chrono::{DateTime, Datelike, Local, Timelike, Weekday};
 use std::time::Duration;
 
 use crate::fl;
+use crate::time::get_calender_first;
 
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
@@ -240,17 +241,20 @@ impl cosmic::Application for Window {
 
         // Calender
         let mut calender: Grid<'_, Message> = grid().width(Length::Fill);
-        for day_of_week in ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] {
+        let mut first_day_of_week = Weekday::Sun; // TODO: Configurable
+        for _ in 0..7 {
             calender = calender.push(
-                text(day_of_week)
+                text(first_day_of_week)
                     .size(12)
                     .width(Length::Fixed(36.0))
                     .horizontal_alignment(Horizontal::Center),
             );
+
+            first_day_of_week = first_day_of_week.succ();
         }
         calender = calender.insert_row();
 
-        let monday = get_sunday(self.now.year(), self.now.month());
+        let monday = get_calender_first(self.now.year(), self.now.month(), first_day_of_week);
         let mut day_iter = monday.iter_days();
         for i in 0..35 {
             if i > 0 && i % 7 == 0 {
@@ -321,10 +325,4 @@ fn date_button(
     } else {
         button
     }
-}
-
-fn get_sunday(year: i32, month: u32) -> NaiveDate {
-    let date = NaiveDate::from_ymd_opt(year, month, 1).unwrap();
-    let num_days = date.weekday().num_days_from_sunday();
-    date.checked_sub_days(Days::new(num_days as u64)).unwrap()
 }

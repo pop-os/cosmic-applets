@@ -1,4 +1,5 @@
 mod localize;
+mod time;
 mod window;
 
 use window::Window;
