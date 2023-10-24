@@ -14,6 +14,7 @@ use cosmic::iced_futures::futures::SinkExt;
 use cosmic::iced_runtime::core::alignment::Horizontal;
 
 use cosmic::widget::button;
+use cosmic::widget::horizontal_space;
 use cosmic::widget::Column;
 use cosmic::widget::Row;
 use cosmic::widget::{divider, icon};
@@ -631,13 +632,29 @@ impl cosmic::Application for Audio {
                 elements.push(icon(icon::from_path(icon_path)).size(36).into());
             }
 
-            elements.push(
-                column![
-                    text(s.title.clone().unwrap_or_default()).size(14),
-                    text(s.artists.clone().unwrap_or_default().join(", ")).size(10),
-                ]
-                .into(),
-            );
+            let title = if let Some(title) = s.title.as_ref() {
+                if title.len() > 15 {
+                    format!("{title:15}...")
+                } else {
+                    title.to_string()
+                }
+            } else {
+                String::new()
+            };
+
+            let artists = if let Some(artists) = s.artists.as_ref() {
+                let artists = artists.join(", ");
+                if artists.len() > 15 {
+                    format!("{artists:15}...")
+                } else {
+                    artists.to_string()
+                }
+            } else {
+                String::new()
+            };
+
+            elements.push(column![text(title).size(14), text(artists).size(10),].into());
+            elements.push(horizontal_space(Length::Fill).into());
 
             if let Some(go_prev) = self.go_previous(32) {
                 elements.push(go_prev);
