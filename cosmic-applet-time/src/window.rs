@@ -1,4 +1,4 @@
-use cosmic::applet::button_theme;
+use cosmic::applet::{menu_button, padded_control};
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced::{
     time,
@@ -7,7 +7,6 @@ use cosmic::iced::{
 };
 use cosmic::iced_core::alignment::{Horizontal, Vertical};
 use cosmic::iced_style::application;
-use cosmic::theme;
 use cosmic::widget::{button, container, divider, grid, Button, Grid, Space};
 use cosmic::{app, applet::cosmic_panel_config::PanelAnchor, Command};
 use cosmic::{
@@ -217,7 +216,7 @@ impl cosmic::Application for Window {
             },
         )
         .on_press(Message::TogglePopup)
-        .style(theme::Button::Text);
+        .style(cosmic::theme::Button::AppletIcon);
 
         if let Some(tracker) = self.rectangle_tracker.as_ref() {
             tracker.container(0, button).into()
@@ -277,13 +276,14 @@ impl cosmic::Application for Window {
             ]
             .padding([12, 20]),
             calender.padding([0, 12].into()),
-            container(divider::horizontal::light())
-                .padding([12, 12])
-                .width(Length::Fill),
-            button(text(fl!("datetime-settings")).size(14))
-                .style(button_theme())
+            padded_control(divider::horizontal::default()),
+            /*container(divider::horizontal::light())
+            .padding([12, 12])
+            .width(Length::Fill),*/
+            menu_button(text(fl!("datetime-settings")).size(14))
+                /*.style(button_theme())
                 .padding([8, 24])
-                .width(Length::Fill)
+                .width(Length::Fill)*/
                 .on_press(Message::OpenDateTimeSettings),
         ]
         .padding([8, 0]);
