@@ -1,5 +1,5 @@
 use cosmic::cosmic_config::cosmic_config_derive::CosmicConfigEntry;
-use cosmic::cosmic_config::{self, Config, ConfigGet, ConfigSet, CosmicConfigEntry};
+use cosmic::cosmic_config::{self, CosmicConfigEntry};
 use serde::{Deserialize, Serialize};
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize, CosmicConfigEntry, PartialEq, Eq)]
