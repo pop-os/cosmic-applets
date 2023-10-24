@@ -152,13 +152,14 @@ impl Audio {
     fn playback_buttons(&self) -> Option<Element<Message>> {
         if self.player_status.is_some() && self.config.show_media_controls_in_top_panel {
             let mut elements = Vec::with_capacity(3);
-            if let Some(go_prev) = self.go_previous() {
+            let icon_size = self.core.applet.suggested_size().0;
+            if let Some(go_prev) = self.go_previous(icon_size) {
                 elements.push(go_prev);
             }
-            if let Some(play_pause) = self.play_pause() {
+            if let Some(play_pause) = self.play_pause(icon_size) {
                 elements.push(play_pause);
             }
-            if let Some(go_next) = self.go_next() {
+            if let Some(go_next) = self.go_next(icon_size) {
                 elements.push(go_next);
             }
 
@@ -175,13 +176,13 @@ impl Audio {
         }
     }
 
-    fn go_previous(&self) -> Option<Element<Message>> {
+    fn go_previous(&self, icon_size: u16) -> Option<Element<Message>> {
         self.player_status.as_ref().and_then(|s| {
             if s.can_go_previous {
                 Some(
                     button::icon(
                         icon::from_name("media-skip-backward-symbolic")
-                            .size(24)
+                            .size(icon_size)
                             .symbolic(true),
                     )
                     .extra_small()
@@ -194,13 +195,13 @@ impl Audio {
         })
     }
 
-    fn go_next(&self) -> Option<Element<Message>> {
+    fn go_next(&self, icon_size: u16) -> Option<Element<Message>> {
         self.player_status.as_ref().and_then(|s| {
             if s.can_go_next {
                 Some(
                     button::icon(
                         icon::from_name("media-skip-forward-symbolic")
-                            .size(24)
+                            .size(icon_size)
                             .symbolic(true),
                     )
                     .extra_small()
@@ -213,14 +214,14 @@ impl Audio {
         })
     }
 
-    fn play_pause(&self) -> Option<Element<Message>> {
+    fn play_pause(&self, icon_size: u16) -> Option<Element<Message>> {
         self.player_status.as_ref().and_then(|s| match s.status {
             PlaybackStatus::Playing => {
                 if s.can_pause {
                     Some(
                         button::icon(
                             icon::from_name("media-playback-pause-symbolic")
-                                .size(32)
+                                .size(icon_size)
                                 .symbolic(true),
                         )
                         .on_press(Message::MprisRequest(MprisRequest::Pause))
@@ -627,7 +628,7 @@ impl cosmic::Application for Audio {
             let mut elements = Vec::with_capacity(5);
 
             if let Some(icon_path) = s.icon.clone() {
-                elements.push(icon(icon::from_path(icon_path)).size(24).into());
+                elements.push(icon(icon::from_path(icon_path)).size(36).into());
             }
 
             elements.push(
@@ -638,13 +639,13 @@ impl cosmic::Application for Audio {
                 .into(),
             );
 
-            if let Some(go_prev) = self.go_previous() {
+            if let Some(go_prev) = self.go_previous(32) {
                 elements.push(go_prev);
             }
-            if let Some(play_pause) = self.play_pause() {
+            if let Some(play_pause) = self.play_pause(32) {
                 elements.push(play_pause);
             }
-            if let Some(go_next) = self.go_next() {
+            if let Some(go_next) = self.go_next(32) {
                 elements.push(go_next);
             }
 
