@@ -75,6 +75,7 @@ async fn update(state: State, output: &mut futures::channel::mpsc::Sender<MprisU
                         Err(e) => {
                             tracing::error!(?e, "Failed to find active media player.");
                             std::thread::sleep(Duration::from_millis(ctr.min(20) * 100));
+                            ctr += 1;
                             continue;
                         }
                     };
