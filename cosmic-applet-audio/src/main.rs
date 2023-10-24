@@ -1,12 +1,21 @@
 mod localize;
 
+use config::AudioAppletConfig;
 use cosmic::app::Command;
+use cosmic::applet::cosmic_panel_config::PanelAnchor;
 use cosmic::applet::menu_button;
+use cosmic::applet::menu_control_padding;
 use cosmic::applet::padded_control;
+use cosmic::cosmic_config::CosmicConfigEntry;
 use cosmic::iced::widget;
 use cosmic::iced::Limits;
+use cosmic::iced_futures::futures::channel::mpsc::Sender;
+use cosmic::iced_futures::futures::SinkExt;
 use cosmic::iced_runtime::core::alignment::Horizontal;
 
+use cosmic::widget::button;
+use cosmic::widget::Column;
+use cosmic::widget::Row;
 use cosmic::widget::{divider, icon};
 use cosmic::Renderer;
 
@@ -21,7 +30,12 @@ use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
 
 use iced::wayland::popup::{destroy_popup, get_popup};
 use iced::widget::container;
+use mpris::PlaybackStatus;
+use mpris_subscription::MprisRequest;
+use mpris_subscription::MprisUpdate;
 
+mod config;
+mod mpris_subscription;
 mod pulse;
 use crate::localize::localize;
 use crate::pulse::DeviceInfo;
@@ -33,7 +47,7 @@ pub fn main() -> cosmic::iced::Result {
     // Prepare i18n
     localize();
 
-    cosmic::applet::run::<Audio>(false, ())
+    cosmic::applet::run::<Audio>(true, ())
 }
 
 static SHOW_MEDIA_CONTROLS: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
@@ -50,9 +64,11 @@ struct Audio {
     icon_name: String,
     input_icon_name: String,
     popup: Option<window::Id>,
-    show_media_controls_in_top_panel: bool,
     id_ctr: u128,
     timeline: Timeline,
+    config: AudioAppletConfig,
+    mpris_tx: Option<Sender<MprisRequest>>,
+    player_status: Option<mpris_subscription::PlayerStatus>,
 }
 
 impl Audio {
@@ -127,6 +143,113 @@ enum Message {
     CloseRequested(window::Id),
     ToggleMediaControlsInTopPanel(chain::Toggler, bool),
     Frame(Instant),
+    ConfigChanged(AudioAppletConfig),
+    Mpris(mpris_subscription::MprisUpdate),
+    MprisRequest(MprisRequest),
+}
+
+impl Audio {
+    fn playback_buttons(&self) -> Option<Element<Message>> {
+        if self.player_status.is_some() && self.config.show_media_controls_in_top_panel {
+            let mut elements = Vec::with_capacity(3);
+            if let Some(go_prev) = self.go_previous() {
+                elements.push(go_prev);
+            }
+            if let Some(play_pause) = self.play_pause() {
+                elements.push(play_pause);
+            }
+            if let Some(go_next) = self.go_next() {
+                elements.push(go_next);
+            }
+
+            Some(match self.core.applet.anchor {
+                PanelAnchor::Left | PanelAnchor::Right => Column::with_children(elements)
+                    .align_items(Alignment::Center)
+                    .into(),
+                PanelAnchor::Top | PanelAnchor::Bottom => Row::with_children(elements)
+                    .align_items(Alignment::Center)
+                    .into(),
+            })
+        } else {
+            None
+        }
+    }
+
+    fn go_previous(&self) -> Option<Element<Message>> {
+        self.player_status.as_ref().and_then(|s| {
+            if s.can_go_previous {
+                Some(
+                    button::icon(
+                        icon::from_name("media-skip-backward-symbolic")
+                            .size(24)
+                            .symbolic(true),
+                    )
+                    .extra_small()
+                    .on_press(Message::MprisRequest(MprisRequest::Previous))
+                    .into(),
+                )
+            } else {
+                None
+            }
+        })
+    }
+
+    fn go_next(&self) -> Option<Element<Message>> {
+        self.player_status.as_ref().and_then(|s| {
+            if s.can_go_next {
+                Some(
+                    button::icon(
+                        icon::from_name("media-skip-forward-symbolic")
+                            .size(24)
+                            .symbolic(true),
+                    )
+                    .extra_small()
+                    .on_press(Message::MprisRequest(MprisRequest::Next))
+                    .into(),
+                )
+            } else {
+                None
+            }
+        })
+    }
+
+    fn play_pause(&self) -> Option<Element<Message>> {
+        self.player_status.as_ref().and_then(|s| match s.status {
+            PlaybackStatus::Playing => {
+                if s.can_pause {
+                    Some(
+                        button::icon(
+                            icon::from_name("media-playback-pause-symbolic")
+                                .size(32)
+                                .symbolic(true),
+                        )
+                        .on_press(Message::MprisRequest(MprisRequest::Pause))
+                        .extra_small()
+                        .into(),
+                    )
+                } else {
+                    None
+                }
+            }
+
+            PlaybackStatus::Paused | PlaybackStatus::Stopped => {
+                if s.can_play {
+                    Some(
+                        button::icon(
+                            icon::from_name("media-playback-start-symbolic")
+                                .size(32)
+                                .symbolic(true),
+                        )
+                        .extra_small()
+                        .on_press(Message::MprisRequest(MprisRequest::Play))
+                        .into(),
+                    )
+                } else {
+                    None
+                }
+            }
+        })
+    }
 }
 
 impl cosmic::Application for Audio {
@@ -227,7 +350,7 @@ impl cosmic::Application for Audio {
                 if let PulseState::Connected(connection) = &mut self.pulse_state {
                     if let Some(device) = &self.current_input {
                         if let Some(name) = &device.name {
-                            log::info!("increasing volume of {}", name);
+                            tracing::info!("increasing volume of {}", name);
                             connection.send(pulse::Message::SetSourceVolumeByName(
                                 name.clone(),
                                 device.volume,
@@ -308,7 +431,7 @@ impl cosmic::Application for Audio {
                             panic!("Subscriton error handling is bad. This should never happen.")
                         }
                         _ => {
-                            log::trace!("Received misc message")
+                            tracing::trace!("Received misc message")
                         }
                     }
                 }
@@ -316,11 +439,38 @@ impl cosmic::Application for Audio {
             },
             Message::ToggleMediaControlsInTopPanel(chain, enabled) => {
                 self.timeline.set_chain(chain).start();
-                self.show_media_controls_in_top_panel = enabled;
+                self.config.show_media_controls_in_top_panel = enabled;
+                if let Ok(helper) =
+                    cosmic::cosmic_config::Config::new(Self::APP_ID, AudioAppletConfig::version())
+                {
+                    if let Err(err) = self.config.write_entry(&helper) {
+                        tracing::error!(?err, "Error writing config");
+                    }
+                }
             }
             Message::CloseRequested(id) => {
                 if Some(id) == self.popup {
                     self.popup = None;
+                }
+            }
+            Message::ConfigChanged(c) => {
+                self.config = c;
+            }
+            Message::Mpris(mpris_subscription::MprisUpdate::Setup(tx)) => {
+                self.mpris_tx = Some(tx);
+            }
+            Message::Mpris(mpris_subscription::MprisUpdate::Player(p)) => {
+                self.player_status = Some(p);
+            }
+            Message::Mpris(MprisUpdate::Finished) => {
+                self.player_status = None;
+                self.mpris_tx = None;
+            }
+            Message::MprisRequest(r) => {
+                if let Some(mut tx) = self.mpris_tx.clone() {
+                    _ = tokio::spawn(async move {
+                        _ = tx.send(r).await;
+                    });
                 }
             }
         };
@@ -334,15 +484,46 @@ impl cosmic::Application for Audio {
             self.timeline
                 .as_subscription()
                 .map(|(_, now)| Message::Frame(now)),
+            cosmic::cosmic_config::config_subscription(
+                0,
+                Self::APP_ID.into(),
+                AudioAppletConfig::version(),
+            )
+            .map(|(_, res)| match res {
+                Ok(c) => Message::ConfigChanged(c),
+                Err((errs, c)) => {
+                    for err in errs {
+                        tracing::error!("Error loading config: {}", err);
+                    }
+                    Message::ConfigChanged(c)
+                }
+            }),
+            mpris_subscription::mpris_subscription(0).map(Message::Mpris),
         ])
     }
 
     fn view(&self) -> Element<Message> {
-        self.core
+        let btn = self
+            .core
             .applet
             .icon_button(&self.icon_name)
-            .on_press(Message::TogglePopup)
-            .into()
+            .on_press(Message::TogglePopup);
+        if let Some(playback_buttons) = self.playback_buttons() {
+            match self.core.applet.anchor {
+                PanelAnchor::Left | PanelAnchor::Right => {
+                    Column::with_children(vec![playback_buttons, btn.into()])
+                        .align_items(Alignment::Center)
+                        .into()
+                }
+                PanelAnchor::Top | PanelAnchor::Bottom => {
+                    Row::with_children(vec![playback_buttons, btn.into()])
+                        .align_items(Alignment::Center)
+                        .into()
+                }
+            }
+        } else {
+            btn.into()
+        }
     }
 
     fn view_window(&self, _id: window::Id) -> Element<Message> {
@@ -362,7 +543,7 @@ impl cosmic::Application for Audio {
         )
         .0 * 100.0;
 
-        let audio_content = if audio_disabled {
+        let mut audio_content = if audio_disabled {
             column![padded_control(
                 text(fl!("disconnected"))
                     .width(Length::Fill)
@@ -441,6 +622,40 @@ impl cosmic::Application for Audio {
             ]
             .align_items(Alignment::Start)
         };
+
+        if let Some(s) = self.player_status.as_ref() {
+            let mut elements = Vec::with_capacity(5);
+
+            if let Some(icon_path) = s.icon.clone() {
+                elements.push(icon(icon::from_path(icon_path)).size(24).into());
+            }
+
+            elements.push(
+                column![
+                    text(s.title.clone().unwrap_or_default()).size(14),
+                    text(s.artists.clone().unwrap_or_default().join(", ")).size(10),
+                ]
+                .into(),
+            );
+
+            if let Some(go_prev) = self.go_previous() {
+                elements.push(go_prev);
+            }
+            if let Some(play_pause) = self.play_pause() {
+                elements.push(play_pause);
+            }
+            if let Some(go_next) = self.go_next() {
+                elements.push(go_next);
+            }
+
+            audio_content = audio_content.push(padded_control(divider::horizontal::default()));
+            audio_content = audio_content.push(
+                Row::with_children(elements)
+                    .align_items(Alignment::Center)
+                    .spacing(8)
+                    .padding(menu_control_padding()),
+            );
+        }
         let content = column![
             audio_content,
             padded_control(divider::horizontal::default()),
@@ -450,7 +665,7 @@ impl cosmic::Application for Audio {
                     SHOW_MEDIA_CONTROLS,
                     &self.timeline,
                     Some(fl!("show-media-controls")),
-                    self.show_media_controls_in_top_panel,
+                    self.config.show_media_controls_in_top_panel,
                     Message::ToggleMediaControlsInTopPanel,
                 )
                 .text_size(14)

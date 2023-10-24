@@ -212,7 +212,7 @@ impl PulseHandle {
                                         .await
                                         .unwrap(),
                                     Err(e) => {
-                                        log::error!("ERROR! {:?}", e);
+                                        tracing::error!("ERROR! {:?}", e);
                                         PulseHandle::send_disconnected(&mut from_pulse_send).await;
                                     }
                                 }
@@ -262,28 +262,31 @@ impl PulseHandle {
                                 server.set_source_volume_by_name(&name, &channel_volumes)
                             }
                             Message::UpdateConnection => {
-                                log::info!(
+                                tracing::info!(
                                     "Updating Connection, server exists: {:?}",
                                     server.is_some()
                                 );
                                 if let Some(mut cur_server) = server.take() {
-                                    log::trace!("getting server info...");
+                                    tracing::trace!("getting server info...");
                                     if let Err(_) = cur_server.get_server_info() {
-                                        log::warn!("got error, server must be disconnected...");
+                                        tracing::warn!("got error, server must be disconnected...");
                                         PulseHandle::send_disconnected(&mut from_pulse_send).await;
                                     } else {
-                                        log::trace!("got server info, still connected...");
+                                        tracing::trace!("got server info, still connected...");
                                         server = Some(cur_server);
                                     }
                                 } else {
                                     match PulseServer::connect().and_then(|server| server.init()) {
                                         Ok(new_server) => {
-                                            log::info!("Connected to server");
+                                            tracing::info!("Connected to server");
                                             PulseHandle::send_connected(&mut from_pulse_send).await;
                                             server = Some(new_server);
                                         }
                                         Err(err) => {
-                                            log::error!("Failed to connect to server: {:?}", err);
+                                            tracing::error!(
+                                                "Failed to connect to server: {:?}",
+                                                err
+                                            );
                                         }
                                     }
                                 }
@@ -327,7 +330,7 @@ impl PulseHandle {
                                 }
                             }
                             _ => {
-                                log::warn!("message doesn't match")
+                                tracing::warn!("message doesn't match")
                             }
                         }
                     }
