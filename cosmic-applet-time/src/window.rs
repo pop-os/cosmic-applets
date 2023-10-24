@@ -277,13 +277,7 @@ impl cosmic::Application for Window {
             .padding([12, 20]),
             calender.padding([0, 12].into()),
             padded_control(divider::horizontal::default()),
-            /*container(divider::horizontal::light())
-            .padding([12, 12])
-            .width(Length::Fill),*/
             menu_button(text(fl!("datetime-settings")).size(14))
-                /*.style(button_theme())
-                .padding([8, 24])
-                .width(Length::Fill)*/
                 .on_press(Message::OpenDateTimeSettings),
         ]
         .padding([8, 0]);
