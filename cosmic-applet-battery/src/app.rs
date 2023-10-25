@@ -438,7 +438,6 @@ impl cosmic::Application for CosmicBatteryApplet {
                     menu_button(text(fl!("power-settings")).size(14).width(Length::Fill))
                         .on_press(Message::OpenBatterySettings)
                 ]
-                .spacing(8)
                 .padding([8, 0]),
             )
             .into()
