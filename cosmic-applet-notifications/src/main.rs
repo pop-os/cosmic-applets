@@ -39,6 +39,7 @@ pub async fn main() -> cosmic::iced::Result {
 }
 
 static DO_NOT_DISTURB: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
+
 #[derive(Default)]
 struct Notifications {
     core: cosmic::app::Core,
@@ -50,12 +51,12 @@ struct Notifications {
     // notifications: Vec<Notification>,
     timeline: Timeline,
     dbus_sender: Option<Sender<subscriptions::dbus::Input>>,
-    cards: Vec<(id::Cards, Vec<Notification>, bool, String)>,
+    cards: Vec<(id::Cards, Vec<Notification>, bool, String, String, String)>,
 }
 
 impl Notifications {
     fn update_cards(&mut self, id: id::Cards) {
-        if let Some((id, _, card_value, _)) = self.cards.iter_mut().find(|c| c.0 == id) {
+        if let Some((id, _, card_value, ..)) = self.cards.iter_mut().find(|c| c.0 == id) {
             let chain = if *card_value {
                 chain::Cards::on(id.clone(), 1.)
             } else {
@@ -233,6 +234,8 @@ impl cosmic::Application for Notifications {
                         vec![n],
                         false,
                         fl!("show-more", HashMap::from_iter(vec![("more", "1")])),
+                        fl!("show-less"),
+                        fl!("clear-all"),
                     ));
                 }
             }
@@ -291,7 +294,7 @@ impl cosmic::Application for Notifications {
                 }
             }
             Message::CardsToggled(name, expanded) => {
-                let id = if let Some((id, _, n_expanded, _)) = self
+                let id = if let Some((id, _, n_expanded, ..)) = self
                     .cards
                     .iter_mut()
                     .find(|c| c.1.iter().any(|notif| name == notif.app_name))
@@ -329,15 +332,17 @@ impl cosmic::Application for Notifications {
             self.config.do_not_disturb,
             Message::DoNotDisturb
         )
+        .text_size(14)
         .width(Length::Fill)]);
 
-        let settings = menu_button(text(fl!("notification-settings"))).on_press(Message::Settings);
+        let settings =
+            menu_button(text(fl!("notification-settings")).size(14)).on_press(Message::Settings);
 
         let notifications = if self.cards.is_empty() {
             row![container(
                 column![
                     text_icon("cosmic-applet-notification-symbolic", 40),
-                    text(&fl!("no-notifications"))
+                    text(&fl!("no-notifications")).size(14)
                 ]
                 .align_items(Alignment::Center)
             )
@@ -368,7 +373,7 @@ impl cosmic::Application for Notifications {
                         .size(12)
                         .width(Length::Fill);
 
-                        let duration_since = text(duration_ago_msg(n)).size(12);
+                        let duration_since = text(duration_ago_msg(n)).size(10);
 
                         let close_notif = button(
                             icon::from_name("window-close-symbolic")
@@ -469,9 +474,8 @@ impl cosmic::Application for Notifications {
                     Message::ClearAll(name.clone()),
                     move |_, e| Message::CardsToggled(name.clone(), e),
                     &c.3,
-                    "Show Less",
-                    // &format!("Show {} More", c.1.len().saturating_sub(1)),
-                    "Clear All",
+                    &c.4,
+                    &c.5,
                     show_more_icon,
                     c.2,
                 );
@@ -491,12 +495,10 @@ impl cosmic::Application for Notifications {
             padded_control(divider::horizontal::default()),
             notifications,
             padded_control(divider::horizontal::default())
-        ]
-        .spacing(12);
+        ];
 
         let content = column![do_not_disturb, main_content, settings]
             .align_items(Alignment::Start)
-            .spacing(12)
             .padding([8, 0]);
 
         self.core.applet.popup_container(content).into()
