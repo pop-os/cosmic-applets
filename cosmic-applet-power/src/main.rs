@@ -243,6 +243,7 @@ impl cosmic::Application for Power {
                         Space::with_width(Length::Fill),
                         text(fl!("lock-screen-shortcut")).size(14),
                     ]
+                    .align_items(Alignment::Center)
                     .spacing(8)
                 )
                 .on_press(Message::Action(PowerAction::Lock)),
@@ -253,6 +254,7 @@ impl cosmic::Application for Power {
                         Space::with_width(Length::Fill),
                         text(fl!("log-out-shortcut")).size(14),
                     ]
+                    .align_items(Alignment::Center)
                     .spacing(8)
                 )
                 .on_press(Message::Action(PowerAction::LogOut)),
