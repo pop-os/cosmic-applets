@@ -380,7 +380,6 @@ impl cosmic::Application for CosmicBluetoothApplet {
             known_bluetooth,
         ]
         .align_items(Alignment::Center)
-        .spacing(8)
         .padding([8, 0]);
         let dropdown_icon = if self.show_visible_devices {
             "go-down-symbolic"
@@ -456,7 +455,6 @@ impl cosmic::Application for CosmicBluetoothApplet {
                         .on_press(Message::Confirm),
                     ]
                     .align_items(Alignment::Center)
-                    .spacing(8)
                 )
                 .align_x(Horizontal::Center)
             ];
