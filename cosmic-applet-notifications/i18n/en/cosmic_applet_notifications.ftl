@@ -6,6 +6,7 @@ minutes-ago = { NUMBER($duration) ->
     [1] 1 Minute Ago
     *[other] {$duration} Minutes Ago
 }
+show-less = Show Less
 show-more = Show {$more} More
 clear-all = Clear All Notifications
 do-not-disturb = Do Not Disturb
