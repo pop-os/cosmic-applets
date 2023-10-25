@@ -1,5 +1,5 @@
 use cosmic::app::Command;
-use cosmic::applet::{menu_button, padded_control};
+use cosmic::applet::{menu_button, menu_control_padding, padded_control};
 use cosmic::iced_widget::Row;
 use cosmic::{
     iced::{
@@ -410,7 +410,8 @@ impl cosmic::Application for CosmicNetworkApplet {
         for conn in &self.nm_state.active_conns {
             match conn {
                 ActiveConnectionInfo::Vpn { name, ip_addresses } => {
-                    let mut ipv4 = Vec::with_capacity(ip_addresses.len());
+                    let mut ipv4 = Vec::with_capacity(ip_addresses.len() + 1);
+                    ipv4.push(text(name).size(14).into());
                     for addr in ip_addresses {
                         ipv4.push(
                             text(format!("{}: {}", fl!("ipv4"), addr.to_string()))
@@ -418,8 +419,25 @@ impl cosmic::Application for CosmicNetworkApplet {
                                 .into(),
                         );
                     }
-                    vpn_ethernet_col = vpn_ethernet_col
-                        .push(column![text(name), Column::with_children(ipv4)].spacing(4));
+                    vpn_ethernet_col = vpn_ethernet_col.push(column![
+                        row![
+                            icon(
+                                icon::from_name(self.icon_name.clone())
+                                    .symbolic(true)
+                                    .into()
+                            )
+                            .size(40),
+                            Column::with_children(ipv4),
+                            text(fl!("connected"))
+                                .width(Length::Fill)
+                                .horizontal_alignment(Horizontal::Right)
+                                .size(14),
+                        ]
+                        .align_items(Alignment::Center)
+                        .spacing(8)
+                        .padding(menu_control_padding()),
+                        padded_control(divider::horizontal::default()),
+                    ]);
                 }
                 ActiveConnectionInfo::Wired {
                     name,
@@ -427,7 +445,8 @@ impl cosmic::Application for CosmicNetworkApplet {
                     speed,
                     ip_addresses,
                 } => {
-                    let mut ipv4 = Vec::with_capacity(ip_addresses.len());
+                    let mut ipv4 = Vec::with_capacity(ip_addresses.len() + 1);
+                    ipv4.push(text(name).size(14).into());
                     for addr in ip_addresses {
                         ipv4.push(
                             text(format!("{}: {}", fl!("ipv4"), addr.to_string()))
@@ -435,17 +454,30 @@ impl cosmic::Application for CosmicNetworkApplet {
                                 .into(),
                         );
                     }
-                    vpn_ethernet_col = vpn_ethernet_col.push(
-                        column![
-                            row![
-                                text(name),
-                                text(format!("{speed} {}", fl!("megabits-per-second")))
-                            ]
-                            .spacing(16),
+
+                    vpn_ethernet_col = vpn_ethernet_col.push(column![
+                        row![
+                            icon(
+                                icon::from_name(self.icon_name.clone())
+                                    .symbolic(true)
+                                    .into()
+                            )
+                            .size(40),
                             Column::with_children(ipv4),
+                            text(format!(
+                                "{} - {speed} {}",
+                                fl!("connected"),
+                                fl!("megabits-per-second")
+                            ))
+                            .width(Length::Fill)
+                            .horizontal_alignment(Horizontal::Right)
+                            .size(14),
                         ]
-                        .spacing(4),
-                    );
+                        .align_items(Alignment::Center)
+                        .spacing(8)
+                        .padding(menu_control_padding()),
+                        padded_control(divider::horizontal::default()),
+                    ]);
                 }
                 ActiveConnectionInfo::WiFi {
                     name,
@@ -531,8 +563,7 @@ impl cosmic::Application for CosmicNetworkApplet {
             ),
             padded_control(divider::horizontal::default()),
         ]
-        .align_items(Alignment::Center)
-        .padding([8, 0]);
+        .align_items(Alignment::Center);
         if self.nm_state.airplane_mode {
             content = content.push(
                 column!(
@@ -753,7 +784,7 @@ impl cosmic::Application for CosmicNetworkApplet {
         }
         self.core
             .applet
-            .popup_container(content.padding([16, 0, 8, 0]))
+            .popup_container(content.padding([8, 0, 8, 0]))
             .into()
     }
 
