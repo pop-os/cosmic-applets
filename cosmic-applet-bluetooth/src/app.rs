@@ -352,30 +352,13 @@ impl cosmic::Application for CosmicBluetoothApplet {
         }
 
         let mut content = column![
-            column![
-                padded_control(
-                    toggler(fl!("bluetooth"), self.bluer_state.bluetooth_enabled, |m| {
-                        Message::Request(BluerRequest::SetBluetoothEnabled(m))
-                    },)
-                    .text_size(14)
-                    .width(Length::Fill)
-                ),
-                // these are not in the UX mockup, but they are useful imo
-                padded_control(
-                    toggler(fl!("discoverable"), self.bluer_state.discoverable, |m| {
-                        Message::Request(BluerRequest::SetDiscoverable(m))
-                    },)
-                    .text_size(14)
-                    .width(Length::Fill)
-                ),
-                padded_control(
-                    toggler(fl!("pairable"), self.bluer_state.pairable, |m| {
-                        Message::Request(BluerRequest::SetPairable(m))
-                    },)
-                    .text_size(14)
-                    .width(Length::Fill)
-                )
-            ],
+            column![padded_control(
+                toggler(fl!("bluetooth"), self.bluer_state.bluetooth_enabled, |m| {
+                    Message::Request(BluerRequest::SetBluetoothEnabled(m))
+                },)
+                .text_size(14)
+                .width(Length::Fill)
+            ),],
             padded_control(divider::horizontal::default()),
             known_bluetooth,
         ]
