@@ -382,6 +382,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
                 .height(Length::Fixed(24.0))
         ])
         .on_press(Message::ToggleVisibleDevices(!self.show_visible_devices));
+        content = content.push(padded_control(divider::horizontal::default()));
         content = content.push(available_connections_btn);
         let mut list_column: Vec<Element<'_, Message>> =
             Vec::with_capacity(self.bluer_state.devices.len());
@@ -485,6 +486,11 @@ impl cosmic::Application for CosmicBluetoothApplet {
         } else {
             content = content.push(Column::with_children(list_column));
         }
+        content = content.push(padded_control(divider::horizontal::default()));
+        content = content.push(
+            menu_button(text(fl!("settings")).size(14).width(Length::Fill))
+                .on_press(Message::Ignore),
+        );
         self.core.applet.popup_container(content).into()
     }
 
