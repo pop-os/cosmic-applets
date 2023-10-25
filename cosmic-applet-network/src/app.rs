@@ -651,6 +651,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                     .height(Length::Fixed(24.0)),
             ])
             .on_press(Message::ToggleVisibleNetworks);
+            content = content.push(padded_control(divider::horizontal::default()));
             content = content.push(available_connections_btn);
         }
         if self.show_visible_networks {
@@ -782,6 +783,8 @@ impl cosmic::Application for CosmicNetworkApplet {
                     .push(scrollable(Column::with_children(list_col)).height(Length::Fixed(300.0)));
             }
         }
+        content = content.push(padded_control(divider::horizontal::default()));
+        content = content.push(menu_button(text(fl!("settings")).size(14)));
         self.core
             .applet
             .popup_container(content.padding([8, 0, 8, 0]))
