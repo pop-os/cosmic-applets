@@ -277,7 +277,6 @@ impl cosmic::Application for Power {
                 power
             ]
             .align_items(Alignment::Start)
-            .spacing(12)
             .padding([8, 0]);
 
             self.core.applet.popup_container(content).into()
