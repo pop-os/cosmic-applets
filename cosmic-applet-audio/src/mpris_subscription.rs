@@ -1,17 +1,19 @@
-use std::{borrow::Cow, fmt::Debug, hash::Hash, path::PathBuf, time::Duration};
+use std::{borrow::Cow, fmt::Debug, hash::Hash, path::PathBuf};
 
 use cosmic::{
     iced::{self, subscription},
-    iced_futures::futures::{
-        self,
-        channel::mpsc::{channel, Receiver, Sender},
-        SinkExt, StreamExt,
-    },
+    iced_futures::futures::{self, SinkExt, StreamExt},
 };
-use mpris::{PlaybackStatus, PlayerFinder};
+use mpris2_zbus::{
+    media_player::MediaPlayer,
+    player::{PlaybackStatus, Player},
+};
+use tokio::join;
+use zbus::Connection;
 
 #[derive(Clone, Debug)]
 pub struct PlayerStatus {
+    pub player: Player,
     pub icon: Option<PathBuf>,
     pub title: Option<Cow<'static, str>>,
     pub artists: Option<Vec<Cow<'static, str>>>,
@@ -20,6 +22,47 @@ pub struct PlayerStatus {
     pub can_play: bool,
     pub can_go_previous: bool,
     pub can_go_next: bool,
+}
+
+impl PlayerStatus {
+    async fn new(player: Player) -> Self {
+        let metadata = player.metadata().await.unwrap();
+        let title = metadata.title().map(|t| Cow::from(t.to_string()));
+        let artists = metadata.artists().map(|a| {
+            a.into_iter()
+                .map(|a| Cow::from(a.to_string()))
+                .collect::<Vec<_>>()
+        });
+        let icon = metadata
+            .art_url()
+            .and_then(|u| url::Url::parse(&u).ok())
+            .and_then(|u| {
+                if u.scheme() == "file" {
+                    u.to_file_path().ok()
+                } else {
+                    None
+                }
+            });
+
+        let (playback_status, can_pause, can_play, can_go_previous, can_go_next) = join!(
+            player.playback_status(),
+            player.can_pause(),
+            player.can_play(),
+            player.can_go_previous(),
+            player.can_go_next()
+        );
+        Self {
+            icon,
+            title,
+            artists,
+            status: playback_status.unwrap_or_else(|_| PlaybackStatus::Stopped),
+            can_pause: can_pause.unwrap_or_default(),
+            can_play: can_play.unwrap_or_default(),
+            can_go_previous: can_go_previous.unwrap_or_default(),
+            can_go_next: can_go_next.unwrap_or_default(),
+            player,
+        }
+    }
 }
 
 pub fn mpris_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
@@ -37,13 +80,13 @@ pub fn mpris_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
 #[derive(Debug)]
 pub enum State {
     Setup,
-    Wait(Receiver<MprisUpdate>),
+    Player(Player),
     Finished,
 }
 
 #[derive(Clone, Debug)]
 pub enum MprisUpdate {
-    Setup(Sender<MprisRequest>),
+    Setup,
     Player(PlayerStatus),
     Finished,
 }
@@ -59,148 +102,113 @@ pub enum MprisRequest {
 async fn update(state: State, output: &mut futures::channel::mpsc::Sender<MprisUpdate>) -> State {
     match state {
         State::Setup => {
-            let (mut tx, rx) = channel(30);
-            let (thread_tx, mut thread_rx) = channel(30);
-            let _ = std::thread::spawn(move || {
-                let mut ctr = 0;
+            let Ok(conn) = Connection::session().await else {
+                tracing::error!("Failed to connect to session bus.");
+                return State::Finished;
+            };
+            let mut players = mpris2_zbus::media_player::MediaPlayer::new_all(&conn)
+                .await
+                .unwrap_or_else(|_| Vec::new());
+            if players.is_empty() {
+                let Ok(dbus) = zbus::fdo::DBusProxy::builder(&conn)
+                    .path("/org/freedesktop/DBus").unwrap()
+                    .build()
+                    .await else {
+                        tracing::error!("Failed to create dbus proxy.");
+                        return State::Finished;
+                    };
                 loop {
-                    let player = match PlayerFinder::new().and_then(|f| {
-                        f.find_active()
-                            .map_err(|e| mpris::DBusError::Miscellaneous(e.to_string()))
-                    }) {
-                        Ok(p) => {
-                            ctr = 0;
-                            p
-                        }
-                        Err(e) => {
-                            tracing::error!(?e, "Failed to find active media player.");
-                            std::thread::sleep(Duration::from_millis(ctr.min(20) * 100));
-                            ctr += 1;
-                            continue;
-                        }
+                    let Ok(mut stream) = dbus.receive_name_owner_changed().await else {
+                        tracing::error!("Failed to receive name owner changed signal.");
+                        tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+                        // restart from the beginning
+                        return State::Setup;
                     };
-                    let can_go_next = player.can_go_next().unwrap_or_default();
-                    let can_go_previous = player.can_go_previous().unwrap_or_default();
-                    let can_play = player.can_play().unwrap_or_default();
-                    let can_pause = player.can_pause().unwrap_or_default();
-
-                    let Ok(mut tracker) = player.track_progress(200) else {
-                        tracing::error!("Failed to track progress.");
-                        std::thread::sleep(Duration::from_secs(2));
-                        continue;
-                    };
-                    let (title, artists, icon) = player
-                        .get_metadata()
-                        .map(|m| {
-                            (
-                                m.title().map(|c| Cow::Owned(String::from(c))),
-                                m.artists().map(|a| {
-                                    a.into_iter()
-                                        .map(|a| Cow::from(String::from(a)))
-                                        .collect::<Vec<_>>()
-                                }),
-                                m.art_url()
-                                    .and_then(|u| url::Url::parse(u).ok())
-                                    .and_then(|u| {
-                                        if u.scheme() == "file" {
-                                            u.to_file_path().ok()
-                                        } else {
-                                            None
-                                        }
-                                    }),
-                            )
-                        })
-                        .unwrap_or_default();
-                    if let Err(err) = tx.try_send(MprisUpdate::Player(PlayerStatus {
-                        icon,
-                        title,
-                        artists,
-                        status: player
-                            .get_playback_status()
-                            .unwrap_or(PlaybackStatus::Stopped),
-                        can_pause,
-                        can_play,
-                        can_go_previous,
-                        can_go_next,
-                    })) {
-                        tracing::error!(?err, "Failed to send player update.");
-                    }
-                    loop {
-                        if let Ok(req) = thread_rx.try_next() {
-                            match req {
-                                Some(MprisRequest::Play) => {
-                                    let _ = player.play();
-                                }
-                                Some(MprisRequest::Pause) => {
-                                    let _ = player.pause();
-                                }
-                                Some(MprisRequest::Next) => {
-                                    let _ = player.next();
-                                }
-                                Some(MprisRequest::Previous) => {
-                                    let _ = player.previous();
-                                }
-                                None => {
-                                    return;
-                                }
-                            }
-                        }
-                        let tick = tracker.tick();
-                        if tick.player_quit {
-                            tracing::info!("Player quit.");
-                            break;
-                        }
-                        if tick.progress_changed {
-                            let metadata = tick.progress.metadata();
-                            if let Err(err) = tx.try_send(MprisUpdate::Player(PlayerStatus {
-                                icon: metadata
-                                    .art_url()
-                                    .and_then(|u| url::Url::parse(u).ok())
-                                    .and_then(|u| {
-                                        if u.scheme() == "file" {
-                                            u.to_file_path().ok()
-                                        } else {
-                                            None
-                                        }
-                                    }),
-                                title: metadata.title().map(|t| Cow::from(t.to_string())),
-                                artists: metadata.artists().map(|a| {
-                                    a.into_iter().map(|a| Cow::from(a.to_string())).collect()
-                                }),
-                                status: tick.progress.playback_status(),
-                                can_pause: player.can_pause().unwrap_or_default(),
-                                can_play: player.can_play().unwrap_or_default(),
-                                can_go_previous: player.can_go_previous().unwrap_or_default(),
-                                can_go_next: player.can_go_next().unwrap_or_default(),
-                            })) {
-                                tracing::error!(?err, "Failed to send player update.");
+                    while let Some(c) = stream.next().await {
+                        if let Ok(args) = c.args() {
+                            if args.name.contains("org.mpris.MediaPlayer2") {
                                 break;
                             }
                         }
                     }
-                    drop(tracker);
-                }
-            });
-
-            let _ = output.send(MprisUpdate::Setup(thread_tx)).await;
-
-            State::Wait(rx)
-        }
-        State::Wait(mut rx) => match rx.next().await {
-            Some(u) => {
-                match u {
-                    MprisUpdate::Setup(_) => {}
-                    u => {
-                        let _ = output.send(u).await;
+                    if let Ok(p) = mpris2_zbus::media_player::MediaPlayer::new_all(&conn).await {
+                        players = p;
+                        break;
+                    } else {
+                        // restart from the beginning
+                        return State::Setup;
                     }
                 }
-                State::Wait(rx)
             }
-            None => {
-                _ = output.send(MprisUpdate::Finished).await;
+
+            let Some(player) = find_active(players).await else {
+                tracing::error!("Failed to find active media player.");
+                tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
                 return State::Finished;
+            };
+
+            let player_status = PlayerStatus::new(player.clone()).await;
+
+            _ = output.send(MprisUpdate::Player(player_status)).await;
+            State::Player(player)
+        }
+        State::Player(player) => {
+            let mut paused = player.receive_playback_status_changed().await;
+            let mut metadata_changed = player.receive_metadata_changed().await;
+            loop {
+                let keep_going = tokio::select! {
+                    p = paused.next() => {
+                        p.is_some()
+                    },
+                    m = metadata_changed.next() => {
+                        m.is_some()
+                    },
+                };
+
+                if keep_going {
+                    let update = PlayerStatus::new(player.clone()).await;
+                    let stopped = update.status == PlaybackStatus::Stopped;
+                    _ = output.send(MprisUpdate::Player(update)).await;
+                    if stopped {
+                        _ = output.send(MprisUpdate::Setup).await;
+                        break;
+                    }
+                } else {
+                    break;
+                }
             }
-        },
+            State::Setup
+        }
         State::Finished => iced::futures::future::pending().await,
     }
+}
+
+async fn find_active(players: Vec<MediaPlayer>) -> Option<Player> {
+    let mut best = (0, None);
+    let eval = |p: Player| async move {
+        let v = {
+            let status = p.playback_status().await;
+
+            match status {
+                Ok(mpris2_zbus::player::PlaybackStatus::Playing) => 100,
+                Ok(mpris2_zbus::player::PlaybackStatus::Paused) => 10,
+                _ => 0,
+            }
+        };
+
+        v + p.metadata().await.is_ok() as i32
+    };
+
+    for p in players {
+        let p = match p.player().await {
+            Ok(p) => p,
+            Err(_) => continue,
+        };
+        let v = eval(p.clone()).await;
+        if v >= best.0 {
+            best = (v, Some(p));
+        }
+    }
+
+    best.1
 }

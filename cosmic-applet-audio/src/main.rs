@@ -9,8 +9,6 @@ use cosmic::applet::padded_control;
 use cosmic::cosmic_config::CosmicConfigEntry;
 use cosmic::iced::widget;
 use cosmic::iced::Limits;
-use cosmic::iced_futures::futures::channel::mpsc::Sender;
-use cosmic::iced_futures::futures::SinkExt;
 use cosmic::iced_runtime::core::alignment::Horizontal;
 
 use cosmic::widget::button;
@@ -31,7 +29,7 @@ use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
 
 use iced::wayland::popup::{destroy_popup, get_popup};
 use iced::widget::container;
-use mpris::PlaybackStatus;
+use mpris2_zbus::player::PlaybackStatus;
 use mpris_subscription::MprisRequest;
 use mpris_subscription::MprisUpdate;
 
@@ -68,7 +66,6 @@ struct Audio {
     id_ctr: u128,
     timeline: Timeline,
     config: AudioAppletConfig,
-    mpris_tx: Option<Sender<MprisRequest>>,
     player_status: Option<mpris_subscription::PlayerStatus>,
 }
 
@@ -187,6 +184,7 @@ impl Audio {
                             .symbolic(true),
                     )
                     .extra_small()
+                    .style(cosmic::theme::Button::AppletIcon)
                     .on_press(Message::MprisRequest(MprisRequest::Previous))
                     .into(),
                 )
@@ -206,6 +204,7 @@ impl Audio {
                             .symbolic(true),
                     )
                     .extra_small()
+                    .style(cosmic::theme::Button::AppletIcon)
                     .on_press(Message::MprisRequest(MprisRequest::Next))
                     .into(),
                 )
@@ -225,6 +224,7 @@ impl Audio {
                                 .size(icon_size)
                                 .symbolic(true),
                         )
+                        .style(cosmic::theme::Button::AppletIcon)
                         .on_press(Message::MprisRequest(MprisRequest::Pause))
                         .extra_small()
                         .into(),
@@ -242,6 +242,7 @@ impl Audio {
                                 .size(32)
                                 .symbolic(true),
                         )
+                        .style(cosmic::theme::Button::AppletIcon)
                         .extra_small()
                         .on_press(Message::MprisRequest(MprisRequest::Play))
                         .into(),
@@ -458,22 +459,48 @@ impl cosmic::Application for Audio {
             Message::ConfigChanged(c) => {
                 self.config = c;
             }
-            Message::Mpris(mpris_subscription::MprisUpdate::Setup(tx)) => {
-                self.mpris_tx = Some(tx);
-            }
             Message::Mpris(mpris_subscription::MprisUpdate::Player(p)) => {
                 self.player_status = Some(p);
             }
             Message::Mpris(MprisUpdate::Finished) => {
                 self.player_status = None;
-                self.mpris_tx = None;
+            }
+            Message::Mpris(MprisUpdate::Setup) => {
+                self.player_status = None;
             }
             Message::MprisRequest(r) => {
-                if let Some(mut tx) = self.mpris_tx.clone() {
-                    _ = tokio::spawn(async move {
-                        _ = tx.send(r).await;
-                    });
-                }
+                let Some(player_status) = self.player_status.as_ref() else {
+                    tracing::error!("No player found");
+                    return Command::none();
+                };
+                let player = player_status.player.clone();
+
+                match r {
+                    MprisRequest::Play => tokio::spawn(async move {
+                        let res = player.play().await;
+                        if let Err(err) = res {
+                            tracing::error!("Error playing: {}", err);
+                        }
+                    }),
+                    MprisRequest::Pause => tokio::spawn(async move {
+                        let res = player.pause().await;
+                        if let Err(err) = res {
+                            tracing::error!("Error pausing: {}", err);
+                        }
+                    }),
+                    MprisRequest::Next => tokio::spawn(async move {
+                        let res = player.next().await;
+                        if let Err(err) = res {
+                            tracing::error!("Error playing next: {}", err);
+                        }
+                    }),
+                    MprisRequest::Previous => tokio::spawn(async move {
+                        let res = player.previous().await;
+                        if let Err(err) = res {
+                            tracing::error!("Error playing previous: {}", err);
+                        }
+                    }),
+                };
             }
         };
 

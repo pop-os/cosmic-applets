@@ -32,6 +32,8 @@ libcosmic = { git = "https://github.com/pop-os/libcosmic", default-features = fa
     "tokio",
     "wayland",
 ] }
+zbus = { version = "3.14", default-features = false, features = ["tokio"] }
+
 
 [profile.release]
 lto = "thin"
@@ -44,3 +46,6 @@ lto = "thin"
 # cosmic-config = { path = "../libcosmic/cosmic-config" }
 [patch."https://github.com/Smithay/client-toolkit"]
 sctk = { git = "https://github.com/smithay/client-toolkit//", package = "smithay-client-toolkit", rev = "dc8c4a0" }
+
+[patch."https://github.com/pop-os/dbus-settings-bindings"]
+zbus ="3.14"
