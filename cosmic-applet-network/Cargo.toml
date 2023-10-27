@@ -5,13 +5,13 @@ edition = "2021"
 license = "GPL-3.0-or-later"
 
 [dependencies]
-cosmic-dbus-networkmanager = { git = "https://github.com/pop-os/dbus-settings-bindings", branch = "main" }
+cosmic-dbus-networkmanager = { git = "https://github.com/pop-os/dbus-settings-bindings" }
 # cosmic-dbus-networkmanager = { path = "../../../dbus-settings-bindings/networkmanager" }
 futures-util = "0.3.21"
 libcosmic.workspace = true
 cosmic-time.workspace = true
 futures = "0.3"
-zbus = { version = "3.13", default-features = false }
+zbus.workspace = true
 log = "0.4"
 pretty_env_logger = "0.5"
 itertools = "0.10.3"

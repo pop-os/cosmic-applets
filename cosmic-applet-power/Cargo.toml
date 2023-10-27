@@ -12,7 +12,7 @@ tokio = { version = "1.20.1", features=["full"] }
 libcosmic.workspace = true
 # cosmic-applet = { path = "../applet" }
 nix = "0.26.2"
-zbus = "3.13"
+zbus.workspace = true
 logind-zbus = "3.1"
 # Application i18n
 i18n-embed = { version = "0.13", features = ["fluent-system", "desktop-requester"] }
