@@ -19,10 +19,10 @@ members = [
 resolver = "2"
 
 [workspace.dependencies]
-cctk = { git = "https://github.com/pop-os/cosmic-protocols", package = "cosmic-client-toolkit", rev = "5c03417" }
+cctk = { git = "https://github.com/pop-os/cosmic-protocols", package = "cosmic-client-toolkit", rev = "a53fef6" }
 cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols", default-features = false, features = [
     "client",
-], rev = "5c03417" }
+], rev = "a53fef6" }
 cosmic-time = { git = "https://github.com/pop-os/cosmic-time", default-features = false, features = [
     "libcosmic",
     "once_cell",
