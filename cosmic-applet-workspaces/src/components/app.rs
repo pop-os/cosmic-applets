@@ -3,11 +3,9 @@ use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::mouse::{self, ScrollDelta};
 use cosmic::iced::widget::{button, column, container, row, text};
 use cosmic::iced::{subscription, Event::Mouse, Length, Subscription};
-use cosmic::iced_core::{font, Background};
-use cosmic::iced_runtime::font::Family;
-use cosmic::iced_runtime::Font;
+use cosmic::iced_core::Background;
 use cosmic::iced_style::application;
-use cosmic::{applet::cosmic_panel_config::PanelAnchor, Command};
+use cosmic::{applet::cosmic_panel_config::PanelAnchor, font::FONT_BOLD, Command};
 use cosmic::{Element, Theme};
 
 use cosmic_protocols::workspace::v1::client::zcosmic_workspace_handle_v1;
@@ -130,16 +128,7 @@ impl cosmic::Application for IcedWorkspacesApplet {
             .filter_map(|w| {
                 let btn = button(
                     text(w.0.clone())
-                        .font(Font {
-                            family: Family::Name("Fira Sans"),
-                            weight: if w.1 == Some(zcosmic_workspace_handle_v1::State::Active) {
-                                font::Weight::Bold
-                            } else {
-                                font::Weight::Normal
-                            },
-                            stretch: font::Stretch::Normal,
-                            monospaced: false,
-                        })
+                        .font(FONT_BOLD)
                         .size(16)
                         .horizontal_alignment(Horizontal::Center)
                         .vertical_alignment(Vertical::Center)
