@@ -165,7 +165,7 @@ impl cosmic::Application for Window {
                 }
                 Command::none()
             }
-            Message::SelectDay(day) => {
+            Message::SelectDay(_day) => {
                 // TODO
                 Command::none()
             }
@@ -190,9 +190,9 @@ impl cosmic::Application for Window {
                 self.core.applet.anchor,
                 PanelAnchor::Top | PanelAnchor::Bottom
             ) {
-                column![
-                    cosmic::widget::text(self.now.format("%b %-d %-I:%M %p").to_string()).size(14)
-                ]
+                Element::from(
+                    cosmic::widget::text(self.now.format("%b %-d %-I:%M %p").to_string()).size(14),
+                )
             } else {
                 let mut date_time_col = column![
                     icon::from_name("emoji-recent-symbolic")
@@ -212,14 +212,14 @@ impl cosmic::Application for Window {
                 for d in self.now.format("%x").to_string().split("/") {
                     date_time_col = date_time_col.push(text(d.to_string()).size(14));
                 }
-                date_time_col
+                date_time_col.into()
             },
         )
         .on_press(Message::TogglePopup)
         .style(cosmic::theme::Button::AppletIcon);
 
         if let Some(tracker) = self.rectangle_tracker.as_ref() {
-            tracker.container(0, button).into()
+            tracker.container(0, button).ignore_bounds(true).into()
         } else {
             button.into()
         }
