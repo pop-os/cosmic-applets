@@ -109,18 +109,18 @@ impl cosmic::Application for Power {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        Subscription::batch(vec![
-            events_with(|e, _status| match e {
-                cosmic::iced::Event::PlatformSpecific(PlatformSpecific::Wayland(
-                    wayland::Event::Layer(LayerEvent::Unfocused, ..),
-                )) => Some(Message::Cancel),
-                // cosmic::iced::Event::PlatformSpecific(PlatformSpecific::Wayland(
-                //     wayland::Event::Seat(wayland::SeatEvent::Leave, _),
-                // )) => Some(Message::Cancel),
-                _ => None,
-            }),
-            time::every(Duration::from_millis(1000)).map(|_| Message::Countdown),
-        ])
+        let mut subscriptions = Vec::with_capacity(2);
+        subscriptions.push(events_with(|e, _status| match e {
+            cosmic::iced::Event::PlatformSpecific(PlatformSpecific::Wayland(
+                wayland::Event::Layer(LayerEvent::Unfocused, ..),
+            )) => Some(Message::Cancel),
+            _ => None,
+        }));
+        if self.action_to_confirm.is_some() {
+            subscriptions
+                .push(time::every(Duration::from_millis(1000)).map(|_| Message::Countdown));
+        }
+        Subscription::batch(subscriptions)
     }
 
     fn update(&mut self, message: Message) -> Command<Message> {
