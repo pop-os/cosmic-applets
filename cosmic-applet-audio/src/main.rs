@@ -397,7 +397,10 @@ impl cosmic::Application for Audio {
                 }
             }
             Message::Pulse(event) => match event {
-                pulse::Event::Init(conn) => self.pulse_state = PulseState::Disconnected(conn),
+                pulse::Event::Init(mut conn) => {
+                    conn.send(pulse::Message::UpdateConnection);
+                    self.pulse_state = PulseState::Disconnected(conn);
+                }
                 pulse::Event::Connected => {
                     self.pulse_state.connected();
 
@@ -431,14 +434,22 @@ impl cosmic::Application for Audio {
                             self.update_input(Some(source));
                         }
                         pulse::Message::Disconnected => {
-                            panic!("Subscriton error handling is bad. This should never happen.")
+                            panic!("Subscription error handling is bad. This should never happen.")
                         }
                         _ => {
                             tracing::trace!("Received misc message")
                         }
                     }
                 }
-                pulse::Event::Disconnected => self.pulse_state.disconnected(),
+                pulse::Event::Disconnected => {
+                    self.pulse_state.disconnected();
+                    if let Some(mut conn) = self.pulse_state.connection().cloned() {
+                        _ = tokio::spawn(async move {
+                            tokio::time::sleep(tokio::time::Duration::from_secs(30)).await;
+                            conn.send(pulse::Message::UpdateConnection);
+                        });
+                    }
+                }
             },
             Message::ToggleMediaControlsInTopPanel(chain, enabled) => {
                 self.timeline.set_chain(chain).start();
