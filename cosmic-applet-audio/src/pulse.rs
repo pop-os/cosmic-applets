@@ -48,7 +48,6 @@ async fn start_listening(
             State::Connecting(from_pulse)
         }
         // Waiting for Connection to succeed
-        // The GUI doesn't have to monitor this state, as it is never sent to the GUI
         State::Connecting(mut from_pulse) => match from_pulse.recv().await {
             Some(Message::Connected) => {
                 _ = output.send(Event::Connected).await;
