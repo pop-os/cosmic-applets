@@ -413,18 +413,15 @@ async fn log_out() -> zbus::Result<()> {
     let session_type = std::env::var("XDG_CURRENT_DESKTOP").ok();
     let connection = Connection::session().await?;
     match session_type.as_ref().map(|s| s.trim()) {
-        Some("pop:COSMIC") => {
-            let cosmic_session = CosmicSessionProxy::new(&connection).await?;
-            cosmic_session.exit().await?;
-        }
         Some("pop:GNOME") => {
             let manager_proxy = SessionManagerProxy::new(&connection).await?;
             manager_proxy.logout(0).await?;
         }
-        Some(desktop) => {
-            eprintln!("unknown XDG_CURRENT_DESKTOP: {desktop}")
+        // By default assume COSMIC
+        _ => {
+            let cosmic_session = CosmicSessionProxy::new(&connection).await?;
+            cosmic_session.exit().await?;
         }
-        None => {}
     }
     Ok(())
 }
