@@ -8,6 +8,7 @@ use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::event::wayland::{self, LayerEvent};
 use cosmic::iced::event::PlatformSpecific;
 use cosmic::iced::subscription::events_with;
+use cosmic::iced::time;
 use cosmic::iced::wayland::actions::layer_surface::SctkLayerSurfaceSettings;
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced_runtime::core::layout::Limits;
@@ -31,7 +32,6 @@ use logind_zbus::manager::ManagerProxy;
 use logind_zbus::session::{SessionProxy, SessionType};
 use logind_zbus::user::UserProxy;
 use nix::unistd::getuid;
-use tokio::time::sleep;
 use zbus::Connection;
 
 pub mod cosmic_session;
@@ -47,13 +47,15 @@ pub fn main() -> cosmic::iced::Result {
     cosmic::applet::run::<Power>(false, ())
 }
 
+const COUNTDOWN_LENGTH: u8 = 60;
+
 #[derive(Default)]
 struct Power {
     core: cosmic::app::Core,
     icon_name: String,
     popup: Option<window::Id>,
     id_ctr: u128,
-    action_to_confirm: Option<(window::Id, PowerAction)>,
+    action_to_confirm: Option<(window::Id, PowerAction, u8)>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -67,7 +69,7 @@ enum PowerAction {
 
 #[derive(Debug, Clone)]
 enum Message {
-    Timeout(window::Id),
+    Countdown,
     Action(PowerAction),
     TogglePopup,
     Settings,
@@ -107,15 +109,18 @@ impl cosmic::Application for Power {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        events_with(|e, _status| match e {
-            cosmic::iced::Event::PlatformSpecific(PlatformSpecific::Wayland(
-                wayland::Event::Layer(LayerEvent::Unfocused, ..),
-            )) => Some(Message::Cancel),
-            // cosmic::iced::Event::PlatformSpecific(PlatformSpecific::Wayland(
-            //     wayland::Event::Seat(wayland::SeatEvent::Leave, _),
-            // )) => Some(Message::Cancel),
-            _ => None,
-        })
+        Subscription::batch(vec![
+            events_with(|e, _status| match e {
+                cosmic::iced::Event::PlatformSpecific(PlatformSpecific::Wayland(
+                    wayland::Event::Layer(LayerEvent::Unfocused, ..),
+                )) => Some(Message::Cancel),
+                // cosmic::iced::Event::PlatformSpecific(PlatformSpecific::Wayland(
+                //     wayland::Event::Seat(wayland::SeatEvent::Leave, _),
+                // )) => Some(Message::Cancel),
+                _ => None,
+            }),
+            time::every(Duration::from_millis(1000)).map(|_| Message::Countdown),
+        ])
     }
 
     fn update(&mut self, message: Message) -> Command<Message> {
@@ -150,21 +155,16 @@ impl cosmic::Application for Power {
             Message::Action(action) => {
                 self.id_ctr += 1;
                 let id = window::Id(self.id_ctr);
-                self.action_to_confirm = Some((id, action));
-                return Command::batch(vec![
-                    iced::Command::perform(sleep(Duration::from_secs(60)), move |_| {
-                        cosmic::app::message::app(Message::Timeout(id))
-                    }),
-                    get_layer_surface(SctkLayerSurfaceSettings {
-                        id,
-                        keyboard_interactivity: KeyboardInteractivity::None,
-                        anchor: Anchor::all(),
-                        namespace: "dialog".into(),
-                        size: Some((None, None)),
-                        size_limits: Limits::NONE.min_width(1.0).min_height(1.0),
-                        ..Default::default()
-                    }),
-                ]);
+                self.action_to_confirm = Some((id, action, COUNTDOWN_LENGTH));
+                return get_layer_surface(SctkLayerSurfaceSettings {
+                    id,
+                    keyboard_interactivity: KeyboardInteractivity::None,
+                    anchor: Anchor::all(),
+                    namespace: "dialog".into(),
+                    size: Some((None, None)),
+                    size_limits: Limits::NONE.min_width(1.0).min_height(1.0),
+                    ..Default::default()
+                });
             }
             Message::Zbus(result) => {
                 if let Err(e) = result {
@@ -173,7 +173,7 @@ impl cosmic::Application for Power {
                 Command::none()
             }
             Message::Confirm => {
-                if let Some((id, a)) = self.action_to_confirm.take() {
+                if let Some((id, a, _)) = self.action_to_confirm.take() {
                     let msg = |m| cosmic::app::message::app(Message::Zbus(m));
                     Command::batch(vec![
                         destroy_layer_surface(id),
@@ -190,14 +190,18 @@ impl cosmic::Application for Power {
                 }
             }
             Message::Cancel => {
-                if let Some((id, _)) = self.action_to_confirm.take() {
+                if let Some((id, _, _)) = self.action_to_confirm.take() {
                     return destroy_layer_surface(id);
                 }
                 Command::none()
             }
-            Message::Timeout(id) => {
-                if let Some((surface_id, a)) = self.action_to_confirm {
-                    if id == surface_id {
+            Message::Countdown => {
+                if let Some((surface_id, a, countdown)) = self.action_to_confirm.as_mut() {
+                    *countdown -= 1;
+                    if *countdown == 0 {
+                        let id = *surface_id;
+                        let a = *a;
+
                         self.action_to_confirm = None;
                         let msg = |m: zbus::Result<()>| cosmic::app::message::app(Message::Zbus(m));
                         return Command::batch(vec![
@@ -282,19 +286,20 @@ impl cosmic::Application for Power {
             .padding([8, 0]);
 
             self.core.applet.popup_container(content).into()
-        } else if matches!(self.action_to_confirm, Some((c_id, _)) if c_id == id) {
-            let action = match self.action_to_confirm.as_ref().unwrap().1 {
+        } else if matches!(self.action_to_confirm, Some((c_id, _, _)) if c_id == id) {
+            let (_, power_action, countdown) = self.action_to_confirm.as_ref().unwrap();
+            let action = match power_action {
                 PowerAction::Lock => "lock-screen",
                 PowerAction::LogOut => "log-out",
                 PowerAction::Suspend => "suspend",
                 PowerAction::Restart => "restart",
                 PowerAction::Shutdown => "shutdown",
             };
-            // TODO actual countdown
+            let countdown = &countdown.to_string();
             let content = column![
                 text(fl!(
                     "confirm-question",
-                    HashMap::from_iter(vec![("action", action), ("countdown", "60")])
+                    HashMap::from_iter(vec![("action", action), ("countdown", countdown)])
                 ))
                 .size(16),
                 row![
