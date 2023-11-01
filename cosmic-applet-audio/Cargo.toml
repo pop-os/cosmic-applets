@@ -6,19 +6,16 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-icon-loader = { version = "0.3.6", features = ["gtk"] }
 libpulse-binding = "2.26.0"
-libpulse-glib-binding = "2.25.0"
 tokio = { version = "1.20.1", features=["full"] }
 libcosmic.workspace = true
 cosmic-time.workspace = true
 tracing = "0.1.40"
-pretty_env_logger = "0.4.0"
+pretty_env_logger = "0.5.0"
 # Application i18n
-i18n-embed = { version = "0.13", features = ["fluent-system", "desktop-requester"] }
-i18n-embed-fl = "0.6"
-rust-embed = "6.6"
-rust-embed-utils = "7.5.0"
+i18n-embed = { version = "0.14", features = ["fluent-system", "desktop-requester"] }
+i18n-embed-fl = "0.7"
+rust-embed = "8.0"
 mpris2-zbus = { git = "https://github.com/pop-os/dbus-settings-bindings" }
 serde = "1.0.130"
 url = "2"
