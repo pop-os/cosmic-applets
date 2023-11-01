@@ -18,7 +18,6 @@ pub fn wireless_enabled_subscription<I: 'static + Hash + Copy + Send + Sync + De
         async move {
             loop {
                 state = start_listening(state, &mut output).await;
-                _ = tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
             }
         }
     })
@@ -38,6 +37,7 @@ async fn start_listening(
         State::Continue(conn) => conn,
         State::Error => iced::futures::future::pending().await,
     };
+
     let network_manager = match NetworkManager::new(&conn).await {
         Ok(n) => n,
         Err(e) => {
@@ -47,11 +47,12 @@ async fn start_listening(
     };
 
     let mut wireless_enabled_changed = network_manager.receive_wireless_enabled_changed().await;
-    wireless_enabled_changed.next().await;
 
-    let new_state = NetworkManagerState::new(&conn).await.unwrap_or_default();
-    _ = output
-        .send(NetworkManagerEvent::WiFiEnabled(new_state))
-        .await;
+    while let Some(_change) = wireless_enabled_changed.next().await {
+        let new_state = NetworkManagerState::new(&conn).await.unwrap_or_default();
+        _ = output
+            .send(NetworkManagerEvent::WiFiEnabled(new_state))
+            .await;
+    }
     State::Continue(conn)
 }

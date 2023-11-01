@@ -472,6 +472,16 @@ async fn start_listening(
                         })
                         .await;
                 }
+                Some(NetworkManagerRequest::Reload) => {
+                    let state = NetworkManagerState::new(&conn).await.unwrap_or_default();
+                    _ = output
+                        .send(NetworkManagerEvent::RequestResponse {
+                            req: NetworkManagerRequest::Reload,
+                            success: true,
+                            state,
+                        })
+                        .await;
+                }
                 _ => {
                     return State::Finished;
                 }
@@ -490,6 +500,7 @@ pub enum NetworkManagerRequest {
     SelectAccessPoint(String),
     Disconnect(String),
     Password(String, String),
+    Reload,
 }
 
 #[derive(Debug, Clone)]

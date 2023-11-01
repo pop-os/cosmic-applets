@@ -18,7 +18,6 @@ pub fn active_conns_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>
         async move {
             loop {
                 state = start_listening(state, &mut output).await;
-                _ = tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
             }
         }
     })
@@ -49,10 +48,15 @@ async fn start_listening(
     let mut active_conns_changed = network_manager.receive_active_connections_changed().await;
     active_conns_changed.next().await;
 
-    let new_state = NetworkManagerState::new(&conn).await.unwrap_or_default();
+    while let (Some(_change), _) = tokio::join!(
+        active_conns_changed.next(),
+        tokio::time::sleep(tokio::time::Duration::from_secs(1))
+    ) {
+        let new_state = NetworkManagerState::new(&conn).await.unwrap_or_default();
+        _ = output
+            .send(NetworkManagerEvent::ActiveConns(new_state))
+            .await;
+    }
 
-    _ = output
-        .send(NetworkManagerEvent::ActiveConns(new_state))
-        .await;
     State::Continue(conn)
 }
