@@ -119,11 +119,13 @@ impl CosmicNetworkApplet {
             .nm_state
             .active_conns
             .iter()
-            .fold("network-offline-symbolic", |icon_name, conn| {
-                match (icon_name, conn) {
-                    ("network-offline-symbolic", ActiveConnectionInfo::WiFi { strength, .. }) => {
-                        wifi_icon(*strength)
-                    }
+            .fold(
+                "network-wired-disconnected-symbolic",
+                |icon_name, conn| match (icon_name, conn) {
+                    (
+                        "network-wired-disconnected-symbolic",
+                        ActiveConnectionInfo::WiFi { strength, .. },
+                    ) => wifi_icon(*strength),
                     (_, ActiveConnectionInfo::Wired { .. })
                         if icon_name != "network-vpn-symbolic" =>
                     {
@@ -131,8 +133,8 @@ impl CosmicNetworkApplet {
                     }
                     (_, ActiveConnectionInfo::Vpn { .. }) => "network-vpn-symbolic",
                     _ => icon_name,
-                }
-            })
+                },
+            )
             .to_string()
     }
 
@@ -233,6 +235,9 @@ impl cosmic::Application for CosmicNetworkApplet {
                         .min_width(1.0)
                         .max_height(800.0)
                         .max_width(400.0);
+                    if let Some(tx) = self.nm_sender.as_mut() {
+                        let _ = tx.unbounded_send(NetworkManagerRequest::Reload);
+                    }
                     return get_popup(popup_settings);
                 }
             }
@@ -799,12 +804,13 @@ impl cosmic::Application for CosmicNetworkApplet {
             .map(|(_, now)| Message::Frame(now));
 
         if let Some(conn) = self.conn.as_ref() {
+            let has_popup = self.popup.is_some();
             Subscription::batch(vec![
                 timeline,
                 network_sub,
                 active_conns_subscription(self.toggle_wifi_ctr, conn.clone())
                     .map(Message::NetworkManagerEvent),
-                devices_subscription(self.toggle_wifi_ctr, conn.clone())
+                devices_subscription(self.toggle_wifi_ctr, has_popup, conn.clone())
                     .map(Message::NetworkManagerEvent),
                 wireless_enabled_subscription(self.toggle_wifi_ctr, conn.clone())
                     .map(Message::NetworkManagerEvent),
