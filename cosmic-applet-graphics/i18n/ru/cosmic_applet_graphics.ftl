@@ -1,0 +1,9 @@
+graphics-mode = Режим графики
+graphics = Графика
+integrated = Интегрированная
+integrated-desc = Отключит внешние дисплеи. Требуется перезагрузка.
+nvidia = NVIDIA
+hybrid = Гибридная
+hybrid-desc = Требуется перезагрузка.
+compute = Вычислительная
+compute-desc = Отключит внешние дисплеи. Требуется перезагрузка.
