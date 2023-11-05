@@ -6,14 +6,14 @@ log-out = Выход из системы
 log-out-shortcut = Ctrl + Alt + Delete
 suspend = Спящий режим
 restart = Перезагрузка
-shutdown = Завершение работы
+shutdown = Выключение
 confirm = Подтвердить
 cancel = Отмена
 confirm-question = 
     Вы уверены? { $action ->
         [restart] Перезагрузка
         [suspend] Переход в режим сна
-        [shutdown] Завершение работы
+        [shutdown] Выключение
         [lock-screen] Блокировка экрана
         [log-out] Выход из системы
         *[other] Выбранное действие
