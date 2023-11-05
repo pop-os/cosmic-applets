@@ -1,12 +1,12 @@
 tile-windows = Автоматически размещать окна
 shortcuts = Горячие клавиши
 navigate-windows = Навигация по окнам
-move-window = Переместить окно
-toggle-floating-window = Переключить плавающее окно
+move-window = Перемещение окон
+toggle-floating-window = Переключение плавающего окна
 view-all-shortcuts = Просмотреть все сочетания клавиш...
-active-hint = Активная подсветка
+active-hint = Подсветка активных окон
 gaps = Зазоры
-floating-window-exceptions = Исключения в плавающих окнах...
+floating-window-exceptions = Исключения окон для размещения...
 window-management-settings = Параметры управления окнами...
 
 super = Super
