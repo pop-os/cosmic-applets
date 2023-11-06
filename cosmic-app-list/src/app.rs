@@ -785,7 +785,7 @@ impl cosmic::Application for CosmicAppList {
                     WaylandUpdate::ActivationToken { token, exec } => {
                         let mut exec = shlex::Shlex::new(&exec);
                         let mut cmd = match exec.next() {
-                            Some(cmd) if !cmd.contains('=') => tokio::process::Command::new(cmd),
+                            Some(cmd) if !cmd.contains('=') => std::process::Command::new(cmd),
                             _ => return Command::none(),
                         };
                         for arg in exec {
@@ -798,7 +798,9 @@ impl cosmic::Application for CosmicAppList {
                             cmd.env("XDG_ACTIVATION_TOKEN", &token);
                             cmd.env("DESKTOP_STARTUP_ID", &token);
                         }
-                        let _ = cmd.spawn();
+                        tokio::task::spawn_blocking(|| {
+                            crate::process::spawn(cmd);
+                        });
                     }
                 }
             }
