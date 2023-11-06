@@ -2,6 +2,7 @@
 mod app;
 mod config;
 mod localize;
+mod process;
 mod wayland_handler;
 mod wayland_subscription;
 
