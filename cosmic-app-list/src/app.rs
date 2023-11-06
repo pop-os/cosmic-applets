@@ -2,9 +2,11 @@ use crate::config;
 use crate::config::AppListConfig;
 use crate::config::APP_ID;
 use crate::fl;
-use crate::toplevel_subscription::toplevel_subscription;
-use crate::toplevel_subscription::ToplevelRequest;
-use crate::toplevel_subscription::ToplevelUpdate;
+use crate::wayland_subscription::wayland_subscription;
+use crate::wayland_subscription::ToplevelRequest;
+use crate::wayland_subscription::ToplevelUpdate;
+use crate::wayland_subscription::WaylandRequest;
+use crate::wayland_subscription::WaylandUpdate;
 use cctk::sctk::reexports::calloop::channel::Sender;
 use cctk::toplevel_info::ToplevelInfo;
 use cctk::wayland_client::protocol::wl_data_device_manager::DndAction;
@@ -207,7 +209,7 @@ struct CosmicAppList {
     favorite_list: Vec<DockItem>,
     dnd_source: Option<(window::Id, DockItem, DndAction)>,
     config: AppListConfig,
-    toplevel_sender: Option<Sender<ToplevelRequest>>,
+    wayland_sender: Option<Sender<WaylandRequest>>,
     seat: Option<WlSeat>,
     rectangle_tracker: Option<RectangleTracker<u32>>,
     rectangles: HashMap<u32, iced::Rectangle>,
@@ -218,7 +220,7 @@ struct CosmicAppList {
 // TODO DnD after sctk merges DnD
 #[derive(Debug, Clone)]
 enum Message {
-    Toplevel(ToplevelUpdate),
+    Wayland(WaylandUpdate),
     Favorite(String),
     UnFavorite(String),
     Popup(String),
@@ -490,8 +492,8 @@ impl cosmic::Application for CosmicAppList {
                 if let Some(p) = self.popup.take() {
                     return destroy_popup(p.0);
                 }
-                if let Some(tx) = self.toplevel_sender.as_ref() {
-                    let _ = tx.send(ToplevelRequest::Activate(handle));
+                if let Some(tx) = self.wayland_sender.as_ref() {
+                    let _ = tx.send(WaylandRequest::Toplevel(ToplevelRequest::Activate(handle)));
                 }
             }
             Message::Quit(id) => {
@@ -502,8 +504,10 @@ impl cosmic::Application for CosmicAppList {
                     .find(|t| t.desktop_info.id == id)
                 {
                     for (handle, _) in &toplevel_group.toplevels {
-                        if let Some(tx) = self.toplevel_sender.as_ref() {
-                            let _ = tx.send(ToplevelRequest::Quit(handle.clone()));
+                        if let Some(tx) = self.wayland_sender.as_ref() {
+                            let _ = tx.send(WaylandRequest::Toplevel(ToplevelRequest::Quit(
+                                handle.clone(),
+                            )));
                         }
                     }
                 }
@@ -695,37 +699,12 @@ impl cosmic::Application for CosmicAppList {
                 }
                 return finish_dnd();
             }
-            Message::Toplevel(event) => {
+            Message::Wayland(event) => {
                 match event {
-                    ToplevelUpdate::AddToplevel(handle, info) => {
-                        if info.app_id.is_empty() {
-                            return Command::none();
-                        }
-                        if let Some(t) = self
-                            .active_list
-                            .iter_mut()
-                            .chain(self.favorite_list.iter_mut())
-                            .find(|DockItem { desktop_info, .. }| {
-                                desktop_info.id == info.app_id
-                                    || desktop_info.wm_class.as_ref() == Some(&info.app_id)
-                            })
-                        {
-                            t.toplevels.push((handle, info));
-                        } else {
-                            let desktop_info =
-                                desktop_info_for_app_ids(vec![info.app_id.clone()]).remove(0);
-                            self.item_ctr += 1;
-                            self.active_list.push(DockItem {
-                                id: self.item_ctr,
-                                toplevels: vec![(handle, info)],
-                                desktop_info,
-                            });
-                        }
+                    WaylandUpdate::Init(tx) => {
+                        self.wayland_sender.replace(tx);
                     }
-                    ToplevelUpdate::Init(tx) => {
-                        self.toplevel_sender.replace(tx);
-                    }
-                    ToplevelUpdate::Finished => {
+                    WaylandUpdate::Finished => {
                         for t in &mut self.favorite_list {
                             t.toplevels.clear();
                         }
@@ -748,33 +727,78 @@ impl cosmic::Application for CosmicAppList {
                         )
                         .map(cosmic::app::message::app);
                     }
-                    ToplevelUpdate::RemoveToplevel(handle) => {
-                        for t in self
-                            .active_list
-                            .iter_mut()
-                            .chain(self.favorite_list.iter_mut())
-                        {
-                            t.toplevels.retain(|(t_handle, _)| t_handle != &handle);
+                    WaylandUpdate::Toplevel(event) => match event {
+                        ToplevelUpdate::AddToplevel(handle, info) => {
+                            if info.app_id.is_empty() {
+                                return Command::none();
+                            }
+                            if let Some(t) = self
+                                .active_list
+                                .iter_mut()
+                                .chain(self.favorite_list.iter_mut())
+                                .find(|DockItem { desktop_info, .. }| {
+                                    desktop_info.id == info.app_id
+                                        || desktop_info.wm_class.as_ref() == Some(&info.app_id)
+                                })
+                            {
+                                t.toplevels.push((handle, info));
+                            } else {
+                                let desktop_info =
+                                    desktop_info_for_app_ids(vec![info.app_id.clone()]).remove(0);
+                                self.item_ctr += 1;
+                                self.active_list.push(DockItem {
+                                    id: self.item_ctr,
+                                    toplevels: vec![(handle, info)],
+                                    desktop_info,
+                                });
+                            }
                         }
-                        self.active_list.retain(|t| !t.toplevels.is_empty());
-                    }
-                    ToplevelUpdate::UpdateToplevel(handle, info) => {
-                        // TODO probably want to make sure it is removed
-                        if info.app_id.is_empty() {
-                            return Command::none();
+                        ToplevelUpdate::RemoveToplevel(handle) => {
+                            for t in self
+                                .active_list
+                                .iter_mut()
+                                .chain(self.favorite_list.iter_mut())
+                            {
+                                t.toplevels.retain(|(t_handle, _)| t_handle != &handle);
+                            }
+                            self.active_list.retain(|t| !t.toplevels.is_empty());
                         }
-                        'toplevel_loop: for toplevel_list in self
-                            .active_list
-                            .iter_mut()
-                            .chain(self.favorite_list.iter_mut())
-                        {
-                            for (t_handle, t_info) in &mut toplevel_list.toplevels {
-                                if &handle == t_handle {
-                                    *t_info = info;
-                                    break 'toplevel_loop;
+                        ToplevelUpdate::UpdateToplevel(handle, info) => {
+                            // TODO probably want to make sure it is removed
+                            if info.app_id.is_empty() {
+                                return Command::none();
+                            }
+                            'toplevel_loop: for toplevel_list in self
+                                .active_list
+                                .iter_mut()
+                                .chain(self.favorite_list.iter_mut())
+                            {
+                                for (t_handle, t_info) in &mut toplevel_list.toplevels {
+                                    if &handle == t_handle {
+                                        *t_info = info;
+                                        break 'toplevel_loop;
+                                    }
                                 }
                             }
                         }
+                    },
+                    WaylandUpdate::ActivationToken { token, exec } => {
+                        let mut exec = shlex::Shlex::new(&exec);
+                        let mut cmd = match exec.next() {
+                            Some(cmd) if !cmd.contains('=') => tokio::process::Command::new(cmd),
+                            _ => return Command::none(),
+                        };
+                        for arg in exec {
+                            // TODO handle "%" args here if necessary?
+                            if !arg.starts_with('%') {
+                                cmd.arg(arg);
+                            }
+                        }
+                        if let Some(token) = token {
+                            cmd.env("XDG_ACTIVATION_TOKEN", &token);
+                            cmd.env("DESKTOP_STARTUP_ID", &token);
+                        }
+                        let _ = cmd.spawn();
                     }
                 }
             }
@@ -784,19 +808,13 @@ impl cosmic::Application for CosmicAppList {
             Message::RemovedSeat(_) => {
                 self.seat.take();
             }
-            Message::Exec(exec_str) => {
-                let mut exec = shlex::Shlex::new(&exec_str);
-                let mut cmd = match exec.next() {
-                    Some(cmd) if !cmd.contains('=') => tokio::process::Command::new(cmd),
-                    _ => return Command::none(),
-                };
-                for arg in exec {
-                    // TODO handle "%" args here if necessary?
-                    if !arg.starts_with('%') {
-                        cmd.arg(arg);
-                    }
+            Message::Exec(exec) => {
+                if let Some(tx) = self.wayland_sender.as_ref() {
+                    let _ = tx.send(WaylandRequest::TokenRequest {
+                        app_id: Self::APP_ID.to_string(),
+                        exec,
+                    });
                 }
-                let _ = cmd.spawn();
             }
             Message::Rectangle(u) => match u {
                 RectangleUpdate::Rectangle(r) => {
@@ -1080,7 +1098,7 @@ impl cosmic::Application for CosmicAppList {
 
     fn subscription(&self) -> Subscription<Message> {
         Subscription::batch(vec![
-            toplevel_subscription(self.subscription_ctr).map(Message::Toplevel),
+            wayland_subscription(self.subscription_ctr).map(Message::Wayland),
             events_with(|e, _| match e {
                 cosmic::iced_runtime::core::Event::PlatformSpecific(
                     event::PlatformSpecific::Wayland(event::wayland::Event::Seat(e, seat)),
