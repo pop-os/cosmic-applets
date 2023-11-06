@@ -2,8 +2,8 @@
 mod app;
 mod config;
 mod localize;
-mod toplevel_handler;
-mod toplevel_subscription;
+mod wayland_handler;
+mod wayland_subscription;
 
 use log::info;
 
