@@ -1,5 +1,7 @@
 network = Mreža
-airplane-mode = Režim aviona
+airplane-mode = Avionski režim
+airplane-mode-on = Avionski režim je uključen
+turn-off-airplane-mode = Isključite da biste omogućili Wi-Fi, Bluetooth i mobilnu mrežu.
 wifi = Wi-Fi
 ipv4 = IPv4 Adresa
 ipv6 = IPv6 Adresa
@@ -9,6 +11,7 @@ connected = Konektovan
 connecting = Konektovanje
 connect = Konektuj
 cancel = Poništi
+settings = Mrežna podešavanja...
 visible-wireless-networks = Vidljive bežične mreže
 enter-password = Unesite lozinku ili ključ za enkripciju
 router-wps-button = Možete se takođe povezati pritiskom "WPS" dugmeta na vašem ruteru
