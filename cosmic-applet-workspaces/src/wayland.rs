@@ -14,12 +14,18 @@ use cctk::{
 };
 use cosmic_protocols::workspace::v1::client::zcosmic_workspace_handle_v1;
 use futures::{channel::mpsc, executor::block_on, SinkExt};
-use std::{env, os::unix::net::UnixStream, path::PathBuf, time::Duration};
+use std::{
+    os::{
+        fd::{FromRawFd, RawFd},
+        unix::net::UnixStream,
+    },
+    time::Duration,
+};
 use wayland_client::backend::ObjectId;
 use wayland_client::{
     globals::registry_queue_init,
     protocol::wl_output::{self, WlOutput},
-    ConnectError, Proxy,
+    Proxy,
 };
 use wayland_client::{Connection, QueueHandle, WEnum};
 
@@ -33,18 +39,22 @@ pub type WorkspaceList = Vec<(String, Option<zcosmic_workspace_handle_v1::State>
 pub fn spawn_workspaces(tx: mpsc::Sender<WorkspaceList>) -> SyncSender<WorkspaceEvent> {
     let (workspaces_tx, workspaces_rx) = calloop::channel::sync_channel(100);
 
-    if let Ok(Ok(conn)) = std::env::var("WAYLAND_DISPLAY")
-        .map_err(anyhow::Error::msg)
-        .map(|display_str| {
-            let mut socket_path = env::var_os("XDG_RUNTIME_DIR")
-                .map(Into::<PathBuf>::into)
-                .ok_or(ConnectError::NoCompositor)?;
-            socket_path.push(display_str);
+    let socket = std::env::var("X_PRIVILEGED_WAYLAND_SOCKET")
+        .ok()
+        .and_then(|fd| {
+            fd.parse::<RawFd>()
+                .ok()
+                .map(|fd| unsafe { UnixStream::from_raw_fd(fd) })
+        });
 
-            Ok(UnixStream::connect(socket_path).map_err(|_| ConnectError::NoCompositor)?)
-        })
-        .and_then(|s| s.map(|s| Connection::from_socket(s).map_err(anyhow::Error::msg)))
-    {
+    let conn = if let Some(socket) = socket {
+        Connection::from_socket(socket)
+    } else {
+        Connection::connect_to_env()
+    }
+    .map_err(anyhow::Error::msg);
+
+    if let Ok(conn) = conn {
         std::thread::spawn(move || {
             let configured_output = std::env::var("COSMIC_PANEL_OUTPUT")
                 .ok()
