@@ -265,7 +265,7 @@ impl cosmic::Application for Power {
             ];
 
             let power = row![
-                power_buttons("system-lock-screen-symbolic", fl!("suspend"))
+                power_buttons("system-suspend-symbolic", fl!("suspend"))
                     .on_press(Message::Action(PowerAction::Suspend)),
                 power_buttons("system-restart-symbolic", fl!("restart"))
                     .on_press(Message::Action(PowerAction::Restart)),
