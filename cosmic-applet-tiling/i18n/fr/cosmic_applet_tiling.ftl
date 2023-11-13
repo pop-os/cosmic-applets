@@ -9,7 +9,6 @@ gaps = Marges
 floating-window-exceptions = Exceptions des fenêtres flottantes...
 window-management-settings = Paramètres d'agencement des fenêtres...
 
-// Commands
 super = Super
 shift = Shift
 arrow-keys = arrows

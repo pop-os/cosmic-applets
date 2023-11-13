@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use cosmic_dbus_networkmanager::{
-    active_connection::ActiveConnection,
-    device::SpecificDevice,
-    interface::enums::{ActiveConnectionState, ApFlags, ApSecurityFlags},
+    active_connection::ActiveConnection, device::SpecificDevice,
+    interface::enums::ActiveConnectionState,
 };
 use std::net::Ipv4Addr;
 
@@ -52,9 +51,6 @@ pub async fn active_connections(
                             name: String::from_utf8_lossy(&access_point.ssid().await?).into_owned(),
                             ip_addresses: addresses.clone(),
                             hw_address: wireless_device.hw_address().await?,
-                            flags: access_point.flags().await?,
-                            rsn_flags: access_point.rsn_flags().await?,
-                            wpa_flags: access_point.wpa_flags().await?,
                             state,
                             strength: access_point.strength().await.unwrap_or_default(),
                         });
@@ -95,9 +91,6 @@ pub enum ActiveConnectionInfo {
         name: String,
         ip_addresses: Vec<Ipv4Addr>,
         hw_address: String,
-        flags: ApFlags,
-        rsn_flags: ApSecurityFlags,
-        wpa_flags: ApSecurityFlags,
         state: ActiveConnectionState,
         strength: u8,
     },
