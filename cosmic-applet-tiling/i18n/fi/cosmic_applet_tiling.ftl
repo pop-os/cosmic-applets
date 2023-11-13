@@ -9,7 +9,6 @@ gaps = Välit
 floating-window-exceptions = Leijuvien ikkunoiden poikkeukset...
 window-management-settings = Ikkunanhallinan asetukset...
 
-// Commands
 super = Super
 shift = Shift
 arrow-keys = arrows
