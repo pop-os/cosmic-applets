@@ -1067,8 +1067,8 @@ impl cosmic::Application for CosmicAppList {
                 }
                 content = content.push(divider::horizontal::default());
                 content = content.push(list_col);
-                content = content.push(divider::horizontal::default());
             }
+            content = content.push(divider::horizontal::default());
             content = content.push(if is_favorite {
                 cosmic::widget::button(iced::widget::text(fl!("unfavorite")))
                     .style(Button::Text)
