@@ -522,7 +522,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                             );
                         }
                         ActiveConnectionState::Activated => btn_content.push(
-                            text(format!("{}", fl!("connected")))
+                            text(fl!("connected").to_string())
                                 .size(14)
                                 .horizontal_alignment(Horizontal::Right)
                                 .vertical_alignment(Vertical::Center)
