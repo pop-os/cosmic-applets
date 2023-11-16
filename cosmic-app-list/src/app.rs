@@ -336,7 +336,7 @@ fn index_in_list(
         list_len += 1;
     }
     let total_len = list_len as f32 * (item_size + divider_size) - divider_size;
-    let pos_in_list = pos_in_list * total_len as f32;
+    let pos_in_list = pos_in_list * total_len;
     let index = if list_len == 0 {
         0
     } else {
