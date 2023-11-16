@@ -219,31 +219,34 @@ impl cosmic::Application for CosmicBluetoothApplet {
                         }
                     }
                     BluerRequest::ConnectDevice(add) => {
-                        self.bluer_state
+                        if let Some(d) = self
+                            .bluer_state
                             .devices
                             .iter_mut()
                             .find(|d| d.address == *add)
-                            .map(|d| {
-                                d.status = BluerDeviceStatus::Connecting;
-                            });
+                        {
+                            d.status = BluerDeviceStatus::Connecting;
+                        }
                     }
                     BluerRequest::DisconnectDevice(add) => {
-                        self.bluer_state
+                        if let Some(d) = self
+                            .bluer_state
                             .devices
                             .iter_mut()
                             .find(|d| d.address == *add)
-                            .map(|d| {
-                                d.status = BluerDeviceStatus::Disconnecting;
-                            });
+                        {
+                            d.status = BluerDeviceStatus::Disconnecting;
+                        }
                     }
                     BluerRequest::PairDevice(add) => {
-                        self.bluer_state
+                        if let Some(d) = self
+                            .bluer_state
                             .devices
                             .iter_mut()
                             .find(|d| d.address == *add)
-                            .map(|d| {
-                                d.status = BluerDeviceStatus::Pairing;
-                            });
+                        {
+                            d.status = BluerDeviceStatus::Pairing;
+                        }
                     }
                     _ => {} // TODO
                 }

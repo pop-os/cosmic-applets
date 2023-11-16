@@ -358,13 +358,14 @@ impl cosmic::Application for CosmicNetworkApplet {
             }
             Message::ActivateKnownWifi(ssid) => {
                 let tx = if let Some(tx) = self.nm_sender.as_ref() {
-                    self.nm_state
+                    if let Some(ap) = self
+                        .nm_state
                         .known_access_points
                         .iter_mut()
                         .find(|c| c.ssid == ssid)
-                        .map(|ap| {
-                            ap.working = true;
-                        });
+                    {
+                        ap.working = true;
+                    }
                     tx
                 } else {
                     return Command::none();
@@ -376,16 +377,19 @@ impl cosmic::Application for CosmicNetworkApplet {
             }
             Message::Disconnect(ssid) => {
                 let tx = if let Some(tx) = self.nm_sender.as_ref() {
-                    self.nm_state
+                    if let Some(ap) = self
+                        .nm_state
                         .active_conns
                         .iter_mut()
                         .find(|c| c.name() == ssid)
-                        .map(|ap| match ap {
+                    {
+                        match ap {
                             ActiveConnectionInfo::WiFi { state, .. } => {
                                 *state = ActiveConnectionState::Deactivating;
                             }
                             _ => {}
-                        });
+                        }
+                    }
                     tx
                 } else {
                     return Command::none();
