@@ -289,18 +289,15 @@ impl cosmic::Application for CosmicNetworkApplet {
                         }
                     }
                     if !success {
-                        match req {
-                            NetworkManagerRequest::Password(_, _) => {
-                                if let Some(
-                                    NewConnectionState::EnterPassword { access_point, .. }
-                                    | NewConnectionState::Waiting(access_point),
-                                ) = self.new_connection.as_ref()
-                                {
-                                    self.new_connection
-                                        .replace(NewConnectionState::Failure(access_point.clone()));
-                                }
+                        if let NetworkManagerRequest::Password(_, _) = req {
+                            if let Some(
+                                NewConnectionState::EnterPassword { access_point, .. }
+                                | NewConnectionState::Waiting(access_point),
+                            ) = self.new_connection.as_ref()
+                            {
+                                self.new_connection
+                                    .replace(NewConnectionState::Failure(access_point.clone()));
                             }
-                            _ => {}
                         }
                     }
                     self.update_nm_state(state);
@@ -327,12 +324,13 @@ impl cosmic::Application for CosmicNetworkApplet {
                 self.new_connection.take();
                 self.show_visible_networks = !self.show_visible_networks;
             }
-            Message::Password(entered_pw) => match &mut self.new_connection {
-                Some(NewConnectionState::EnterPassword { password, .. }) => {
+            Message::Password(entered_pw) => {
+                if let Some(NewConnectionState::EnterPassword { password, .. }) =
+                    &mut self.new_connection
+                {
                     *password = entered_pw;
                 }
-                _ => {}
-            },
+            }
             Message::SubmitPassword => {
                 // save password
                 let tx = if let Some(tx) = self.nm_sender.as_ref() {
@@ -341,19 +339,17 @@ impl cosmic::Application for CosmicNetworkApplet {
                     return Command::none();
                 };
 
-                match self.new_connection.take() {
-                    Some(NewConnectionState::EnterPassword {
-                        password,
-                        access_point,
-                    }) => {
-                        let _ = tx.unbounded_send(NetworkManagerRequest::Password(
-                            access_point.ssid.clone(),
-                            password.to_string(),
-                        ));
-                        self.new_connection
-                            .replace(NewConnectionState::Waiting(access_point.clone()));
-                    }
-                    _ => {}
+                if let Some(NewConnectionState::EnterPassword {
+                    password,
+                    access_point,
+                }) = self.new_connection.take()
+                {
+                    let _ = tx.unbounded_send(NetworkManagerRequest::Password(
+                        access_point.ssid.clone(),
+                        password.to_string(),
+                    ));
+                    self.new_connection
+                        .replace(NewConnectionState::Waiting(access_point.clone()));
                 };
             }
             Message::ActivateKnownWifi(ssid) => {
@@ -383,11 +379,8 @@ impl cosmic::Application for CosmicNetworkApplet {
                         .iter_mut()
                         .find(|c| c.name() == ssid)
                     {
-                        match ap {
-                            ActiveConnectionInfo::WiFi { state, .. } => {
-                                *state = ActiveConnectionState::Deactivating;
-                            }
-                            _ => {}
+                        if let ActiveConnectionInfo::WiFi { state, .. } = ap {
+                            *state = ActiveConnectionState::Deactivating;
                         }
                     }
                     tx
