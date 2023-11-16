@@ -92,30 +92,28 @@ async fn start_listening(
                         .await
                         .unwrap_or_default()
                     {
-                        if c.id().await.unwrap_or_default() == ssid {
-                            if network_manager.deactivate_connection(&c).await.is_ok() {
-                                success = true;
-                                if let Ok(ActiveConnectionState::Deactivated) = c.state().await {
-                                    break;
-                                } else {
-                                    let mut changed = c.receive_state_changed().await;
-                                    _ = tokio::time::timeout(Duration::from_secs(5), async move {
-                                        loop {
-                                            if let Some(next) = changed.next().await {
-                                                if let Ok(ActiveConnectionState::Deactivated) = next
-                                                    .get()
-                                                    .await
-                                                    .map(ActiveConnectionState::from)
-                                                {
-                                                    break;
-                                                }
+                        if c.id().await.unwrap_or_default() == ssid
+                            && network_manager.deactivate_connection(&c).await.is_ok()
+                        {
+                            success = true;
+                            if let Ok(ActiveConnectionState::Deactivated) = c.state().await {
+                                break;
+                            } else {
+                                let mut changed = c.receive_state_changed().await;
+                                _ = tokio::time::timeout(Duration::from_secs(5), async move {
+                                    loop {
+                                        if let Some(next) = changed.next().await {
+                                            if let Ok(ActiveConnectionState::Deactivated) =
+                                                next.get().await.map(ActiveConnectionState::from)
+                                            {
+                                                break;
                                             }
                                         }
-                                    })
-                                    .await;
-                                }
-                                break;
+                                    }
+                                })
+                                .await;
                             }
+                            break;
                         }
                     }
                     _ = output
