@@ -531,7 +531,7 @@ pub struct NetworkManagerState {
 
 impl NetworkManagerState {
     pub async fn new(conn: &Connection) -> anyhow::Result<Self> {
-        let network_manager = NetworkManager::new(&conn).await?;
+        let network_manager = NetworkManager::new(conn).await?;
         let mut _self = Self::default();
         // airplane mode
         let airplaine_mode = Command::new("rfkill")
@@ -543,7 +543,7 @@ impl NetworkManagerState {
         _self.wifi_enabled = network_manager.wireless_enabled().await.unwrap_or_default();
         _self.airplane_mode = airplane_mode.contains("Soft blocked: yes") && !_self.wifi_enabled;
 
-        let s = NetworkManagerSettings::new(&conn).await?;
+        let s = NetworkManagerSettings::new(conn).await?;
         _ = s.load_connections(&[]).await;
         let known_conns = s.list_connections().await.unwrap_or_default();
         let mut active_conns = active_connections(

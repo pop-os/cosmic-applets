@@ -47,19 +47,19 @@ impl AppListConfig {
     pub fn add_favorite(&mut self, id: String, config: &Config) {
         if !self.favorites.contains(&id) {
             self.favorites.push(id);
-            let _ = self.write_entry(&config);
+            let _ = self.write_entry(config);
         }
     }
 
     pub fn remove_favorite(&mut self, id: String, config: &Config) {
         if let Some(pos) = self.favorites.iter().position(|e| e == &id) {
             self.favorites.remove(pos);
-            let _ = self.write_entry(&config);
+            let _ = self.write_entry(config);
         }
     }
 
     pub fn update_favorites(&mut self, favorites: Vec<String>, config: &Config) {
         self.favorites = favorites;
-        let _ = self.write_entry(&config);
+        let _ = self.write_entry(config);
     }
 }

@@ -86,7 +86,7 @@ pub async fn create_service(connection: &zbus::Connection) -> zbus::Result<()> {
         .interface::<_, StatusNotifierWatcher>(OBJECT_PATH)
         .await
         .unwrap();
-    let dbus_proxy = DBusProxy::new(&connection).await?;
+    let dbus_proxy = DBusProxy::new(connection).await?;
     let mut name_owner_changed_stream = dbus_proxy.receive_name_owner_changed().await?;
 
     let flags = RequestNameFlags::AllowReplacement.into();
