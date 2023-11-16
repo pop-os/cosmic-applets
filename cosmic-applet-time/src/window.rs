@@ -209,7 +209,7 @@ impl cosmic::Application for Window {
                 ]
                 .align_items(Alignment::Center)
                 .spacing(4);
-                for d in self.now.format("%x").to_string().split("/") {
+                for d in self.now.format("%x").to_string().split('/') {
                     date_time_col = date_time_col.push(text(d.to_string()).size(14));
                 }
                 date_time_col.into()
