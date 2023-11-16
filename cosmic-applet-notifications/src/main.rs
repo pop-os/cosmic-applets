@@ -328,7 +328,7 @@ impl cosmic::Application for Notifications {
         let do_not_disturb = padded_control(row![anim!(
             DO_NOT_DISTURB,
             &self.timeline,
-            String::from(fl!("do-not-disturb")),
+            fl!("do-not-disturb"),
             self.config.do_not_disturb,
             Message::DoNotDisturb
         )
@@ -442,9 +442,7 @@ impl cosmic::Application for Notifications {
                     info!("app_icon: {:?}", &n.app_icon);
                     if n.app_icon.is_empty() {
                         match n.image().cloned() {
-                            Some(Image::File(p)) => {
-                                Some(cosmic::widget::icon::from_path(PathBuf::from(p)))
-                            }
+                            Some(Image::File(p)) => Some(cosmic::widget::icon::from_path(p)),
                             Some(Image::Name(name)) => {
                                 Some(cosmic::widget::icon::from_name(name).handle())
                             }

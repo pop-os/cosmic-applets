@@ -293,30 +293,24 @@ async fn start_listening(
                                 let conn_settings: HashMap<&str, HashMap<&str, zvariant::Value>> =
                                     HashMap::from([
                                         (
-                                            "802-11-wireless".into(),
+                                            "802-11-wireless",
                                             HashMap::from([(
-                                                "ssid".into(),
+                                                "ssid",
                                                 Value::Array(ssid.as_bytes().into()),
                                             )]),
                                         ),
                                         (
-                                            "connection".into(),
+                                            "connection",
                                             HashMap::from([
-                                                ("id".into(), Value::Str(ssid.as_str().into())),
-                                                (
-                                                    "type".into(),
-                                                    Value::Str("802-11-wireless".into()),
-                                                ),
+                                                ("id", Value::Str(ssid.as_str().into())),
+                                                ("type", Value::Str("802-11-wireless".into())),
                                             ]),
                                         ),
                                         (
-                                            "802-11-wireless-security".into(),
+                                            "802-11-wireless-security",
                                             HashMap::from([
-                                                (
-                                                    "psk".into(),
-                                                    Value::Str(password.as_str().into()),
-                                                ),
-                                                ("key-mgmt".into(), Value::Str("wpa-psk".into())),
+                                                ("psk", Value::Str(password.as_str().into())),
+                                                ("key-mgmt", Value::Str("wpa-psk".into())),
                                             ]),
                                         ),
                                     ]);

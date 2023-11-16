@@ -121,7 +121,6 @@ impl DockItem {
 
         let dot_radius = 2;
         let dots = (0..toplevels.len())
-            .into_iter()
             .map(|_| {
                 container(vertical_space(Length::Fixed(0.0)))
                     .padding(dot_radius)
