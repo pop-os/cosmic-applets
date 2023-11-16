@@ -222,18 +222,13 @@ impl cosmic::Application for IcedWorkspacesApplet {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        Subscription::batch(
-            vec![
-                workspaces(0).map(Message::WorkspaceUpdate),
-                subscription::events_with(|e, _| match e {
-                    Mouse(mouse::Event::WheelScrolled { delta }) => {
-                        Some(Message::WheelScrolled(delta))
-                    }
-                    _ => None,
-                }),
-            ]
-            .into_iter(),
-        )
+        Subscription::batch(vec![
+            workspaces(0).map(Message::WorkspaceUpdate),
+            subscription::events_with(|e, _| match e {
+                Mouse(mouse::Event::WheelScrolled { delta }) => Some(Message::WheelScrolled(delta)),
+                _ => None,
+            }),
+        ])
     }
 
     fn style(&self) -> Option<<Theme as application::StyleSheet>::Style> {
