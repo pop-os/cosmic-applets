@@ -86,7 +86,7 @@ fn layout_view(layout: &Layout, expanded: Option<i32>) -> cosmic::Element<Msg> {
             .filter_map(|i| {
                 if !i.visible() {
                     None
-                } else if i.type_().as_deref() == Some("separator") {
+                } else if i.type_() == Some("separator") {
                     Some(iced::widget::horizontal_rule(2).into())
                 } else if let Some(label) = i.label() {
                     // Strip _ when not doubled
@@ -101,7 +101,7 @@ fn layout_view(layout: &Layout, expanded: Option<i32>) -> cosmic::Element<Msg> {
                         })
                         .collect::<String>();
 
-                    let is_submenu = i.children_display().as_deref() == Some("submenu");
+                    let is_submenu = i.children_display() == Some("submenu");
                     let is_expanded = expanded == Some(i.id());
 
                     let text = iced::widget::text(label).width(iced::Length::Fill);
