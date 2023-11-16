@@ -162,7 +162,7 @@ impl cosmic::Application for CosmicBatteryApplet {
         cosmic::iced::Command<cosmic::app::Message<Self::Message>>,
     ) {
         (
-            CosmicBatteryApplet {
+            Self {
                 core,
                 icon_name: "battery-symbolic".to_string(),
                 display_icon_name: "display-brightness-symbolic".to_string(),

@@ -124,7 +124,7 @@ impl cosmic::Application for Notifications {
                 })
             })
             .unwrap_or_default();
-        let mut _self = Notifications {
+        let mut _self = Self {
             core,
             config_helper: helper,
             config,

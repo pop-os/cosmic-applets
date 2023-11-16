@@ -261,9 +261,9 @@ impl cosmic::Application for Audio {
     type Flags = ();
     const APP_ID: &'static str = "com.system76.CosmicAppletAudio";
 
-    fn init(core: cosmic::app::Core, _flags: ()) -> (Audio, Command<Message>) {
+    fn init(core: cosmic::app::Core, _flags: ()) -> (Self, Command<Message>) {
         (
-            Audio {
+            Self {
                 core,
                 is_open: IsOpen::None,
                 current_output: None,
@@ -797,27 +797,27 @@ enum PulseState {
 impl PulseState {
     fn connection(&mut self) -> Option<&mut pulse::Connection> {
         match self {
-            PulseState::Disconnected(c) => Some(c),
-            PulseState::Connected(c) => Some(c),
-            PulseState::Init => None,
+            Self::Disconnected(c) => Some(c),
+            Self::Connected(c) => Some(c),
+            Self::Init => None,
         }
     }
 
     fn connected(&mut self) {
-        if let PulseState::Disconnected(c) = self {
-            *self = PulseState::Connected(c.clone());
+        if let Self::Disconnected(c) = self {
+            *self = Self::Connected(c.clone());
         }
     }
 
     fn disconnected(&mut self) {
-        if let PulseState::Connected(c) = self {
-            *self = PulseState::Disconnected(c.clone());
+        if let Self::Connected(c) = self {
+            *self = Self::Disconnected(c.clone());
         }
     }
 }
 
 impl Default for IsOpen {
     fn default() -> Self {
-        IsOpen::None
+        Self::None
     }
 }

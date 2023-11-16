@@ -26,7 +26,7 @@ pub struct AppListConfig {
 impl AppListConfig {
     // TODO async?
     /// load config with the provided name
-    pub fn load() -> anyhow::Result<AppListConfig> {
+    pub fn load() -> anyhow::Result<Self> {
         let mut relative_path = PathBuf::from(APP_ID);
         relative_path.push("config.ron");
         let file = match BaseDirectories::new()
@@ -40,7 +40,7 @@ impl AppListConfig {
             }
         };
 
-        ron::de::from_reader::<_, AppListConfig>(file)
+        ron::de::from_reader::<_, Self>(file)
             .map_err(|err| anyhow!("Failed to parse config file: {}", err))
     }
 

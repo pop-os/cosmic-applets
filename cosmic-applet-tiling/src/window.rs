@@ -68,7 +68,7 @@ impl cosmic::Application for Window {
         gaps.value = core.system_theme().cosmic().gaps.1 as i32;
         let mut active_hint = spin_button::Model::default().max(99).min(0).step(1);
         active_hint.value = core.system_theme().cosmic().active_hint as i32;
-        let window = Window {
+        let window = Self {
             core,
             gaps,
             active_hint,

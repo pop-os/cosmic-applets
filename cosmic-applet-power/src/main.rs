@@ -93,9 +93,9 @@ impl cosmic::Application for Power {
         &mut self.core
     }
 
-    fn init(core: cosmic::app::Core, _flags: ()) -> (Power, Command<Message>) {
+    fn init(core: cosmic::app::Core, _flags: ()) -> (Self, Command<Message>) {
         (
-            Power {
+            Self {
                 core,
                 icon_name: "system-shutdown-symbolic".to_string(),
                 ..Default::default()

@@ -108,7 +108,7 @@ impl DockItem {
         rectangle_tracker: Option<&RectangleTracker<u32>>,
         interaction_enabled: bool,
     ) -> Element<'_, Message> {
-        let DockItem {
+        let Self {
             toplevels,
             desktop_info,
             id,
@@ -377,7 +377,7 @@ impl cosmic::Application for CosmicAppList {
         _flags: Self::Flags,
     ) -> (Self, iced::Command<cosmic::app::Message<Self::Message>>) {
         let config = config::AppListConfig::load().unwrap_or_default();
-        let mut self_ = CosmicAppList {
+        let mut self_ = Self {
             core,
             favorite_list: desktop_info_for_app_ids(config.favorites.clone())
                 .into_iter()
