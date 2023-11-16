@@ -797,7 +797,7 @@ impl cosmic::Application for CosmicNetworkApplet {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        let network_sub = network_manager_subscription(0).map(|e| Message::NetworkManagerEvent(e));
+        let network_sub = network_manager_subscription(0).map(Message::NetworkManagerEvent);
         let timeline = self
             .timeline
             .as_subscription()

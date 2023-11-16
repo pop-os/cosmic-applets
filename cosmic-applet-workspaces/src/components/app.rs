@@ -167,7 +167,7 @@ impl cosmic::Application for IcedWorkspacesApplet {
                                 ..button::Appearance::default()
                             };
                             cosmic::theme::iced::Button::Custom {
-                                active: Box::new(move |theme| appearence(theme)),
+                                active: Box::new(appearence),
                                 hover: Box::new(move |theme| button::Appearance {
                                     background: Some(Background::Color(
                                         theme.current_container().component.hover.into(),
@@ -184,7 +184,7 @@ impl cosmic::Application for IcedWorkspacesApplet {
                                 ..button::Appearance::default()
                             };
                             cosmic::theme::iced::Button::Custom {
-                                active: Box::new(move |theme| appearence(theme)),
+                                active: Box::new(appearence),
                                 hover: Box::new(move |theme| button::Appearance {
                                     background: Some(Background::Color(
                                         theme.current_container().component.hover.into(),
