@@ -11,8 +11,7 @@ use cctk::sctk::reexports::calloop::channel::Sender;
 use cctk::toplevel_info::ToplevelInfo;
 use cctk::wayland_client::protocol::wl_data_device_manager::DndAction;
 use cctk::wayland_client::protocol::wl_seat::WlSeat;
-use cosmic::cosmic_config;
-use cosmic::cosmic_config::Config;
+use cosmic::cosmic_config::{self, Config, CosmicConfigEntry};
 use cosmic::iced;
 use cosmic::iced::subscription::events_with;
 use cosmic::iced::wayland::actions::data_device::DataFromMimeType;
@@ -376,7 +375,10 @@ impl cosmic::Application for CosmicAppList {
         core: cosmic::app::Core,
         _flags: Self::Flags,
     ) -> (Self, iced::Command<cosmic::app::Message<Self::Message>>) {
-        let config = config::AppListConfig::load().unwrap_or_default();
+        let config = Config::new(APP_ID, 1)
+            .ok()
+            .and_then(|c| AppListConfig::get_entry(&c).ok())
+            .unwrap_or_default();
         let mut self_ = Self {
             core,
             favorite_list: desktop_info_for_app_ids(config.favorites.clone())
