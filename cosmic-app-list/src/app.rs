@@ -956,7 +956,7 @@ impl cosmic::Application for CosmicAppList {
                 }
             })
             .on_motion(if self.dnd_offer.is_some() {
-                |x, y| Message::DndMotion(x, y)
+                Message::DndMotion
             } else {
                 |_, _| Message::Ignore
             })

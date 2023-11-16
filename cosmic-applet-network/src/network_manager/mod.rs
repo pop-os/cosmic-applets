@@ -105,7 +105,7 @@ async fn start_listening(
                                                 if let Ok(ActiveConnectionState::Deactivated) = next
                                                     .get()
                                                     .await
-                                                    .map(|p| ActiveConnectionState::from(p))
+                                                    .map(ActiveConnectionState::from)
                                                 {
                                                     break;
                                                 }
