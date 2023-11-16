@@ -209,7 +209,7 @@ impl BluerDevice {
             .await
             .unwrap_or_default()
             .unwrap_or_else(|| device.address().to_string());
-        if name == "" {
+        if name.is_empty() {
             name = device.address().to_string();
         };
         let is_paired = device.is_paired().await.unwrap_or_default();
