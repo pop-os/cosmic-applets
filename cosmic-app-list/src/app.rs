@@ -339,22 +339,20 @@ fn index_in_list(
     let pos_in_list = pos_in_list * total_len;
     let index = if list_len == 0 {
         0
+    } else if pos_in_list < item_size / 2.0 {
+        0
     } else {
-        if pos_in_list < item_size / 2.0 {
-            0
-        } else {
-            let mut i = 1;
-            let mut pos = item_size / 2.0;
-            while i < list_len {
-                let next_pos = pos + item_size + divider_size;
-                if pos > pos_in_list && pos_in_list < next_pos {
-                    break;
-                }
-                pos = next_pos;
-                i += 1;
+        let mut i = 1;
+        let mut pos = item_size / 2.0;
+        while i < list_len {
+            let next_pos = pos + item_size + divider_size;
+            if pos > pos_in_list && pos_in_list < next_pos {
+                break;
             }
-            i
+            pos = next_pos;
+            i += 1;
         }
+        i
     };
 
     if let Some(existing_preview) = existing_preview {
