@@ -628,23 +628,21 @@ impl cosmic::Application for CosmicAppList {
             Message::DndData(file_path) => {
                 if let Some(DndOffer { dock_item, .. }) = self.dnd_offer.as_mut() {
                     if let Some(di) = std::fs::read_to_string(&file_path).ok().and_then(|input| {
-                        DesktopEntry::decode(&file_path, &input)
-                            .ok()
-                            .and_then(|de| {
-                                let icon = freedesktop_icons::lookup(de.icon().unwrap_or(de.appid))
-                                    .with_size(128)
-                                    .with_cache()
-                                    .find()
-                                    .unwrap_or_else(default_app_icon);
-                                Some(DesktopInfo {
-                                    id: de.id().to_string(),
-                                    wm_class: de.startup_wm_class().map(ToString::to_string),
-                                    icon,
-                                    exec: de.exec().unwrap_or_default().to_string(),
-                                    name: de.name(None).unwrap_or_default().to_string(),
-                                    path: file_path.clone(),
-                                })
-                            })
+                        DesktopEntry::decode(&file_path, &input).ok().map(|de| {
+                            let icon = freedesktop_icons::lookup(de.icon().unwrap_or(de.appid))
+                                .with_size(128)
+                                .with_cache()
+                                .find()
+                                .unwrap_or_else(default_app_icon);
+                            DesktopInfo {
+                                id: de.id().to_string(),
+                                wm_class: de.startup_wm_class().map(ToString::to_string),
+                                icon,
+                                exec: de.exec().unwrap_or_default().to_string(),
+                                name: de.name(None).unwrap_or_default().to_string(),
+                                path: file_path.clone(),
+                            }
+                        })
                     }) {
                         self.item_ctr += 1;
                         *dock_item = Some(DockItem::new(self.item_ctr, Vec::new(), di));
