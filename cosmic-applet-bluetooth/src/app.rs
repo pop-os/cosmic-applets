@@ -464,10 +464,10 @@ impl cosmic::Application for CosmicBluetoothApplet {
                 ]
                 .align_items(Alignment::Center)
                 .spacing(12);
-                visible_devices =
-                    visible_devices.push(menu_button(row.width(Length::Fill)).on_press(
-                        Message::Request(BluerRequest::PairDevice(dev.address.clone())),
-                    ));
+                visible_devices = visible_devices.push(
+                    menu_button(row.width(Length::Fill))
+                        .on_press(Message::Request(BluerRequest::PairDevice(dev.address))),
+                );
                 visible_devices_count += 1;
             }
             list_column.push(visible_devices.into());

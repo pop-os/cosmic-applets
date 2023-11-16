@@ -552,7 +552,7 @@ impl BluerSessionState {
                             }
                         }
                         BluerRequest::PairDevice(address) => {
-                            let res = adapter_clone.device(address.clone());
+                            let res = adapter_clone.device(*address);
                             if let Err(err) = res {
                                 err_msg = Some(err.to_string());
                             } else if let Ok(device) = res {
@@ -563,7 +563,7 @@ impl BluerSessionState {
                             }
                         }
                         BluerRequest::ConnectDevice(address) => {
-                            let res = adapter_clone.device(address.clone());
+                            let res = adapter_clone.device(*address);
                             if let Err(err) = res {
                                 err_msg = Some(err.to_string());
                             } else if let Ok(device) = res {
@@ -574,7 +574,7 @@ impl BluerSessionState {
                             }
                         }
                         BluerRequest::DisconnectDevice(address) => {
-                            let res = adapter_clone.device(address.clone());
+                            let res = adapter_clone.device(*address);
                             if let Err(err) = res {
                                 err_msg = Some(err.to_string());
                             } else if let Ok(device) = res {
