@@ -622,8 +622,7 @@ impl BluerSessionState {
                         })
                         .await;
 
-                    let mut active_requests_clone = active_requests_clone.lock().await;
-                    let _ = active_requests_clone.remove(&req_clone_2);
+                    active_requests_clone.lock().await.remove(&req_clone_2);
 
                     Ok(())
                 });
