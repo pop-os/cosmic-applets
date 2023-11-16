@@ -521,6 +521,6 @@ fn duration_ago_msg(notification: &Notification) -> String {
             fl!("minutes-ago", HashMap::from_iter(vec![("duration", min)]))
         }
     } else {
-        format!("")
+        String::new()
     }
 }
