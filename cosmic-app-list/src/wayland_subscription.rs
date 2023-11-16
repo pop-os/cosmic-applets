@@ -64,7 +64,7 @@ async fn start_listening(
                 }
                 None => {
                     _ = output.send(WaylandUpdate::Finished).await;
-                    return State::Finished;
+                    State::Finished
                 }
             }
         }
