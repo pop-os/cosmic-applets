@@ -469,8 +469,7 @@ impl cosmic::Application for CosmicAppList {
                 }
             }
             Message::UnFavorite(id) => {
-                let _ = self
-                    .config
+                self.config
                     .remove_favorite(id.clone(), &Config::new(APP_ID, 1).unwrap());
                 if let Some(i) = self
                     .favorite_list
@@ -532,7 +531,7 @@ impl cosmic::Application for CosmicAppList {
                             .position(|t| t.desktop_info.id == id)
                         {
                             let t = self.favorite_list.remove(pos);
-                            let _ = self.config.remove_favorite(
+                            self.config.remove_favorite(
                                 t.desktop_info.id.clone(),
                                 &Config::new(APP_ID, 1).unwrap(),
                             );
