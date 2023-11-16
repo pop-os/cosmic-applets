@@ -26,7 +26,7 @@ trait StatusNotifierWatcher {
 }
 
 pub async fn watch(connection: &zbus::Connection) -> zbus::Result<EventStream> {
-    let watcher = StatusNotifierWatcherProxy::new(&connection).await?;
+    let watcher = StatusNotifierWatcherProxy::new(connection).await?;
 
     let name = connection.unique_name().unwrap().as_str();
     if let Err(err) = watcher.register_status_notifier_host(name).await {

@@ -18,7 +18,7 @@ impl StatusNotifierItem {
             (name.as_str(), "/StatusNotifierItem")
         };
 
-        let item_proxy = StatusNotifierItemProxy::builder(&connection)
+        let item_proxy = StatusNotifierItemProxy::builder(connection)
             .destination(dest.to_string())?
             .path(path.to_string())?
             .build()
@@ -27,7 +27,7 @@ impl StatusNotifierItem {
         let icon_name = item_proxy.icon_name().await?;
 
         let menu_path = item_proxy.menu().await?;
-        let menu_proxy = DBusMenuProxy::builder(&connection)
+        let menu_proxy = DBusMenuProxy::builder(connection)
             .destination(dest.to_string())?
             .path(menu_path)?
             .build()
