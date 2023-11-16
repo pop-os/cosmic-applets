@@ -685,7 +685,7 @@ impl cosmic::Application for Audio {
                 if artists.len() > 15 {
                     format!("{artists:15}...")
                 } else {
-                    artists.to_string()
+                    artists
                 }
             } else {
                 String::new()

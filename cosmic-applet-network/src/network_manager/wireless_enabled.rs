@@ -11,9 +11,9 @@ pub fn wireless_enabled_subscription<I: 'static + Hash + Copy + Send + Sync + De
     id: I,
     conn: Connection,
 ) -> iced::Subscription<NetworkManagerEvent> {
-    let initial = State::Continue(conn.clone());
+    let initial = State::Continue(conn);
     subscription::channel(id, 50, move |mut output| {
-        let mut state = initial.clone();
+        let mut state = initial;
 
         async move {
             loop {

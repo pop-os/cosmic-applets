@@ -346,10 +346,10 @@ impl cosmic::Application for CosmicNetworkApplet {
                 {
                     let _ = tx.unbounded_send(NetworkManagerRequest::Password(
                         access_point.ssid.clone(),
-                        password.to_string(),
+                        password,
                     ));
                     self.new_connection
-                        .replace(NewConnectionState::Waiting(access_point.clone()));
+                        .replace(NewConnectionState::Waiting(access_point));
                 };
             }
             Message::ActivateKnownWifi(ssid) => {
