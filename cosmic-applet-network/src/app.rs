@@ -373,15 +373,13 @@ impl cosmic::Application for CosmicNetworkApplet {
             }
             Message::Disconnect(ssid) => {
                 let tx = if let Some(tx) = self.nm_sender.as_ref() {
-                    if let Some(ap) = self
+                    if let Some(ActiveConnectionInfo::WiFi { state, .. }) = self
                         .nm_state
                         .active_conns
                         .iter_mut()
                         .find(|c| c.name() == ssid)
                     {
-                        if let ActiveConnectionInfo::WiFi { state, .. } = ap {
-                            *state = ActiveConnectionState::Deactivating;
-                        }
+                        *state = ActiveConnectionState::Deactivating;
                     }
                     tx
                 } else {
