@@ -267,7 +267,7 @@ impl PulseHandle {
                                 );
                                 if let Some(mut cur_server) = server.take() {
                                     tracing::trace!("getting server info...");
-                                    if let Err(_) = cur_server.get_server_info() {
+                                    if cur_server.get_server_info().is_err() {
                                         tracing::warn!("got error, server must be disconnected...");
                                         PulseHandle::send_disconnected(&mut from_pulse_send).await;
                                     } else {

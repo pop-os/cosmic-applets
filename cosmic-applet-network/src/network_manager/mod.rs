@@ -93,7 +93,7 @@ async fn start_listening(
                         .unwrap_or_default()
                     {
                         if c.id().await.unwrap_or_default() == ssid {
-                            if let Ok(_) = network_manager.deactivate_connection(&c).await {
+                            if network_manager.deactivate_connection(&c).await.is_ok() {
                                 success = true;
                                 if let Ok(ActiveConnectionState::Deactivated) = c.state().await {
                                     break;
