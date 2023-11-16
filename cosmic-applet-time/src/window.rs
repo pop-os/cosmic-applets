@@ -60,7 +60,7 @@ impl cosmic::Application for Window {
         _flags: Self::Flags,
     ) -> (Self, cosmic::iced::Command<app::Message<Self::Message>>) {
         (
-            Window {
+            Self {
                 core,
                 popup: None,
                 id_ctr: 0,

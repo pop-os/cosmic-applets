@@ -30,9 +30,9 @@ enum GraphicsMode {
 impl GraphicsMode {
     fn inner(&self) -> Graphics {
         match self {
-            GraphicsMode::Selected { new, .. } => *new,
-            GraphicsMode::Current(g) => *g,
-            GraphicsMode::Applied(g) => *g,
+            Self::Selected { new, .. } => *new,
+            Self::Current(g) => *g,
+            Self::Applied(g) => *g,
         }
     }
 }
@@ -67,7 +67,7 @@ impl cosmic::Application for Window {
         core: cosmic::app::Core,
         _flags: Self::Flags,
     ) -> (Self, iced::Command<cosmic::app::Message<Self::Message>>) {
-        let window = Window {
+        let window = Self {
             core,
             ..Default::default()
         };

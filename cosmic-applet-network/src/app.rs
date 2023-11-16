@@ -52,12 +52,12 @@ enum NewConnectionState {
 impl NewConnectionState {
     pub fn ssid(&self) -> &str {
         &match self {
-            NewConnectionState::EnterPassword {
+            Self::EnterPassword {
                 access_point,
                 password: _,
             } => access_point,
-            NewConnectionState::Waiting(ap) => ap,
-            NewConnectionState::Failure(ap) => ap,
+            Self::Waiting(ap) => ap,
+            Self::Failure(ap) => ap,
         }
         .ssid
     }
@@ -66,12 +66,12 @@ impl NewConnectionState {
 impl Into<AccessPoint> for NewConnectionState {
     fn into(self) -> AccessPoint {
         match self {
-            NewConnectionState::EnterPassword {
+            Self::EnterPassword {
                 access_point,
                 password: _,
             } => access_point,
-            NewConnectionState::Waiting(access_point) => access_point,
-            NewConnectionState::Failure(access_point) => access_point,
+            Self::Waiting(access_point) => access_point,
+            Self::Failure(access_point) => access_point,
         }
     }
 }
@@ -192,7 +192,7 @@ impl cosmic::Application for CosmicNetworkApplet {
 
     fn init(core: cosmic::app::Core, _flags: ()) -> (Self, Command<Message>) {
         (
-            CosmicNetworkApplet {
+            Self {
                 core,
                 icon_name: "network-offline-symbolic".to_string(),
                 ..Default::default()

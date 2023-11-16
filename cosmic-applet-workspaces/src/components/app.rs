@@ -54,7 +54,7 @@ impl cosmic::Application for IcedWorkspacesApplet {
         cosmic::iced::Command<cosmic::app::Message<Self::Message>>,
     ) {
         (
-            IcedWorkspacesApplet {
+            Self {
                 layout: match &core.applet.anchor {
                     PanelAnchor::Left | PanelAnchor::Right => Layout::Column,
                     PanelAnchor::Top | PanelAnchor::Bottom => Layout::Row,

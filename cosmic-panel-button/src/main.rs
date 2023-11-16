@@ -27,7 +27,7 @@ impl cosmic::Application for Button {
     const APP_ID: &'static str = "com.system76.CosmicPanelButton";
 
     fn init(core: cosmic::app::Core, desktop: Desktop) -> (Self, app::Command<Msg>) {
-        (Button { core, desktop }, app::Command::none())
+        (Self { core, desktop }, app::Command::none())
     }
 
     fn core(&self) -> &cosmic::app::Core {

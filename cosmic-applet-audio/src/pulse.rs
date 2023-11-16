@@ -157,7 +157,7 @@ struct PulseHandle {
 
 impl PulseHandle {
     // Create pulse server thread, and bidirectional comms
-    pub fn new() -> PulseHandle {
+    pub fn new() -> Self {
         let (to_pulse, mut to_pulse_recv) = tokio::sync::mpsc::channel(10);
         let (mut from_pulse_send, from_pulse) = tokio::sync::mpsc::channel(10);
         // get initial connection status
@@ -195,9 +195,7 @@ impl PulseHandle {
                                         .send(Message::SetDefaultSink(sink))
                                         .await
                                         .unwrap(),
-                                    Err(_) => {
-                                        PulseHandle::send_disconnected(&mut from_pulse_send).await
-                                    }
+                                    Err(_) => Self::send_disconnected(&mut from_pulse_send).await,
                                 }
                             }
                             Message::GetDefaultSource => {
@@ -212,7 +210,7 @@ impl PulseHandle {
                                         .unwrap(),
                                     Err(e) => {
                                         tracing::error!("ERROR! {:?}", e);
-                                        PulseHandle::send_disconnected(&mut from_pulse_send).await;
+                                        Self::send_disconnected(&mut from_pulse_send).await;
                                     }
                                 }
                             }
@@ -226,9 +224,7 @@ impl PulseHandle {
                                         .send(Message::SetSinks(sinks))
                                         .await
                                         .unwrap(),
-                                    Err(_) => {
-                                        PulseHandle::send_disconnected(&mut from_pulse_send).await
-                                    }
+                                    Err(_) => Self::send_disconnected(&mut from_pulse_send).await,
                                 }
                             }
                             Message::GetSources => {
@@ -241,9 +237,7 @@ impl PulseHandle {
                                         .send(Message::SetSources(sinks))
                                         .await
                                         .unwrap(),
-                                    Err(_) => {
-                                        PulseHandle::send_disconnected(&mut from_pulse_send).await
-                                    }
+                                    Err(_) => Self::send_disconnected(&mut from_pulse_send).await,
                                 }
                             }
                             Message::SetSinkVolumeByName(name, channel_volumes) => {
@@ -269,7 +263,7 @@ impl PulseHandle {
                                     tracing::trace!("getting server info...");
                                     if cur_server.get_server_info().is_err() {
                                         tracing::warn!("got error, server must be disconnected...");
-                                        PulseHandle::send_disconnected(&mut from_pulse_send).await;
+                                        Self::send_disconnected(&mut from_pulse_send).await;
                                     } else {
                                         tracing::trace!("got server info, still connected...");
                                         server = Some(cur_server);
@@ -278,7 +272,7 @@ impl PulseHandle {
                                     match PulseServer::connect().and_then(|server| server.init()) {
                                         Ok(new_server) => {
                                             tracing::info!("Connected to server");
-                                            PulseHandle::send_connected(&mut from_pulse_send).await;
+                                            Self::send_connected(&mut from_pulse_send).await;
                                             server = Some(new_server);
                                         }
                                         Err(err) => {
@@ -336,7 +330,7 @@ impl PulseHandle {
                 }
             });
         });
-        PulseHandle {
+        Self {
             to_pulse,
             from_pulse,
         }
@@ -372,7 +366,7 @@ enum PulseServerError<'a> {
 // https://crates.io/crates/pulsectl-rs
 impl PulseServer {
     // connect() requires init() to be run after
-    pub fn connect() -> Result<PulseServer, PulseServerError<'static>> {
+    pub fn connect() -> Result<Self, PulseServerError<'static>> {
         // TODO: fix app name, should be variable
         let mut proplist = Proplist::new().unwrap();
         proplist
@@ -398,7 +392,7 @@ impl PulseServer {
             .connect(None, pulse::context::FlagSet::NOFLAGS, None)
             .map_err(PulseServerError::PAErr)?;
 
-        Ok(PulseServer {
+        Ok(Self {
             mainloop,
             context,
             introspector,
@@ -729,7 +723,7 @@ pub struct ServerInfo {
 
 impl<'a> From<&'a pulse::context::introspect::ServerInfo<'a>> for ServerInfo {
     fn from(info: &'a pulse::context::introspect::ServerInfo<'a>) -> Self {
-        ServerInfo {
+        Self {
             user_name: info.user_name.as_ref().map(|cow| cow.to_string()),
             host_name: info.host_name.as_ref().map(|cow| cow.to_string()),
             server_version: info.server_version.as_ref().map(|cow| cow.to_string()),

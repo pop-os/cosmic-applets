@@ -75,7 +75,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
         _flags: Self::Flags,
     ) -> (Self, iced::Command<cosmic::app::Message<Self::Message>>) {
         (
-            CosmicBluetoothApplet {
+            Self {
                 core,
                 icon_name: "bluetooth-symbolic".to_string(),
                 ..Default::default()
