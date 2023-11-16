@@ -12,7 +12,7 @@ pub fn devices_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
     has_popup: bool,
     conn: Connection,
 ) -> iced::Subscription<NetworkManagerEvent> {
-    let initial = State::Continue(conn.clone());
+    let initial = State::Continue(conn);
     subscription::channel((id, has_popup), 50, move |mut output| {
         let mut state = initial.clone();
 

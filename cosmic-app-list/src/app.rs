@@ -551,7 +551,7 @@ impl cosmic::Application for CosmicAppList {
                         },
                         window::Id(0),
                         Some(DndIcon::Custom(icon_id)),
-                        Box::new(toplevel_group.clone()),
+                        Box::new(toplevel_group),
                     );
                 }
             }

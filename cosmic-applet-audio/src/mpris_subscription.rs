@@ -27,12 +27,10 @@ pub struct PlayerStatus {
 impl PlayerStatus {
     async fn new(player: Player) -> Self {
         let metadata = player.metadata().await.unwrap();
-        let title = metadata.title().map(|t| Cow::from(t.to_string()));
-        let artists = metadata.artists().map(|a| {
-            a.into_iter()
-                .map(|a| Cow::from(a.to_string()))
-                .collect::<Vec<_>>()
-        });
+        let title = metadata.title().map(|t| Cow::from(t));
+        let artists = metadata
+            .artists()
+            .map(|a| a.into_iter().map(|a| Cow::from(a)).collect::<Vec<_>>());
         let icon = metadata
             .art_url()
             .and_then(|u| url::Url::parse(&u).ok())
