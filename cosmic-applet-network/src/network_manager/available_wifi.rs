@@ -44,8 +44,7 @@ pub async fn handle_wireless_device(device: WirelessDevice<'_>) -> zbus::Result<
         );
     }
     let aps = aps
-        .into_iter()
-        .map(|(_, x)| x)
+        .into_values()
         .sorted_by(|a, b| b.strength.cmp(&a.strength))
         .collect();
     Ok(aps)
