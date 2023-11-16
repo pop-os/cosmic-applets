@@ -82,9 +82,9 @@ pub enum WaylandUpdate {
 
 #[derive(Clone, Debug)]
 pub enum ToplevelUpdate {
-    AddToplevel(ZcosmicToplevelHandleV1, ToplevelInfo),
-    UpdateToplevel(ZcosmicToplevelHandleV1, ToplevelInfo),
-    RemoveToplevel(ZcosmicToplevelHandleV1),
+    Add(ZcosmicToplevelHandleV1, ToplevelInfo),
+    Update(ZcosmicToplevelHandleV1, ToplevelInfo),
+    Remove(ZcosmicToplevelHandleV1),
 }
 
 #[derive(Clone, Debug)]

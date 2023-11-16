@@ -135,7 +135,7 @@ impl ToplevelInfoHandler for AppData {
         if let Some(info) = self.toplevel_info_state.info(toplevel) {
             let _ = self
                 .tx
-                .unbounded_send(WaylandUpdate::Toplevel(ToplevelUpdate::AddToplevel(
+                .unbounded_send(WaylandUpdate::Toplevel(ToplevelUpdate::Add(
                     toplevel.clone(),
                     info.clone(),
                 )));
@@ -149,12 +149,12 @@ impl ToplevelInfoHandler for AppData {
         toplevel: &zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1,
     ) {
         if let Some(info) = self.toplevel_info_state.info(toplevel) {
-            let _ =
-                self.tx
-                    .unbounded_send(WaylandUpdate::Toplevel(ToplevelUpdate::UpdateToplevel(
-                        toplevel.clone(),
-                        info.clone(),
-                    )));
+            let _ = self
+                .tx
+                .unbounded_send(WaylandUpdate::Toplevel(ToplevelUpdate::Update(
+                    toplevel.clone(),
+                    info.clone(),
+                )));
         }
     }
 
@@ -166,7 +166,7 @@ impl ToplevelInfoHandler for AppData {
     ) {
         let _ = self
             .tx
-            .unbounded_send(WaylandUpdate::Toplevel(ToplevelUpdate::RemoveToplevel(
+            .unbounded_send(WaylandUpdate::Toplevel(ToplevelUpdate::Remove(
                 toplevel.clone(),
             )));
     }

@@ -22,17 +22,17 @@ const ID: &str = "com.system76.CosmicAppletGraphics";
 
 #[derive(Clone, Copy)]
 enum GraphicsMode {
-    AppliedGraphicsMode(Graphics),
-    SelectedGraphicsMode { prev: Graphics, new: Graphics },
-    CurrentGraphicsMode(Graphics),
+    Applied(Graphics),
+    Selected { prev: Graphics, new: Graphics },
+    Current(Graphics),
 }
 
 impl GraphicsMode {
     fn inner(&self) -> Graphics {
         match self {
-            GraphicsMode::SelectedGraphicsMode { new, .. } => *new,
-            GraphicsMode::CurrentGraphicsMode(g) => *g,
-            GraphicsMode::AppliedGraphicsMode(g) => *g,
+            GraphicsMode::Selected { new, .. } => *new,
+            GraphicsMode::Current(g) => *g,
+            GraphicsMode::Applied(g) => *g,
         }
     }
 }
@@ -98,7 +98,7 @@ impl cosmic::Application for Window {
                         .graphics_mode
                         .map(|m| m.inner())
                         .unwrap_or_else(|| Graphics::Integrated);
-                    self.graphics_mode = Some(GraphicsMode::SelectedGraphicsMode { prev, new });
+                    self.graphics_mode = Some(GraphicsMode::Selected { prev, new });
                     return iced::Command::perform(
                         set_graphics(proxy.clone(), new),
                         move |success| {
@@ -157,9 +157,7 @@ impl cosmic::Application for Window {
             Message::CurrentGraphics(g) => {
                 if let Some(g) = g {
                     self.graphics_mode = Some(match self.graphics_mode.take() {
-                        Some(GraphicsMode::CurrentGraphicsMode(_)) | None => {
-                            GraphicsMode::CurrentGraphicsMode(g)
-                        }
+                        Some(GraphicsMode::Current(_)) | None => GraphicsMode::Current(g),
                         Some(g) => g,
                     });
                 }
@@ -171,13 +169,13 @@ impl cosmic::Application for Window {
             }
             Message::AppliedGraphics(g) => {
                 if let Some(g) = g {
-                    self.graphics_mode = Some(GraphicsMode::AppliedGraphicsMode(g));
+                    self.graphics_mode = Some(GraphicsMode::Applied(g));
                 } else {
                     // Reset graphics
                     match self.graphics_mode {
-                        Some(GraphicsMode::SelectedGraphicsMode { prev, new }) => {
+                        Some(GraphicsMode::Selected { prev, new }) => {
                             // TODO send notification with error?
-                            self.graphics_mode = Some(GraphicsMode::AppliedGraphicsMode(prev));
+                            self.graphics_mode = Some(GraphicsMode::Applied(prev));
                             // Reset to prev after failing
                             // https://github.com/pop-os/system76-power/issues/387
                             if let Some((_, proxy)) = self.dbus.as_ref() {
@@ -342,7 +340,7 @@ fn button_icon<'a>(
     button_mode: Graphics,
 ) -> Container<'a, Message, cosmic::Renderer> {
     match cur_mode {
-        Some(GraphicsMode::SelectedGraphicsMode { prev: _, new }) if new == button_mode => {
+        Some(GraphicsMode::Selected { prev: _, new }) if new == button_mode => {
             cosmic::widget::container(
                 icon::from_name("process-working-symbolic")
                     .size(12)
@@ -350,9 +348,7 @@ fn button_icon<'a>(
                     .prefer_svg(true),
             )
         }
-        Some(GraphicsMode::AppliedGraphicsMode(g) | GraphicsMode::CurrentGraphicsMode(g))
-            if g == button_mode =>
-        {
+        Some(GraphicsMode::Applied(g) | GraphicsMode::Current(g)) if g == button_mode => {
             cosmic::widget::container(
                 icon::from_name("emblem-ok-symbolic")
                     .size(12)

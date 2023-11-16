@@ -722,7 +722,7 @@ impl cosmic::Application for CosmicAppList {
                         .map(cosmic::app::message::app);
                     }
                     WaylandUpdate::Toplevel(event) => match event {
-                        ToplevelUpdate::AddToplevel(handle, info) => {
+                        ToplevelUpdate::Add(handle, info) => {
                             if info.app_id.is_empty() {
                                 return Command::none();
                             }
@@ -747,7 +747,7 @@ impl cosmic::Application for CosmicAppList {
                                 });
                             }
                         }
-                        ToplevelUpdate::RemoveToplevel(handle) => {
+                        ToplevelUpdate::Remove(handle) => {
                             for t in self
                                 .active_list
                                 .iter_mut()
@@ -757,7 +757,7 @@ impl cosmic::Application for CosmicAppList {
                             }
                             self.active_list.retain(|t| !t.toplevels.is_empty());
                         }
-                        ToplevelUpdate::UpdateToplevel(handle, info) => {
+                        ToplevelUpdate::Update(handle, info) => {
                             // TODO probably want to make sure it is removed
                             if info.app_id.is_empty() {
                                 return Command::none();
