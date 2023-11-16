@@ -342,12 +342,12 @@ impl PulseHandle {
         }
     }
 
-    async fn send_disconnected(sender: &mut tokio::sync::mpsc::Sender<Message>) {
+    async fn send_disconnected(sender: &tokio::sync::mpsc::Sender<Message>) {
         sender.send(Message::Disconnected).await.unwrap()
     }
 
     #[allow(dead_code)]
-    async fn send_connected(sender: &mut tokio::sync::mpsc::Sender<Message>) {
+    async fn send_connected(sender: &tokio::sync::mpsc::Sender<Message>) {
         sender.send(Message::Connected).await.unwrap()
     }
 }
