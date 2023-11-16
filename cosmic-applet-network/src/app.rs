@@ -422,11 +422,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                     let mut ipv4 = Vec::with_capacity(ip_addresses.len() + 1);
                     ipv4.push(text(name).size(14).into());
                     for addr in ip_addresses {
-                        ipv4.push(
-                            text(format!("{}: {}", fl!("ipv4"), addr.to_string()))
-                                .size(10)
-                                .into(),
-                        );
+                        ipv4.push(text(format!("{}: {}", fl!("ipv4"), addr)).size(10).into());
                     }
                     vpn_ethernet_col = vpn_ethernet_col.push(column![
                         row![
@@ -457,11 +453,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                     let mut ipv4 = Vec::with_capacity(ip_addresses.len() + 1);
                     ipv4.push(text(name).size(14).into());
                     for addr in ip_addresses {
-                        ipv4.push(
-                            text(format!("{}: {}", fl!("ipv4"), addr.to_string()))
-                                .size(12)
-                                .into(),
-                        );
+                        ipv4.push(text(format!("{}: {}", fl!("ipv4"), addr)).size(12).into());
                     }
 
                     vpn_ethernet_col = vpn_ethernet_col.push(column![
@@ -497,11 +489,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                 } => {
                     let mut ipv4 = Vec::with_capacity(ip_addresses.len());
                     for addr in ip_addresses {
-                        ipv4.push(
-                            text(format!("{}: {}", fl!("ipv4"), addr.to_string()))
-                                .size(12)
-                                .into(),
-                        );
+                        ipv4.push(text(format!("{}: {}", fl!("ipv4"), addr)).size(12).into());
                     }
                     let mut btn_content = vec![
                         icon::from_name(wifi_icon(*strength))
