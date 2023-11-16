@@ -156,7 +156,7 @@ impl cosmic::Application for Power {
                 self.id_ctr += 1;
                 let id = window::Id(self.id_ctr);
                 self.action_to_confirm = Some((id, action, COUNTDOWN_LENGTH));
-                return get_layer_surface(SctkLayerSurfaceSettings {
+                get_layer_surface(SctkLayerSurfaceSettings {
                     id,
                     keyboard_interactivity: KeyboardInteractivity::None,
                     anchor: Anchor::all(),
@@ -164,7 +164,7 @@ impl cosmic::Application for Power {
                     size: Some((None, None)),
                     size_limits: Limits::NONE.min_width(1.0).min_height(1.0),
                     ..Default::default()
-                });
+                })
             }
             Message::Zbus(result) => {
                 if let Err(e) = result {
