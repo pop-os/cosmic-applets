@@ -158,7 +158,7 @@ impl cosmic::Application for IcedWorkspacesApplet {
                             cosmic::theme::iced::Button::Primary
                         }
                         Some(zcosmic_workspace_handle_v1::State::Urgent) => {
-                            let appearence = |theme: &Theme| button::Appearance {
+                            let appearance = |theme: &Theme| button::Appearance {
                                 background: Some(Background::Color(
                                     theme.cosmic().palette.neutral_3.into(),
                                 )),
@@ -167,29 +167,29 @@ impl cosmic::Application for IcedWorkspacesApplet {
                                 ..button::Appearance::default()
                             };
                             cosmic::theme::iced::Button::Custom {
-                                active: Box::new(appearence),
+                                active: Box::new(appearance),
                                 hover: Box::new(move |theme| button::Appearance {
                                     background: Some(Background::Color(
                                         theme.current_container().component.hover.into(),
                                     )),
-                                    ..appearence(theme)
+                                    ..appearance(theme)
                                 }),
                             }
                         }
                         None => {
-                            let appearence = |theme: &Theme| button::Appearance {
+                            let appearance = |theme: &Theme| button::Appearance {
                                 background: None,
                                 border_radius: theme.cosmic().radius_xl().into(),
                                 text_color: theme.current_container().component.on.into(),
                                 ..button::Appearance::default()
                             };
                             cosmic::theme::iced::Button::Custom {
-                                active: Box::new(appearence),
+                                active: Box::new(appearance),
                                 hover: Box::new(move |theme| button::Appearance {
                                     background: Some(Background::Color(
                                         theme.current_container().component.hover.into(),
                                     )),
-                                    ..appearence(theme)
+                                    ..appearance(theme)
                                 }),
                             }
                         }

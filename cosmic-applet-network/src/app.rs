@@ -63,15 +63,15 @@ impl NewConnectionState {
     }
 }
 
-impl Into<AccessPoint> for NewConnectionState {
-    fn into(self) -> AccessPoint {
-        match self {
-            Self::EnterPassword {
+impl From<NewConnectionState> for AccessPoint {
+    fn from(connection_state: NewConnectionState) -> Self {
+        match connection_state {
+            NewConnectionState::EnterPassword {
                 access_point,
                 password: _,
             } => access_point,
-            Self::Waiting(access_point) => access_point,
-            Self::Failure(access_point) => access_point,
+            NewConnectionState::Waiting(access_point) => access_point,
+            NewConnectionState::Failure(access_point) => access_point,
         }
     }
 }
