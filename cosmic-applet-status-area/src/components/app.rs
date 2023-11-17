@@ -114,8 +114,7 @@ impl cosmic::Application for App {
                     ])
                 }
                 status_notifier_watcher::Event::Unregistered(name) => {
-                    if let Some((id, _)) =
-                        self.menus.iter().find(|(_id, menu)| menu.name() == &name)
+                    if let Some((id, _)) = self.menus.iter().find(|(_id, menu)| menu.name() == name)
                     {
                         let id = *id;
                         self.menus.remove(&id);

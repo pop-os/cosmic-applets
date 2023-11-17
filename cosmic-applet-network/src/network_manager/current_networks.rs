@@ -21,7 +21,7 @@ pub async fn active_connections(
         let state = connection
             .state()
             .await
-            .unwrap_or_else(|_| ActiveConnectionState::Unknown);
+            .unwrap_or(ActiveConnectionState::Unknown);
 
         if connection.vpn().await.unwrap_or_default() {
             info.push(ActiveConnectionInfo::Vpn {

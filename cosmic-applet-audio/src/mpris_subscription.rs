@@ -27,10 +27,10 @@ pub struct PlayerStatus {
 impl PlayerStatus {
     async fn new(player: Player) -> Self {
         let metadata = player.metadata().await.unwrap();
-        let title = metadata.title().map(|t| Cow::from(t));
+        let title = metadata.title().map(Cow::from);
         let artists = metadata
             .artists()
-            .map(|a| a.into_iter().map(|a| Cow::from(a)).collect::<Vec<_>>());
+            .map(|a| a.into_iter().map(Cow::from).collect::<Vec<_>>());
         let icon = metadata
             .art_url()
             .and_then(|u| url::Url::parse(&u).ok())
@@ -53,7 +53,7 @@ impl PlayerStatus {
             icon,
             title,
             artists,
-            status: playback_status.unwrap_or_else(|_| PlaybackStatus::Stopped),
+            status: playback_status.unwrap_or(PlaybackStatus::Stopped),
             can_pause: can_pause.unwrap_or_default(),
             can_play: can_play.unwrap_or_default(),
             can_go_previous: can_go_previous.unwrap_or_default(),
@@ -109,33 +109,32 @@ async fn update(state: State, output: &mut futures::channel::mpsc::Sender<MprisU
                 .unwrap_or_else(|_| Vec::new());
             if players.is_empty() {
                 let Ok(dbus) = zbus::fdo::DBusProxy::builder(&conn)
-                    .path("/org/freedesktop/DBus").unwrap()
+                    .path("/org/freedesktop/DBus")
+                    .unwrap()
                     .build()
-                    .await else {
-                        tracing::error!("Failed to create dbus proxy.");
-                        return State::Finished;
-                    };
-                loop {
-                    let Ok(mut stream) = dbus.receive_name_owner_changed().await else {
-                        tracing::error!("Failed to receive name owner changed signal.");
-                        tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
-                        // restart from the beginning
-                        return State::Setup;
-                    };
-                    while let Some(c) = stream.next().await {
-                        if let Ok(args) = c.args() {
-                            if args.name.contains("org.mpris.MediaPlayer2") {
-                                break;
-                            }
+                    .await
+                else {
+                    tracing::error!("Failed to create dbus proxy.");
+                    return State::Finished;
+                };
+                let Ok(mut stream) = dbus.receive_name_owner_changed().await else {
+                    tracing::error!("Failed to receive name owner changed signal.");
+                    tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+                    // restart from the beginning
+                    return State::Setup;
+                };
+                while let Some(c) = stream.next().await {
+                    if let Ok(args) = c.args() {
+                        if args.name.contains("org.mpris.MediaPlayer2") {
+                            break;
                         }
                     }
-                    if let Ok(p) = mpris2_zbus::media_player::MediaPlayer::new_all(&conn).await {
-                        players = p;
-                        break;
-                    } else {
-                        // restart from the beginning
-                        return State::Setup;
-                    }
+                }
+                if let Ok(p) = mpris2_zbus::media_player::MediaPlayer::new_all(&conn).await {
+                    players = p;
+                } else {
+                    // restart from the beginning
+                    return State::Setup;
                 }
             }
 

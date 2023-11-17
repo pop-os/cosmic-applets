@@ -71,23 +71,22 @@ pub fn main() -> iced::Result {
         path.push(&filename);
         if let Ok(bytes) = fs::read_to_string(&path) {
             if let Ok(entry) = DesktopEntry::decode(&path, &bytes) {
-                desktop = Some(Desktop {
-                    name: entry
-                        .name(None)
-                        .map(|x| x.to_string())
-                        .expect(&format!("Desktop file '{filename}' doesn't have `Name`")),
-                    icon: entry.icon().map(|x| x.to_string()),
-                    exec: entry
-                        .exec()
-                        .map(|x| x.to_string())
-                        .expect(&format!("Desktop file '{filename}' doesn't have `Exec`")),
-                });
+                desktop =
+                    Some(Desktop {
+                        name: entry.name(None).map(|x| x.to_string()).unwrap_or_else(|| {
+                            panic!("Desktop file '{filename}' doesn't have `Name`")
+                        }),
+                        icon: entry.icon().map(|x| x.to_string()),
+                        exec: entry.exec().map(|x| x.to_string()).unwrap_or_else(|| {
+                            panic!("Desktop file '{filename}' doesn't have `Exec`")
+                        }),
+                    });
                 break;
             }
         }
     }
-    let desktop = desktop.expect(&format!(
-        "Failed to find valid desktop file '{filename}' in search paths"
-    ));
+    let desktop = desktop.unwrap_or_else(|| {
+        panic!("Failed to find valid desktop file '{filename}' in search paths")
+    });
     cosmic::applet::run::<Button>(true, desktop)
 }

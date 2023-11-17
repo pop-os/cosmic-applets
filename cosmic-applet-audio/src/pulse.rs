@@ -159,7 +159,7 @@ impl PulseHandle {
     // Create pulse server thread, and bidirectional comms
     pub fn new() -> Self {
         let (to_pulse, mut to_pulse_recv) = tokio::sync::mpsc::channel(10);
-        let (mut from_pulse_send, from_pulse) = tokio::sync::mpsc::channel(10);
+        let (from_pulse_send, from_pulse) = tokio::sync::mpsc::channel(10);
         // get initial connection status
         to_pulse
             .try_send(Message::UpdateConnection)
@@ -195,7 +195,7 @@ impl PulseHandle {
                                         .send(Message::SetDefaultSink(sink))
                                         .await
                                         .unwrap(),
-                                    Err(_) => Self::send_disconnected(&mut from_pulse_send).await,
+                                    Err(_) => Self::send_disconnected(&from_pulse_send).await,
                                 }
                             }
                             Message::GetDefaultSource => {
@@ -210,7 +210,7 @@ impl PulseHandle {
                                         .unwrap(),
                                     Err(e) => {
                                         tracing::error!("ERROR! {:?}", e);
-                                        Self::send_disconnected(&mut from_pulse_send).await;
+                                        Self::send_disconnected(&from_pulse_send).await;
                                     }
                                 }
                             }
@@ -224,7 +224,7 @@ impl PulseHandle {
                                         .send(Message::SetSinks(sinks))
                                         .await
                                         .unwrap(),
-                                    Err(_) => Self::send_disconnected(&mut from_pulse_send).await,
+                                    Err(_) => Self::send_disconnected(&from_pulse_send).await,
                                 }
                             }
                             Message::GetSources => {
@@ -237,7 +237,7 @@ impl PulseHandle {
                                         .send(Message::SetSources(sinks))
                                         .await
                                         .unwrap(),
-                                    Err(_) => Self::send_disconnected(&mut from_pulse_send).await,
+                                    Err(_) => Self::send_disconnected(&from_pulse_send).await,
                                 }
                             }
                             Message::SetSinkVolumeByName(name, channel_volumes) => {
@@ -263,7 +263,7 @@ impl PulseHandle {
                                     tracing::trace!("getting server info...");
                                     if cur_server.get_server_info().is_err() {
                                         tracing::warn!("got error, server must be disconnected...");
-                                        Self::send_disconnected(&mut from_pulse_send).await;
+                                        Self::send_disconnected(&from_pulse_send).await;
                                     } else {
                                         tracing::trace!("got server info, still connected...");
                                         server = Some(cur_server);
@@ -272,7 +272,7 @@ impl PulseHandle {
                                     match PulseServer::connect().and_then(|server| server.init()) {
                                         Ok(new_server) => {
                                             tracing::info!("Connected to server");
-                                            Self::send_connected(&mut from_pulse_send).await;
+                                            Self::send_connected(&from_pulse_send).await;
                                             server = Some(new_server);
                                         }
                                         Err(err) => {

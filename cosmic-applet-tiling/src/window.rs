@@ -16,7 +16,7 @@ use std::time::Instant;
 use tracing::error;
 
 const ID: &str = "com.system76.CosmicAppletTiling";
-const ON: &str = "com.system76.CosmicAppletTiling.On";
+//const ON: &str = "com.system76.CosmicAppletTiling.On";
 const OFF: &str = "com.system76.CosmicAppletTiling.Off";
 
 static TILE_WINDOWS: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);

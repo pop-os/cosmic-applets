@@ -1,0 +1,29 @@
+name: Continuous Integration
+
+on: [push, pull_request]
+
+jobs:
+  formatting:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt
+      - name: Run rustfmt
+        run: cargo +nightly fmt --all -- --check
+
+  linting:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2023-11-18
+          components: clippy
+      - name: install dependencies
+        run: sudo apt install -y libxkbcommon-dev libwayland-dev libdbus-1-dev libpulse-dev
+      - uses: actions-rs-plus/clippy-check@v2
+        with:
+          toolchain: nightly-2023-11-18
+          args: --all --all-targets --all-features
