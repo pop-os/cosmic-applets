@@ -8,7 +8,7 @@ use std::{
     os::unix::io::{FromRawFd, RawFd},
 };
 
-use tracing::{error, info};
+use tracing::{error, trace};
 use zbus::{
     dbus_proxy,
     export::futures_util::{SinkExt, StreamExt},
@@ -18,7 +18,7 @@ use zbus::{
 #[derive(Debug)]
 pub enum State {
     Ready,
-    WaitingForNotificationEvent(NotificationsAppletProxy<'static>),
+    WaitingForNotificationEvent(NotificationsAppletProxy<'static>, u8),
     Finished,
 }
 
@@ -35,15 +35,15 @@ pub fn notifications() -> Subscription<Notification> {
                 match &mut state {
                     State::Ready => {
                         state = match get_proxy().await {
-                            Ok(p) => State::WaitingForNotificationEvent(p),
+                            Ok(p) => State::WaitingForNotificationEvent(p, 0),
                             Err(err) => {
                                 error!("Failed to connect to notifications daemon {}", err);
                                 State::Finished
                             }
                         };
                     }
-                    State::WaitingForNotificationEvent(proxy) => {
-                        info!("Waiting for notification events...");
+                    State::WaitingForNotificationEvent(proxy, mut fail_count) => {
+                        trace!("Waiting for notification events...");
                         let mut signal = match proxy.receive_notify().await {
                             Ok(s) => s,
                             Err(err) => {
@@ -51,13 +51,18 @@ pub fn notifications() -> Subscription<Notification> {
                                     "failed to get a stream of signals for notifications. {}",
                                     err
                                 );
+                                fail_count = fail_count.saturating_add(1);
+                                if fail_count > 5 {
+                                    error!("Failed to receive notification events");
+                                    state = State::Finished;
+                                } else {
+                                    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                                };
                                 continue;
                             }
                         };
                         while let Some(msg) = signal.next().await {
-                            info!("Notification event");
                             let Some(args) = msg.args().into_iter().next() else {
-                                error!("Failed to get arguments from notification signal.");
                                 break;
                             };
                             let notification = Notification::new(
@@ -110,7 +115,7 @@ async fn get_proxy() -> anyhow::Result<NotificationsAppletProxy<'static>> {
     stream.set_nonblocking(true)?;
     let stream = tokio::net::UnixStream::from_std(stream)?;
     let conn = ConnectionBuilder::socket(stream).p2p().build().await?;
-    info!("Applet connection created");
+    trace!("Applet connection created");
     let proxy = NotificationsAppletProxy::new(&conn).await?;
 
     Ok(proxy)
