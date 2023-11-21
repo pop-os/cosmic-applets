@@ -1,4 +1,9 @@
 use crate::bluetooth::{BluerDeviceStatus, BluerRequest, BluerState};
+use cosmic::applet::token::subscription::{
+    activation_token_subscription, TokenRequest, TokenUpdate,
+};
+use cosmic::cctk::sctk::reexports::calloop;
+
 use cosmic::applet::{menu_button, padded_control};
 use cosmic::Command;
 use cosmic::{
@@ -39,6 +44,7 @@ struct CosmicBluetoothApplet {
     // UI state
     show_visible_devices: bool,
     request_confirmation: Option<(BluerDevice, String, Sender<bool>)>,
+    token_tx: Option<calloop::channel::Sender<TokenRequest>>,
 }
 
 impl CosmicBluetoothApplet {
@@ -62,6 +68,8 @@ enum Message {
     Request(BluerRequest),
     Cancel,
     Confirm,
+    Token(TokenUpdate),
+    OpenSettings,
 }
 
 impl cosmic::Application for CosmicBluetoothApplet {
@@ -78,6 +86,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
             Self {
                 core,
                 icon_name: "bluetooth-symbolic".to_string(),
+                token_tx: None,
                 ..Default::default()
             },
             Command::none(),
@@ -284,6 +293,32 @@ impl cosmic::Application for CosmicBluetoothApplet {
                     self.popup = None;
                 }
             }
+            Message::OpenSettings => {
+                let exec = "cosmic-settings bluetooth".to_string();
+                if let Some(tx) = self.token_tx.as_ref() {
+                    let _ = tx.send(TokenRequest {
+                        app_id: Self::APP_ID.to_string(),
+                        exec,
+                    });
+                };
+            }
+            Message::Token(u) => match u {
+                TokenUpdate::Init(tx) => {
+                    self.token_tx = Some(tx);
+                }
+                TokenUpdate::Finished => {
+                    self.token_tx = None;
+                }
+                TokenUpdate::ActivationToken { token, .. } => {
+                    let mut cmd = std::process::Command::new("cosmic-settings");
+                    cmd.arg("bluetooth");
+                    if let Some(token) = token {
+                        cmd.env("XDG_ACTIVATION_TOKEN", &token);
+                        cmd.env("DESKTOP_STARTUP_ID", &token);
+                    }
+                    cosmic::process::spawn(cmd);
+                }
+            },
         }
         self.update_icon();
         Command::none()
@@ -492,13 +527,16 @@ impl cosmic::Application for CosmicBluetoothApplet {
         content = content.push(padded_control(divider::horizontal::default()));
         content = content.push(
             menu_button(text(fl!("settings")).size(14).width(Length::Fill))
-                .on_press(Message::Ignore),
+                .on_press(Message::OpenSettings),
         );
         self.core.applet.popup_container(content).into()
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        bluetooth_subscription(0).map(Message::BluetoothEvent)
+        Subscription::batch(vec![
+            activation_token_subscription(0).map(Message::Token),
+            bluetooth_subscription(0).map(Message::BluetoothEvent),
+        ])
     }
 
     fn style(&self) -> Option<<Theme as application::StyleSheet>::Style> {
