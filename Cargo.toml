@@ -29,11 +29,13 @@ cosmic-time = { git = "https://github.com/pop-os/cosmic-time", default-features 
 ] }
 libcosmic = { git = "https://github.com/pop-os/libcosmic", default-features = false, features = [
     "applet",
+    "applet-token",
     "tokio",
     "wayland",
+    "process",
 ] }
 zbus = { version = "3.14", default-features = false, features = ["tokio"] }
-
+tracing = "0.1"
 
 [profile.release]
 lto = "thin"
