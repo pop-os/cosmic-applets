@@ -1,5 +1,9 @@
 use cosmic::app::Command;
+use cosmic::applet::token::subscription::{
+    activation_token_subscription, TokenRequest, TokenUpdate,
+};
 use cosmic::applet::{menu_button, menu_control_padding, padded_control};
+use cosmic::cctk::sctk::reexports::calloop;
 use cosmic::iced_widget::Row;
 use cosmic::{
     iced::{
@@ -93,6 +97,7 @@ struct CosmicNetworkApplet {
     conn: Option<Connection>,
     timeline: Timeline,
     toggle_wifi_ctr: u128,
+    token_tx: Option<calloop::channel::Sender<TokenRequest>>,
 }
 
 fn wifi_icon(strength: u8) -> &'static str {
@@ -181,6 +186,8 @@ pub(crate) enum Message {
     Password(String),
     SubmitPassword,
     Frame(Instant),
+    Token(TokenUpdate),
+    OpenSettings,
     // Errored(String),
 }
 
@@ -195,6 +202,7 @@ impl cosmic::Application for CosmicNetworkApplet {
             Self {
                 core,
                 icon_name: "network-offline-symbolic".to_string(),
+                token_tx: None,
                 ..Default::default()
             },
             Command::none(),
@@ -392,6 +400,32 @@ impl cosmic::Application for CosmicNetworkApplet {
                     self.popup = None;
                 }
             }
+            Message::OpenSettings => {
+                let exec = "cosmic-settings network".to_string();
+                if let Some(tx) = self.token_tx.as_ref() {
+                    let _ = tx.send(TokenRequest {
+                        app_id: Self::APP_ID.to_string(),
+                        exec,
+                    });
+                }
+            }
+            Message::Token(u) => match u {
+                TokenUpdate::Init(tx) => {
+                    self.token_tx = Some(tx);
+                }
+                TokenUpdate::Finished => {
+                    self.token_tx = None;
+                }
+                TokenUpdate::ActivationToken { token, .. } => {
+                    let mut cmd = std::process::Command::new("cosmic-settings");
+                    cmd.arg("network");
+                    if let Some(token) = token {
+                        cmd.env("XDG_ACTIVATION_TOKEN", &token);
+                        cmd.env("DESKTOP_STARTUP_ID", &token);
+                    }
+                    cosmic::process::spawn(cmd);
+                }
+            },
         }
         Command::none()
     }
@@ -772,7 +806,8 @@ impl cosmic::Application for CosmicNetworkApplet {
             }
         }
         content = content.push(padded_control(divider::horizontal::default()));
-        content = content.push(menu_button(text(fl!("settings")).size(14)));
+        content = content
+            .push(menu_button(text(fl!("settings")).size(14)).on_press(Message::OpenSettings));
         self.core
             .applet
             .popup_container(content.padding([8, 0, 8, 0]))
@@ -785,12 +820,14 @@ impl cosmic::Application for CosmicNetworkApplet {
             .timeline
             .as_subscription()
             .map(|(_, now)| Message::Frame(now));
+        let token_sub = activation_token_subscription(0).map(Message::Token);
 
         if let Some(conn) = self.conn.as_ref() {
             let has_popup = self.popup.is_some();
             Subscription::batch(vec![
                 timeline,
                 network_sub,
+                token_sub,
                 active_conns_subscription(self.toggle_wifi_ctr, conn.clone())
                     .map(Message::NetworkManagerEvent),
                 devices_subscription(self.toggle_wifi_ctr, has_popup, conn.clone())
@@ -799,7 +836,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                     .map(Message::NetworkManagerEvent),
             ])
         } else {
-            Subscription::batch(vec![timeline, network_sub])
+            Subscription::batch(vec![timeline, network_sub, token_sub])
         }
     }
 
