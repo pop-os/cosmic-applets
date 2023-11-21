@@ -10,7 +10,11 @@ use crate::upower_device::{device_subscription, DeviceDbusEvent};
 use crate::upower_kbdbacklight::{
     kbd_backlight_subscription, KeyboardBacklightRequest, KeyboardBacklightUpdate,
 };
+use cosmic::applet::token::subscription::{
+    activation_token_subscription, TokenRequest, TokenUpdate,
+};
 use cosmic::applet::{menu_button, padded_control};
+use cosmic::cctk::sctk::reexports::calloop;
 use cosmic::iced::alignment::Horizontal;
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced::{
@@ -68,6 +72,7 @@ struct CosmicBatteryApplet {
     power_profile: Power,
     power_profile_sender: Option<UnboundedSender<PowerProfileRequest>>,
     timeline: Timeline,
+    token_tx: Option<calloop::channel::Sender<TokenRequest>>,
 }
 
 impl CosmicBatteryApplet {
@@ -138,7 +143,6 @@ enum Message {
     SetChargingLimit(chain::Toggler, bool),
     UpdateKbdBrightness(f64),
     UpdateScreenBrightness(f64),
-    OpenBatterySettings,
     InitKbdBacklight(UnboundedSender<KeyboardBacklightRequest>, f64),
     InitScreenBacklight(UnboundedSender<ScreenBacklightRequest>, f64),
     Errored(String),
@@ -146,6 +150,8 @@ enum Message {
     Profile(Power),
     SelectProfile(Power),
     Frame(Instant),
+    Token(TokenUpdate),
+    OpenSettings,
 }
 
 impl cosmic::Application for CosmicBatteryApplet {
@@ -166,6 +172,8 @@ impl cosmic::Application for CosmicBatteryApplet {
                 core,
                 icon_name: "battery-symbolic".to_string(),
                 display_icon_name: "display-brightness-symbolic".to_string(),
+                token_tx: None,
+
                 ..Default::default()
             },
             Command::none(),
@@ -201,9 +209,6 @@ impl cosmic::Application for CosmicBatteryApplet {
             Message::SetChargingLimit(chain, enable) => {
                 self.timeline.set_chain(chain).start();
                 self.set_charging_limit(enable);
-            }
-            Message::OpenBatterySettings => {
-                // TODO Ashley
             }
             Message::Errored(e) => {
                 error!("{}", e);
@@ -288,6 +293,34 @@ impl cosmic::Application for CosmicBatteryApplet {
                     self.popup = None;
                 }
             }
+            Message::OpenSettings => {
+                let exec = "cosmic-settings power".to_string();
+                if let Some(tx) = self.token_tx.as_ref() {
+                    let _ = tx.send(TokenRequest {
+                        app_id: Self::APP_ID.to_string(),
+                        exec,
+                    });
+                } else {
+                    tracing::error!("Wayland tx is None");
+                };
+            }
+            Message::Token(u) => match u {
+                TokenUpdate::Init(tx) => {
+                    self.token_tx = Some(tx);
+                }
+                TokenUpdate::Finished => {
+                    self.token_tx = None;
+                }
+                TokenUpdate::ActivationToken { token, .. } => {
+                    let mut cmd = std::process::Command::new("cosmic-settings");
+                    cmd.arg("power");
+                    if let Some(token) = token {
+                        cmd.env("XDG_ACTIVATION_TOKEN", &token);
+                        cmd.env("DESKTOP_STARTUP_ID", &token);
+                    }
+                    cosmic::process::spawn(cmd);
+                }
+            },
         }
         Command::none()
     }
@@ -436,7 +469,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                     ),
                     padded_control(divider::horizontal::default()),
                     menu_button(text(fl!("power-settings")).size(14).width(Length::Fill))
-                        .on_press(Message::OpenBatterySettings)
+                        .on_press(Message::OpenSettings)
                 ]
                 .padding([8, 0]),
             )
@@ -472,6 +505,7 @@ impl cosmic::Application for CosmicBatteryApplet {
             self.timeline
                 .as_subscription()
                 .map(|(_, now)| Message::Frame(now)),
+            activation_token_subscription(0).map(Message::Token),
         ])
     }
 
