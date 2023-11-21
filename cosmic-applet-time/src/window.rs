@@ -1,4 +1,5 @@
 use cosmic::applet::{menu_button, padded_control};
+use cosmic::cctk::sctk::reexports::calloop;
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced::{
     time,
@@ -19,6 +20,9 @@ use std::time::Duration;
 
 use crate::fl;
 use crate::time::get_calender_first;
+use cosmic::applet::token::subscription::{
+    activation_token_subscription, TokenRequest, TokenUpdate,
+};
 
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
@@ -35,6 +39,7 @@ pub struct Window {
     now: DateTime<Local>,
     rectangle_tracker: Option<RectangleTracker<u32>>,
     rectangle: Rectangle,
+    token_tx: Option<calloop::channel::Sender<TokenRequest>>,
 }
 
 #[derive(Debug, Clone)]
@@ -47,6 +52,7 @@ pub enum Message {
     PreviousMonth,
     NextMonth,
     OpenDateTimeSettings,
+    Token(TokenUpdate),
 }
 
 impl cosmic::Application for Window {
@@ -68,6 +74,7 @@ impl cosmic::Application for Window {
                 now: Local::now(),
                 rectangle_tracker: None,
                 rectangle: Rectangle::default(),
+                token_tx: None,
             },
             Command::none(),
         )
@@ -106,6 +113,7 @@ impl cosmic::Application for Window {
                 wait.try_into().unwrap_or(FALLBACK_DELAY),
             ))
             .map(|_| Message::Tick),
+            activation_token_subscription(0).map(Message::Token),
         ])
     }
 
@@ -178,7 +186,35 @@ impl cosmic::Application for Window {
                 Command::none()
             }
             Message::OpenDateTimeSettings => {
-                // TODO
+                let exec = "cosmic-settings time".to_string();
+                if let Some(tx) = self.token_tx.as_ref() {
+                    let _ = tx.send(TokenRequest {
+                        app_id: Self::APP_ID.to_string(),
+                        exec,
+                    });
+                } else {
+                    tracing::error!("Wayland tx is None");
+                };
+                Command::none()
+            }
+            Message::Token(u) => {
+                match u {
+                    TokenUpdate::Init(tx) => {
+                        self.token_tx = Some(tx);
+                    }
+                    TokenUpdate::Finished => {
+                        self.token_tx = None;
+                    }
+                    TokenUpdate::ActivationToken { token, .. } => {
+                        let mut cmd = std::process::Command::new("cosmic-settings");
+                        cmd.arg("time");
+                        if let Some(token) = token {
+                            cmd.env("XDG_ACTIVATION_TOKEN", &token);
+                            cmd.env("DESKTOP_STARTUP_ID", &token);
+                        }
+                        cosmic::process::spawn(cmd);
+                    }
+                }
                 Command::none()
             }
         }

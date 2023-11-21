@@ -9,3 +9,5 @@ Keywords=Cosmic;Iced;
 Icon=com.system76.CosmicAppletTime
 NoDisplay=true
 X-CosmicApplet=true
+X-HostWaylandDisplay=true
+
