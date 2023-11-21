@@ -1,34 +1,38 @@
 mod localize;
 
+use crate::localize::localize;
+use crate::pulse::DeviceInfo;
 use config::AudioAppletConfig;
 use cosmic::app::Command;
 use cosmic::applet::cosmic_panel_config::PanelAnchor;
 use cosmic::applet::menu_button;
 use cosmic::applet::menu_control_padding;
 use cosmic::applet::padded_control;
+use cosmic::applet::token::subscription::{
+    activation_token_subscription, TokenRequest, TokenUpdate,
+};
+use cosmic::cctk::sctk::reexports::calloop;
 use cosmic::cosmic_config::CosmicConfigEntry;
 use cosmic::iced::widget;
 use cosmic::iced::Limits;
+use cosmic::iced::{
+    self,
+    widget::{column, row, slider, text},
+    window, Alignment, Length, Subscription,
+};
 use cosmic::iced_runtime::core::alignment::Horizontal;
-
+use cosmic::iced_style::application;
 use cosmic::widget::button;
 use cosmic::widget::horizontal_space;
 use cosmic::widget::Column;
 use cosmic::widget::Row;
 use cosmic::widget::{divider, icon};
 use cosmic::Renderer;
-
-use cosmic::iced::{
-    self,
-    widget::{column, row, slider, text},
-    window, Alignment, Length, Subscription,
-};
-use cosmic::iced_style::application;
 use cosmic::{Element, Theme};
 use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
-
 use iced::wayland::popup::{destroy_popup, get_popup};
 use iced::widget::container;
+use libpulse_binding::volume::VolumeLinear;
 use mpris2_zbus::player::PlaybackStatus;
 use mpris_subscription::MprisRequest;
 use mpris_subscription::MprisUpdate;
@@ -36,10 +40,6 @@ use mpris_subscription::MprisUpdate;
 mod config;
 mod mpris_subscription;
 mod pulse;
-use crate::localize::localize;
-use crate::pulse::DeviceInfo;
-use libpulse_binding::volume::VolumeLinear;
-
 pub fn main() -> cosmic::iced::Result {
     pretty_env_logger::init();
 
@@ -67,6 +67,7 @@ struct Audio {
     timeline: Timeline,
     config: AudioAppletConfig,
     player_status: Option<mpris_subscription::PlayerStatus>,
+    token_tx: Option<calloop::channel::Sender<TokenRequest>>,
 }
 
 impl Audio {
@@ -144,6 +145,8 @@ enum Message {
     ConfigChanged(AudioAppletConfig),
     Mpris(mpris_subscription::MprisUpdate),
     MprisRequest(MprisRequest),
+    Token(TokenUpdate),
+    OpenSettings,
 }
 
 impl Audio {
@@ -272,6 +275,7 @@ impl cosmic::Application for Audio {
                 inputs: vec![],
                 icon_name: "audio-volume-high-symbolic".to_string(),
                 input_icon_name: "audio-input-microphone-symbolic".to_string(),
+                token_tx: None,
                 ..Default::default()
             },
             Command::none(),
@@ -513,6 +517,34 @@ impl cosmic::Application for Audio {
                     }),
                 };
             }
+            Message::OpenSettings => {
+                let exec = "cosmic-settings sound".to_string();
+                if let Some(tx) = self.token_tx.as_ref() {
+                    let _ = tx.send(TokenRequest {
+                        app_id: Self::APP_ID.to_string(),
+                        exec,
+                    });
+                } else {
+                    tracing::error!("Wayland tx is None");
+                };
+            }
+            Message::Token(u) => match u {
+                TokenUpdate::Init(tx) => {
+                    self.token_tx = Some(tx);
+                }
+                TokenUpdate::Finished => {
+                    self.token_tx = None;
+                }
+                TokenUpdate::ActivationToken { token, .. } => {
+                    let mut cmd = std::process::Command::new("cosmic-settings");
+                    cmd.arg("sound");
+                    if let Some(token) = token {
+                        cmd.env("XDG_ACTIVATION_TOKEN", &token);
+                        cmd.env("DESKTOP_STARTUP_ID", &token);
+                    }
+                    cosmic::process::spawn(cmd);
+                }
+            },
         };
 
         Command::none()
@@ -539,6 +571,7 @@ impl cosmic::Application for Audio {
                 }
             }),
             mpris_subscription::mpris_subscription(0).map(Message::Mpris),
+            activation_token_subscription(0).map(Message::Token),
         ])
     }
 
@@ -728,7 +761,7 @@ impl cosmic::Application for Audio {
             )
             .padding([0, 24]),
             padded_control(divider::horizontal::default()),
-            menu_button(text(fl!("sound-settings")).size(14))
+            menu_button(text(fl!("sound-settings")).size(14)).on_press(Message::OpenSettings)
         ]
         .align_items(Alignment::Start)
         .padding([8, 0]);
