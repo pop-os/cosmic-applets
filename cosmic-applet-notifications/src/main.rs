@@ -1,7 +1,10 @@
 mod localize;
 mod subscriptions;
-
+use cosmic::applet::token::subscription::{
+    activation_token_subscription, TokenRequest, TokenUpdate,
+};
 use cosmic::applet::{menu_button, menu_control_padding, padded_control};
+use cosmic::cctk::sctk::reexports::calloop;
 use cosmic::cosmic_config::{config_subscription, Config, CosmicConfigEntry};
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced::Limits;
@@ -23,7 +26,6 @@ use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::process;
 use tokio::sync::mpsc::Sender;
 use tracing::info;
 
@@ -52,6 +54,7 @@ struct Notifications {
     timeline: Timeline,
     dbus_sender: Option<Sender<subscriptions::dbus::Input>>,
     cards: Vec<(id::Cards, Vec<Notification>, bool, String, String, String)>,
+    token_tx: Option<calloop::channel::Sender<TokenRequest>>,
 }
 
 impl Notifications {
@@ -84,7 +87,6 @@ enum Message {
     TogglePopup,
     CloseRequested(window::Id),
     DoNotDisturb(chain::Toggler, bool),
-    Settings,
     Frame(Instant),
     NotificationEvent(Notification),
     Config(NotificationsConfig),
@@ -92,6 +94,8 @@ enum Message {
     Dismissed(u32),
     ClearAll(String),
     CardsToggled(String, bool),
+    Token(TokenUpdate),
+    OpenSettings,
 }
 
 impl cosmic::Application for Notifications {
@@ -167,6 +171,7 @@ impl cosmic::Application for Notifications {
                 .map(|(_, now)| Message::Frame(now)),
             subscriptions::dbus::proxy().map(Message::DbusEvent),
             subscriptions::notifications::notifications().map(Message::NotificationEvent),
+            activation_token_subscription(0).map(Message::Token),
         ])
     }
 
@@ -209,9 +214,6 @@ impl cosmic::Application for Notifications {
                         tracing::error!("{:?}", err);
                     }
                 }
-            }
-            Message::Settings => {
-                let _ = process::Command::new("cosmic-settings notifications").spawn();
             }
             Message::NotificationEvent(n) => {
                 if let Some(c) = self
@@ -311,6 +313,32 @@ impl cosmic::Application for Notifications {
                     self.popup = None;
                 }
             }
+            Message::OpenSettings => {
+                let exec = "cosmic-settings notifications".to_string();
+                if let Some(tx) = self.token_tx.as_ref() {
+                    let _ = tx.send(TokenRequest {
+                        app_id: Self::APP_ID.to_string(),
+                        exec,
+                    });
+                }
+            }
+            Message::Token(u) => match u {
+                TokenUpdate::Init(tx) => {
+                    self.token_tx = Some(tx);
+                }
+                TokenUpdate::Finished => {
+                    self.token_tx = None;
+                }
+                TokenUpdate::ActivationToken { token, .. } => {
+                    let mut cmd = std::process::Command::new("cosmic-settings");
+                    cmd.arg("notifications");
+                    if let Some(token) = token {
+                        cmd.env("XDG_ACTIVATION_TOKEN", &token);
+                        cmd.env("DESKTOP_STARTUP_ID", &token);
+                    }
+                    cosmic::process::spawn(cmd);
+                }
+            },
         };
         self.update_icon();
         Command::none()
@@ -335,8 +363,8 @@ impl cosmic::Application for Notifications {
         .text_size(14)
         .width(Length::Fill)]);
 
-        let settings =
-            menu_button(text(fl!("notification-settings")).size(14)).on_press(Message::Settings);
+        let settings = menu_button(text(fl!("notification-settings")).size(14))
+            .on_press(Message::OpenSettings);
 
         let notifications = if self.cards.is_empty() {
             row![container(
