@@ -1,0 +1,12 @@
+bluetooth = Bluetooth
+other-devices = Други Bluetooth уређаји
+settings = Bluetooth подешавања...
+connected = Конектован
+confirm-pin = Потврдите да се PIN поклапа са оним који је приказан на уређају {$deviceName}
+confirm = Потврди
+cancel = Поништи
+unsuccessful = Повезивање неуспешно
+check-device = Проверите да ли је уређај {$deviceName} укључен, у домету, и спреман за повезивање.
+try-again = Покушај поново
+discoverable = Видљив
+pairable = Повезив
