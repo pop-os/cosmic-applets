@@ -13,7 +13,7 @@ use cctk::wayland_client::protocol::wl_data_device_manager::DndAction;
 use cctk::wayland_client::protocol::wl_seat::WlSeat;
 use cosmic::cosmic_config::{self, Config, CosmicConfigEntry};
 use cosmic::iced;
-use cosmic::iced::subscription::events_with;
+use cosmic::iced::event::listen_with;
 use cosmic::iced::wayland::actions::data_device::DataFromMimeType;
 use cosmic::iced::wayland::actions::data_device::DndIcon;
 use cosmic::iced::wayland::popup::destroy_popup;
@@ -1095,7 +1095,7 @@ impl cosmic::Application for CosmicAppList {
     fn subscription(&self) -> Subscription<Message> {
         Subscription::batch(vec![
             wayland_subscription(self.subscription_ctr).map(Message::Wayland),
-            events_with(|e, _| match e {
+            listen_with(|e, _| match e {
                 cosmic::iced_runtime::core::Event::PlatformSpecific(
                     event::PlatformSpecific::Wayland(event::wayland::Event::Seat(e, seat)),
                 ) => match e {

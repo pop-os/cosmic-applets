@@ -1,5 +1,6 @@
 use cctk::sctk::reexports::{calloop::channel::SyncSender, client::backend::ObjectId};
 use cosmic::iced::alignment::{Horizontal, Vertical};
+use cosmic::iced::event;
 use cosmic::iced::mouse::{self, ScrollDelta};
 use cosmic::iced::widget::{button, column, container, row, text};
 use cosmic::iced::{subscription, Event::Mouse, Length, Subscription};
@@ -224,7 +225,7 @@ impl cosmic::Application for IcedWorkspacesApplet {
     fn subscription(&self) -> Subscription<Message> {
         Subscription::batch(vec![
             workspaces(0).map(Message::WorkspaceUpdate),
-            subscription::events_with(|e, _| match e {
+            event::listen_with(|e, _| match e {
                 Mouse(mouse::Event::WheelScrolled { delta }) => Some(Message::WheelScrolled(delta)),
                 _ => None,
             }),
