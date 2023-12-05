@@ -19,15 +19,18 @@ use cosmic::{
         window,
     },
     iced_style::application,
-    widget::{button, divider, icon, toggler},
+    widget::{button, divider, icon},
     Element, Theme,
 };
+use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
 use std::collections::HashMap;
 use std::time::Duration;
 use tokio::sync::mpsc::Sender;
 
 use crate::bluetooth::{bluetooth_subscription, BluerDevice, BluerEvent};
 use crate::{config, fl};
+
+static BLUETOOTH_ENABLED: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
 
 pub fn run() -> cosmic::iced::Result {
     cosmic::applet::run::<CosmicBluetoothApplet>(false, ())
@@ -45,6 +48,7 @@ struct CosmicBluetoothApplet {
     show_visible_devices: bool,
     request_confirmation: Option<(BluerDevice, String, Sender<bool>)>,
     token_tx: Option<calloop::channel::Sender<TokenRequest>>,
+    timeline: Timeline,
 }
 
 impl CosmicBluetoothApplet {
@@ -70,6 +74,8 @@ enum Message {
     Confirm,
     Token(TokenUpdate),
     OpenSettings,
+    Frame(Instant),
+    ToggleBluetooth(chain::Toggler, bool),
 }
 
 impl cosmic::Application for CosmicBluetoothApplet {
@@ -155,6 +161,16 @@ impl cosmic::Application for CosmicBluetoothApplet {
                     if let Some(err_msg) = err_msg {
                         eprintln!("bluetooth request error: {}", err_msg);
                     }
+                    if self.bluer_state.bluetooth_enabled != state.bluetooth_enabled {
+                        self.timeline
+                            .set_chain(if state.bluetooth_enabled {
+                                chain::Toggler::on(BLUETOOTH_ENABLED.clone(), 1.0)
+                            } else {
+                                chain::Toggler::off(BLUETOOTH_ENABLED.clone(), 1.0)
+                            })
+                            .start();
+                    }
+
                     self.bluer_state = state;
                     // TODO special handling for some requests
                     match req {
@@ -162,14 +178,11 @@ impl cosmic::Application for CosmicBluetoothApplet {
                             if self.popup.is_some() && self.bluer_sender.is_some() =>
                         {
                             let tx = self.bluer_sender.as_ref().cloned().unwrap();
-                            return iced::Command::perform(
-                                async move {
-                                    // sleep for a bit before requesting state update again
-                                    tokio::time::sleep(Duration::from_millis(3000)).await;
-                                    let _ = tx.send(BluerRequest::StateUpdate).await;
-                                },
-                                |_| cosmic::app::message::app(Message::Ignore),
-                            );
+                            tokio::spawn(async move {
+                                // sleep for a bit before requesting state update again
+                                tokio::time::sleep(Duration::from_millis(3000)).await;
+                                let _ = tx.send(BluerRequest::StateUpdate).await;
+                            });
                         }
                         _ => {}
                     };
@@ -223,9 +236,6 @@ impl cosmic::Application for CosmicBluetoothApplet {
                 match &r {
                     BluerRequest::SetBluetoothEnabled(enabled) => {
                         self.bluer_state.bluetooth_enabled = *enabled;
-                        if !*enabled {
-                            self.bluer_state = BluerState::default();
-                        }
                     }
                     BluerRequest::ConnectDevice(add) => {
                         if let Some(d) = self
@@ -260,32 +270,23 @@ impl cosmic::Application for CosmicBluetoothApplet {
                     _ => {} // TODO
                 }
                 if let Some(tx) = self.bluer_sender.as_mut().cloned() {
-                    return iced::Command::perform(
-                        async move {
-                            let _ = tx.send(r).await;
-                        },
-                        |_| cosmic::app::message::app(Message::Ignore), // Error handling
-                    );
+                    tokio::spawn(async move {
+                        let _ = tx.send(r).await;
+                    });
                 }
             }
             Message::Cancel => {
                 if let Some((_, _, tx)) = self.request_confirmation.take() {
-                    return iced::Command::perform(
-                        async move {
-                            let _ = tx.send(false).await;
-                        },
-                        |_| cosmic::app::message::app(Message::Ignore),
-                    );
+                    tokio::spawn(async move {
+                        let _ = tx.send(false).await;
+                    });
                 }
             }
             Message::Confirm => {
                 if let Some((_, _, tx)) = self.request_confirmation.take() {
-                    return iced::Command::perform(
-                        async move {
-                            let _ = tx.send(true).await;
-                        },
-                        |_| cosmic::app::message::app(Message::Ignore),
-                    );
+                    tokio::spawn(async move {
+                        let _ = tx.send(true).await;
+                    });
                 }
             }
             Message::CloseRequested(id) => {
@@ -319,6 +320,19 @@ impl cosmic::Application for CosmicBluetoothApplet {
                     cosmic::process::spawn(cmd);
                 }
             },
+            Message::Frame(instant) => self.timeline.now(instant),
+            Message::ToggleBluetooth(chain, enabled) => {
+                if self.bluer_state.bluetooth_enabled == enabled {
+                    return Command::none();
+                }
+                self.timeline.set_chain(chain).start();
+                self.bluer_state.bluetooth_enabled = enabled;
+                if let Some(tx) = self.bluer_sender.clone() {
+                    tokio::spawn(async move {
+                        let _ = tx.send(BluerRequest::SetBluetoothEnabled(enabled)).await;
+                    });
+                }
+            }
         }
         self.update_icon();
         Command::none()
@@ -391,9 +405,14 @@ impl cosmic::Application for CosmicBluetoothApplet {
 
         let mut content = column![
             column![padded_control(
-                toggler(fl!("bluetooth"), self.bluer_state.bluetooth_enabled, |m| {
-                    Message::Request(BluerRequest::SetBluetoothEnabled(m))
-                },)
+                anim!(
+                    //toggler
+                    BLUETOOTH_ENABLED,
+                    &self.timeline,
+                    fl!("bluetooth"),
+                    self.bluer_state.bluetooth_enabled,
+                    Message::ToggleBluetooth,
+                )
                 .text_size(14)
                 .width(Length::Fill)
             ),],
@@ -536,6 +555,9 @@ impl cosmic::Application for CosmicBluetoothApplet {
         Subscription::batch(vec![
             activation_token_subscription(0).map(Message::Token),
             bluetooth_subscription(0).map(Message::BluetoothEvent),
+            self.timeline
+                .as_subscription()
+                .map(|(_, now)| Message::Frame(now)),
         ])
     }
 

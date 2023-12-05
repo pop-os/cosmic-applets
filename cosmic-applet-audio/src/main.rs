@@ -758,6 +758,7 @@ impl cosmic::Application for Audio {
                     Message::ToggleMediaControlsInTopPanel,
                 )
                 .text_size(14)
+                .width(Length::Fill)
             )
             .padding([0, 24]),
             padded_control(divider::horizontal::default()),
