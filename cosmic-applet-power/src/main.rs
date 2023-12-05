@@ -6,8 +6,7 @@ use cosmic::applet::{menu_button, padded_control};
 use cosmic::iced;
 use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::event::wayland::{self, LayerEvent};
-use cosmic::iced::event::PlatformSpecific;
-use cosmic::iced::subscription::events_with;
+use cosmic::iced::event::{listen_with, PlatformSpecific};
 use cosmic::iced::time;
 use cosmic::iced::wayland::actions::layer_surface::SctkLayerSurfaceSettings;
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
@@ -110,7 +109,7 @@ impl cosmic::Application for Power {
 
     fn subscription(&self) -> Subscription<Message> {
         let mut subscriptions = Vec::with_capacity(2);
-        subscriptions.push(events_with(|e, _status| match e {
+        subscriptions.push(listen_with(|e, _status| match e {
             cosmic::iced::Event::PlatformSpecific(PlatformSpecific::Wayland(
                 wayland::Event::Layer(LayerEvent::Unfocused, ..),
             )) => Some(Message::Cancel),
