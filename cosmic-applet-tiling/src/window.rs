@@ -242,7 +242,8 @@ impl cosmic::Application for Window {
                 )
                 .text_size(14)
                 .width(Length::Fill),
-            )),
+            ))
+            .width(Length::Fill),
             padded_control(row!(
                 text(fl!("navigate-windows")).size(14).width(Length::Fill),
                 text(format!("{} + {}", fl!("super"), fl!("arrow-keys"))).size(14),

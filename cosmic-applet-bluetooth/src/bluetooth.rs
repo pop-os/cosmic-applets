@@ -471,8 +471,32 @@ impl BluerSessionState {
         };
         self_.process_requests(request_rx);
         self_.process_changes();
+        self_.listen_bluetooth_power_changes();
 
         Ok(self_)
+    }
+
+    fn listen_bluetooth_power_changes(&self) {
+        let tx = self.tx.clone();
+        let adapter_clone = self.adapter.clone();
+        let _handle: JoinHandle<anyhow::Result<()>> = spawn(async move {
+            let mut status = adapter_clone.is_powered().await.unwrap_or_default();
+            loop {
+                tokio::time::sleep(Duration::from_secs(5)).await;
+                let new_status = adapter_clone.is_powered().await.unwrap_or_default();
+                if new_status != status {
+                    status = new_status;
+                    let _ = tx
+                        .send(BluerSessionEvent::ChangesProcessed(BluerState {
+                            devices: build_device_list(&adapter_clone).await,
+                            bluetooth_enabled: status,
+                            discoverable: adapter_clone.is_discoverable().await.unwrap_or_default(),
+                            pairable: adapter_clone.is_pairable().await.unwrap_or_default(),
+                        }))
+                        .await;
+                }
+            }
+        });
     }
 
     // Note: For some reason, this doesn't actually seem to work so well. it seems unreliable...
@@ -482,7 +506,6 @@ impl BluerSessionState {
         let _monitor_devices: tokio::task::JoinHandle<Result<(), anyhow::Error>> =
             spawn(async move {
                 let mut change_stream = adapter_clone.discover_devices_with_changes().await?;
-
                 let mut devices_changed = false;
                 let mut milli_timeout = 10;
                 'outer: loop {
@@ -543,12 +566,6 @@ impl BluerSessionState {
                             let res = adapter_clone.set_powered(*enabled).await;
                             if let Err(e) = res {
                                 err_msg = Some(e.to_string());
-                            }
-                            if *enabled {
-                                let res = adapter_clone.set_discoverable(*enabled).await;
-                                if let Err(e) = res {
-                                    err_msg = Some(e.to_string());
-                                }
                             }
                         }
                         BluerRequest::PairDevice(address) => {

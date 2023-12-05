@@ -6,5 +6,5 @@ mod window;
 fn main() -> cosmic::iced::Result {
     localize::localize();
 
-    cosmic::applet::run::<Window>(true, ())
+    cosmic::applet::run::<Window>(false, ())
 }
