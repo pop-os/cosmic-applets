@@ -49,7 +49,6 @@ struct Notifications {
     config_helper: Option<Config>,
     icon_name: String,
     popup: Option<window::Id>,
-    id_ctr: u128,
     // notifications: Vec<Notification>,
     timeline: Timeline,
     dbus_sender: Option<Sender<subscriptions::dbus::Input>>,
@@ -187,12 +186,11 @@ impl cosmic::Application for Notifications {
                 if let Some(p) = self.popup.take() {
                     return destroy_popup(p);
                 } else {
-                    self.id_ctr += 1;
-                    let new_id = window::Id(self.id_ctr);
+                    let new_id = window::Id::unique();
                     self.popup.replace(new_id);
 
                     let mut popup_settings = self.core.applet.get_popup_settings(
-                        window::Id(0),
+                        window::Id::MAIN,
                         new_id,
                         None,
                         None,

@@ -34,7 +34,6 @@ struct App {
     menus: BTreeMap<usize, status_menu::State>,
     open_menu: Option<usize>,
     max_menu_id: usize,
-    max_popup_id: u128,
     popup: Option<window::Id>,
 }
 
@@ -45,14 +44,13 @@ impl App {
     }
 
     fn next_popup_id(&mut self) -> window::Id {
-        self.max_popup_id += 1;
-        window::Id(self.max_popup_id)
+        window::Id::unique()
     }
 
     fn resize_window(&self) -> Command<Msg> {
         let icon_size = self.core.applet.suggested_size().0 as u32 + APPLET_PADDING * 2;
         let n = self.menus.len() as u32;
-        resize_window(window::Id(0), 1.max(icon_size * n), icon_size)
+        resize_window(window::Id::MAIN, 1.max(icon_size * n), icon_size)
     }
 }
 
@@ -144,7 +142,7 @@ impl cosmic::Application for App {
                     if self.popup.is_none() {
                         let id = self.next_popup_id();
                         let popup_settings = self.core.applet.get_popup_settings(
-                            window::Id(0),
+                            window::Id::MAIN,
                             id,
                             None,
                             None,

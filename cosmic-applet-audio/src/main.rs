@@ -63,7 +63,6 @@ struct Audio {
     icon_name: String,
     input_icon_name: String,
     popup: Option<window::Id>,
-    id_ctr: u128,
     timeline: Timeline,
     config: AudioAppletConfig,
     player_status: Option<mpris_subscription::PlayerStatus>,
@@ -304,12 +303,11 @@ impl cosmic::Application for Audio {
                     if let Some(conn) = self.pulse_state.connection() {
                         conn.send(pulse::Message::UpdateConnection);
                     }
-                    self.id_ctr += 1;
-                    let new_id = window::Id(self.id_ctr);
+                    let new_id = window::Id::unique();
                     self.popup.replace(new_id);
 
                     let mut popup_settings = self.core.applet.get_popup_settings(
-                        window::Id(0),
+                        window::Id::MAIN,
                         new_id,
                         None,
                         None,

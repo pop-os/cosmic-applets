@@ -200,7 +200,6 @@ struct DndOffer {
 struct CosmicAppList {
     core: cosmic::app::Core,
     popup: Option<(window::Id, DockItem)>,
-    surface_id_ctr: u128,
     subscription_ctr: u32,
     item_ctr: u32,
     active_list: Vec<DockItem>,
@@ -424,12 +423,11 @@ impl cosmic::Application for CosmicAppList {
                         None => return Command::none(),
                     };
 
-                    self.surface_id_ctr += 1;
-                    let new_id = window::Id(self.surface_id_ctr);
+                    let new_id = window::Id::unique();
                     self.popup = Some((new_id, toplevel_group.clone()));
 
                     let mut popup_settings = self.core.applet.get_popup_settings(
-                        window::Id(0),
+                        window::Id::MAIN,
                         new_id,
                         None,
                         None,
@@ -539,8 +537,7 @@ impl cosmic::Application for CosmicAppList {
                         }
                     })
                 {
-                    self.surface_id_ctr += 1;
-                    let icon_id = window::Id(self.surface_id_ctr);
+                    let icon_id = window::Id::unique();
                     self.dnd_source = Some((icon_id, toplevel_group.clone(), DndAction::empty()));
                     return start_drag(
                         vec![MIME_TYPE.to_string()],
@@ -549,7 +546,7 @@ impl cosmic::Application for CosmicAppList {
                         } else {
                             DndAction::Copy
                         },
-                        window::Id(0),
+                        window::Id::MAIN,
                         Some(DndIcon::Custom(icon_id)),
                         Box::new(toplevel_group),
                     );

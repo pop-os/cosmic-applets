@@ -53,7 +53,6 @@ struct Power {
     core: cosmic::app::Core,
     icon_name: String,
     popup: Option<window::Id>,
-    id_ctr: u128,
     action_to_confirm: Option<(window::Id, PowerAction, u8)>,
 }
 
@@ -128,12 +127,11 @@ impl cosmic::Application for Power {
                 if let Some(p) = self.popup.take() {
                     destroy_popup(p)
                 } else {
-                    self.id_ctr += 1;
-                    let new_id = window::Id(self.id_ctr);
+                    let new_id = window::Id::unique();
                     self.popup.replace(new_id);
 
                     let mut popup_settings = self.core.applet.get_popup_settings(
-                        window::Id(0),
+                        window::Id::MAIN,
                         new_id,
                         None,
                         None,
@@ -152,8 +150,7 @@ impl cosmic::Application for Power {
                 Command::none()
             }
             Message::Action(action) => {
-                self.id_ctr += 1;
-                let id = window::Id(self.id_ctr);
+                let id = window::Id::unique();
                 self.action_to_confirm = Some((id, action, COUNTDOWN_LENGTH));
                 get_layer_surface(SctkLayerSurfaceSettings {
                     id,

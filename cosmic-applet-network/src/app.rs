@@ -88,7 +88,6 @@ struct CosmicNetworkApplet {
     core: cosmic::app::Core,
     icon_name: String,
     popup: Option<window::Id>,
-    id_ctr: u128,
     nm_state: NetworkManagerState,
     // UI state
     nm_sender: Option<UnboundedSender<NetworkManagerRequest>>,
@@ -226,12 +225,11 @@ impl cosmic::Application for CosmicNetworkApplet {
                     return destroy_popup(p);
                 } else {
                     // TODO request update of state maybe
-                    self.id_ctr += 1;
-                    let new_id = window::Id(self.id_ctr);
+                    let new_id = window::Id::unique();
                     self.popup.replace(new_id);
 
                     let mut popup_settings = self.core.applet.get_popup_settings(
-                        window::Id(0),
+                        window::Id::MAIN,
                         new_id,
                         None,
                         None,

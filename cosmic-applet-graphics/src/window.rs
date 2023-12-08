@@ -42,7 +42,6 @@ pub struct Window {
     core: cosmic::app::Core,
     popup: Option<window::Id>,
     graphics_mode: Option<GraphicsMode>,
-    id_ctr: u128,
     dbus: Option<(Connection, PowerDaemonProxy<'static>)>,
 }
 
@@ -113,8 +112,7 @@ impl cosmic::Application for Window {
                 if let Some(p) = self.popup.take() {
                     return destroy_popup(p);
                 } else {
-                    self.id_ctr += 1;
-                    let new_id = window::Id(self.id_ctr);
+                    let new_id = window::Id::unique();
                     self.popup.replace(new_id);
                     let mut commands = Vec::new();
                     if let Some((_, proxy)) = self.dbus.as_ref() {
@@ -124,7 +122,7 @@ impl cosmic::Application for Window {
                         ));
                     }
                     let popup_settings = self.core.applet.get_popup_settings(
-                        window::Id(0),
+                        window::Id::MAIN,
                         new_id,
                         None,
                         None,
