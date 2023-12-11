@@ -66,7 +66,6 @@ struct CosmicBatteryApplet {
     kbd_brightness: f64,
     screen_brightness: f64,
     popup: Option<window::Id>,
-    id_ctr: u128,
     screen_sender: Option<UnboundedSender<ScreenBacklightRequest>>,
     kbd_sender: Option<UnboundedSender<KeyboardBacklightRequest>>,
     power_profile: Power,
@@ -224,12 +223,11 @@ impl cosmic::Application for CosmicBatteryApplet {
                         let _ = tx.send(ScreenBacklightRequest::Get);
                     }
 
-                    self.id_ctr += 1;
-                    let new_id = window::Id(self.id_ctr);
+                    let new_id = window::Id::unique();
                     self.popup.replace(new_id);
 
                     let mut popup_settings = self.core.applet.get_popup_settings(
-                        window::Id(0),
+                        window::Id::MAIN,
                         new_id,
                         None,
                         None,

@@ -34,7 +34,6 @@ enum Every {
 pub struct Window {
     core: cosmic::app::Core,
     popup: Option<window::Id>,
-    id_ctr: u128,
     update_at: Every,
     now: DateTime<Local>,
     rectangle_tracker: Option<RectangleTracker<u32>>,
@@ -69,7 +68,6 @@ impl cosmic::Application for Window {
             Self {
                 core,
                 popup: None,
-                id_ctr: 0,
                 update_at: Every::Minute,
                 now: Local::now(),
                 rectangle_tracker: None,
@@ -126,12 +124,11 @@ impl cosmic::Application for Window {
                 if let Some(p) = self.popup.take() {
                     destroy_popup(p)
                 } else {
-                    self.id_ctr += 1;
-                    let new_id = window::Id(self.id_ctr);
+                    let new_id = window::Id::unique();
                     self.popup.replace(new_id);
 
                     let mut popup_settings = self.core.applet.get_popup_settings(
-                        window::Id(0),
+                        window::Id::MAIN,
                         new_id,
                         None,
                         None,

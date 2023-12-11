@@ -3,7 +3,7 @@ use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::event;
 use cosmic::iced::mouse::{self, ScrollDelta};
 use cosmic::iced::widget::{button, column, container, row, text};
-use cosmic::iced::{subscription, Event::Mouse, Length, Subscription};
+use cosmic::iced::{Event::Mouse, Length, Subscription};
 use cosmic::iced_core::Background;
 use cosmic::iced_style::application;
 use cosmic::{applet::cosmic_panel_config::PanelAnchor, font::FONT_BOLD, Command};

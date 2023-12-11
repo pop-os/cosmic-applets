@@ -41,7 +41,6 @@ struct CosmicBluetoothApplet {
     core: cosmic::app::Core,
     icon_name: String,
     popup: Option<window::Id>,
-    id_ctr: u128,
     bluer_state: BluerState,
     bluer_sender: Option<Sender<BluerRequest>>,
     // UI state
@@ -117,12 +116,11 @@ impl cosmic::Application for CosmicBluetoothApplet {
                     return destroy_popup(p);
                 } else {
                     // TODO request update of state maybe
-                    self.id_ctr += 1;
-                    let new_id = window::Id(self.id_ctr);
+                    let new_id = window::Id::unique();
                     self.popup.replace(new_id);
 
                     let mut popup_settings = self.core.applet.get_popup_settings(
-                        window::Id(0),
+                        window::Id::MAIN,
                         new_id,
                         None,
                         None,
