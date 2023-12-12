@@ -21,7 +21,9 @@ use cosmic::{
     widget::{button, divider, icon},
     Element, Theme,
 };
-use cosmic_dbus_networkmanager::interface::enums::{ActiveConnectionState, DeviceState};
+use cosmic_dbus_networkmanager::interface::enums::{
+    ActiveConnectionState, DeviceState, NmConnectivityState,
+};
 use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
 
 use futures::channel::mpsc::UnboundedSender;
@@ -306,6 +308,20 @@ impl cosmic::Application for CosmicNetworkApplet {
                             }
                         }
                     }
+
+                    if self.nm_state.connectivity != state.connectivity
+                        && !matches!(req, NetworkManagerRequest::Reload)
+                        && matches!(state.connectivity, NmConnectivityState::Portal)
+                    {
+                        // spawn browser
+                        if let Err(err) = std::process::Command::new("xdg-open")
+                            .arg("http://pop.system76.com")
+                            .spawn()
+                        {
+                            log::error!("Failed to open browser: {}", err);
+                        }
+                    }
+
                     self.update_nm_state(state);
                 }
             },

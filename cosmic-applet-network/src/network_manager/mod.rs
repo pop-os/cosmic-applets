@@ -11,8 +11,8 @@ use cosmic_dbus_networkmanager::{
     device::SpecificDevice,
     interface::{
         active_connection::ActiveConnectionProxy,
-        enums::DeviceType,
         enums::{self, ActiveConnectionState},
+        enums::{DeviceType, NmConnectivityState},
     },
     nm::NetworkManager,
     settings::{connection::Settings, NetworkManagerSettings},
@@ -512,19 +512,33 @@ pub enum NetworkManagerEvent {
     ActiveConns(NetworkManagerState),
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct NetworkManagerState {
     pub wireless_access_points: Vec<AccessPoint>,
     pub active_conns: Vec<ActiveConnectionInfo>,
     pub known_access_points: Vec<AccessPoint>,
     pub wifi_enabled: bool,
     pub airplane_mode: bool,
+    pub connectivity: NmConnectivityState,
+}
+
+impl Default for NetworkManagerState {
+    fn default() -> Self {
+        Self {
+            wireless_access_points: Vec::new(),
+            active_conns: Vec::new(),
+            known_access_points: Vec::new(),
+            wifi_enabled: false,
+            airplane_mode: false,
+            connectivity: NmConnectivityState::Unknown,
+        }
+    }
 }
 
 impl NetworkManagerState {
     pub async fn new(conn: &Connection) -> anyhow::Result<Self> {
         let network_manager = NetworkManager::new(conn).await?;
-        let mut _self = Self::default();
+        let mut self_ = Self::default();
         // airplane mode
         let airplaine_mode = Command::new("rfkill")
             .arg("list")
@@ -532,8 +546,8 @@ impl NetworkManagerState {
             .output()
             .await?;
         let airplane_mode = std::str::from_utf8(&airplaine_mode.stdout).unwrap_or_default();
-        _self.wifi_enabled = network_manager.wireless_enabled().await.unwrap_or_default();
-        _self.airplane_mode = airplane_mode.contains("Soft blocked: yes") && !_self.wifi_enabled;
+        self_.wifi_enabled = network_manager.wireless_enabled().await.unwrap_or_default();
+        self_.airplane_mode = airplane_mode.contains("Soft blocked: yes") && !self_.wifi_enabled;
 
         let s = NetworkManagerSettings::new(conn).await?;
         _ = s.load_connections(&[]).await;
@@ -595,10 +609,12 @@ impl NetworkManagerState {
             .cloned()
             .collect();
         wireless_access_points.sort_by(|a, b| b.strength.cmp(&a.strength));
-        _self.wireless_access_points = wireless_access_points;
-        _self.active_conns = active_conns;
-        _self.known_access_points = known_access_points;
-        Ok(_self)
+        self_.wireless_access_points = wireless_access_points;
+        self_.active_conns = active_conns;
+        self_.known_access_points = known_access_points;
+        self_.connectivity = network_manager.connectivity().await?;
+
+        Ok(self_)
     }
 
     #[allow(dead_code)]
