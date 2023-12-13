@@ -7,6 +7,8 @@ use cosmic::iced::{
     window, Alignment, Length, Rectangle, Subscription,
 };
 use cosmic::iced_core::alignment::{Horizontal, Vertical};
+use cosmic::iced_core::event::{wayland, PlatformSpecific};
+use cosmic::iced_futures::event::listen_with;
 use cosmic::iced_style::application;
 use cosmic::widget::{button, container, divider, grid, Button, Grid, Space};
 use cosmic::{app, applet::cosmic_panel_config::PanelAnchor, Command};
@@ -112,6 +114,16 @@ impl cosmic::Application for Window {
             ))
             .map(|_| Message::Tick),
             activation_token_subscription(0).map(Message::Token),
+            listen_with(|e, _| {
+                if let cosmic::iced::Event::PlatformSpecific(PlatformSpecific::Wayland(
+                    wayland::Event::Popup(wayland::PopupEvent::Done, _, id),
+                )) = e
+                {
+                    Some(Message::CloseRequested(id))
+                } else {
+                    None
+                }
+            }),
         ])
     }
 
@@ -319,10 +331,6 @@ impl cosmic::Application for Window {
             .applet
             .popup_container(container(content_list))
             .into()
-    }
-
-    fn on_close_requested(&self, id: window::Id) -> Option<Message> {
-        Some(Message::CloseRequested(id))
     }
 }
 

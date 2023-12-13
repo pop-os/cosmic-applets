@@ -20,6 +20,9 @@ use cosmic::iced::{
     widget::{column, row, slider, text},
     window, Alignment, Length, Subscription,
 };
+use cosmic::iced_core::event::wayland;
+use cosmic::iced_core::event::PlatformSpecific;
+use cosmic::iced_futures::event::listen_with;
 use cosmic::iced_runtime::core::alignment::Horizontal;
 use cosmic::iced_style::application;
 use cosmic::widget::button;
@@ -570,6 +573,16 @@ impl cosmic::Application for Audio {
             }),
             mpris_subscription::mpris_subscription(0).map(Message::Mpris),
             activation_token_subscription(0).map(Message::Token),
+            listen_with(|e, _| {
+                if let cosmic::iced::Event::PlatformSpecific(PlatformSpecific::Wayland(
+                    wayland::Event::Popup(wayland::PopupEvent::Done, _, id),
+                )) = e
+                {
+                    Some(Message::CloseRequested(id))
+                } else {
+                    None
+                }
+            }),
         ])
     }
 
@@ -766,10 +779,6 @@ impl cosmic::Application for Audio {
         .padding([8, 0]);
 
         self.core.applet.popup_container(container(content)).into()
-    }
-
-    fn on_close_requested(&self, id: window::Id) -> Option<Message> {
-        Some(Message::CloseRequested(id))
     }
 }
 

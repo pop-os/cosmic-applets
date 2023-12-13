@@ -5,7 +5,9 @@ use cosmic::cosmic_config::{ConfigGet, ConfigSet};
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced::window::Id;
 use cosmic::iced::{Command, Length, Limits, Subscription};
+use cosmic::iced_core::event::{wayland, PlatformSpecific};
 use cosmic::iced_core::Alignment;
+use cosmic::iced_futures::event::listen_with;
 use cosmic::iced_style::application;
 use cosmic::iced_widget::{column, row};
 use cosmic::widget::{container, divider, spin_button, text};
@@ -76,16 +78,24 @@ impl cosmic::Application for Window {
         (window, Command::none())
     }
 
-    fn on_close_requested(&self, id: Id) -> Option<Message> {
-        Some(Message::PopupClosed(id))
-    }
-
     fn subscription(&self) -> Subscription<Self::Message> {
         let timeline = self
             .timeline
             .as_subscription()
             .map(|(_, now)| Message::Frame(now));
-        Subscription::batch(vec![timeline])
+        Subscription::batch(vec![
+            timeline,
+            listen_with(|e, _| {
+                if let cosmic::iced::Event::PlatformSpecific(PlatformSpecific::Wayland(
+                    wayland::Event::Popup(wayland::PopupEvent::Done, _, id),
+                )) = e
+                {
+                    Some(Message::PopupClosed(id))
+                } else {
+                    None
+                }
+            }),
+        ])
     }
 
     fn update(&mut self, message: Self::Message) -> Command<cosmic::app::Message<Self::Message>> {

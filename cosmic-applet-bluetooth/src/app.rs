@@ -5,6 +5,8 @@ use cosmic::applet::token::subscription::{
 use cosmic::cctk::sctk::reexports::calloop;
 
 use cosmic::applet::{menu_button, padded_control};
+use cosmic::iced_core::event::{wayland, PlatformSpecific};
+use cosmic::iced_futures::event::listen_with;
 use cosmic::Command;
 use cosmic::{
     iced::{
@@ -556,14 +558,20 @@ impl cosmic::Application for CosmicBluetoothApplet {
             self.timeline
                 .as_subscription()
                 .map(|(_, now)| Message::Frame(now)),
+            listen_with(|e, _| {
+                if let cosmic::iced::Event::PlatformSpecific(PlatformSpecific::Wayland(
+                    wayland::Event::Popup(wayland::PopupEvent::Done, _, id),
+                )) = e
+                {
+                    Some(Message::CloseRequested(id))
+                } else {
+                    None
+                }
+            }),
         ])
     }
 
     fn style(&self) -> Option<<Theme as application::StyleSheet>::Style> {
         Some(cosmic::applet::style())
-    }
-
-    fn on_close_requested(&self, id: window::Id) -> Option<Message> {
-        Some(Message::CloseRequested(id))
     }
 }

@@ -15,6 +15,8 @@ use cosmic::iced::{
 use cosmic::iced_core::alignment::Horizontal;
 use cosmic::Command;
 
+use cosmic::iced_core::event::{wayland, PlatformSpecific};
+use cosmic::iced_futures::event::listen_with;
 use cosmic::iced_style::application;
 
 use cosmic::iced_widget::{scrollable, Column};
@@ -171,6 +173,16 @@ impl cosmic::Application for Notifications {
             subscriptions::dbus::proxy().map(Message::DbusEvent),
             subscriptions::notifications::notifications().map(Message::NotificationEvent),
             activation_token_subscription(0).map(Message::Token),
+            listen_with(|e, _| {
+                if let cosmic::iced::Event::PlatformSpecific(PlatformSpecific::Wayland(
+                    wayland::Event::Popup(wayland::PopupEvent::Done, _, id),
+                )) = e
+                {
+                    Some(Message::CloseRequested(id))
+                } else {
+                    None
+                }
+            }),
         ])
     }
 
@@ -526,10 +538,6 @@ impl cosmic::Application for Notifications {
             .padding([8, 0]);
 
         self.core.applet.popup_container(content).into()
-    }
-
-    fn on_close_requested(&self, id: window::Id) -> Option<Message> {
-        Some(Message::CloseRequested(id))
     }
 }
 

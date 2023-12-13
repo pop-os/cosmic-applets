@@ -4,6 +4,8 @@ use cosmic::applet::token::subscription::{
 };
 use cosmic::applet::{menu_button, menu_control_padding, padded_control};
 use cosmic::cctk::sctk::reexports::calloop;
+use cosmic::iced_core::event::{wayland, PlatformSpecific};
+use cosmic::iced_futures::event::listen_with;
 use cosmic::iced_widget::Row;
 use cosmic::{
     iced::{
@@ -819,13 +821,23 @@ impl cosmic::Application for CosmicNetworkApplet {
             .as_subscription()
             .map(|(_, now)| Message::Frame(now));
         let token_sub = activation_token_subscription(0).map(Message::Token);
-
+        let close_sub = listen_with(|e, _| {
+            if let cosmic::iced::Event::PlatformSpecific(PlatformSpecific::Wayland(
+                wayland::Event::Popup(wayland::PopupEvent::Done, _, id),
+            )) = e
+            {
+                Some(Message::CloseRequested(id))
+            } else {
+                None
+            }
+        });
         if let Some(conn) = self.conn.as_ref() {
             let has_popup = self.popup.is_some();
             Subscription::batch(vec![
                 timeline,
                 network_sub,
                 token_sub,
+                close_sub,
                 active_conns_subscription(self.toggle_wifi_ctr, conn.clone())
                     .map(Message::NetworkManagerEvent),
                 devices_subscription(self.toggle_wifi_ctr, has_popup, conn.clone())
@@ -834,15 +846,11 @@ impl cosmic::Application for CosmicNetworkApplet {
                     .map(Message::NetworkManagerEvent),
             ])
         } else {
-            Subscription::batch(vec![timeline, network_sub, token_sub])
+            Subscription::batch(vec![timeline, network_sub, token_sub, close_sub])
         }
     }
 
     fn style(&self) -> Option<<Theme as application::StyleSheet>::Style> {
         Some(cosmic::applet::style())
-    }
-
-    fn on_close_requested(&self, id: window::Id) -> Option<Message> {
-        Some(Message::CloseRequested(id))
     }
 }

@@ -102,16 +102,15 @@ impl cosmic::Application for Power {
         )
     }
 
-    fn on_close_requested(&self, id: window::Id) -> Option<Message> {
-        Some(Message::Closed(id))
-    }
-
     fn subscription(&self) -> Subscription<Message> {
         let mut subscriptions = Vec::with_capacity(2);
         subscriptions.push(listen_with(|e, _status| match e {
             cosmic::iced::Event::PlatformSpecific(PlatformSpecific::Wayland(
                 wayland::Event::Layer(LayerEvent::Unfocused, ..),
             )) => Some(Message::Cancel),
+            cosmic::iced::Event::PlatformSpecific(PlatformSpecific::Wayland(
+                wayland::Event::Popup(wayland::PopupEvent::Done, _, id),
+            )) => Some(Message::Closed(id)),
             _ => None,
         }));
         if self.action_to_confirm.is_some() {

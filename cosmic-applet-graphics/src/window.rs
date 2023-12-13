@@ -327,10 +327,6 @@ impl cosmic::Application for Window {
     fn style(&self) -> Option<<Theme as application::StyleSheet>::Style> {
         Some(cosmic::applet::style())
     }
-
-    fn on_close_requested(&self, id: window::Id) -> Option<Message> {
-        Some(Message::PopupClosed(id))
-    }
 }
 
 fn button_icon<'a>(

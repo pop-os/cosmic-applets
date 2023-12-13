@@ -21,6 +21,8 @@ use cosmic::iced::{
     widget::{column, container, row, slider, text},
     window, Alignment, Length, Subscription,
 };
+use cosmic::iced_core::event::{wayland, PlatformSpecific};
+use cosmic::iced_futures::event::listen_with;
 use cosmic::iced_runtime::core::layout::Limits;
 use cosmic::iced_style::application;
 use cosmic::widget::{divider, horizontal_space, icon};
@@ -504,11 +506,17 @@ impl cosmic::Application for CosmicBatteryApplet {
                 .as_subscription()
                 .map(|(_, now)| Message::Frame(now)),
             activation_token_subscription(0).map(Message::Token),
+            listen_with(|e, _| {
+                if let cosmic::iced::Event::PlatformSpecific(PlatformSpecific::Wayland(
+                    wayland::Event::Popup(wayland::PopupEvent::Done, _, id),
+                )) = e
+                {
+                    Some(Message::CloseRequested(id))
+                } else {
+                    None
+                }
+            }),
         ])
-    }
-
-    fn on_close_requested(&self, id: window::Id) -> Option<Message> {
-        Some(Message::CloseRequested(id))
     }
 
     fn style(&self) -> Option<<Theme as application::StyleSheet>::Style> {

@@ -24,6 +24,8 @@ use cosmic::iced::widget::vertical_space;
 use cosmic::iced::widget::{column, dnd_source, mouse_area, row, Column, Row};
 use cosmic::iced::Color;
 use cosmic::iced::{window, Subscription};
+use cosmic::iced_core::event::wayland;
+use cosmic::iced_core::event::PlatformSpecific;
 use cosmic::iced_runtime::core::alignment::Horizontal;
 use cosmic::iced_runtime::core::event;
 use cosmic::iced_sctk::commands::data_device::accept_mime_type;
@@ -1125,6 +1127,9 @@ impl cosmic::Application for CosmicAppList {
                         | event::wayland::DndOfferEvent::DropPerformed,
                     )),
                 ) => Some(Message::StopListeningForDnd),
+                cosmic::iced::Event::PlatformSpecific(PlatformSpecific::Wayland(
+                    wayland::Event::Popup(wayland::PopupEvent::Done, _, id),
+                )) => Some(Message::CloseRequested(id)),
                 _ => None,
             }),
             rectangle_tracker_subscription(0).map(|update| Message::Rectangle(update.1)),
@@ -1144,9 +1149,5 @@ impl cosmic::Application for CosmicAppList {
 
     fn style(&self) -> Option<<Theme as application::StyleSheet>::Style> {
         Some(cosmic::applet::style())
-    }
-
-    fn on_close_requested(&self, id: window::Id) -> Option<Message> {
-        Some(Message::CloseRequested(id))
     }
 }

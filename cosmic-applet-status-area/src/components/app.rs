@@ -8,6 +8,8 @@ use cosmic::{
         },
         window, Subscription,
     },
+    iced_core::event::{wayland, PlatformSpecific},
+    iced_futures::event::listen_with,
     iced_style::application,
     Theme,
 };
@@ -168,6 +170,17 @@ impl cosmic::Application for App {
             subscriptions.push(menu.subscription().with(*id).map(Msg::StatusMenu));
         }
 
+        subscriptions.push(listen_with(|e, _| {
+            if let cosmic::iced::Event::PlatformSpecific(PlatformSpecific::Wayland(
+                wayland::Event::Popup(wayland::PopupEvent::Done, _, id),
+            )) = e
+            {
+                Some(Msg::Closed(id))
+            } else {
+                None
+            }
+        }));
+
         iced::Subscription::batch(subscriptions)
     }
 
@@ -200,10 +213,6 @@ impl cosmic::Application for App {
             },
             None => iced::widget::text("").into(),
         }
-    }
-
-    fn on_close_requested(&self, id: window::Id) -> Option<Msg> {
-        Some(Msg::Closed(id))
     }
 }
 
