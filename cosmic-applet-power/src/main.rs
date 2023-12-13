@@ -317,15 +317,14 @@ impl cosmic::Application for Power {
                 container(
                     container(content)
                         .style(cosmic::theme::Container::custom(|theme| {
+                            let cosmic = theme.cosmic();
                             container::Appearance {
-                                icon_color: Some(theme.cosmic().background.on.into()),
-                                text_color: Some(theme.cosmic().background.on.into()),
-                                background: Some(
-                                    Color::from(theme.cosmic().background.base).into(),
-                                ),
-                                border_radius: 12.0.into(),
+                                icon_color: Some(cosmic.background.on.into()),
+                                text_color: Some(cosmic.background.on.into()),
+                                background: Some(Color::from(cosmic.background.base).into()),
+                                border_radius: cosmic.corner_radii.radius_m.into(),
                                 border_width: 2.0,
-                                border_color: theme.cosmic().bg_divider().into(),
+                                border_color: cosmic.bg_divider().into(),
                             }
                         }))
                         .width(Length::Shrink)

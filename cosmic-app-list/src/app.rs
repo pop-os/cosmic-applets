@@ -124,15 +124,16 @@ impl DockItem {
                 container(vertical_space(Length::Fixed(0.0)))
                     .padding(dot_radius)
                     .style(<Theme as container::StyleSheet>::Style::Custom(Box::new(
-                        |theme| container::Appearance {
-                            text_color: Some(Color::TRANSPARENT),
-                            background: Some(Background::Color(
-                                theme.cosmic().on_bg_color().into(),
-                            )),
-                            border_radius: 4.0.into(),
-                            border_width: 0.0,
-                            border_color: Color::TRANSPARENT,
-                            icon_color: Some(Color::TRANSPARENT),
+                        |theme| {
+                            let cosmic = theme.cosmic();
+                            container::Appearance {
+                                text_color: Some(Color::TRANSPARENT),
+                                background: Some(Background::Color(cosmic.on_bg_color().into())),
+                                border_radius: cosmic.corner_radii.radius_xs.into(),
+                                border_width: 0.0,
+                                border_color: Color::TRANSPARENT,
+                                icon_color: Some(Color::TRANSPARENT),
+                            }
                         },
                     )))
                     .into()
