@@ -43,6 +43,7 @@ pub struct Window {
     popup: Option<window::Id>,
     graphics_mode: Option<GraphicsMode>,
     dbus: Option<(Connection, PowerDaemonProxy<'static>)>,
+    switchable: bool,
 }
 
 #[allow(dead_code)]
@@ -50,7 +51,7 @@ pub struct Window {
 pub enum Message {
     CurrentGraphics(Option<Graphics>),
     AppliedGraphics(Option<Graphics>),
-    DBusInit(Option<(Connection, PowerDaemonProxy<'static>)>),
+    DBusInit(Option<(Connection, PowerDaemonProxy<'static>)>, bool),
     SelectGraphicsMode(Graphics),
     TogglePopup,
     PopupClosed(window::Id),
@@ -72,9 +73,18 @@ impl cosmic::Application for Window {
         };
         (
             window,
-            iced::Command::perform(dbus::init(), |x| {
-                cosmic::app::message::app(Message::DBusInit(x))
-            }),
+            iced::Command::perform(
+                async {
+                    let dbus = dbus::init().await;
+                    let switchable = if let Some((_, proxy)) = dbus.as_ref() {
+                        proxy.get_switchable().await.ok().unwrap_or(false)
+                    } else {
+                        false
+                    };
+                    (dbus, switchable)
+                },
+                |(dbus, switchable)| cosmic::app::message::app(Message::DBusInit(dbus, switchable)),
+            ),
         )
     }
 
@@ -132,7 +142,8 @@ impl cosmic::Application for Window {
                     return iced::Command::batch(commands).map(cosmic::app::message::app);
                 }
             }
-            Message::DBusInit(dbus) => {
+            Message::DBusInit(dbus, switchable) => {
+                self.switchable = switchable;
                 if dbus.is_none() {
                     eprintln!("Could not connect to com.system76.PowerDaemon. Exiting.");
                     std::process::exit(0);
@@ -214,7 +225,7 @@ impl cosmic::Application for Window {
                 .core
                 .applet
                 .icon_button(ID)
-                .on_press(Message::TogglePopup)
+                .on_press_maybe(self.switchable.then(|| Message::TogglePopup))
                 .into(),
             PanelAnchor::Top | PanelAnchor::Bottom => button(
                 row![
@@ -243,7 +254,7 @@ impl cosmic::Application for Window {
                 .padding([0, self.core.applet.suggested_size().0 / 2])
                 .align_items(Alignment::Center),
             )
-            .on_press(Message::TogglePopup)
+            .on_press_maybe(self.switchable.then(|| Message::TogglePopup))
             .padding(8)
             .width(Length::Shrink)
             .height(Length::Shrink)
