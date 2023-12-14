@@ -759,8 +759,8 @@ name = "cosmic-app-list"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "cosmic-client-toolkit 0.1.0 (git+https://github.com/pop-os/cosmic-protocols?rev=5faec87)",
- "cosmic-protocols 0.1.0 (git+https://github.com/pop-os/cosmic-protocols?rev=5faec87)",
+ "cosmic-client-toolkit",
+ "cosmic-protocols",
  "freedesktop-desktop-entry",
  "freedesktop-icons",
  "futures",
@@ -968,8 +968,8 @@ name = "cosmic-applet-workspaces"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "cosmic-client-toolkit 0.1.0 (git+https://github.com/pop-os/cosmic-protocols?rev=5faec87)",
- "cosmic-protocols 0.1.0 (git+https://github.com/pop-os/cosmic-protocols?rev=5faec87)",
+ "cosmic-client-toolkit",
+ "cosmic-protocols",
  "futures",
  "i18n-embed 0.13.9",
  "i18n-embed-fl 0.6.7",
@@ -985,19 +985,9 @@ dependencies = [
 [[package]]
 name = "cosmic-client-toolkit"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/cosmic-protocols?rev=5faec87#5faec87be0a1fd1d72e99431ac8e6647ff1dfd41"
-dependencies = [
- "cosmic-protocols 0.1.0 (git+https://github.com/pop-os/cosmic-protocols?rev=5faec87)",
- "smithay-client-toolkit 0.18.0",
- "wayland-client 0.31.1",
-]
-
-[[package]]
-name = "cosmic-client-toolkit"
-version = "0.1.0"
 source = "git+https://github.com/pop-os/cosmic-protocols?rev=c1b6516#c1b651630c2b71cd8dfd2eb4ab47ede9dbd63840"
 dependencies = [
- "cosmic-protocols 0.1.0 (git+https://github.com/pop-os/cosmic-protocols?rev=c1b6516)",
+ "cosmic-protocols",
  "smithay-client-toolkit 0.18.0",
  "wayland-client 0.31.1",
 ]
@@ -1081,19 +1071,6 @@ dependencies = [
  "tracing",
  "wayland-protocols-wlr",
  "xdg-shell-wrapper-config",
-]
-
-[[package]]
-name = "cosmic-protocols"
-version = "0.1.0"
-source = "git+https://github.com/pop-os/cosmic-protocols?rev=5faec87#5faec87be0a1fd1d72e99431ac8e6647ff1dfd41"
-dependencies = [
- "bitflags 2.4.1",
- "wayland-backend 0.3.2",
- "wayland-client 0.31.1",
- "wayland-protocols 0.31.0",
- "wayland-scanner 0.31.0",
- "wayland-server",
 ]
 
 [[package]]
@@ -3063,7 +3040,7 @@ source = "git+https://github.com/pop-os/libcosmic#8725497827e87536ac9cad5ddad1a5
 dependencies = [
  "apply",
  "ashpd",
- "cosmic-client-toolkit 0.1.0 (git+https://github.com/pop-os/cosmic-protocols?rev=c1b6516)",
+ "cosmic-client-toolkit",
  "cosmic-config",
  "cosmic-panel-config",
  "cosmic-theme",
