@@ -144,6 +144,9 @@ impl cosmic::Application for Window {
             }
             Message::DBusInit(dbus, switchable) => {
                 self.switchable = switchable;
+                if !switchable {
+                    std::process::exit(0);
+                }
                 if dbus.is_none() {
                     eprintln!("Could not connect to com.system76.PowerDaemon. Exiting.");
                     std::process::exit(0);
@@ -220,12 +223,15 @@ impl cosmic::Application for Window {
     }
 
     fn view(&self) -> Element<Message> {
+        if !self.switchable {
+            return horizontal_space(1.0).into();
+        }
         match self.core.applet.anchor {
             PanelAnchor::Left | PanelAnchor::Right => self
                 .core
                 .applet
                 .icon_button(ID)
-                .on_press_maybe(self.switchable.then(|| Message::TogglePopup))
+                .on_press(Message::TogglePopup)
                 .into(),
             PanelAnchor::Top | PanelAnchor::Bottom => button(
                 row![
@@ -254,7 +260,7 @@ impl cosmic::Application for Window {
                 .padding([0, self.core.applet.suggested_size().0 / 2])
                 .align_items(Alignment::Center),
             )
-            .on_press_maybe(self.switchable.then(|| Message::TogglePopup))
+            .on_press(Message::TogglePopup)
             .padding(8)
             .width(Length::Shrink)
             .height(Length::Shrink)
