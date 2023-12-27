@@ -15,7 +15,7 @@ use crate::config::{APP_ID, VERSION};
 fn main() -> cosmic::iced::Result {
     // Initialize logger
     pretty_env_logger::init();
-    info!("Iced Workspaces Applet ({})", APP_ID);
+    info!("Iced Dock Applet ({})", APP_ID);
     info!("Version: {}", VERSION);
     // Prepare i18n
     localize();

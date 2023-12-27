@@ -887,9 +887,12 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bytemuck",
+ "cosmic-client-toolkit",
  "cosmic-notifications-config",
  "cosmic-notifications-util",
+ "cosmic-protocols",
  "cosmic-time",
+ "futures",
  "i18n-embed 0.13.9",
  "i18n-embed-fl 0.6.7",
  "libcosmic",

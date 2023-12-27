@@ -1,8 +1,7 @@
 mod localize;
 mod subscriptions;
-use cosmic::applet::token::subscription::{
-    activation_token_subscription, TokenRequest, TokenUpdate,
-};
+mod wayland_handler;
+mod wayland_subscription;
 use cosmic::applet::{menu_button, menu_control_padding, padded_control};
 use cosmic::cctk::sctk::reexports::calloop;
 use cosmic::cosmic_config::{config_subscription, Config, CosmicConfigEntry};
@@ -27,7 +26,9 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use tokio::sync::mpsc::Sender;
+use tokio::time::Duration;
 use tracing::info;
+use wayland_subscription::{WaylandRequest, WaylandUpdate};
 
 #[tokio::main(flavor = "current_thread")]
 pub async fn main() -> cosmic::iced::Result {
@@ -42,18 +43,25 @@ pub async fn main() -> cosmic::iced::Result {
 
 static DO_NOT_DISTURB: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
 
+#[derive(Debug, Clone)]
+pub enum Popup {
+    NewNotifications(Vec<u32>),
+    UserActivated,
+}
+
 #[derive(Default)]
 struct Notifications {
     core: cosmic::app::Core,
     config: NotificationsConfig,
     config_helper: Option<Config>,
     icon_name: String,
-    popup: Option<window::Id>,
+    popup: Option<(window::Id, Popup)>,
     // notifications: Vec<Notification>,
     timeline: Timeline,
     dbus_sender: Option<Sender<subscriptions::dbus::Input>>,
     cards: Vec<(id::Cards, Vec<Notification>, bool, String, String, String)>,
-    token_tx: Option<calloop::channel::Sender<TokenRequest>>,
+    wayland_tx: Option<calloop::channel::Sender<WaylandRequest>>,
+    on_active_output: bool,
 }
 
 impl Notifications {
@@ -93,8 +101,9 @@ enum Message {
     Dismissed(u32),
     ClearAll(String),
     CardsToggled(String, bool),
-    Token(TokenUpdate),
     OpenSettings,
+    WaylandUpdate(wayland_subscription::WaylandUpdate),
+    Timeout(u32),
 }
 
 impl cosmic::Application for Notifications {
@@ -131,6 +140,7 @@ impl cosmic::Application for Notifications {
             core,
             config_helper: helper,
             config,
+            on_active_output: false,
             ..Default::default()
         };
         _self.update_icon();
@@ -170,7 +180,7 @@ impl cosmic::Application for Notifications {
                 .map(|(_, now)| Message::Frame(now)),
             subscriptions::dbus::proxy().map(Message::DbusEvent),
             subscriptions::notifications::notifications().map(Message::NotificationEvent),
-            activation_token_subscription(0).map(Message::Token),
+            wayland_subscription::wayland_subscription(0).map(Message::WaylandUpdate),
         ])
     }
 
@@ -183,11 +193,11 @@ impl cosmic::Application for Notifications {
                 self.timeline.now(now);
             }
             Message::TogglePopup => {
-                if let Some(p) = self.popup.take() {
+                if let Some((p, _popup_type)) = self.popup.take() {
                     return destroy_popup(p);
                 } else {
                     let new_id = window::Id::unique();
-                    self.popup.replace(new_id);
+                    self.popup.replace((new_id, Popup::UserActivated));
 
                     let mut popup_settings = self.core.applet.get_popup_settings(
                         window::Id::MAIN,
@@ -214,6 +224,9 @@ impl cosmic::Application for Notifications {
                 }
             }
             Message::NotificationEvent(n) => {
+                let id = n.id;
+                let timeout = n.expire_timeout;
+                let urgency = n.urgency();
                 if let Some(c) = self
                     .cards
                     .iter_mut()
@@ -238,12 +251,66 @@ impl cosmic::Application for Notifications {
                         fl!("clear-all"),
                     ));
                 }
+                if self.on_active_output {
+                    // create new notification popup if none exists
+                    let timeout_instant = if urgency == 2 {
+                        if timeout > 0 {
+                            Some(
+                                tokio::time::Instant::now() + Duration::from_millis(timeout as u64),
+                            )
+                        } else {
+                            None
+                        }
+                    } else {
+                        if timeout > 0 {
+                            Some(
+                                tokio::time::Instant::now()
+                                    + Duration::from_millis(timeout.max(10000) as u64),
+                            )
+                        } else {
+                            Some(tokio::time::Instant::now() + Duration::from_millis(5000))
+                        }
+                    };
+                    let mut cmds = if let Some(timeout_instant) = timeout_instant {
+                        vec![Command::perform(
+                            async move {
+                                tokio::time::sleep_until(timeout_instant).await;
+                                Message::Timeout(id)
+                            },
+                            |msg| msg,
+                        )
+                        .map(cosmic::app::Message::App)]
+                    } else {
+                        Vec::new()
+                    };
+                    if let Some((_, Popup::NewNotifications(notifs))) = &mut self.popup {
+                        notifs.push(id);
+                    } else {
+                        let new_id = window::Id::unique();
+                        self.popup
+                            .replace((new_id, Popup::NewNotifications(vec![id])));
+
+                        let mut popup_settings = self.core.applet.get_popup_settings(
+                            window::Id::MAIN,
+                            new_id,
+                            None,
+                            None,
+                            None,
+                        );
+                        popup_settings.positioner.size_limits = Limits::NONE
+                            .min_width(1.0)
+                            .max_width(444.0)
+                            .min_height(100.0)
+                            .max_height(900.0);
+                        cmds.push(get_popup(popup_settings));
+                    }
+                    return Command::batch(cmds);
+                }
             }
             Message::Config(config) => {
                 self.config = config;
             }
             Message::Dismissed(id) => {
-                info!("Dismissed {}", id);
                 for c in &mut self.cards {
                     c.1.retain(|n| n.id != id);
                 }
@@ -256,6 +323,14 @@ impl cosmic::Application for Notifications {
                             tracing::error!("{:?}", err);
                         }
                     });
+                }
+
+                if let Some((p_id, Popup::NewNotifications(mut notifs))) = self.popup.take() {
+                    notifs.retain(|n| n != &id);
+                    if notifs.is_empty() {
+                        self.popup = None;
+                        return destroy_popup(p_id);
+                    }
                 }
             }
             Message::DbusEvent(e) => match e {
@@ -307,27 +382,27 @@ impl cosmic::Application for Notifications {
                 self.update_cards(id);
             }
             Message::CloseRequested(id) => {
-                if Some(id) == self.popup {
+                if Some(id) == self.popup.as_ref().map(|(id, _)| *id) {
                     self.popup = None;
                 }
             }
             Message::OpenSettings => {
                 let exec = "cosmic-settings notifications".to_string();
-                if let Some(tx) = self.token_tx.as_ref() {
-                    let _ = tx.send(TokenRequest {
+                if let Some(tx) = self.wayland_tx.as_ref() {
+                    let _ = tx.send(WaylandRequest::TokenRequest {
                         app_id: Self::APP_ID.to_string(),
                         exec,
                     });
                 }
             }
-            Message::Token(u) => match u {
-                TokenUpdate::Init(tx) => {
-                    self.token_tx = Some(tx);
+            Message::WaylandUpdate(u) => match u {
+                WaylandUpdate::Init(tx) => {
+                    self.wayland_tx = Some(tx);
                 }
-                TokenUpdate::Finished => {
-                    self.token_tx = None;
+                WaylandUpdate::Finished => {
+                    self.wayland_tx = None;
                 }
-                TokenUpdate::ActivationToken { token, .. } => {
+                WaylandUpdate::ActivationToken { token, .. } => {
                     let mut cmd = std::process::Command::new("cosmic-settings");
                     cmd.arg("notifications");
                     if let Some(token) = token {
@@ -336,7 +411,22 @@ impl cosmic::Application for Notifications {
                     }
                     cosmic::process::spawn(cmd);
                 }
+                WaylandUpdate::ActiveOutput(active) => {
+                    info!("is output active {:?}", active);
+                    self.on_active_output = active;
+                }
             },
+            Message::Timeout(t) => {
+                if let Some((id, Popup::NewNotifications(mut notifs))) = self.popup.take() {
+                    notifs.retain(|n| n != &t);
+                    if notifs.is_empty() {
+                        self.popup = None;
+                        return destroy_popup(id);
+                    } else {
+                        self.popup = Some((id, Popup::NewNotifications(notifs)));
+                    }
+                }
+            }
         };
         self.update_icon();
         Command::none()
@@ -387,6 +477,13 @@ impl cosmic::Application for Notifications {
                     .1
                     .iter()
                     .rev()
+                    .filter(|n| {
+                        if let Some((_, Popup::NewNotifications(ids))) = &self.popup {
+                            ids.contains(&n.id)
+                        } else {
+                            true
+                        }
+                    })
                     .map(|n| {
                         let app_name = text(if n.app_name.len() > 24 {
                             Cow::from(format!(
@@ -465,7 +562,6 @@ impl cosmic::Application for Notifications {
                     })
                     .collect();
                 let show_more_icon = c.1.last().and_then(|n| {
-                    info!("app_icon: {:?}", &n.app_icon);
                     if n.app_icon.is_empty() {
                         match n.image().cloned() {
                             Some(Image::File(p)) => Some(cosmic::widget::icon::from_path(p)),
@@ -506,24 +602,33 @@ impl cosmic::Application for Notifications {
                 notifs.push(card_list.into());
             }
 
-            row!(scrollable(
+            let ret = row!(scrollable(
                 Column::with_children(notifs)
                     .spacing(8)
                     .height(Length::Shrink),
             )
             .height(Length::Shrink))
-            .padding(menu_control_padding())
+            .padding(menu_control_padding());
+
+            ret
         };
 
-        let main_content = column![
-            padded_control(divider::horizontal::default()),
-            notifications,
-            padded_control(divider::horizontal::default())
-        ];
-
-        let content = column![do_not_disturb, main_content, settings]
+        let content: Element<_> = if matches!(&self.popup, Some((_, Popup::NewNotifications(_)))) {
+            container(notifications).padding([8, 0]).into()
+        } else {
+            column![
+                do_not_disturb,
+                column![
+                    padded_control(divider::horizontal::default()),
+                    notifications,
+                    padded_control(divider::horizontal::default())
+                ],
+                settings
+            ]
             .align_items(Alignment::Start)
-            .padding([8, 0]);
+            .padding([8, 0])
+            .into()
+        };
 
         self.core.applet.popup_container(content).into()
     }

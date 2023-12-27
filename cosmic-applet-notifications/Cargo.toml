@@ -36,4 +36,7 @@ i18n-embed = { version = "0.13.4", features = [
 i18n-embed-fl = "0.6.4"
 rust-embed = "6.3.0"
 rust-embed-utils = "7.5.0"
+cctk.workspace = true
+cosmic-protocols.workspace = true
 url = "2.4.0"
+futures = "0.3.21"
