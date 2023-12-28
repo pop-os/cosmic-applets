@@ -53,6 +53,7 @@ use itertools::Itertools;
 use rand::{thread_rng, Rng};
 use std::borrow::Cow;
 use std::collections::HashMap;
+use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::Duration;
@@ -278,11 +279,18 @@ fn desktop_info_for_app_ids(mut app_ids: Vec<String>) -> Vec<DesktopInfo> {
                     if let Some(i) = app_ids.iter().position(|s| {
                         s == de.appid || s.eq(&de.startup_wm_class().unwrap_or_default())
                     }) {
-                        let icon = freedesktop_icons::lookup(de.icon().unwrap_or(de.appid))
-                            .with_size(128)
-                            .with_cache()
-                            .find()
-                            .unwrap_or_else(default_app_icon);
+                        // check if absolute path exists and otherwise treat it as a name
+                        let icon_path = Path::new(de.icon().unwrap_or(de.appid));
+                        let icon = if icon_path.is_absolute() && icon_path.exists() {
+                            icon_path.into()
+                        } else {
+                            freedesktop_icons::lookup(de.icon().unwrap_or(de.appid))
+                                .with_size(128)
+                                .with_theme("Cosmic")
+                                .with_cache()
+                                .find()
+                                .unwrap_or_else(default_app_icon)
+                        };
                         app_ids.remove(i);
 
                         Some(DesktopInfo {
@@ -719,10 +727,7 @@ impl cosmic::Application for CosmicAppList {
                         .map(cosmic::app::message::app);
                     }
                     WaylandUpdate::Toplevel(event) => match event {
-                        ToplevelUpdate::Add(handle, info) => {
-                            if info.app_id.is_empty() {
-                                return Command::none();
-                            }
+                        ToplevelUpdate::Add(handle, mut info) => {
                             if let Some(t) = self
                                 .active_list
                                 .iter_mut()
@@ -734,9 +739,21 @@ impl cosmic::Application for CosmicAppList {
                             {
                                 t.toplevels.push((handle, info));
                             } else {
-                                let desktop_info =
-                                    desktop_info_for_app_ids(vec![info.app_id.clone()]).remove(0);
+                                if info.app_id.is_empty() {
+                                    info.app_id = format!("Unknown Application {}", self.item_ctr);
+                                }
                                 self.item_ctr += 1;
+                                let desktop_info =
+                                    desktop_info_for_app_ids(vec![info.app_id.clone()])
+                                        .pop()
+                                        .unwrap_or_else(|| DesktopInfo {
+                                            id: info.app_id.clone(),
+                                            wm_class: None,
+                                            icon: default_app_icon(),
+                                            exec: String::new(),
+                                            name: info.app_id.clone(),
+                                            path: PathBuf::new(),
+                                        });
                                 self.active_list.push(DockItem {
                                     id: self.item_ctr,
                                     toplevels: vec![(handle, info)],
