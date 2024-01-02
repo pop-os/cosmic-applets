@@ -24,6 +24,7 @@ use cosmic::iced::widget::vertical_space;
 use cosmic::iced::widget::{column, dnd_source, mouse_area, row, Column, Row};
 use cosmic::iced::Color;
 use cosmic::iced::{window, Subscription};
+use cosmic::iced_core::window::Icon;
 use cosmic::iced_runtime::core::alignment::Horizontal;
 use cosmic::iced_runtime::core::event;
 use cosmic::iced_sctk::commands::data_device::accept_mime_type;
@@ -115,8 +116,9 @@ impl DockItem {
             ..
         } = self;
 
-        let cosmic_icon = cosmic::widget::icon::from_path(PathBuf::from(&desktop_info.icon))
-            .icon()
+        let cosmic_icon = desktop_info
+            .icon
+            .as_cosmic_icon()
             .size(applet.suggested_size().0);
 
         let dot_radius = 2;
@@ -244,30 +246,44 @@ enum Message {
     ConfigUpdated(AppListConfig),
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum IconSource {
+    Name(String),
+    Path(PathBuf),
+}
+
+impl IconSource {
+    fn from_unknown(icon: &str) -> Self {
+        let icon_path = Path::new(icon);
+        if icon_path.is_absolute() && icon_path.exists() {
+            Self::Path(icon_path.into())
+        } else {
+            Self::Name(icon.into())
+        }
+    }
+
+    fn as_cosmic_icon(&self) -> cosmic::widget::icon::Icon {
+        match self {
+            Self::Name(name) => cosmic::widget::icon::from_name(name.as_str()).into(),
+            Self::Path(path) => cosmic::widget::icon(cosmic::widget::icon::from_path(path.clone())),
+        }
+    }
+}
+
+impl Default for IconSource {
+    fn default() -> Self {
+        Self::Name("application-default".to_string())
+    }
+}
+
 #[derive(Debug, Clone, Default)]
 struct DesktopInfo {
     id: String,
     wm_class: Option<String>,
-    icon: PathBuf,
+    icon: IconSource,
     exec: String,
     name: String,
     path: PathBuf,
-}
-
-fn default_app_icon() -> PathBuf {
-    freedesktop_icons::lookup("application-default")
-        .with_theme("Cosmic")
-        .force_svg()
-        .with_cache()
-        .find()
-        .or_else(|| {
-            freedesktop_icons::lookup("application-x-executable")
-                .with_theme("default")
-                .with_size(128)
-                .with_cache()
-                .find()
-        })
-        .unwrap_or_default()
 }
 
 fn desktop_info_for_app_ids(mut app_ids: Vec<String>) -> Vec<DesktopInfo> {
@@ -280,16 +296,12 @@ fn desktop_info_for_app_ids(mut app_ids: Vec<String>) -> Vec<DesktopInfo> {
                         s == de.appid || s.eq(&de.startup_wm_class().unwrap_or_default())
                     }) {
                         // check if absolute path exists and otherwise treat it as a name
-                        let icon_path = Path::new(de.icon().unwrap_or(de.appid));
+                        let icon = de.icon().unwrap_or(de.appid);
+                        let icon_path = Path::new(icon);
                         let icon = if icon_path.is_absolute() && icon_path.exists() {
-                            icon_path.into()
+                            IconSource::Path(icon_path.into())
                         } else {
-                            freedesktop_icons::lookup(de.icon().unwrap_or(de.appid))
-                                .with_size(128)
-                                .with_theme("Cosmic")
-                                .with_cache()
-                                .find()
-                                .unwrap_or_else(default_app_icon)
+                            IconSource::Name(icon.into())
                         };
                         app_ids.remove(i);
 
@@ -313,7 +325,7 @@ fn desktop_info_for_app_ids(mut app_ids: Vec<String>) -> Vec<DesktopInfo> {
             .into_iter()
             .map(|id| DesktopInfo {
                 id,
-                icon: default_app_icon(),
+                icon: IconSource::default(),
                 ..Default::default()
             })
             .collect_vec(),
@@ -630,21 +642,16 @@ impl cosmic::Application for CosmicAppList {
             Message::DndData(file_path) => {
                 if let Some(DndOffer { dock_item, .. }) = self.dnd_offer.as_mut() {
                     if let Some(di) = std::fs::read_to_string(&file_path).ok().and_then(|input| {
-                        DesktopEntry::decode(&file_path, &input).ok().map(|de| {
-                            let icon = freedesktop_icons::lookup(de.icon().unwrap_or(de.appid))
-                                .with_size(128)
-                                .with_cache()
-                                .find()
-                                .unwrap_or_else(default_app_icon);
-                            DesktopInfo {
+                        DesktopEntry::decode(&file_path, &input)
+                            .ok()
+                            .map(|de| DesktopInfo {
                                 id: de.id().to_string(),
                                 wm_class: de.startup_wm_class().map(ToString::to_string),
-                                icon,
+                                icon: IconSource::from_unknown(de.icon().unwrap_or(de.appid)),
                                 exec: de.exec().unwrap_or_default().to_string(),
                                 name: de.name(None).unwrap_or_default().to_string(),
                                 path: file_path.clone(),
-                            }
-                        })
+                            })
                     }) {
                         self.item_ctr += 1;
                         *dock_item = Some(DockItem::new(self.item_ctr, Vec::new(), di));
@@ -749,7 +756,7 @@ impl cosmic::Application for CosmicAppList {
                                         .unwrap_or_else(|| DesktopInfo {
                                             id: info.app_id.clone(),
                                             wm_class: None,
-                                            icon: default_app_icon(),
+                                            icon: IconSource::default(),
                                             exec: String::new(),
                                             name: info.app_id.clone(),
                                             path: PathBuf::new(),
@@ -1031,8 +1038,9 @@ impl cosmic::Application for CosmicAppList {
 
     fn view_window(&self, id: window::Id) -> Element<Message> {
         if let Some((_, item, _)) = self.dnd_source.as_ref().filter(|s| s.0 == id) {
-            cosmic::widget::icon::from_path(PathBuf::from(&item.desktop_info.icon))
-                .icon()
+            item.desktop_info
+                .icon
+                .as_cosmic_icon()
                 .size(self.core.applet.suggested_size().0)
                 .into()
         } else if let Some((
