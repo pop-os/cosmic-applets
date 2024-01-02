@@ -33,6 +33,7 @@ libcosmic = { git = "https://github.com/pop-os/libcosmic", default-features = fa
     "tokio",
     "wayland",
     "process",
+    "dbus-config"
 ] }
 zbus = { version = "3.14", default-features = false, features = ["tokio"] }
 tracing = "0.1"
