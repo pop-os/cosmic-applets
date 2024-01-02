@@ -1,0 +1,13 @@
+cosmic-applet-button = Przycisk Cosmic
+battery = Bateryjny
+battery-desc = Zmniejszone zużycie energii oraz osiągi.
+balanced = Zbalansowany
+balanced-desc = Standardowa wydajność i zużycie baterii. 
+performance = Wysoko Wydajny
+performance-desc = Wysokia wydajność i zużycie energii.
+max-charge = Zwiększ żywotność swojej baterii ustawiając maksymalny poziom naładowania na 80%
+seconds = s
+minutes = m
+hours = g
+until-empty = Do opróżnienia
+power-settings = Ustawienia Zasilania i Baterii...
