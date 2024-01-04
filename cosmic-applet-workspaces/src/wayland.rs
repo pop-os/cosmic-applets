@@ -79,6 +79,7 @@ pub fn spawn_workspaces(tx: mpsc::Sender<WorkspaceList>) -> SyncSender<Workspace
                 tx,
                 running: true,
                 have_workspaces: false,
+                scroll: 0.0,
             };
             let loop_handle = event_loop.handle();
             loop_handle
@@ -100,6 +101,14 @@ pub fn spawn_workspaces(tx: mpsc::Sender<WorkspaceList>) -> SyncSender<Workspace
                         }
                     }
                     Event::Msg(WorkspaceEvent::Scroll(v)) => {
+                        // reset scroll if we're scrolling in the opposite direction
+                        if state.scroll * v < 0.0 {
+                            state.scroll = 0.0;
+                        }
+                        state.scroll += v;
+                        if state.scroll.abs() < 1.0 {
+                            return;
+                        }
                         if let Some((w_g, w_i)) = state
                             .workspace_state
                             .workspace_groups()
@@ -123,17 +132,18 @@ pub fn spawn_workspaces(tx: mpsc::Sender<WorkspaceList>) -> SyncSender<Workspace
                             })
                         {
                             let max_w = w_g.workspaces.len().wrapping_sub(1);
-                            let d_i = if v > 0.0 {
-                                if w_i == max_w {
-                                    0
+                            let d_i = if state.scroll > 0.0 {
+                                if w_i == 0 {
+                                    max_w
                                 } else {
-                                    w_i.wrapping_add(1)
+                                    w_i.wrapping_sub(1)
                                 }
-                            } else if w_i == 0 {
-                                max_w
+                            } else if w_i == max_w {
+                                0
                             } else {
-                                w_i.wrapping_sub(1)
+                                w_i.wrapping_add(1)
                             };
+                            state.scroll = 0.0;
                             if let Some(w) = w_g.workspaces.get(d_i) {
                                 w.handle.activate();
                                 state
@@ -181,6 +191,7 @@ pub struct State {
     registry_state: RegistryState,
     workspace_state: WorkspaceState,
     have_workspaces: bool,
+    scroll: f64,
 }
 
 impl State {
