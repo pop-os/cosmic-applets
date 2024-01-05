@@ -265,6 +265,7 @@ impl IconSource {
     fn as_cosmic_icon(&self) -> cosmic::widget::icon::Icon {
         match self {
             Self::Name(name) => cosmic::widget::icon::from_name(name.as_str())
+                .size(128)
                 .fallback(Some(cosmic::widget::icon::IconFallback::Names(vec![
                     "application-default".into(),
                     "application-x-executable".into(),
