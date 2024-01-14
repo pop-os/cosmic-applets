@@ -1,0 +1,13 @@
+cosmic-applet-button = Кнопка Cosmic
+battery = Акумулятор
+battery-desc = Зниження енергоспоживання та швидкодії.
+balanced = Баланс
+balanced-desc = Стандартні швидкодія та використання акумулятора.
+performance = Висока швидкодія
+performance-desc = Збільшення швидкодії та енергоспоживання.
+max-charge = Збільште термін служби акумулятора, обмеживши заряджання до 80%
+seconds = сек
+minutes = хв
+hours = год
+until-empty = доки не розрядиться
+power-settings = Налаштування живлення та акумулятора...
