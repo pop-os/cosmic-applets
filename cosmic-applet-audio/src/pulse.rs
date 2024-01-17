@@ -191,10 +191,14 @@ impl PulseHandle {
                                     None => continue,
                                 };
                                 match server.get_default_sink() {
-                                    Ok(sink) => from_pulse_send
-                                        .send(Message::SetDefaultSink(sink))
-                                        .await
-                                        .unwrap(),
+                                    Ok(sink) => {
+                                        if let Err(err) = from_pulse_send
+                                            .send(Message::SetDefaultSink(sink))
+                                            .await
+                                        {
+                                            tracing::error!("ERROR! {:?}", err);
+                                        }
+                                    }
                                     Err(_) => Self::send_disconnected(&from_pulse_send).await,
                                 }
                             }
@@ -204,10 +208,14 @@ impl PulseHandle {
                                     None => continue,
                                 };
                                 match server.get_default_source() {
-                                    Ok(source) => from_pulse_send
-                                        .send(Message::SetDefaultSource(source))
-                                        .await
-                                        .unwrap(),
+                                    Ok(source) => {
+                                        if let Err(err) = from_pulse_send
+                                            .send(Message::SetDefaultSource(source))
+                                            .await
+                                        {
+                                            tracing::error!("ERROR! {:?}", err);
+                                        }
+                                    }
                                     Err(e) => {
                                         tracing::error!("ERROR! {:?}", e);
                                         Self::send_disconnected(&from_pulse_send).await;
@@ -220,10 +228,13 @@ impl PulseHandle {
                                     None => continue,
                                 };
                                 match server.get_sinks() {
-                                    Ok(sinks) => from_pulse_send
-                                        .send(Message::SetSinks(sinks))
-                                        .await
-                                        .unwrap(),
+                                    Ok(sinks) => {
+                                        if let Err(err) =
+                                            from_pulse_send.send(Message::SetSinks(sinks)).await
+                                        {
+                                            tracing::error!("ERROR! {:?}", err);
+                                        }
+                                    }
                                     Err(_) => Self::send_disconnected(&from_pulse_send).await,
                                 }
                             }
@@ -233,10 +244,13 @@ impl PulseHandle {
                                     None => continue,
                                 };
                                 match server.get_sources() {
-                                    Ok(sinks) => from_pulse_send
-                                        .send(Message::SetSources(sinks))
-                                        .await
-                                        .unwrap(),
+                                    Ok(sinks) => {
+                                        if let Err(err) =
+                                            from_pulse_send.send(Message::SetSources(sinks)).await
+                                        {
+                                            tracing::error!("ERROR! {:?}", err);
+                                        }
+                                    }
                                     Err(_) => Self::send_disconnected(&from_pulse_send).await,
                                 }
                             }
@@ -296,10 +310,12 @@ impl PulseHandle {
                                 let to_move = server.get_sink_inputs(default_sink.index);
                                 if let Some(name) = device.name.as_ref() {
                                     if server.set_default_sink(name, to_move) {
-                                        from_pulse_send
+                                        if let Err(err) = from_pulse_send
                                             .send(Message::SetDefaultSink(device))
                                             .await
-                                            .unwrap();
+                                        {
+                                            tracing::error!("ERROR! {:?}", err);
+                                        };
                                     }
                                 }
                             }
@@ -315,10 +331,12 @@ impl PulseHandle {
                                 let to_move = server.get_source_outputs(default_source.index);
                                 if let Some(name) = device.name.as_ref() {
                                     if server.set_default_source(name, to_move) {
-                                        from_pulse_send
+                                        if let Err(err) = from_pulse_send
                                             .send(Message::SetDefaultSource(device))
                                             .await
-                                            .unwrap();
+                                        {
+                                            tracing::error!("ERROR! {:?}", err);
+                                        };
                                     }
                                 }
                             }
