@@ -40,11 +40,17 @@ use mpris_subscription::MprisUpdate;
 mod config;
 mod mpris_subscription;
 mod pulse;
+
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
 pub fn main() -> cosmic::iced::Result {
-    pretty_env_logger::init();
+    tracing_subscriber::fmt::init();
+    let _ = tracing_log::LogTracer::init();
 
     // Prepare i18n
     localize();
+
+    tracing::info!("Starting audio applet with version {VERSION}");
 
     cosmic::applet::run::<Audio>(true, ())
 }

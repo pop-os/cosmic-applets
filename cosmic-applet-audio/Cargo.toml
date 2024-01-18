@@ -1,19 +1,19 @@
 [package]
 name = "cosmic-applet-audio"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-icon-loader = { version = "0.3.6", features = ["gtk"] }
-libpulse-binding = "2.26.0"
-libpulse-glib-binding = "2.25.0"
+libpulse-binding = "2.28.1"
+libpulse-glib-binding = "2.28.1"
 tokio = { version = "1.20.1", features=["full"] }
 libcosmic.workspace = true
 cosmic-time.workspace = true
 tracing = "0.1.40"
-pretty_env_logger = "0.4.0"
+tracing-subscriber.workspace = true
+tracing-log.workspace = true
 # Application i18n
 i18n-embed = { version = "0.13", features = ["fluent-system", "desktop-requester"] }
 i18n-embed-fl = "0.6"
