@@ -1158,16 +1158,11 @@ impl cosmic::Application for CosmicAppList {
                 _ => None,
             }),
             rectangle_tracker_subscription(0).map(|update| Message::Rectangle(update.1)),
-            cosmic_config::config_subscription(0, Cow::from(APP_ID), 1).map(|(_, config)| {
-                match config {
-                    Ok(config) => Message::ConfigUpdated(config),
-                    Err((errors, config)) => {
-                        for error in errors {
-                            log::error!("{:?}", error);
-                        }
-                        Message::ConfigUpdated(config)
-                    }
+            self.core.watch_config(APP_ID).map(|u| {
+                for err in u.errors {
+                    log::error!("Error watching config: {}", err);
                 }
+                Message::ConfigUpdated(u.config)
             }),
         ])
     }

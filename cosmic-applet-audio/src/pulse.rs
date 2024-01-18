@@ -196,7 +196,8 @@ impl PulseHandle {
                                             .send(Message::SetDefaultSink(sink))
                                             .await
                                         {
-                                            tracing::error!("ERROR! {:?}", err);
+                                            tracing::error!("ERROR! {}", err);
+                                            break;
                                         }
                                     }
                                     Err(_) => Self::send_disconnected(&from_pulse_send).await,
@@ -213,7 +214,8 @@ impl PulseHandle {
                                             .send(Message::SetDefaultSource(source))
                                             .await
                                         {
-                                            tracing::error!("ERROR! {:?}", err);
+                                            tracing::error!("ERROR! {}", err);
+                                            break;
                                         }
                                     }
                                     Err(e) => {
@@ -232,7 +234,8 @@ impl PulseHandle {
                                         if let Err(err) =
                                             from_pulse_send.send(Message::SetSinks(sinks)).await
                                         {
-                                            tracing::error!("ERROR! {:?}", err);
+                                            tracing::error!("ERROR! {}", err);
+                                            break;
                                         }
                                     }
                                     Err(_) => Self::send_disconnected(&from_pulse_send).await,
@@ -248,7 +251,8 @@ impl PulseHandle {
                                         if let Err(err) =
                                             from_pulse_send.send(Message::SetSources(sinks)).await
                                         {
-                                            tracing::error!("ERROR! {:?}", err);
+                                            tracing::error!("ERROR! {}", err);
+                                            break;
                                         }
                                     }
                                     Err(_) => Self::send_disconnected(&from_pulse_send).await,

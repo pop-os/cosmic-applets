@@ -5,8 +5,7 @@ mod localize;
 mod wayland;
 mod wayland_subscription;
 
-use config::APP_ID;
-use log::info;
+use tracing::info;
 
 use localize::localize;
 
