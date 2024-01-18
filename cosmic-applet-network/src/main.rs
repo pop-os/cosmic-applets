@@ -12,7 +12,8 @@ use crate::localize::localize;
 
 fn main() -> cosmic::iced::Result {
     // Initialize logger
-    pretty_env_logger::init();
+    tracing_subscriber::fmt::init();
+    let _ = tracing_log::LogTracer::init();
     info!("Iced Workspaces Applet ({})", APP_ID);
     info!("Version: {} ({})", VERSION, PROFILE);
 

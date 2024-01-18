@@ -10,16 +10,17 @@ use log::info;
 
 use localize::localize;
 
-use crate::{
-    components::app,
-    config::{PROFILE, VERSION},
-};
+use crate::components::app;
+
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 fn main() -> cosmic::iced::Result {
     // Initialize logger
-    pretty_env_logger::init();
-    info!("Iced Workspaces Applet ({})", APP_ID);
-    info!("Version: {} ({})", VERSION, PROFILE);
+    tracing_subscriber::fmt::init();
+    let _ = tracing_log::LogTracer::init();
+
+    info!("Starting audio applet with version {VERSION}");
+    info!("Iced Workspaces Applet ({VERSION})");
 
     // Prepare i18n
     localize();

@@ -411,17 +411,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "atty"
-version = "0.2.14"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d9b39be18770d11421cdb1b9947a45dd3f37e93092cbf377614828a319d5fee8"
-dependencies = [
- "hermit-abi 0.1.19",
- "libc",
- "winapi",
-]
-
-[[package]]
 name = "autocfg"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -772,7 +761,6 @@ dependencies = [
  "log",
  "nix 0.26.4",
  "once_cell",
- "pretty_env_logger 0.5.0",
  "rand",
  "ron",
  "rust-embed 6.8.1",
@@ -780,28 +768,30 @@ dependencies = [
  "serde",
  "shlex",
  "tokio",
+ "tracing-log",
+ "tracing-subscriber",
  "url",
  "xdg",
 ]
 
 [[package]]
 name = "cosmic-applet-audio"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "cosmic-time",
  "i18n-embed 0.13.9",
  "i18n-embed-fl 0.6.7",
- "icon-loader",
  "libcosmic",
  "libpulse-binding",
  "libpulse-glib-binding",
  "mpris2-zbus",
- "pretty_env_logger 0.4.0",
  "rust-embed 6.8.1",
  "rust-embed-utils 7.8.1",
  "serde",
  "tokio",
  "tracing",
+ "tracing-log",
+ "tracing-subscriber",
  "url",
  "zbus",
 ]
@@ -817,10 +807,11 @@ dependencies = [
  "libcosmic",
  "log",
  "once_cell",
- "pretty_env_logger 0.5.0",
  "rust-embed 6.8.1",
  "tokio",
  "tracing",
+ "tracing-log",
+ "tracing-subscriber",
  "zbus",
 ]
 
@@ -839,11 +830,12 @@ dependencies = [
  "libcosmic",
  "log",
  "once_cell",
- "pretty_env_logger 0.5.0",
  "rand",
  "rust-embed 6.8.1",
  "slotmap",
  "tokio",
+ "tracing-log",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -873,11 +865,12 @@ dependencies = [
  "itertools 0.10.5",
  "libcosmic",
  "log",
- "pretty_env_logger 0.5.0",
  "rust-embed 6.8.1",
  "rust-embed-utils 7.8.1",
  "slotmap",
  "tokio",
+ "tracing-log",
+ "tracing-subscriber",
  "zbus",
 ]
 
@@ -900,6 +893,7 @@ dependencies = [
  "sendfd",
  "tokio",
  "tracing",
+ "tracing-log",
  "tracing-subscriber",
  "url",
  "zbus",
@@ -965,7 +959,7 @@ dependencies = [
 
 [[package]]
 name = "cosmic-applet-workspaces"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "cosmic-client-toolkit",
@@ -977,8 +971,9 @@ dependencies = [
  "log",
  "nix 0.26.4",
  "once_cell",
- "pretty_env_logger 0.5.0",
  "rust-embed 6.8.1",
+ "tracing-log",
+ "tracing-subscriber",
  "xdg",
 ]
 
@@ -1631,32 +1626,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.40",
-]
-
-[[package]]
-name = "env_logger"
-version = "0.7.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "44533bbbb3bb3c1fa17d9f2e4e38bbbaf8396ba82193c4cb1b6445d711445d36"
-dependencies = [
- "atty",
- "humantime 1.3.0",
- "log",
- "regex",
- "termcolor",
-]
-
-[[package]]
-name = "env_logger"
-version = "0.10.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "95b3f3e67048839cb0d0781f445682a35113da7121f7c949db0e2be96a4fbece"
-dependencies = [
- "humantime 2.1.0",
- "is-terminal",
- "log",
- "regex",
- "termcolor",
 ]
 
 [[package]]
@@ -2427,15 +2396,6 @@ checksum = "95505c38b4572b2d910cecb0281560f54b440a19336cbbcb27bf6ce6adc6f5a8"
 
 [[package]]
 name = "hermit-abi"
-version = "0.1.19"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "62b467343b94ba476dcb2500d242dadbb39557df889310ac77c5d99100aaac33"
-dependencies = [
- "libc",
-]
-
-[[package]]
-name = "hermit-abi"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d77f7ec81a6d05a3abb01ab6eb7590f6083d08449fe5a1c8b1e620283546ccb7"
@@ -2451,21 +2411,6 @@ name = "hexf-parse"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dfa686283ad6dd069f105e5ab091b04c62850d3e4cf5d67debad1933f55023df"
-
-[[package]]
-name = "humantime"
-version = "1.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "df004cfca50ef23c36850aaaa59ad52cc70d0e90243c3c7737a4dd32dc7a3c4f"
-dependencies = [
- "quick-error",
-]
-
-[[package]]
-name = "humantime"
-version = "2.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
 
 [[package]]
 name = "i18n-config"
@@ -2909,7 +2854,7 @@ version = "1.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eae7b9aee968036d54dce06cebaefd919e4472e753296daccd6d344e3e2df0c2"
 dependencies = [
- "hermit-abi 0.3.3",
+ "hermit-abi",
  "libc",
  "windows-sys 0.48.0",
 ]
@@ -2919,17 +2864,6 @@ name = "io-lifetimes"
 version = "2.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5a611371471e98973dbcab4e0ec66c31a10bc356eeb4d54a0e05eac8158fe38c"
-
-[[package]]
-name = "is-terminal"
-version = "0.4.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cb0889898416213fab133e1d33a0e5858a48177452750691bde3666d0fdbaf8b"
-dependencies = [
- "hermit-abi 0.3.3",
- "rustix 0.38.28",
- "windows-sys 0.48.0",
-]
 
 [[package]]
 name = "itertools"
@@ -3611,7 +3545,7 @@ version = "1.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4161fcb6d602d4d2081af7c3a45852d875a03dd337a6bfdd6e06407b61342a43"
 dependencies = [
- "hermit-abi 0.3.3",
+ "hermit-abi",
  "libc",
 ]
 
@@ -3974,26 +3908,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e8cf8e6a8aa66ce33f63993ffc4ea4271eb5b0530a9002db8455ea6050c77bfa"
 
 [[package]]
-name = "pretty_env_logger"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "926d36b9553851b8b0005f1275891b392ee4d2d833852c417ed025477350fb9d"
-dependencies = [
- "env_logger 0.7.1",
- "log",
-]
-
-[[package]]
-name = "pretty_env_logger"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "865724d4dbe39d9f3dd3b52b88d859d66bcb2d6a0acfd5ea68a65fb66d4bdc1c"
-dependencies = [
- "env_logger 0.10.1",
- "log",
-]
-
-[[package]]
 name = "proc-macro-crate"
 version = "1.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4082,12 +3996,6 @@ checksum = "7f6d64c71eb498fe9eae14ce4ec935c555749aef511cca85b5568910d6e48001"
 dependencies = [
  "bytemuck",
 ]
-
-[[package]]
-name = "quick-error"
-version = "1.2.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a1d01941d82fa2ab50be1e79e6714289dd7cde78eba4c074bc5a4374f650dfe0"
 
 [[package]]
 name = "quick-xml"

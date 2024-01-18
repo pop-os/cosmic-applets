@@ -38,7 +38,6 @@ enum Message {
     WorkspaceUpdate(WorkspacesUpdate),
     WorkspacePressed(ObjectId),
     WheelScrolled(ScrollDelta),
-    Errored,
 }
 
 impl cosmic::Application for IcedWorkspacesApplet {
@@ -114,7 +113,6 @@ impl cosmic::Application for IcedWorkspacesApplet {
                     let _ = tx.try_send(WorkspaceEvent::Scroll(delta));
                 }
             }
-            Message::Errored => {}
         }
         Command::none()
     }
