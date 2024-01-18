@@ -43,7 +43,8 @@ mod pulse;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-pub fn main() -> cosmic::iced::Result {
+#[tokio::main(flavor = "current_thread")]
+pub async fn main() -> cosmic::iced::Result {
     tracing_subscriber::fmt::init();
     let _ = tracing_log::LogTracer::init();
 
@@ -560,19 +561,11 @@ impl cosmic::Application for Audio {
             self.timeline
                 .as_subscription()
                 .map(|(_, now)| Message::Frame(now)),
-            cosmic::cosmic_config::config_subscription(
-                0,
-                Self::APP_ID.into(),
-                AudioAppletConfig::version(),
-            )
-            .map(|(_, res)| match res {
-                Ok(c) => Message::ConfigChanged(c),
-                Err((errs, c)) => {
-                    for err in errs {
-                        tracing::error!("Error loading config: {}", err);
-                    }
-                    Message::ConfigChanged(c)
+            self.core.watch_config(Self::APP_ID.into()).map(|u| {
+                for err in u.errors {
+                    tracing::error!(?err, "Error watching config");
                 }
+                Message::ConfigChanged(u.config)
             }),
             mpris_subscription::mpris_subscription(0).map(Message::Mpris),
             activation_token_subscription(0).map(Message::Token),
