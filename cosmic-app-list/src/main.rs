@@ -10,14 +10,13 @@ use log::info;
 
 use localize::localize;
 
-use crate::config::{APP_ID, VERSION};
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 fn main() -> cosmic::iced::Result {
     // Initialize logger
     tracing_subscriber::fmt::init();
     let _ = tracing_log::LogTracer::init();
-    info!("Iced Workspaces Applet ({})", APP_ID);
-    info!("Version: {}", VERSION);
+    info!("Iced Workspaces Applet ({VERSION})");
     // Prepare i18n
     localize();
 

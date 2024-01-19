@@ -398,7 +398,7 @@ impl cosmic::Application for CosmicAppList {
         core: cosmic::app::Core,
         _flags: Self::Flags,
     ) -> (Self, iced::Command<cosmic::app::Message<Self::Message>>) {
-        let config = Config::new(APP_ID, 1)
+        let config = Config::new(APP_ID, AppListConfig::VERSION)
             .ok()
             .and_then(|c| AppListConfig::get_entry(&c).ok())
             .unwrap_or_default();
@@ -485,14 +485,16 @@ impl cosmic::Application for CosmicAppList {
                 }
 
                 self.config
-                    .add_favorite(id, &Config::new(APP_ID, 1).unwrap());
+                    .add_favorite(id, &Config::new(APP_ID, AppListConfig::VERSION).unwrap());
                 if let Some((popup_id, _toplevel)) = self.popup.take() {
                     return destroy_popup(popup_id);
                 }
             }
             Message::UnFavorite(id) => {
-                self.config
-                    .remove_favorite(id.clone(), &Config::new(APP_ID, 1).unwrap());
+                self.config.remove_favorite(
+                    id.clone(),
+                    &Config::new(APP_ID, AppListConfig::VERSION).unwrap(),
+                );
                 if let Some(i) = self
                     .favorite_list
                     .iter()
@@ -555,7 +557,7 @@ impl cosmic::Application for CosmicAppList {
                             let t = self.favorite_list.remove(pos);
                             self.config.remove_favorite(
                                 t.desktop_info.id.clone(),
-                                &Config::new(APP_ID, 1).unwrap(),
+                                &Config::new(APP_ID, AppListConfig::VERSION).unwrap(),
                             );
                             Some((true, t))
                         } else {
@@ -706,7 +708,7 @@ impl cosmic::Application for CosmicAppList {
                             .iter()
                             .map(|dock_item| dock_item.desktop_info.id.clone())
                             .collect(),
-                        &Config::new(APP_ID, 1).unwrap(),
+                        &Config::new(APP_ID, AppListConfig::VERSION).unwrap(),
                     );
                 }
                 return finish_dnd();
