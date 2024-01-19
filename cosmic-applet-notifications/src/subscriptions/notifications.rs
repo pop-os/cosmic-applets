@@ -22,7 +22,7 @@ pub enum State {
     Finished,
 }
 
-pub fn notifications() -> Subscription<Notification> {
+pub fn notifications(proxy: NotificationsAppletProxy<'static>) -> Subscription<Notification> {
     struct SomeWorker;
 
     subscription::channel(
@@ -107,7 +107,7 @@ trait NotificationsApplet {
     ) -> zbus::Result<()>;
 }
 
-async fn get_proxy() -> anyhow::Result<NotificationsAppletProxy<'static>> {
+pub async fn get_proxy() -> anyhow::Result<NotificationsAppletProxy<'static>> {
     let raw_fd = std::env::var("COSMIC_NOTIFICATIONS")?;
     let raw_fd = raw_fd.parse::<RawFd>()?;
 

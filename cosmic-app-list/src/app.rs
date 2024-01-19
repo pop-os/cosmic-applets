@@ -1122,7 +1122,7 @@ impl cosmic::Application for CosmicAppList {
 
     fn subscription(&self) -> Subscription<Message> {
         Subscription::batch(vec![
-            wayland_subscription(self.subscription_ctr).map(Message::Wayland),
+            wayland_subscription().map(Message::Wayland),
             listen_with(|e, _| match e {
                 cosmic::iced_runtime::core::Event::PlatformSpecific(
                     event::PlatformSpecific::Wayland(event::wayland::Event::Seat(e, seat)),

@@ -222,7 +222,7 @@ impl cosmic::Application for IcedWorkspacesApplet {
 
     fn subscription(&self) -> Subscription<Message> {
         Subscription::batch(vec![
-            workspaces(0).map(Message::WorkspaceUpdate),
+            workspaces().map(Message::WorkspaceUpdate),
             event::listen_with(|e, _| match e {
                 Mouse(mouse::Event::WheelScrolled { delta }) => Some(Message::WheelScrolled(delta)),
                 _ => None,

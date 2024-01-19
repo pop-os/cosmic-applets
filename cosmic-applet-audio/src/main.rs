@@ -43,8 +43,7 @@ mod pulse;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-#[tokio::main(flavor = "current_thread")]
-pub async fn main() -> cosmic::iced::Result {
+pub fn main() -> cosmic::iced::Result {
     tracing_subscriber::fmt::init();
     let _ = tracing_log::LogTracer::init();
 
