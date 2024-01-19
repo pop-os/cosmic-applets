@@ -3,7 +3,6 @@ use cosmic::cosmic_config::{self, Config, CosmicConfigEntry};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 pub const APP_ID: &str = "com.system76.CosmicAppList";
-pub const VERSION: &str = "0.1.0";
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq)]
 pub enum TopLevelFilter {
@@ -13,6 +12,7 @@ pub enum TopLevelFilter {
 }
 
 #[derive(Debug, Clone, Default, Deserialize, Serialize, PartialEq, Eq, CosmicConfigEntry)]
+#[version = 1]
 pub struct AppListConfig {
     pub filter_top_levels: Option<TopLevelFilter>,
     pub favorites: Vec<String>,
