@@ -114,7 +114,7 @@ impl cosmic::Application for Notifications {
     ) {
         let helper = Config::new(
             cosmic_notifications_config::ID,
-            NotificationsConfig::version(),
+            NotificationsConfig::VERSION,
         )
         .ok();
 
