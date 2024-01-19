@@ -11,29 +11,31 @@ use futures::{
     channel::mpsc::{unbounded, UnboundedReceiver},
     SinkExt, StreamExt,
 };
+use once_cell::sync::Lazy;
 use std::{fmt::Debug, hash::Hash, thread::JoinHandle};
+use tokio::sync::Mutex;
 
 use crate::wayland_handler::wayland_handler;
 
-pub fn wayland_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
-    id: I,
-) -> iced::Subscription<WaylandUpdate> {
-    subscription::channel(id, 50, move |mut output| async move {
-        let mut state = State::Ready;
+pub static WAYLAND_RX: Lazy<Mutex<Option<UnboundedReceiver<WaylandUpdate>>>> =
+    Lazy::new(|| Mutex::new(None));
 
-        loop {
-            state = start_listening(state, &mut output).await;
-        }
-    })
+pub fn wayland_subscription() -> iced::Subscription<WaylandUpdate> {
+    subscription::channel(
+        std::any::TypeId::of::<WaylandUpdate>(),
+        50,
+        move |mut output| async move {
+            let mut state = State::Waiting;
+
+            loop {
+                state = start_listening(state, &mut output).await;
+            }
+        },
+    )
 }
 
 pub enum State {
-    Ready,
-    Waiting(
-        UnboundedReceiver<WaylandUpdate>,
-        calloop::channel::Sender<WaylandRequest>,
-        JoinHandle<()>,
-    ),
+    Waiting,
     Finished,
 }
 
@@ -42,28 +44,28 @@ async fn start_listening(
     output: &mut futures::channel::mpsc::Sender<WaylandUpdate>,
 ) -> State {
     match state {
-        State::Ready => {
-            let (calloop_tx, calloop_rx) = calloop::channel::channel();
-            let (toplevel_tx, toplevel_rx) = unbounded();
-            let handle = std::thread::spawn(move || {
-                wayland_handler(toplevel_tx, calloop_rx);
-            });
-            let tx = calloop_tx.clone();
-            _ = output.send(WaylandUpdate::Init(tx)).await;
-            State::Waiting(toplevel_rx, calloop_tx, handle)
-        }
-        State::Waiting(mut rx, tx, handle) => {
-            if handle.is_finished() {
-                _ = output.send(WaylandUpdate::Finished).await;
-                return State::Finished;
-            }
+        State::Waiting => {
+            let mut guard = WAYLAND_RX.lock().await;
+            let rx = {
+                if guard.is_none() {
+                    let (calloop_tx, calloop_rx) = calloop::channel::channel();
+                    let (toplevel_tx, toplevel_rx) = unbounded();
+                    let _ = std::thread::spawn(move || {
+                        wayland_handler(toplevel_tx, calloop_rx);
+                    });
+                    *guard = Some(toplevel_rx);
+                    _ = output.send(WaylandUpdate::Init(calloop_tx)).await;
+                }
+                guard.as_mut().unwrap()
+            };
             match rx.next().await {
                 Some(u) => {
                     _ = output.send(u).await;
-                    State::Waiting(rx, tx, handle)
+                    State::Waiting
                 }
                 None => {
                     _ = output.send(WaylandUpdate::Finished).await;
+                    tracing::error!("Wayland handler thread died");
                     State::Finished
                 }
             }

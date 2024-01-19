@@ -15,6 +15,7 @@ use cosmic::iced::{
 use cosmic::iced_core::alignment::Horizontal;
 use cosmic::Command;
 
+use cosmic::iced_futures::futures::executor::block_on;
 use cosmic::iced_style::application;
 
 use cosmic::iced_widget::{scrollable, Column};
@@ -26,11 +27,11 @@ use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::path::PathBuf;
+use subscriptions::notifications::NotificationsAppletProxy;
 use tokio::sync::mpsc::Sender;
 use tracing::info;
 
-#[tokio::main(flavor = "current_thread")]
-pub async fn main() -> cosmic::iced::Result {
+pub fn main() -> cosmic::iced::Result {
     tracing_subscriber::fmt::init();
     let _ = tracing_log::LogTracer::init();
     // Prepare i18n
@@ -43,7 +44,6 @@ pub async fn main() -> cosmic::iced::Result {
 
 static DO_NOT_DISTURB: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
 
-#[derive(Default)]
 struct Notifications {
     core: cosmic::app::Core,
     config: NotificationsConfig,
@@ -55,6 +55,7 @@ struct Notifications {
     dbus_sender: Option<Sender<subscriptions::dbus::Input>>,
     cards: Vec<(id::Cards, Vec<Notification>, bool, String, String, String)>,
     token_tx: Option<calloop::channel::Sender<TokenRequest>>,
+    proxy: NotificationsAppletProxy<'static>,
 }
 
 impl Notifications {
@@ -132,7 +133,14 @@ impl cosmic::Application for Notifications {
             core,
             config_helper: helper,
             config,
-            ..Default::default()
+            icon_name: Default::default(),
+            popup: None,
+            timeline: Default::default(),
+            dbus_sender: Default::default(),
+            cards: Vec::new(),
+            token_tx: Default::default(),
+            proxy: block_on(crate::subscriptions::notifications::get_proxy())
+                .expect("Failed to get proxy"),
         };
         _self.update_icon();
         (_self, Command::none())
@@ -152,25 +160,20 @@ impl cosmic::Application for Notifications {
 
     fn subscription(&self) -> Subscription<Message> {
         Subscription::batch(vec![
-            config_subscription::<u64, NotificationsConfig>(
-                0,
-                cosmic_notifications_config::ID.into(),
-                NotificationsConfig::version(),
-            )
-            .map(|(_, res)| match res {
-                Ok(config) => Message::Config(config),
-                Err((errors, config)) => {
-                    for err in errors {
+            self.core
+                .watch_config(cosmic_notifications_config::ID.into())
+                .map(|res| {
+                    for err in res.errors {
                         tracing::error!("{:?}", err);
                     }
-                    Message::Config(config)
-                }
-            }),
+                    Message::Config(res.config)
+                }),
             self.timeline
                 .as_subscription()
                 .map(|(_, now)| Message::Frame(now)),
             subscriptions::dbus::proxy().map(Message::DbusEvent),
-            subscriptions::notifications::notifications().map(Message::NotificationEvent),
+            subscriptions::notifications::notifications(self.proxy.clone())
+                .map(Message::NotificationEvent),
             activation_token_subscription(0).map(Message::Token),
         ])
     }
