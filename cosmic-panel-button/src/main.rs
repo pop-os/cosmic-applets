@@ -52,9 +52,8 @@ impl cosmic::Application for Button {
     }
 
     fn view(&self) -> cosmic::Element<Msg> {
-        // TODO icon?
-        cosmic::widget::button(text(&self.desktop.name))
-            .style(cosmic::theme::Button::Text)
+        cosmic::widget::button(text(&self.desktop.name).size(14.0))
+            .style(cosmic::theme::Button::AppletIcon)
             .on_press(Msg::Press)
             .into()
     }
