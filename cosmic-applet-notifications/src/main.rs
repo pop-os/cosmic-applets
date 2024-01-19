@@ -5,7 +5,7 @@ use cosmic::applet::token::subscription::{
 };
 use cosmic::applet::{menu_button, menu_control_padding, padded_control};
 use cosmic::cctk::sctk::reexports::calloop;
-use cosmic::cosmic_config::{config_subscription, Config, CosmicConfigEntry};
+use cosmic::cosmic_config::{Config, CosmicConfigEntry};
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced::Limits;
 use cosmic::iced::{

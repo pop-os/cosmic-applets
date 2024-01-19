@@ -17,8 +17,7 @@ use zbus::{
 
 #[derive(Debug)]
 pub enum State {
-    Ready,
-    WaitingForNotificationEvent(NotificationsAppletProxy<'static>, u8),
+    WaitingForNotificationEvent(u8),
     Finished,
 }
 
@@ -29,20 +28,11 @@ pub fn notifications(proxy: NotificationsAppletProxy<'static>) -> Subscription<N
         std::any::TypeId::of::<SomeWorker>(),
         50,
         |mut output| async move {
-            let mut state = State::Ready;
+            let mut state = State::WaitingForNotificationEvent(0);
 
             loop {
                 match &mut state {
-                    State::Ready => {
-                        state = match get_proxy().await {
-                            Ok(p) => State::WaitingForNotificationEvent(p, 0),
-                            Err(err) => {
-                                error!("Failed to connect to notifications daemon {}", err);
-                                State::Finished
-                            }
-                        };
-                    }
-                    State::WaitingForNotificationEvent(proxy, mut fail_count) => {
+                    State::WaitingForNotificationEvent(mut fail_count) => {
                         trace!("Waiting for notification events...");
                         let mut signal = match proxy.receive_notify().await {
                             Ok(s) => s,
@@ -110,6 +100,7 @@ trait NotificationsApplet {
 pub async fn get_proxy() -> anyhow::Result<NotificationsAppletProxy<'static>> {
     let raw_fd = std::env::var("COSMIC_NOTIFICATIONS")?;
     let raw_fd = raw_fd.parse::<RawFd>()?;
+    tracing::info!("Connecting to notifications daemon on fd {}", raw_fd);
 
     let stream = unsafe { std::os::unix::net::UnixStream::from_raw_fd(raw_fd) };
     stream.set_nonblocking(true)?;
