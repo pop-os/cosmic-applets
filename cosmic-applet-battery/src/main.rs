@@ -2,10 +2,10 @@
 mod backlight;
 mod app;
 mod config;
+mod dgpu;
 mod localize;
 mod power_daemon;
 mod upower;
-
 mod upower_device;
 mod upower_kbdbacklight;
 use config::APP_ID;

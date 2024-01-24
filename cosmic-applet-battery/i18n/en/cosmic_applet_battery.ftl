@@ -11,3 +11,5 @@ minutes = m
 hours = h
 until-empty = until empty
 power-settings = Power and Battery Settings...
+dgpu-running = Discrete GPU is active and can reduce battery life
+dgpu-applications = Applications using {$gpu_name} discrete GPU
