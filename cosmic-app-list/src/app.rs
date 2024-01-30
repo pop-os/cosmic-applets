@@ -12,6 +12,7 @@ use cctk::toplevel_info::ToplevelInfo;
 use cctk::wayland_client::protocol::wl_data_device_manager::DndAction;
 use cctk::wayland_client::protocol::wl_seat::WlSeat;
 use cosmic::cosmic_config::{self, Config, CosmicConfigEntry};
+use cosmic::desktop::{load_applications_for_app_ids, DesktopEntryData};
 use cosmic::iced;
 use cosmic::iced::event::listen_with;
 use cosmic::iced::wayland::actions::data_device::DataFromMimeType;
@@ -24,7 +25,6 @@ use cosmic::iced::widget::vertical_space;
 use cosmic::iced::widget::{column, dnd_source, mouse_area, row, Column, Row};
 use cosmic::iced::Color;
 use cosmic::iced::{window, Subscription};
-use cosmic::iced_core::window::Icon;
 use cosmic::iced_runtime::core::alignment::Horizontal;
 use cosmic::iced_runtime::core::event;
 use cosmic::iced_sctk::commands::data_device::accept_mime_type;
@@ -44,7 +44,6 @@ use cosmic::{
 };
 use cosmic::{Element, Theme};
 use cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1;
-use freedesktop_desktop_entry::DesktopEntry;
 use futures::future::pending;
 use iced::widget::container;
 use iced::Alignment;
@@ -52,9 +51,7 @@ use iced::Background;
 use iced::Length;
 use itertools::Itertools;
 use rand::{thread_rng, Rng};
-use std::borrow::Cow;
 use std::collections::HashMap;
-use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::Duration;
@@ -71,14 +68,14 @@ pub fn run() -> cosmic::iced::Result {
 struct DockItem {
     id: u32,
     toplevels: Vec<(ZcosmicToplevelHandleV1, ToplevelInfo)>,
-    desktop_info: DesktopInfo,
+    desktop_info: DesktopEntryData,
 }
 
 impl DataFromMimeType for DockItem {
     fn from_mime_type(&self, mime_type: &str) -> Option<Vec<u8>> {
-        if mime_type == MIME_TYPE {
+        if mime_type == MIME_TYPE && self.desktop_info.path.is_some() {
             Some(
-                Url::from_file_path(self.desktop_info.path.clone())
+                Url::from_file_path(self.desktop_info.path.as_deref().unwrap())
                     .ok()?
                     .to_string()
                     .as_bytes()
@@ -94,7 +91,7 @@ impl DockItem {
     fn new(
         id: u32,
         toplevels: Vec<(ZcosmicToplevelHandleV1, ToplevelInfo)>,
-        desktop_info: DesktopInfo,
+        desktop_info: DesktopEntryData,
     ) -> Self {
         Self {
             id,
@@ -167,11 +164,11 @@ impl DockItem {
             dnd_source(
                 mouse_area(
                     icon_button
-                        .on_press(
+                        .on_press_maybe(
                             toplevels
                                 .first()
                                 .map(|t| Message::Activate(t.0.clone()))
-                                .unwrap_or_else(|| Message::Exec(desktop_info.exec.clone())),
+                                .or_else(|| desktop_info.exec.clone().map(Message::Exec)),
                         )
                         .width(Length::Shrink)
                         .height(Length::Shrink),
@@ -202,7 +199,7 @@ struct DndOffer {
 #[derive(Clone, Default)]
 struct CosmicAppList {
     core: cosmic::app::Core,
-    popup: Option<(window::Id, DockItem)>,
+    popup: Option<(window::Id, u32)>,
     subscription_ctr: u32,
     item_ctr: u32,
     active_list: Vec<DockItem>,
@@ -244,109 +241,6 @@ enum Message {
     StopListeningForDnd,
     IncrementSubscriptionCtr,
     ConfigUpdated(AppListConfig),
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) enum IconSource {
-    Name(String),
-    Path(PathBuf),
-}
-
-impl IconSource {
-    fn from_unknown(icon: &str) -> Self {
-        let icon_path = Path::new(icon);
-        if icon_path.is_absolute() && icon_path.exists() {
-            Self::Path(icon_path.into())
-        } else {
-            Self::Name(icon.into())
-        }
-    }
-
-    fn as_cosmic_icon(&self) -> cosmic::widget::icon::Icon {
-        match self {
-            Self::Name(name) => cosmic::widget::icon::from_name(name.as_str())
-                .size(128)
-                .fallback(Some(cosmic::widget::icon::IconFallback::Names(vec![
-                    "application-default".into(),
-                    "application-x-executable".into(),
-                ])))
-                .into(),
-            Self::Path(path) => cosmic::widget::icon(cosmic::widget::icon::from_path(path.clone())),
-        }
-    }
-}
-
-impl Default for IconSource {
-    fn default() -> Self {
-        Self::Name("application-default".to_string())
-    }
-}
-
-#[derive(Debug, Clone, Default)]
-struct DesktopInfo {
-    id: String,
-    wm_class: Option<String>,
-    icon: IconSource,
-    exec: String,
-    name: String,
-    path: PathBuf,
-}
-
-fn desktop_info_for_app_ids(mut app_ids: Vec<String>) -> Vec<DesktopInfo> {
-    let app_ids_clone = app_ids.clone();
-    let mut ret = freedesktop_desktop_entry::Iter::new(freedesktop_desktop_entry::default_paths())
-        .filter_map(|path| {
-            std::fs::read_to_string(&path).ok().and_then(|input| {
-                DesktopEntry::decode(&path, &input).ok().and_then(|de| {
-                    if let Some(i) = app_ids.iter().position(|s| {
-                        s == de.appid || s.eq(&de.startup_wm_class().unwrap_or_default())
-                    }) {
-                        // check if absolute path exists and otherwise treat it as a name
-                        let icon = de.icon().unwrap_or(de.appid);
-                        let icon_path = Path::new(icon);
-                        let icon = if icon_path.is_absolute() && icon_path.exists() {
-                            IconSource::Path(icon_path.into())
-                        } else {
-                            IconSource::Name(icon.into())
-                        };
-                        app_ids.remove(i);
-
-                        Some(DesktopInfo {
-                            id: de.appid.to_string(),
-                            wm_class: de.startup_wm_class().map(ToString::to_string),
-                            icon,
-                            exec: de.exec().unwrap_or_default().to_string(),
-                            name: de.name(None).unwrap_or_default().to_string(),
-                            path: path.clone(),
-                        })
-                    } else {
-                        None
-                    }
-                })
-            })
-        })
-        .collect_vec();
-    ret.append(
-        &mut app_ids
-            .into_iter()
-            .map(|id| DesktopInfo {
-                id,
-                icon: IconSource::default(),
-                ..Default::default()
-            })
-            .collect_vec(),
-    );
-    ret.sort_by(|a, b| {
-        app_ids_clone
-            .iter()
-            .position(|id| id == &a.id || Some(id) == a.wm_class.as_ref())
-            .cmp(
-                &app_ids_clone
-                    .iter()
-                    .position(|id| id == &b.id || Some(id) == b.wm_class.as_ref()),
-            )
-    });
-    ret
 }
 
 fn index_in_list(
@@ -404,15 +298,19 @@ impl cosmic::Application for CosmicAppList {
             .unwrap_or_default();
         let mut self_ = Self {
             core,
-            favorite_list: desktop_info_for_app_ids(config.favorites.clone())
-                .into_iter()
-                .enumerate()
-                .map(|(favorite_ctr, e)| DockItem {
-                    id: favorite_ctr as u32,
-                    toplevels: Default::default(),
-                    desktop_info: e,
-                })
-                .collect(),
+            favorite_list: load_applications_for_app_ids(
+                None,
+                config.favorites.iter().map(|s| &**s),
+                true,
+            )
+            .into_iter()
+            .enumerate()
+            .map(|(favorite_ctr, e)| DockItem {
+                id: favorite_ctr as u32,
+                toplevels: Default::default(),
+                desktop_info: e,
+            })
+            .collect(),
             config,
             ..Default::default()
         };
@@ -450,7 +348,7 @@ impl cosmic::Application for CosmicAppList {
                     };
 
                     let new_id = window::Id::unique();
-                    self.popup = Some((new_id, toplevel_group.clone()));
+                    self.popup = Some((new_id, toplevel_group.id.clone()));
 
                     let mut popup_settings = self.core.applet.get_popup_settings(
                         window::Id::MAIN,
@@ -511,11 +409,11 @@ impl cosmic::Application for CosmicAppList {
                 }
             }
             Message::Activate(handle) => {
-                if let Some(p) = self.popup.take() {
-                    return destroy_popup(p.0);
-                }
                 if let Some(tx) = self.wayland_sender.as_ref() {
                     let _ = tx.send(WaylandRequest::Toplevel(ToplevelRequest::Activate(handle)));
+                }
+                if let Some(p) = self.popup.take() {
+                    return destroy_popup(p.0);
                 }
             }
             Message::Quit(id) => {
@@ -649,18 +547,7 @@ impl cosmic::Application for CosmicAppList {
             }
             Message::DndData(file_path) => {
                 if let Some(DndOffer { dock_item, .. }) = self.dnd_offer.as_mut() {
-                    if let Some(di) = std::fs::read_to_string(&file_path).ok().and_then(|input| {
-                        DesktopEntry::decode(&file_path, &input)
-                            .ok()
-                            .map(|de| DesktopInfo {
-                                id: de.id().to_string(),
-                                wm_class: de.startup_wm_class().map(ToString::to_string),
-                                icon: IconSource::from_unknown(de.icon().unwrap_or(de.appid)),
-                                exec: de.exec().unwrap_or_default().to_string(),
-                                name: de.name(None).unwrap_or_default().to_string(),
-                                path: file_path.clone(),
-                            })
-                    }) {
+                    if let Some(di) = cosmic::desktop::load_desktop_file(None, &file_path) {
                         self.item_ctr += 1;
                         *dock_item = Some(DockItem::new(self.item_ctr, Vec::new(), di));
                     }
@@ -758,17 +645,14 @@ impl cosmic::Application for CosmicAppList {
                                     info.app_id = format!("Unknown Application {}", self.item_ctr);
                                 }
                                 self.item_ctr += 1;
-                                let desktop_info =
-                                    desktop_info_for_app_ids(vec![info.app_id.clone()])
-                                        .pop()
-                                        .unwrap_or_else(|| DesktopInfo {
-                                            id: info.app_id.clone(),
-                                            wm_class: None,
-                                            icon: IconSource::default(),
-                                            exec: String::new(),
-                                            name: info.app_id.clone(),
-                                            path: PathBuf::new(),
-                                        });
+                                let desktop_info = load_applications_for_app_ids(
+                                    None,
+                                    std::iter::once(&*info.app_id),
+                                    true,
+                                )
+                                .into_iter()
+                                .next()
+                                .unwrap();
                                 self.active_list.push(DockItem {
                                     id: self.item_ctr,
                                     toplevels: vec![(handle, info)],
@@ -806,23 +690,13 @@ impl cosmic::Application for CosmicAppList {
                         }
                     },
                     WaylandUpdate::ActivationToken { token, exec } => {
-                        let mut exec = shlex::Shlex::new(&exec);
-                        let mut cmd = match exec.next() {
-                            Some(cmd) if !cmd.contains('=') => std::process::Command::new(cmd),
-                            _ => return Command::none(),
-                        };
-                        for arg in exec {
-                            // TODO handle "%" args here if necessary?
-                            if !arg.starts_with('%') {
-                                cmd.arg(arg);
-                            }
-                        }
+                        let mut envs = Vec::new();
                         if let Some(token) = token {
-                            cmd.env("XDG_ACTIVATION_TOKEN", &token);
-                            cmd.env("DESKTOP_STARTUP_ID", &token);
+                            envs.push(("XDG_ACTIVATION_TOKEN", token.clone()));
+                            envs.push(("DESKTOP_STARTUP_ID", token));
                         }
                         tokio::task::spawn_blocking(|| {
-                            crate::process::spawn(cmd);
+                            cosmic::desktop::spawn_desktop_exec(exec, envs);
                         });
                     }
                 }
@@ -872,25 +746,29 @@ impl cosmic::Application for CosmicAppList {
                 }
 
                 // pull back configured items into the favorites list
-                self.favorite_list = desktop_info_for_app_ids(self.config.favorites.clone())
-                    .into_iter()
-                    .map(|new_dock_item| {
-                        if let Some(p) = self
-                            .active_list
-                            .iter()
-                            .position(|dock_item| dock_item.desktop_info.id == new_dock_item.id)
-                        {
-                            self.active_list.remove(p)
-                        } else {
-                            self.item_ctr += 1;
-                            DockItem {
-                                id: self.item_ctr,
-                                toplevels: Default::default(),
-                                desktop_info: new_dock_item,
-                            }
+                self.favorite_list = load_applications_for_app_ids(
+                    None,
+                    self.config.favorites.iter().map(|s| &**s),
+                    true,
+                )
+                .into_iter()
+                .map(|new_dock_item| {
+                    if let Some(p) = self
+                        .active_list
+                        .iter()
+                        .position(|dock_item| dock_item.desktop_info.id == new_dock_item.id)
+                    {
+                        self.active_list.remove(p)
+                    } else {
+                        self.item_ctr += 1;
+                        DockItem {
+                            id: self.item_ctr,
+                            toplevels: Default::default(),
+                            desktop_info: new_dock_item,
                         }
-                    })
-                    .collect();
+                    }
+                })
+                .collect();
             }
             Message::CloseRequested(id) => {
                 if Some(id) == self.popup.as_ref().map(|p| p.0) {
@@ -1051,15 +929,20 @@ impl cosmic::Application for CosmicAppList {
                 .as_cosmic_icon()
                 .size(self.core.applet.suggested_size().0)
                 .into()
-        } else if let Some((
-            _popup_id,
-            DockItem {
+        } else if let Some((_popup_id, id)) = self.popup.as_ref().filter(|p| id == p.0) {
+            let Some(DockItem {
                 toplevels,
                 desktop_info,
                 ..
-            },
-        )) = self.popup.as_ref().filter(|p| id == p.0)
-        {
+            }) = self
+                .favorite_list
+                .iter()
+                .chain(self.active_list.iter())
+                .find(|i| i.id == *id)
+            else {
+                return iced::widget::text("").into();
+            };
+
             let is_favorite = self.config.favorites.contains(&desktop_info.id)
                 || desktop_info
                     .wm_class
@@ -1068,13 +951,20 @@ impl cosmic::Application for CosmicAppList {
 
             let mut content = column![
                 iced::widget::text(&desktop_info.name).horizontal_alignment(Horizontal::Center),
-                cosmic::widget::button(iced::widget::text(fl!("new-window")))
-                    .style(Button::Text)
-                    .on_press(Message::Exec(desktop_info.exec.clone())),
             ]
             .padding(8)
             .spacing(4)
             .align_items(Alignment::Center);
+
+            if let Some(exec) = desktop_info.exec.clone() {
+                content = content.push(
+                    cosmic::widget::button(iced::widget::text(fl!("new-window")))
+                        .style(Button::Text)
+                        .on_press(Message::Exec(exec)),
+                );
+                content = content.push(divider::horizontal::default());
+            }
+
             if !toplevels.is_empty() {
                 let mut list_col = column![];
                 for (handle, info) in toplevels {
@@ -1089,10 +979,9 @@ impl cosmic::Application for CosmicAppList {
                             .on_press(Message::Activate(handle.clone())),
                     );
                 }
-                content = content.push(divider::horizontal::default());
                 content = content.push(list_col);
+                content = content.push(divider::horizontal::default());
             }
-            content = content.push(divider::horizontal::default());
             content = content.push(if is_favorite {
                 cosmic::widget::button(iced::widget::text(fl!("unfavorite")))
                     .style(Button::Text)

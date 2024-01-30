@@ -32,7 +32,7 @@ libcosmic = { git = "https://github.com/pop-os/libcosmic", default-features = fa
     "applet-token",
     "tokio",
     "wayland",
-    "process",
+    "desktop",
     "dbus-config"
 ] }
 zbus = { version = "3.14", default-features = false, features = ["tokio"] }
