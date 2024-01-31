@@ -79,7 +79,11 @@ pub enum WaylandUpdate {
     Init(calloop::channel::Sender<WaylandRequest>),
     Finished,
     Toplevel(ToplevelUpdate),
-    ActivationToken { token: Option<String>, exec: String },
+    ActivationToken {
+        token: Option<String>,
+        exec: String,
+        gpu_idx: Option<usize>,
+    },
 }
 
 #[derive(Clone, Debug)]
@@ -92,7 +96,11 @@ pub enum ToplevelUpdate {
 #[derive(Clone, Debug)]
 pub enum WaylandRequest {
     Toplevel(ToplevelRequest),
-    TokenRequest { app_id: String, exec: String },
+    TokenRequest {
+        app_id: String,
+        exec: String,
+        gpu_idx: Option<usize>,
+    },
 }
 
 #[derive(Debug, Clone)]

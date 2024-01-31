@@ -806,12 +806,14 @@ dependencies = [
  "rust-embed 6.8.1",
  "rust-embed-utils 7.8.1",
  "serde",
+ "switcheroo-control",
  "tokio",
  "tracing",
  "tracing-log",
  "tracing-subscriber",
  "url",
  "xdg",
+ "zbus",
 ]
 
 [[package]]
@@ -1062,7 +1064,7 @@ dependencies = [
 [[package]]
 name = "cosmic-dbus-networkmanager"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/dbus-settings-bindings#3644bc909984842f35adb1057ef6e0a277c1aa6a"
+source = "git+https://github.com/pop-os/dbus-settings-bindings#5dea929b730460f883935357a1a8fb9736f36f95"
 dependencies = [
  "bitflags 2.4.2",
  "derive_builder",
@@ -3506,7 +3508,7 @@ dependencies = [
 [[package]]
 name = "mpris2-zbus"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/dbus-settings-bindings#3644bc909984842f35adb1057ef6e0a277c1aa6a"
+source = "git+https://github.com/pop-os/dbus-settings-bindings#5dea929b730460f883935357a1a8fb9736f36f95"
 dependencies = [
  "serde",
  "thiserror",
@@ -4963,6 +4965,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "switcheroo-control"
+version = "0.1.0"
+source = "git+https://github.com/pop-os/dbus-settings-bindings#5dea929b730460f883935357a1a8fb9736f36f95"
+dependencies = [
+ "zbus",
+]
+
+[[package]]
 name = "syn"
 version = "1.0.109"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5982,7 +5992,7 @@ dependencies = [
  "js-sys",
  "log",
  "naga",
- "parking_lot 0.12.1",
+ "parking_lot 0.11.2",
  "profiling",
  "raw-window-handle",
  "smallvec",
@@ -6007,7 +6017,7 @@ dependencies = [
  "codespan-reporting",
  "log",
  "naga",
- "parking_lot 0.12.1",
+ "parking_lot 0.11.2",
  "profiling",
  "raw-window-handle",
  "rustc-hash",
@@ -6047,7 +6057,7 @@ dependencies = [
  "naga",
  "objc",
  "once_cell",
- "parking_lot 0.12.1",
+ "parking_lot 0.11.2",
  "profiling",
  "range-alloc",
  "raw-window-handle",

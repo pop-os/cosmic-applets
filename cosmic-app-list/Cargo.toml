@@ -8,6 +8,7 @@ edition = "2021"
 cctk.workspace = true
 cosmic-protocols.workspace = true
 libcosmic.workspace = true
+zbus.workspace = true
 # libcosmic = { path = "../../libcosmic", default-features = false, features = ["wayland", "tokio", "applet"] }
 ron = "0.8"
 futures = "0.3"
@@ -29,3 +30,4 @@ rust-embed = "6.3"
 url = "2.3.1"
 rust-embed-utils = "7.5.0"
 rand = "0.8.5"
+switcheroo-control = { git = "https://github.com/pop-os/dbus-settings-bindings" }

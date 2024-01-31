@@ -11,7 +11,7 @@ use cctk::sctk::reexports::calloop::channel::Sender;
 use cctk::toplevel_info::ToplevelInfo;
 use cctk::wayland_client::protocol::wl_data_device_manager::DndAction;
 use cctk::wayland_client::protocol::wl_seat::WlSeat;
-use cosmic::cosmic_config::{self, Config, CosmicConfigEntry};
+use cosmic::cosmic_config::{Config, CosmicConfigEntry};
 use cosmic::desktop::{load_applications_for_app_ids, DesktopEntryData};
 use cosmic::iced;
 use cosmic::iced::event::listen_with;
@@ -25,6 +25,7 @@ use cosmic::iced::widget::vertical_space;
 use cosmic::iced::widget::{column, dnd_source, mouse_area, row, Column, Row};
 use cosmic::iced::Color;
 use cosmic::iced::{window, Subscription};
+use cosmic::iced_core::Padding;
 use cosmic::iced_runtime::core::alignment::Horizontal;
 use cosmic::iced_runtime::core::event;
 use cosmic::iced_sctk::commands::data_device::accept_mime_type;
@@ -55,6 +56,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::Duration;
+use switcheroo_control::Gpu;
 use tokio::time::sleep;
 use url::Url;
 
@@ -105,6 +107,7 @@ impl DockItem {
         applet: &Context,
         rectangle_tracker: Option<&RectangleTracker<u32>>,
         interaction_enabled: bool,
+        gpus: Option<&[Gpu]>,
     ) -> Element<'_, Message> {
         let Self {
             toplevels,
@@ -168,7 +171,20 @@ impl DockItem {
                             toplevels
                                 .first()
                                 .map(|t| Message::Activate(t.0.clone()))
-                                .or_else(|| desktop_info.exec.clone().map(Message::Exec)),
+                                .or_else(|| {
+                                    let gpu_idx = gpus.map(|gpus| {
+                                        if desktop_info.prefers_dgpu {
+                                            gpus.iter().position(|gpu| !gpu.default).unwrap_or(0)
+                                        } else {
+                                            gpus.iter().position(|gpu| gpu.default).unwrap_or(0)
+                                        }
+                                    });
+
+                                    desktop_info
+                                        .exec
+                                        .clone()
+                                        .map(|exec| Message::Exec(exec, gpu_idx))
+                                }),
                         )
                         .width(Length::Shrink)
                         .height(Length::Shrink),
@@ -212,6 +228,7 @@ struct CosmicAppList {
     rectangles: HashMap<u32, iced::Rectangle>,
     dnd_offer: Option<DndOffer>,
     is_listening_for_dnd: bool,
+    gpus: Option<Vec<Gpu>>,
 }
 
 // TODO DnD after sctk merges DnD
@@ -221,10 +238,11 @@ enum Message {
     Favorite(String),
     UnFavorite(String),
     Popup(String),
+    GpuRequest(Option<Vec<Gpu>>),
     CloseRequested(window::Id),
     ClosePopup,
     Activate(ZcosmicToplevelHandleV1),
-    Exec(String),
+    Exec(String, Option<usize>),
     Quit(String),
     Ignore,
     NewSeat(WlSeat),
@@ -282,6 +300,39 @@ fn index_in_list(
     }
 }
 
+async fn try_get_gpus() -> Option<Vec<Gpu>> {
+    let connection = zbus::Connection::system().await.ok()?;
+    let proxy = switcheroo_control::SwitcherooControlProxy::new(&connection)
+        .await
+        .ok()?;
+
+    if !proxy.has_dual_gpu().await.ok()? {
+        return None;
+    }
+
+    let gpus = proxy.get_gpus().await.ok()?;
+    if gpus.is_empty() {
+        return None;
+    }
+
+    Some(gpus)
+}
+
+pub fn menu_button<'a, Message>(
+    content: impl Into<Element<'a, Message>>,
+) -> cosmic::widget::Button<'a, Message, cosmic::Renderer> {
+    cosmic::widget::Button::new(content)
+        .style(Button::AppletMenu)
+        .padding(menu_control_padding())
+        .width(Length::Fill)
+}
+
+pub fn menu_control_padding() -> Padding {
+    let theme = cosmic::theme::active();
+    let cosmic = theme.cosmic();
+    [cosmic.space_xxs(), cosmic.space_m()].into()
+}
+
 impl cosmic::Application for CosmicAppList {
     type Message = Message;
     type Executor = cosmic::SingleThreadExecutor;
@@ -316,7 +367,12 @@ impl cosmic::Application for CosmicAppList {
         };
         self_.item_ctr = self_.favorite_list.len() as u32;
 
-        (self_, Command::none())
+        (
+            self_,
+            Command::perform(try_get_gpus(), |gpus| {
+                cosmic::app::Message::App(Message::GpuRequest(gpus))
+            }),
+        )
     }
 
     fn core(&self) -> &cosmic::app::Core {
@@ -348,7 +404,7 @@ impl cosmic::Application for CosmicAppList {
                     };
 
                     let new_id = window::Id::unique();
-                    self.popup = Some((new_id, toplevel_group.id.clone()));
+                    self.popup = Some((new_id, toplevel_group.id));
 
                     let mut popup_settings = self.core.applet.get_popup_settings(
                         window::Id::MAIN,
@@ -369,7 +425,11 @@ impl cosmic::Application for CosmicAppList {
                         width: width as i32,
                         height: height as i32,
                     };
-                    return get_popup(popup_settings);
+
+                    let gpu_update = Command::perform(try_get_gpus(), |gpus| {
+                        cosmic::app::Message::App(Message::GpuRequest(gpus))
+                    });
+                    return Command::batch([gpu_update, get_popup(popup_settings)]);
                 }
             }
             Message::Favorite(id) => {
@@ -547,7 +607,7 @@ impl cosmic::Application for CosmicAppList {
             }
             Message::DndData(file_path) => {
                 if let Some(DndOffer { dock_item, .. }) = self.dnd_offer.as_mut() {
-                    if let Some(di) = cosmic::desktop::load_desktop_file(None, &file_path) {
+                    if let Some(di) = cosmic::desktop::load_desktop_file(None, file_path) {
                         self.item_ctr += 1;
                         *dock_item = Some(DockItem::new(self.item_ctr, Vec::new(), di));
                     }
@@ -689,11 +749,23 @@ impl cosmic::Application for CosmicAppList {
                             }
                         }
                     },
-                    WaylandUpdate::ActivationToken { token, exec } => {
+                    WaylandUpdate::ActivationToken {
+                        token,
+                        exec,
+                        gpu_idx,
+                    } => {
                         let mut envs = Vec::new();
                         if let Some(token) = token {
-                            envs.push(("XDG_ACTIVATION_TOKEN", token.clone()));
-                            envs.push(("DESKTOP_STARTUP_ID", token));
+                            envs.push(("XDG_ACTIVATION_TOKEN".to_string(), token.clone()));
+                            envs.push(("DESKTOP_STARTUP_ID".to_string(), token));
+                        }
+                        if let (Some(gpus), Some(idx)) = (self.gpus.as_ref(), gpu_idx) {
+                            envs.extend(
+                                gpus[idx]
+                                    .environment
+                                    .iter()
+                                    .map(|(k, v)| (k.clone(), v.clone())),
+                            );
                         }
                         tokio::task::spawn_blocking(|| {
                             cosmic::desktop::spawn_desktop_exec(exec, envs);
@@ -707,11 +779,12 @@ impl cosmic::Application for CosmicAppList {
             Message::RemovedSeat(_) => {
                 self.seat.take();
             }
-            Message::Exec(exec) => {
+            Message::Exec(exec, gpu_idx) => {
                 if let Some(tx) = self.wayland_sender.as_ref() {
                     let _ = tx.send(WaylandRequest::TokenRequest {
                         app_id: Self::APP_ID.to_string(),
                         exec,
+                        gpu_idx,
                     });
                 }
             }
@@ -775,6 +848,9 @@ impl cosmic::Application for CosmicAppList {
                     self.popup = None;
                 }
             }
+            Message::GpuRequest(gpus) => {
+                self.gpus = gpus;
+            }
         }
 
         Command::none()
@@ -793,6 +869,7 @@ impl cosmic::Application for CosmicAppList {
                     &self.core.applet,
                     self.rectangle_tracker.as_ref(),
                     self.popup.is_none(),
+                    self.gpus.as_deref(),
                 )
             })
             .collect();
@@ -802,7 +879,10 @@ impl cosmic::Application for CosmicAppList {
             .as_ref()
             .and_then(|o| o.dock_item.as_ref().map(|item| (item, o.preview_index)))
         {
-            favorites.insert(index, item.as_icon(&self.core.applet, None, false));
+            favorites.insert(
+                index,
+                item.as_icon(&self.core.applet, None, false, self.gpus.as_deref()),
+            );
         } else if self.is_listening_for_dnd && self.favorite_list.is_empty() {
             // show star indicating favorite_list is drag target
             favorites.push(
@@ -823,6 +903,7 @@ impl cosmic::Application for CosmicAppList {
                     &self.core.applet,
                     self.rectangle_tracker.as_ref(),
                     self.popup.is_none(),
+                    self.gpus.as_deref(),
                 )
             })
             .collect();
@@ -949,19 +1030,45 @@ impl cosmic::Application for CosmicAppList {
                     .as_ref()
                     .is_some_and(|wm_class| self.config.favorites.contains(wm_class));
 
-            let mut content = column![
-                iced::widget::text(&desktop_info.name).horizontal_alignment(Horizontal::Center),
-            ]
-            .padding(8)
-            .spacing(4)
+            let mut content = column![container(
+                iced::widget::text(&desktop_info.name).horizontal_alignment(Horizontal::Center)
+            )
+            .padding(menu_control_padding()),]
+            .padding([8, 0])
             .align_items(Alignment::Center);
 
             if let Some(exec) = desktop_info.exec.clone() {
-                content = content.push(
-                    cosmic::widget::button(iced::widget::text(fl!("new-window")))
-                        .style(Button::Text)
-                        .on_press(Message::Exec(exec)),
-                );
+                if !toplevels.is_empty() {
+                    content = content.push(
+                        menu_button(iced::widget::text(fl!("new-window")))
+                            .on_press(Message::Exec(exec, None)),
+                    );
+                } else if let Some(gpus) = self.gpus.as_ref() {
+                    let default_idx = if desktop_info.prefers_dgpu {
+                        gpus.iter().position(|gpu| !gpu.default).unwrap_or(0)
+                    } else {
+                        gpus.iter().position(|gpu| gpu.default).unwrap_or(0)
+                    };
+                    for (i, gpu) in gpus.iter().enumerate() {
+                        content = content.push(
+                            menu_button(iced::widget::text(format!(
+                                "{} {}",
+                                fl!("run-on", gpu = gpu.name.clone()),
+                                if i == default_idx {
+                                    fl!("run-on-default")
+                                } else {
+                                    String::new()
+                                }
+                            )))
+                            .on_press(Message::Exec(exec.clone(), Some(i))),
+                        );
+                    }
+                } else {
+                    content = content.push(
+                        menu_button(iced::widget::text(fl!("run")))
+                            .on_press(Message::Exec(exec, None)),
+                    );
+                }
                 content = content.push(divider::horizontal::default());
             }
 
@@ -974,8 +1081,7 @@ impl cosmic::Application for CosmicAppList {
                         info.title.clone()
                     };
                     list_col = list_col.push(
-                        cosmic::widget::button(iced::widget::text(title))
-                            .style(Button::Text)
+                        menu_button(iced::widget::text(title))
                             .on_press(Message::Activate(handle.clone())),
                     );
                 }
@@ -983,25 +1089,21 @@ impl cosmic::Application for CosmicAppList {
                 content = content.push(divider::horizontal::default());
             }
             content = content.push(if is_favorite {
-                cosmic::widget::button(iced::widget::text(fl!("unfavorite")))
-                    .style(Button::Text)
+                menu_button(iced::widget::text(fl!("unfavorite")))
                     .on_press(Message::UnFavorite(desktop_info.id.clone()))
             } else {
-                cosmic::widget::button(iced::widget::text(fl!("favorite")))
-                    .style(Button::Text)
+                menu_button(iced::widget::text(fl!("favorite")))
                     .on_press(Message::Favorite(desktop_info.id.clone()))
             });
 
             content = match toplevels.len() {
                 0 => content,
                 1 => content.push(
-                    cosmic::widget::button(iced::widget::text(fl!("quit")))
-                        .style(Button::Text)
+                    menu_button(iced::widget::text(fl!("quit")))
                         .on_press(Message::Quit(desktop_info.id.clone())),
                 ),
                 _ => content.push(
-                    cosmic::widget::button(iced::widget::text(&fl!("quit-all")))
-                        .style(Button::Text)
+                    menu_button(iced::widget::text(&fl!("quit-all")))
                         .on_press(Message::Quit(desktop_info.id.clone())),
                 ),
             };
