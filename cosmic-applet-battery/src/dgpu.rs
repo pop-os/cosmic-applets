@@ -3,12 +3,13 @@ use std::{
     fmt::{self, Debug},
     hash::Hash,
     io,
-    os::fd::AsRawFd,
+    os::fd::{AsFd, AsRawFd},
     path::{Path, PathBuf},
     time::Duration,
 };
 
 use cosmic::iced::{self, subscription};
+use drm::control::Device as ControlDevice;
 use futures::{FutureExt, SinkExt};
 use tokio::{
     io::unix::AsyncFd,
@@ -126,7 +127,7 @@ impl GpuMonitor {
 }
 
 #[derive(Debug, Clone)]
-pub struct App {
+pub struct Entry {
     pub name: String,
     pub icon: Option<String>,
     pub secondary: String,
@@ -140,7 +141,45 @@ pub struct RunningApp {
 }
 
 impl Gpu {
-    async fn app_list(&self, running_apps: &[RunningApp]) -> Option<Vec<App>> {
+    async fn connected_outputs(&self) -> Option<Vec<Entry>> {
+        let path = self.path.clone();
+        spawn_blocking(move || {
+            struct Device(std::fs::File);
+            impl AsFd for Device {
+                fn as_fd(&self) -> std::os::unix::prelude::BorrowedFd<'_> {
+                    self.0.as_fd()
+                }
+            }
+            impl drm::Device for Device {}
+            impl ControlDevice for Device {}
+
+            let device = Device(std::fs::File::open(path).ok()?);
+            let resources = device.resource_handles().ok()?;
+
+            let outputs = resources
+                .connectors
+                .into_iter()
+                .filter_map(|conn| device.get_connector(conn, false).ok())
+                .filter(|info| info.state() == drm::control::connector::State::Connected)
+                .map(|info| Entry {
+                    name: format!(
+                        "Output @ {}:{}",
+                        info.interface().as_str(),
+                        info.interface_id()
+                    ),
+                    icon: Some("display-symbolic".to_string()),
+                    secondary: String::new(),
+                })
+                .collect();
+            // TODO read and parse edid with libdisplay-info and display output manufacture/model
+
+            Some(outputs)
+        })
+        .await
+        .ok()?
+    }
+
+    async fn app_list(&self, running_apps: &[RunningApp]) -> Option<Vec<Entry>> {
         match self.driver.as_ref().and_then(|s| s.to_str()) {
             Some("nvidia") => {
                 // figure out bus path for calling nvidia-smi
@@ -190,13 +229,13 @@ impl Gpu {
                                 .iter()
                                 .find(|running_app| running_app.executable_name == process_name)
                             {
-                                App {
+                                Entry {
                                     name: application.name.clone(),
                                     icon: application.icon.clone(),
                                     secondary: String::new(),
                                 }
                             } else {
-                                App {
+                                Entry {
                                     name: process_name.to_string(),
                                     icon: None,
                                     secondary: pid.to_string(),
@@ -235,13 +274,13 @@ impl Gpu {
                                 .iter()
                                 .find(|running_app| running_app.executable_name == executable)
                             {
-                                Some(App {
+                                Some(Entry {
                                     name: application.name.clone(),
                                     icon: application.icon.clone(),
                                     secondary: String::new(),
                                 })
                             } else {
-                                Some(App {
+                                Some(Entry {
                                     name: executable,
                                     icon: None,
                                     secondary: pid.to_string(),
@@ -351,7 +390,7 @@ pub enum State {
 #[derive(Debug)]
 pub enum GpuUpdate {
     Off(PathBuf),
-    On(PathBuf, String, Option<Vec<App>>),
+    On(PathBuf, String, Option<Vec<Entry>>),
 }
 
 async fn start_listening(
@@ -440,8 +479,12 @@ async fn start_listening(
                     }
 
                     if enabled {
-                        let app_list = gpu.app_list(&[]).await;
-                        if output.send(GpuUpdate::On(gpu.path.clone(), gpu.name.clone(), app_list)).await.is_err() {
+                        let mut list = gpu.connected_outputs().await.unwrap_or_default();
+                        if let Some(mut apps) = gpu.app_list(&[]).await {
+                            apps.retain(|app| app.name != "cosmic-comp");
+                            list.extend(apps);
+                        }
+                        if output.send(GpuUpdate::On(gpu.path.clone(), gpu.name.clone(), (!list.is_empty()).then_some(list))).await.is_err() {
                             return State::Finished;
                         }
                     } else if output.send(GpuUpdate::Off(gpu.path.clone())).await.is_err() {

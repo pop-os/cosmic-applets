@@ -2,7 +2,7 @@ use crate::backlight::{
     screen_backlight_subscription, ScreenBacklightRequest, ScreenBacklightUpdate,
 };
 use crate::config;
-use crate::dgpu::{dgpu_subscription, App, GpuUpdate};
+use crate::dgpu::{dgpu_subscription, Entry, GpuUpdate};
 use crate::fl;
 use crate::power_daemon::{
     power_profile_subscription, Power, PowerProfileRequest, PowerProfileUpdate,
@@ -65,7 +65,7 @@ static MAX_CHARGE: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
 struct GPUData {
     name: String,
     toggled: bool,
-    app_list: Option<Vec<App>>,
+    app_list: Option<Vec<Entry>>,
 }
 
 #[derive(Clone, Default)]
@@ -159,7 +159,7 @@ enum Message {
     UpdateScreenBrightness(f64),
     InitKbdBacklight(UnboundedSender<KeyboardBacklightRequest>, f64),
     InitScreenBacklight(UnboundedSender<ScreenBacklightRequest>, f64),
-    GpuOn(PathBuf, String, Option<Vec<App>>),
+    GpuOn(PathBuf, String, Option<Vec<Entry>>),
     GpuOff(PathBuf),
     ToggleGpuApps(PathBuf),
     Errored(String),

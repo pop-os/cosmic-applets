@@ -19,3 +19,4 @@ i18n-embed-fl = "0.6.4"
 rust-embed = "6.3.0"
 tokio = { version = "1.17.0", features = ["sync", "rt", "rt-multi-thread", "fs", "macros"] }
 udev = "0.8"
+drm = "0.11.1"
