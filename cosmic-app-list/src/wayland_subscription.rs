@@ -12,7 +12,7 @@ use futures::{
     SinkExt, StreamExt,
 };
 use once_cell::sync::Lazy;
-use std::{fmt::Debug, hash::Hash, thread::JoinHandle};
+use std::fmt::Debug;
 use tokio::sync::Mutex;
 
 use crate::wayland_handler::wayland_handler;
@@ -107,5 +107,4 @@ pub enum WaylandRequest {
 pub enum ToplevelRequest {
     Activate(ZcosmicToplevelHandleV1),
     Quit(ZcosmicToplevelHandleV1),
-    Exit,
 }

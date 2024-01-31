@@ -215,9 +215,6 @@ pub(crate) fn wayland_handler(
                         let manager = &state.toplevel_manager_state.manager;
                         manager.close(&handle);
                     }
-                    ToplevelRequest::Exit => {
-                        state.exit = true;
-                    }
                 },
                 WaylandRequest::TokenRequest {
                     app_id,
