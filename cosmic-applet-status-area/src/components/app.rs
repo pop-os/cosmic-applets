@@ -8,7 +8,7 @@ use cosmic::{
         },
         window, Subscription,
     },
-    iced_style::application,
+    iced_style::{application, menu},
     Theme,
 };
 use std::collections::BTreeMap;
@@ -173,18 +173,13 @@ impl cosmic::Application for App {
 
     fn view(&self) -> cosmic::Element<'_, Msg> {
         // XXX connect open event
-        iced::widget::row(
-            self.menus
-                .iter()
-                .map(|(id, menu)| {
-                    self.core
-                        .applet
-                        .icon_button(menu.icon_name())
-                        .on_press(Msg::TogglePopup(*id))
-                        .into()
-                })
-                .collect(),
-        )
+        iced::widget::row(self.menus.iter().map(|(id, menu)| {
+            self.core
+                .applet
+                .icon_button(menu.icon_name())
+                .on_press(Msg::TogglePopup(*id))
+                .into()
+        }))
         .into()
     }
 

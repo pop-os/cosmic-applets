@@ -79,84 +79,76 @@ impl State {
 }
 
 fn layout_view(layout: &Layout, expanded: Option<i32>) -> cosmic::Element<Msg> {
-    iced::widget::column(
-        layout
-            .children()
-            .iter()
-            .filter_map(|i| {
-                if !i.visible() {
-                    None
-                } else if i.type_() == Some("separator") {
-                    Some(iced::widget::horizontal_rule(2).into())
-                } else if let Some(label) = i.label() {
-                    // Strip _ when not doubled
-                    // TODO: interpret as "access key"? And label with underline.
-                    let mut is_underscore = false;
-                    let label = label
-                        .chars()
-                        .filter(|c| {
-                            let prev_is_underscore = is_underscore;
-                            is_underscore = !is_underscore && *c == '_';
-                            *c != '_' || prev_is_underscore
-                        })
-                        .collect::<String>();
+    iced::widget::column(layout.children().iter().filter_map(|i| {
+        if !i.visible() {
+            None
+        } else if i.type_() == Some("separator") {
+            Some(iced::widget::horizontal_rule(2).into())
+        } else if let Some(label) = i.label() {
+            // Strip _ when not doubled
+            // TODO: interpret as "access key"? And label with underline.
+            let mut is_underscore = false;
+            let label = label
+                .chars()
+                .filter(|c| {
+                    let prev_is_underscore = is_underscore;
+                    is_underscore = !is_underscore && *c == '_';
+                    *c != '_' || prev_is_underscore
+                })
+                .collect::<String>();
 
-                    let is_submenu = i.children_display() == Some("submenu");
-                    let is_expanded = expanded == Some(i.id());
+            let is_submenu = i.children_display() == Some("submenu");
+            let is_expanded = expanded == Some(i.id());
 
-                    let text = iced::widget::text(label).width(iced::Length::Fill);
+            let text = iced::widget::text(label).width(iced::Length::Fill);
 
-                    let mut children: Vec<cosmic::Element<_>> = vec![text.into()];
-                    if is_submenu {
-                        let icon = cosmic::widget::icon::from_name(if is_expanded {
-                            "go-down-symbolic"
-                        } else {
-                            "go-next-symbolic"
-                        })
-                        .size(14)
-                        .symbolic(true);
-                        children.push(icon.into());
-                    }
-                    if let Some(icon_data) = i.icon_data() {
-                        let handle = iced::widget::image::Handle::from_memory(icon_data.to_vec());
-                        children.insert(0, iced::widget::Image::new(handle).into());
-                    } else if let Some(icon_name) = i.icon_name() {
-                        let icon = cosmic::widget::icon::from_name(icon_name)
-                            .size(14)
-                            .symbolic(true);
-                        children.insert(0, icon.into());
-                    }
-                    if i.toggle_state() == Some(1) {
-                        let icon = cosmic::widget::icon::from_name("emblem-ok-symbolic")
-                            .size(14)
-                            .symbolic(true);
-                        children.push(icon.into());
-                    }
-                    let button = row_button(children).on_press(Msg::Click(i.id(), is_submenu));
-
-                    if is_submenu && is_expanded {
-                        Some(
-                            iced::widget::column![
-                                button,
-                                // XXX nested
-                                iced::widget::container(layout_view(i, None)).padding(
-                                    iced::Padding {
-                                        left: 12.,
-                                        ..iced::Padding::ZERO
-                                    }
-                                )
-                            ]
-                            .into(),
-                        )
-                    } else {
-                        Some(button.into())
-                    }
+            let mut children: Vec<cosmic::Element<_>> = vec![text.into()];
+            if is_submenu {
+                let icon = cosmic::widget::icon::from_name(if is_expanded {
+                    "go-down-symbolic"
                 } else {
-                    None
-                }
-            })
-            .collect(),
-    )
+                    "go-next-symbolic"
+                })
+                .size(14)
+                .symbolic(true);
+                children.push(icon.into());
+            }
+            if let Some(icon_data) = i.icon_data() {
+                let handle = iced::widget::image::Handle::from_memory(icon_data.to_vec());
+                children.insert(0, iced::widget::Image::new(handle).into());
+            } else if let Some(icon_name) = i.icon_name() {
+                let icon = cosmic::widget::icon::from_name(icon_name)
+                    .size(14)
+                    .symbolic(true);
+                children.insert(0, icon.into());
+            }
+            if i.toggle_state() == Some(1) {
+                let icon = cosmic::widget::icon::from_name("emblem-ok-symbolic")
+                    .size(14)
+                    .symbolic(true);
+                children.push(icon.into());
+            }
+            let button = row_button(children).on_press(Msg::Click(i.id(), is_submenu));
+
+            if is_submenu && is_expanded {
+                Some(
+                    iced::widget::column![
+                        button,
+                        // XXX nested
+                        iced::widget::container(layout_view(i, None)).padding(iced::Padding {
+                            left: 12.,
+                            ..iced::Padding::ZERO
+                        })
+                    ]
+                    .into(),
+                )
+            } else {
+                Some(button.into())
+            }
+        } else {
+            None
+        }
+    }))
     .into()
 }
 

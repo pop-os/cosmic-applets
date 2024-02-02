@@ -778,7 +778,7 @@ fn revealer(
     options: Vec<(String, String)>,
     toggle: Message,
     mut change: impl FnMut(String) -> Message + 'static,
-) -> widget::Column<'static, Message, Renderer> {
+) -> widget::Column<'static, Message, crate::Theme, Renderer> {
     if open {
         options.iter().fold(
             column![revealer_head(open, title, selected, toggle)].width(Length::Fill),

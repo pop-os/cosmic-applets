@@ -10,6 +10,7 @@ use cosmic::iced::event::{listen_with, PlatformSpecific};
 use cosmic::iced::time;
 use cosmic::iced::wayland::actions::layer_surface::SctkLayerSurfaceSettings;
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
+use cosmic::iced_core::{Border, Shadow};
 use cosmic::iced_runtime::core::layout::Limits;
 use cosmic::iced_sctk::commands::layer_surface::{
     destroy_layer_surface, get_layer_surface, Anchor, KeyboardInteractivity,
@@ -323,9 +324,12 @@ impl cosmic::Application for Power {
                                 background: Some(
                                     Color::from(theme.cosmic().background.base).into(),
                                 ),
-                                border_radius: 12.0.into(),
-                                border_width: 2.0,
-                                border_color: theme.cosmic().bg_divider().into(),
+                                border: Border {
+                                    radius: 12.0.into(),
+                                    width: 2.0,
+                                    color: theme.cosmic().bg_divider().into(),
+                                },
+                                shadow: Shadow::default(),
                             }
                         }))
                         .width(Length::Shrink)

@@ -25,7 +25,10 @@ use cosmic::iced::widget::vertical_space;
 use cosmic::iced::widget::{column, dnd_source, mouse_area, row, Column, Row};
 use cosmic::iced::Color;
 use cosmic::iced::{window, Subscription};
+use cosmic::iced_core::window::Icon;
+use cosmic::iced_core::Border;
 use cosmic::iced_core::Padding;
+use cosmic::iced_core::Shadow;
 use cosmic::iced_runtime::core::alignment::Horizontal;
 use cosmic::iced_runtime::core::event;
 use cosmic::iced_sctk::commands::data_device::accept_mime_type;
@@ -132,9 +135,12 @@ impl DockItem {
                             background: Some(Background::Color(
                                 theme.cosmic().on_bg_color().into(),
                             )),
-                            border_radius: 4.0.into(),
-                            border_width: 0.0,
-                            border_color: Color::TRANSPARENT,
+                            border: Border {
+                                radius: 4.0.into(),
+                                width: 0.0,
+                                color: Color::TRANSPARENT,
+                            },
+                            shadow: Shadow::default(),
                             icon_color: Some(Color::TRANSPARENT),
                         },
                     )))

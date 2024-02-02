@@ -4,7 +4,7 @@ use cosmic::iced::event;
 use cosmic::iced::mouse::{self, ScrollDelta};
 use cosmic::iced::widget::{button, column, container, row, text};
 use cosmic::iced::{Event::Mouse, Length, Subscription};
-use cosmic::iced_core::Background;
+use cosmic::iced_core::{Background, Border};
 use cosmic::iced_style::application;
 use cosmic::{applet::cosmic_panel_config::PanelAnchor, font::FONT_BOLD, Command};
 use cosmic::{Element, Theme};
@@ -121,83 +121,101 @@ impl cosmic::Application for IcedWorkspacesApplet {
         if self.workspaces.is_empty() {
             return row![].padding(8).into();
         }
-        let buttons = self
-            .workspaces
-            .iter()
-            .filter_map(|w| {
-                let btn = button(
-                    text(w.0.clone())
-                        .font(FONT_BOLD)
-                        .size(16)
-                        .horizontal_alignment(Horizontal::Center)
-                        .vertical_alignment(Vertical::Center)
-                        .width(Length::Fill)
-                        .height(Length::Fill),
-                )
-                .width(Length::Fixed(
-                    self.core.applet.suggested_size().0 as f32
-                        + match self.layout {
-                            Layout::Row => 20.0,
-                            Layout::Column => 16.0,
-                        },
-                ))
-                .height(Length::Fixed(
-                    self.core.applet.suggested_size().0 as f32
-                        + match self.layout {
-                            Layout::Row => 16.0,
-                            Layout::Column => 20.0,
-                        },
-                ))
-                .on_press(Message::WorkspacePressed(w.2.clone()))
-                .padding(0);
+        let buttons = self.workspaces.iter().filter_map(|w| {
+            let btn = button(
+                text(w.0.clone())
+                    .font(FONT_BOLD)
+                    .size(16)
+                    .horizontal_alignment(Horizontal::Center)
+                    .vertical_alignment(Vertical::Center)
+                    .width(Length::Fill)
+                    .height(Length::Fill),
+            )
+            .width(Length::Fixed(
+                self.core.applet.suggested_size().0 as f32
+                    + match self.layout {
+                        Layout::Row => 20.0,
+                        Layout::Column => 16.0,
+                    },
+            ))
+            .height(Length::Fixed(
+                self.core.applet.suggested_size().0 as f32
+                    + match self.layout {
+                        Layout::Row => 16.0,
+                        Layout::Column => 20.0,
+                    },
+            ))
+            .on_press(Message::WorkspacePressed(w.2.clone()))
+            .padding(0);
 
-                Some(
-                    btn.style(match w.1 {
-                        Some(zcosmic_workspace_handle_v1::State::Active) => {
-                            cosmic::theme::iced::Button::Primary
-                        }
-                        Some(zcosmic_workspace_handle_v1::State::Urgent) => {
-                            let appearance = |theme: &Theme| button::Appearance {
+            Some(
+                btn.style(match w.1 {
+                    Some(zcosmic_workspace_handle_v1::State::Active) => {
+                        cosmic::theme::iced::Button::Primary
+                    }
+                    Some(zcosmic_workspace_handle_v1::State::Urgent) => {
+                        let appearance = |theme: &Theme| {
+                            let cosmic = theme.cosmic();
+                            button::Appearance {
                                 background: Some(Background::Color(
-                                    theme.cosmic().palette.neutral_3.into(),
+                                    cosmic.palette.neutral_3.into(),
                                 )),
+                                border: Border {
+                                    radius: cosmic.radius_xl().into(),
+                                    ..Default::default()
+                                },
                                 border_radius: theme.cosmic().radius_xl().into(),
                                 text_color: theme.cosmic().destructive_button.base.into(),
                                 ..button::Appearance::default()
-                            };
-                            cosmic::theme::iced::Button::Custom {
-                                active: Box::new(appearance),
-                                hover: Box::new(move |theme| button::Appearance {
-                                    background: Some(Background::Color(
-                                        theme.current_container().component.hover.into(),
-                                    )),
-                                    ..appearance(theme)
-                                }),
                             }
+                        };
+                        cosmic::theme::iced::Button::Custom {
+                            active: Box::new(appearance),
+                            hover: Box::new(move |theme| button::Appearance {
+                                background: Some(Background::Color(
+                                    theme.current_container().component.hover.into(),
+                                )),
+                                border: Border {
+                                    radius: theme.cosmic().radius_xl().into(),
+                                    ..Default::default()
+                                },
+                                ..appearance(theme)
+                            }),
                         }
-                        None => {
-                            let appearance = |theme: &Theme| button::Appearance {
+                    }
+                    None => {
+                        let appearance = |theme: &Theme| {
+                            let cosmic = theme.cosmic();
+                            button::Appearance {
                                 background: None,
-                                border_radius: theme.cosmic().radius_xl().into(),
+                                border: Border {
+                                    radius: cosmic.radius_xl().into(),
+                                    ..Default::default()
+                                },
+                                border_radius: cosmic.radius_xl().into(),
                                 text_color: theme.current_container().component.on.into(),
                                 ..button::Appearance::default()
-                            };
-                            cosmic::theme::iced::Button::Custom {
-                                active: Box::new(appearance),
-                                hover: Box::new(move |theme| button::Appearance {
-                                    background: Some(Background::Color(
-                                        theme.current_container().component.hover.into(),
-                                    )),
-                                    ..appearance(theme)
-                                }),
                             }
+                        };
+                        cosmic::theme::iced::Button::Custom {
+                            active: Box::new(appearance),
+                            hover: Box::new(move |theme| button::Appearance {
+                                background: Some(Background::Color(
+                                    theme.current_container().component.hover.into(),
+                                )),
+                                border: Border {
+                                    radius: theme.cosmic().radius_xl().into(),
+                                    ..Default::default()
+                                },
+                                ..appearance(theme)
+                            }),
                         }
-                        _ => return None,
-                    })
-                    .into(),
-                )
-            })
-            .collect();
+                    }
+                    _ => return None,
+                })
+                .into(),
+            )
+        });
         let layout_section: Element<_> = match self.layout {
             Layout::Row => row(buttons)
                 .width(Length::Shrink)
