@@ -313,13 +313,9 @@ impl cosmic::Application for CosmicNetworkApplet {
                         && !matches!(req, NetworkManagerRequest::Reload)
                         && matches!(state.connectivity, NmConnectivityState::Portal)
                     {
-                        // spawn browser
-                        if let Err(err) = std::process::Command::new("xdg-open")
-                            .arg("http://pop.system76.com")
-                            .spawn()
-                        {
-                            log::error!("Failed to open browser: {}", err);
-                        }
+                        let mut browser = std::process::Command::new("xdg-open");
+                        browser.arg("http://204.pop-os.org/");
+                        cosmic::process::spawn(browser);
                     }
 
                     self.update_nm_state(state);
