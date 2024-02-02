@@ -353,7 +353,7 @@ impl cosmic::Application for Window {
 fn button_icon<'a>(
     cur_mode: Option<GraphicsMode>,
     button_mode: Graphics,
-) -> Container<'a, Message, cosmic::Renderer> {
+) -> Container<'a, Message, cosmic::Theme, cosmic::Renderer> {
     match cur_mode {
         Some(GraphicsMode::Selected { prev: _, new }) if new == button_mode => {
             cosmic::widget::container(
