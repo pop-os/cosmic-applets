@@ -330,7 +330,7 @@ fn date_button(
     day: u32,
     is_month: bool,
     is_day: bool,
-) -> Button<'static, Message, cosmic::Renderer> {
+) -> Button<'static, Message, cosmic::Theme, cosmic::Renderer> {
     let style = if is_day {
         cosmic::widget::button::Style::Suggested
     } else {

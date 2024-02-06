@@ -24,7 +24,7 @@ use cosmic::iced::{
     window, Alignment, Length, Subscription,
 };
 use cosmic::iced_core::alignment::Vertical;
-use cosmic::iced_core::{Background, Color};
+use cosmic::iced_core::{Background, Border, Color, Shadow};
 use cosmic::iced_runtime::core::layout::Limits;
 use cosmic::iced_style::application;
 use cosmic::iced_widget::{Column, Row};
@@ -379,9 +379,12 @@ impl cosmic::Application for CosmicBatteryApplet {
                     |theme| container::Appearance {
                         text_color: Some(Color::TRANSPARENT),
                         background: Some(Background::Color(theme.cosmic().accent_color().into())),
-                        border_radius: 2.0.into(),
-                        border_width: 0.0,
-                        border_color: Color::TRANSPARENT,
+                        border: Border {
+                            radius: 2.0.into(),
+                            width: 0.0,
+                            color: Color::TRANSPARENT,
+                        },
+                        shadow: Shadow::default(),
                         icon_color: Some(Color::TRANSPARENT),
                     },
                 )))
@@ -558,9 +561,12 @@ impl cosmic::Application for CosmicBatteryApplet {
                                     background: Some(Background::Color(
                                         theme.cosmic().accent_color().into(),
                                     )),
-                                    border_radius: 4.0.into(),
-                                    border_width: 0.0,
-                                    border_color: Color::TRANSPARENT,
+                                    border: Border {
+                                        radius: 4.0.into(),
+                                        width: 0.0,
+                                        color: Color::TRANSPARENT,
+                                    },
+                                    shadow: Default::default(),
                                     icon_color: Some(Color::TRANSPARENT),
                                 },
                             ))),
