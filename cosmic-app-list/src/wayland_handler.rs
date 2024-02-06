@@ -52,6 +52,7 @@ impl ProvidesRegistryState for AppData {
 struct ExecRequestData {
     data: RequestData,
     exec: String,
+    gpu_idx: Option<usize>,
 }
 
 impl RequestDataExt for ExecRequestData {
@@ -74,6 +75,7 @@ impl ActivationHandler for AppData {
         let _ = self.tx.unbounded_send(WaylandUpdate::ActivationToken {
             token: Some(token),
             exec: data.exec.clone(),
+            gpu_idx: data.gpu_idx,
         });
     }
 }
@@ -213,11 +215,12 @@ pub(crate) fn wayland_handler(
                         let manager = &state.toplevel_manager_state.manager;
                         manager.close(&handle);
                     }
-                    ToplevelRequest::Exit => {
-                        state.exit = true;
-                    }
                 },
-                WaylandRequest::TokenRequest { app_id, exec } => {
+                WaylandRequest::TokenRequest {
+                    app_id,
+                    exec,
+                    gpu_idx,
+                } => {
                     if let Some(activation_state) = state.activation_state.as_ref() {
                         activation_state.request_token_with_data(
                             &state.queue_handle,
@@ -232,12 +235,15 @@ pub(crate) fn wayland_handler(
                                     surface: None,
                                 },
                                 exec,
+                                gpu_idx,
                             },
                         );
                     } else {
-                        let _ = state
-                            .tx
-                            .unbounded_send(WaylandUpdate::ActivationToken { token: None, exec });
+                        let _ = state.tx.unbounded_send(WaylandUpdate::ActivationToken {
+                            token: None,
+                            exec,
+                            gpu_idx,
+                        });
                     }
                 }
             },

@@ -12,7 +12,7 @@ use futures::{
     SinkExt, StreamExt,
 };
 use once_cell::sync::Lazy;
-use std::{fmt::Debug, hash::Hash, thread::JoinHandle};
+use std::fmt::Debug;
 use tokio::sync::Mutex;
 
 use crate::wayland_handler::wayland_handler;
@@ -79,7 +79,11 @@ pub enum WaylandUpdate {
     Init(calloop::channel::Sender<WaylandRequest>),
     Finished,
     Toplevel(ToplevelUpdate),
-    ActivationToken { token: Option<String>, exec: String },
+    ActivationToken {
+        token: Option<String>,
+        exec: String,
+        gpu_idx: Option<usize>,
+    },
 }
 
 #[derive(Clone, Debug)]
@@ -92,12 +96,15 @@ pub enum ToplevelUpdate {
 #[derive(Clone, Debug)]
 pub enum WaylandRequest {
     Toplevel(ToplevelRequest),
-    TokenRequest { app_id: String, exec: String },
+    TokenRequest {
+        app_id: String,
+        exec: String,
+        gpu_idx: Option<usize>,
+    },
 }
 
 #[derive(Debug, Clone)]
 pub enum ToplevelRequest {
     Activate(ZcosmicToplevelHandleV1),
     Quit(ZcosmicToplevelHandleV1),
-    Exit,
 }
