@@ -8,7 +8,7 @@ vendor_args := if vendor == '1' { '--frozen --offline' } else { '' }
 debug_args := if debug == '1' { '' } else { '--release' }
 cargo_args := vendor_args + ' ' + debug_args
 
-
+targetdir := env('CARGO_TARGET_DIR', 'target')
 sharedir := rootdir + prefix + '/share'
 iconsdir := sharedir + '/icons/hicolor'
 bindir := rootdir + prefix + '/bin'
@@ -31,7 +31,7 @@ _install_desktop path:
     install -Dm0644 {{path}} {{sharedir}}/applications/{{file_name(path)}}
 
 _install_bin name:
-    install -Dm0755 target/{{target}}/{{name}} {{bindir}}/{{name}}
+    install -Dm0755 {{targetdir}}/{{target}}/{{name}} {{bindir}}/{{name}}
 
 _install id name: (_install_icons name) (_install_desktop name + '/data/' + id + '.desktop') (_install_bin name)
 
