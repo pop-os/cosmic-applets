@@ -1,9 +1,9 @@
 power = 電源
 settings = 設定...
 lock-screen = 画面をロック
-lock-screen-shortcut = Super + Escape
+lock-screen-shortcut = スーパー + エスケープ
 log-out = ログアウト
-log-out-shortcut = Ctrl + Alt + Delete
+log-out-shortcut = コントロール + Alt + 削除
 suspend = サスペンド
 restart = 再起動
 shutdown = シャットダウン
