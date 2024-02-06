@@ -39,6 +39,7 @@ use mpris_subscription::MprisUpdate;
 
 mod config;
 mod mpris_subscription;
+mod pipewire;
 mod pulse;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");

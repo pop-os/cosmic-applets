@@ -2,10 +2,11 @@ use std::cell::RefCell;
 use std::{rc::Rc, thread};
 
 extern crate libpulse_binding as pulse;
+
 use cosmic::iced::{self, subscription};
 use cosmic::iced_futures::futures::{self, SinkExt};
 use cosmic_time::once_cell::sync::Lazy;
-//use futures::channel::mpsc;
+
 use libpulse_binding::{
     callbacks::ListResult,
     context::{
@@ -17,6 +18,9 @@ use libpulse_binding::{
     proplist::Proplist,
     volume::ChannelVolumes,
 };
+
+use std::time::{Duration, Instant};
+
 use tokio::sync::{mpsc, Mutex};
 
 pub static FROM_PULSE: Lazy<Mutex<Option<(mpsc::Receiver<Message>, mpsc::Sender<Message>)>>> =
@@ -386,6 +390,7 @@ struct PulseServer {
     mainloop: Rc<RefCell<Mainloop>>,
     context: Rc<RefCell<Context>>,
     introspector: Introspector,
+    last_playback: Instant,
 }
 
 #[derive(Clone, Debug)]
@@ -432,6 +437,7 @@ impl PulseServer {
             mainloop,
             context,
             introspector,
+            last_playback: Instant::now(),
         })
     }
 
@@ -631,6 +637,12 @@ impl PulseServer {
             .introspector
             .set_sink_volume_by_name(name, volume, None);
         self.wait_for_result(op).ok();
+
+        let now = Instant::now();
+        if now.duration_since(self.last_playback) > Duration::from_millis(250) {
+            self.last_playback = now;
+            crate::pipewire::play_audio_volume_change();
+        }
     }
 
     fn set_source_volume_by_name(&mut self, name: &str, volume: &ChannelVolumes) {
