@@ -1,6 +1,6 @@
 tile-windows = 自動的にウィンドウを調整する
 shortcuts = ショートカット
-navigate-windows =
+navigate-windows = ウィンドウを動き回る
 move-window = ウィンドウを動かす
 toggle-floating-window = フローティングウィンドウを有効にする
 view-all-shortcuts = 全てのショートカットの一覧...
