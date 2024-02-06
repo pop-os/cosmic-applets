@@ -412,12 +412,13 @@ async fn start_listening(
             .map(|(_, i, _)| i);
 
             tokio::select! {
-                _guard = monitor.monitor.readable() => {
-                    for event in monitor.monitor.get_ref().0.iter() {
-                        match event.event_type() {
-                            // New device
-                            EventType::Add => {
-                                if let Some(path) = event.devnode() {
+                guard = monitor.monitor.readable() => {
+                    if let Ok(mut guard) = guard {
+                        for event in monitor.monitor.get_ref().0.iter() {
+                            match event.event_type() {
+                                // New device
+                                EventType::Add => {
+                                    if let Some(path) = event.devnode() {
                                         let device = event.device();
                                         let name = if let Some(parent) = device.parent() {
                                             let vendor = parent
@@ -438,40 +439,45 @@ async fn start_listening(
                                             }
                                         } else {
                                             String::from("Unknown GPU")
-                                    };
+                                        };
 
                                         let mut device = Some(device);
-                                    let driver = loop {
-                                        if let Some(dev) = device {
-                                            if dev.driver().is_some() {
-                                                break dev.driver().map(std::ffi::OsStr::to_os_string);
+                                        let driver = loop {
+                                            if let Some(dev) = device {
+                                                if dev.driver().is_some() {
+                                                    break dev.driver().map(std::ffi::OsStr::to_os_string);
+                                                } else {
+                                                    device = dev.parent();
+                                                }
                                             } else {
-                                                device = dev.parent();
+                                                break None;
                                             }
-                                        } else {
-                                            break None;
-                                        }
-                                    };
+                                        };
 
-                                    let mut interval = time::interval(Duration::from_secs(3));
-                                    interval.set_missed_tick_behavior(time::MissedTickBehavior::Delay);
-                                    monitor.gpus.push(Gpu {
-                                        path: path.to_path_buf(),
-                                        name,
-                                        primary: false,
-                                        enabled: false,
-                                        driver,
-                                        interval,
-                                    });
+                                        let mut interval = time::interval(Duration::from_secs(3));
+                                        interval.set_missed_tick_behavior(time::MissedTickBehavior::Delay);
+                                        monitor.gpus.push(Gpu {
+                                            path: path.to_path_buf(),
+                                            name,
+                                            primary: false,
+                                            enabled: false,
+                                            driver,
+                                            interval,
+                                        });
+                                    }
+                                },
+                                EventType::Remove => {
+                                    if let Some(path) = event.devnode() {
+                                        monitor.gpus.retain(|gpu| gpu.path != path);
+                                    }
                                 }
-                            },
-                            EventType::Remove => {
-                                if let Some(path) = event.devnode() {
-                                    monitor.gpus.retain(|gpu| gpu.path != path);
-                                }
+                                _ => {},
                             }
-                            _ => {},
                         }
+
+                        guard.clear_ready_matching(tokio::io::Ready::READABLE);
+                    } else {
+                        return State::Finished;
                     }
                 }
                 i = select_all => {
