@@ -499,7 +499,7 @@ async fn start_listening(
                     if enabled {
                         let mut list = gpu.connected_outputs().await.unwrap_or_default();
                         if let Some(mut apps) = gpu.app_list(&[]).await {
-                            apps.retain(|app| app.name != "cosmic-comp");
+                            apps.retain(|app| app.name != "cosmic-comp" && app.name != "Xwayland");
                             list.extend(apps);
                         }
                         if output.send(GpuUpdate::On(gpu.path.clone(), gpu.name.clone(), (!list.is_empty()).then_some(list))).await.is_err() {
