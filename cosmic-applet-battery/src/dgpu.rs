@@ -418,17 +418,29 @@ async fn start_listening(
                             // New device
                             EventType::Add => {
                                 if let Some(path) = event.devnode() {
-                                    let name = if let Ok(Some(pci)) = event.device().parent_with_subsystem(Path::new("pci")) {
-                                        if let Some(value) = pci.attribute_value("ID_MODEL_FROM_DATABASE") {
-                                            value.to_string_lossy().into_owned()
+                                        let device = event.device();
+                                        let name = if let Some(parent) = device.parent() {
+                                            let vendor = parent
+                                                .property_value("SWITCHEROO_CONTROL_VENDOR_NAME")
+                                                .or_else(|| parent.property_value("ID_VENDOR_FROM_DATABASE"));
+                                            let name = parent
+                                                .property_value("SWITCHEROO_CONTROL_PRODUCT_NAME")
+                                                .or_else(|| parent.property_value("ID_MODEL_FROM_DATABASE"));
+
+                                            if vendor.is_none() && name.is_none() {
+                                                String::from("Unknown GPU")
+                                            } else {
+                                                format!(
+                                                    "{} {}",
+                                                    vendor.map(|s| s.to_string_lossy()).unwrap_or_default(),
+                                                    name.map(|s| s.to_string_lossy()).unwrap_or_default()
+                                                )
+                                            }
                                         } else {
-                                            String::from("Unknown")
-                                        }
-                                    } else {
-                                        String::from("Unknown")
+                                            String::from("Unknown GPU")
                                     };
 
-                                    let mut device = Some(event.device());
+                                        let mut device = Some(device);
                                     let driver = loop {
                                         if let Some(dev) = device {
                                             if dev.driver().is_some() {
