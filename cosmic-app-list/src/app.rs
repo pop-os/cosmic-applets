@@ -25,7 +25,6 @@ use cosmic::iced::widget::vertical_space;
 use cosmic::iced::widget::{column, dnd_source, mouse_area, row, Column, Row};
 use cosmic::iced::Color;
 use cosmic::iced::{window, Subscription};
-use cosmic::iced_core::window::Icon;
 use cosmic::iced_core::Border;
 use cosmic::iced_core::Padding;
 use cosmic::iced_core::Shadow;
@@ -326,7 +325,7 @@ async fn try_get_gpus() -> Option<Vec<Gpu>> {
 
 pub fn menu_button<'a, Message>(
     content: impl Into<Element<'a, Message>>,
-) -> cosmic::widget::Button<'a, Message, cosmic::Renderer> {
+) -> cosmic::widget::Button<'a, Message, cosmic::Theme, cosmic::Renderer> {
     cosmic::widget::Button::new(content)
         .style(Button::AppletMenu)
         .padding(menu_control_padding())
@@ -916,7 +915,7 @@ impl cosmic::Application for CosmicAppList {
 
         let (w, h, favorites, active, divider) = if is_horizontal {
             (
-                Length::Fill,
+                Length::Shrink,
                 Length::Shrink,
                 dnd_listener(row(favorites)),
                 row(active).into(),
@@ -927,7 +926,7 @@ impl cosmic::Application for CosmicAppList {
         } else {
             (
                 Length::Shrink,
-                Length::Fill,
+                Length::Shrink,
                 dnd_listener(column(favorites)),
                 column(active).into(),
                 container(divider::horizontal::default())
@@ -983,7 +982,7 @@ impl cosmic::Application for CosmicAppList {
             ]
         };
 
-        let content = match &self.core.applet.anchor {
+        let mut content = match &self.core.applet.anchor {
             PanelAnchor::Left | PanelAnchor::Right => container(
                 Column::with_children(content_list)
                     .spacing(4)
@@ -999,6 +998,10 @@ impl cosmic::Application for CosmicAppList {
                     .width(w),
             ),
         };
+        if self.active_list.is_empty() && self.favorite_list.is_empty() {
+            let suggested_size = self.core.applet.suggested_size();
+            content = content.width(suggested_size.0).height(suggested_size.1);
+        }
         if self.popup.is_some() {
             mouse_area(content)
                 .on_right_release(Message::ClosePopup)
@@ -1115,7 +1118,11 @@ impl cosmic::Application for CosmicAppList {
             };
             self.core.applet.popup_container(content).into()
         } else {
-            iced::widget::text("").into()
+            let suggested = self.core.applet.suggested_size();
+            iced::widget::row!()
+                .width(Length::Fixed(suggested.0 as f32))
+                .height(Length::Fixed(suggested.1 as f32))
+                .into()
         }
     }
 
