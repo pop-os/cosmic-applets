@@ -39,6 +39,7 @@ _install_app_list: (_install 'com.system76.CosmicAppList' 'cosmic-app-list')
 _install_audio: (_install 'com.system76.CosmicAppletAudio' 'cosmic-applet-audio')
 _install_battery: (_install 'com.system76.CosmicAppletBattery' 'cosmic-applet-battery')
 _install_bluetooth: (_install 'com.system76.CosmicAppletBluetooth' 'cosmic-applet-bluetooth')
+_install_minimize: (_install 'com.system76.CosmicAppletMinimize' 'cosmic-applet-minimize')
 _install_network: (_install 'com.system76.CosmicAppletNetwork' 'cosmic-applet-network')
 _install_notifications: (_install 'com.system76.CosmicAppletNotifications' 'cosmic-applet-notifications')
 _install_power: (_install 'com.system76.CosmicAppletPower' 'cosmic-applet-power')
@@ -54,7 +55,7 @@ _install_app_button: (_install_button 'com.system76.CosmicPanelAppButton' 'cosmi
 _install_workspaces_button: (_install_button 'com.system76.CosmicPanelWorkspacesButton' 'cosmic-panel-workspaces-button')
 
 # Installs files into the system
-install: _install_app_list _install_audio _install_battery _install_bluetooth _install_network _install_notifications _install_power _install_workspace _install_time _install_tiling _install_panel_button _install_app_button _install_workspaces_button _install_status_area
+install: _install_app_list _install_audio _install_battery _install_bluetooth _install_minimize _install_network _install_notifications _install_power _install_workspace _install_time _install_tiling _install_panel_button _install_app_button _install_workspaces_button _install_status_area
 
 # Extracts vendored dependencies if vendor=1
 _extract_vendor:

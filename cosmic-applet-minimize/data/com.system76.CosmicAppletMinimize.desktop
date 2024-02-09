@@ -1,0 +1,14 @@
+[Desktop Entry]
+Name=Cosmic Applet Minimize Windows
+Comment=Applet for Cosmic Panel
+Type=Application
+Exec=cosmic-applet-minimize
+Terminal=false
+Categories=Cosmic;Iced;
+Keywords=Cosmic;Iced;
+# Translators: Do NOT translate or transliterate this text (this is an icon file name)!
+Icon=com.system76.CosmicAppletMinimize
+StartupNotify=true
+NoDisplay=true
+X-CosmicApplet=true
+X-NotificationsApplet=true
