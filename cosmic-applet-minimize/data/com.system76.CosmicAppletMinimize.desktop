@@ -11,4 +11,4 @@ Icon=com.system76.CosmicAppletMinimize
 StartupNotify=true
 NoDisplay=true
 X-CosmicApplet=true
-X-NotificationsApplet=true
+X-MinimizeApplet=true
