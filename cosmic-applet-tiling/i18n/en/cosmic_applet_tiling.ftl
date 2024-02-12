@@ -1,4 +1,5 @@
 tile-windows = Automatically tile windows
+tile-current = Automatically tile current workspace
 shortcuts = Shortcuts
 navigate-windows = Navigate windows
 move-window = Move window
@@ -8,7 +9,12 @@ active-hint = Active hint
 gaps = Gaps
 floating-window-exceptions = Floating window exceptions...
 window-management-settings = Window management settings...
-
+all-workspaces = All workspaces
+per-workspace = Per workspace
 super = Super
 shift = Shift
 arrow-keys = arrows
+tiled = Tiled
+floating = Floating
+autotile-behavior = Tile windows on workspaces
+new-workspace = New workspace behavior

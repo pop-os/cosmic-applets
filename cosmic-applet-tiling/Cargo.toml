@@ -8,9 +8,23 @@ edition = "2021"
 
 [dependencies]
 libcosmic.workspace = true
+libcosmic.features = [
+    "applet",
+    "applet-token",
+    "dbus-config",
+    "desktop",
+    "tokio",
+    "wayland",
+    "wgpu"
+]
 cosmic-time.workspace = true
+cctk.workspace = true
+cosmic-protocols.workspace = true
+anyhow = "1.0.79"
 once_cell = "1"
 i18n-embed = { version = "0.14.0", features = ["fluent-system", "desktop-requester"] }
 i18n-embed-fl = "0.7.0"
 rust-embed = "8.0.0"
 tracing = "0.1"
+cosmic-comp-config = { git = "https://github.com/pop-os/cosmic-comp.git", rev = "5eb5af4" }
+tokio = { version = "1.17.0", features = ["sync", "rt"] }
