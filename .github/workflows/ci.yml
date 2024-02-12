@@ -22,7 +22,7 @@ jobs:
           toolchain: nightly-2023-11-18
           components: clippy
       - name: install dependencies
-        run: sudo apt install -y libxkbcommon-dev libwayland-dev libdbus-1-dev libpulse-dev
+        run: sudo apt install -y libxkbcommon-dev libwayland-dev libdbus-1-dev libpulse-dev libinput-dev
       - uses: actions-rs-plus/clippy-check@v2
         with:
           toolchain: nightly-2023-11-18
