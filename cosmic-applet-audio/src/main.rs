@@ -561,7 +561,7 @@ impl cosmic::Application for Audio {
             self.timeline
                 .as_subscription()
                 .map(|(_, now)| Message::Frame(now)),
-            self.core.watch_config(Self::APP_ID.into()).map(|u| {
+            self.core.watch_config(Self::APP_ID).map(|u| {
                 for err in u.errors {
                     tracing::error!(?err, "Error watching config");
                 }
