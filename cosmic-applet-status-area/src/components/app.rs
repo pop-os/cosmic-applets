@@ -8,7 +8,7 @@ use cosmic::{
         },
         window, Subscription,
     },
-    iced_style::{application},
+    iced_style::application,
     Theme,
 };
 use std::collections::BTreeMap;
