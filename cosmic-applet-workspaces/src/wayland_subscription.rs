@@ -79,12 +79,4 @@ impl WorkspacesWatcher {
         let tx = wayland::spawn_workspaces(tx);
         Ok(Self { tx, rx })
     }
-
-    pub fn get_sender(&self) -> SyncSender<WorkspaceEvent> {
-        self.tx.clone()
-    }
-
-    pub async fn workspaces(&mut self) -> Option<WorkspaceList> {
-        self.rx.next().await
-    }
 }

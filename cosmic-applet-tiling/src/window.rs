@@ -50,7 +50,7 @@ pub enum Message {
     Frame(Instant),
     ToggleTileWindows(chain::Toggler, bool),
     ToggleActiveHint(chain::Toggler, bool),
-    MyConfigUpdate(CosmicCompConfig),
+    MyConfigUpdate(Box<CosmicCompConfig>),
     TileMode(Entity),
     WorkspaceUpdate(WorkspacesUpdate),
     NewWorkspace(Entity),
@@ -144,8 +144,8 @@ impl cosmic::Application for Window {
             timeline,
             self.core
                 .watch_config::<CosmicCompConfig>("com.system76.CosmicComp")
-                .map(|u| Message::MyConfigUpdate(u.config)),
-            wayland_subscription::workspaces().map(|e| Message::WorkspaceUpdate(e)),
+                .map(|u| Message::MyConfigUpdate(Box::new(u.config))),
+            wayland_subscription::workspaces().map(Message::WorkspaceUpdate),
         ])
     }
 
@@ -258,7 +258,7 @@ impl cosmic::Application for Window {
                     });
                 }
 
-                self.config = c;
+                self.config = *c;
             }
             Message::TileMode(e) => {
                 let behavior = if e == self.autotile_global_entity {
@@ -311,7 +311,7 @@ impl cosmic::Application for Window {
             segmented_selection::horizontal(&self.new_workspace_behavior_model);
         if matches!(self.config.autotile_behavior, TileBehavior::PerWorkspace) {
             new_workspace_behavior_button =
-                new_workspace_behavior_button.on_activate(|e| Message::NewWorkspace(e));
+                new_workspace_behavior_button.on_activate(Message::NewWorkspace);
         }
         let content_list = column![
             padded_control(container(
@@ -336,7 +336,7 @@ impl cosmic::Application for Window {
                     column![
                         text(fl!("autotile-behavior")).size(14),
                         segmented_selection::horizontal(&self.autotile_behavior_model)
-                            .on_activate(|e| Message::TileMode(e))
+                            .on_activate(Message::TileMode)
                     ],
                     divider::horizontal::default(),
                     column![
