@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 libcosmic.workspace = true
+tokio = { version = "1.17.0", features = ["sync", "macros"] }
 tracing = "0.1.40"
 tracing-subscriber.workspace = true
 tracing-log.workspace = true

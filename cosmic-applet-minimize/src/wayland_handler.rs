@@ -7,27 +7,23 @@ use std::os::{
 use cctk::{
     sctk::{
         self,
-        activation::{RequestData, RequestDataExt},
         reexports::{calloop, calloop_wayland_source::WaylandSource},
         seat::{SeatHandler, SeatState},
     },
     toplevel_info::{ToplevelInfoHandler, ToplevelInfoState},
     toplevel_management::{ToplevelManagerHandler, ToplevelManagerState},
-    wayland_client::{
-        self,
-        protocol::{wl_seat::WlSeat, wl_surface::WlSurface},
-        WEnum,
-    },
+    wayland_client::{self, protocol::wl_seat::WlSeat, WEnum},
+};
+use cosmic::{
+    cctk::{self, cosmic_protocols},
+    iced_futures::futures,
 };
 use cosmic_protocols::{
     toplevel_info::v1::client::zcosmic_toplevel_handle_v1,
     toplevel_management::v1::client::zcosmic_toplevel_manager_v1,
 };
 use futures::channel::mpsc::UnboundedSender;
-use sctk::{
-    activation::{ActivationHandler, ActivationState},
-    registry::{ProvidesRegistryState, RegistryState},
-};
+use sctk::registry::{ProvidesRegistryState, RegistryState};
 use wayland_client::{globals::registry_queue_init, Connection, QueueHandle};
 
 struct AppData {
@@ -35,7 +31,6 @@ struct AppData {
     tx: UnboundedSender<WaylandUpdate>,
     queue_handle: QueueHandle<Self>,
     registry_state: RegistryState,
-    activation_state: Option<ActivationState>,
     toplevel_info_state: ToplevelInfoState,
     toplevel_manager_state: ToplevelManagerState,
     seat_state: SeatState,
@@ -47,37 +42,6 @@ impl ProvidesRegistryState for AppData {
     }
 
     sctk::registry_handlers!();
-}
-
-struct ExecRequestData {
-    data: RequestData,
-    exec: String,
-    gpu_idx: Option<usize>,
-}
-
-impl RequestDataExt for ExecRequestData {
-    fn app_id(&self) -> Option<&str> {
-        self.data.app_id()
-    }
-
-    fn seat_and_serial(&self) -> Option<(&WlSeat, u32)> {
-        self.data.seat_and_serial()
-    }
-
-    fn surface(&self) -> Option<&WlSurface> {
-        self.data.surface()
-    }
-}
-
-impl ActivationHandler for AppData {
-    type RequestData = ExecRequestData;
-    fn new_token(&mut self, token: String, data: &ExecRequestData) {
-        let _ = self.tx.unbounded_send(WaylandUpdate::ActivationToken {
-            token: Some(token),
-            exec: data.exec.clone(),
-            gpu_idx: data.gpu_idx,
-        });
-    }
 }
 
 impl SeatHandler for AppData {
@@ -135,7 +99,7 @@ impl ToplevelInfoHandler for AppData {
         toplevel: &zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1,
     ) {
         if let Some(info) = self.toplevel_info_state.info(toplevel) {
-            if !info
+            if info
                 .state
                 .contains(&zcosmic_toplevel_handle_v1::State::Minimized)
             {
@@ -162,7 +126,7 @@ impl ToplevelInfoHandler for AppData {
         toplevel: &zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1,
     ) {
         if let Some(info) = self.toplevel_info_state.info(toplevel) {
-            if !info
+            if info
                 .state
                 .contains(&zcosmic_toplevel_handle_v1::State::Minimized)
             {
@@ -238,36 +202,6 @@ pub(crate) fn wayland_handler(
                         manager.close(&handle);
                     }
                 },
-                WaylandRequest::TokenRequest {
-                    app_id,
-                    exec,
-                    gpu_idx,
-                } => {
-                    if let Some(activation_state) = state.activation_state.as_ref() {
-                        activation_state.request_token_with_data(
-                            &state.queue_handle,
-                            ExecRequestData {
-                                data: RequestData {
-                                    app_id: Some(app_id),
-                                    seat_and_serial: state
-                                        .seat_state
-                                        .seats()
-                                        .next()
-                                        .map(|seat| (seat, 0)),
-                                    surface: None,
-                                },
-                                exec,
-                                gpu_idx,
-                            },
-                        );
-                    } else {
-                        let _ = state.tx.unbounded_send(WaylandUpdate::ActivationToken {
-                            token: None,
-                            exec,
-                            gpu_idx,
-                        });
-                    }
-                }
             },
             calloop::channel::Event::Closed => {
                 state.exit = true;
@@ -282,7 +216,6 @@ pub(crate) fn wayland_handler(
         exit: false,
         tx,
         queue_handle: qh.clone(),
-        activation_state: ActivationState::bind::<AppData>(&globals, &qh).ok(),
         seat_state: SeatState::new(&globals, &qh),
         toplevel_info_state: ToplevelInfoState::new(&registry_state, &qh),
         toplevel_manager_state: ToplevelManagerState::new(&registry_state, &qh),
@@ -297,7 +230,6 @@ pub(crate) fn wayland_handler(
     }
 }
 
-sctk::delegate_activation!(AppData, ExecRequestData);
 sctk::delegate_seat!(AppData);
 sctk::delegate_registry!(AppData);
 cctk::delegate_toplevel_info!(AppData);
