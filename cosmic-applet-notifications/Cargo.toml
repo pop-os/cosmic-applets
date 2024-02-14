@@ -5,7 +5,7 @@ edition = "2021"
 license = "GPL-3.0-or-later"
 
 [dependencies]
-anyhow = "1"
+anyhow.workspace = true 
 libcosmic.workspace = true
 cosmic-time.workspace = true
 nix = "0.26"

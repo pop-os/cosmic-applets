@@ -1,6 +1,7 @@
 mod localize;
 pub(crate) mod wayland_handler;
 pub(crate) mod wayland_subscription;
+pub(crate) mod window_image;
 
 use crate::localize::localize;
 use cosmic::app::Command;
@@ -10,12 +11,16 @@ use cosmic::cctk::sctk::reexports::calloop;
 use cosmic::cctk::toplevel_info::ToplevelInfo;
 use cosmic::desktop::DesktopEntryData;
 use cosmic::iced::{widget::text, Length, Subscription};
+use cosmic::iced_core::Size;
 use cosmic::iced_style::application;
 use cosmic::iced_widget::{Column, Row};
 use cosmic::theme::Button;
-use cosmic::widget::tooltip;
+use cosmic::widget::image::Handle;
+use cosmic::widget::{tooltip, Image};
 use cosmic::{Element, Theme};
-use wayland_subscription::{ToplevelRequest, ToplevelUpdate, WaylandRequest, WaylandUpdate};
+use wayland_subscription::{
+    ToplevelRequest, ToplevelUpdate, WaylandImage, WaylandRequest, WaylandUpdate,
+};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -34,7 +39,12 @@ pub fn main() -> cosmic::iced::Result {
 #[derive(Default)]
 struct Minimize {
     core: cosmic::app::Core,
-    apps: Vec<(ZcosmicToplevelHandleV1, ToplevelInfo, DesktopEntryData)>,
+    apps: Vec<(
+        ZcosmicToplevelHandleV1,
+        ToplevelInfo,
+        DesktopEntryData,
+        Option<WaylandImage>,
+    )>,
     tx: Option<calloop::channel::Sender<WaylandRequest>>,
 }
 
@@ -98,11 +108,16 @@ impl cosmic::Application for Minimize {
                             self.apps[pos].1 = info;
                         } else {
                             let data = data(&info.app_id);
-                            self.apps.push((handle, info, data));
+                            self.apps.push((handle, info, data, None));
                         }
                     }
                     ToplevelUpdate::Remove(handle) => self.apps.retain(|a| a.0 != handle),
                 },
+                WaylandUpdate::Image(handle, img) => {
+                    if let Some(pos) = self.apps.iter().position(|a| a.0 == handle) {
+                        self.apps[pos].3 = Some(img);
+                    }
+                }
             },
             Message::Activate(handle) => {
                 if let Some(tx) = self.tx.as_ref() {
@@ -118,25 +133,22 @@ impl cosmic::Application for Minimize {
     }
 
     fn view(&self) -> Element<Message> {
-        let (width, height) = self.core.applet.suggested_size();
+        let (width, _) = self.core.applet.suggested_size();
         let theme = self.core.system_theme().cosmic();
         let space_xxs = theme.space_xxs();
-        let icon_buttons = self.apps.iter().map(|(handle, _, data)| {
+        let icon_buttons = self.apps.iter().map(|(handle, _, data, img)| {
             tooltip(
-                cosmic::widget::button::button(
-                    data.icon
-                        .as_cosmic_icon()
-                        .width(Length::Fixed(width as f32))
-                        .height(Length::Fixed(height as f32)),
-                )
-                .style(Button::AppletIcon)
-                .padding(space_xxs)
-                .width(Length::Shrink)
-                .height(Length::Shrink)
-                .on_press(Message::Activate(handle.clone())),
+                Element::from(crate::window_image::WindowImage::new(
+                    img.clone(),
+                    &data.icon,
+                    width as f32,
+                    Message::Activate(handle.clone()),
+                    space_xxs,
+                )),
                 data.name.clone(),
                 // tooltip::Position::FollowCursor,
                 // FIXME tooltip fails to appear when created as indicated in design
+                // maybe it should be a subsurface
                 match self.core.applet.anchor {
                     PanelAnchor::Left => tooltip::Position::Right,
                     PanelAnchor::Right => tooltip::Position::Left,
@@ -150,6 +162,7 @@ impl cosmic::Application for Minimize {
         });
 
         // TODO optional dividers on ends if detects app list neighbor
+        // not sure the best way to tell if there is an adjacent app-list
 
         if matches!(
             self.core.applet.anchor,

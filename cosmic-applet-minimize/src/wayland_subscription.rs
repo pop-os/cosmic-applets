@@ -13,8 +13,10 @@ use futures::{
     channel::mpsc::{unbounded, UnboundedReceiver},
     SinkExt, StreamExt,
 };
+use image::EncodableLayout;
 use once_cell::sync::Lazy;
 use std::fmt::Debug;
+use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use crate::wayland_handler::wayland_handler;
@@ -81,6 +83,24 @@ pub enum WaylandUpdate {
     Init(calloop::channel::Sender<WaylandRequest>),
     Finished,
     Toplevel(ToplevelUpdate),
+    Image(ZcosmicToplevelHandleV1, WaylandImage),
+}
+
+#[derive(Debug, Clone)]
+pub struct WaylandImage {
+    pub img: Arc<image::RgbaImage>,
+}
+
+impl WaylandImage {
+    pub fn new(img: image::RgbaImage) -> Self {
+        Self { img: Arc::new(img) }
+    }
+}
+
+impl AsRef<[u8]> for WaylandImage {
+    fn as_ref(&self) -> &[u8] {
+        self.img.as_bytes()
+    }
 }
 
 #[derive(Clone, Debug)]
