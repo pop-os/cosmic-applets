@@ -68,6 +68,23 @@ pub fn run() -> cosmic::iced::Result {
     cosmic::applet::run::<CosmicAppList>(true, ())
 }
 
+pub fn load_applications_for_app_ids_sorted<'a, 'b>(
+    locale: impl Into<Option<&'a str>>,
+    app_ids: impl Iterator<Item = &'b str> + Clone,
+    fill_missing_ones: bool,
+) -> Vec<DesktopEntryData> {
+    let mut ret = load_applications_for_app_ids(locale, app_ids.clone(), fill_missing_ones);
+    ret.sort_by(|a, b| {
+        app_ids
+            .clone()
+            .position(|id| id == a.id)
+            .unwrap()
+            .cmp(&app_ids.clone().position(|id| id == b.id).unwrap())
+    });
+
+    ret
+}
+
 #[derive(Debug, Clone, Default)]
 struct DockItem {
     id: u32,
@@ -354,7 +371,7 @@ impl cosmic::Application for CosmicAppList {
             .unwrap_or_default();
         let mut self_ = Self {
             core,
-            favorite_list: load_applications_for_app_ids(
+            favorite_list: load_applications_for_app_ids_sorted(
                 None,
                 config.favorites.iter().map(|s| &**s),
                 true,
@@ -710,7 +727,7 @@ impl cosmic::Application for CosmicAppList {
                                     info.app_id = format!("Unknown Application {}", self.item_ctr);
                                 }
                                 self.item_ctr += 1;
-                                let desktop_info = load_applications_for_app_ids(
+                                let desktop_info = load_applications_for_app_ids_sorted(
                                     None,
                                     std::iter::once(&*info.app_id),
                                     true,
@@ -824,7 +841,7 @@ impl cosmic::Application for CosmicAppList {
                 }
 
                 // pull back configured items into the favorites list
-                self.favorite_list = load_applications_for_app_ids(
+                self.favorite_list = load_applications_for_app_ids_sorted(
                     None,
                     self.config.favorites.iter().map(|s| &**s),
                     true,
