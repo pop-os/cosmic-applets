@@ -11,12 +11,11 @@ use cosmic::cctk::sctk::reexports::calloop;
 use cosmic::cctk::toplevel_info::ToplevelInfo;
 use cosmic::desktop::DesktopEntryData;
 use cosmic::iced::{widget::text, Length, Subscription};
-use cosmic::iced_core::Size;
+
 use cosmic::iced_style::application;
 use cosmic::iced_widget::{Column, Row};
-use cosmic::theme::Button;
-use cosmic::widget::image::Handle;
-use cosmic::widget::{tooltip, Image};
+
+use cosmic::widget::tooltip;
 use cosmic::{Element, Theme};
 use wayland_subscription::{
     ToplevelRequest, ToplevelUpdate, WaylandImage, WaylandRequest, WaylandUpdate,
@@ -129,7 +128,7 @@ impl cosmic::Application for Minimize {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        wayland_subscription::wayland_subscription().map(|e| Message::Wayland(e))
+        wayland_subscription::wayland_subscription().map(Message::Wayland)
     }
 
     fn view(&self) -> Element<Message> {

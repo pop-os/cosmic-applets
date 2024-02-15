@@ -118,5 +118,4 @@ pub enum WaylandRequest {
 #[derive(Debug, Clone)]
 pub enum ToplevelRequest {
     Activate(ZcosmicToplevelHandleV1),
-    Quit(ZcosmicToplevelHandleV1),
 }

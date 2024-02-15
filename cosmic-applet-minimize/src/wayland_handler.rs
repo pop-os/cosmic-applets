@@ -37,7 +37,6 @@ use cosmic::{
         wayland_client::{
             protocol::{
                 wl_buffer,
-                wl_output::WlOutput,
                 wl_shm::{self, WlShm},
                 wl_shm_pool,
             },
@@ -164,8 +163,7 @@ impl CaptureData {
             if len != buf_len {
                 return None;
             }
-        } else {
-            if let Err(err) = rustix::fs::ftruncate(&fd, buf_len as _) {};
+        } else if let Err(_err) = rustix::fs::ftruncate(&fd, buf_len as _) {
         };
         let pool = self
             .wl_shm
@@ -438,10 +436,6 @@ pub(crate) fn wayland_handler(
                             let manager = &state.toplevel_manager_state.manager;
                             manager.activate(&handle, &seat);
                         }
-                    }
-                    ToplevelRequest::Quit(handle) => {
-                        let manager = &state.toplevel_manager_state.manager;
-                        manager.close(&handle);
                     }
                 },
             },

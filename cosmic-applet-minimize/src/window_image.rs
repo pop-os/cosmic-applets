@@ -1,9 +1,9 @@
 use cosmic::{
     desktop::IconSource,
     iced::Limits,
-    iced_core::{layout, overlay, widget::Tree, Border, Layout, Length, Shadow, Size, Vector},
+    iced_core::{layout, overlay, widget::Tree, Border, Layout, Length, Size, Vector},
     theme::{Button, Container},
-    widget::{button, container, horizontal_space, image::Handle, Image, Widget},
+    widget::{button, container, image::Handle, Image, Widget},
     Element,
 };
 
@@ -12,7 +12,6 @@ use crate::wayland_subscription::WaylandImage;
 pub struct WindowImage<'a, Msg> {
     image_button: Element<'a, Msg>,
     icon: Element<'a, Msg>,
-    size: Size,
 }
 
 impl<'a, Msg> WindowImage<'a, Msg>
@@ -83,7 +82,6 @@ where
                 .width(Length::Fixed(size / 3.0))
                 .height(Length::Fixed(size / 3.0))
                 .into(),
-            size: Size::new(size, size),
         }
     }
 }
@@ -168,7 +166,7 @@ impl<'a, Msg> Widget<Msg, cosmic::Theme, cosmic::Renderer> for WindowImage<'a, M
             let tree = &tree.children[i];
             child
                 .as_widget()
-                .draw(&tree, renderer, theme, style, layout, cursor, viewport);
+                .draw(tree, renderer, theme, style, layout, cursor, viewport);
         }
     }
 
