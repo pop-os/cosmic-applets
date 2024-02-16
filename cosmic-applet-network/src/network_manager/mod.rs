@@ -166,7 +166,7 @@ async fn start_listening(
                     };
                     _ = output.send(response).await;
                 }
-                Some(NetworkManagerRequest::Password(ssid, password)) => {
+                Some(NetworkManagerRequest::Password(ssid, identity, password)) => {
                     let s = match NetworkManagerSettings::new(&conn).await {
                         Ok(s) => s,
                         Err(_) => return State::Finished,
@@ -268,6 +268,7 @@ async fn start_listening(
                                 status = Some(NetworkManagerEvent::RequestResponse {
                                     req: NetworkManagerRequest::Password(
                                         ssid.clone(),
+                                        identity.clone(),
                                         password.clone(),
                                     ),
                                     success,
@@ -357,6 +358,7 @@ async fn start_listening(
                                     .send(NetworkManagerEvent::RequestResponse {
                                         req: NetworkManagerRequest::Password(
                                             ssid.clone(),
+                                            identity.clone(),
                                             password.clone(),
                                         ),
                                         success,
@@ -376,7 +378,7 @@ async fn start_listening(
                     } else {
                         _ = output
                             .send(NetworkManagerEvent::RequestResponse {
-                                req: NetworkManagerRequest::Password(ssid, password),
+                                req: NetworkManagerRequest::Password(ssid, identity, password),
                                 success: false,
                                 state: NetworkManagerState::new(&conn).await.unwrap_or_default(),
                             })
@@ -491,7 +493,7 @@ pub enum NetworkManagerRequest {
     SetWiFi(bool),
     SelectAccessPoint(String),
     Disconnect(String),
-    Password(String, String),
+    Password(String, String, String),
     Reload,
 }
 
