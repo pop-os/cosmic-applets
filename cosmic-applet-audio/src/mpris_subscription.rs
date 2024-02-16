@@ -260,7 +260,7 @@ async fn find_active(mut players: Vec<MediaPlayer>) -> Option<Player> {
             match status {
                 Ok(mpris2_zbus::player::PlaybackStatus::Playing) => 100,
                 Ok(mpris2_zbus::player::PlaybackStatus::Paused) => 10,
-                _ => 0,
+                _ => return 0,
             }
         };
 
