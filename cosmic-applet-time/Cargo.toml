@@ -8,8 +8,9 @@ license = "GPL-3.0-or-later"
 icon-loader = { version = "0.3.6", features = ["gtk"] }
 libcosmic.workspace = true
 nix = "0.26.2"
-chrono = { version = "0.4.23", features = ["clock"] }
+chrono = { version = "0.4.34", features = ["clock"] }
 once_cell = "1"
+tokio = { version = "1.36.0", features = ["time"] }
 tracing.workspace = true
 
 # Application i18n
