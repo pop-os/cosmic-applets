@@ -23,6 +23,7 @@ use std::time::Instant;
 use tracing::error;
 
 const ID: &str = "com.system76.CosmicAppletTiling";
+const ON: &str = "com.system76.CosmicAppletTiling.On";
 const OFF: &str = "com.system76.CosmicAppletTiling.Off";
 
 static TILE_WINDOWS: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
@@ -300,7 +301,7 @@ impl cosmic::Application for Window {
     fn view(&self) -> Element<Self::Message> {
         self.core
             .applet
-            .icon_button(OFF)
+            .icon_button(if self.autotiled { ON } else { OFF })
             .on_press(Message::TogglePopup)
             .into()
     }
