@@ -701,8 +701,10 @@ impl cosmic::Application for Audio {
             }
 
             let title = if let Some(title) = s.title.as_ref() {
-                if title.len() > 15 {
-                    format!("{title:15}...")
+                if title.chars().count() > 15 {
+                    let mut title_trunc = title.chars().take(15).collect::<String>();
+                    title_trunc.push_str("...");
+                    title_trunc
                 } else {
                     title.to_string()
                 }
@@ -712,8 +714,10 @@ impl cosmic::Application for Audio {
 
             let artists = if let Some(artists) = s.artists.as_ref() {
                 let artists = artists.join(", ");
-                if artists.len() > 15 {
-                    format!("{artists:15}...")
+                if artists.chars().count() > 15 {
+                    let mut artists_trunc = artists.chars().take(15).collect::<String>();
+                    artists_trunc.push_str("...");
+                    artists_trunc
                 } else {
                     artists
                 }
