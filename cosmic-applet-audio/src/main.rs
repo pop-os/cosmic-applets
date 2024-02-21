@@ -718,7 +718,7 @@ impl cosmic::Application for Audio {
                     artists
                 }
             } else {
-                String::new()
+                fl!("unknown-artist")
             };
 
             elements.push(column![text(title).size(14), text(artists).size(10),].into());

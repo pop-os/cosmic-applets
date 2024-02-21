@@ -9,6 +9,7 @@ use mpris2_zbus::{
     player::{PlaybackStatus, Player},
 };
 use tokio::join;
+use urlencoding::decode;
 use zbus::{fdo::DBusProxy, Connection};
 
 #[derive(Clone, Debug)]
@@ -27,7 +28,16 @@ pub struct PlayerStatus {
 impl PlayerStatus {
     async fn new(player: Player) -> Option<Self> {
         let metadata = player.metadata().await.ok()?;
-        let title = metadata.title().map(Cow::from);
+        let pathname = metadata.url().unwrap_or("".into());
+        let pathbuf = PathBuf::from(pathname);
+
+        let title = metadata
+            .title()
+            .or(pathbuf
+                .file_name()
+                .and_then(|s| s.to_str())
+                .and_then(|s| decode(s).map_or(None, |s| Some(s.into_owned()))))
+            .map(Cow::from);
         let artists = metadata
             .artists()
             .map(|a| a.into_iter().map(Cow::from).collect::<Vec<_>>());
