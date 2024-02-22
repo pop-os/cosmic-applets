@@ -15,7 +15,7 @@ use cosmic::{
     Element, Theme,
 };
 
-use chrono::{DateTime, Datelike, Local, Timelike, Weekday};
+use chrono::{DateTime, Datelike, Local, Months, NaiveDate, Timelike, Weekday};
 use std::time::Duration;
 
 use crate::fl;
@@ -36,6 +36,7 @@ pub struct Window {
     popup: Option<window::Id>,
     update_at: Every,
     now: DateTime<Local>,
+    date_selected: NaiveDate,
     rectangle_tracker: Option<RectangleTracker<u32>>,
     rectangle: Rectangle,
     token_tx: Option<calloop::channel::Sender<TokenRequest>>,
@@ -64,12 +65,14 @@ impl cosmic::Application for Window {
         core: app::Core,
         _flags: Self::Flags,
     ) -> (Self, cosmic::iced::Command<app::Message<Self::Message>>) {
+        let now = Local::now();
         (
             Self {
                 core,
                 popup: None,
                 update_at: Every::Minute,
-                now: Local::now(),
+                now,
+                date_selected: NaiveDate::from(now.naive_local()),
                 rectangle_tracker: None,
                 rectangle: Rectangle::default(),
                 token_tx: None,
@@ -175,11 +178,17 @@ impl cosmic::Application for Window {
                 Command::none()
             }
             Message::PreviousMonth => {
-                // TODO
+                self.date_selected = self
+                    .date_selected
+                    .checked_sub_months(Months::new(1))
+                    .expect("valid naivedate");
                 Command::none()
             }
             Message::NextMonth => {
-                // TODO
+                self.date_selected = self
+                    .date_selected
+                    .checked_add_months(Months::new(1))
+                    .expect("valid naivedate");
                 Command::none()
             }
             Message::OpenDateTimeSettings => {
@@ -259,8 +268,8 @@ impl cosmic::Application for Window {
     }
 
     fn view_window(&self, _id: window::Id) -> Element<Message> {
-        let date = text(self.now.format("%B %-d, %Y").to_string()).size(18);
-        let day_of_week = text(self.now.format("%A").to_string()).size(14);
+        let date = text(self.date_selected.format("%B %-d, %Y").to_string()).size(18);
+        let day_of_week = text(self.date_selected.format("%A").to_string()).size(14);
 
         let month_controls = row![
             button::icon(icon::from_name("go-previous-symbolic"))
@@ -286,7 +295,11 @@ impl cosmic::Application for Window {
         }
         calender = calender.insert_row();
 
-        let monday = get_calender_first(self.now.year(), self.now.month(), first_day_of_week);
+        let monday = get_calender_first(
+            self.date_selected.year(),
+            self.date_selected.month(),
+            first_day_of_week,
+        );
         let mut day_iter = monday.iter_days();
         for i in 0..35 {
             if i > 0 && i % 7 == 0 {
@@ -294,8 +307,9 @@ impl cosmic::Application for Window {
             }
 
             let date = day_iter.next().unwrap();
-            let is_month = date.month() == self.now.month() && date.year_ce() == self.now.year_ce();
-            let is_day = date.day() == self.now.day() && is_month;
+            let is_month = date.month() == self.date_selected.month()
+                && date.year_ce() == self.date_selected.year_ce();
+            let is_day = date.day() == self.date_selected.day() && is_month;
 
             calender = calender.push(date_button(date.day(), is_month, is_day));
         }
