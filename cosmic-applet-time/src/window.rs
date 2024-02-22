@@ -301,7 +301,7 @@ impl cosmic::Application for Window {
             first_day_of_week,
         );
         let mut day_iter = monday.iter_days();
-        for i in 0..35 {
+        for i in 0..42 {
             if i > 0 && i % 7 == 0 {
                 calender = calender.insert_row();
             }
