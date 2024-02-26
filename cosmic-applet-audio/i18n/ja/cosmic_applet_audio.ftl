@@ -4,3 +4,4 @@ show-media-controls = トップパネルにメディアプレーヤーのボタ�
 sound-settings = サウンド設定...
 disconnected = PulseAudioは接続されていません。
 no-device = デバイスは選択されていません。
+unknown-artist = 不明
