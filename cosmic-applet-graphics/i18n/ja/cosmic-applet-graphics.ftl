@@ -1,9 +1,0 @@
-graphics-mode = グラフィックスモード
-graphics = グラフィックス
-integrated = 内蔵
-integrated-desc = 再起動して外付けのモニターを無効にすることは必要です。
-nvidia = NVIDIA
-hybrid = ハイブリッド
-hybrid-desc = 再起動が必要です。
-compute = 計算
-compute-desc = 再起動して外付けのモニターを無効にすることは必要です。
