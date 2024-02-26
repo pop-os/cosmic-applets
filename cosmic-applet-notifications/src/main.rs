@@ -161,7 +161,7 @@ impl cosmic::Application for Notifications {
     fn subscription(&self) -> Subscription<Message> {
         Subscription::batch(vec![
             self.core
-                .watch_config(cosmic_notifications_config::ID.into())
+                .watch_config(cosmic_notifications_config::ID)
                 .map(|res| {
                     for err in res.errors {
                         tracing::error!("{:?}", err);

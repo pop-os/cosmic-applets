@@ -23,3 +23,4 @@ mpris2-zbus = { git = "https://github.com/pop-os/dbus-settings-bindings" }
 serde = "1.0.130"
 url = "2"
 zbus.workspace = true
+urlencoding = "2.1.3"

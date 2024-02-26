@@ -10,12 +10,12 @@ shutdown = Éteindre
 confirm = Confirmer
 cancel = Annuler
 confirm-question = 
-    Êtes vous sûr ? L'ordinateur va { $action ->
-        [restart] { restart }
+    Êtes-vous sûr ? L'ordinateur va { $action ->
+        [restart] se redémarrer
         [suspend] se mettre en veille
         [shutdown] s'éteindre
         [lock-screen] verrouiller la session
         [log-out] déconnecter l'utilisateur
-        *[other] appliquer l'option choisie.
+        *[other] appliquer l'option choisie
     } dans { $countdown } secondes.
 

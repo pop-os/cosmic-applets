@@ -1,0 +1,12 @@
+bluetooth = Bluetooth
+other-devices = 他のBluetoothデバイス
+settings = Bluetooth設定...
+connected = 接続
+confirm-pin = 次のPINが{$deviceName}に表示されているPINと一致するかと確かめてください。
+confirm = 確認
+cancel = キャンセル
+unsuccessful = ペアリングが失敗しました。
+check-device = {$deviceName}は電源オンで近くてペアリング準備ができたかと確かめてください。
+try-again = もう一度試す
+discoverable = 発見可能
+pairable = ペアリング出来る

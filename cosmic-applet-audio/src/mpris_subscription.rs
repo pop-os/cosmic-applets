@@ -9,6 +9,7 @@ use mpris2_zbus::{
     player::{PlaybackStatus, Player},
 };
 use tokio::join;
+use urlencoding::decode;
 use zbus::{fdo::DBusProxy, Connection};
 
 #[derive(Clone, Debug)]
@@ -27,7 +28,16 @@ pub struct PlayerStatus {
 impl PlayerStatus {
     async fn new(player: Player) -> Option<Self> {
         let metadata = player.metadata().await.ok()?;
-        let title = metadata.title().map(Cow::from);
+        let pathname = metadata.url().unwrap_or("".into());
+        let pathbuf = PathBuf::from(pathname);
+
+        let title = metadata
+            .title()
+            .or(pathbuf
+                .file_name()
+                .and_then(|s| s.to_str())
+                .and_then(|s| decode(s).map_or(None, |s| Some(s.into_owned()))))
+            .map(Cow::from);
         let artists = metadata
             .artists()
             .map(|a| a.into_iter().map(Cow::from).collect::<Vec<_>>());
@@ -165,7 +175,7 @@ async fn update(state: State, output: &mut futures::channel::mpsc::Sender<MprisU
                 return State::Setup;
             };
             let conn = player.connection();
-            let media_players = mpris2_zbus::media_player::MediaPlayer::new_all(&conn)
+            let media_players = mpris2_zbus::media_player::MediaPlayer::new_all(conn)
                 .await
                 .unwrap_or_else(|_| Vec::new());
 
@@ -224,7 +234,7 @@ async fn update(state: State, output: &mut futures::channel::mpsc::Sender<MprisU
                     // if they are, break
                     if !matches!(update.status, PlaybackStatus::Playing) {
                         let conn = player.connection();
-                        let players = mpris2_zbus::media_player::MediaPlayer::new_all(&conn)
+                        let players = mpris2_zbus::media_player::MediaPlayer::new_all(conn)
                             .await
                             .unwrap_or_else(|_| Vec::new());
                         if let Some(active) = find_active(players).await {
@@ -250,7 +260,7 @@ async fn find_active(mut players: Vec<MediaPlayer>) -> Option<Player> {
     players.sort_by(|a, b| {
         let a = a.destination();
         let b = b.destination();
-        a.cmp(&b)
+        a.cmp(b)
     });
     let mut best = (0, None);
     let eval = |p: Player| async move {

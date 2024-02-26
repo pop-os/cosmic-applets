@@ -1,20 +1,21 @@
-use crate::wayland::{self, WorkspaceEvent, WorkspaceList};
+use crate::wayland::{self};
 use cctk::sctk::reexports::calloop::channel::SyncSender;
 use cosmic::iced::{
     self,
-    futures::{channel::mpsc, SinkExt, StreamExt},
+    futures::{self, channel::mpsc, SinkExt, StreamExt},
     subscription,
 };
+use cosmic_protocols::workspace::v1::client::zcosmic_workspace_handle_v1::TilingState;
 use once_cell::sync::Lazy;
 use tokio::sync::Mutex;
 
-pub static WAYLAND_RX: Lazy<Mutex<Option<mpsc::Receiver<WorkspaceList>>>> =
+pub static WAYLAND_RX: Lazy<Mutex<Option<mpsc::Receiver<TilingState>>>> =
     Lazy::new(|| Mutex::new(None));
 
 #[derive(Debug, Clone)]
 pub enum WorkspacesUpdate {
-    Workspaces(WorkspaceList),
-    Started(SyncSender<WorkspaceEvent>),
+    State(TilingState),
+    Started(SyncSender<TilingState>),
     Errored,
 }
 
@@ -52,7 +53,7 @@ async fn start_listening(
                 guard.as_mut().unwrap()
             };
             if let Some(w) = rx.next().await {
-                _ = output.send(WorkspacesUpdate::Workspaces(w)).await;
+                _ = output.send(WorkspacesUpdate::State(w)).await;
                 State::Waiting
             } else {
                 _ = output.send(WorkspacesUpdate::Errored).await;
@@ -69,8 +70,8 @@ pub enum State {
 }
 
 pub struct WorkspacesWatcher {
-    rx: mpsc::Receiver<WorkspaceList>,
-    tx: SyncSender<WorkspaceEvent>,
+    rx: mpsc::Receiver<TilingState>,
+    tx: SyncSender<TilingState>,
 }
 
 impl WorkspacesWatcher {

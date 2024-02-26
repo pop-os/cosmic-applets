@@ -13,6 +13,7 @@ Build-Depends:
   libudev-dev,
   libxkbcommon-dev,
   libwayland-dev,
+  libinput-dev,
   just,
   pkg-config,
 Standards-Version: 4.3.0

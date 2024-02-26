@@ -9,5 +9,5 @@ max-charge = Augmente la durée de vie de votre batterie en mettant la charge ma
 seconds = s
 minutes = m
 hours = h
-until-empty = Avant la décharge totale
+until-empty = avant la décharge totale
 power-settings = Paramètres d'alimentation...
