@@ -1,0 +1,9 @@
+cosmic-app-list = Lista de aplicaciones Cosmic
+favorite = Añadir a favoritos
+unfavorite = Quitar de favoritos
+quit = Cerrar
+quit-all = Cerrar todas
+new-window = Nueva ventana
+run = Ejecutar
+run-on = Ejectuar {$gpu}
+run-on-default = (Por defecto)
