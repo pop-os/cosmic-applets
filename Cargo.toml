@@ -5,6 +5,7 @@ members = [
     "cosmic-applet-audio",
     "cosmic-applet-battery",
     "cosmic-applet-bluetooth",
+    "cosmic-applet-minimize",
     "cosmic-applet-network",
     "cosmic-applet-notifications",
     "cosmic-applet-power",
