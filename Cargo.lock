@@ -1035,6 +1035,7 @@ dependencies = [
  "nix 0.26.4",
  "once_cell",
  "rust-embed 6.8.1",
+ "tokio",
  "tracing",
 ]
 

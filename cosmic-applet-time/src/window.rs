@@ -2,7 +2,7 @@ use cosmic::applet::{menu_button, padded_control};
 use cosmic::cctk::sctk::reexports::calloop;
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced::{
-    time,
+    subscription,
     widget::{column, row, text, vertical_space},
     window, Alignment, Length, Rectangle, Subscription,
 };
@@ -15,7 +15,7 @@ use cosmic::{
     Element, Theme,
 };
 
-use chrono::{DateTime, Datelike, Local, Months, NaiveDate, Timelike, Weekday};
+use chrono::{DateTime, Datelike, DurationRound, Local, Months, NaiveDate, Timelike, Weekday};
 use std::time::Duration;
 
 use crate::fl;
@@ -24,8 +24,8 @@ use cosmic::applet::token::subscription::{
     activation_token_subscription, TokenRequest, TokenUpdate,
 };
 
-#[derive(Debug, Clone)]
 #[allow(dead_code)]
+#[derive(Debug, Clone, Copy)]
 enum Every {
     Minute,
     Second,
@@ -94,26 +94,9 @@ impl cosmic::Application for Window {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        const FALLBACK_DELAY: u64 = 500;
-        let update_delay = match self.update_at {
-            Every::Minute => chrono::Duration::minutes(1),
-            Every::Second => chrono::Duration::seconds(1),
-        };
-
-        // Calculate the time until next second/minute so we can sleep the thread until then.
-        let now = Local::now().time();
-        let next = (now + update_delay)
-            .with_second(0)
-            .expect("Setting seconds to 0 should always be possible")
-            .with_nanosecond(0)
-            .expect("Setting nanoseconds to 0 should always be possible.");
-        let wait = 1.max((next - now).num_milliseconds());
         Subscription::batch(vec![
             rectangle_tracker_subscription(0).map(|e| Message::Rectangle(e.1)),
-            time::every(Duration::from_millis(
-                wait.try_into().unwrap_or(FALLBACK_DELAY),
-            ))
-            .map(|_| Message::Tick),
+            time_subscription(self.update_at).map(|_| Message::Tick),
             activation_token_subscription(0).map(Message::Token),
         ])
     }
@@ -366,4 +349,19 @@ fn date_button(
     } else {
         button
     }
+}
+
+fn time_subscription(update_at: Every) -> Subscription<()> {
+    subscription::unfold("time-sub", (), move |()| async move {
+        let now = Local::now();
+        let update_delay = match update_at {
+            Every::Minute => chrono::TimeDelta::minutes(1),
+            Every::Second => chrono::TimeDelta::seconds(1),
+        };
+        let duration = ((now + update_delay).duration_trunc(update_delay).unwrap() - now)
+            .to_std()
+            .unwrap();
+        tokio::time::sleep(duration).await;
+        ((), ())
+    })
 }
