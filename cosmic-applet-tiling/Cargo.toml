@@ -15,7 +15,6 @@ libcosmic.features = [
     "desktop",
     "tokio",
     "wayland",
-    "wgpu"
 ]
 cosmic-time.workspace = true
 cctk.workspace = true
