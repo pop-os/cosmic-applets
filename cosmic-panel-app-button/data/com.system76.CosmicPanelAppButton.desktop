@@ -1,8 +1,12 @@
 [Desktop Entry]
 Name=Cosmic Panel App Library Button
+Name[es]=Botón de biblioteca de aplicaciones del panel Cosmic
+Name[ja]=Cosmicパネルのアップライブラリーボタン
 Name[ko]=코스믹 패널 앱 라이브러리 단추
 Name[ru]=Кнопка библиотеки приложений на панели Cosmic
 Comment=Applet for Cosmic Panel
+Comment[es]=Applet para el panel Cosmic
+Comment[ja]=Cosmicパネルのアプレット
 Comment[ko]=코스믹 패널용 애플릿
 Comment[ru]=Апплет для панели Cosmic
 Type=Application
