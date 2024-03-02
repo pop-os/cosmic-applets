@@ -1,6 +1,8 @@
 [Desktop Entry]
 Name=Cosmic Applet Status Area
+Name[pt]=Área de estado do applet Cosmic
 Comment=Applet for Cosmic Panel
+Comment[pt]=Applet para o painel Cosmic
 Type=Application
 Exec=cosmic-applet-status-area
 Terminal=false
