@@ -1,6 +1,8 @@
 [Desktop Entry]
 Name=Cosmic Panel Workspaces Button
+Name[pt]=Botão de áreas de trabalho do painel Cosmic
 Comment=Applet for Cosmic Panel
+Comment[pt]=Applet para o painel Cosmic
 Type=Application
 Exec=cosmic-panel-button com.system76.CosmicWorkspaces
 Terminal=false
