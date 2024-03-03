@@ -139,53 +139,100 @@ impl DockItem {
         let cosmic_icon = desktop_info
             .icon
             .as_cosmic_icon()
-            .size(applet.suggested_size().0);
+            .size(applet.suggested_size().0 + 6);
 
         let dot_radius = 2;
-        let dots = (0..min(toplevels.len(), 3))
+        let dot_spacer = (0..1)
             .map(|_| {
                 container(vertical_space(Length::Fixed(0.0)))
                     .padding(dot_radius)
-                    .style(<Theme as container::StyleSheet>::Style::Custom(Box::new(
-                        |theme| container::Appearance {
-                            text_color: Some(Color::TRANSPARENT),
-                            background: Some(Background::Color(
-                                theme.cosmic().on_bg_color().into(),
-                            )),
-                            border: Border {
-                                radius: 4.0.into(),
-                                width: 0.0,
-                                color: Color::TRANSPARENT,
-                            },
-                            shadow: Shadow::default(),
-                            icon_color: Some(Color::TRANSPARENT),
-                        },
-                    )))
                     .into()
             })
             .collect_vec();
-        let icon_wrapper: Element<_> = match applet.anchor {
-            PanelAnchor::Left => row(vec![column(dots).spacing(4).into(), cosmic_icon.into()])
-                .align_items(iced::Alignment::Center)
-                .spacing(4)
-                .into(),
-            PanelAnchor::Right => row(vec![cosmic_icon.into(), column(dots).spacing(4).into()])
-                .align_items(iced::Alignment::Center)
-                .spacing(4)
-                .into(),
-            PanelAnchor::Top => column(vec![row(dots).spacing(4).into(), cosmic_icon.into()])
-                .align_items(iced::Alignment::Center)
-                .spacing(4)
-                .into(),
-            PanelAnchor::Bottom => column(vec![cosmic_icon.into(), row(dots).spacing(4).into()])
-                .align_items(iced::Alignment::Center)
-                .spacing(4)
-                .into(),
+
+        let dots = if toplevels.is_empty() {
+            (0..1)
+                .map(|_| {
+                    container(vertical_space(Length::Fixed(0.0)))
+                        .padding(dot_radius)
+                        .into()
+                })
+                .collect_vec()
+        } else {
+            (0..min(toplevels.len(), 3))
+                .map(|_| {
+                    container(vertical_space(Length::Fixed(0.0)))
+                        .padding(dot_radius)
+                        .style(<Theme as container::StyleSheet>::Style::Custom(Box::new(
+                            |theme| container::Appearance {
+                                text_color: Some(Color::TRANSPARENT),
+                                background: Some(Background::Color(
+                                    theme.cosmic().on_bg_color().into(),
+                                )),
+                                border: Border {
+                                    radius: 4.0.into(),
+                                    width: 0.0,
+                                    color: Color::TRANSPARENT,
+                                },
+                                shadow: Shadow::default(),
+                                icon_color: Some(Color::TRANSPARENT),
+                            },
+                        )))
+                        .into()
+                })
+                .collect_vec()
         };
 
-        let icon_button = cosmic::widget::button(icon_wrapper)
-            .style(Button::Text)
-            .padding(8);
+        let icon_wrapper: Element<_> = match applet.anchor {
+            PanelAnchor::Left => row(vec![
+                column(dots).spacing(4).into(),
+                cosmic_icon.into(),
+                column(dot_spacer).spacing(4).into(),
+            ])
+            .align_items(iced::Alignment::Center)
+            .spacing(1)
+            .into(),
+            PanelAnchor::Right => row(vec![
+                column(dot_spacer).spacing(4).into(),
+                cosmic_icon.into(),
+                column(dots).spacing(4).into(),
+            ])
+            .align_items(iced::Alignment::Center)
+            .spacing(1)
+            .into(),
+            PanelAnchor::Top => column(vec![
+                row(dots).spacing(4).into(),
+                cosmic_icon.into(),
+                row(dot_spacer).spacing(4).into(),
+            ])
+            .align_items(iced::Alignment::Center)
+            .spacing(1)
+            .into(),
+            PanelAnchor::Bottom => column(vec![
+                row(dot_spacer).spacing(4).into(),
+                cosmic_icon.into(),
+                row(dots).spacing(4).into(),
+            ])
+            .align_items(iced::Alignment::Center)
+            .spacing(1)
+            .into(),
+        };
+
+        let icon_button = match applet.anchor {
+            PanelAnchor::Left => cosmic::widget::button(icon_wrapper)
+                .style(Button::Text)
+                .padding([5, 0]),
+            PanelAnchor::Right => cosmic::widget::button(icon_wrapper)
+                .style(Button::Text)
+                .padding([5, 0]),
+            PanelAnchor::Top => cosmic::widget::button(icon_wrapper)
+                .style(Button::Text)
+                .padding([0, 5]),
+            PanelAnchor::Bottom => cosmic::widget::button(icon_wrapper)
+                .style(Button::Text)
+                .padding([0, 5]),
+        };
+
         let icon_button = if interaction_enabled {
             dnd_source(
                 mouse_area(
