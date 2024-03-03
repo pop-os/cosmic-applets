@@ -58,6 +58,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::Duration;
+use std::cmp::min;
 use switcheroo_control::Gpu;
 use tokio::time::sleep;
 use url::Url;
@@ -141,7 +142,7 @@ impl DockItem {
             .size(applet.suggested_size().0);
 
         let dot_radius = 2;
-        let dots = (0..toplevels.len())
+        let dots = (0..min(toplevels.len(), 3))
             .map(|_| {
                 container(vertical_space(Length::Fixed(0.0)))
                     .padding(dot_radius)
