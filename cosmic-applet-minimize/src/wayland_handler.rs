@@ -280,7 +280,8 @@ impl AppData {
         };
         std::thread::spawn(move || {
             use std::ffi::CStr;
-            let name = unsafe { CStr::from_bytes_with_nul_unchecked(b"pipewire-screencopy\0") };
+            let name =
+                unsafe { CStr::from_bytes_with_nul_unchecked(b"minimize-applet-screencopy\0") };
             let Ok(fd) = rustix::fs::memfd_create(name, rustix::fs::MemfdFlags::CLOEXEC) else {
                 tracing::error!("Failed to get fd for capture");
                 return;
