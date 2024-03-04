@@ -1,0 +1,12 @@
+bluetooth = Bluetooth
+other-devices = Altri Dispositivi Bluetooth
+settings = Impostazioni Bluetooth ...
+connected = Connesso
+confirm-pin = Perfafore conferma il seguente PIN corrispondente a quello visualizzato su {$deviceName}
+confirm = Conferma
+cancel = Cancella
+unsuccessful = Pairing senza Successo
+check-device = Assicurati che {$deviceName} sia acceso, nel raggio d'azione e pronto per l'accoppiamento.
+try-again = Prova di Nuovo
+discoverable = Rilevabile
+pairable = Accoppiabile
