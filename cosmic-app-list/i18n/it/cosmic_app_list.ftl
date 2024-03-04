@@ -1,0 +1,9 @@
+cosmic-app-list = Lista Applicazioni Cosmic Dock
+favorite = Favoriti
+unfavorite = Non-Favoriti
+quit = Esci
+quit-all = Esci da Tutto
+new-window = Nuova Finestra
+run = Run
+run-on = Run on {$gpu}
+run-on-default = (Default)
