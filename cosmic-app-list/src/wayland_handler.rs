@@ -135,23 +135,12 @@ impl ToplevelInfoHandler for AppData {
         toplevel: &zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1,
     ) {
         if let Some(info) = self.toplevel_info_state.info(toplevel) {
-            if !info
-                .state
-                .contains(&zcosmic_toplevel_handle_v1::State::Minimized)
-            {
-                let _ = self
-                    .tx
-                    .unbounded_send(WaylandUpdate::Toplevel(ToplevelUpdate::Add(
-                        toplevel.clone(),
-                        info.clone(),
-                    )));
-            } else {
-                let _ = self
-                    .tx
-                    .unbounded_send(WaylandUpdate::Toplevel(ToplevelUpdate::Remove(
-                        toplevel.clone(),
-                    )));
-            }
+            let _ = self
+                .tx
+                .unbounded_send(WaylandUpdate::Toplevel(ToplevelUpdate::Add(
+                    toplevel.clone(),
+                    info.clone(),
+                )));
         }
     }
 
@@ -162,23 +151,12 @@ impl ToplevelInfoHandler for AppData {
         toplevel: &zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1,
     ) {
         if let Some(info) = self.toplevel_info_state.info(toplevel) {
-            if !info
-                .state
-                .contains(&zcosmic_toplevel_handle_v1::State::Minimized)
-            {
-                let _ = self
-                    .tx
-                    .unbounded_send(WaylandUpdate::Toplevel(ToplevelUpdate::Update(
-                        toplevel.clone(),
-                        info.clone(),
-                    )));
-            } else {
-                let _ = self
-                    .tx
-                    .unbounded_send(WaylandUpdate::Toplevel(ToplevelUpdate::Remove(
-                        toplevel.clone(),
-                    )));
-            }
+            let _ = self
+                .tx
+                .unbounded_send(WaylandUpdate::Toplevel(ToplevelUpdate::Update(
+                    toplevel.clone(),
+                    info.clone(),
+                )));
         }
     }
 
