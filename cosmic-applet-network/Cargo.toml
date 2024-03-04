@@ -18,7 +18,7 @@ tracing-log.workspace = true
 itertools = "0.10.3"
 slotmap = "1.0.6"
 tokio = { version = "1.15.0", features = ["full"] }
-anyhow = "1.0"
+anyhow.workspace = true 
 # Application i18n
 i18n-embed = { version = "0.13.4", features = ["fluent-system", "desktop-requester"] }
 i18n-embed-fl = "0.6.4"

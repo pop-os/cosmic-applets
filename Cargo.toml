@@ -5,6 +5,7 @@ members = [
     "cosmic-applet-audio",
     "cosmic-applet-battery",
     "cosmic-applet-bluetooth",
+    "cosmic-applet-minimize",
     "cosmic-applet-network",
     "cosmic-applet-notifications",
     "cosmic-applet-power",
@@ -18,6 +19,7 @@ members = [
 resolver = "2"
 
 [workspace.dependencies]
+anyhow = "1.0.79"
 cctk = { git = "https://github.com/pop-os/cosmic-protocols", package = "cosmic-client-toolkit", rev = "e65fa5e" }
 cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols", default-features = false, features = [
     "client",
