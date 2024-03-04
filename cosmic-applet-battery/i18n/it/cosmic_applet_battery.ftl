@@ -1,0 +1,15 @@
+cosmic-applet-button = Bottone Cosmic
+battery = Batteria
+battery-desc = Consumo energetico e prestazioni ridotti.
+balanced = Balanciato
+balanced-desc = Prestazioni e utilizzo della batteria standard.
+performance = Prestazioni Elevate
+performance-desc = Elevate prestazioni e consumo energetico.
+max-charge = Aumenta la durata della tua batteria impostando un valore di carica massimo dell'80%
+seconds = s
+minutes = m
+hours = h
+until-empty = fino a vuoto
+power-settings = Impostazioni di alimentazione e batteria...
+dgpu-running = La GPU discreta è attiva e può ridurre la durata della batteria
+dgpu-applications = Applicazioni che utilizzano GPU discreta {$gpu_name}
