@@ -10,9 +10,7 @@ use cosmic::iced::{Command, Length, Limits, Subscription};
 use cosmic::iced_style::application;
 use cosmic::iced_widget::{column, row};
 use cosmic::widget::segmented_button::{Entity, SingleSelectModel};
-use cosmic::widget::{
-    container, divider, segmented_button, segmented_selection, spin_button, text,
-};
+use cosmic::widget::{container, divider, segmented_button, segmented_control, spin_button, text};
 use cosmic::{Element, Theme};
 use cosmic_comp_config::{CosmicCompConfig, TileBehavior};
 use cosmic_protocols::workspace::v1::client::zcosmic_workspace_handle_v1::TilingState;
@@ -309,7 +307,7 @@ impl cosmic::Application for Window {
     fn view_window(&self, _id: Id) -> Element<Self::Message> {
         let space_xxs = self.core.system_theme().cosmic().space_xxs();
         let mut new_workspace_behavior_button =
-            segmented_selection::horizontal(&self.new_workspace_behavior_model);
+            segmented_control::horizontal(&self.new_workspace_behavior_model);
         if matches!(self.config.autotile_behavior, TileBehavior::PerWorkspace) {
             new_workspace_behavior_button =
                 new_workspace_behavior_button.on_activate(Message::NewWorkspace);
@@ -336,7 +334,7 @@ impl cosmic::Application for Window {
                     divider::horizontal::default(),
                     column![
                         text(fl!("autotile-behavior")).size(14),
-                        segmented_selection::horizontal(&self.autotile_behavior_model)
+                        segmented_control::horizontal(&self.autotile_behavior_model)
                             .on_activate(Message::TileMode)
                     ],
                     divider::horizontal::default(),
