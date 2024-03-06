@@ -114,9 +114,7 @@ pub fn spawn_workspaces(tx: mpsc::Sender<TilingState>) -> SyncSender<TilingState
                 })
                 .unwrap();
             while state.running {
-                event_loop
-                    .dispatch(Duration::from_millis(16), &mut state)
-                    .unwrap();
+                event_loop.dispatch(None, &mut state).unwrap();
             }
         });
     } else {
