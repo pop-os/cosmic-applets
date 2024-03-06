@@ -93,7 +93,7 @@ enum Message {
     Config(NotificationsConfig),
     DbusEvent(subscriptions::dbus::Output),
     Dismissed(u32),
-    ClearAll(String),
+    ClearAll(Option<String>),
     CardsToggled(String, bool),
     Token(TokenUpdate),
     OpenSettings,
@@ -277,7 +277,7 @@ impl cosmic::Application for Notifications {
                     self.cards.retain(|c| !c.1.is_empty());
                 }
             },
-            Message::ClearAll(app_name) => {
+            Message::ClearAll(Some(app_name)) => {
                 if let Some(pos) = self
                     .cards
                     .iter_mut()
@@ -294,6 +294,20 @@ impl cosmic::Application for Notifications {
                                 }
                             });
                         }
+                    }
+                }
+            }
+            Message::ClearAll(None) => {
+                for n in self.cards.drain(..).map(|n| n.1).flatten() {
+                    if let Some(tx) = &self.dbus_sender {
+                        let tx = tx.clone();
+                        tokio::spawn(async move {
+                            if let Err(err) =
+                                tx.send(subscriptions::dbus::Input::Dismiss(n.id)).await
+                            {
+                                tracing::error!("{:?}", err);
+                            }
+                        });
                     }
                 }
             }
@@ -381,7 +395,15 @@ impl cosmic::Application for Notifications {
             .spacing(12)
         } else {
             let mut notifs: Vec<Element<_>> = Vec::with_capacity(self.cards.len());
-
+            notifs.push(
+                container(
+                    cosmic::widget::button::text(fl!("clear-all"))
+                        .on_press(Message::ClearAll(None)),
+                )
+                .width(Length::Fill)
+                .align_x(Horizontal::Right)
+                .into(),
+            );
             for c in self.cards.iter().rev() {
                 if c.1.is_empty() {
                     continue;
@@ -499,7 +521,7 @@ impl cosmic::Application for Notifications {
                     c.0.clone(),
                     &self.timeline,
                     notif_elems,
-                    Message::ClearAll(name.clone()),
+                    Message::ClearAll(Some(name.clone())),
                     move |_, e| Message::CardsToggled(name.clone(), e),
                     &c.3,
                     &c.4,
