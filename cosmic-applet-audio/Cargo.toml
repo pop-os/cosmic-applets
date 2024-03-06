@@ -19,7 +19,7 @@ i18n-embed = { version = "0.13", features = ["fluent-system", "desktop-requester
 i18n-embed-fl = "0.6"
 rust-embed = "6.6"
 rust-embed-utils = "7.5.0"
-mpris2-zbus = { git = "https://github.com/pop-os/dbus-settings-bindings" }
+mpris2-zbus = { git = "https://github.com/pop-os/dbus-settings-bindings", branch = "zbus-4" }
 serde = "1.0.130"
 url = "2"
 zbus.workspace = true

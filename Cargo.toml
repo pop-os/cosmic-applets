@@ -37,13 +37,17 @@ libcosmic = { git = "https://github.com/pop-os/libcosmic", default-features = fa
     "desktop",
     "dbus-config",
 ] }
-zbus = { version = "3.14", default-features = false, features = ["tokio"] }
+zbus = { version = "4.1.2", default-features = false, features = ["tokio"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 tracing-log = "0.2.0"
 
 [profile.release]
 lto = "fat"
+
+[patch."https://github.com/pop-os/libcosmic"]
+cosmic-config = { git = "https://github.com/pop-os/libcosmic//", branch = "zbus-4" }
+libcosmic = { git = "https://github.com/pop-os/libcosmic//", branch = "zbus-4" }
 
 [patch."https://github.com/Smithay/client-toolkit"]
 sctk = { git = "https://github.com/smithay/client-toolkit//", package = "smithay-client-toolkit", rev = "e63ab5f" }

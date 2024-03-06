@@ -163,7 +163,7 @@ async fn update(state: State, output: &mut futures::channel::mpsc::Sender<MprisU
             State::Player(player, dbus_proxy)
         }
         State::Player(player, dbus_proxy) => {
-            let Ok(mut name_owner_changed) = player.receive_owner_changed().await else {
+            let Ok(mut name_owner_changed) = player.inner().receive_owner_changed().await else {
                 tracing::error!("Failed to receive owner changed signal.");
                 // restart from the beginning
                 return State::Setup;
@@ -174,7 +174,7 @@ async fn update(state: State, output: &mut futures::channel::mpsc::Sender<MprisU
                 // restart from the beginning
                 return State::Setup;
             };
-            let conn = player.connection();
+            let conn = player.inner().connection();
             let media_players = mpris2_zbus::media_player::MediaPlayer::new_all(conn)
                 .await
                 .unwrap_or_else(|_| Vec::new());
@@ -233,12 +233,12 @@ async fn update(state: State, output: &mut futures::channel::mpsc::Sender<MprisU
                     // if paused check if any players are playing
                     // if they are, break
                     if !matches!(update.status, PlaybackStatus::Playing) {
-                        let conn = player.connection();
+                        let conn = player.inner().connection();
                         let players = mpris2_zbus::media_player::MediaPlayer::new_all(conn)
                             .await
                             .unwrap_or_else(|_| Vec::new());
                         if let Some(active) = find_active(players).await {
-                            if active.destination() != player.destination() {
+                            if active.inner().destination() != player.inner().destination() {
                                 break;
                             }
                         }
@@ -258,8 +258,8 @@ async fn update(state: State, output: &mut futures::channel::mpsc::Sender<MprisU
 async fn find_active(mut players: Vec<MediaPlayer>) -> Option<Player> {
     // pre-sort by path so that the same player is always selected
     players.sort_by(|a, b| {
-        let a = a.destination();
-        let b = b.destination();
+        let a = a.inner().destination();
+        let b = b.inner().destination();
         a.cmp(b)
     });
     let mut best = (0, None);

@@ -177,36 +177,45 @@ async fn start_listening(
                     // First try known connections
                     // TODO more convenient methods of managing settings
                     for c in s.list_connections().await.unwrap_or_default() {
-                        let mut settings = match c.get_settings().await.ok() {
-                            Some(s) => s,
+                        let mut settings: HashMap<_, _> = match c.get_settings().await.ok() {
+                            Some(s) => s
+                                .into_iter()
+                                .map(|(k, v)| {
+                                    (k, v.into_iter().map(|(k, v)| (k, Value::from(v))).collect())
+                                })
+                                .collect(),
                             None => continue,
                         };
 
                         let cur_ssid = settings
                             .get("802-11-wireless")
-                            .and_then(|w| w.get("ssid"))
-                            .cloned()
-                            .and_then(|ssid| ssid.try_into().ok())
+                            .and_then(|w: &HashMap<_, _>| w.get("ssid"))
+                            .and_then(|ssid| Vec::<u8>::try_from(ssid.try_clone().ok()?).ok())
                             .and_then(|ssid| String::from_utf8(ssid).ok());
                         if cur_ssid.as_ref() != Some(&ssid) {
                             continue;
                         }
 
-                        let mut secrets = match c.get_secrets("802-11-wireless-security").await {
-                            Ok(s) => s,
+                        let mut secrets: HashMap<String, HashMap<String, Value<'_>>> = match c
+                            .get_secrets("802-11-wireless-security")
+                            .await
+                        {
+                            Ok(s) => s
+                                .into_iter()
+                                .map(|(k, v)| {
+                                    (k, v.into_iter().map(|(k, v)| (k, Value::from(v))).collect())
+                                })
+                                .collect(),
                             _ => HashMap::from([(
                                 "802-11-wireless-security".into(),
                                 HashMap::from([
-                                    (
-                                        "psk".into(),
-                                        Value::Str(password.as_str().into()).to_owned(),
-                                    ),
-                                    ("key-mgmt".into(), Value::Str("wpa-psk".into()).to_owned()),
+                                    ("psk".into(), Value::Str(password.as_str().into())),
+                                    ("key-mgmt".into(), Value::Str("wpa-psk".into())),
                                 ]),
                             )]),
                         };
                         if let Some(s) = secrets.get_mut("802-11-wireless-security") {
-                            s.insert("psk".into(), Value::Str(password.clone().into()).to_owned());
+                            s.insert("psk".into(), Value::Str(password.clone().into()));
                             settings.extend(secrets.into_iter());
                             let settings: HashMap<_, _> = settings
                                 .iter()
@@ -214,8 +223,10 @@ async fn start_listening(
                                     let map = (
                                         k.as_str(),
                                         v.iter()
-                                            .map(|(k, v)| (k.as_str(), v.into()))
-                                            .collect::<HashMap<_, _>>(),
+                                            .filter_map(|(k, v)| {
+                                                Some((k.as_str(), v.try_clone().ok()?))
+                                            })
+                                            .collect::<HashMap<_, Value<'_>>>(),
                                     );
                                     map
                                 })
@@ -225,20 +236,22 @@ async fn start_listening(
                                 let success = if let Ok(path) = network_manager
                                     .deref()
                                     .activate_connection(
-                                        c.deref().path(),
+                                        c.deref().inner().path(),
                                         &ObjectPath::try_from("/").unwrap(),
                                         &ObjectPath::try_from("/").unwrap(),
                                     )
                                     .await
                                 {
                                     // let active_conn = ActiveConnection::from(ActiveConnectionProxy::from(conn.1));
-                                    let dummy = ActiveConnectionProxy::new(&conn).await.unwrap();
+                                    let dummy = ActiveConnectionProxy::new(&conn, path.clone())
+                                        .await
+                                        .unwrap();
                                     let active = ActiveConnectionProxy::builder(&conn)
                                         .path(path)
                                         .unwrap()
-                                        .destination(dummy.destination())
+                                        .destination(dummy.inner().destination())
                                         .unwrap()
-                                        .interface(dummy.interface())
+                                        .interface(dummy.inner().interface())
                                         .unwrap()
                                         .build()
                                         .await
@@ -315,18 +328,20 @@ async fn start_listening(
                                 let success = if let Ok((_, path)) = network_manager
                                     .add_and_activate_connection(
                                         conn_settings,
-                                        device.path(),
+                                        device.inner().path(),
                                         &ObjectPath::try_from("/").unwrap(),
                                     )
                                     .await
                                 {
-                                    let dummy = ActiveConnectionProxy::new(&conn).await.unwrap();
+                                    let dummy = ActiveConnectionProxy::new(&conn, path.clone())
+                                        .await
+                                        .unwrap();
                                     let active = ActiveConnectionProxy::builder(&conn)
                                         .path(path)
                                         .unwrap()
-                                        .destination(dummy.destination())
+                                        .destination(dummy.inner().destination())
                                         .unwrap()
-                                        .interface(dummy.interface())
+                                        .interface(dummy.inner().interface())
                                         .unwrap()
                                         .build()
                                         .await
@@ -399,7 +414,7 @@ async fn start_listening(
                         let cur_ssid = settings
                             .get("802-11-wireless")
                             .and_then(|w| w.get("ssid"))
-                            .cloned()
+                            .and_then(|v| Some(v.try_clone().ok()?))
                             .and_then(|ssid| ssid.try_into().ok())
                             .and_then(|ssid| String::from_utf8(ssid).ok());
 
@@ -410,19 +425,21 @@ async fn start_listening(
                         let success = if let Ok(path) = network_manager
                             .deref()
                             .activate_connection(
-                                c.deref().path(),
+                                c.deref().inner().path(),
                                 &ObjectPath::try_from("/").unwrap(),
                                 &ObjectPath::try_from("/").unwrap(),
                             )
                             .await
                         {
-                            let dummy = ActiveConnectionProxy::new(&conn).await.unwrap();
+                            let dummy = ActiveConnectionProxy::new(&conn, path.clone())
+                                .await
+                                .unwrap();
                             let active = ActiveConnectionProxy::builder(&conn)
                                 .path(path)
                                 .unwrap()
-                                .destination(dummy.destination())
+                                .destination(dummy.inner().destination())
                                 .unwrap()
-                                .interface(dummy.interface())
+                                .interface(dummy.inner().interface())
                                 .unwrap()
                                 .build()
                                 .await

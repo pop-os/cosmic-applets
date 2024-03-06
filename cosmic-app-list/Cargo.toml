@@ -30,4 +30,4 @@ rust-embed = "6.3"
 url = "2.3.1"
 rust-embed-utils = "7.5.0"
 rand = "0.8.5"
-switcheroo-control = { git = "https://github.com/pop-os/dbus-settings-bindings" }
+switcheroo-control = { git = "https://github.com/pop-os/dbus-settings-bindings", branch = "zbus-4" }
