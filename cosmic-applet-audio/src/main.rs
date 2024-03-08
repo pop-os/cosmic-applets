@@ -58,6 +58,11 @@ pub fn main() -> cosmic::iced::Result {
 
 static SHOW_MEDIA_CONTROLS: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
 
+const GO_BACK: &str = "media-skip-backward-symbolic";
+const GO_NEXT: &str = "media-skip-forward-symbolic";
+const PAUSE: &str = "media-playback-pause-symbolic";
+const PLAY: &str = "media-playback-start-symbolic";
+
 #[derive(Default)]
 struct Audio {
     core: cosmic::app::Core,
@@ -159,15 +164,34 @@ impl Audio {
     fn playback_buttons(&self) -> Option<Element<Message>> {
         if self.player_status.is_some() && self.config.show_media_controls_in_top_panel {
             let mut elements = Vec::with_capacity(3);
-            let icon_size = self.core.applet.suggested_size().0;
-            if let Some(go_prev) = self.go_previous(icon_size) {
-                elements.push(go_prev);
+            if self
+                .player_status
+                .as_ref()
+                .map(|s| s.can_go_previous)
+                .unwrap_or_default()
+            {
+                elements.push(self.core.applet.icon_button(GO_BACK).into())
             }
-            if let Some(play_pause) = self.play_pause(icon_size) {
-                elements.push(play_pause);
+            if let Some(play) = self.is_play() {
+                elements.push(
+                    self.core
+                        .applet
+                        .icon_button(if play { PLAY } else { PAUSE })
+                        .on_press(if play {
+                            Message::MprisRequest(MprisRequest::Play)
+                        } else {
+                            Message::MprisRequest(MprisRequest::Pause)
+                        })
+                        .into(),
+                );
             }
-            if let Some(go_next) = self.go_next(icon_size) {
-                elements.push(go_next);
+            if self
+                .player_status
+                .as_ref()
+                .map(|s| s.can_go_next)
+                .unwrap_or_default()
+            {
+                elements.push(self.core.applet.icon_button(GO_NEXT).into())
             }
 
             Some(match self.core.applet.anchor {
@@ -187,15 +211,11 @@ impl Audio {
         self.player_status.as_ref().and_then(|s| {
             if s.can_go_previous {
                 Some(
-                    button::icon(
-                        icon::from_name("media-skip-backward-symbolic")
-                            .size(icon_size)
-                            .symbolic(true),
-                    )
-                    .extra_small()
-                    .style(cosmic::theme::Button::AppletIcon)
-                    .on_press(Message::MprisRequest(MprisRequest::Previous))
-                    .into(),
+                    button::icon(icon::from_name(GO_BACK).size(icon_size).symbolic(true))
+                        .extra_small()
+                        .style(cosmic::theme::Button::AppletIcon)
+                        .on_press(Message::MprisRequest(MprisRequest::Previous))
+                        .into(),
                 )
             } else {
                 None
@@ -207,15 +227,11 @@ impl Audio {
         self.player_status.as_ref().and_then(|s| {
             if s.can_go_next {
                 Some(
-                    button::icon(
-                        icon::from_name("media-skip-forward-symbolic")
-                            .size(icon_size)
-                            .symbolic(true),
-                    )
-                    .extra_small()
-                    .style(cosmic::theme::Button::AppletIcon)
-                    .on_press(Message::MprisRequest(MprisRequest::Next))
-                    .into(),
+                    button::icon(icon::from_name(GO_NEXT).size(icon_size).symbolic(true))
+                        .extra_small()
+                        .style(cosmic::theme::Button::AppletIcon)
+                        .on_press(Message::MprisRequest(MprisRequest::Next))
+                        .into(),
                 )
             } else {
                 None
@@ -223,21 +239,11 @@ impl Audio {
         })
     }
 
-    fn play_pause(&self, icon_size: u16) -> Option<Element<Message>> {
+    fn is_play(&self) -> Option<bool> {
         self.player_status.as_ref().and_then(|s| match s.status {
             PlaybackStatus::Playing => {
                 if s.can_pause {
-                    Some(
-                        button::icon(
-                            icon::from_name("media-playback-pause-symbolic")
-                                .size(icon_size)
-                                .symbolic(true),
-                        )
-                        .style(cosmic::theme::Button::AppletIcon)
-                        .on_press(Message::MprisRequest(MprisRequest::Pause))
-                        .extra_small()
-                        .into(),
-                    )
+                    Some(false)
                 } else {
                     None
                 }
@@ -245,17 +251,7 @@ impl Audio {
 
             PlaybackStatus::Paused | PlaybackStatus::Stopped => {
                 if s.can_play {
-                    Some(
-                        button::icon(
-                            icon::from_name("media-playback-start-symbolic")
-                                .size(32)
-                                .symbolic(true),
-                        )
-                        .style(cosmic::theme::Button::AppletIcon)
-                        .extra_small()
-                        .on_press(Message::MprisRequest(MprisRequest::Play))
-                        .into(),
-                    )
+                    Some(true)
                 } else {
                     None
                 }
@@ -731,8 +727,22 @@ impl cosmic::Application for Audio {
             if let Some(go_prev) = self.go_previous(32) {
                 elements.push(go_prev);
             }
-            if let Some(play_pause) = self.play_pause(32) {
-                elements.push(play_pause);
+            if let Some(play) = self.is_play() {
+                elements.push(
+                    button::icon(
+                        icon::from_name(if play { PLAY } else { PAUSE })
+                            .size(32)
+                            .symbolic(true),
+                    )
+                    .extra_small()
+                    .style(cosmic::theme::Button::AppletIcon)
+                    .on_press(if play {
+                        Message::MprisRequest(MprisRequest::Play)
+                    } else {
+                        Message::MprisRequest(MprisRequest::Pause)
+                    })
+                    .into(),
+                );
             }
             if let Some(go_next) = self.go_next(32) {
                 elements.push(go_next);
