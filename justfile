@@ -12,6 +12,7 @@ targetdir := env('CARGO_TARGET_DIR', 'target')
 sharedir := rootdir + prefix + '/share'
 iconsdir := sharedir + '/icons/hicolor'
 bindir := rootdir + prefix + '/bin'
+default-schema-target := sharedir / 'cosmic'
 
 build: _extract_vendor
     #!/usr/bin/env bash
@@ -27,6 +28,9 @@ build-release *args: (build-debug '--release' args)
 _install_icons name:
     find {{name}}/'data'/'icons' -type f -exec echo {} \; | rev | cut -d'/' -f-3 | rev | xargs -d '\n' -I {} install -Dm0644 {{name}}/'data'/'icons'/{} {{iconsdir}}/{}
 
+_install_default_schema name:
+    find {{name}}/'data'/'default_schema' -type f -exec echo {} \; | rev | cut -d'/' -f-3 | rev | xargs -d '\n' -I {} install -Dm0644 {{name}}/'data'/'default_schema'/{} {{default-schema-target}}/{}
+
 _install_desktop path:
     install -Dm0644 {{path}} {{sharedir}}/applications/{{file_name(path)}}
 
@@ -35,7 +39,7 @@ _install_bin name:
 
 _install id name: (_install_icons name) (_install_desktop name + '/data/' + id + '.desktop') (_install_bin name)
 
-_install_app_list: (_install 'com.system76.CosmicAppList' 'cosmic-app-list')
+_install_app_list: (_install 'com.system76.CosmicAppList' 'cosmic-app-list') (_install_default_schema 'cosmic-app-list')
 _install_audio: (_install 'com.system76.CosmicAppletAudio' 'cosmic-applet-audio')
 _install_battery: (_install 'com.system76.CosmicAppletBattery' 'cosmic-applet-battery')
 _install_bluetooth: (_install 'com.system76.CosmicAppletBluetooth' 'cosmic-applet-bluetooth')
