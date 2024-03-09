@@ -1,3 +1,4 @@
+use cosmic::applet::cosmic_panel_config::PanelAnchor;
 use cosmic::iced_widget::text;
 use cosmic::{app, iced, iced_style::application, theme::Theme};
 use freedesktop_desktop_entry::DesktopEntry;
@@ -52,10 +53,20 @@ impl cosmic::Application for Button {
     }
 
     fn view(&self) -> cosmic::Element<Msg> {
-        cosmic::widget::button(text(&self.desktop.name).size(14.0))
-            .style(cosmic::theme::Button::AppletIcon)
-            .on_press(Msg::Press)
-            .into()
+        if matches!(
+            self.core.applet.anchor,
+            PanelAnchor::Left | PanelAnchor::Right
+        ) && self.desktop.icon.is_some()
+        {
+            self.core
+                .applet
+                .icon_button(self.desktop.icon.as_ref().unwrap())
+        } else {
+            cosmic::widget::button(text(&self.desktop.name).size(14.0))
+                .style(cosmic::theme::Button::AppletIcon)
+        }
+        .on_press(Msg::Press)
+        .into()
     }
 }
 
