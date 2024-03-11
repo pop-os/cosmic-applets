@@ -74,13 +74,18 @@ pub fn load_applications_for_app_ids_sorted<'a, 'b>(
     app_ids: impl Iterator<Item = &'b str> + Clone,
     fill_missing_ones: bool,
 ) -> Vec<DesktopEntryData> {
-    let mut ret = load_applications_for_app_ids(locale, app_ids.clone(), fill_missing_ones);
+    let mut ret = load_applications_for_app_ids(locale, app_ids.clone(), fill_missing_ones, false);
     ret.sort_by(|a, b| {
         app_ids
             .clone()
-            .position(|id| id == a.id)
-            .unwrap()
-            .cmp(&app_ids.clone().position(|id| id == b.id).unwrap())
+            .position(|id| id == a.id || a.name.to_lowercase() == id.to_lowercase())
+            .unwrap_or(usize::MAX)
+            .cmp(
+                &app_ids
+                    .clone()
+                    .position(|id| id == b.id || b.name.to_lowercase() == id.to_lowercase())
+                    .unwrap_or(usize::MAX),
+            )
     });
 
     ret

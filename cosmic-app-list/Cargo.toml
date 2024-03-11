@@ -9,7 +9,6 @@ cctk.workspace = true
 cosmic-protocols.workspace = true
 libcosmic.workspace = true
 zbus.workspace = true
-# libcosmic = { path = "../../libcosmic", default-features = false, features = ["wayland", "tokio", "applet"] }
 ron = "0.8"
 futures = "0.3"
 futures-util = "0.3"
