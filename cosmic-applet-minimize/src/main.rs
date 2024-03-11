@@ -97,6 +97,7 @@ impl cosmic::Application for Minimize {
                                 None,
                                 std::iter::once(id),
                                 true,
+                                false,
                             )
                             .remove(0)
                         };
