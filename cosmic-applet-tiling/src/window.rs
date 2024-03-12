@@ -15,7 +15,6 @@ use cosmic::{Element, Theme};
 use cosmic_comp_config::{CosmicCompConfig, TileBehavior};
 use cosmic_protocols::workspace::v1::client::zcosmic_workspace_handle_v1::TilingState;
 use cosmic_time::{anim, chain, id, Timeline};
-use once_cell::sync::Lazy;
 use std::thread;
 use std::time::Instant;
 use tracing::error;
@@ -23,9 +22,6 @@ use tracing::error;
 const ID: &str = "com.system76.CosmicAppletTiling";
 const ON: &str = "com.system76.CosmicAppletTiling.On";
 const OFF: &str = "com.system76.CosmicAppletTiling.Off";
-
-static TILE_WINDOWS: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
-static ACTIVE_HINT: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
 
 pub struct Window {
     core: Core,
@@ -40,6 +36,8 @@ pub struct Window {
     /// may not match the config value if behavior is per-workspace
     autotiled: bool,
     workspace_tx: Option<SyncSender<TilingState>>,
+    tile_windows: id::Toggler,
+    active_hint: id::Toggler,
 }
 
 #[derive(Clone, Debug)]
@@ -126,6 +124,8 @@ impl cosmic::Application for Window {
             autotile_global_entity,
             new_workspace_entity,
             workspace_tx: None,
+            tile_windows: id::Toggler::unique(),
+            active_hint: id::Toggler::unique(),
         };
         (window, Command::none())
     }
@@ -153,11 +153,15 @@ impl cosmic::Application for Window {
             Message::WorkspaceUpdate(msg) => match msg {
                 WorkspacesUpdate::State(state) => {
                     self.autotiled = matches!(state, TilingState::TilingEnabled);
-                    self.timeline.set_chain(if self.autotiled {
-                        cosmic_time::chain::Toggler::on(TILE_WINDOWS.clone(), 1.0)
-                    } else {
-                        cosmic_time::chain::Toggler::off(TILE_WINDOWS.clone(), 1.0)
-                    });
+                    if self.popup.is_some() {
+                        self.timeline
+                            .set_chain(if self.autotiled {
+                                cosmic_time::chain::Toggler::on(self.tile_windows.clone(), 1.0)
+                            } else {
+                                cosmic_time::chain::Toggler::off(self.tile_windows.clone(), 1.0)
+                            })
+                            .start();
+                    }
                 }
                 WorkspacesUpdate::Started(tx) => {
                     self.workspace_tx = Some(tx);
@@ -170,6 +174,9 @@ impl cosmic::Application for Window {
                 return if let Some(p) = self.popup.take() {
                     destroy_popup(p)
                 } else {
+                    self.timeline = Timeline::default();
+                    self.tile_windows = id::Toggler::unique();
+                    self.active_hint = id::Toggler::unique();
                     let new_id = Id::unique();
                     self.popup.replace(new_id);
                     let mut popup_settings =
@@ -235,11 +242,15 @@ impl cosmic::Application for Window {
             Message::MyConfigUpdate(c) => {
                 if matches!(c.autotile_behavior, TileBehavior::Global) {
                     if c.autotile != self.config.autotile {
-                        self.timeline.set_chain(if c.autotile {
-                            cosmic_time::chain::Toggler::on(TILE_WINDOWS.clone(), 1.0)
-                        } else {
-                            cosmic_time::chain::Toggler::off(TILE_WINDOWS.clone(), 1.0)
-                        });
+                        if self.popup.is_some() {
+                            self.timeline
+                                .set_chain(if c.autotile {
+                                    cosmic_time::chain::Toggler::on(self.tile_windows.clone(), 1.0)
+                                } else {
+                                    cosmic_time::chain::Toggler::off(self.tile_windows.clone(), 1.0)
+                                })
+                                .start();
+                        }
                     }
                     self.autotile_behavior_model.activate_position(0);
                 } else {
@@ -250,11 +261,15 @@ impl cosmic::Application for Window {
                     self.autotile_behavior_model.activate_position(1);
                 }
                 if c.active_hint != self.config.active_hint {
-                    self.timeline.set_chain(if c.active_hint {
-                        cosmic_time::chain::Toggler::on(ACTIVE_HINT.clone(), 1.0)
-                    } else {
-                        cosmic_time::chain::Toggler::off(ACTIVE_HINT.clone(), 1.0)
-                    });
+                    if self.popup.is_some() {
+                        self.timeline
+                            .set_chain(if c.active_hint {
+                                cosmic_time::chain::Toggler::on(self.active_hint.clone(), 1.0)
+                            } else {
+                                cosmic_time::chain::Toggler::off(self.active_hint.clone(), 1.0)
+                            })
+                            .start();
+                    }
                 }
 
                 self.config = *c;
@@ -315,7 +330,7 @@ impl cosmic::Application for Window {
         let content_list = column![
             padded_control(container(
                 anim!(
-                    TILE_WINDOWS,
+                    self.tile_windows,
                     &self.timeline,
                     if matches!(self.config.autotile_behavior, TileBehavior::Global) {
                         fl!("tile-windows")
@@ -369,7 +384,7 @@ impl cosmic::Application for Window {
             padded_control(divider::horizontal::default()),
             padded_control(
                 anim!(
-                    ACTIVE_HINT,
+                    self.active_hint,
                     &self.timeline,
                     fl!("active-hint"),
                     self.config.active_hint,
