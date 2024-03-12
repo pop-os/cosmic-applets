@@ -772,7 +772,7 @@ impl cosmic::Application for CosmicAppList {
                                 .iter_mut()
                                 .chain(self.favorite_list.iter_mut())
                                 .find(|DockItem { desktop_info, .. }| {
-                                    app_id_or_fallback_matches(&info.app_id, &desktop_info)
+                                    app_id_or_fallback_matches(&info.app_id, desktop_info)
                                 })
                             {
                                 t.toplevels.push((handle, info));
@@ -1108,7 +1108,7 @@ impl cosmic::Application for CosmicAppList {
                 .config
                 .favorites
                 .iter()
-                .any(|x| app_id_or_fallback_matches(&x, &desktop_info));
+                .any(|x| app_id_or_fallback_matches(&x, desktop_info));
 
             let mut content = column![container(
                 iced::widget::text(&desktop_info.name).horizontal_alignment(Horizontal::Center)
