@@ -78,12 +78,12 @@ pub fn load_applications_for_app_ids_sorted<'a, 'b>(
     ret.sort_by(|a, b| {
         app_ids
             .clone()
-            .position(|id| id == a.id || a.name.to_lowercase() == id.to_lowercase())
+            .position(|id| id == a.id)
             .unwrap_or(usize::MAX)
             .cmp(
                 &app_ids
                     .clone()
-                    .position(|id| id == b.id || b.name.to_lowercase() == id.to_lowercase())
+                    .position(|id| id == b.id)
                     .unwrap_or(usize::MAX),
             )
     });
