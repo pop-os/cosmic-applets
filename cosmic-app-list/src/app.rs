@@ -12,7 +12,9 @@ use cctk::toplevel_info::ToplevelInfo;
 use cctk::wayland_client::protocol::wl_data_device_manager::DndAction;
 use cctk::wayland_client::protocol::wl_seat::WlSeat;
 use cosmic::cosmic_config::{Config, CosmicConfigEntry};
-use cosmic::desktop::{load_applications_for_app_ids, DesktopEntryData};
+use cosmic::desktop::{
+    app_id_or_fallback_matches, load_applications_for_app_ids, DesktopEntryData,
+};
 use cosmic::iced;
 use cosmic::iced::event::listen_with;
 use cosmic::iced::wayland::actions::data_device::DataFromMimeType;
@@ -770,8 +772,7 @@ impl cosmic::Application for CosmicAppList {
                                 .iter_mut()
                                 .chain(self.favorite_list.iter_mut())
                                 .find(|DockItem { desktop_info, .. }| {
-                                    desktop_info.id == info.app_id
-                                        || desktop_info.wm_class.as_ref() == Some(&info.app_id)
+                                    app_id_or_fallback_matches(&info.app_id, &desktop_info)
                                 })
                             {
                                 t.toplevels.push((handle, info));
@@ -1103,11 +1104,11 @@ impl cosmic::Application for CosmicAppList {
                 return iced::widget::text("").into();
             };
 
-            let is_favorite = self.config.favorites.contains(&desktop_info.id)
-                || desktop_info
-                    .wm_class
-                    .as_ref()
-                    .is_some_and(|wm_class| self.config.favorites.contains(wm_class));
+            let is_favorite = self
+                .config
+                .favorites
+                .iter()
+                .any(|x| app_id_or_fallback_matches(&x, &desktop_info));
 
             let mut content = column![container(
                 iced::widget::text(&desktop_info.name).horizontal_alignment(Horizontal::Center)
