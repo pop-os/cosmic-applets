@@ -5,24 +5,22 @@ edition = "2021"
 license = "GPL-3.0-or-later"
 
 [dependencies]
+
+anyhow.workspace = true
 cosmic-dbus-networkmanager = { git = "https://github.com/pop-os/dbus-settings-bindings" }
-# cosmic-dbus-networkmanager = { path = "../../../dbus-settings-bindings/networkmanager" }
-futures-util = "0.3.21"
-libcosmic.workspace = true
 cosmic-time.workspace = true
-futures = "0.3"
-zbus.workspace = true
+futures.workspace = true
+futures-util.workspace = true
+i18n-embed-fl.workspace = true
+i18n-embed.workspace = true
+itertools = "0.12.1"
+libcosmic.workspace = true
 log = "0.4"
-tracing.workspace = true
+rust-embed-utils.workspace = true
+rust-embed.workspace = true
+slotmap = "1.0.7"
+tokio = { version = "1.36.0", features = ["full"] }
 tracing-log.workspace = true
 tracing-subscriber.workspace = true
-itertools = "0.10.3"
-slotmap = "1.0.6"
-tokio = { version = "1.15.0", features = ["full"] }
-anyhow.workspace = true
-# Application i18n
-i18n-embed = { version = "0.13.4", features = ["fluent-system", "desktop-requester"] }
-i18n-embed-fl = "0.6.4"
-rust-embed = "6.3.0"
-rust-embed-utils = "7.5.0"
-
+tracing.workspace = true
+zbus.workspace = true

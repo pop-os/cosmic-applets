@@ -6,10 +6,10 @@ license = "GPL-3.0-or-later"
 
 [dependencies]
 anyhow.workspace = true
-libcosmic.workspace = true
 cosmic-time.workspace = true
-nix = "0.26"
-tokio = { version = "1.24.1", features = [
+libcosmic.workspace = true
+nix.workspace = true
+tokio = { version = "1.36.0", features = [
     "sync",
     "rt",
     "tracing",
@@ -18,23 +18,17 @@ tokio = { version = "1.24.1", features = [
     "io-util",
     "io-std",
 ] }
-cosmic-notifications-util = { git = "https://github.com/pop-os/cosmic-notifications" }
-cosmic-notifications-config = { git = "https://github.com/pop-os/cosmic-notifications" }
-# cosmic-notifications-util = { path = "../../cosmic-notifications-daemon/cosmic-notifications-util" }
-# cosmic-notifications-config = { path = "../../cosmic-notifications-daemon/cosmic-notifications-config" }
-tracing.workspace = true
-tracing-subscriber.workspace = true
-tracing-log.workspace = true
-ron = "0.8"
-sendfd = { version = "0.4", features = ["tokio"] }
 bytemuck = "1"
+cosmic-notifications-config = { git = "https://github.com/pop-os/cosmic-notifications" }
+cosmic-notifications-util = { git = "https://github.com/pop-os/cosmic-notifications" }
+i18n-embed-fl.workspace = true
+i18n-embed.workspace = true
+ron = "0.8"
+rust-embed-utils.workspace = true
+rust-embed.workspace = true
+sendfd = { version = "0.4", features = ["tokio"] }
+tracing-log.workspace = true
+tracing-subscriber.workspace = true
+tracing.workspace = true
+url = "2.5.0"
 zbus.workspace = true
-# Application i18n
-i18n-embed = { version = "0.13.4", features = [
-    "fluent-system",
-    "desktop-requester",
-] }
-i18n-embed-fl = "0.6.4"
-rust-embed = "6.3.0"
-rust-embed-utils = "7.5.0"
-url = "2.4.0"

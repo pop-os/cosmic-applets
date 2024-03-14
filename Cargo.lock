@@ -548,9 +548,9 @@ dependencies = [
 
 [[package]]
 name = "bluer"
-version = "0.15.7"
+version = "0.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3d76ba39a871348200bbbf7dbff9fbaec30f0b988420f7391bfd9fdc5f8b5144"
+checksum = "ce636932455607d7227fa44d2c6b888a9f5f48e11c0e95fc4d0d793aac71fb98"
 dependencies = [
  "custom_debug",
  "dbus",
@@ -563,8 +563,8 @@ dependencies = [
  "libc",
  "log",
  "macaddr",
- "nix 0.26.4",
- "num-derive",
+ "nix 0.27.1",
+ "num-derive 0.4.2",
  "num-traits",
  "pin-project",
  "serde",
@@ -852,17 +852,17 @@ dependencies = [
  "cosmic-protocols",
  "futures",
  "futures-util",
- "i18n-embed 0.13.9",
- "i18n-embed-fl 0.6.7",
- "itertools 0.12.1",
+ "i18n-embed",
+ "i18n-embed-fl",
+ "itertools",
  "libcosmic",
  "log",
- "nix 0.26.4",
+ "nix 0.28.0",
  "once_cell",
  "rand",
  "ron",
- "rust-embed 6.8.1",
- "rust-embed-utils 7.8.1",
+ "rust-embed",
+ "rust-embed-utils",
  "serde",
  "switcheroo-control",
  "tokio",
@@ -879,14 +879,14 @@ name = "cosmic-applet-audio"
 version = "0.1.1"
 dependencies = [
  "cosmic-time",
- "i18n-embed 0.13.9",
- "i18n-embed-fl 0.6.7",
+ "i18n-embed",
+ "i18n-embed-fl",
  "libcosmic",
  "libpulse-binding",
  "libpulse-glib-binding",
  "mpris2-zbus",
- "rust-embed 6.8.1",
- "rust-embed-utils 7.8.1",
+ "rust-embed",
+ "rust-embed-utils",
  "serde",
  "tokio",
  "tracing",
@@ -904,12 +904,12 @@ dependencies = [
  "cosmic-time",
  "drm",
  "futures",
- "i18n-embed 0.13.9",
- "i18n-embed-fl 0.6.7",
+ "i18n-embed",
+ "i18n-embed-fl",
  "libcosmic",
  "log",
  "once_cell",
- "rust-embed 6.8.1",
+ "rust-embed",
  "tokio",
  "tracing",
  "tracing-log",
@@ -927,14 +927,14 @@ dependencies = [
  "cosmic-time",
  "futures",
  "futures-util",
- "i18n-embed 0.13.9",
- "i18n-embed-fl 0.6.7",
- "itertools 0.10.5",
+ "i18n-embed",
+ "i18n-embed-fl",
+ "itertools",
  "libcosmic",
  "log",
  "once_cell",
  "rand",
- "rust-embed 6.8.1",
+ "rust-embed",
  "slotmap",
  "tokio",
  "tracing",
@@ -947,15 +947,15 @@ name = "cosmic-applet-minimize"
 version = "0.1.1"
 dependencies = [
  "anyhow",
- "i18n-embed 0.13.9",
- "i18n-embed-fl 0.6.7",
+ "i18n-embed",
+ "i18n-embed-fl",
  "image",
  "libcosmic",
  "memmap2 0.9.4",
  "once_cell",
  "png",
- "rust-embed 6.8.1",
- "rust-embed-utils 7.8.1",
+ "rust-embed",
+ "rust-embed-utils",
  "rustix 0.38.31",
  "tempfile",
  "tokio",
@@ -973,13 +973,13 @@ dependencies = [
  "cosmic-time",
  "futures",
  "futures-util",
- "i18n-embed 0.13.9",
- "i18n-embed-fl 0.6.7",
- "itertools 0.10.5",
+ "i18n-embed",
+ "i18n-embed-fl",
+ "itertools",
  "libcosmic",
  "log",
- "rust-embed 6.8.1",
- "rust-embed-utils 7.8.1",
+ "rust-embed",
+ "rust-embed-utils",
  "slotmap",
  "tokio",
  "tracing",
@@ -997,13 +997,13 @@ dependencies = [
  "cosmic-notifications-config",
  "cosmic-notifications-util",
  "cosmic-time",
- "i18n-embed 0.13.9",
- "i18n-embed-fl 0.6.7",
+ "i18n-embed",
+ "i18n-embed-fl",
  "libcosmic",
- "nix 0.26.4",
+ "nix 0.28.0",
  "ron",
- "rust-embed 6.8.1",
- "rust-embed-utils 7.8.1",
+ "rust-embed",
+ "rust-embed-utils",
  "sendfd",
  "tokio",
  "tracing",
@@ -1017,17 +1017,17 @@ dependencies = [
 name = "cosmic-applet-power"
 version = "0.1.0"
 dependencies = [
- "i18n-embed 0.13.9",
- "i18n-embed-fl 0.6.7",
+ "i18n-embed",
+ "i18n-embed-fl",
  "icon-loader",
  "libcosmic",
  "libpulse-binding",
  "libpulse-glib-binding",
  "logind-zbus",
- "nix 0.26.4",
+ "nix 0.28.0",
  "once_cell",
- "rust-embed 6.8.1",
- "rust-embed-utils 7.8.1",
+ "rust-embed",
+ "rust-embed-utils",
  "tokio",
  "tracing",
  "tracing-log",
@@ -1058,11 +1058,11 @@ dependencies = [
  "cosmic-comp-config",
  "cosmic-protocols",
  "cosmic-time",
- "i18n-embed 0.14.1",
- "i18n-embed-fl 0.7.0",
+ "i18n-embed",
+ "i18n-embed-fl",
  "libcosmic",
  "once_cell",
- "rust-embed 8.3.0",
+ "rust-embed",
  "tokio",
  "tracing",
  "tracing-log",
@@ -1074,13 +1074,13 @@ name = "cosmic-applet-time"
 version = "0.1.0"
 dependencies = [
  "chrono",
- "i18n-embed 0.13.9",
- "i18n-embed-fl 0.6.7",
+ "i18n-embed",
+ "i18n-embed-fl",
  "icon-loader",
  "libcosmic",
- "nix 0.26.4",
+ "nix 0.28.0",
  "once_cell",
- "rust-embed 6.8.1",
+ "rust-embed",
  "tokio",
  "tracing",
  "tracing-log",
@@ -1095,12 +1095,12 @@ dependencies = [
  "cosmic-client-toolkit",
  "cosmic-protocols",
  "futures",
- "i18n-embed 0.13.9",
- "i18n-embed-fl 0.6.7",
+ "i18n-embed",
+ "i18n-embed-fl",
  "libcosmic",
- "nix 0.27.1",
+ "nix 0.28.0",
  "once_cell",
- "rust-embed 6.8.1",
+ "rust-embed",
  "tokio",
  "tracing",
  "tracing-log",
@@ -1407,21 +1407,24 @@ checksum = "96a6ac251f4a2aca6b3f91340350eab87ae57c3f127ffeb585e92bd336717991"
 
 [[package]]
 name = "custom_debug"
-version = "0.5.1"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e89e0ae2c2a42be29595d05c50e3ce6096c0698a97e021c3289790f0750cc8e2"
+checksum = "14e715bf0e503e909c7076c052e39dd215202e8edeb32f1c194fd630c314d256"
 dependencies = [
  "custom_debug_derive",
 ]
 
 [[package]]
 name = "custom_debug_derive"
-version = "0.5.1"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "08a9f3941234c9f62ceaa2782974827749de9b0a8a6487275a278da068e1baf7"
+checksum = "f731440b39c73910e253cb465ec1fac97732b3c7af215639881ec0c2a38f4f69"
 dependencies = [
+ "darling 0.20.8",
+ "itertools",
  "proc-macro2",
- "syn 1.0.109",
+ "quote",
+ "syn 2.0.52",
  "synstructure",
 ]
 
@@ -2693,28 +2696,6 @@ dependencies = [
 
 [[package]]
 name = "i18n-embed"
-version = "0.13.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "92a86226a7a16632de6723449ee5fe70bac5af718bc642ee9ca2f0f6e14fa1fa"
-dependencies = [
- "arc-swap",
- "fluent",
- "fluent-langneg",
- "fluent-syntax",
- "i18n-embed-impl",
- "intl-memoizer",
- "lazy_static",
- "locale_config",
- "log",
- "parking_lot 0.12.1",
- "rust-embed 6.8.1",
- "thiserror",
- "unic-langid",
- "walkdir",
-]
-
-[[package]]
-name = "i18n-embed"
 version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "94205d95764f5bb9db9ea98fa77f89653365ca748e27161f5bbea2ffd50e459c"
@@ -2729,7 +2710,7 @@ dependencies = [
  "locale_config",
  "log",
  "parking_lot 0.12.1",
- "rust-embed 8.3.0",
+ "rust-embed",
  "thiserror",
  "unic-langid",
  "walkdir",
@@ -2737,37 +2718,16 @@ dependencies = [
 
 [[package]]
 name = "i18n-embed-fl"
-version = "0.6.7"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d26a3d3569737dfaac7fc1c4078e6af07471c3060b8e570bcd83cdd5f4685395"
+checksum = "8241a781f49e923415e106fcd1f89c3fab92cc9f699a521c56e95dee273903d3"
 dependencies = [
  "dashmap",
  "find-crate",
  "fluent",
  "fluent-syntax",
  "i18n-config",
- "i18n-embed 0.13.9",
- "lazy_static",
- "proc-macro-error",
- "proc-macro2",
- "quote",
- "strsim",
- "syn 2.0.52",
- "unic-langid",
-]
-
-[[package]]
-name = "i18n-embed-fl"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9fc1f8715195dffc4caddcf1cf3128da15fe5d8a137606ea8856c9300047d5a2"
-dependencies = [
- "dashmap",
- "find-crate",
- "fluent",
- "fluent-syntax",
- "i18n-config",
- "i18n-embed 0.14.1",
+ "i18n-embed",
  "lazy_static",
  "proc-macro-error",
  "proc-macro2",
@@ -2929,7 +2889,7 @@ dependencies = [
  "iced_graphics",
  "iced_runtime",
  "iced_style",
- "itertools 0.12.1",
+ "itertools",
  "lazy_static",
  "raw-window-handle 0.6.0",
  "smithay-client-toolkit",
@@ -3151,15 +3111,6 @@ checksum = "5a611371471e98973dbcab4e0ec66c31a10bc356eeb4d54a0e05eac8158fe38c"
 
 [[package]]
 name = "itertools"
-version = "0.10.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b0fd2260e829bddf4cb6ea802289de2f86d6a7a690192fbe91b3f46e0f2c8473"
-dependencies = [
- "either",
-]
-
-[[package]]
-name = "itertools"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba291022dbbd398a455acf126c1e341954079855bc60dfdda641363bd6922569"
@@ -3360,7 +3311,7 @@ dependencies = [
  "bitflags 1.3.2",
  "libc",
  "libpulse-sys",
- "num-derive",
+ "num-derive 0.3.3",
  "num-traits",
  "winapi",
 ]
@@ -3395,7 +3346,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bc19e110fbf42c17260d30f6d3dc545f58491c7830d38ecb9aaca96e26067a9b"
 dependencies = [
  "libc",
- "num-derive",
+ "num-derive 0.3.3",
  "num-traits",
  "pkg-config",
  "winapi",
@@ -3697,7 +3648,6 @@ dependencies = [
  "cfg-if",
  "libc",
  "memoffset 0.7.1",
- "pin-utils",
 ]
 
 [[package]]
@@ -3708,6 +3658,18 @@ checksum = "2eb04e9c688eff1c89d72b407f168cf79bb9e867a9d3323ed6c01519eb9cc053"
 dependencies = [
  "bitflags 2.4.2",
  "cfg-if",
+ "libc",
+]
+
+[[package]]
+name = "nix"
+version = "0.28.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ab2156c4fce2f8df6c499cc1c763e4394b7482525bf2a9701c9d79d215f519e4"
+dependencies = [
+ "bitflags 2.4.2",
+ "cfg-if",
+ "cfg_aliases 0.1.1",
  "libc",
 ]
 
@@ -3789,6 +3751,17 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "num-derive"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ed3955f1a9c7c0c15e092f9c887db08b1fc683305fdf6eb6684f22555355e202"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.52",
 ]
 
 [[package]]
@@ -4569,36 +4542,12 @@ checksum = "3cd14fd5e3b777a7422cca79358c57a8f6e3a703d9ac187448d0daf220c2407f"
 
 [[package]]
 name = "rust-embed"
-version = "6.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a36224c3276f8c4ebc8c20f158eca7ca4359c8db89991c4925132aaaf6702661"
-dependencies = [
- "rust-embed-impl 6.8.1",
- "rust-embed-utils 7.8.1",
- "walkdir",
-]
-
-[[package]]
-name = "rust-embed"
 version = "8.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fb78f46d0066053d16d4ca7b898e9343bc3530f71c61d5ad84cd404ada068745"
 dependencies = [
- "rust-embed-impl 8.3.0",
- "rust-embed-utils 8.3.0",
- "walkdir",
-]
-
-[[package]]
-name = "rust-embed-impl"
-version = "6.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "49b94b81e5b2c284684141a2fb9e2a31be90638caf040bf9afbc5a0416afe1ac"
-dependencies = [
- "proc-macro2",
- "quote",
- "rust-embed-utils 7.8.1",
- "syn 2.0.52",
+ "rust-embed-impl",
+ "rust-embed-utils",
  "walkdir",
 ]
 
@@ -4610,18 +4559,8 @@ checksum = "b91ac2a3c6c0520a3fb3dd89321177c3c692937c4eb21893378219da10c44fc8"
 dependencies = [
  "proc-macro2",
  "quote",
- "rust-embed-utils 8.3.0",
+ "rust-embed-utils",
  "syn 2.0.52",
- "walkdir",
-]
-
-[[package]]
-name = "rust-embed-utils"
-version = "7.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d38ff6bf570dc3bb7100fce9f7b60c33fa71d80e88da3f2580df4ff2bdded74"
-dependencies = [
- "sha2",
  "walkdir",
 ]
 
@@ -5038,24 +4977,24 @@ checksum = "73473c0e59e6d5812c5dfe2a064a6444949f089e20eec9a2e5506596494e4623"
 
 [[package]]
 name = "strum"
-version = "0.24.1"
+version = "0.26.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "063e6045c0e62079840579a7e47a355ae92f60eb74daaf156fb1e84ba164e63f"
+checksum = "5d8cec3501a5194c432b2b7976db6b7d10ec95c253208b45f83f7136aa985e29"
 dependencies = [
  "strum_macros",
 ]
 
 [[package]]
 name = "strum_macros"
-version = "0.24.3"
+version = "0.26.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e385be0d24f186b4ce2f9982191e7101bb737312ad61c1f2f984f34bcf85d59"
+checksum = "c6cf59daf282c0a494ba14fd21610a0325f9f90ec9d1231dea26bcb1d696c946"
 dependencies = [
  "heck",
  "proc-macro2",
  "quote",
  "rustversion",
- "syn 1.0.109",
+ "syn 2.0.52",
 ]
 
 [[package]]
@@ -5117,14 +5056,13 @@ dependencies = [
 
 [[package]]
 name = "synstructure"
-version = "0.12.6"
+version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f36bdaa60a83aca3921b5259d5400cbf5e90fc51931376a9bd4a0eb79aa7210f"
+checksum = "c8af7666ab7b6390ab78131fb5b0fce11d6b7a6951602017c35fa82800708971"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 1.0.109",
- "unicode-xid",
+ "syn 2.0.52",
 ]
 
 [[package]]
@@ -6407,9 +6345,9 @@ checksum = "c94451ac9513335b5e23d7a8a2b61a7102398b8cca5160829d313e84c9d98be1"
 
 [[package]]
 name = "zbus"
-version = "3.15.2"
+version = "3.15.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "675d170b632a6ad49804c8cf2105d7c31eddd3312555cffd4b740e08e97c25e6"
+checksum = "5acecd3f8422f198b1a2f954bcc812fe89f3fa4281646f3da1da7925db80085d"
 dependencies = [
  "async-broadcast",
  "async-executor",
@@ -6449,9 +6387,9 @@ dependencies = [
 
 [[package]]
 name = "zbus_macros"
-version = "3.15.2"
+version = "3.15.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7131497b0f887e8061b430c530240063d33bf9455fa34438f388a245da69e0a5"
+checksum = "2207eb71efebda17221a579ca78b45c4c5f116f074eb745c3a172e688ccf89f5"
 dependencies = [
  "proc-macro-crate 1.3.1",
  "proc-macro2",
@@ -6509,9 +6447,9 @@ dependencies = [
 
 [[package]]
 name = "zvariant"
-version = "3.15.2"
+version = "3.15.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4eef2be88ba09b358d3b58aca6e41cd853631d44787f319a1383ca83424fb2db"
+checksum = "c5b4fcf3660d30fc33ae5cd97e2017b23a96e85afd7a1dd014534cd0bf34ba67"
 dependencies = [
  "byteorder",
  "enumflags2",
@@ -6524,9 +6462,9 @@ dependencies = [
 
 [[package]]
 name = "zvariant_derive"
-version = "3.15.2"
+version = "3.15.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "37c24dc0bed72f5f90d1f8bb5b07228cbf63b3c6e9f82d82559d4bae666e7ed9"
+checksum = "0277758a8a0afc0e573e80ed5bfd9d9c2b48bd3108ffe09384f9f738c83f4a55"
 dependencies = [
  "proc-macro-crate 1.3.1",
  "proc-macro2",
@@ -6537,9 +6475,9 @@ dependencies = [
 
 [[package]]
 name = "zvariant_utils"
-version = "1.0.1"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7234f0d811589db492d16893e3f21e8e2fd282e6d01b0cddee310322062cc200"
+checksum = "00bedb16a193cc12451873fee2a1bc6550225acece0e36f333e68326c73c8172"
 dependencies = [
  "proc-macro2",
  "quote",

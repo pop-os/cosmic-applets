@@ -4,19 +4,18 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-once_cell = "1.16.0"
-libcosmic.workspace = true
 cosmic-time.workspace = true
-tracing.workspace = true
-futures = "0.3"
-zbus.workspace = true
-log = "0.4"
-tracing-subscriber.workspace = true
-tracing-log.workspace = true
-# Application i18n
-i18n-embed = { version = "0.13.4", features = ["fluent-system", "desktop-requester"] }
-i18n-embed-fl = "0.6.4"
-rust-embed = "6.3.0"
-tokio = { version = "1.17.0", features = ["sync", "rt", "rt-multi-thread", "fs", "macros"] }
-udev = "0.8"
 drm = "0.11.1"
+futures.workspace = true
+i18n-embed-fl.workspace = true
+i18n-embed.workspace = true
+libcosmic.workspace = true
+log = "0.4"
+once_cell = "1.19.0"
+rust-embed.workspace = true
+tokio = { version = "1.36.0", features = ["sync", "rt", "rt-multi-thread", "fs", "macros"] }
+tracing-log.workspace = true
+tracing-subscriber.workspace = true
+tracing.workspace = true
+udev = "0.8"
+zbus.workspace = true
