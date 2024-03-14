@@ -14,12 +14,9 @@ use cctk::{
 };
 use cosmic_protocols::workspace::v1::client::zcosmic_workspace_handle_v1;
 use futures::{channel::mpsc, executor::block_on, SinkExt};
-use std::{
-    os::{
-        fd::{FromRawFd, RawFd},
-        unix::net::UnixStream,
-    },
-    time::Duration,
+use std::os::{
+    fd::{FromRawFd, RawFd},
+    unix::net::UnixStream,
 };
 use wayland_client::backend::ObjectId;
 use wayland_client::{

@@ -1,11 +1,10 @@
-mod localize;
-mod time;
-mod window;
-
-use window::Window;
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 fn main() -> cosmic::iced::Result {
-    localize::localize();
+    tracing_subscriber::fmt::init();
+    let _ = tracing_log::LogTracer::init();
 
-    cosmic::applet::run::<Window>(true, ())
+    tracing::info!("Starting time applet with version {VERSION}");
+
+    cosmic_applet_time::run()
 }

@@ -12,12 +12,9 @@ use cctk::{
 use cosmic::iced::futures;
 use cosmic_protocols::workspace::v1::client::zcosmic_workspace_handle_v1::{self, TilingState};
 use futures::{channel::mpsc, executor::block_on, SinkExt};
-use std::{
-    os::{
-        fd::{FromRawFd, RawFd},
-        unix::net::UnixStream,
-    },
-    time::Duration,
+use std::os::{
+    fd::{FromRawFd, RawFd},
+    unix::net::UnixStream,
 };
 use tracing::error;
 use wayland_client::{
