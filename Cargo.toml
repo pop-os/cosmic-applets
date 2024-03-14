@@ -20,7 +20,7 @@ members = [
 resolver = "2"
 
 [workspace.dependencies]
-anyhow = "1.0.79"
+anyhow = "1.0.81"
 cctk = { git = "https://github.com/pop-os/cosmic-protocols", package = "cosmic-client-toolkit", rev = "e65fa5e" }
 cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols", default-features = false, features = [
     "client",
@@ -29,7 +29,10 @@ cosmic-time = { git = "https://github.com/pop-os/cosmic-time", default-features 
     "libcosmic",
     "once_cell",
 ] }
-
+futures = "0.3"
+futures-util = "0.3"
+i18n-embed = { version = "0.14.1", features = ["fluent-system", "desktop-requester"] }
+i18n-embed-fl = "0.8"
 libcosmic = { git = "https://github.com/pop-os/libcosmic", default-features = false, features = [
     "applet",
     "applet-token",
@@ -38,7 +41,10 @@ libcosmic = { git = "https://github.com/pop-os/libcosmic", default-features = fa
     "desktop",
     "dbus-config",
 ] }
-zbus = { version = "3.14", default-features = false, features = ["tokio"] }
+nix = { version = "0.28.0", features = ["user"] }
+rust-embed = "8.3"
+rust-embed-utils = "8.3.0"
+zbus = { version = "3.15", default-features = false, features = ["tokio"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 tracing-log = "0.2.0"
