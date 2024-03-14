@@ -1,7 +1,8 @@
 [workspace]
-
+default-members = ["cosmic-applets", "cosmic-panel-button"]
 members = [
     "cosmic-app-list",
+    "cosmic-applets",
     "cosmic-applet-audio",
     "cosmic-applet-battery",
     "cosmic-applet-bluetooth",

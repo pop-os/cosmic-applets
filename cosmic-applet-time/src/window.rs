@@ -16,7 +16,6 @@ use cosmic::{
 };
 
 use chrono::{DateTime, Datelike, DurationRound, Local, Months, NaiveDate, Timelike, Weekday};
-use std::time::Duration;
 
 use crate::fl;
 use crate::time::get_calender_first;

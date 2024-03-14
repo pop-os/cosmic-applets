@@ -1,12 +1,10 @@
-use crate::window::Window;
-
-mod localize;
-mod wayland;
-mod wayland_subscription;
-mod window;
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 fn main() -> cosmic::iced::Result {
-    localize::localize();
+    tracing_subscriber::fmt::init();
+    let _ = tracing_log::LogTracer::init();
 
-    cosmic::applet::run::<Window>(false, ())
+    tracing::info!("Starting tiling applet with version {VERSION}");
+
+    cosmic_applet_tiling::run()
 }

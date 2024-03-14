@@ -12,8 +12,9 @@ libcosmic.workspace = true
 cosmic-time.workspace = true
 futures = "0.3"
 log = "0.4"
-tracing-subscriber.workspace = true
+tracing.workspace = true
 tracing-log.workspace = true
+tracing-subscriber.workspace = true
 itertools = "0.10.3"
 slotmap = "1.0.6"
 tokio = { version = "1.15.0", features = ["full"] }

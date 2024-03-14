@@ -1,0 +1,12 @@
+/usr/bin/cosmic-applets /usr/bin/cosmic-app-list
+/usr/bin/cosmic-applets /usr/bin/cosmic-applet-audio
+/usr/bin/cosmic-applets /usr/bin/cosmic-applet-battery
+/usr/bin/cosmic-applets /usr/bin/cosmic-applet-bluetooth
+/usr/bin/cosmic-applets /usr/bin/cosmic-applet-minimize
+/usr/bin/cosmic-applets /usr/bin/cosmic-applet-network
+/usr/bin/cosmic-applets /usr/bin/cosmic-applet-notifications
+/usr/bin/cosmic-applets /usr/bin/cosmic-applet-power
+/usr/bin/cosmic-applets /usr/bin/cosmic-applet-status-area
+/usr/bin/cosmic-applets /usr/bin/cosmic-applet-tiling
+/usr/bin/cosmic-applets /usr/bin/cosmic-applet-time
+/usr/bin/cosmic-applets /usr/bin/cosmic-applet-workspaces

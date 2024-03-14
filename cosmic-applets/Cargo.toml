@@ -1,0 +1,22 @@
+[package]
+name = "cosmic-applets"
+version = "0.1.1"
+edition = "2021"
+
+[dependencies]
+cosmic-app-list = { path = "../cosmic-app-list" }
+cosmic-applet-audio = { path = "../cosmic-applet-audio" }
+cosmic-applet-battery = { path = "../cosmic-applet-battery" }
+cosmic-applet-bluetooth = { path = "../cosmic-applet-bluetooth" }
+cosmic-applet-minimize = { path = "../cosmic-applet-minimize" }
+cosmic-applet-network = { path = "../cosmic-applet-network" }
+cosmic-applet-notifications = { path = "../cosmic-applet-notifications" }
+cosmic-applet-power = { path = "../cosmic-applet-power" }
+cosmic-applet-status-area = { path = "../cosmic-applet-status-area" }
+cosmic-applet-tiling = { path = "../cosmic-applet-tiling" }
+cosmic-applet-time = { path = "../cosmic-applet-time" }
+cosmic-applet-workspaces = { path = "../cosmic-applet-workspaces" }
+libcosmic.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+tracing-log.workspace = true
