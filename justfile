@@ -29,7 +29,7 @@ build-release *args: (build-debug '--release' args)
 build-vendored *args: vendor-extract (build-release '--frozen --offline' args)
 
 _link_applet name:
-    ln -sf {{cosmic-applets-bin}} {{name}}
+    ln -sf {{cosmic-applets-bin}} {{bindir}}/{{name}}
 
 _install_icons name:
     find {{name}}/'data'/'icons' -type f -exec echo {} \; | rev | cut -d'/' -f-3 | rev | xargs -d '\n' -I {} install -Dm0644 {{name}}/'data'/'icons'/{} {{iconsdir}}/{}
