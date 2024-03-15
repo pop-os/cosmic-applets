@@ -1,5 +1,5 @@
 power = Démarrage
-settings = Paramêtres...
+settings = Paramètres...
 lock-screen = Vérouiller la session
 lock-screen-shortcut = Super + Échap
 log-out = Se déconnecter
@@ -17,5 +17,9 @@ confirm-question =
         [lock-screen] verrouiller la session
         [log-out] déconnecter l'utilisateur
         *[other] appliquer l'option choisie
-    } dans { $countdown } secondes.
+    } dans { $countdown ->
+    	[1] 1 seconde.
+    	*[other] {$countdown} secondes.
+    }
+
 

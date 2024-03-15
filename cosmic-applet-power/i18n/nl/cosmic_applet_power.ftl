@@ -17,5 +17,8 @@ confirm-question =
         [lock-screen] Het scherm vergrendelen
         [log-out] Uit aan het loggen
         *[other] de geselecteerde actie
-    } gaat verder in { $countdown } seconden.
+    } gaat verder in { $countdown ->
+    	[1] 1 seconde.
+    	*[other] {$countdown} seconden.
+    }
 
