@@ -52,5 +52,8 @@ tracing-log = "0.2.0"
 [profile.release]
 lto = "fat"
 
+[workspace.metadata.cargo-machete]
+ignored = ["libcosmic"]
+
 [patch."https://github.com/Smithay/client-toolkit"]
 sctk = { git = "https://github.com/smithay/client-toolkit//", package = "smithay-client-toolkit", rev = "e63ab5f" }
