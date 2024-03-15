@@ -15,7 +15,6 @@ i18n-embed-fl.workspace = true
 i18n-embed.workspace = true
 itertools = "0.12.1"
 libcosmic.workspace = true
-log = "0.4"
 rust-embed-utils.workspace = true
 rust-embed.workspace = true
 slotmap = "1.0.7"
