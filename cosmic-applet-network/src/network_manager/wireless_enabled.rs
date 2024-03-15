@@ -2,7 +2,6 @@ use super::{NetworkManagerEvent, NetworkManagerState};
 use cosmic::iced::{self, subscription};
 use cosmic_dbus_networkmanager::nm::NetworkManager;
 use futures::{SinkExt, StreamExt};
-use log::error;
 use std::fmt::Debug;
 use std::hash::Hash;
 use zbus::Connection;
@@ -40,8 +39,8 @@ async fn start_listening(
 
     let network_manager = match NetworkManager::new(&conn).await {
         Ok(n) => n,
-        Err(e) => {
-            error!("Failed to connect to NetworkManager: {}", e);
+        Err(why) => {
+            tracing::error!(why = why.to_string(), "Failed to connect to NetworkManager");
             return State::Error;
         }
     };

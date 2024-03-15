@@ -1236,8 +1236,8 @@ impl cosmic::Application for CosmicAppList {
             }),
             rectangle_tracker_subscription(0).map(|update| Message::Rectangle(update.1)),
             self.core.watch_config(APP_ID).map(|u| {
-                for err in u.errors {
-                    log::error!("Error watching config: {}", err);
+                for why in u.errors {
+                    tracing::error!(why = why.to_string(), "Error watching config");
                 }
                 Message::ConfigUpdated(u.config)
             }),
