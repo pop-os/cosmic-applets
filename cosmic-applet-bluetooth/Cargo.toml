@@ -9,15 +9,12 @@ anyhow.workspace = true
 bluer = { version = "0.17", features = ["bluetoothd", "id"] }
 cosmic-time.workspace = true
 futures.workspace = true
-futures-util.workspace = true
 i18n-embed-fl.workspace = true
 i18n-embed.workspace = true
-itertools = "0.12.1"
 libcosmic.workspace = true
 once_cell = "1.19.0"
 rand = "0.8"
 rust-embed.workspace = true
-slotmap = "1.0.7"
 tokio = { version = "1.36.0", features = ["full"] }
 tracing-log.workspace = true
 tracing-subscriber.workspace = true

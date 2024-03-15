@@ -17,15 +17,11 @@ tokio = { version = "1.36.0", features = [
     "io-util",
     "io-std",
 ] }
-bytemuck = "1"
 cosmic-notifications-config = { git = "https://github.com/pop-os/cosmic-notifications" }
 cosmic-notifications-util = { git = "https://github.com/pop-os/cosmic-notifications" }
 i18n-embed-fl.workspace = true
 i18n-embed.workspace = true
-ron = "0.8"
-rust-embed-utils.workspace = true
 rust-embed.workspace = true
-sendfd = { version = "0.4", features = ["tokio"] }
 tracing-log.workspace = true
 tracing-subscriber.workspace = true
 tracing.workspace = true
