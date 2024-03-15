@@ -4,3 +4,5 @@ unfavorite = Enlever des favoris
 quit = Quitter
 quit-all = Tout quitter
 new-window = Nouvelle fenêtre
+run-on = Exécuter sur {$gpu}
+run-on-default = (Predeterminée)
