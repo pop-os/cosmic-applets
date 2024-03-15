@@ -13,7 +13,6 @@ tracing-subscriber.workspace = true
 tracing-log.workspace = true
 once_cell = "1.19"
 futures.workspace = true
-xdg = "2.5.2"
 anyhow.workspace = true
 tokio = "1.36"
 i18n-embed.workspace = true

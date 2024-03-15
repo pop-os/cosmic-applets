@@ -15,9 +15,7 @@ i18n-embed-fl.workspace = true
 i18n-embed.workspace = true
 itertools = "0.12.1"
 libcosmic.workspace = true
-rust-embed-utils.workspace = true
 rust-embed.workspace = true
-slotmap = "1.0.7"
 tokio = { version = "1.36.0", features = ["full"] }
 tracing-log.workspace = true
 tracing-subscriber.workspace = true

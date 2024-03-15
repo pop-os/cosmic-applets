@@ -11,9 +11,7 @@ i18n-embed-fl.workspace = true
 i18n-embed.workspace = true
 libcosmic.workspace = true
 libpulse-binding = "2.28.1"
-libpulse-glib-binding = "2.28.1"
 mpris2-zbus = { git = "https://github.com/pop-os/dbus-settings-bindings" }
-rust-embed-utils.workspace = true
 rust-embed.workspace = true
 serde = "1.0.197"
 tokio = { version = "1.36.0", features=["full"] }
