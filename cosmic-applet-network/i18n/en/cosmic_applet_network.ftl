@@ -13,6 +13,7 @@ connect = Connect
 cancel = Cancel
 settings = Network Settings...
 visible-wireless-networks = Visible Wireless Networks
+enter-identity = Enter your identity for the network
 enter-password = Enter the password or encryption key
 router-wps-button = You can also connect by pressing the "WPS" button on the router
 unable-to-connect = Unable to connect to network

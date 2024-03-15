@@ -49,6 +49,7 @@ pub fn run() -> cosmic::iced::Result {
 enum NewConnectionState {
     EnterPassword {
         access_point: AccessPoint,
+        identity: String,
         password: String,
     },
     Waiting(AccessPoint),
@@ -60,6 +61,7 @@ impl NewConnectionState {
         &match self {
             Self::EnterPassword {
                 access_point,
+                identity: _,
                 password: _,
             } => access_point,
             Self::Waiting(ap) => ap,
@@ -74,6 +76,7 @@ impl From<NewConnectionState> for AccessPoint {
         match connection_state {
             NewConnectionState::EnterPassword {
                 access_point,
+                identity: _,
                 password: _,
             } => access_point,
             NewConnectionState::Waiting(access_point) => access_point,
@@ -284,7 +287,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                     req,
                 } => {
                     if let NetworkManagerRequest::SelectAccessPoint(ssid)
-                    | NetworkManagerRequest::Password(ssid, _)
+                    | NetworkManagerRequest::Password(ssid, _, _)
                     | NetworkManagerRequest::Disconnect(ssid) = &req
                     {
                         if self
@@ -297,7 +300,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                         }
                     }
                     if !success {
-                        if let NetworkManagerRequest::Password(_, _) = req {
+                        if let NetworkManagerRequest::Password(_, _, _) = req {
                             if let Some(
                                 NewConnectionState::EnterPassword { access_point, .. }
                                 | NewConnectionState::Waiting(access_point),
@@ -335,6 +338,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                 self.new_connection
                     .replace(NewConnectionState::EnterPassword {
                         access_point,
+                        identity: String::new(),
                         password: String::new(),
                     });
             }
@@ -358,12 +362,14 @@ impl cosmic::Application for CosmicNetworkApplet {
                 };
 
                 if let Some(NewConnectionState::EnterPassword {
+                    identity,
                     password,
                     access_point,
                 }) = self.new_connection.take()
                 {
                     let _ = tx.unbounded_send(NetworkManagerRequest::Password(
                         access_point.ssid.clone(),
+                        identity,
                         password,
                     ));
                     self.new_connection
@@ -691,6 +697,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                 match new_conn_state {
                     NewConnectionState::EnterPassword {
                         access_point,
+                        identity,
                         password,
                     } => {
                         let id = padded_control(
@@ -706,6 +713,14 @@ impl cosmic::Application for CosmicNetworkApplet {
                         content = content.push(id);
                         let col = padded_control(
                             column![
+                                // TODO: Figure out how to make this conditional
+                                text(fl!("enter-identity")),
+                                text_input("", identity)
+                                    .on_input(Message::Password)
+                                    .on_paste(Message::Password)
+                                    .on_submit(Message::SubmitPassword)
+                                    .password(),
+                                container(text(fl!("router-wps-button"))).padding(8),
                                 text(fl!("enter-password")),
                                 text_input("", password)
                                     .on_input(Message::Password)
