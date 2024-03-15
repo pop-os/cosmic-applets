@@ -31,7 +31,7 @@ use cosmic::{app::Command, Element, Theme};
 use logind_zbus::manager::ManagerProxy;
 use logind_zbus::session::{SessionProxy, SessionType};
 use logind_zbus::user::UserProxy;
-use nix::unistd::getuid;
+use rustix::process::getuid;
 use zbus::Connection;
 
 pub mod cosmic_session;
