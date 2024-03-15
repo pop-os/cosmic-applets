@@ -33,7 +33,6 @@ use cosmic::Command;
 use cosmic::{Element, Theme};
 use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
 
-use log::error;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::Duration;
@@ -227,8 +226,8 @@ impl cosmic::Application for CosmicBatteryApplet {
                 self.timeline.set_chain(chain).start();
                 self.set_charging_limit(enable);
             }
-            Message::Errored(e) => {
-                error!("{}", e);
+            Message::Errored(why) => {
+                tracing::error!("{}", why);
             }
             Message::TogglePopup => {
                 if let Some(p) = self.popup.take() {
