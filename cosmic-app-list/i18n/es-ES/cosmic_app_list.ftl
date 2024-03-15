@@ -5,5 +5,5 @@ quit = Cerrar
 quit-all = Cerrar todas
 new-window = Nueva ventana
 run = Ejecutar
-run-on = Ejectuar {$gpu}
+run-on = Ejectuar en {$gpu}
 run-on-default = (Por defecto)
