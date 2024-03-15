@@ -8,7 +8,6 @@ license = "GPL-3.0-or-later"
 anyhow.workspace = true
 cosmic-time.workspace = true
 libcosmic.workspace = true
-nix.workspace = true
 tokio = { version = "1.36.0", features = [
     "sync",
     "rt",

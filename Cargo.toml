@@ -41,9 +41,9 @@ libcosmic = { git = "https://github.com/pop-os/libcosmic", default-features = fa
     "desktop",
     "dbus-config",
 ] }
-nix = { version = "0.28.0", features = ["user"] }
 rust-embed = "8.3"
 rust-embed-utils = "8.3.0"
+rustix = { version = "0.38", features = ["fs", "process"] }
 zbus = { version = "3.15", default-features = false, features = ["tokio"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
