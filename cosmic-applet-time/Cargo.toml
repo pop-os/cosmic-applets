@@ -8,7 +8,6 @@ license = "GPL-3.0-or-later"
 chrono = { version = "0.4.35", features = ["clock"] }
 i18n-embed-fl.workspace = true
 i18n-embed.workspace = true
-icon-loader = { version = "0.3.6", features = ["gtk"] }
 libcosmic.workspace = true
 nix.workspace = true
 once_cell = "1"

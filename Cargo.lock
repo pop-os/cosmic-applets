@@ -50,17 +50,6 @@ checksum = "f26201604c87b1e01bd3d98f8d5d9a8fcbb815e8cedb41ffccbeb4bf593a35fe"
 
 [[package]]
 name = "ahash"
-version = "0.7.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "891477e0c6a8957309ee5c45a6368af3ae14bb510732d2684ffa19af310920f9"
-dependencies = [
- "getrandom",
- "once_cell",
- "version_check",
-]
-
-[[package]]
-name = "ahash"
 version = "0.8.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e89da841a80418a9b391ebaea17f5c112ffaaa96f621d2c285b5174da76b9011"
@@ -698,6 +687,43 @@ dependencies = [
 ]
 
 [[package]]
+name = "clipboard-win"
+version = "5.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d517d4b86184dbb111d3556a10f1c8a04da7428d2987bf1081602bf11c3aa9ee"
+dependencies = [
+ "error-code",
+]
+
+[[package]]
+name = "clipboard_macos"
+version = "0.1.0"
+source = "git+https://github.com/pop-os/window_clipboard.git?tag=pop-mime-types#c3e9e794b94a2e79419517145424dc2035a572da"
+dependencies = [
+ "objc",
+ "objc-foundation",
+ "objc_id",
+]
+
+[[package]]
+name = "clipboard_wayland"
+version = "0.2.2"
+source = "git+https://github.com/pop-os/window_clipboard.git?tag=pop-mime-types#c3e9e794b94a2e79419517145424dc2035a572da"
+dependencies = [
+ "mime 0.1.0",
+ "smithay-clipboard",
+]
+
+[[package]]
+name = "clipboard_x11"
+version = "0.4.2"
+source = "git+https://github.com/pop-os/window_clipboard.git?tag=pop-mime-types#c3e9e794b94a2e79419517145424dc2035a572da"
+dependencies = [
+ "thiserror",
+ "x11rb",
+]
+
+[[package]]
 name = "cocoa"
 version = "0.25.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1019,7 +1045,6 @@ version = "0.1.0"
 dependencies = [
  "i18n-embed",
  "i18n-embed-fl",
- "icon-loader",
  "libcosmic",
  "libpulse-binding",
  "libpulse-glib-binding",
@@ -1076,7 +1101,6 @@ dependencies = [
  "chrono",
  "i18n-embed",
  "i18n-embed-fl",
- "icon-loader",
  "libcosmic",
  "nix 0.28.0",
  "once_cell",
@@ -1136,7 +1160,7 @@ version = "0.1.0"
 source = "git+https://github.com/pop-os/cosmic-protocols?rev=e65fa5e#e65fa5e2bb47e51656221657049bd3f88ae9dae5"
 dependencies = [
  "cosmic-protocols",
- "smithay-client-toolkit",
+ "smithay-client-toolkit 0.18.0",
  "wayland-client",
 ]
 
@@ -1153,7 +1177,7 @@ dependencies = [
 [[package]]
 name = "cosmic-config"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic#bf331cad7ff2512b01e31ea593f885932166b0e7"
+source = "git+https://github.com/pop-os/libcosmic#5d600c70c2900ab8918d97f950c2af779636da0f"
 dependencies = [
  "atomicwrites",
  "cosmic-config-derive",
@@ -1173,7 +1197,7 @@ dependencies = [
 [[package]]
 name = "cosmic-config-derive"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic#bf331cad7ff2512b01e31ea593f885932166b0e7"
+source = "git+https://github.com/pop-os/libcosmic#5d600c70c2900ab8918d97f950c2af779636da0f"
 dependencies = [
  "quote",
  "syn 1.0.109",
@@ -1232,7 +1256,7 @@ dependencies = [
  "cosmic-config",
  "ron",
  "serde",
- "smithay-client-toolkit",
+ "smithay-client-toolkit 0.18.0",
  "tracing",
  "wayland-protocols-wlr",
  "xdg-shell-wrapper-config",
@@ -1284,7 +1308,7 @@ dependencies = [
 [[package]]
 name = "cosmic-theme"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic#bf331cad7ff2512b01e31ea593f885932166b0e7"
+source = "git+https://github.com/pop-os/libcosmic#5d600c70c2900ab8918d97f950c2af779636da0f"
 dependencies = [
  "almost",
  "cosmic-config",
@@ -1515,7 +1539,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "978747c1d849a7d2ee5e8adc0159961c48fb7e5db2f06af6723b80123bb53856"
 dependencies = [
  "cfg-if",
- "hashbrown 0.14.3",
+ "hashbrown",
  "lock_api",
  "once_cell",
  "parking_lot_core 0.9.9",
@@ -1702,12 +1726,6 @@ dependencies = [
 
 [[package]]
 name = "dlv-list"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0688c2a7f92e427f44895cd63841bff7b29f8d7a1648b9e7e07a4a365b2e1257"
-
-[[package]]
-name = "dlv-list"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "442039f5147480ba31067cb00ada1adae6892028e40e45fc5de7b7df6dcc1b5f"
@@ -1813,6 +1831,12 @@ dependencies = [
  "libc",
  "windows-sys 0.52.0",
 ]
+
+[[package]]
+name = "error-code"
+version = "3.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a0474425d51df81997e2f90a21591180b38eccf27292d755f3e30750225c175b"
 
 [[package]]
 name = "etagere"
@@ -2149,7 +2173,7 @@ checksum = "a8ef34245e0540c9a3ce7a28340b98d2c12b75da0d446da4e8224923fcaa0c16"
 dependencies = [
  "dirs 5.0.1",
  "once_cell",
- "rust-ini 0.20.0",
+ "rust-ini",
  "thiserror",
  "xdg",
 ]
@@ -2566,7 +2590,7 @@ checksum = "cc11df1ace8e7e564511f53af41f3e42ddc95b56fd07b3f4445d2a6048bc682c"
 dependencies = [
  "bitflags 2.4.2",
  "gpu-descriptor-types",
- "hashbrown 0.14.3",
+ "hashbrown",
 ]
 
 [[package]]
@@ -2624,20 +2648,11 @@ dependencies = [
 
 [[package]]
 name = "hashbrown"
-version = "0.12.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a9ee70c43aaf417c914396645a0fa852624801b24ebb7ae78fe8272889ac888"
-dependencies = [
- "ahash 0.7.8",
-]
-
-[[package]]
-name = "hashbrown"
 version = "0.14.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "290f1a1d9242c78d09ce40a5e87e7554ee637af1351968159f4952f028f75604"
 dependencies = [
- "ahash 0.8.11",
+ "ahash",
  "allocator-api2",
 ]
 
@@ -2776,7 +2791,7 @@ dependencies = [
 [[package]]
 name = "iced"
 version = "0.12.0"
-source = "git+https://github.com/pop-os/libcosmic#bf331cad7ff2512b01e31ea593f885932166b0e7"
+source = "git+https://github.com/pop-os/libcosmic#5d600c70c2900ab8918d97f950c2af779636da0f"
 dependencies = [
  "iced_accessibility",
  "iced_core",
@@ -2791,7 +2806,7 @@ dependencies = [
 [[package]]
 name = "iced_accessibility"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic#bf331cad7ff2512b01e31ea593f885932166b0e7"
+source = "git+https://github.com/pop-os/libcosmic#5d600c70c2900ab8918d97f950c2af779636da0f"
 dependencies = [
  "accesskit",
  "accesskit_unix",
@@ -2800,7 +2815,7 @@ dependencies = [
 [[package]]
 name = "iced_core"
 version = "0.12.0"
-source = "git+https://github.com/pop-os/libcosmic#bf331cad7ff2512b01e31ea593f885932166b0e7"
+source = "git+https://github.com/pop-os/libcosmic#5d600c70c2900ab8918d97f950c2af779636da0f"
 dependencies = [
  "bitflags 1.3.2",
  "iced_accessibility",
@@ -2809,17 +2824,18 @@ dependencies = [
  "palette",
  "raw-window-handle 0.6.0",
  "serde",
- "smithay-client-toolkit",
+ "smithay-client-toolkit 0.18.0",
  "smol_str",
  "thiserror",
  "web-time",
+ "window_clipboard",
  "xxhash-rust",
 ]
 
 [[package]]
 name = "iced_futures"
 version = "0.12.0"
-source = "git+https://github.com/pop-os/libcosmic#bf331cad7ff2512b01e31ea593f885932166b0e7"
+source = "git+https://github.com/pop-os/libcosmic#5d600c70c2900ab8918d97f950c2af779636da0f"
 dependencies = [
  "futures",
  "iced_core",
@@ -2832,7 +2848,7 @@ dependencies = [
 [[package]]
 name = "iced_graphics"
 version = "0.12.0"
-source = "git+https://github.com/pop-os/libcosmic#bf331cad7ff2512b01e31ea593f885932166b0e7"
+source = "git+https://github.com/pop-os/libcosmic#5d600c70c2900ab8918d97f950c2af779636da0f"
 dependencies = [
  "bitflags 1.3.2",
  "bytemuck",
@@ -2856,7 +2872,7 @@ dependencies = [
 [[package]]
 name = "iced_renderer"
 version = "0.12.0"
-source = "git+https://github.com/pop-os/libcosmic#bf331cad7ff2512b01e31ea593f885932166b0e7"
+source = "git+https://github.com/pop-os/libcosmic#5d600c70c2900ab8918d97f950c2af779636da0f"
 dependencies = [
  "iced_graphics",
  "iced_tiny_skia",
@@ -2868,19 +2884,20 @@ dependencies = [
 [[package]]
 name = "iced_runtime"
 version = "0.12.0"
-source = "git+https://github.com/pop-os/libcosmic#bf331cad7ff2512b01e31ea593f885932166b0e7"
+source = "git+https://github.com/pop-os/libcosmic#5d600c70c2900ab8918d97f950c2af779636da0f"
 dependencies = [
  "iced_accessibility",
  "iced_core",
  "iced_futures",
- "smithay-client-toolkit",
+ "smithay-client-toolkit 0.18.0",
  "thiserror",
+ "window_clipboard",
 ]
 
 [[package]]
 name = "iced_sctk"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic#bf331cad7ff2512b01e31ea593f885932166b0e7"
+source = "git+https://github.com/pop-os/libcosmic#5d600c70c2900ab8918d97f950c2af779636da0f"
 dependencies = [
  "enum-repr",
  "float-cmp",
@@ -2892,11 +2909,12 @@ dependencies = [
  "itertools",
  "lazy_static",
  "raw-window-handle 0.6.0",
- "smithay-client-toolkit",
+ "smithay-client-toolkit 0.18.0",
  "thiserror",
  "tracing",
  "wayland-backend",
  "wayland-protocols",
+ "window_clipboard",
  "xkbcommon",
  "xkbcommon-dl",
  "xkeysym",
@@ -2905,7 +2923,7 @@ dependencies = [
 [[package]]
 name = "iced_style"
 version = "0.12.0"
-source = "git+https://github.com/pop-os/libcosmic#bf331cad7ff2512b01e31ea593f885932166b0e7"
+source = "git+https://github.com/pop-os/libcosmic#5d600c70c2900ab8918d97f950c2af779636da0f"
 dependencies = [
  "iced_core",
  "once_cell",
@@ -2915,7 +2933,7 @@ dependencies = [
 [[package]]
 name = "iced_tiny_skia"
 version = "0.12.0"
-source = "git+https://github.com/pop-os/libcosmic#bf331cad7ff2512b01e31ea593f885932166b0e7"
+source = "git+https://github.com/pop-os/libcosmic#5d600c70c2900ab8918d97f950c2af779636da0f"
 dependencies = [
  "bytemuck",
  "cosmic-text",
@@ -2932,7 +2950,7 @@ dependencies = [
 [[package]]
 name = "iced_wgpu"
 version = "0.12.0"
-source = "git+https://github.com/pop-os/libcosmic#bf331cad7ff2512b01e31ea593f885932166b0e7"
+source = "git+https://github.com/pop-os/libcosmic#5d600c70c2900ab8918d97f950c2af779636da0f"
 dependencies = [
  "bitflags 1.3.2",
  "bytemuck",
@@ -2951,27 +2969,16 @@ dependencies = [
 [[package]]
 name = "iced_widget"
 version = "0.12.0"
-source = "git+https://github.com/pop-os/libcosmic#bf331cad7ff2512b01e31ea593f885932166b0e7"
+source = "git+https://github.com/pop-os/libcosmic#5d600c70c2900ab8918d97f950c2af779636da0f"
 dependencies = [
  "iced_renderer",
  "iced_runtime",
  "iced_style",
  "num-traits",
  "ouroboros",
- "smithay-client-toolkit",
+ "smithay-client-toolkit 0.18.0",
  "thiserror",
  "unicode-segmentation",
-]
-
-[[package]]
-name = "icon-loader"
-version = "0.3.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f4a8c09d5f0ce32daff2039f6f1830a4920f5eb23f00e62412bfb5f878a1be2e"
-dependencies = [
- "dashmap",
- "rust-ini 0.18.0",
- "xdg",
 ]
 
 [[package]]
@@ -3021,7 +3028,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7b0b929d511467233429c45a44ac1dcaa21ba0f5ba11e4879e6ed28ddb4f9df4"
 dependencies = [
  "equivalent",
- "hashbrown 0.14.3",
+ "hashbrown",
 ]
 
 [[package]]
@@ -3227,10 +3234,11 @@ checksum = "9c198f91728a82281a64e1f4f9eeb25d82cb32a5de251c6bd1b5154d63a8e7bd"
 [[package]]
 name = "libcosmic"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic#bf331cad7ff2512b01e31ea593f885932166b0e7"
+source = "git+https://github.com/pop-os/libcosmic#5d600c70c2900ab8918d97f950c2af779636da0f"
 dependencies = [
  "apply",
  "ashpd 0.7.0",
+ "chrono",
  "cosmic-client-toolkit",
  "cosmic-config",
  "cosmic-panel-config",
@@ -3251,7 +3259,7 @@ dependencies = [
  "iced_tiny_skia",
  "iced_widget",
  "lazy_static",
- "mime",
+ "mime 0.3.17",
  "nix 0.27.1",
  "palette",
  "rfd",
@@ -3436,7 +3444,7 @@ version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d3262e75e648fce39813cb56ac41f3c3e3f65217ebf3844d818d1f9398cfb0dc"
 dependencies = [
- "hashbrown 0.14.3",
+ "hashbrown",
 ]
 
 [[package]]
@@ -3570,6 +3578,14 @@ dependencies = [
  "log",
  "objc",
  "paste",
+]
+
+[[package]]
+name = "mime"
+version = "0.1.0"
+source = "git+https://github.com/pop-os/window_clipboard.git?tag=pop-mime-types#c3e9e794b94a2e79419517145424dc2035a572da"
+dependencies = [
+ "smithay-clipboard",
 ]
 
 [[package]]
@@ -3878,22 +3894,12 @@ checksum = "04744f49eae99ab78e0d5c0b603ab218f515ea8cfe5a456d7629ad883a3b6e7d"
 
 [[package]]
 name = "ordered-multimap"
-version = "0.4.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ccd746e37177e1711c20dd619a1620f34f5c8b569c53590a72dedd5344d8924a"
-dependencies = [
- "dlv-list 0.3.0",
- "hashbrown 0.12.3",
-]
-
-[[package]]
-name = "ordered-multimap"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a4d6a8c22fc714f0c2373e6091bf6f5e9b37b1bc0b1184874b7e0a4e303d318f"
 dependencies = [
- "dlv-list 0.5.2",
- "hashbrown 0.14.3",
+ "dlv-list",
+ "hashbrown",
 ]
 
 [[package]]
@@ -4576,22 +4582,12 @@ dependencies = [
 
 [[package]]
 name = "rust-ini"
-version = "0.18.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f6d5f2436026b4f6e79dc829837d467cc7e9a55ee40e750d716713540715a2df"
-dependencies = [
- "cfg-if",
- "ordered-multimap 0.4.3",
-]
-
-[[package]]
-name = "rust-ini"
 version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3e0698206bcb8882bf2a9ecb4c1e7785db57ff052297085a6efd4fe42302068a"
 dependencies = [
  "cfg-if",
- "ordered-multimap 0.7.1",
+ "ordered-multimap",
 ]
 
 [[package]]
@@ -4875,6 +4871,41 @@ dependencies = [
  "wayland-scanner",
  "xkbcommon",
  "xkeysym",
+]
+
+[[package]]
+name = "smithay-client-toolkit"
+version = "0.18.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "922fd3eeab3bd820d76537ce8f582b1cf951eceb5475c28500c7457d9d17f53a"
+dependencies = [
+ "bitflags 2.4.2",
+ "calloop",
+ "calloop-wayland-source",
+ "cursor-icon",
+ "libc",
+ "log",
+ "memmap2 0.9.4",
+ "rustix 0.38.31",
+ "thiserror",
+ "wayland-backend",
+ "wayland-client",
+ "wayland-csd-frame",
+ "wayland-cursor",
+ "wayland-protocols",
+ "wayland-protocols-wlr",
+ "wayland-scanner",
+ "xkeysym",
+]
+
+[[package]]
+name = "smithay-clipboard"
+version = "0.8.0"
+source = "git+https://github.com/pop-os/smithay-clipboard?tag=pop-mime-types#cc0101c1f9ccc937a413bd3af3c0f6217f27e935"
+dependencies = [
+ "libc",
+ "smithay-client-toolkit 0.18.1",
+ "wayland-backend",
 ]
 
 [[package]]
@@ -5306,9 +5337,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-stream"
-version = "0.1.14"
+version = "0.1.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "397c988d37662c7dda6d2208364a706264bf3d6138b11d436cbac0ad38832842"
+checksum = "267ac89e0bec6e691e5813911606935d77c476ff49024f98abcea3e7b15e37af"
 dependencies = [
  "futures-core",
  "pin-project-lite",
@@ -6066,6 +6097,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
 
 [[package]]
+name = "window_clipboard"
+version = "0.4.1"
+source = "git+https://github.com/pop-os/window_clipboard.git?tag=pop-mime-types#c3e9e794b94a2e79419517145424dc2035a572da"
+dependencies = [
+ "clipboard-win",
+ "clipboard_macos",
+ "clipboard_wayland",
+ "clipboard_x11",
+ "mime 0.1.0",
+ "raw-window-handle 0.6.0",
+ "thiserror",
+]
+
+[[package]]
 name = "windows"
 version = "0.52.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6345,9 +6390,9 @@ checksum = "c94451ac9513335b5e23d7a8a2b61a7102398b8cca5160829d313e84c9d98be1"
 
 [[package]]
 name = "zbus"
-version = "3.15.1"
+version = "3.15.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5acecd3f8422f198b1a2f954bcc812fe89f3fa4281646f3da1da7925db80085d"
+checksum = "675d170b632a6ad49804c8cf2105d7c31eddd3312555cffd4b740e08e97c25e6"
 dependencies = [
  "async-broadcast",
  "async-executor",
@@ -6387,9 +6432,9 @@ dependencies = [
 
 [[package]]
 name = "zbus_macros"
-version = "3.15.1"
+version = "3.15.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2207eb71efebda17221a579ca78b45c4c5f116f074eb745c3a172e688ccf89f5"
+checksum = "7131497b0f887e8061b430c530240063d33bf9455fa34438f388a245da69e0a5"
 dependencies = [
  "proc-macro-crate 1.3.1",
  "proc-macro2",
@@ -6447,9 +6492,9 @@ dependencies = [
 
 [[package]]
 name = "zvariant"
-version = "3.15.1"
+version = "3.15.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c5b4fcf3660d30fc33ae5cd97e2017b23a96e85afd7a1dd014534cd0bf34ba67"
+checksum = "4eef2be88ba09b358d3b58aca6e41cd853631d44787f319a1383ca83424fb2db"
 dependencies = [
  "byteorder",
  "enumflags2",
@@ -6462,9 +6507,9 @@ dependencies = [
 
 [[package]]
 name = "zvariant_derive"
-version = "3.15.1"
+version = "3.15.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0277758a8a0afc0e573e80ed5bfd9d9c2b48bd3108ffe09384f9f738c83f4a55"
+checksum = "37c24dc0bed72f5f90d1f8bb5b07228cbf63b3c6e9f82d82559d4bae666e7ed9"
 dependencies = [
  "proc-macro-crate 1.3.1",
  "proc-macro2",
@@ -6475,9 +6520,9 @@ dependencies = [
 
 [[package]]
 name = "zvariant_utils"
-version = "1.1.0"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "00bedb16a193cc12451873fee2a1bc6550225acece0e36f333e68326c73c8172"
+checksum = "7234f0d811589db492d16893e3f21e8e2fd282e6d01b0cddee310322062cc200"
 dependencies = [
  "proc-macro2",
  "quote",
