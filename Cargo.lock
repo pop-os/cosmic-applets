@@ -961,7 +961,7 @@ dependencies = [
  "anyhow",
  "i18n-embed",
  "i18n-embed-fl",
- "image",
+ "image 0.25.0",
  "libcosmic",
  "memmap2 0.9.4",
  "once_cell",
@@ -2712,7 +2712,7 @@ dependencies = [
  "iced_renderer",
  "iced_sctk",
  "iced_widget",
- "image",
+ "image 0.24.9",
  "thiserror",
 ]
 
@@ -2770,7 +2770,7 @@ dependencies = [
  "half",
  "iced_core",
  "iced_futures",
- "image",
+ "image 0.24.9",
  "kamadak-exif",
  "log",
  "lyon_path",
@@ -2926,6 +2926,17 @@ dependencies = [
  "png",
  "qoi",
  "tiff",
+]
+
+[[package]]
+name = "image"
+version = "0.25.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a9b4f005360d32e9325029b38ba47ebd7a56f3316df09249368939562d518645"
+dependencies = [
+ "bytemuck",
+ "byteorder",
+ "num-traits",
 ]
 
 [[package]]
