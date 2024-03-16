@@ -11,3 +11,5 @@ minutes = 分
 hours = 時間
 until-empty = 後に切れます
 power-settings = 電源設定...
+dgpu-running = 専用GPUが使用されているのでバッテリーの寿命は低下する可能性があります
+dgpu-applications = {$gpu_name}という専用GPUを使用中アプリケーション
