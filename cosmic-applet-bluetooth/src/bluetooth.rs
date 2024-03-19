@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Debug, hash::Hash, sync::Arc, time::Duration};
+use std::{collections::HashMap, fmt::Debug, hash::Hash, mem, sync::Arc, time::Duration};
 
 use bluer::{
     agent::{Agent, AgentHandle},
@@ -65,17 +65,7 @@ async fn start_listening(
             // reconnect to paired and trusted devices
             if state.bluetooth_enabled {
                 for d in &state.devices {
-                    if d.properties
-                        .iter()
-                        .filter(|p| {
-                            matches!(
-                                p,
-                                DeviceProperty::Trusted(true) | DeviceProperty::Paired(true)
-                            )
-                        })
-                        .count()
-                        == 2
-                    {
+                    if d.paired_and_trusted() {
                         _ = session_state
                             .req_tx
                             .send(BluerRequest::ConnectDevice(d.address))
@@ -259,6 +249,19 @@ impl BluerDevice {
             properties,
             icon,
         }
+    }
+
+    fn paired_and_trusted(&self) -> bool {
+        self.properties
+            .iter()
+            .filter(|p| {
+                matches!(
+                    p,
+                    DeviceProperty::Trusted(true) | DeviceProperty::Paired(true)
+                )
+            })
+            .count()
+            == 2
     }
 }
 
@@ -513,18 +516,7 @@ impl BluerSessionState {
                     };
                     if state.bluetooth_enabled {
                         for d in &state.devices {
-                            if d.properties
-                                .iter()
-                                .filter(|p| {
-                                    matches!(
-                                        p,
-                                        DeviceProperty::Trusted(true)
-                                            | DeviceProperty::Paired(true)
-                                    )
-                                })
-                                .count()
-                                == 2
-                            {
+                            if d.paired_and_trusted() {
                                 _ = req_tx.send(BluerRequest::ConnectDevice(d.address)).await;
                             }
                         }
@@ -539,12 +531,14 @@ impl BluerSessionState {
     // Note: For some reason, this doesn't actually seem to work so well. it seems unreliable...
     pub(crate) fn process_changes(&self) {
         let tx = self.tx.clone();
+        let req_tx = self.req_tx.clone();
         let adapter_clone = self.adapter.clone();
         let _monitor_devices: tokio::task::JoinHandle<Result<(), anyhow::Error>> =
             spawn(async move {
                 let mut change_stream = adapter_clone.discover_devices_with_changes().await?;
-                let mut devices_changed = false;
+                let mut changed = false;
                 let mut milli_timeout = 10;
+                let mut devices: Vec<BluerDevice> = Vec::new();
                 'outer: loop {
                     while let Ok(event) =
                         timeout(Duration::from_millis(milli_timeout), change_stream.next()).await
@@ -552,10 +546,19 @@ impl BluerSessionState {
                         if event.is_none() {
                             break 'outer;
                         }
-                        devices_changed = true;
+                        changed = true;
                     }
-                    if devices_changed {
-                        devices_changed = false;
+                    if changed {
+                        let mut new_devices = build_device_list(&adapter_clone).await;
+                        for d in new_devices
+                            .iter()
+                            .filter(|d| !devices.contains(d) && d.paired_and_trusted())
+                        {
+                            _ = req_tx.send(BluerRequest::ConnectDevice(d.address)).await;
+                        }
+                        devices = mem::take(&mut new_devices);
+
+                        changed = false;
                         let _ = tx
                             .send(BluerSessionEvent::ChangesProcessed(BluerState {
                                 devices: build_device_list(&adapter_clone).await,
