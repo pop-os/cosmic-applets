@@ -11,10 +11,11 @@ cargo_args := vendor_args + ' ' + debug_args
 targetdir := env('CARGO_TARGET_DIR', 'target')
 sharedir := rootdir + prefix + '/share'
 iconsdir := sharedir + '/icons/hicolor'
-bindir := rootdir + prefix + '/bin'
+prefixdir := prefix + '/bin'
+bindir := rootdir + prefixdir
 default-schema-target := sharedir / 'cosmic'
 
-cosmic-applets-bin := bindir / 'cosmic-applets'
+cosmic-applets-bin := prefixdir / 'cosmic-applets'
 
 default: build-release
 
