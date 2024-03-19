@@ -243,10 +243,11 @@ async fn start_listening(
                                         .build()
                                         .await
                                         .unwrap();
-                                    let state = enums::ActiveConnectionState::from(
+                                    let mut state = enums::ActiveConnectionState::from(
                                         active.state().await.unwrap_or_default(),
                                     );
-                                    let s = if let enums::ActiveConnectionState::Activating = state
+
+                                    while matches!(state, enums::ActiveConnectionState::Activating)
                                     {
                                         if let Ok(Some(s)) = timeout(
                                             Duration::from_secs(10),
@@ -254,14 +255,13 @@ async fn start_listening(
                                         )
                                         .await
                                         {
-                                            s.get().await.unwrap_or_default().into()
+                                            state = s.get().await.unwrap_or_default().into();
                                         } else {
-                                            state
+                                            break;
                                         }
-                                    } else {
-                                        state
-                                    };
-                                    matches!(s, enums::ActiveConnectionState::Activated)
+                                    }
+
+                                    matches!(state, enums::ActiveConnectionState::Activated)
                                 } else {
                                     false
                                 };
@@ -331,10 +331,10 @@ async fn start_listening(
                                         .build()
                                         .await
                                         .unwrap();
-                                    let state = enums::ActiveConnectionState::from(
+                                    let mut state = enums::ActiveConnectionState::from(
                                         active.state().await.unwrap_or_default(),
                                     );
-                                    let s = if let enums::ActiveConnectionState::Activating = state
+                                    while matches!(state, enums::ActiveConnectionState::Activating)
                                     {
                                         if let Ok(Some(s)) = timeout(
                                             Duration::from_secs(10),
@@ -342,29 +342,25 @@ async fn start_listening(
                                         )
                                         .await
                                         {
-                                            s.get().await.unwrap_or_default().into()
+                                            state = s.get().await.unwrap_or_default().into();
                                         } else {
-                                            state
+                                            break;
                                         }
-                                    } else {
-                                        state
-                                    };
-                                    matches!(s, enums::ActiveConnectionState::Activated)
+                                    }
+                                    matches!(state, enums::ActiveConnectionState::Activated)
                                 } else {
                                     false
                                 };
-                                _ = output
-                                    .send(NetworkManagerEvent::RequestResponse {
-                                        req: NetworkManagerRequest::Password(
-                                            ssid.clone(),
-                                            password.clone(),
-                                        ),
-                                        success,
-                                        state: NetworkManagerState::new(&conn)
-                                            .await
-                                            .unwrap_or_default(),
-                                    })
-                                    .await;
+                                status = Some(NetworkManagerEvent::RequestResponse {
+                                    req: NetworkManagerRequest::Password(
+                                        ssid.clone(),
+                                        password.clone(),
+                                    ),
+                                    success,
+                                    state: NetworkManagerState::new(&conn)
+                                        .await
+                                        .unwrap_or_default(),
+                                });
 
                                 break;
                             }
@@ -454,7 +450,7 @@ async fn start_listening(
                             })
                             .await;
 
-                        break;
+                        return State::Waiting(conn, rx);
                     }
                     _ = output
                         .send(NetworkManagerEvent::RequestResponse {

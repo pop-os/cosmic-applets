@@ -283,28 +283,26 @@ impl cosmic::Application for CosmicNetworkApplet {
                     success,
                     req,
                 } => {
-                    if let NetworkManagerRequest::SelectAccessPoint(ssid)
-                    | NetworkManagerRequest::Password(ssid, _)
-                    | NetworkManagerRequest::Disconnect(ssid) = &req
-                    {
+                    if let NetworkManagerRequest::SelectAccessPoint(ssid) = &req {
                         if self
                             .new_connection
                             .as_ref()
-                            .map(|c| c.ssid() != ssid)
+                            .map(|c| c.ssid() == ssid)
                             .unwrap_or_default()
+                            && success
                         {
                             self.new_connection = None;
                         }
                     }
-                    if !success {
-                        if let NetworkManagerRequest::Password(_, _) = req {
-                            if let Some(
-                                NewConnectionState::EnterPassword { access_point, .. }
-                                | NewConnectionState::Waiting(access_point),
-                            ) = self.new_connection.as_ref()
-                            {
-                                self.new_connection
-                                    .replace(NewConnectionState::Failure(access_point.clone()));
+                    if let NetworkManagerRequest::Password(ssid, _) = &req {
+                        if let Some(
+                            NewConnectionState::EnterPassword { access_point, .. }
+                            | NewConnectionState::Waiting(access_point),
+                        ) = self.new_connection.take()
+                        {
+                            if !success && ssid == &access_point.ssid {
+                                self.new_connection =
+                                    Some(NewConnectionState::Failure(access_point.clone()));
                             }
                         }
                     }
@@ -315,6 +313,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                     {
                         let mut browser = std::process::Command::new("xdg-open");
                         browser.arg("http://204.pop-os.org/");
+
                         cosmic::process::spawn(browser);
                     }
 
@@ -332,14 +331,13 @@ impl cosmic::Application for CosmicNetworkApplet {
                     access_point.ssid.clone(),
                 ));
 
-                self.new_connection
-                    .replace(NewConnectionState::EnterPassword {
-                        access_point,
-                        password: String::new(),
-                    });
+                self.new_connection = Some(NewConnectionState::EnterPassword {
+                    access_point,
+                    password: String::new(),
+                });
             }
             Message::ToggleVisibleNetworks => {
-                self.new_connection.take();
+                self.new_connection = None;
                 self.show_visible_networks = !self.show_visible_networks;
             }
             Message::Password(entered_pw) => {
@@ -387,9 +385,10 @@ impl cosmic::Application for CosmicNetworkApplet {
                 let _ = tx.unbounded_send(NetworkManagerRequest::SelectAccessPoint(ssid));
             }
             Message::CancelNewConnection => {
-                self.new_connection.take();
+                self.new_connection = None;
             }
             Message::Disconnect(ssid) => {
+                self.new_connection = None;
                 let tx = if let Some(tx) = self.nm_sender.as_ref() {
                     if let Some(ActiveConnectionInfo::WiFi { state, .. }) = self
                         .nm_state
