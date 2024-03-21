@@ -11,11 +11,15 @@ confirm = Conferma
 cancel = Annulla
 confirm-question = 
     Confermi? { $action ->
-        [restart] { restart }
-        [suspend] { suspend }
-        [shutdown] { shutdown }
-        [lock-screen] Blocco schermo in corso
-        [log-out] Disconnessione in corso
-        *[other] L'azione selezionata
-    } verrà eseguita tra { $countdown } secondi.
+        [restart] Il sistema si riavvierà
+        [suspend] Il sistema si sospenderà
+        [shutdown] Il sistema si spegnerà
+        [lock-screen] Lo schermo si blochherà
+        [log-out] Si disconetterà
+        *[other] L'azione selezionata verrà eseguita
+    } tra { $countdown ->
+    	[1] 1 secondo.
+    	*[other] {$countdown} secondi.
+    }
+
 

@@ -17,4 +17,8 @@ confirm-question =
         [lock-screen] La pantalla se bloqueará
         [log-out] La sesión se cerrará
         *[other] Esta acción se realizará
-    } en { $countdown } segundos.
+    } en { $countdown ->
+    	[1] 1 segundo.
+    	*[other] {$countdown} segundos.
+    }
+

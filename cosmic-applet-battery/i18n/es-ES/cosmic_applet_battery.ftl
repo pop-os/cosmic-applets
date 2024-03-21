@@ -11,3 +11,5 @@ minutes = m
 hours = h
 until-empty = hasta el descargo total
 power-settings = Ajustes de alimentación y batería...
+dgpu-running = La GPU discreta está en uso y podría reducir la vida de la batería
+dgpu-applications = Aplicaciones usando GPU discrete {$gpu_name}

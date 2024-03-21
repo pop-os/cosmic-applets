@@ -17,5 +17,8 @@ confirm-question =
         [lock-screen] Locking the screen
         [log-out] Logging out
         *[other] The selected action
-    } will continue in { $countdown } seconds.
+    } will continue in { $countdown ->
+    	[1] 1 second.
+    	*[other] {$countdown} seconds.
+    }
 
