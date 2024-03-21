@@ -11,4 +11,5 @@ Icon=com.system76.CosmicAppList
 StartupNotify=true
 NoDisplay=true
 X-CosmicApplet=true
+X-MinimizeApplet=5
 X-HostWaylandDisplay=true
