@@ -1,0 +1,12 @@
+bluetooth = Bluetooth
+other-devices = Diğer Bluetooth cihazları
+settings = Bluetooth ayarları...
+connected = Bağlı
+confirm-pin = Lütfen aşağıdaki PIN'in {$deviceName} cihazında görüntülenen PIN ile eşleştiğini doğrulayın
+confirm = Onayla
+cancel = İptal
+unsuccessful = Eşleştirme Başarısız
+check-device = {$deviceName} cihazının açık, kapsama alanında ve eşleşmeye hazır olduğundan emin olun.
+try-again = Tekrar dene
+discoverable = Keşfedilebilir
+pairable = Eşleştirilebilir
