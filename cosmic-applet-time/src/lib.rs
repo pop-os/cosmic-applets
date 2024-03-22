@@ -1,3 +1,4 @@
+mod config;
 mod localize;
 mod time;
 mod window;
