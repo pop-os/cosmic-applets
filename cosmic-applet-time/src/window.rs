@@ -317,7 +317,8 @@ impl cosmic::Application for Window {
 
         // Calender
         let mut calender: Grid<'_, Message> = grid().width(Length::Fill);
-        let mut first_day_of_week = Weekday::Sun; // TODO: Configurable
+        let mut first_day_of_week =
+            Weekday::try_from(self.config.first_day_of_week).unwrap_or(Weekday::Sun);
         for _ in 0..7 {
             calender = calender.push(
                 text(first_day_of_week)
