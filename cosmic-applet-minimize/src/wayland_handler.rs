@@ -24,14 +24,16 @@ use cosmic::{
         self,
         cosmic_protocols::{
             self,
-            screencopy::v1::client::{
-                zcosmic_screencopy_manager_v1, zcosmic_screencopy_session_v1,
+            image_source::v1::client::zcosmic_toplevel_image_source_manager_v1::ZcosmicToplevelImageSourceManagerV1,
+            screencopy::v2::client::{
+                zcosmic_screencopy_frame_v2, zcosmic_screencopy_manager_v2,
+                zcosmic_screencopy_session_v2,
             },
             toplevel_info::v1::client::zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1,
         },
         screencopy::{
-            BufferInfo, ScreencopyHandler, ScreencopySessionData, ScreencopySessionDataExt,
-            ScreencopyState,
+            capture, Formats, Frame, ScreencopyFrameData, ScreencopyFrameDataExt,
+            ScreencopyHandler, ScreencopySessionData, ScreencopySessionDataExt, ScreencopyState,
         },
         sctk::shm::{Shm, ShmHandler},
         wayland_client::{
@@ -55,8 +57,8 @@ use wayland_client::{globals::registry_queue_init, Connection, QueueHandle};
 
 #[derive(Default)]
 struct SessionInner {
-    buffer_infos: Option<Vec<BufferInfo>>,
-    res: Option<Result<(), WEnum<zcosmic_screencopy_session_v1::FailureReason>>>,
+    formats: Option<Formats>,
+    res: Option<Result<(), WEnum<zcosmic_screencopy_frame_v2::FailureReason>>>,
 }
 
 // TODO: dmabuf? need to handle modifier negotation
@@ -72,9 +74,14 @@ struct SessionData {
     session_data: ScreencopySessionData,
 }
 
+struct FrameData {
+    frame_data: ScreencopyFrameData,
+    session: zcosmic_screencopy_session_v2::ZcosmicScreencopySessionV2,
+}
+
 impl Session {
     pub fn for_session(
-        session: &zcosmic_screencopy_session_v1::ZcosmicScreencopySessionV1,
+        session: &zcosmic_screencopy_session_v2::ZcosmicScreencopySessionV2,
     ) -> Option<&Self> {
         Some(&session.data::<SessionData>()?.session)
     }
@@ -96,6 +103,13 @@ impl ScreencopySessionDataExt for SessionData {
         &self.session_data
     }
 }
+
+impl ScreencopyFrameDataExt for FrameData {
+    fn screencopy_frame_data(&self) -> &ScreencopyFrameData {
+        &self.frame_data
+    }
+}
+
 struct AppData {
     exit: bool,
     tx: UnboundedSender<WaylandUpdate>,
@@ -113,7 +127,8 @@ struct CaptureData {
     qh: QueueHandle<AppData>,
     conn: Connection,
     wl_shm: WlShm,
-    screencopy_manager: zcosmic_screencopy_manager_v1::ZcosmicScreencopyManagerV1,
+    screencopy_manager: zcosmic_screencopy_manager_v2::ZcosmicScreencopyManagerV2,
+    toplevel_source_manager: ZcosmicToplevelImageSourceManagerV1,
 }
 
 impl CaptureData {
@@ -131,9 +146,12 @@ impl CaptureData {
         let overlay_cursor = if overlay_cursor { 1 } else { 0 };
 
         let session = Arc::new(Session::default());
-        let screencopy_session = self.screencopy_manager.capture_toplevel(
-            &source,
-            zcosmic_screencopy_manager_v1::CursorMode::Hidden, // XXX take into account adventised capabilities
+        let image_source = self
+            .toplevel_source_manager
+            .create_source(&source, &self.qh, ());
+        let screencopy_session = self.screencopy_manager.create_session(
+            &image_source,
+            zcosmic_screencopy_manager_v2::Options::empty(),
             &self.qh,
             SessionData {
                 session: session.clone(),
@@ -142,23 +160,24 @@ impl CaptureData {
         );
         self.conn.flush().unwrap();
 
-        let buffer_infos = session
-            .wait_while(|data| data.buffer_infos.is_none())
-            .buffer_infos
+        let formats = session
+            .wait_while(|data| data.formats.is_none())
+            .formats
             .take()
             .unwrap();
+        let (width, height) = formats.buffer_size;
 
         // XXX
-        let Some(buffer_info) = buffer_infos.iter().find(|x| {
-            x.type_ == WEnum::Value(zcosmic_screencopy_session_v1::BufferType::WlShm)
-                && x.format == wl_shm::Format::Abgr8888.into()
-        }) else {
+        if !formats
+            .shm_formats
+            .contains(&wl_shm::Format::Abgr8888.into())
+        {
             tracing::error!("No suitable buffer format found");
-            tracing::warn!("Available formats: {:#?}", buffer_infos);
+            tracing::warn!("Available formats: {:#?}", formats);
             return None;
         };
 
-        let buf_len = buffer_info.stride * buffer_info.height;
+        let buf_len = width * height * 4;
         if let Some(len) = len {
             if len != buf_len {
                 return None;
@@ -170,16 +189,24 @@ impl CaptureData {
             .create_pool(fd.as_fd(), buf_len as i32, &self.qh, ());
         let buffer = pool.create_buffer(
             0,
-            buffer_info.width as i32,
-            buffer_info.height as i32,
-            buffer_info.stride as i32,
+            width as i32,
+            height as i32,
+            width as i32 * 4,
             wl_shm::Format::Abgr8888,
             &self.qh,
             (),
         );
 
-        screencopy_session.attach_buffer(&buffer, None, 0); // XXX age?
-        screencopy_session.commit(zcosmic_screencopy_session_v1::Options::empty());
+        capture(
+            &screencopy_session,
+            &buffer,
+            &[],
+            &self.qh,
+            FrameData {
+                frame_data: Default::default(),
+                session: screencopy_session.clone(),
+            },
+        );
         self.conn.flush().unwrap();
 
         // TODO: wait for server to release buffer?
@@ -194,11 +221,7 @@ impl CaptureData {
         //std::thread::sleep(std::time::Duration::from_millis(16));
 
         if res.is_ok() {
-            Some(ShmImage {
-                fd,
-                width: buffer_info.width,
-                height: buffer_info.height,
-            })
+            Some(ShmImage { fd, width, height })
         } else {
             None
         }
@@ -277,6 +300,11 @@ impl AppData {
             conn: self.conn.clone(),
             wl_shm: self.shm_state.wl_shm().clone(),
             screencopy_manager: self.screencopy_state.screencopy_manager.clone(),
+            toplevel_source_manager: self
+                .screencopy_state
+                .toplevel_source_manager
+                .clone()
+                .unwrap(),
         };
         std::thread::spawn(move || {
             use std::ffi::CStr;
@@ -488,11 +516,11 @@ impl ScreencopyHandler for AppData {
         &mut self,
         _conn: &Connection,
         _qh: &QueueHandle<Self>,
-        session: &zcosmic_screencopy_session_v1::ZcosmicScreencopySessionV1,
-        buffer_infos: &[BufferInfo],
+        session: &zcosmic_screencopy_session_v2::ZcosmicScreencopySessionV2,
+        formats: &Formats,
     ) {
         Session::for_session(session).unwrap().update(|data| {
-            data.buffer_infos = Some(buffer_infos.to_vec());
+            data.formats = Some(formats.clone());
         });
     }
 
@@ -500,8 +528,10 @@ impl ScreencopyHandler for AppData {
         &mut self,
         _conn: &Connection,
         _qh: &QueueHandle<Self>,
-        session: &zcosmic_screencopy_session_v1::ZcosmicScreencopySessionV1,
+        screencopy_frame: &zcosmic_screencopy_frame_v2::ZcosmicScreencopyFrameV2,
+        _frame: Frame,
     ) {
+        let session = &screencopy_frame.data::<FrameData>().unwrap().session;
         Session::for_session(session).unwrap().update(|data| {
             data.res = Some(Ok(()));
         });
@@ -512,14 +542,23 @@ impl ScreencopyHandler for AppData {
         &mut self,
         _conn: &Connection,
         _qh: &QueueHandle<Self>,
-        session: &zcosmic_screencopy_session_v1::ZcosmicScreencopySessionV1,
-        reason: WEnum<zcosmic_screencopy_session_v1::FailureReason>,
+        screencopy_frame: &zcosmic_screencopy_frame_v2::ZcosmicScreencopyFrameV2,
+        reason: WEnum<zcosmic_screencopy_frame_v2::FailureReason>,
     ) {
         // TODO send message to thread
+        let session = &screencopy_frame.data::<FrameData>().unwrap().session;
         Session::for_session(session).unwrap().update(|data| {
             data.res = Some(Err(reason));
         });
         session.destroy();
+    }
+
+    fn stopped(
+        &mut self,
+        _conn: &Connection,
+        _qh: &QueueHandle<Self>,
+        _session: &zcosmic_screencopy_session_v2::ZcosmicScreencopySessionV2,
+    ) {
     }
 }
 
@@ -552,4 +591,4 @@ sctk::delegate_seat!(AppData);
 sctk::delegate_registry!(AppData);
 cctk::delegate_toplevel_info!(AppData);
 cctk::delegate_toplevel_manager!(AppData);
-cctk::delegate_screencopy!(AppData, session: [SessionData]);
+cctk::delegate_screencopy!(AppData, session: [SessionData], frame: [FrameData]);
