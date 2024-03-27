@@ -54,6 +54,10 @@ pub enum State {
     Finished,
 }
 
+async fn get_brightness(kbd_proxy: &KbdBacklightProxy<'_>) -> zbus::Result<f64> {
+    Ok(kbd_proxy.get_brightness().await? as f64 / kbd_proxy.get_max_brightness().await? as f64)
+}
+
 async fn start_listening(
     state: State,
     output: &mut futures::channel::mpsc::Sender<KeyboardBacklightUpdate>,
@@ -70,18 +74,17 @@ async fn start_listening(
             };
             let (tx, rx) = unbounded_channel();
 
-            let b = kbd_proxy.get_brightness().await.unwrap_or_default() as f64
-                / kbd_proxy.get_max_brightness().await.unwrap_or(1) as f64;
-            _ = output.send(KeyboardBacklightUpdate::Init(tx, b)).await;
+            let b = get_brightness(&kbd_proxy).await.ok();
+            _ = output.send(KeyboardBacklightUpdate::Sender(tx)).await;
+            _ = output.send(KeyboardBacklightUpdate::Brightness(b)).await;
 
             State::Waiting(kbd_proxy, rx)
         }
         State::Waiting(proxy, mut rx) => match rx.recv().await {
             Some(req) => match req {
                 KeyboardBacklightRequest::Get => {
-                    let b = proxy.get_brightness().await.unwrap_or_default() as f64
-                        / proxy.get_max_brightness().await.unwrap_or(1) as f64;
-                    _ = output.send(KeyboardBacklightUpdate::Update(b)).await;
+                    let b = get_brightness(&proxy).await.ok();
+                    _ = output.send(KeyboardBacklightUpdate::Brightness(b)).await;
                     State::Waiting(proxy, rx)
                 }
                 KeyboardBacklightRequest::Set(value) => {
@@ -102,8 +105,8 @@ async fn start_listening(
 
 #[derive(Debug, Clone)]
 pub enum KeyboardBacklightUpdate {
-    Update(f64),
-    Init(UnboundedSender<KeyboardBacklightRequest>, f64),
+    Sender(UnboundedSender<KeyboardBacklightRequest>),
+    Brightness(Option<f64>),
 }
 
 #[derive(Debug, Clone)]

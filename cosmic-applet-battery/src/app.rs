@@ -77,7 +77,7 @@ struct CosmicBatteryApplet {
     on_battery: bool,
     gpus: HashMap<PathBuf, GPUData>,
     time_remaining: Duration,
-    kbd_brightness: f64,
+    kbd_brightness: Option<f64>,
     screen_brightness: f64,
     popup: Option<window::Id>,
     screen_sender: Option<UnboundedSender<ScreenBacklightRequest>>,
@@ -154,9 +154,9 @@ enum Message {
     SetKbdBrightness(i32),
     SetScreenBrightness(i32),
     SetChargingLimit(chain::Toggler, bool),
-    UpdateKbdBrightness(f64),
+    UpdateKbdBrightness(Option<f64>),
     UpdateScreenBrightness(f64),
-    InitKbdBacklight(UnboundedSender<KeyboardBacklightRequest>, f64),
+    InitKbdBacklight(UnboundedSender<KeyboardBacklightRequest>),
     InitScreenBacklight(UnboundedSender<ScreenBacklightRequest>, f64),
     GpuOn(PathBuf, String, Option<Vec<Entry>>),
     GpuOff(PathBuf),
@@ -211,9 +211,10 @@ impl cosmic::Application for CosmicBatteryApplet {
         match message {
             Message::Frame(now) => self.timeline.now(now),
             Message::SetKbdBrightness(brightness) => {
-                self.kbd_brightness = (brightness as f64 / 100.0).clamp(0., 1.);
+                let brightness = (brightness as f64 / 100.0).clamp(0., 1.);
+                self.kbd_brightness = Some(brightness);
                 if let Some(tx) = &self.kbd_sender {
-                    let _ = tx.send(KeyboardBacklightRequest::Set(self.kbd_brightness));
+                    let _ = tx.send(KeyboardBacklightRequest::Set(brightness));
                 }
             }
             Message::SetScreenBrightness(brightness) => {
@@ -272,10 +273,8 @@ impl cosmic::Application for CosmicBatteryApplet {
             Message::UpdateKbdBrightness(b) => {
                 self.kbd_brightness = b;
             }
-            Message::InitKbdBacklight(tx, brightness) => {
-                let _ = tx.send(KeyboardBacklightRequest::Get);
+            Message::InitKbdBacklight(tx) => {
                 self.kbd_sender = Some(tx);
-                self.kbd_brightness = brightness;
             }
             Message::InitScreenBacklight(tx, brightness) => {
                 let _ = tx.send(ScreenBacklightRequest::Get);
@@ -523,26 +522,32 @@ impl cosmic::Application for CosmicBatteryApplet {
                 .spacing(12),
             )
             .into(),
-            padded_control(
-                row![
-                    icon::from_name("keyboard-brightness-symbolic")
-                        .size(24)
-                        .symbolic(true),
-                    slider(
-                        0..=100,
-                        (self.kbd_brightness * 100.0) as i32,
-                        Message::SetKbdBrightness
-                    ),
-                    text(format!("{:.0}%", self.kbd_brightness * 100.0))
-                        .size(16)
-                        .width(Length::Fixed(40.0))
-                        .horizontal_alignment(Horizontal::Right)
-                ]
-                .spacing(12),
-            )
-            .into(),
-            padded_control(divider::horizontal::default()).into(),
         ];
+
+        if let Some(kbd_brightness) = self.kbd_brightness {
+            content.push(
+                padded_control(
+                    row![
+                        icon::from_name("keyboard-brightness-symbolic")
+                            .size(24)
+                            .symbolic(true),
+                        slider(
+                            0..=100,
+                            (kbd_brightness * 100.0) as i32,
+                            Message::SetKbdBrightness
+                        ),
+                        text(format!("{:.0}%", kbd_brightness * 100.0))
+                            .size(16)
+                            .width(Length::Fixed(40.0))
+                            .horizontal_alignment(Horizontal::Right)
+                    ]
+                    .spacing(12),
+                )
+                .into(),
+            );
+        }
+
+        content.push(padded_control(divider::horizontal::default()).into());
 
         if !self.gpus.is_empty() {
             content.push(
@@ -670,8 +675,8 @@ impl cosmic::Application for CosmicBatteryApplet {
                 },
             ),
             kbd_backlight_subscription(0).map(|event| match event {
-                KeyboardBacklightUpdate::Update(b) => Message::UpdateKbdBrightness(b),
-                KeyboardBacklightUpdate::Init(tx, b) => Message::InitKbdBacklight(tx, b),
+                KeyboardBacklightUpdate::Brightness(b) => Message::UpdateKbdBrightness(b),
+                KeyboardBacklightUpdate::Sender(tx) => Message::InitKbdBacklight(tx),
             }),
             screen_backlight_subscription(0).map(|e| match e {
                 ScreenBacklightUpdate::Update(b) => Message::UpdateScreenBrightness(b),
