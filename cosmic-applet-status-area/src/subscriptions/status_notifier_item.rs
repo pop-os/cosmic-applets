@@ -1,4 +1,4 @@
-use cosmic::iced;
+use cosmic::{iced, widget::icon};
 use futures::{FutureExt, StreamExt};
 use zbus::zvariant::{self, OwnedValue};
 
@@ -6,8 +6,17 @@ use zbus::zvariant::{self, OwnedValue};
 pub struct StatusNotifierItem {
     name: String,
     icon_name: String,
+    // TODO Handle icon with multiple sizes?
+    icon_pixmap: Option<icon::Handle>,
     _item_proxy: StatusNotifierItemProxy<'static>,
     menu_proxy: DBusMenuProxy<'static>,
+}
+
+#[derive(Clone, Debug, zvariant::Value)]
+pub struct Icon {
+    width: i32,
+    height: i32,
+    bytes: Vec<u8>,
 }
 
 impl StatusNotifierItem {
@@ -25,6 +34,18 @@ impl StatusNotifierItem {
             .await?;
 
         let icon_name = item_proxy.icon_name().await?;
+        let icon_pixmap = item_proxy
+            .icon_pixmap()
+            .await?
+            .into_iter()
+            .max_by_key(|i| (i.width, i.height))
+            .map(|mut i| {
+                // Convert ARGB to RGBA
+                for pixel in i.bytes.chunks_exact_mut(4) {
+                    pixel.rotate_left(1);
+                }
+                icon::from_raster_pixels(i.width as u32, i.height as u32, i.bytes)
+            });
 
         let menu_path = item_proxy.menu().await?;
         let menu_proxy = DBusMenuProxy::builder(connection)
@@ -36,6 +57,7 @@ impl StatusNotifierItem {
         Ok(Self {
             name,
             icon_name,
+            icon_pixmap,
             _item_proxy: item_proxy,
             menu_proxy,
         })
@@ -47,6 +69,10 @@ impl StatusNotifierItem {
 
     pub fn icon_name(&self) -> &str {
         &self.icon_name
+    }
+
+    pub fn icon_pixmap(&self) -> Option<&icon::Handle> {
+        self.icon_pixmap.as_ref()
     }
 
     // TODO: Only fetch changed part of layout, if that's any faster
@@ -80,6 +106,10 @@ async fn get_layout(menu_proxy: DBusMenuProxy<'static>) -> Result<Layout, String
 trait StatusNotifierItem {
     #[dbus_proxy(property)]
     fn icon_name(&self) -> zbus::Result<String>;
+
+    // https://www.freedesktop.org/wiki/Specifications/StatusNotifierItem/Icons
+    #[dbus_proxy(property)]
+    fn icon_pixmap(&self) -> zbus::Result<Vec<Icon>>;
 
     #[dbus_proxy(property)]
     fn menu(&self) -> zbus::Result<zvariant::OwnedObjectPath>;
