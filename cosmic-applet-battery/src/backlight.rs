@@ -160,22 +160,3 @@ pub enum ScreenBacklightRequest {
     Get,
     Set(f64),
 }
-
-/*
-// TODO: Cache device, max_brightness, etc.
-async fn set_display_brightness(brightness: f64) -> io::Result<()> {
-    if let Some(backlight) = backlight()? {
-        if let Some(max_brightness) = backlight.max_brightness() {
-            let value = brightness.clamp(0., 1.) * (max_brightness as f64);
-            let value = value.round() as u32;
-            let connection = zbus::Connection::system().await?;
-            if let Ok(session) = LogindSessionProxy::builder(&connection).build().await {
-                backlight.set_brightness(&session, value).await;
-            }
-        }
-    }
-    Ok(())
-}
-*/
-
-// TODO: keyboard backlight
