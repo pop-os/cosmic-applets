@@ -232,8 +232,8 @@ impl cosmic::Application for Window {
                     self.config.military_time,
                     self.config.show_date_in_top_panel,
                 ) {
-                    (true, true) => "%b %-d %-H:%M",
-                    (true, false) => "%-H:%M",
+                    (true, true) => "%b %-d %H:%M",
+                    (true, false) => "%H:%M",
                     (false, true) => "%b %-d %-I:%M %p",
                     (false, false) => "%-I:%M %p",
                 };
