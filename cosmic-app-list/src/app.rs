@@ -63,6 +63,7 @@ use std::str::FromStr;
 use std::time::Duration;
 use switcheroo_control::Gpu;
 use tokio::time::sleep;
+use tracing::info;
 use url::Url;
 
 static MIME_TYPE: &str = "text/uri-list";
@@ -96,6 +97,7 @@ pub fn load_applications_for_app_ids_sorted<'a, 'b>(
 #[derive(Debug, Clone, Default)]
 struct DockItem {
     id: u32,
+    next_idx: usize,
     toplevels: Vec<(ZcosmicToplevelHandleV1, ToplevelInfo)>,
     desktop_info: DesktopEntryData,
 }
@@ -124,6 +126,7 @@ impl DockItem {
     ) -> Self {
         Self {
             id,
+            next_idx: 0,
             toplevels,
             desktop_info,
         }
@@ -138,6 +141,7 @@ impl DockItem {
     ) -> Element<'_, Message> {
         let Self {
             toplevels,
+            next_idx,
             desktop_info,
             id,
             ..
@@ -240,14 +244,15 @@ impl DockItem {
                 .padding([0, 5]),
         };
 
+        info!("[re-render][{}] idx: {}", desktop_info.id, next_idx);
         let icon_button = if interaction_enabled {
             dnd_source(
                 mouse_area(
                     icon_button
                         .on_press_maybe(
                             toplevels
-                                .first()
-                                .map(|t| Message::Activate(t.0.clone()))
+                                .get(*next_idx)
+                                .map(|t| Message::Activate(t.0.clone(), desktop_info.id.clone()))
                                 .or_else(|| {
                                     let gpu_idx = gpus.map(|gpus| {
                                         if desktop_info.prefers_dgpu {
@@ -318,7 +323,7 @@ enum Message {
     GpuRequest(Option<Vec<Gpu>>),
     CloseRequested(window::Id),
     ClosePopup,
-    Activate(ZcosmicToplevelHandleV1),
+    Activate(ZcosmicToplevelHandleV1, String),
     Exec(String, Option<usize>),
     Quit(String),
     Ignore,
@@ -437,6 +442,7 @@ impl cosmic::Application for CosmicAppList {
                 id: favorite_ctr as u32,
                 toplevels: Default::default(),
                 desktop_info: e,
+                ..Default::default()
             })
             .collect(),
             config,
@@ -545,12 +551,26 @@ impl cosmic::Application for CosmicAppList {
                     return destroy_popup(popup_id);
                 }
             }
-            Message::Activate(handle) => {
+            Message::Activate(handle, id) => {
                 if let Some(tx) = self.wayland_sender.as_ref() {
                     let _ = tx.send(WaylandRequest::Toplevel(ToplevelRequest::Activate(handle)));
                 }
+
                 if let Some(p) = self.popup.take() {
                     return destroy_popup(p.0);
+                }
+
+                if let Some(toplevel_group) = self
+                    .active_list
+                    .iter_mut()
+                    .chain(self.favorite_list.iter_mut())
+                    .find(|t| t.desktop_info.id == id)
+                {
+                    if toplevel_group.next_idx + 1 < toplevel_group.toplevels.len() {
+                        toplevel_group.next_idx += 1;
+                    } else {
+                        toplevel_group.next_idx = 0;
+                    }
                 }
             }
             Message::Quit(id) => {
@@ -793,6 +813,7 @@ impl cosmic::Application for CosmicAppList {
                                     id: self.item_ctr,
                                     toplevels: vec![(handle, info)],
                                     desktop_info,
+                                    ..Default::default()
                                 });
                             }
                         }
@@ -818,9 +839,29 @@ impl cosmic::Application for CosmicAppList {
                             {
                                 for (t_handle, t_info) in &mut toplevel_list.toplevels {
                                     if &handle == t_handle {
-                                        *t_info = info;
+                                        *t_info = info.clone();
                                         break 'toplevel_loop;
                                     }
+                                }
+                            }
+
+                            if let Some(t) = self
+                                .active_list
+                                .iter_mut()
+                                .chain(self.favorite_list.iter_mut())
+                                .find(|DockItem { desktop_info, .. }| {
+                                    app_id_or_fallback_matches(&info.app_id, desktop_info)
+                                })
+                            {
+                                let idx = t
+                                    .toplevels
+                                    .iter_mut()
+                                    .position(|h| h.0 == handle)
+                                    .unwrap_or(0);
+                                if idx + 1 < t.toplevels.len() {
+                                    t.next_idx = idx + 1;
+                                } else {
+                                    t.next_idx = 0;
                                 }
                             }
                         }
@@ -914,6 +955,7 @@ impl cosmic::Application for CosmicAppList {
                             id: self.item_ctr,
                             toplevels: Default::default(),
                             desktop_info: new_dock_item,
+                            ..Default::default()
                         }
                     }
                 })
@@ -1162,7 +1204,7 @@ impl cosmic::Application for CosmicAppList {
                     };
                     list_col = list_col.push(
                         menu_button(iced::widget::text(title))
-                            .on_press(Message::Activate(handle.clone())),
+                            .on_press(Message::Activate(handle.clone(), desktop_info.id.clone())),
                     );
                 }
                 content = content.push(list_col);
