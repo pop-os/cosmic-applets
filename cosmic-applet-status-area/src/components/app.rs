@@ -174,11 +174,14 @@ impl cosmic::Application for App {
     fn view(&self) -> cosmic::Element<'_, Msg> {
         // XXX connect open event
         iced::widget::row(self.menus.iter().map(|(id, menu)| {
-            self.core
-                .applet
-                .icon_button(menu.icon_name())
-                .on_press(Msg::TogglePopup(*id))
-                .into()
+            match menu.icon_pixmap() {
+                Some(icon) if menu.icon_name() == "" => {
+                    self.core.applet.icon_button_from_handle(icon.clone())
+                }
+                _ => self.core.applet.icon_button(menu.icon_name()),
+            }
+            .on_press(Msg::TogglePopup(*id))
+            .into()
         }))
         .into()
     }

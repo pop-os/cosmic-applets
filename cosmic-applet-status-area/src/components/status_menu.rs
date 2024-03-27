@@ -1,5 +1,5 @@
 use cosmic::applet::menu_button;
-use cosmic::iced;
+use cosmic::{iced, widget::icon};
 
 use crate::subscriptions::status_notifier_item::{Layout, StatusNotifierItem};
 
@@ -63,6 +63,10 @@ impl State {
 
     pub fn icon_name(&self) -> &str {
         self.item.icon_name()
+    }
+
+    pub fn icon_pixmap(&self) -> Option<&icon::Handle> {
+        self.item.icon_pixmap()
     }
 
     pub fn popup_view(&self) -> cosmic::Element<Msg> {
