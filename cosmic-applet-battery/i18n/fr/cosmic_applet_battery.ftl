@@ -11,3 +11,5 @@ minutes = m
 hours = h
 until-empty = avant la décharge totale
 power-settings = Paramètres d'alimentation...
+dgpu-running = Le GPU dédié est actif et peu réduire l'autonomie de la batterie
+dgpu-applications = Applications utilisant le GPU dédié {$gpu_name}
