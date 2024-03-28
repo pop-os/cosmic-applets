@@ -6,6 +6,7 @@ use cosmic::iced::widget::{button, column, container, row, text};
 use cosmic::iced::{Event::Mouse, Length, Subscription};
 use cosmic::iced_core::{Background, Border};
 use cosmic::iced_style::application;
+use cosmic::widget::{horizontal_space, vertical_space};
 use cosmic::{applet::cosmic_panel_config::PanelAnchor, font::FONT_BOLD, Command};
 use cosmic::{Element, Theme};
 
@@ -121,30 +122,41 @@ impl cosmic::Application for IcedWorkspacesApplet {
         if self.workspaces.is_empty() {
             return row![].padding(8).into();
         }
+        let horizontal = matches!(
+            self.core.applet.anchor,
+            PanelAnchor::Top | PanelAnchor::Bottom
+        );
         let buttons = self.workspaces.iter().filter_map(|w| {
-            let btn = button(
-                text(w.0.clone())
-                    .font(FONT_BOLD)
-                    .size(16)
-                    .horizontal_alignment(Horizontal::Center)
-                    .vertical_alignment(Vertical::Center)
-                    .width(Length::Fill)
-                    .height(Length::Fill),
+            let content = text(w.0.clone()).font(FONT_BOLD).size(16);
+
+            let content = row!(
+                content,
+                vertical_space(Length::Fixed(
+                    (self.core.applet.suggested_size().1 + 2 * self.core.applet.suggested_padding())
+                        as f32
+                ))
             )
-            .width(Length::Fixed(
-                self.core.applet.suggested_size().0 as f32
-                    + match self.layout {
-                        Layout::Row => 20.0,
-                        Layout::Column => 16.0,
-                    },
-            ))
-            .height(Length::Fixed(
-                self.core.applet.suggested_size().0 as f32
-                    + match self.layout {
-                        Layout::Row => 16.0,
-                        Layout::Column => 20.0,
-                    },
-            ))
+            .align_items(cosmic::iced::Alignment::Center);
+
+            let content = column!(
+                content,
+                horizontal_space(Length::Fixed(
+                    (self.core.applet.suggested_size().0 + 2 * self.core.applet.suggested_padding())
+                        as f32
+                ))
+            )
+            .align_items(cosmic::iced::Alignment::Center);
+
+            let btn = button(
+                container(content)
+                    .align_x(Horizontal::Center)
+                    .align_y(Vertical::Center),
+            )
+            .padding(if horizontal {
+                [0, self.core.applet.suggested_padding()]
+            } else {
+                [self.core.applet.suggested_padding(), 0]
+            })
             .on_press(Message::WorkspacePressed(w.2.clone()))
             .padding(0);
 
@@ -217,25 +229,11 @@ impl cosmic::Application for IcedWorkspacesApplet {
             )
         });
         let layout_section: Element<_> = match self.layout {
-            Layout::Row => row(buttons)
-                .width(Length::Shrink)
-                .height(Length::Shrink)
-                .padding([0, 4])
-                .spacing(4)
-                .into(),
-            Layout::Column => column(buttons)
-                .width(Length::Shrink)
-                .height(Length::Shrink)
-                .padding([4, 0])
-                .spacing(4)
-                .into(),
+            Layout::Row => row(buttons).spacing(4).into(),
+            Layout::Column => column(buttons).spacing(4).into(),
         };
 
-        container(layout_section)
-            .width(Length::Shrink)
-            .height(Length::Shrink)
-            .padding(0)
-            .into()
+        container(layout_section).padding(0).into()
     }
 
     fn subscription(&self) -> Subscription<Message> {
