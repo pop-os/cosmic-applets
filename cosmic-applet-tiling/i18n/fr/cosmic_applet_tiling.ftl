@@ -1,14 +1,20 @@
 tile-windows = Automatiquement ajuster les fenêtres
+tile-current = Automatiquement ajuster le bureau actuel
 shortcuts = Raccourcis
 navigate-windows = Naviguer les fenêtres
 move-window = Déplacer la fenêtre
 toggle-floating-window = Activer les fenêtres flottantes
 view-all-shortcuts = Voir tous les raccourcis...
-show-active-hint = Afficher un indice de sélection
+active-hint = Indice de sélection
 gaps = Marges
 floating-window-exceptions = Exceptions des fenêtres flottantes...
 window-management-settings = Paramètres d'agencement des fenêtres...
-
+all-workspaces = Tous les bureaux
+per-workspace = Par bureau
 super = Super
 shift = Shift
-arrow-keys = arrows
+arrow-keys = flèches
+tiled = Ajusté
+floating = Flottante
+autotile-behavior = Ajuster les fenêtes
+new-workspace = New workspace behavior

@@ -11,6 +11,7 @@ connected = Connecté
 connecting = Connexion en cours
 connect = Se connecter
 cancel = Annuler
+settings = Paramètres réseaux...
 visible-wireless-networks = Réseaux sans-fil visibles
 enter-password = Entrez le mot de passe ou la clé de cryptage
 router-wps-button = Vous pouvez aussi vous connecter en appuyant sur le bouton "WPS" du routeur
