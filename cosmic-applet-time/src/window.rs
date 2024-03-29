@@ -109,6 +109,8 @@ impl cosmic::Application for Window {
                 if let Some(p) = self.popup.take() {
                     destroy_popup(p)
                 } else {
+                    self.date_selected = NaiveDate::from(self.now.naive_local());
+
                     let new_id = window::Id::unique();
                     self.popup.replace(new_id);
 
