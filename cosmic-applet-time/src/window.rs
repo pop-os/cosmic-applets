@@ -8,14 +8,14 @@ use cosmic::iced::{
 };
 use cosmic::iced_core::alignment::{Horizontal, Vertical};
 use cosmic::iced_style::application;
-use cosmic::widget::{button, container, divider, grid, Button, Grid, Space};
+use cosmic::widget::{button, container, divider, grid, horizontal_space, Button, Grid, Space};
 use cosmic::{app, applet::cosmic_panel_config::PanelAnchor, Command};
 use cosmic::{
     widget::{icon, rectangle_tracker::*},
     Element, Theme,
 };
 
-use chrono::{DateTime, Datelike, DurationRound, Local, Months, NaiveDate, Timelike, Weekday};
+use chrono::{DateTime, Datelike, DurationRound, Local, Months, NaiveDate, Weekday};
 
 use crate::fl;
 use crate::time::get_calender_first;
@@ -209,36 +209,58 @@ impl cosmic::Application for Window {
     }
 
     fn view(&self) -> Element<Message> {
-        let button = cosmic::widget::button(
-            if matches!(
-                self.core.applet.anchor,
-                PanelAnchor::Top | PanelAnchor::Bottom
-            ) {
-                Element::from(
+        let horizontal = matches!(
+            self.core.applet.anchor,
+            PanelAnchor::Top | PanelAnchor::Bottom
+        );
+        let button = cosmic::widget::button(if horizontal {
+            Element::from(
+                row!(
                     cosmic::widget::text(self.now.format("%b %-d %-I:%M %p").to_string()).size(14),
+                    container(vertical_space(Length::Fixed(
+                        (self.core.applet.suggested_size().1
+                            + 2 * self.core.applet.suggested_padding())
+                            as f32
+                    )))
                 )
-            } else {
-                let mut date_time_col = column![
-                    icon::from_name("emoji-recent-symbolic")
-                        .size(self.core.applet.suggested_size().0)
-                        .symbolic(true),
-                    text(self.now.format("%I").to_string()).size(14),
-                    text(self.now.format("%M").to_string()).size(14),
-                    text(self.now.format("%p").to_string()).size(14),
-                    vertical_space(Length::Fixed(4.0)),
-                    // TODO better calendar icon?
-                    icon::from_name("calendar-go-today-symbolic")
-                        .size(self.core.applet.suggested_size().0)
-                        .symbolic(true),
-                ]
-                .align_items(Alignment::Center)
-                .spacing(4);
-                for d in self.now.format("%x").to_string().split('/') {
-                    date_time_col = date_time_col.push(text(d.to_string()).size(14));
-                }
-                date_time_col.into()
-            },
-        )
+                .align_items(Alignment::Center),
+            )
+        } else {
+            let mut date_time_col = column![
+                icon::from_name("emoji-recent-symbolic")
+                    .size(self.core.applet.suggested_size().0)
+                    .symbolic(true),
+                text(self.now.format("%I").to_string()).size(14),
+                text(self.now.format("%M").to_string()).size(14),
+                text(self.now.format("%p").to_string()).size(14),
+                vertical_space(Length::Fixed(4.0)),
+                // TODO better calendar icon?
+                icon::from_name("calendar-go-today-symbolic")
+                    .size(self.core.applet.suggested_size().0)
+                    .symbolic(true),
+            ]
+            .align_items(Alignment::Center)
+            .spacing(4);
+            for d in self.now.format("%x").to_string().split('/') {
+                date_time_col = date_time_col.push(text(d.to_string()).size(14));
+            }
+            Element::from(
+                column!(
+                    date_time_col,
+                    horizontal_space(Length::Fixed(
+                        (self.core.applet.suggested_size().0
+                            + 2 * self.core.applet.suggested_padding())
+                            as f32
+                    ))
+                )
+                .align_items(Alignment::Center),
+            )
+        })
+        .padding(if horizontal {
+            [0, self.core.applet.suggested_padding()]
+        } else {
+            [self.core.applet.suggested_padding(), 0]
+        })
         .on_press(Message::TogglePopup)
         .style(cosmic::theme::Button::AppletIcon);
 

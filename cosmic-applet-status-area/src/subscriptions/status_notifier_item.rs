@@ -33,10 +33,11 @@ impl StatusNotifierItem {
             .build()
             .await?;
 
-        let icon_name = item_proxy.icon_name().await?;
+        let icon_name = item_proxy.icon_name().await.unwrap_or_default();
         let icon_pixmap = item_proxy
             .icon_pixmap()
-            .await?
+            .await
+            .unwrap_or_default()
             .into_iter()
             .max_by_key(|i| (i.width, i.height))
             .map(|mut i| {
