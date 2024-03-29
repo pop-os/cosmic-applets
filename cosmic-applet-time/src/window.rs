@@ -156,7 +156,7 @@ impl cosmic::Application for Window {
                 Command::none()
             }
             Message::SelectDay(_day) => {
-                // TODO
+                self.date_selected = self.date_selected.with_day(_day).expect("valid naivedate");
                 Command::none()
             }
             Message::PreviousMonth => {
