@@ -1,4 +1,6 @@
-use crate::wayland_subscription::{ToplevelRequest, ToplevelUpdate, WaylandRequest, WaylandUpdate};
+use crate::wayland_subscription::{
+    ToplevelRequest, ToplevelUpdate, WaylandRequest, WaylandUpdate, WorkspaceUpdate,
+};
 use std::os::{
     fd::{FromRawFd, RawFd},
     unix::net::UnixStream,
@@ -8,6 +10,7 @@ use cctk::{
     sctk::{
         self,
         activation::{RequestData, RequestDataExt},
+        output::{OutputHandler, OutputState},
         reexports::{calloop, calloop_wayland_source::WaylandSource},
         seat::{SeatHandler, SeatState},
     },
@@ -15,13 +18,15 @@ use cctk::{
     toplevel_management::{ToplevelManagerHandler, ToplevelManagerState},
     wayland_client::{
         self,
-        protocol::{wl_seat::WlSeat, wl_surface::WlSurface},
+        protocol::{wl_output, wl_seat::WlSeat, wl_surface::WlSurface},
         WEnum,
     },
+    workspace::{WorkspaceHandler, WorkspaceState},
 };
 use cosmic_protocols::{
     toplevel_info::v1::client::zcosmic_toplevel_handle_v1,
     toplevel_management::v1::client::zcosmic_toplevel_manager_v1,
+    workspace::v1::client::zcosmic_workspace_handle_v1::State,
 };
 use futures::channel::mpsc::UnboundedSender;
 use sctk::{
@@ -39,6 +44,60 @@ struct AppData {
     toplevel_info_state: ToplevelInfoState,
     toplevel_manager_state: ToplevelManagerState,
     seat_state: SeatState,
+    workspace_state: WorkspaceState,
+    output_state: OutputState,
+}
+
+// Need to bind output globals just so workspace can get output events
+impl OutputHandler for AppData {
+    fn output_state(&mut self) -> &mut OutputState {
+        &mut self.output_state
+    }
+
+    fn new_output(
+        &mut self,
+        _conn: &Connection,
+        _qh: &QueueHandle<Self>,
+        output: wl_output::WlOutput,
+    ) {
+    }
+
+    fn update_output(
+        &mut self,
+        _conn: &Connection,
+        _qh: &QueueHandle<Self>,
+        _output: wl_output::WlOutput,
+    ) {
+    }
+
+    fn output_destroyed(
+        &mut self,
+        _conn: &Connection,
+        _qh: &QueueHandle<Self>,
+        output: wl_output::WlOutput,
+    ) {
+    }
+}
+
+impl WorkspaceHandler for AppData {
+    fn workspace_state(&mut self) -> &mut WorkspaceState {
+        &mut self.workspace_state
+    }
+
+    fn done(&mut self) {
+        'workspaces_loop: for group in self.workspace_state.workspace_groups() {
+            for workspace in &group.workspaces {
+                if workspace.state.contains(&WEnum::Value(State::Active)) {
+                    let _ =
+                        self.tx
+                            .unbounded_send(WaylandUpdate::Workspace(WorkspaceUpdate::Enter(
+                                workspace.handle.clone(),
+                            )));
+                    break 'workspaces_loop;
+                }
+            }
+        }
+    }
 }
 
 impl ProvidesRegistryState for AppData {
@@ -211,6 +270,10 @@ pub(crate) fn wayland_handler(
                             manager.activate(&handle, &seat);
                         }
                     }
+                    ToplevelRequest::Minimize(handle) => {
+                        let manager = &state.toplevel_manager_state.manager;
+                        manager.set_minimized(&handle);
+                    }
                     ToplevelRequest::Quit(handle) => {
                         let manager = &state.toplevel_manager_state.manager;
                         manager.close(&handle);
@@ -264,6 +327,8 @@ pub(crate) fn wayland_handler(
         seat_state: SeatState::new(&globals, &qh),
         toplevel_info_state: ToplevelInfoState::new(&registry_state, &qh),
         toplevel_manager_state: ToplevelManagerState::new(&registry_state, &qh),
+        output_state: OutputState::new(&globals, &qh),
+        workspace_state: WorkspaceState::new(&registry_state, &qh),
         registry_state,
     };
 
@@ -280,3 +345,6 @@ sctk::delegate_seat!(AppData);
 sctk::delegate_registry!(AppData);
 cctk::delegate_toplevel_info!(AppData);
 cctk::delegate_toplevel_manager!(AppData);
+
+sctk::delegate_output!(AppData);
+cctk::delegate_workspace!(AppData);
