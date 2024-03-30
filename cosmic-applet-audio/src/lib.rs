@@ -39,7 +39,6 @@ use mpris_subscription::MprisUpdate;
 
 mod config;
 mod mpris_subscription;
-mod pipewire;
 mod pulse;
 
 static SHOW_MEDIA_CONTROLS: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
