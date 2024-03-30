@@ -7,6 +7,7 @@ use cctk::toplevel_info::ToplevelInfo;
 use cosmic::iced;
 use cosmic::iced::subscription;
 use cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1;
+use cosmic_protocols::workspace::v1::client::zcosmic_workspace_handle_v1::ZcosmicWorkspaceHandleV1;
 use futures::{
     channel::mpsc::{unbounded, UnboundedReceiver},
     SinkExt, StreamExt,
@@ -79,6 +80,7 @@ pub enum WaylandUpdate {
     Init(calloop::channel::Sender<WaylandRequest>),
     Finished,
     Toplevel(ToplevelUpdate),
+    Workspace(WorkspaceUpdate),
     ActivationToken {
         token: Option<String>,
         exec: String,
@@ -94,6 +96,11 @@ pub enum ToplevelUpdate {
 }
 
 #[derive(Clone, Debug)]
+pub enum WorkspaceUpdate {
+    Enter(ZcosmicWorkspaceHandleV1),
+}
+
+#[derive(Clone, Debug)]
 pub enum WaylandRequest {
     Toplevel(ToplevelRequest),
     TokenRequest {
@@ -106,5 +113,6 @@ pub enum WaylandRequest {
 #[derive(Debug, Clone)]
 pub enum ToplevelRequest {
     Activate(ZcosmicToplevelHandleV1),
+    Minimize(ZcosmicToplevelHandleV1),
     Quit(ZcosmicToplevelHandleV1),
 }

@@ -7,6 +7,7 @@ use crate::wayland_subscription::ToplevelRequest;
 use crate::wayland_subscription::ToplevelUpdate;
 use crate::wayland_subscription::WaylandRequest;
 use crate::wayland_subscription::WaylandUpdate;
+use crate::wayland_subscription::WorkspaceUpdate;
 use cctk::sctk::reexports::calloop::channel::Sender;
 use cctk::toplevel_info::ToplevelInfo;
 use cctk::wayland_client::protocol::wl_data_device_manager::DndAction;
@@ -48,7 +49,9 @@ use cosmic::{
     Command,
 };
 use cosmic::{Element, Theme};
+use cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::State;
 use cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1;
+use cosmic_protocols::workspace::v1::client::zcosmic_workspace_handle_v1::ZcosmicWorkspaceHandleV1;
 use futures::future::pending;
 use iced::widget::container;
 use iced::Alignment;
@@ -134,6 +137,7 @@ impl DockItem {
         applet: &Context,
         rectangle_tracker: Option<&RectangleTracker<u32>>,
         interaction_enabled: bool,
+        focused: bool,
         gpus: Option<&[Gpu]>,
     ) -> Element<'_, Message> {
         let Self {
@@ -166,28 +170,53 @@ impl DockItem {
                 })
                 .collect_vec()
         } else {
-            (0..min(toplevels.len(), 3))
-                .map(|_| {
-                    container(vertical_space(Length::Fixed(0.0)))
-                        .padding(dot_radius)
-                        .style(<Theme as container::StyleSheet>::Style::Custom(Box::new(
-                            |theme| container::Appearance {
-                                text_color: Some(Color::TRANSPARENT),
-                                background: Some(Background::Color(
-                                    theme.cosmic().on_bg_color().into(),
-                                )),
-                                border: Border {
-                                    radius: 4.0.into(),
-                                    width: 0.0,
-                                    color: Color::TRANSPARENT,
+            if focused {
+                (0..min(toplevels.len(), 3))
+                    .map(|_| {
+                        container(vertical_space(Length::Fixed(0.0)))
+                            .padding(dot_radius)
+                            .style(<Theme as container::StyleSheet>::Style::Custom(Box::new(
+                                |theme| container::Appearance {
+                                    text_color: Some(Color::TRANSPARENT),
+                                    background: Some(Background::Color(
+                                        theme.cosmic().accent_color().into(),
+                                    )),
+                                    border: Border {
+                                        radius: 4.0.into(),
+                                        width: 0.0,
+                                        color: Color::TRANSPARENT,
+                                    },
+                                    shadow: Shadow::default(),
+                                    icon_color: Some(Color::TRANSPARENT),
                                 },
-                                shadow: Shadow::default(),
-                                icon_color: Some(Color::TRANSPARENT),
-                            },
-                        )))
-                        .into()
-                })
-                .collect_vec()
+                            )))
+                            .into()
+                    })
+                    .collect_vec()
+            } else {
+                (0..min(toplevels.len(), 3))
+                    .map(|_| {
+                        container(vertical_space(Length::Fixed(0.0)))
+                            .padding(dot_radius)
+                            .style(<Theme as container::StyleSheet>::Style::Custom(Box::new(
+                                |theme| container::Appearance {
+                                    text_color: Some(Color::TRANSPARENT),
+                                    background: Some(Background::Color(
+                                        theme.cosmic().on_bg_color().into(),
+                                    )),
+                                    border: Border {
+                                        radius: 4.0.into(),
+                                        width: 0.0,
+                                        color: Color::TRANSPARENT,
+                                    },
+                                    shadow: Shadow::default(),
+                                    icon_color: Some(Color::TRANSPARENT),
+                                },
+                            )))
+                            .into()
+                    })
+                    .collect_vec()
+            }
         };
 
         let icon_wrapper: Element<_> = match applet.anchor {
@@ -244,25 +273,37 @@ impl DockItem {
             dnd_source(
                 mouse_area(
                     icon_button
-                        .on_press_maybe(
-                            toplevels
-                                .first()
-                                .map(|t| Message::Activate(t.0.clone()))
-                                .or_else(|| {
-                                    let gpu_idx = gpus.map(|gpus| {
-                                        if desktop_info.prefers_dgpu {
-                                            gpus.iter().position(|gpu| !gpu.default).unwrap_or(0)
-                                        } else {
-                                            gpus.iter().position(|gpu| gpu.default).unwrap_or(0)
-                                        }
-                                    });
+                        .on_press_maybe(if toplevels.is_empty() {
+                            let gpu_idx = gpus.map(|gpus| {
+                                if desktop_info.prefers_dgpu {
+                                    gpus.iter().position(|gpu| !gpu.default).unwrap_or(0)
+                                } else {
+                                    gpus.iter().position(|gpu| gpu.default).unwrap_or(0)
+                                }
+                            });
 
-                                    desktop_info
-                                        .exec
-                                        .clone()
-                                        .map(|exec| Message::Exec(exec, gpu_idx))
-                                }),
-                        )
+                            desktop_info
+                                .exec
+                                .clone()
+                                .map(|exec| Message::Exec(exec, gpu_idx))
+                        } else if toplevels.len() == 1 {
+                            toplevels.first().map(|t| {
+                                if focused {
+                                    Message::Minimize(t.0.clone())
+                                } else {
+                                    Message::Activate(t.0.clone())
+                                }
+                            })
+                        } else {
+                            // TODO: Change this
+                            toplevels.first().map(|t| {
+                                if focused {
+                                    Message::Minimize(t.0.clone())
+                                } else {
+                                    Message::Activate(t.0.clone())
+                                }
+                            })
+                        })
                         .width(Length::Shrink)
                         .height(Length::Shrink),
                 )
@@ -306,6 +347,7 @@ struct CosmicAppList {
     dnd_offer: Option<DndOffer>,
     is_listening_for_dnd: bool,
     gpus: Option<Vec<Gpu>>,
+    active_workspace: Option<ZcosmicWorkspaceHandleV1>,
 }
 
 // TODO DnD after sctk merges DnD
@@ -319,6 +361,7 @@ enum Message {
     CloseRequested(window::Id),
     ClosePopup,
     Activate(ZcosmicToplevelHandleV1),
+    Minimize(ZcosmicToplevelHandleV1),
     Exec(String, Option<usize>),
     Quit(String),
     Ignore,
@@ -548,6 +591,14 @@ impl cosmic::Application for CosmicAppList {
             Message::Activate(handle) => {
                 if let Some(tx) = self.wayland_sender.as_ref() {
                     let _ = tx.send(WaylandRequest::Toplevel(ToplevelRequest::Activate(handle)));
+                }
+                if let Some(p) = self.popup.take() {
+                    return destroy_popup(p.0);
+                }
+            }
+            Message::Minimize(handle) => {
+                if let Some(tx) = self.wayland_sender.as_ref() {
+                    let _ = tx.send(WaylandRequest::Toplevel(ToplevelRequest::Minimize(handle)));
                 }
                 if let Some(p) = self.popup.take() {
                     return destroy_popup(p.0);
@@ -825,6 +876,12 @@ impl cosmic::Application for CosmicAppList {
                             }
                         }
                     },
+                    WaylandUpdate::Workspace(event) => match event {
+                        WorkspaceUpdate::Enter(handle) => {
+                            self.active_workspace = Some(handle);
+                        }
+                        _ => {}
+                    },
                     WaylandUpdate::ActivationToken {
                         token,
                         exec,
@@ -933,6 +990,7 @@ impl cosmic::Application for CosmicAppList {
     }
 
     fn view(&self) -> Element<Message> {
+        let active_toplevel = self.currently_active_toplevel();
         let is_horizontal = match self.core.applet.anchor {
             PanelAnchor::Top | PanelAnchor::Bottom => true,
             PanelAnchor::Left | PanelAnchor::Right => false,
@@ -945,6 +1003,9 @@ impl cosmic::Application for CosmicAppList {
                     &self.core.applet,
                     self.rectangle_tracker.as_ref(),
                     self.popup.is_none(),
+                    active_toplevel
+                        .as_ref()
+                        .is_some_and(|x| dock_item.toplevels.iter().any(|y| y.0 == *x)),
                     self.gpus.as_deref(),
                 )
             })
@@ -957,7 +1018,15 @@ impl cosmic::Application for CosmicAppList {
         {
             favorites.insert(
                 index,
-                item.as_icon(&self.core.applet, None, false, self.gpus.as_deref()),
+                item.as_icon(
+                    &self.core.applet,
+                    None,
+                    false,
+                    active_toplevel
+                        .as_ref()
+                        .is_some_and(|x| item.toplevels.iter().any(|y| y.0 == *x)),
+                    self.gpus.as_deref(),
+                ),
             );
         } else if self.is_listening_for_dnd && self.favorite_list.is_empty() {
             // show star indicating favorite_list is drag target
@@ -979,6 +1048,9 @@ impl cosmic::Application for CosmicAppList {
                     &self.core.applet,
                     self.rectangle_tracker.as_ref(),
                     self.popup.is_none(),
+                    active_toplevel
+                        .as_ref()
+                        .is_some_and(|x| dock_item.toplevels.iter().any(|y| y.0 == *x)),
                     self.gpus.as_deref(),
                 )
             })
@@ -1250,5 +1322,24 @@ impl cosmic::Application for CosmicAppList {
 
     fn on_close_requested(&self, id: window::Id) -> Option<Message> {
         Some(Message::CloseRequested(id))
+    }
+}
+
+impl CosmicAppList {
+    fn currently_active_toplevel(&self) -> Option<ZcosmicToplevelHandleV1> {
+        if self.active_workspace.is_none() {
+            return None;
+        }
+        let active_workspace = self.active_workspace.as_ref().unwrap().clone();
+        for toplevel_list in self.active_list.iter().chain(self.favorite_list.iter()) {
+            for (t_handle, t_info) in &toplevel_list.toplevels {
+                if t_info.workspace.contains(&active_workspace)
+                    && t_info.state.contains(&State::Activated)
+                {
+                    return Some(t_handle.clone());
+                }
+            }
+        }
+        None
     }
 }
