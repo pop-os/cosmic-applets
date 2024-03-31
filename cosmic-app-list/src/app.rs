@@ -878,15 +878,17 @@ impl cosmic::Application for CosmicAppList {
                     };
                     dock_item.id = self.item_ctr;
 
-                    self.favorite_list
-                        .insert(index.min(self.favorite_list.len()), dock_item);
-                    self.config.update_favorites(
+                    if dock_item.desktop_info.exec.is_some() {
                         self.favorite_list
-                            .iter()
-                            .map(|dock_item| dock_item.desktop_info.id.clone())
-                            .collect(),
-                        &Config::new(APP_ID, AppListConfig::VERSION).unwrap(),
-                    );
+                            .insert(index.min(self.favorite_list.len()), dock_item);
+                        self.config.update_favorites(
+                            self.favorite_list
+                                .iter()
+                                .map(|dock_item| dock_item.desktop_info.id.clone())
+                                .collect(),
+                            &Config::new(APP_ID, AppListConfig::VERSION).unwrap(),
+                        );
+                    }
                 }
                 return finish_dnd();
             }
@@ -1361,13 +1363,17 @@ impl cosmic::Application for CosmicAppList {
                         content = content.push(list_col);
                         content = content.push(divider::horizontal::default());
                     }
-                    content = content.push(if is_favorite {
-                        menu_button(iced::widget::text(fl!("unfavorite")))
-                            .on_press(Message::UnFavorite(desktop_info.id.clone()))
-                    } else {
-                        menu_button(iced::widget::text(fl!("favorite")))
-                            .on_press(Message::Favorite(desktop_info.id.clone()))
-                    });
+                    if is_favorite {
+                        content = content.push(
+                            menu_button(iced::widget::text(fl!("unfavorite")))
+                                .on_press(Message::UnFavorite(desktop_info.id.clone())),
+                        )
+                    } else if let Some(_) = desktop_info.exec.clone() {
+                        content = content.push(
+                            menu_button(iced::widget::text(fl!("favorite")))
+                                .on_press(Message::Favorite(desktop_info.id.clone())),
+                        )
+                    }
 
                     content = match toplevels.len() {
                         0 => content,
