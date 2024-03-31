@@ -8,12 +8,14 @@ use cosmic::iced;
 use cosmic::iced::subscription;
 use cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1;
 use cosmic_protocols::workspace::v1::client::zcosmic_workspace_handle_v1::ZcosmicWorkspaceHandleV1;
+use image::EncodableLayout;
+
 use futures::{
     channel::mpsc::{unbounded, UnboundedReceiver},
     SinkExt, StreamExt,
 };
 use once_cell::sync::Lazy;
-use std::fmt::Debug;
+use std::{fmt::Debug, sync::Arc};
 use tokio::sync::Mutex;
 
 use crate::wayland_handler::wayland_handler;
@@ -38,6 +40,23 @@ pub fn wayland_subscription() -> iced::Subscription<WaylandUpdate> {
 pub enum State {
     Waiting,
     Finished,
+}
+
+#[derive(Debug, Clone)]
+pub struct WaylandImage {
+    pub img: Arc<image::RgbaImage>,
+}
+
+impl WaylandImage {
+    pub fn new(img: image::RgbaImage) -> Self {
+        Self { img: Arc::new(img) }
+    }
+}
+
+impl AsRef<[u8]> for WaylandImage {
+    fn as_ref(&self) -> &[u8] {
+        self.img.as_bytes()
+    }
 }
 
 async fn start_listening(
@@ -86,6 +105,7 @@ pub enum WaylandUpdate {
         exec: String,
         gpu_idx: Option<usize>,
     },
+    Image(ZcosmicToplevelHandleV1, WaylandImage),
 }
 
 #[derive(Clone, Debug)]
