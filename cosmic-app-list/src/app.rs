@@ -5,6 +5,7 @@ use crate::fl;
 use crate::wayland_subscription::wayland_subscription;
 use crate::wayland_subscription::ToplevelRequest;
 use crate::wayland_subscription::ToplevelUpdate;
+use crate::wayland_subscription::WaylandImage;
 use crate::wayland_subscription::WaylandRequest;
 use crate::wayland_subscription::WaylandUpdate;
 use crate::wayland_subscription::WorkspaceUpdate;
@@ -13,6 +14,7 @@ use cctk::toplevel_info::ToplevelInfo;
 use cctk::wayland_client::protocol::wl_data_device_manager::DndAction;
 use cctk::wayland_client::protocol::wl_seat::WlSeat;
 use cosmic::cosmic_config::{Config, CosmicConfigEntry};
+use cosmic::desktop::IconSource;
 use cosmic::desktop::{
     app_id_or_fallback_matches, load_applications_for_app_ids, DesktopEntryData,
 };
@@ -39,7 +41,9 @@ use cosmic::iced_sctk::commands::data_device::request_dnd_data;
 use cosmic::iced_sctk::commands::data_device::set_actions;
 use cosmic::iced_sctk::commands::data_device::start_drag;
 use cosmic::iced_style::application;
+use cosmic::iced_widget::button;
 use cosmic::theme::Button;
+use cosmic::theme::Container;
 use cosmic::widget::divider;
 use cosmic::widget::rectangle_tracker::rectangle_tracker_subscription;
 use cosmic::widget::rectangle_tracker::RectangleTracker;
@@ -47,6 +51,12 @@ use cosmic::widget::rectangle_tracker::RectangleUpdate;
 use cosmic::{
     applet::{cosmic_panel_config::PanelAnchor, Context},
     Command,
+};
+use cosmic::{
+    iced::{alignment::Vertical, Limits},
+    iced_core::{layout, overlay, widget::Tree, Layout, Size, Vector},
+    iced_widget::text,
+    widget::{image::Handle, Image, Widget},
 };
 use cosmic::{Element, Theme};
 use cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::State;
@@ -99,7 +109,7 @@ pub fn load_applications_for_app_ids_sorted<'a, 'b>(
 #[derive(Debug, Clone, Default)]
 struct DockItem {
     id: u32,
-    toplevels: Vec<(ZcosmicToplevelHandleV1, ToplevelInfo)>,
+    toplevels: Vec<(ZcosmicToplevelHandleV1, ToplevelInfo, Option<WaylandImage>)>,
     desktop_info: DesktopEntryData,
 }
 
@@ -122,7 +132,7 @@ impl DataFromMimeType for DockItem {
 impl DockItem {
     fn new(
         id: u32,
-        toplevels: Vec<(ZcosmicToplevelHandleV1, ToplevelInfo)>,
+        toplevels: Vec<(ZcosmicToplevelHandleV1, ToplevelInfo, Option<WaylandImage>)>,
         desktop_info: DesktopEntryData,
     ) -> Self {
         Self {
@@ -170,53 +180,28 @@ impl DockItem {
                 })
                 .collect_vec()
         } else {
-            if focused {
-                (0..min(toplevels.len(), 3))
-                    .map(|_| {
-                        container(vertical_space(Length::Fixed(0.0)))
-                            .padding(dot_radius)
-                            .style(<Theme as container::StyleSheet>::Style::Custom(Box::new(
-                                |theme| container::Appearance {
-                                    text_color: Some(Color::TRANSPARENT),
-                                    background: Some(Background::Color(
-                                        theme.cosmic().accent_color().into(),
-                                    )),
-                                    border: Border {
-                                        radius: 4.0.into(),
-                                        width: 0.0,
-                                        color: Color::TRANSPARENT,
-                                    },
-                                    shadow: Shadow::default(),
-                                    icon_color: Some(Color::TRANSPARENT),
+            (0..min(toplevels.len(), 3))
+                .map(|_| {
+                    container(vertical_space(Length::Fixed(0.0)))
+                        .padding(dot_radius)
+                        .style(<Theme as container::StyleSheet>::Style::Custom(Box::new(
+                            |theme| container::Appearance {
+                                text_color: Some(Color::TRANSPARENT),
+                                background: Some(Background::Color(
+                                    theme.cosmic().on_bg_color().into(),
+                                )),
+                                border: Border {
+                                    radius: 4.0.into(),
+                                    width: 0.0,
+                                    color: Color::TRANSPARENT,
                                 },
-                            )))
-                            .into()
-                    })
-                    .collect_vec()
-            } else {
-                (0..min(toplevels.len(), 3))
-                    .map(|_| {
-                        container(vertical_space(Length::Fixed(0.0)))
-                            .padding(dot_radius)
-                            .style(<Theme as container::StyleSheet>::Style::Custom(Box::new(
-                                |theme| container::Appearance {
-                                    text_color: Some(Color::TRANSPARENT),
-                                    background: Some(Background::Color(
-                                        theme.cosmic().on_bg_color().into(),
-                                    )),
-                                    border: Border {
-                                        radius: 4.0.into(),
-                                        width: 0.0,
-                                        color: Color::TRANSPARENT,
-                                    },
-                                    shadow: Shadow::default(),
-                                    icon_color: Some(Color::TRANSPARENT),
-                                },
-                            )))
-                            .into()
-                    })
-                    .collect_vec()
-            }
+                                shadow: Shadow::default(),
+                                icon_color: Some(Color::TRANSPARENT),
+                            },
+                        )))
+                        .into()
+                })
+                .collect_vec()
         };
 
         let icon_wrapper: Element<_> = match applet.anchor {
@@ -289,20 +274,14 @@ impl DockItem {
                         } else if toplevels.len() == 1 {
                             toplevels.first().map(|t| {
                                 if focused {
-                                    Message::Minimize(t.0.clone())
+                                    // FIXME: Change to Message::Minimize once focus tracking is fixed
+                                    Message::Activate(t.0.clone())
                                 } else {
                                     Message::Activate(t.0.clone())
                                 }
                             })
                         } else {
-                            // TODO: Change this
-                            toplevels.first().map(|t| {
-                                if focused {
-                                    Message::Minimize(t.0.clone())
-                                } else {
-                                    Message::Activate(t.0.clone())
-                                }
-                            })
+                            Some(Message::TopLevelListPopup(desktop_info.id.clone()))
                         })
                         .width(Length::Shrink)
                         .height(Length::Shrink),
@@ -333,7 +312,7 @@ struct DndOffer {
 #[derive(Clone, Default)]
 struct CosmicAppList {
     core: cosmic::app::Core,
-    popup: Option<(window::Id, u32)>,
+    popup: Option<(window::Id, u32, PopupType)>,
     subscription_ctr: u32,
     item_ctr: u32,
     active_list: Vec<DockItem>,
@@ -350,6 +329,12 @@ struct CosmicAppList {
     active_workspace: Option<ZcosmicWorkspaceHandleV1>,
 }
 
+#[derive(Clone, PartialEq)]
+pub enum PopupType {
+    RightClickMenu,
+    TopLevelList,
+}
+
 // TODO DnD after sctk merges DnD
 #[derive(Debug, Clone)]
 enum Message {
@@ -357,6 +342,7 @@ enum Message {
     Favorite(String),
     UnFavorite(String),
     Popup(String),
+    TopLevelListPopup(String),
     GpuRequest(Option<Vec<Gpu>>),
     CloseRequested(window::Id),
     ClosePopup,
@@ -447,6 +433,77 @@ pub fn menu_button<'a, Message>(
         .width(Length::Fill)
 }
 
+const TOPLEVEL_BUTTON_WIDTH: f32 = 160.0;
+const TOPLEVEL_BUTTON_HEIGHT: f32 = 130.0;
+
+pub fn toplevel_button<'a, Msg>(
+    img: Option<WaylandImage>,
+    icon: &IconSource,
+    on_press: Msg,
+    title: String,
+    text_size: f32,
+) -> cosmic::widget::Button<'a, Msg, cosmic::Theme, cosmic::Renderer>
+where
+    Msg: 'static + Clone,
+{
+    let border = 1.0;
+    cosmic::widget::Button::new(
+        container(
+            column![
+                container(if let Some(img) = img {
+                    Element::from(
+                        Image::new(Handle::from_pixels(
+                            img.img.width(),
+                            img.img.height(),
+                            img.clone(),
+                        ))
+                        .width(Length::Fill)
+                        .height(Length::Fill)
+                        .content_fit(cosmic::iced_core::ContentFit::Contain),
+                    )
+                } else {
+                    Element::from(
+                        icon.as_cosmic_icon()
+                            .width(Length::Fill)
+                            .height(Length::Fill),
+                    )
+                })
+                .style(Container::Custom(Box::new(move |theme| {
+                    container::Appearance {
+                        border: Border {
+                            color: theme.cosmic().bg_divider().into(),
+                            width: border,
+                            radius: 0.0.into(),
+                        },
+                        ..Default::default()
+                    }
+                })))
+                .padding(border as u16)
+                .height(Length::Fill)
+                .width(Length::Fill),
+                container(
+                    text(title)
+                        .size(text_size)
+                        .horizontal_alignment(Horizontal::Center),
+                )
+                .height(Length::Fixed(14.0))
+                .width(Length::Fill)
+                .center_x(),
+            ]
+            .spacing(4)
+            .align_items(Alignment::Center),
+        )
+        .align_x(cosmic::iced_core::alignment::Horizontal::Center)
+        .align_y(cosmic::iced_core::alignment::Vertical::Center)
+        .height(Length::Fill)
+        .width(Length::Fill),
+    )
+    .on_press(on_press)
+    .style(Button::AppletMenu)
+    .width(Length::Fixed(TOPLEVEL_BUTTON_WIDTH))
+    .height(Length::Fixed(TOPLEVEL_BUTTON_HEIGHT))
+}
+
 pub fn menu_control_padding() -> Padding {
     let theme = cosmic::theme::active();
     let cosmic = theme.cosmic();
@@ -509,7 +566,7 @@ impl cosmic::Application for CosmicAppList {
     ) -> iced::Command<cosmic::app::Message<Self::Message>> {
         match message {
             Message::Popup(id) => {
-                if let Some((popup_id, _toplevel)) = self.popup.take() {
+                if let Some((popup_id, _toplevel, _)) = self.popup.take() {
                     return destroy_popup(popup_id);
                 }
                 if let Some(toplevel_group) = self
@@ -524,7 +581,7 @@ impl cosmic::Application for CosmicAppList {
                     };
 
                     let new_id = window::Id::unique();
-                    self.popup = Some((new_id, toplevel_group.id));
+                    self.popup = Some((new_id, toplevel_group.id, PopupType::RightClickMenu));
 
                     let mut popup_settings = self.core.applet.get_popup_settings(
                         window::Id::MAIN,
@@ -552,6 +609,51 @@ impl cosmic::Application for CosmicAppList {
                     return Command::batch([gpu_update, get_popup(popup_settings)]);
                 }
             }
+            Message::TopLevelListPopup(id) => {
+                if let Some((popup_id, _toplevel, _)) = self.popup.take() {
+                    return destroy_popup(popup_id);
+                }
+                if let Some(toplevel_group) = self
+                    .active_list
+                    .iter()
+                    .chain(self.favorite_list.iter())
+                    .find(|t| t.desktop_info.id == id)
+                {
+                    let rectangle = match self.rectangles.get(&toplevel_group.id) {
+                        Some(r) => r,
+                        None => return Command::none(),
+                    };
+
+                    let new_id = window::Id::unique();
+                    self.popup = Some((new_id, toplevel_group.id, PopupType::TopLevelList));
+
+                    let mut popup_settings = self.core.applet.get_popup_settings(
+                        window::Id::MAIN,
+                        new_id,
+                        None,
+                        None,
+                        None,
+                    );
+                    let iced::Rectangle {
+                        x,
+                        y,
+                        width,
+                        height,
+                    } = *rectangle;
+                    popup_settings.positioner.anchor_rect = iced::Rectangle::<i32> {
+                        x: x as i32,
+                        y: y as i32,
+                        width: width as i32,
+                        height: height as i32,
+                    };
+                    popup_settings.positioner.size_limits = Limits::NONE
+                        .max_width(56.0 + (TOPLEVEL_BUTTON_WIDTH + 12.0) * 7.0)
+                        .min_width(30.0)
+                        .min_height(100.0)
+                        .max_height(16.0 + TOPLEVEL_BUTTON_HEIGHT);
+                    return get_popup(popup_settings);
+                }
+            }
             Message::Favorite(id) => {
                 if let Some(i) = self
                     .active_list
@@ -564,7 +666,7 @@ impl cosmic::Application for CosmicAppList {
 
                 self.config
                     .add_favorite(id, &Config::new(APP_ID, AppListConfig::VERSION).unwrap());
-                if let Some((popup_id, _toplevel)) = self.popup.take() {
+                if let Some((popup_id, _toplevel, _)) = self.popup.take() {
                     return destroy_popup(popup_id);
                 }
             }
@@ -584,7 +686,7 @@ impl cosmic::Application for CosmicAppList {
                         self.active_list.push(entry);
                     }
                 }
-                if let Some((popup_id, _toplevel)) = self.popup.take() {
+                if let Some((popup_id, _toplevel, _)) = self.popup.take() {
                     return destroy_popup(popup_id);
                 }
             }
@@ -611,7 +713,7 @@ impl cosmic::Application for CosmicAppList {
                     .chain(self.favorite_list.iter())
                     .find(|t| t.desktop_info.id == id)
                 {
-                    for (handle, _) in &toplevel_group.toplevels {
+                    for (handle, _, _) in &toplevel_group.toplevels {
                         if let Some(tx) = self.wayland_sender.as_ref() {
                             let _ = tx.send(WaylandRequest::Toplevel(ToplevelRequest::Quit(
                                 handle.clone(),
@@ -619,7 +721,7 @@ impl cosmic::Application for CosmicAppList {
                         }
                     }
                 }
-                if let Some((popup_id, _toplevel)) = self.popup.take() {
+                if let Some((popup_id, _toplevel, _)) = self.popup.take() {
                     return destroy_popup(popup_id);
                 }
             }
@@ -793,6 +895,22 @@ impl cosmic::Application for CosmicAppList {
                     WaylandUpdate::Init(tx) => {
                         self.wayland_sender.replace(tx);
                     }
+                    WaylandUpdate::Image(handle, img) => {
+                        'img_update: for x in self
+                            .active_list
+                            .iter_mut()
+                            .chain(self.favorite_list.iter_mut())
+                        {
+                            if let Some((_, _, ref mut handle_img)) = x
+                                .toplevels
+                                .iter_mut()
+                                .find(|(toplevel_handle, _, _)| toplevel_handle.clone() == handle)
+                            {
+                                *handle_img = Some(img);
+                                break 'img_update;
+                            }
+                        }
+                    }
                     WaylandUpdate::Finished => {
                         for t in &mut self.favorite_list {
                             t.toplevels.clear();
@@ -826,7 +944,7 @@ impl cosmic::Application for CosmicAppList {
                                     app_id_or_fallback_matches(&info.app_id, desktop_info)
                                 })
                             {
-                                t.toplevels.push((handle, info));
+                                t.toplevels.push((handle, info, None));
                             } else {
                                 if info.app_id.is_empty() {
                                     info.app_id = format!("Unknown Application {}", self.item_ctr);
@@ -842,7 +960,7 @@ impl cosmic::Application for CosmicAppList {
                                 .unwrap();
                                 self.active_list.push(DockItem {
                                     id: self.item_ctr,
-                                    toplevels: vec![(handle, info)],
+                                    toplevels: vec![(handle, info, None)],
                                     desktop_info,
                                 });
                             }
@@ -853,7 +971,7 @@ impl cosmic::Application for CosmicAppList {
                                 .iter_mut()
                                 .chain(self.favorite_list.iter_mut())
                             {
-                                t.toplevels.retain(|(t_handle, _)| t_handle != &handle);
+                                t.toplevels.retain(|(t_handle, _, _)| t_handle != &handle);
                             }
                             self.active_list.retain(|t| !t.toplevels.is_empty());
                         }
@@ -867,7 +985,7 @@ impl cosmic::Application for CosmicAppList {
                                 .iter_mut()
                                 .chain(self.favorite_list.iter_mut())
                             {
-                                for (t_handle, t_info) in &mut toplevel_list.toplevels {
+                                for (t_handle, t_info, _) in &mut toplevel_list.toplevels {
                                     if &handle == t_handle {
                                         *t_info = info;
                                         break 'toplevel_loop;
@@ -1162,7 +1280,8 @@ impl cosmic::Application for CosmicAppList {
                 .as_cosmic_icon()
                 .size(self.core.applet.suggested_size().0)
                 .into()
-        } else if let Some((_popup_id, id)) = self.popup.as_ref().filter(|p| id == p.0) {
+        } else if let Some((_popup_id, id, popup_type)) = self.popup.as_ref().filter(|p| id == p.0)
+        {
             let Some(DockItem {
                 toplevels,
                 desktop_info,
@@ -1175,91 +1294,116 @@ impl cosmic::Application for CosmicAppList {
             else {
                 return iced::widget::text("").into();
             };
+            match popup_type {
+                PopupType::RightClickMenu => {
+                    let is_favorite = self
+                        .config
+                        .favorites
+                        .iter()
+                        .any(|x| app_id_or_fallback_matches(&x, desktop_info));
 
-            let is_favorite = self
-                .config
-                .favorites
-                .iter()
-                .any(|x| app_id_or_fallback_matches(&x, desktop_info));
+                    let mut content = column![container(
+                        iced::widget::text(&desktop_info.name)
+                            .horizontal_alignment(Horizontal::Center)
+                    )
+                    .padding(menu_control_padding()),]
+                    .padding([8, 0])
+                    .align_items(Alignment::Center);
 
-            let mut content = column![container(
-                iced::widget::text(&desktop_info.name).horizontal_alignment(Horizontal::Center)
-            )
-            .padding(menu_control_padding()),]
-            .padding([8, 0])
-            .align_items(Alignment::Center);
-
-            if let Some(exec) = desktop_info.exec.clone() {
-                if !toplevels.is_empty() {
-                    content = content.push(
-                        menu_button(iced::widget::text(fl!("new-window")))
-                            .on_press(Message::Exec(exec, None)),
-                    );
-                } else if let Some(gpus) = self.gpus.as_ref() {
-                    let default_idx = if desktop_info.prefers_dgpu {
-                        gpus.iter().position(|gpu| !gpu.default).unwrap_or(0)
-                    } else {
-                        gpus.iter().position(|gpu| gpu.default).unwrap_or(0)
-                    };
-                    for (i, gpu) in gpus.iter().enumerate() {
-                        content = content.push(
-                            menu_button(iced::widget::text(format!(
-                                "{} {}",
-                                fl!("run-on", gpu = gpu.name.clone()),
-                                if i == default_idx {
-                                    fl!("run-on-default")
-                                } else {
-                                    String::new()
-                                }
-                            )))
-                            .on_press(Message::Exec(exec.clone(), Some(i))),
-                        );
+                    if let Some(exec) = desktop_info.exec.clone() {
+                        if !toplevels.is_empty() {
+                            content = content.push(
+                                menu_button(iced::widget::text(fl!("new-window")))
+                                    .on_press(Message::Exec(exec, None)),
+                            );
+                        } else if let Some(gpus) = self.gpus.as_ref() {
+                            let default_idx = if desktop_info.prefers_dgpu {
+                                gpus.iter().position(|gpu| !gpu.default).unwrap_or(0)
+                            } else {
+                                gpus.iter().position(|gpu| gpu.default).unwrap_or(0)
+                            };
+                            for (i, gpu) in gpus.iter().enumerate() {
+                                content = content.push(
+                                    menu_button(iced::widget::text(format!(
+                                        "{} {}",
+                                        fl!("run-on", gpu = gpu.name.clone()),
+                                        if i == default_idx {
+                                            fl!("run-on-default")
+                                        } else {
+                                            String::new()
+                                        }
+                                    )))
+                                    .on_press(Message::Exec(exec.clone(), Some(i))),
+                                );
+                            }
+                        } else {
+                            content = content.push(
+                                menu_button(iced::widget::text(fl!("run")))
+                                    .on_press(Message::Exec(exec, None)),
+                            );
+                        }
+                        content = content.push(divider::horizontal::default());
                     }
-                } else {
-                    content = content.push(
-                        menu_button(iced::widget::text(fl!("run")))
-                            .on_press(Message::Exec(exec, None)),
-                    );
-                }
-                content = content.push(divider::horizontal::default());
-            }
 
-            if !toplevels.is_empty() {
-                let mut list_col = column![];
-                for (handle, info) in toplevels {
-                    let title = if info.title.len() > 20 {
-                        format!("{:.24}...", &info.title)
+                    if !toplevels.is_empty() {
+                        let mut list_col = column![];
+                        for (handle, info, _) in toplevels {
+                            let title = if info.title.len() > 20 {
+                                format!("{:.24}...", &info.title)
+                            } else {
+                                info.title.clone()
+                            };
+                            list_col = list_col.push(
+                                menu_button(iced::widget::text(title))
+                                    .on_press(Message::Activate(handle.clone())),
+                            );
+                        }
+                        content = content.push(list_col);
+                        content = content.push(divider::horizontal::default());
+                    }
+                    content = content.push(if is_favorite {
+                        menu_button(iced::widget::text(fl!("unfavorite")))
+                            .on_press(Message::UnFavorite(desktop_info.id.clone()))
                     } else {
-                        info.title.clone()
-                    };
-                    list_col = list_col.push(
-                        menu_button(iced::widget::text(title))
-                            .on_press(Message::Activate(handle.clone())),
-                    );
-                }
-                content = content.push(list_col);
-                content = content.push(divider::horizontal::default());
-            }
-            content = content.push(if is_favorite {
-                menu_button(iced::widget::text(fl!("unfavorite")))
-                    .on_press(Message::UnFavorite(desktop_info.id.clone()))
-            } else {
-                menu_button(iced::widget::text(fl!("favorite")))
-                    .on_press(Message::Favorite(desktop_info.id.clone()))
-            });
+                        menu_button(iced::widget::text(fl!("favorite")))
+                            .on_press(Message::Favorite(desktop_info.id.clone()))
+                    });
 
-            content = match toplevels.len() {
-                0 => content,
-                1 => content.push(
-                    menu_button(iced::widget::text(fl!("quit")))
-                        .on_press(Message::Quit(desktop_info.id.clone())),
-                ),
-                _ => content.push(
-                    menu_button(iced::widget::text(&fl!("quit-all")))
-                        .on_press(Message::Quit(desktop_info.id.clone())),
-                ),
-            };
-            self.core.applet.popup_container(content).into()
+                    content = match toplevels.len() {
+                        0 => content,
+                        1 => content.push(
+                            menu_button(iced::widget::text(fl!("quit")))
+                                .on_press(Message::Quit(desktop_info.id.clone())),
+                        ),
+                        _ => content.push(
+                            menu_button(iced::widget::text(&fl!("quit-all")))
+                                .on_press(Message::Quit(desktop_info.id.clone())),
+                        ),
+                    };
+                    self.core.applet.popup_container(content).into()
+                }
+                PopupType::TopLevelList => {
+                    let mut content = row![]
+                        .padding([8, 12])
+                        .align_items(Alignment::Center)
+                        .spacing(12);
+                    for (handle, info, img) in toplevels {
+                        let title = if info.title.len() > 18 {
+                            format!("{:.15}...", &info.title)
+                        } else {
+                            info.title.clone()
+                        };
+                        content = content.push(toplevel_button(
+                            img.clone(),
+                            &desktop_info.icon,
+                            Message::Activate(handle.clone()),
+                            title,
+                            10.0,
+                        ));
+                    }
+                    self.core.applet.popup_container(content).into()
+                }
+            }
         } else {
             let suggested = self.core.applet.suggested_size();
             iced::widget::row!()
@@ -1332,7 +1476,7 @@ impl CosmicAppList {
         }
         let active_workspace = self.active_workspace.as_ref().unwrap().clone();
         for toplevel_list in self.active_list.iter().chain(self.favorite_list.iter()) {
-            for (t_handle, t_info) in &toplevel_list.toplevels {
+            for (t_handle, t_info, _) in &toplevel_list.toplevels {
                 if t_info.workspace.contains(&active_workspace)
                     && t_info.state.contains(&State::Activated)
                 {
