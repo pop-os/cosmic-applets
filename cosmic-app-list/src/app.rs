@@ -685,11 +685,27 @@ impl cosmic::Application for CosmicAppList {
                         width: width as i32,
                         height: height as i32,
                     };
-                    popup_settings.positioner.size_limits = Limits::NONE
-                        .max_width(56.0 + (TOPLEVEL_BUTTON_WIDTH + 12.0) * 7.0)
-                        .min_width(30.0)
-                        .min_height(100.0)
-                        .max_height(16.0 + TOPLEVEL_BUTTON_HEIGHT);
+                    let max_windows = 7.0;
+                    let window_spacing = 8.0;
+                    popup_settings.positioner.size_limits = match self.core.applet.anchor {
+                        PanelAnchor::Right | PanelAnchor::Left => Limits::NONE
+                            .min_width(100.0)
+                            .min_height(30.0)
+                            .max_width(window_spacing * 2.0 + TOPLEVEL_BUTTON_WIDTH)
+                            .max_height(
+                                TOPLEVEL_BUTTON_HEIGHT * max_windows
+                                    + window_spacing * (max_windows + 1.0),
+                            ),
+                        PanelAnchor::Bottom | PanelAnchor::Top => Limits::NONE
+                            .min_width(30.0)
+                            .min_height(100.0)
+                            .max_width(
+                                TOPLEVEL_BUTTON_WIDTH * max_windows
+                                    + window_spacing * (max_windows + 1.0),
+                            )
+                            .max_height(window_spacing * 2.0 + TOPLEVEL_BUTTON_HEIGHT),
+                    };
+
                     return get_popup(popup_settings);
                 }
             }
@@ -1421,27 +1437,48 @@ impl cosmic::Application for CosmicAppList {
                     };
                     self.core.applet.popup_container(content).into()
                 }
-                PopupType::TopLevelList => {
-                    let mut content = row![]
-                        .padding([8, 12])
-                        .align_items(Alignment::Center)
-                        .spacing(12);
-                    for (handle, info, img) in toplevels {
-                        let title = if info.title.len() > 26 {
-                            format!("{:.23}...", &info.title)
-                        } else {
-                            info.title.clone()
-                        };
-                        content = content.push(toplevel_button(
-                            img.clone(),
-                            &desktop_info.icon,
-                            Message::Toggle(handle.clone()),
-                            title,
-                            10.0,
-                        ));
+                PopupType::TopLevelList => match self.core.applet.anchor {
+                    PanelAnchor::Left | PanelAnchor::Right => {
+                        let mut content = column![]
+                            .padding(8)
+                            .align_items(Alignment::Center)
+                            .spacing(8);
+                        for (handle, info, img) in toplevels {
+                            let title = if info.title.len() > 26 {
+                                format!("{:.23}...", &info.title)
+                            } else {
+                                info.title.clone()
+                            };
+                            content = content.push(toplevel_button(
+                                img.clone(),
+                                &desktop_info.icon,
+                                Message::Toggle(handle.clone()),
+                                title,
+                                10.0,
+                            ));
+                        }
+                        self.core.applet.popup_container(content).into()
                     }
-                    self.core.applet.popup_container(content).into()
-                }
+                    PanelAnchor::Bottom | PanelAnchor::Top => {
+                        let mut content =
+                            row![].padding(8).align_items(Alignment::Center).spacing(8);
+                        for (handle, info, img) in toplevels {
+                            let title = if info.title.len() > 26 {
+                                format!("{:.23}...", &info.title)
+                            } else {
+                                info.title.clone()
+                            };
+                            content = content.push(toplevel_button(
+                                img.clone(),
+                                &desktop_info.icon,
+                                Message::Toggle(handle.clone()),
+                                title,
+                                10.0,
+                            ));
+                        }
+                        self.core.applet.popup_container(content).into()
+                    }
+                },
             }
         } else {
             let suggested = self.core.applet.suggested_size();
