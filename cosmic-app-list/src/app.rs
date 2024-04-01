@@ -147,7 +147,6 @@ impl DockItem {
         applet: &Context,
         rectangle_tracker: Option<&RectangleTracker<u32>>,
         interaction_enabled: bool,
-        focused: bool,
         gpus: Option<&[Gpu]>,
     ) -> Element<'_, Message> {
         let Self {
@@ -272,14 +271,7 @@ impl DockItem {
                                 .clone()
                                 .map(|exec| Message::Exec(exec, gpu_idx))
                         } else if toplevels.len() == 1 {
-                            toplevels.first().map(|t| {
-                                if focused {
-                                    // FIXME: Change to Message::Minimize once focus tracking is fixed
-                                    Message::Activate(t.0.clone())
-                                } else {
-                                    Message::Activate(t.0.clone())
-                                }
-                            })
+                            toplevels.first().map(|t| Message::Toggle(t.0.clone()))
                         } else {
                             Some(Message::TopLevelListPopup(desktop_info.id.clone()))
                         })
@@ -347,7 +339,7 @@ enum Message {
     CloseRequested(window::Id),
     ClosePopup,
     Activate(ZcosmicToplevelHandleV1),
-    Minimize(ZcosmicToplevelHandleV1),
+    Toggle(ZcosmicToplevelHandleV1),
     Exec(String, Option<usize>),
     Quit(String),
     Ignore,
@@ -698,9 +690,18 @@ impl cosmic::Application for CosmicAppList {
                     return destroy_popup(p.0);
                 }
             }
-            Message::Minimize(handle) => {
+            Message::Toggle(handle) => {
                 if let Some(tx) = self.wayland_sender.as_ref() {
-                    let _ = tx.send(WaylandRequest::Toplevel(ToplevelRequest::Minimize(handle)));
+                    let _ = tx.send(WaylandRequest::Toplevel(
+                        if self
+                            .currently_active_toplevel()
+                            .is_some_and(|x| x == handle)
+                        {
+                            ToplevelRequest::Minimize(handle)
+                        } else {
+                            ToplevelRequest::Activate(handle)
+                        },
+                    ));
                 }
                 if let Some(p) = self.popup.take() {
                     return destroy_popup(p.0);
@@ -1110,7 +1111,6 @@ impl cosmic::Application for CosmicAppList {
     }
 
     fn view(&self) -> Element<Message> {
-        let active_toplevel = self.currently_active_toplevel();
         let is_horizontal = match self.core.applet.anchor {
             PanelAnchor::Top | PanelAnchor::Bottom => true,
             PanelAnchor::Left | PanelAnchor::Right => false,
@@ -1123,9 +1123,6 @@ impl cosmic::Application for CosmicAppList {
                     &self.core.applet,
                     self.rectangle_tracker.as_ref(),
                     self.popup.is_none(),
-                    active_toplevel
-                        .as_ref()
-                        .is_some_and(|x| dock_item.toplevels.iter().any(|y| y.0 == *x)),
                     self.gpus.as_deref(),
                 )
             })
@@ -1138,15 +1135,7 @@ impl cosmic::Application for CosmicAppList {
         {
             favorites.insert(
                 index,
-                item.as_icon(
-                    &self.core.applet,
-                    None,
-                    false,
-                    active_toplevel
-                        .as_ref()
-                        .is_some_and(|x| item.toplevels.iter().any(|y| y.0 == *x)),
-                    self.gpus.as_deref(),
-                ),
+                item.as_icon(&self.core.applet, None, false, self.gpus.as_deref()),
             );
         } else if self.is_listening_for_dnd && self.favorite_list.is_empty() {
             // show star indicating favorite_list is drag target
@@ -1168,9 +1157,6 @@ impl cosmic::Application for CosmicAppList {
                     &self.core.applet,
                     self.rectangle_tracker.as_ref(),
                     self.popup.is_none(),
-                    active_toplevel
-                        .as_ref()
-                        .is_some_and(|x| dock_item.toplevels.iter().any(|y| y.0 == *x)),
                     self.gpus.as_deref(),
                 )
             })
@@ -1402,7 +1388,7 @@ impl cosmic::Application for CosmicAppList {
                         content = content.push(toplevel_button(
                             img.clone(),
                             &desktop_info.icon,
-                            Message::Activate(handle.clone()),
+                            Message::Toggle(handle.clone()),
                             title,
                             10.0,
                         ));
