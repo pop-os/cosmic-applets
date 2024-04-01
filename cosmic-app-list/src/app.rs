@@ -41,9 +41,9 @@ use cosmic::iced_sctk::commands::data_device::request_dnd_data;
 use cosmic::iced_sctk::commands::data_device::set_actions;
 use cosmic::iced_sctk::commands::data_device::start_drag;
 use cosmic::iced_style::application;
-use cosmic::iced_widget::button;
 use cosmic::theme::Button;
 use cosmic::theme::Container;
+use cosmic::widget::button;
 use cosmic::widget::divider;
 use cosmic::widget::rectangle_tracker::rectangle_tracker_subscription;
 use cosmic::widget::rectangle_tracker::RectangleTracker;
@@ -53,10 +53,9 @@ use cosmic::{
     Command,
 };
 use cosmic::{
-    iced::{alignment::Vertical, Limits},
-    iced_core::{layout, overlay, widget::Tree, Layout, Size, Vector},
+    iced::Limits,
     iced_widget::text,
-    widget::{image::Handle, Image, Widget},
+    widget::{image::Handle, Image},
 };
 use cosmic::{Element, Theme};
 use cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::State;
@@ -439,6 +438,7 @@ where
     Msg: 'static + Clone,
 {
     let border = 1.0;
+    let is_focused = false; // We could optionally make this dependent on currently focused toplevel
     cosmic::widget::Button::new(
         container(
             column![
@@ -491,7 +491,54 @@ where
         .width(Length::Fill),
     )
     .on_press(on_press)
-    .style(Button::AppletMenu)
+    .style(Button::Custom {
+        active: Box::new(move |focused, theme| {
+            let focused = is_focused || focused;
+            let rad_s = [8.0, 8.0, 8.0, 8.0];
+            let a = if focused {
+                button::StyleSheet::hovered(theme, focused, focused, &Button::AppletMenu)
+            } else {
+                button::StyleSheet::active(theme, focused, focused, &Button::AppletMenu)
+            };
+            button::Appearance {
+                border_radius: rad_s.into(),
+                outline_width: 0.0,
+                ..a
+            }
+        }),
+        hovered: Box::new(move |focused, theme| {
+            let focused = is_focused || focused;
+            let rad_s = theme.cosmic().corner_radii.radius_s;
+
+            let text = button::StyleSheet::hovered(theme, focused, focused, &Button::AppletMenu);
+            button::Appearance {
+                border_radius: rad_s.into(),
+                outline_width: 0.0,
+                ..text
+            }
+        }),
+        disabled: Box::new(|theme| {
+            let rad_s = theme.cosmic().corner_radii.radius_s;
+
+            let text = button::StyleSheet::disabled(theme, &Button::AppletMenu);
+            button::Appearance {
+                border_radius: rad_s.into(),
+                outline_width: 0.0,
+                ..text
+            }
+        }),
+        pressed: Box::new(move |focused, theme| {
+            let focused = is_focused || focused;
+            let rad_s = theme.cosmic().corner_radii.radius_s;
+
+            let text = button::StyleSheet::pressed(theme, focused, focused, &Button::AppletMenu);
+            button::Appearance {
+                border_radius: rad_s.into(),
+                outline_width: 0.0,
+                ..text
+            }
+        }),
+    })
     .width(Length::Fixed(TOPLEVEL_BUTTON_WIDTH))
     .height(Length::Fixed(TOPLEVEL_BUTTON_HEIGHT))
 }
