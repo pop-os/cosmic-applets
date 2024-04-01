@@ -1380,8 +1380,8 @@ impl cosmic::Application for CosmicAppList {
                         .align_items(Alignment::Center)
                         .spacing(12);
                     for (handle, info, img) in toplevels {
-                        let title = if info.title.len() > 18 {
-                            format!("{:.15}...", &info.title)
+                        let title = if info.title.len() > 26 {
+                            format!("{:.23}...", &info.title)
                         } else {
                             info.title.clone()
                         };
