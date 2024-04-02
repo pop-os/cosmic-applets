@@ -633,6 +633,11 @@ impl PulseServer {
     fn set_sink_volume_by_name(&mut self, name: &str, volume: &ChannelVolumes) {
         let op = self
             .introspector
+            .set_sink_mute_by_name(name, volume.is_muted(), None);
+        self.wait_for_result(op).ok();
+
+        let op = self
+            .introspector
             .set_sink_volume_by_name(name, volume, None);
         self.wait_for_result(op).ok();
     }
@@ -640,8 +645,13 @@ impl PulseServer {
     fn set_source_volume_by_name(&mut self, name: &str, volume: &ChannelVolumes) {
         let op = self
             .introspector
+            .set_source_mute_by_name(name, volume.is_muted(), None);
+        let _ = self.wait_for_result(op);
+
+        let op = self
+            .introspector
             .set_source_volume_by_name(name, volume, None);
-        self.wait_for_result(op).ok();
+        let _ = self.wait_for_result(op);
     }
 
     fn get_source_outputs(&mut self, source: u32) -> Vec<u32> {
@@ -654,7 +664,7 @@ impl PulseServer {
                 }
             }
         });
-        self.wait_for_result(op).ok();
+        let _ = self.wait_for_result(op);
         result_ref.replace(Vec::new())
     }
 
@@ -668,7 +678,7 @@ impl PulseServer {
                 }
             }
         });
-        self.wait_for_result(op).ok();
+        let _ = self.wait_for_result(op);
         result_ref.replace(Vec::new())
     }
 
