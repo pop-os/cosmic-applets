@@ -658,6 +658,12 @@ impl cosmic::Application for CosmicAppList {
                     .chain(self.favorite_list.iter())
                     .find(|t| t.desktop_info.id == id)
                 {
+                    for (ref handle, _, _) in &toplevel_group.toplevels {
+                        if let Some(tx) = self.wayland_sender.as_ref() {
+                            let _ = tx.send(WaylandRequest::Screencopy(handle.clone()));
+                        }
+                    }
+
                     let rectangle = match self.rectangles.get(&toplevel_group.id) {
                         Some(r) => r,
                         None => return Command::none(),

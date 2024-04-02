@@ -220,15 +220,13 @@ impl ToplevelInfoHandler for AppData {
         toplevel: &zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1,
     ) {
         if let Some(info) = self.toplevel_info_state.info(toplevel) {
-            // spawn thread for sending the image
-            self.send_image(toplevel.clone());
-
             let _ = self
                 .tx
                 .unbounded_send(WaylandUpdate::Toplevel(ToplevelUpdate::Add(
                     toplevel.clone(),
                     info.clone(),
                 )));
+            self.send_image(toplevel.clone());
         }
     }
 
@@ -239,8 +237,6 @@ impl ToplevelInfoHandler for AppData {
         toplevel: &zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1,
     ) {
         if let Some(info) = self.toplevel_info_state.info(toplevel) {
-            // spawn thread for sending the image
-            self.send_image(toplevel.clone());
             let _ = self
                 .tx
                 .unbounded_send(WaylandUpdate::Toplevel(ToplevelUpdate::Update(
@@ -615,6 +611,9 @@ pub(crate) fn wayland_handler(
     if handle
         .insert_source(rx, |event, _, state| match event {
             calloop::channel::Event::Msg(req) => match req {
+                WaylandRequest::Screencopy(handle) => {
+                    state.send_image(handle.clone());
+                }
                 WaylandRequest::Toplevel(req) => match req {
                     ToplevelRequest::Activate(handle) => {
                         if let Some(seat) = state.seat_state.seats().next() {
