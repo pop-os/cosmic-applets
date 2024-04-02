@@ -1,5 +1,6 @@
 use cosmic::{
     app::{self, Command},
+    applet::cosmic_panel_config::PanelAnchor,
     iced::{
         self,
         wayland::{
@@ -172,8 +173,7 @@ impl cosmic::Application for App {
     }
 
     fn view(&self) -> cosmic::Element<'_, Msg> {
-        // XXX connect open event
-        iced::widget::row(self.menus.iter().map(|(id, menu)| {
+        let children = self.menus.iter().map(|(id, menu)| {
             match menu.icon_pixmap() {
                 Some(icon) if menu.icon_name() == "" => {
                     self.core.applet.icon_button_from_handle(icon.clone())
@@ -182,8 +182,15 @@ impl cosmic::Application for App {
             }
             .on_press(Msg::TogglePopup(*id))
             .into()
-        }))
-        .into()
+        });
+        if matches!(
+            self.core.applet.anchor,
+            PanelAnchor::Left | PanelAnchor::Right
+        ) {
+            iced::widget::column(children).into()
+        } else {
+            iced::widget::row(children).into()
+        }
     }
 
     fn view_window(&self, _surface: window::Id) -> cosmic::Element<'_, Msg> {
