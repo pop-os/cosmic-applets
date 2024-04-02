@@ -58,14 +58,14 @@ struct AppData {
     tx: UnboundedSender<WaylandUpdate>,
     conn: Connection,
     queue_handle: QueueHandle<Self>,
-    registry_state: RegistryState,
-    activation_state: Option<ActivationState>,
+    workspace_state: WorkspaceState,
     toplevel_info_state: ToplevelInfoState,
     toplevel_manager_state: ToplevelManagerState,
-    seat_state: SeatState,
-    workspace_state: WorkspaceState,
-    shm_state: Shm,
     screencopy_state: ScreencopyState,
+    registry_state: RegistryState,
+    seat_state: SeatState,
+    shm_state: Shm,
+    activation_state: Option<ActivationState>,
     output_state: OutputState,
 }
 
@@ -671,23 +671,22 @@ pub(crate) fn wayland_handler(
         return;
     }
     let registry_state = RegistryState::new(&globals);
-    let screencopy_state = ScreencopyState::new(&globals, &qh);
-    let shm_state = Shm::bind(&globals, &qh).expect("Failed to get shm state");
+    let workspace_state = WorkspaceState::new(&registry_state, &qh); // Create before toplevel info state
 
     let mut app_data = AppData {
         exit: false,
         tx,
         conn,
         queue_handle: qh.clone(),
-        activation_state: ActivationState::bind::<AppData>(&globals, &qh).ok(),
-        seat_state: SeatState::new(&globals, &qh),
+        workspace_state,
         toplevel_info_state: ToplevelInfoState::new(&registry_state, &qh),
         toplevel_manager_state: ToplevelManagerState::new(&registry_state, &qh),
-        output_state: OutputState::new(&globals, &qh),
-        workspace_state: WorkspaceState::new(&registry_state, &qh),
-        shm_state,
-        screencopy_state,
+        screencopy_state: ScreencopyState::new(&globals, &qh),
         registry_state,
+        seat_state: SeatState::new(&globals, &qh),
+        shm_state: Shm::bind(&globals, &qh).unwrap(),
+        activation_state: ActivationState::bind::<AppData>(&globals, &qh).ok(),
+        output_state: OutputState::new(&globals, &qh),
     };
 
     loop {
@@ -698,14 +697,14 @@ pub(crate) fn wayland_handler(
     }
 }
 
-sctk::delegate_shm!(AppData);
 sctk::delegate_seat!(AppData);
 sctk::delegate_registry!(AppData);
+sctk::delegate_shm!(AppData);
 cctk::delegate_toplevel_info!(AppData);
+cctk::delegate_workspace!(AppData);
 cctk::delegate_toplevel_manager!(AppData);
 cctk::delegate_screencopy!(AppData, session: [SessionData], frame: [FrameData]);
 
 sctk::delegate_activation!(AppData, ExecRequestData);
 
 sctk::delegate_output!(AppData);
-cctk::delegate_workspace!(AppData);

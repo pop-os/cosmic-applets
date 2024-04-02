@@ -147,6 +147,7 @@ impl DockItem {
         rectangle_tracker: Option<&RectangleTracker<u32>>,
         interaction_enabled: bool,
         gpus: Option<&[Gpu]>,
+        is_focused: bool,
     ) -> Element<'_, Message> {
         let Self {
             toplevels,
@@ -250,7 +251,8 @@ impl DockItem {
             PanelAnchor::Bottom => cosmic::widget::button(icon_wrapper)
                 .style(Button::Text)
                 .padding([0, 5]),
-        };
+        }
+        .selected(is_focused);
 
         let icon_button = if interaction_enabled {
             dnd_source(
@@ -433,12 +435,12 @@ pub fn toplevel_button<'a, Msg>(
     on_press: Msg,
     title: String,
     text_size: f32,
+    is_focused: bool,
 ) -> cosmic::widget::Button<'a, Msg, cosmic::Theme, cosmic::Renderer>
 where
     Msg: 'static + Clone,
 {
     let border = 1.0;
-    let is_focused = false; // We could optionally make this dependent on currently focused toplevel
     cosmic::widget::Button::new(
         container(
             column![
@@ -541,6 +543,7 @@ where
     })
     .width(Length::Fixed(TOPLEVEL_BUTTON_WIDTH))
     .height(Length::Fixed(TOPLEVEL_BUTTON_HEIGHT))
+    .selected(is_focused)
 }
 
 pub fn menu_control_padding() -> Padding {
@@ -1174,6 +1177,7 @@ impl cosmic::Application for CosmicAppList {
     }
 
     fn view(&self) -> Element<Message> {
+        let focused_item = self.currently_active_toplevel();
         let is_horizontal = match self.core.applet.anchor {
             PanelAnchor::Top | PanelAnchor::Bottom => true,
             PanelAnchor::Left | PanelAnchor::Right => false,
@@ -1187,6 +1191,9 @@ impl cosmic::Application for CosmicAppList {
                     self.rectangle_tracker.as_ref(),
                     self.popup.is_none(),
                     self.gpus.as_deref(),
+                    focused_item
+                        .as_ref()
+                        .is_some_and(|x| dock_item.toplevels.iter().any(|y| *x == y.0)),
                 )
             })
             .collect();
@@ -1198,7 +1205,15 @@ impl cosmic::Application for CosmicAppList {
         {
             favorites.insert(
                 index,
-                item.as_icon(&self.core.applet, None, false, self.gpus.as_deref()),
+                item.as_icon(
+                    &self.core.applet,
+                    None,
+                    false,
+                    self.gpus.as_deref(),
+                    focused_item
+                        .as_ref()
+                        .is_some_and(|x| item.toplevels.iter().any(|y| *x == y.0)),
+                ),
             );
         } else if self.is_listening_for_dnd && self.favorite_list.is_empty() {
             // show star indicating favorite_list is drag target
@@ -1221,6 +1236,9 @@ impl cosmic::Application for CosmicAppList {
                     self.rectangle_tracker.as_ref(),
                     self.popup.is_none(),
                     self.gpus.as_deref(),
+                    focused_item
+                        .as_ref()
+                        .is_some_and(|x| dock_item.toplevels.iter().any(|y| *x == y.0)),
                 )
             })
             .collect();
@@ -1455,6 +1473,8 @@ impl cosmic::Application for CosmicAppList {
                                 Message::Toggle(handle.clone()),
                                 title,
                                 10.0,
+                                self.currently_active_toplevel()
+                                    .is_some_and(|x| x == handle.clone()),
                             ));
                         }
                         self.core.applet.popup_container(content).into()
@@ -1474,6 +1494,8 @@ impl cosmic::Application for CosmicAppList {
                                 Message::Toggle(handle.clone()),
                                 title,
                                 10.0,
+                                self.currently_active_toplevel()
+                                    .is_some_and(|x| x == handle.clone()),
                             ));
                         }
                         self.core.applet.popup_container(content).into()
