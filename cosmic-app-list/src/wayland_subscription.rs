@@ -128,6 +128,7 @@ pub enum WaylandRequest {
         exec: String,
         gpu_idx: Option<usize>,
     },
+    Screencopy(ZcosmicToplevelHandleV1),
 }
 
 #[derive(Debug, Clone)]
