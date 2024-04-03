@@ -250,7 +250,8 @@ impl DockItem {
                 .style(Button::Text)
                 .padding([0, 5]),
         }
-        .selected(is_focused);
+        .selected(is_focused)
+        .style(app_list_icon_style(is_focused));
 
         let icon_button = if interaction_enabled {
             dnd_source(
@@ -479,23 +480,32 @@ where
         .width(Length::Fill),
     )
     .on_press(on_press)
-    .style(Button::Custom {
+    .style(window_menu_style(is_focused))
+    .width(Length::Fixed(TOPLEVEL_BUTTON_WIDTH))
+    .height(Length::Fixed(TOPLEVEL_BUTTON_HEIGHT))
+    .selected(is_focused)
+}
+
+fn window_menu_style(selected: bool) -> cosmic::theme::Button {
+    Button::Custom {
         active: Box::new(move |focused, theme| {
-            let focused = is_focused || focused;
-            let rad_s = [8.0, 8.0, 8.0, 8.0];
-            let a = if focused {
-                button::StyleSheet::hovered(theme, focused, focused, &Button::AppletMenu)
-            } else {
-                button::StyleSheet::active(theme, focused, focused, &Button::AppletMenu)
-            };
+            let a = button::StyleSheet::active(theme, focused, selected, &Button::AppletMenu);
+            let rad_s = theme.cosmic().corner_radii.radius_s;
             button::Appearance {
+                background: if selected {
+                    Some(Background::Color(
+                        theme.cosmic().icon_button.selected_state_color().into(),
+                    ))
+                } else {
+                    a.background
+                },
                 border_radius: rad_s.into(),
                 outline_width: 0.0,
                 ..a
             }
         }),
         hovered: Box::new(move |focused, theme| {
-            let focused = is_focused || focused;
+            let focused = selected || focused;
             let rad_s = theme.cosmic().corner_radii.radius_s;
 
             let text = button::StyleSheet::hovered(theme, focused, focused, &Button::AppletMenu);
@@ -516,7 +526,7 @@ where
             }
         }),
         pressed: Box::new(move |focused, theme| {
-            let focused = is_focused || focused;
+            let focused = selected || focused;
             let rad_s = theme.cosmic().corner_radii.radius_s;
 
             let text = button::StyleSheet::pressed(theme, focused, focused, &Button::AppletMenu);
@@ -526,10 +536,32 @@ where
                 ..text
             }
         }),
-    })
-    .width(Length::Fixed(TOPLEVEL_BUTTON_WIDTH))
-    .height(Length::Fixed(TOPLEVEL_BUTTON_HEIGHT))
-    .selected(is_focused)
+    }
+}
+
+fn app_list_icon_style(selected: bool) -> cosmic::theme::Button {
+    Button::Custom {
+        active: Box::new(move |focused, theme| {
+            let a = button::StyleSheet::active(theme, focused, selected, &Button::AppletIcon);
+            button::Appearance {
+                background: if selected {
+                    Some(Background::Color(
+                        theme.cosmic().icon_button.selected_state_color().into(),
+                    ))
+                } else {
+                    a.background
+                },
+                ..a
+            }
+        }),
+        hovered: Box::new(move |focused, theme| {
+            button::StyleSheet::hovered(theme, focused, selected, &Button::AppletIcon)
+        }),
+        disabled: Box::new(|theme| button::StyleSheet::disabled(theme, &Button::AppletIcon)),
+        pressed: Box::new(move |focused, theme| {
+            button::StyleSheet::pressed(theme, focused, selected, &Button::AppletIcon)
+        }),
+    }
 }
 
 pub fn menu_control_padding() -> Padding {
@@ -751,10 +783,7 @@ impl cosmic::Application for CosmicAppList {
             Message::Toggle(handle) => {
                 if let Some(tx) = self.wayland_sender.as_ref() {
                     let _ = tx.send(WaylandRequest::Toplevel(
-                        if self
-                            .currently_active_toplevel()
-                            .is_some_and(|x| x == handle)
-                        {
+                        if self.currently_active_toplevel().contains(&handle) {
                             ToplevelRequest::Minimize(handle)
                         } else {
                             ToplevelRequest::Activate(handle)
@@ -1180,9 +1209,10 @@ impl cosmic::Application for CosmicAppList {
                     self.rectangle_tracker.as_ref(),
                     self.popup.is_none(),
                     self.gpus.as_deref(),
-                    focused_item
-                        .as_ref()
-                        .is_some_and(|x| dock_item.toplevels.iter().any(|y| *x == y.0)),
+                    dock_item
+                        .toplevels
+                        .iter()
+                        .any(|y| focused_item.contains(&y.0)),
                 )
             })
             .collect();
@@ -1199,9 +1229,7 @@ impl cosmic::Application for CosmicAppList {
                     None,
                     false,
                     self.gpus.as_deref(),
-                    focused_item
-                        .as_ref()
-                        .is_some_and(|x| item.toplevels.iter().any(|y| *x == y.0)),
+                    item.toplevels.iter().any(|y| focused_item.contains(&y.0)),
                 ),
             );
         } else if self.is_listening_for_dnd && self.favorite_list.is_empty() {
@@ -1225,9 +1253,10 @@ impl cosmic::Application for CosmicAppList {
                     self.rectangle_tracker.as_ref(),
                     self.popup.is_none(),
                     self.gpus.as_deref(),
-                    focused_item
-                        .as_ref()
-                        .is_some_and(|x| dock_item.toplevels.iter().any(|y| *x == y.0)),
+                    dock_item
+                        .toplevels
+                        .iter()
+                        .any(|y| focused_item.contains(&y.0)),
                 )
             })
             .collect();
@@ -1461,8 +1490,7 @@ impl cosmic::Application for CosmicAppList {
                                 Message::Toggle(handle.clone()),
                                 title,
                                 10.0,
-                                self.currently_active_toplevel()
-                                    .is_some_and(|x| x == handle.clone()),
+                                self.currently_active_toplevel().contains(&handle),
                             ));
                         }
                         self.core.applet.popup_container(content).into()
@@ -1481,8 +1509,7 @@ impl cosmic::Application for CosmicAppList {
                                 Message::Toggle(handle.clone()),
                                 title,
                                 10.0,
-                                self.currently_active_toplevel()
-                                    .is_some_and(|x| x == handle.clone()),
+                                self.currently_active_toplevel().contains(&handle),
                             ));
                         }
                         self.core.applet.popup_container(content).into()
@@ -1555,21 +1582,23 @@ impl cosmic::Application for CosmicAppList {
 }
 
 impl CosmicAppList {
-    fn currently_active_toplevel(&self) -> Option<ZcosmicToplevelHandleV1> {
+    fn currently_active_toplevel(&self) -> Vec<ZcosmicToplevelHandleV1> {
         if self.active_workspace.is_none() {
-            return None;
+            println!("No active workspace?");
+            return Vec::new();
         }
+        let mut focused_toplevels: Vec<ZcosmicToplevelHandleV1> = Vec::new();
         let active_workspace = self.active_workspace.as_ref().unwrap().clone();
         for toplevel_list in self.active_list.iter().chain(self.favorite_list.iter()) {
             for (t_handle, t_info, _) in &toplevel_list.toplevels {
                 if t_info.workspace.contains(&active_workspace)
                     && t_info.state.contains(&State::Activated)
                 {
-                    return Some(t_handle.clone());
+                    focused_toplevels.push(t_handle.clone());
                 }
             }
         }
-        None
+        focused_toplevels
     }
 }
 
