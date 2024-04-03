@@ -8,13 +8,11 @@ use crate::wayland_subscription::ToplevelUpdate;
 use crate::wayland_subscription::WaylandImage;
 use crate::wayland_subscription::WaylandRequest;
 use crate::wayland_subscription::WaylandUpdate;
-use crate::wayland_subscription::WorkspaceUpdate;
 use cctk::sctk::reexports::calloop::channel::Sender;
 use cctk::toplevel_info::ToplevelInfo;
 use cctk::wayland_client::protocol::wl_data_device_manager::DndAction;
 use cctk::wayland_client::protocol::wl_seat::WlSeat;
 use cosmic::cosmic_config::{Config, CosmicConfigEntry};
-use cosmic::desktop::IconSource;
 use cosmic::desktop::{
     app_id_or_fallback_matches, load_applications_for_app_ids, DesktopEntryData,
 };
@@ -1064,12 +1062,9 @@ impl cosmic::Application for CosmicAppList {
                             }
                         }
                     },
-                    WaylandUpdate::Workspace(event) => match event {
-                        WorkspaceUpdate::Enter(handle) => {
-                            self.active_workspace = Some(handle);
-                        }
-                        _ => {}
-                    },
+                    WaylandUpdate::Workspace(handle) => {
+                        self.active_workspace = Some(handle);
+                    }
                     WaylandUpdate::ActivationToken {
                         token,
                         exec,
@@ -1370,7 +1365,7 @@ impl cosmic::Application for CosmicAppList {
                         .config
                         .favorites
                         .iter()
-                        .any(|x| app_id_or_fallback_matches(&x, desktop_info));
+                        .any(|x| app_id_or_fallback_matches(x, desktop_info));
 
                     let mut content = column![container(
                         iced::widget::text(&desktop_info.name)
