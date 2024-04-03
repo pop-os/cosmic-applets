@@ -12,6 +12,8 @@ use cctk::sctk::reexports::calloop::channel::Sender;
 use cctk::toplevel_info::ToplevelInfo;
 use cctk::wayland_client::protocol::wl_data_device_manager::DndAction;
 use cctk::wayland_client::protocol::wl_seat::WlSeat;
+use cosmic::applet::cosmic_panel_config::PanelSize;
+use cosmic::applet::Size;
 use cosmic::cosmic_config::{Config, CosmicConfigEntry};
 use cosmic::desktop::{
     app_id_or_fallback_matches, load_applications_for_app_ids, DesktopEntryData,
@@ -154,12 +156,19 @@ impl DockItem {
             ..
         } = self;
 
-        let cosmic_icon = desktop_info
-            .icon
-            .as_cosmic_icon()
-            .size(applet.suggested_size().0 + 6);
+        let (app_icon_size_modifier, dot_radius, p_padding) = match applet.size {
+            Size::PanelSize(PanelSize::XL) => (10, 2.0, 5),
+            Size::PanelSize(PanelSize::L) => (10, 2.0, 5),
+            Size::PanelSize(PanelSize::M) => (10, 2.0, 5),
+            Size::PanelSize(PanelSize::S) => (16, 1.0, 3),
+            Size::PanelSize(PanelSize::XS) => (8, 1.0, 3),
+            Size::Hardcoded(_) => (10, 2.0, 5),
+        };
 
-        let dot_radius = 2;
+        let app_icon_size = applet.suggested_size().0 + app_icon_size_modifier;
+
+        let cosmic_icon = desktop_info.icon.as_cosmic_icon().size(app_icon_size);
+
         let dot_spacer = (0..1)
             .map(|_| {
                 container(vertical_space(Length::Fixed(0.0)))
@@ -239,16 +248,16 @@ impl DockItem {
         let icon_button = match applet.anchor {
             PanelAnchor::Left => cosmic::widget::button(icon_wrapper)
                 .style(Button::Text)
-                .padding([5, 0]),
+                .padding([p_padding, 0]),
             PanelAnchor::Right => cosmic::widget::button(icon_wrapper)
                 .style(Button::Text)
-                .padding([5, 0]),
+                .padding([p_padding, 0]),
             PanelAnchor::Top => cosmic::widget::button(icon_wrapper)
                 .style(Button::Text)
-                .padding([0, 5]),
+                .padding([0, p_padding]),
             PanelAnchor::Bottom => cosmic::widget::button(icon_wrapper)
                 .style(Button::Text)
-                .padding([0, 5]),
+                .padding([0, p_padding]),
         }
         .selected(is_focused)
         .style(app_list_icon_style(is_focused));
