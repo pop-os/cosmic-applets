@@ -390,7 +390,6 @@ struct PulseServer {
     mainloop: Rc<RefCell<Mainloop>>,
     context: Rc<RefCell<Context>>,
     introspector: Introspector,
-    last_playback: Instant,
 }
 
 #[derive(Clone, Debug)]
@@ -437,7 +436,6 @@ impl PulseServer {
             mainloop,
             context,
             introspector,
-            last_playback: Instant::now(),
         })
     }
 
@@ -637,12 +635,6 @@ impl PulseServer {
             .introspector
             .set_sink_volume_by_name(name, volume, None);
         self.wait_for_result(op).ok();
-
-        let now = Instant::now();
-        if now.duration_since(self.last_playback) > Duration::from_millis(250) {
-            self.last_playback = now;
-            crate::pipewire::play_audio_volume_change();
-        }
     }
 
     fn set_source_volume_by_name(&mut self, name: &str, volume: &ChannelVolumes) {

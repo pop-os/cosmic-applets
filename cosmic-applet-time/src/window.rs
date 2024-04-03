@@ -17,6 +17,7 @@ use cosmic::{
 
 use chrono::{DateTime, Datelike, DurationRound, Local, Months, NaiveDate, Weekday};
 
+use crate::config::TimeAppletConfig;
 use crate::fl;
 use crate::time::get_calender_first;
 use cosmic::applet::token::subscription::{
@@ -39,6 +40,7 @@ pub struct Window {
     rectangle_tracker: Option<RectangleTracker<u32>>,
     rectangle: Rectangle,
     token_tx: Option<calloop::channel::Sender<TokenRequest>>,
+    config: TimeAppletConfig,
 }
 
 #[derive(Debug, Clone)]
@@ -52,6 +54,7 @@ pub enum Message {
     NextMonth,
     OpenDateTimeSettings,
     Token(TokenUpdate),
+    ConfigChanged(TimeAppletConfig),
 }
 
 impl cosmic::Application for Window {
@@ -75,6 +78,7 @@ impl cosmic::Application for Window {
                 rectangle_tracker: None,
                 rectangle: Rectangle::default(),
                 token_tx: None,
+                config: TimeAppletConfig::default(),
             },
             Command::none(),
         )
@@ -97,6 +101,12 @@ impl cosmic::Application for Window {
             rectangle_tracker_subscription(0).map(|e| Message::Rectangle(e.1)),
             time_subscription(self.update_at).map(|_| Message::Tick),
             activation_token_subscription(0).map(Message::Token),
+            self.core.watch_config(Self::APP_ID).map(|u| {
+                for err in u.errors {
+                    tracing::error!(?err, "Error watching config");
+                }
+                Message::ConfigChanged(u.config)
+            }),
         ])
     }
 
@@ -207,6 +217,10 @@ impl cosmic::Application for Window {
                 }
                 Command::none()
             }
+            Message::ConfigChanged(c) => {
+                self.config = c;
+                Command::none()
+            }
         }
     }
 
@@ -216,9 +230,18 @@ impl cosmic::Application for Window {
             PanelAnchor::Top | PanelAnchor::Bottom
         );
         let button = cosmic::widget::button(if horizontal {
+            let format = match (
+                self.config.military_time,
+                self.config.show_date_in_top_panel,
+            ) {
+                (true, true) => "%b %-d %H:%M",
+                (true, false) => "%H:%M",
+                (false, true) => "%b %-d %-I:%M %p",
+                (false, false) => "%-I:%M %p",
+            };
             Element::from(
                 row!(
-                    cosmic::widget::text(self.now.format("%b %-d %-I:%M %p").to_string()).size(14),
+                    cosmic::widget::text(self.now.format(format).to_string()).size(14),
                     container(vertical_space(Length::Fixed(
                         (self.core.applet.suggested_size().1
                             + 2 * self.core.applet.suggested_padding())
@@ -228,23 +251,31 @@ impl cosmic::Application for Window {
                 .align_items(Alignment::Center),
             )
         } else {
-            let mut date_time_col = column![
-                icon::from_name("emoji-recent-symbolic")
-                    .size(self.core.applet.suggested_size().0)
-                    .symbolic(true),
-                text(self.now.format("%I").to_string()).size(14),
-                text(self.now.format("%M").to_string()).size(14),
-                text(self.now.format("%p").to_string()).size(14),
-                vertical_space(Length::Fixed(4.0)),
-                // TODO better calendar icon?
-                icon::from_name("calendar-go-today-symbolic")
-                    .size(self.core.applet.suggested_size().0)
-                    .symbolic(true),
-            ]
+            let mut date_time_col = if self.config.military_time {
+                column![
+                    text(self.now.format("%H").to_string()).size(14),
+                    text(self.now.format("%M").to_string()).size(14),
+                ]
+            } else {
+                column![
+                    text(self.now.format("%I").to_string()).size(14),
+                    text(self.now.format("%M").to_string()).size(14),
+                    text(self.now.format("%p").to_string()).size(14),
+                ]
+            }
             .align_items(Alignment::Center)
             .spacing(4);
-            for d in self.now.format("%x").to_string().split('/') {
-                date_time_col = date_time_col.push(text(d.to_string()).size(14));
+            if self.config.show_date_in_top_panel {
+                date_time_col = date_time_col.push(vertical_space(Length::Fixed(4.0)));
+                date_time_col = date_time_col.push(
+                    // TODO better calendar icon?
+                    icon::from_name("calendar-go-today-symbolic")
+                        .size(self.core.applet.suggested_size().0)
+                        .symbolic(true),
+                );
+                for d in self.now.format("%x").to_string().split('/') {
+                    date_time_col = date_time_col.push(text(d.to_string()).size(14));
+                }
             }
             Element::from(
                 column!(
@@ -288,7 +319,8 @@ impl cosmic::Application for Window {
 
         // Calender
         let mut calender: Grid<'_, Message> = grid().width(Length::Fill);
-        let mut first_day_of_week = Weekday::Sun; // TODO: Configurable
+        let mut first_day_of_week =
+            Weekday::try_from(self.config.first_day_of_week).unwrap_or(Weekday::Sun);
         for _ in 0..7 {
             calender = calender.push(
                 text(first_day_of_week)
