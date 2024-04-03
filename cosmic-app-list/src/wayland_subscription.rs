@@ -99,7 +99,7 @@ pub enum WaylandUpdate {
     Init(calloop::channel::Sender<WaylandRequest>),
     Finished,
     Toplevel(ToplevelUpdate),
-    Workspace(WorkspaceUpdate),
+    Workspace(ZcosmicWorkspaceHandleV1),
     ActivationToken {
         token: Option<String>,
         exec: String,
@@ -113,11 +113,6 @@ pub enum ToplevelUpdate {
     Add(ZcosmicToplevelHandleV1, ToplevelInfo),
     Update(ZcosmicToplevelHandleV1, ToplevelInfo),
     Remove(ZcosmicToplevelHandleV1),
-}
-
-#[derive(Clone, Debug)]
-pub enum WorkspaceUpdate {
-    Enter(ZcosmicWorkspaceHandleV1),
 }
 
 #[derive(Clone, Debug)]
