@@ -279,7 +279,22 @@ impl DockItem {
                         .width(Length::Shrink)
                         .height(Length::Shrink),
                 )
-                .on_right_release(Message::Popup(desktop_info.id.clone())),
+                .on_right_release(Message::Popup(desktop_info.id.clone()))
+                .on_middle_release({
+                    let gpu_idx = gpus.map(|gpus| {
+                        if desktop_info.prefers_dgpu {
+                            gpus.iter().position(|gpu| !gpu.default).unwrap_or(0)
+                        } else {
+                            gpus.iter().position(|gpu| gpu.default).unwrap_or(0)
+                        }
+                    });
+
+                    desktop_info
+                        .exec
+                        .clone()
+                        .map(|exec| Message::Exec(exec, gpu_idx))
+                        .unwrap_or(Message::Popup(desktop_info.id.clone()))
+                }),
             )
             .on_drag(|_| Message::StartDrag(desktop_info.id.clone()))
             .on_cancelled(Message::DragFinished)
