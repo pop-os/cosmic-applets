@@ -168,21 +168,27 @@ impl cosmic::Application for Window {
                 Command::none()
             }
             Message::SelectDay(_day) => {
-                self.date_selected = self.date_selected.with_day(_day).expect("valid naivedate");
+                if let Some(date) = self.date_selected.with_day(_day) {
+                    self.date_selected = date;
+                } else {
+                    tracing::error!("invalid naivedate");
+                }
                 Command::none()
             }
             Message::PreviousMonth => {
-                self.date_selected = self
-                    .date_selected
-                    .checked_sub_months(Months::new(1))
-                    .expect("valid naivedate");
+                if let Some(date) = self.date_selected.checked_sub_months(Months::new(1)) {
+                    self.date_selected = date;
+                } else {
+                    tracing::error!("invalid naivedate");
+                }
                 Command::none()
             }
             Message::NextMonth => {
-                self.date_selected = self
-                    .date_selected
-                    .checked_add_months(Months::new(1))
-                    .expect("valid naivedate");
+                if let Some(date) = self.date_selected.checked_add_months(Months::new(1)) {
+                    self.date_selected = date;
+                } else {
+                    tracing::error!("invalid naivedate");
+                }
                 Command::none()
             }
             Message::OpenDateTimeSettings => {
