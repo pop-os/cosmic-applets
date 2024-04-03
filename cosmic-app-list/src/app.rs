@@ -431,7 +431,6 @@ const TOPLEVEL_BUTTON_HEIGHT: f32 = 130.0;
 
 pub fn toplevel_button<'a, Msg>(
     img: Option<WaylandImage>,
-    icon: &IconSource,
     on_press: Msg,
     title: String,
     text_size: f32,
@@ -456,11 +455,7 @@ where
                         .content_fit(cosmic::iced_core::ContentFit::Contain),
                     )
                 } else {
-                    Element::from(
-                        icon.as_cosmic_icon()
-                            .width(Length::Fill)
-                            .height(Length::Fill),
-                    )
+                    Image::new(Handle::from_pixels(1, 1, vec![0, 0, 0, 255])).into()
                 })
                 .style(Container::Custom(Box::new(move |theme| {
                     container::Appearance {
@@ -1475,7 +1470,6 @@ impl cosmic::Application for CosmicAppList {
                             };
                             content = content.push(toplevel_button(
                                 img.clone(),
-                                &desktop_info.icon,
                                 Message::Toggle(handle.clone()),
                                 title,
                                 10.0,
@@ -1496,7 +1490,6 @@ impl cosmic::Application for CosmicAppList {
                             };
                             content = content.push(toplevel_button(
                                 img.clone(),
-                                &desktop_info.icon,
                                 Message::Toggle(handle.clone()),
                                 title,
                                 10.0,

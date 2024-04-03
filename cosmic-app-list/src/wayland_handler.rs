@@ -226,7 +226,6 @@ impl ToplevelInfoHandler for AppData {
                     toplevel.clone(),
                     info.clone(),
                 )));
-            self.send_image(toplevel.clone());
         }
     }
 
