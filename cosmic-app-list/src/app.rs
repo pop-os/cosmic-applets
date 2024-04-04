@@ -271,7 +271,7 @@ impl DockItem {
                 .on_right_release(Message::Popup(desktop_info.id.clone()))
                 .on_middle_release({
                     launch_on_preferred_gpu(desktop_info, gpus)
-                        .unwrap_or(Message::Popup(desktop_info.id.clone()))
+                        .unwrap_or_else(|| Message::Popup(desktop_info.id.clone()))
                 }),
             )
             .on_drag(|_| Message::StartDrag(desktop_info.id.clone()))
