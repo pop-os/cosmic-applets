@@ -259,18 +259,7 @@ impl DockItem {
                 mouse_area(
                     icon_button
                         .on_press_maybe(if toplevels.is_empty() {
-                            let gpu_idx = gpus.map(|gpus| {
-                                if desktop_info.prefers_dgpu {
-                                    gpus.iter().position(|gpu| !gpu.default).unwrap_or(0)
-                                } else {
-                                    gpus.iter().position(|gpu| gpu.default).unwrap_or(0)
-                                }
-                            });
-
-                            desktop_info
-                                .exec
-                                .clone()
-                                .map(|exec| Message::Exec(exec, gpu_idx))
+                            launch_on_preferred_gpu(desktop_info, gpus)
                         } else if toplevels.len() == 1 {
                             toplevels.first().map(|t| Message::Toggle(t.0.clone()))
                         } else {
@@ -281,18 +270,7 @@ impl DockItem {
                 )
                 .on_right_release(Message::Popup(desktop_info.id.clone()))
                 .on_middle_release({
-                    let gpu_idx = gpus.map(|gpus| {
-                        if desktop_info.prefers_dgpu {
-                            gpus.iter().position(|gpu| !gpu.default).unwrap_or(0)
-                        } else {
-                            gpus.iter().position(|gpu| gpu.default).unwrap_or(0)
-                        }
-                    });
-
-                    desktop_info
-                        .exec
-                        .clone()
-                        .map(|exec| Message::Exec(exec, gpu_idx))
+                    launch_on_preferred_gpu(desktop_info, gpus)
                         .unwrap_or(Message::Popup(desktop_info.id.clone()))
                 }),
             )
@@ -1605,4 +1583,22 @@ impl CosmicAppList {
         }
         None
     }
+}
+
+fn launch_on_preferred_gpu(
+    desktop_info: &DesktopEntryData,
+    gpus: Option<&[Gpu]>,
+) -> Option<Message> {
+    let gpu_idx = gpus.map(|gpus| {
+        if desktop_info.prefers_dgpu {
+            gpus.iter().position(|gpu| !gpu.default).unwrap_or(0)
+        } else {
+            gpus.iter().position(|gpu| gpu.default).unwrap_or(0)
+        }
+    });
+
+    desktop_info
+        .exec
+        .clone()
+        .map(|exec| Message::Exec(exec, gpu_idx))
 }
