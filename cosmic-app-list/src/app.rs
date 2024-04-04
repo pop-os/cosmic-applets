@@ -1589,6 +1589,10 @@ fn launch_on_preferred_gpu(
     desktop_info: &DesktopEntryData,
     gpus: Option<&[Gpu]>,
 ) -> Option<Message> {
+    let Some(exec) = desktop_info.exec.clone() else {
+        return None;
+    };
+
     let gpu_idx = gpus.map(|gpus| {
         if desktop_info.prefers_dgpu {
             gpus.iter().position(|gpu| !gpu.default).unwrap_or(0)
@@ -1597,8 +1601,5 @@ fn launch_on_preferred_gpu(
         }
     });
 
-    desktop_info
-        .exec
-        .clone()
-        .map(|exec| Message::Exec(exec, gpu_idx))
+    Some(Message::Exec(exec, gpu_idx))
 }
