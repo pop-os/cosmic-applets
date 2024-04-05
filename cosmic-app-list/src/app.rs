@@ -8,13 +8,11 @@ use crate::wayland_subscription::ToplevelUpdate;
 use crate::wayland_subscription::WaylandImage;
 use crate::wayland_subscription::WaylandRequest;
 use crate::wayland_subscription::WaylandUpdate;
-use crate::wayland_subscription::WorkspaceUpdate;
 use cctk::sctk::reexports::calloop::channel::Sender;
 use cctk::toplevel_info::ToplevelInfo;
 use cctk::wayland_client::protocol::wl_data_device_manager::DndAction;
 use cctk::wayland_client::protocol::wl_seat::WlSeat;
 use cosmic::cosmic_config::{Config, CosmicConfigEntry};
-use cosmic::desktop::IconSource;
 use cosmic::desktop::{
     app_id_or_fallback_matches, load_applications_for_app_ids, DesktopEntryData,
 };
@@ -259,18 +257,7 @@ impl DockItem {
                 mouse_area(
                     icon_button
                         .on_press_maybe(if toplevels.is_empty() {
-                            let gpu_idx = gpus.map(|gpus| {
-                                if desktop_info.prefers_dgpu {
-                                    gpus.iter().position(|gpu| !gpu.default).unwrap_or(0)
-                                } else {
-                                    gpus.iter().position(|gpu| gpu.default).unwrap_or(0)
-                                }
-                            });
-
-                            desktop_info
-                                .exec
-                                .clone()
-                                .map(|exec| Message::Exec(exec, gpu_idx))
+                            launch_on_preferred_gpu(desktop_info, gpus)
                         } else if toplevels.len() == 1 {
                             toplevels.first().map(|t| Message::Toggle(t.0.clone()))
                         } else {
@@ -279,7 +266,11 @@ impl DockItem {
                         .width(Length::Shrink)
                         .height(Length::Shrink),
                 )
-                .on_right_release(Message::Popup(desktop_info.id.clone())),
+                .on_right_release(Message::Popup(desktop_info.id.clone()))
+                .on_middle_release({
+                    launch_on_preferred_gpu(desktop_info, gpus)
+                        .unwrap_or_else(|| Message::Popup(desktop_info.id.clone()))
+                }),
             )
             .on_drag(|_| Message::StartDrag(desktop_info.id.clone()))
             .on_cancelled(Message::DragFinished)
@@ -431,7 +422,6 @@ const TOPLEVEL_BUTTON_HEIGHT: f32 = 130.0;
 
 pub fn toplevel_button<'a, Msg>(
     img: Option<WaylandImage>,
-    icon: &IconSource,
     on_press: Msg,
     title: String,
     text_size: f32,
@@ -456,11 +446,7 @@ where
                         .content_fit(cosmic::iced_core::ContentFit::Contain),
                     )
                 } else {
-                    Element::from(
-                        icon.as_cosmic_icon()
-                            .width(Length::Fill)
-                            .height(Length::Fill),
-                    )
+                    Image::new(Handle::from_pixels(1, 1, vec![0, 0, 0, 255])).into()
                 })
                 .style(Container::Custom(Box::new(move |theme| {
                     container::Appearance {
@@ -1069,12 +1055,9 @@ impl cosmic::Application for CosmicAppList {
                             }
                         }
                     },
-                    WaylandUpdate::Workspace(event) => match event {
-                        WorkspaceUpdate::Enter(handle) => {
-                            self.active_workspace = Some(handle);
-                        }
-                        _ => {}
-                    },
+                    WaylandUpdate::Workspace(handle) => {
+                        self.active_workspace = Some(handle);
+                    }
                     WaylandUpdate::ActivationToken {
                         token,
                         exec,
@@ -1375,7 +1358,7 @@ impl cosmic::Application for CosmicAppList {
                         .config
                         .favorites
                         .iter()
-                        .any(|x| app_id_or_fallback_matches(&x, desktop_info));
+                        .any(|x| app_id_or_fallback_matches(x, desktop_info));
 
                     let mut content = column![container(
                         iced::widget::text(&desktop_info.name)
@@ -1475,7 +1458,6 @@ impl cosmic::Application for CosmicAppList {
                             };
                             content = content.push(toplevel_button(
                                 img.clone(),
-                                &desktop_info.icon,
                                 Message::Toggle(handle.clone()),
                                 title,
                                 10.0,
@@ -1496,7 +1478,6 @@ impl cosmic::Application for CosmicAppList {
                             };
                             content = content.push(toplevel_button(
                                 img.clone(),
-                                &desktop_info.icon,
                                 Message::Toggle(handle.clone()),
                                 title,
                                 10.0,
@@ -1590,4 +1571,23 @@ impl CosmicAppList {
         }
         None
     }
+}
+
+fn launch_on_preferred_gpu(
+    desktop_info: &DesktopEntryData,
+    gpus: Option<&[Gpu]>,
+) -> Option<Message> {
+    let Some(exec) = desktop_info.exec.clone() else {
+        return None;
+    };
+
+    let gpu_idx = gpus.map(|gpus| {
+        if desktop_info.prefers_dgpu {
+            gpus.iter().position(|gpu| !gpu.default).unwrap_or(0)
+        } else {
+            gpus.iter().position(|gpu| gpu.default).unwrap_or(0)
+        }
+    });
+
+    Some(Message::Exec(exec, gpu_idx))
 }

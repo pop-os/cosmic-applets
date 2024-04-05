@@ -50,7 +50,7 @@ const PLAY: &str = "media-playback-start-symbolic";
 
 pub fn run() -> cosmic::iced::Result {
     localize();
-    cosmic::applet::run::<Audio>(true, ())
+    cosmic::applet::run::<Audio>(false, ())
 }
 
 #[derive(Default)]
@@ -87,11 +87,11 @@ impl Audio {
         let output_volume = VolumeLinear::from(volume).0;
         if volume.is_muted() {
             self.icon_name = "audio-volume-muted-symbolic".to_string();
-        } else if output_volume < 0.25 {
+        } else if output_volume < 0.33 {
             self.icon_name = "audio-volume-low-symbolic".to_string();
-        } else if output_volume < 0.5 {
+        } else if output_volume < 0.66 {
             self.icon_name = "audio-volume-medium-symbolic".to_string();
-        } else if output_volume < 0.75 {
+        } else if output_volume <= 1.00 {
             self.icon_name = "audio-volume-high-symbolic".to_string();
         } else {
             self.icon_name = "audio-volume-overamplified-symbolic".to_string();
@@ -111,7 +111,7 @@ impl Audio {
 
         let volume = input.volume.avg();
         let input_volume = VolumeLinear::from(volume).0;
-        if volume.is_muted() {
+        if volume.is_muted() || input_volume == 0.0 {
             self.input_icon_name = "microphone-sensitivity-muted-symbolic".to_string();
         } else if input_volume < 0.33 {
             self.input_icon_name = "microphone-sensitivity-low-symbolic".to_string();

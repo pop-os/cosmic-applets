@@ -1,5 +1,5 @@
 use crate::wayland_subscription::{
-    ToplevelRequest, ToplevelUpdate, WaylandImage, WaylandRequest, WaylandUpdate, WorkspaceUpdate,
+    ToplevelRequest, ToplevelUpdate, WaylandImage, WaylandRequest, WaylandUpdate,
 };
 use std::{
     os::{
@@ -114,11 +114,9 @@ impl WorkspaceHandler for AppData {
                     .state
                     .contains(&WEnum::Value(WorkspaceUpdateState::Active))
                 {
-                    let _ =
-                        self.tx
-                            .unbounded_send(WaylandUpdate::Workspace(WorkspaceUpdate::Enter(
-                                workspace.handle.clone(),
-                            )));
+                    let _ = self
+                        .tx
+                        .unbounded_send(WaylandUpdate::Workspace(workspace.handle.clone()));
                     break 'workspaces_loop;
                 }
             }
@@ -226,7 +224,6 @@ impl ToplevelInfoHandler for AppData {
                     toplevel.clone(),
                     info.clone(),
                 )));
-            self.send_image(toplevel.clone());
         }
     }
 
