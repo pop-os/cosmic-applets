@@ -1179,7 +1179,7 @@ dependencies = [
 [[package]]
 name = "cosmic-dbus-networkmanager"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/dbus-settings-bindings#c81f428acec4c8633efb62b4f8284202dad9a492"
+source = "git+https://github.com/pop-os/dbus-settings-bindings#8b9767f6cedede2def12941ce89e14bfcd913aeb"
 dependencies = [
  "bitflags 2.5.0",
  "derive_builder",
@@ -3534,9 +3534,8 @@ dependencies = [
 [[package]]
 name = "mpris2-zbus"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/dbus-settings-bindings#c81f428acec4c8633efb62b4f8284202dad9a492"
+source = "git+https://github.com/pop-os/dbus-settings-bindings#8b9767f6cedede2def12941ce89e14bfcd913aeb"
 dependencies = [
- "futures-util",
  "serde",
  "thiserror",
  "time",
@@ -4944,7 +4943,7 @@ dependencies = [
 [[package]]
 name = "switcheroo-control"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/dbus-settings-bindings#c81f428acec4c8633efb62b4f8284202dad9a492"
+source = "git+https://github.com/pop-os/dbus-settings-bindings#8b9767f6cedede2def12941ce89e14bfcd913aeb"
 dependencies = [
  "zbus",
 ]
@@ -5843,7 +5842,7 @@ dependencies = [
  "js-sys",
  "log",
  "naga",
- "parking_lot 0.11.2",
+ "parking_lot 0.12.1",
  "profiling",
  "raw-window-handle 0.6.0",
  "smallvec",
@@ -5870,7 +5869,7 @@ dependencies = [
  "log",
  "naga",
  "once_cell",
- "parking_lot 0.11.2",
+ "parking_lot 0.12.1",
  "profiling",
  "raw-window-handle 0.6.0",
  "rustc-hash",
@@ -5910,7 +5909,7 @@ dependencies = [
  "naga",
  "objc",
  "once_cell",
- "parking_lot 0.11.2",
+ "parking_lot 0.12.1",
  "profiling",
  "range-alloc",
  "raw-window-handle 0.6.0",

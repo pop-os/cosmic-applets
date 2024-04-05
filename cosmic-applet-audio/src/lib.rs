@@ -50,7 +50,7 @@ const PLAY: &str = "media-playback-start-symbolic";
 
 pub fn run() -> cosmic::iced::Result {
     localize();
-    cosmic::applet::run::<Audio>(false, ())
+    cosmic::applet::run::<Audio>(true, ())
 }
 
 #[derive(Default)]
