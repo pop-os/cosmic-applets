@@ -50,7 +50,7 @@ const PLAY: &str = "media-playback-start-symbolic";
 
 pub fn run() -> cosmic::iced::Result {
     localize();
-    cosmic::applet::run::<Audio>(false, ())
+    cosmic::applet::run::<Audio>(true, ())
 }
 
 #[derive(Default)]
@@ -160,7 +160,13 @@ impl Audio {
                 .map(|s| s.can_go_previous)
                 .unwrap_or_default()
             {
-                elements.push(self.core.applet.icon_button(GO_BACK).into())
+                elements.push(
+                    self.core
+                        .applet
+                        .icon_button(GO_BACK)
+                        .on_press(Message::MprisRequest(MprisRequest::Previous))
+                        .into(),
+                )
             }
             if let Some(play) = self.is_play() {
                 elements.push(
@@ -181,7 +187,13 @@ impl Audio {
                 .map(|s| s.can_go_next)
                 .unwrap_or_default()
             {
-                elements.push(self.core.applet.icon_button(GO_NEXT).into())
+                elements.push(
+                    self.core
+                        .applet
+                        .icon_button(GO_NEXT)
+                        .on_press(Message::MprisRequest(MprisRequest::Next))
+                        .into(),
+                )
             }
 
             Some(match self.core.applet.anchor {
