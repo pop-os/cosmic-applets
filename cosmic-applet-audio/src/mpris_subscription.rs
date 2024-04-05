@@ -1,8 +1,8 @@
-use std::{borrow::Cow, collections::HashMap, fmt::Debug, hash::Hash, path::PathBuf};
+use std::{borrow::Cow, fmt::Debug, hash::Hash, path::PathBuf};
 
 use cosmic::{
     iced::{self, subscription},
-    iced_futures::futures::{self, future::OptionFuture, FutureExt, SinkExt, StreamExt},
+    iced_futures::futures::{self, future::OptionFuture, SinkExt, StreamExt},
 };
 use mpris2_zbus::{
     enumerator,
@@ -13,7 +13,6 @@ use tokio::join;
 use urlencoding::decode;
 use zbus::{
     names::{BusName, OwnedBusName},
-    zvariant::OwnedValue,
     Connection,
 };
 
@@ -129,8 +128,7 @@ struct State {
         Box<dyn futures::Stream<Item = zbus::Result<enumerator::Event>> + Unpin + Send>,
     players: Vec<MprisPlayer>,
     active_player: Option<MprisPlayer>,
-    active_player_metadata_stream:
-        Option<zbus::PropertyStream<'static, HashMap<String, OwnedValue>>>,
+    active_player_metadata_stream: Option<Box<dyn futures::Stream<Item = ()> + Unpin + Send>>,
     any_player_state_stream: futures::stream::SelectAll<zbus::PropertyStream<'static, String>>,
 }
 
@@ -195,8 +193,18 @@ impl State {
         if self.active_player.as_ref().map(|p| p.name()) != new_active_player.map(|p| p.name()) {
             self.active_player = new_active_player.cloned();
             if let Some(player) = new_active_player {
-                self.active_player_metadata_stream =
-                    Some(player.player.receive_metadata_changed().await);
+                let controls_changed = futures::stream::select_all([
+                    player.player.receive_can_pause_changed().await,
+                    player.player.receive_can_play_changed().await,
+                    player.player.receive_can_go_previous_changed().await,
+                    player.player.receive_can_go_next_changed().await,
+                ]);
+                let metadata_changed = player.player.receive_metadata_changed().await;
+                let stream = futures::stream::select(
+                    controls_changed.map(|_| ()),
+                    metadata_changed.map(|_| ()),
+                );
+                self.active_player_metadata_stream = Some(Box::new(stream));
             } else {
                 self.active_player_metadata_stream = None;
             }
@@ -242,7 +250,7 @@ async fn run(output: &mut futures::channel::mpsc::Sender<MprisUpdate>) {
             _ = metadata_changed_next, if state.active_player.is_some() => {
             },
             event = state.enumerator_stream.next() => {
-                match dbg!(event) {
+                match event {
                     Some(Ok(enumerator::Event::Add(name))) => state.add_player(name).await,
                     Some(Ok(enumerator::Event::Remove(name))) => state.remove_player(name).await,
                     Some(Err(err)) => {
