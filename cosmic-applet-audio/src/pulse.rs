@@ -19,8 +19,6 @@ use libpulse_binding::{
     volume::ChannelVolumes,
 };
 
-use std::time::{Duration, Instant};
-
 use tokio::sync::{mpsc, Mutex};
 
 pub static FROM_PULSE: Lazy<Mutex<Option<(mpsc::Receiver<Message>, mpsc::Sender<Message>)>>> =
