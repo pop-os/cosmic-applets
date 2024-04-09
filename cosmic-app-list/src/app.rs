@@ -3,15 +3,20 @@ use crate::config::AppListConfig;
 use crate::config::APP_ID;
 use crate::fl;
 use crate::wayland_subscription::wayland_subscription;
+use crate::wayland_subscription::OutputUpdate;
 use crate::wayland_subscription::ToplevelRequest;
 use crate::wayland_subscription::ToplevelUpdate;
 use crate::wayland_subscription::WaylandImage;
 use crate::wayland_subscription::WaylandRequest;
 use crate::wayland_subscription::WaylandUpdate;
+use cctk::sctk::output::OutputInfo;
+use cctk::sctk::output::OutputState;
 use cctk::sctk::reexports::calloop::channel::Sender;
 use cctk::toplevel_info::ToplevelInfo;
 use cctk::wayland_client::protocol::wl_data_device_manager::DndAction;
+use cctk::wayland_client::protocol::wl_output::WlOutput;
 use cctk::wayland_client::protocol::wl_seat::WlSeat;
+use cctk::wayland_client::Proxy;
 use cosmic::applet::cosmic_panel_config::PanelSize;
 use cosmic::applet::Size;
 use cosmic::cosmic_config::{Config, CosmicConfigEntry};
@@ -105,6 +110,40 @@ pub fn load_applications_for_app_ids_sorted<'a, 'b>(
     ret
 }
 
+#[derive(Debug, Clone)]
+struct AppletIconData {
+    icon_size: u16,
+    icon_spacing: f32,
+    dot_size: f32,
+    dot_spacing: f32,
+    padding: [u16; 2],
+}
+
+impl AppletIconData {
+    fn new(applet: &Context) -> Self {
+        let suggested_size = applet.suggested_size().0;
+        let (icon_size, icon_spacing, dot_size, dot_spacing, p_padding) = match applet.size {
+            Size::PanelSize(PanelSize::XL) => (10 + suggested_size, 0.0, 2.0, 4.0, 5),
+            Size::PanelSize(PanelSize::L) => (10 + suggested_size, 0.0, 2.0, 4.0, 5),
+            Size::PanelSize(PanelSize::M) => (10 + suggested_size, 0.0, 2.0, 4.0, 5),
+            Size::PanelSize(PanelSize::S) => (16 + suggested_size, 0.0, 1.0, 2.0, 3),
+            Size::PanelSize(PanelSize::XS) => (8 + suggested_size, 0.0, 1.0, 2.0, 3),
+            Size::Hardcoded(_) => (10 + suggested_size, 4.0, 0.0, 4.0, 5),
+        };
+        let padding = match applet.anchor {
+            PanelAnchor::Bottom | PanelAnchor::Top => [0, p_padding],
+            PanelAnchor::Left | PanelAnchor::Right => [p_padding, 0],
+        };
+        AppletIconData {
+            icon_size,
+            icon_spacing,
+            dot_size,
+            dot_spacing,
+            padding,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Default)]
 struct DockItem {
     id: u32,
@@ -156,23 +195,14 @@ impl DockItem {
             ..
         } = self;
 
-        let (app_icon_size_modifier, dot_radius, p_padding) = match applet.size {
-            Size::PanelSize(PanelSize::XL) => (10, 2.0, 5),
-            Size::PanelSize(PanelSize::L) => (10, 2.0, 5),
-            Size::PanelSize(PanelSize::M) => (10, 2.0, 5),
-            Size::PanelSize(PanelSize::S) => (16, 1.0, 3),
-            Size::PanelSize(PanelSize::XS) => (8, 1.0, 3),
-            Size::Hardcoded(_) => (10, 2.0, 5),
-        };
+        let app_icon = AppletIconData::new(applet);
 
-        let app_icon_size = applet.suggested_size().0 + app_icon_size_modifier;
-
-        let cosmic_icon = desktop_info.icon.as_cosmic_icon().size(app_icon_size);
+        let cosmic_icon = desktop_info.icon.as_cosmic_icon().size(app_icon.icon_size);
 
         let dot_spacer = (0..1)
             .map(|_| {
                 container(vertical_space(Length::Fixed(0.0)))
-                    .padding(dot_radius)
+                    .padding(app_icon.dot_size)
                     .into()
             })
             .collect_vec();
@@ -181,7 +211,7 @@ impl DockItem {
             (0..1)
                 .map(|_| {
                     container(vertical_space(Length::Fixed(0.0)))
-                        .padding(dot_radius)
+                        .padding(app_icon.dot_size)
                         .into()
                 })
                 .collect_vec()
@@ -189,7 +219,7 @@ impl DockItem {
             (0..min(toplevels.len(), 3))
                 .map(|_| {
                     container(vertical_space(Length::Fixed(0.0)))
-                        .padding(dot_radius)
+                        .padding(app_icon.dot_size)
                         .style(<Theme as container::StyleSheet>::Style::Custom(Box::new(
                             |theme| container::Appearance {
                                 text_color: Some(Color::TRANSPARENT),
@@ -212,55 +242,43 @@ impl DockItem {
 
         let icon_wrapper: Element<_> = match applet.anchor {
             PanelAnchor::Left => row(vec![
-                column(dots).spacing(4).into(),
+                column(dots).spacing(app_icon.dot_spacing).into(),
                 cosmic_icon.into(),
-                column(dot_spacer).spacing(4).into(),
+                column(dot_spacer).spacing(app_icon.dot_spacing).into(),
             ])
             .align_items(iced::Alignment::Center)
             .spacing(1)
             .into(),
             PanelAnchor::Right => row(vec![
-                column(dot_spacer).spacing(4).into(),
+                column(dot_spacer).spacing(app_icon.dot_spacing).into(),
                 cosmic_icon.into(),
-                column(dots).spacing(4).into(),
+                column(dots).spacing(app_icon.dot_spacing).into(),
             ])
             .align_items(iced::Alignment::Center)
             .spacing(1)
             .into(),
             PanelAnchor::Top => column(vec![
-                row(dots).spacing(4).into(),
+                row(dots).spacing(app_icon.dot_spacing).into(),
                 cosmic_icon.into(),
-                row(dot_spacer).spacing(4).into(),
+                row(dot_spacer).spacing(app_icon.dot_spacing).into(),
             ])
             .align_items(iced::Alignment::Center)
             .spacing(1)
             .into(),
             PanelAnchor::Bottom => column(vec![
-                row(dot_spacer).spacing(4).into(),
+                row(dot_spacer).spacing(app_icon.dot_spacing).into(),
                 cosmic_icon.into(),
-                row(dots).spacing(4).into(),
+                row(dots).spacing(app_icon.dot_spacing).into(),
             ])
             .align_items(iced::Alignment::Center)
             .spacing(1)
             .into(),
         };
 
-        let icon_button = match applet.anchor {
-            PanelAnchor::Left => cosmic::widget::button(icon_wrapper)
-                .style(Button::Text)
-                .padding([p_padding, 0]),
-            PanelAnchor::Right => cosmic::widget::button(icon_wrapper)
-                .style(Button::Text)
-                .padding([p_padding, 0]),
-            PanelAnchor::Top => cosmic::widget::button(icon_wrapper)
-                .style(Button::Text)
-                .padding([0, p_padding]),
-            PanelAnchor::Bottom => cosmic::widget::button(icon_wrapper)
-                .style(Button::Text)
-                .padding([0, p_padding]),
-        }
-        .selected(is_focused)
-        .style(app_list_icon_style(is_focused));
+        let icon_button = cosmic::widget::button(icon_wrapper)
+            .padding(app_icon.padding)
+            .selected(is_focused)
+            .style(app_list_icon_style(is_focused));
 
         let icon_button = if interaction_enabled {
             dnd_source(
@@ -320,7 +338,8 @@ struct CosmicAppList {
     dnd_offer: Option<DndOffer>,
     is_listening_for_dnd: bool,
     gpus: Option<Vec<Gpu>>,
-    active_workspace: Option<ZcosmicWorkspaceHandleV1>,
+    active_workspaces: Vec<ZcosmicWorkspaceHandleV1>,
+    output_list: HashMap<WlOutput, OutputInfo>,
 }
 
 #[derive(Clone, PartialEq)]
@@ -1093,9 +1112,18 @@ impl cosmic::Application for CosmicAppList {
                             }
                         }
                     },
-                    WaylandUpdate::Workspace(handle) => {
-                        self.active_workspace = Some(handle);
-                    }
+                    WaylandUpdate::Workspace(workspaces) => self.active_workspaces = workspaces,
+                    WaylandUpdate::Output(event) => match event {
+                        OutputUpdate::Add(output, info) => {
+                            self.output_list.insert(output, info);
+                        }
+                        OutputUpdate::Update(output, info) => {
+                            self.output_list.insert(output, info);
+                        }
+                        OutputUpdate::Remove(output) => {
+                            self.output_list.remove(&output);
+                        }
+                    },
                     WaylandUpdate::ActivationToken {
                         token,
                         exec,
@@ -1205,6 +1233,7 @@ impl cosmic::Application for CosmicAppList {
 
     fn view(&self) -> Element<Message> {
         let focused_item = self.currently_active_toplevel();
+        let app_icon = AppletIconData::new(&self.core.applet);
         let is_horizontal = match self.core.applet.anchor {
             PanelAnchor::Top | PanelAnchor::Bottom => true,
             PanelAnchor::Left | PanelAnchor::Right => false,
@@ -1274,20 +1303,18 @@ impl cosmic::Application for CosmicAppList {
             (
                 Length::Shrink,
                 Length::Shrink,
-                dnd_listener(row(favorites)),
-                row(active).into(),
-                container(vertical_rule(1))
-                    .height(self.core.applet.suggested_size().1)
-                    .into(),
+                dnd_listener(row(favorites).spacing(app_icon.icon_spacing)),
+                row(active).spacing(app_icon.icon_spacing).into(),
+                container(vertical_rule(1)).height(Length::Fill).into(),
             )
         } else {
             (
                 Length::Shrink,
                 Length::Shrink,
-                dnd_listener(column(favorites)),
-                column(active).into(),
+                dnd_listener(column(favorites).spacing(app_icon.icon_spacing)),
+                column(active).spacing(app_icon.icon_spacing).into(),
                 container(divider::horizontal::default())
-                    .width(self.core.applet.suggested_size().1)
+                    .width(Length::Fill)
                     .into(),
             )
         };
@@ -1342,14 +1369,14 @@ impl cosmic::Application for CosmicAppList {
         let mut content = match &self.core.applet.anchor {
             PanelAnchor::Left | PanelAnchor::Right => container(
                 Column::with_children(content_list)
-                    .spacing(4)
+                    .spacing(4.0)
                     .align_items(Alignment::Center)
                     .height(h)
                     .width(w),
             ),
             PanelAnchor::Top | PanelAnchor::Bottom => container(
                 Row::with_children(content_list)
-                    .spacing(4)
+                    .spacing(4.0)
                     .align_items(Alignment::Center)
                     .height(h)
                     .width(w),
@@ -1592,16 +1619,23 @@ impl cosmic::Application for CosmicAppList {
 
 impl CosmicAppList {
     fn currently_active_toplevel(&self) -> Vec<ZcosmicToplevelHandleV1> {
-        if self.active_workspace.is_none() {
-            println!("No active workspace?");
+        if self.active_workspaces.is_empty() {
             return Vec::new();
         }
+        let current_output = self.core.applet.output_name.clone();
         let mut focused_toplevels: Vec<ZcosmicToplevelHandleV1> = Vec::new();
-        let active_workspace = self.active_workspace.as_ref().unwrap().clone();
+        let active_workspaces = self.active_workspaces.clone();
         for toplevel_list in self.active_list.iter().chain(self.favorite_list.iter()) {
             for (t_handle, t_info, _) in &toplevel_list.toplevels {
-                if t_info.workspace.contains(&active_workspace)
-                    && t_info.state.contains(&State::Activated)
+                if t_info.state.contains(&State::Activated)
+                    && active_workspaces
+                        .iter()
+                        .any(|workspace| t_info.workspace.contains(workspace))
+                    && t_info.output.iter().any(|x| {
+                        self.output_list.get(x).is_some_and(|val| {
+                            val.name.as_ref().is_some_and(|n| *n == current_output)
+                        })
+                    })
                 {
                     focused_toplevels.push(t_handle.clone());
                 }
