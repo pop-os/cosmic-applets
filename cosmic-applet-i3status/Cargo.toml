@@ -1,0 +1,21 @@
+[package]
+name = "cosmic-applet-i3status"
+version = "0.1.1"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow.workspace = true
+i18n-embed-fl.workspace = true
+i18n-embed.workspace = true
+image = { version = "0.25.0", default-features = false }
+libcosmic.workspace = true
+memmap2 = "0.9.4"
+once_cell = "1"
+rust-embed.workspace = true
+rustix.workspace = true
+tokio = { version = "1.36.0", features = ["sync", "macros"] }
+tracing-log.workspace = true
+tracing-subscriber.workspace = true
+tracing.workspace = true

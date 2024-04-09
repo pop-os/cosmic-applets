@@ -18,6 +18,7 @@ fn main() -> cosmic::iced::Result {
         "cosmic-applet-audio" => cosmic_applet_audio::run(),
         "cosmic-applet-battery" => cosmic_applet_battery::run(),
         "cosmic-applet-bluetooth" => cosmic_applet_bluetooth::run(),
+        "cosmic-applet-i3status" => cosmic_applet_i3status::run(),
         "cosmic-applet-minimize" => cosmic_applet_minimize::run(),
         "cosmic-applet-network" => cosmic_applet_network::run(),
         "cosmic-applet-notifications" => cosmic_applet_notifications::run(),

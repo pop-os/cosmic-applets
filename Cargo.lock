@@ -959,6 +959,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "cosmic-applet-i3status"
+version = "0.1.1"
+dependencies = [
+ "anyhow",
+ "i18n-embed",
+ "i18n-embed-fl",
+ "image 0.25.0",
+ "libcosmic",
+ "memmap2 0.9.4",
+ "once_cell",
+ "rust-embed",
+ "rustix 0.38.32",
+ "tokio",
+ "tracing",
+ "tracing-log",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "cosmic-applet-minimize"
 version = "0.1.1"
 dependencies = [
@@ -1112,6 +1131,7 @@ dependencies = [
  "cosmic-applet-audio",
  "cosmic-applet-battery",
  "cosmic-applet-bluetooth",
+ "cosmic-applet-i3status",
  "cosmic-applet-minimize",
  "cosmic-applet-network",
  "cosmic-applet-notifications",

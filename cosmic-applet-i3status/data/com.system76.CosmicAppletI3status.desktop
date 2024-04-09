@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=Cosmic Applet i3status
+Comment=Applet for Cosmic Panel
+Type=Application
+Exec=cosmic-applet-i3status
+Terminal=false
+Categories=Cosmic;Iced;
+Keywords=Cosmic;Iced;
+StartupNotify=true
+NoDisplay=true
+X-CosmicApplet=true
+X-HostWaylandDisplay=true

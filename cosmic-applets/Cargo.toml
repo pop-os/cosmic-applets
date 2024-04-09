@@ -8,6 +8,7 @@ cosmic-app-list = { path = "../cosmic-app-list" }
 cosmic-applet-audio = { path = "../cosmic-applet-audio" }
 cosmic-applet-battery = { path = "../cosmic-applet-battery" }
 cosmic-applet-bluetooth = { path = "../cosmic-applet-bluetooth" }
+cosmic-applet-i3status = { path = "../cosmic-applet-i3status" }
 cosmic-applet-minimize = { path = "../cosmic-applet-minimize" }
 cosmic-applet-network = { path = "../cosmic-applet-network" }
 cosmic-applet-notifications = { path = "../cosmic-applet-notifications" }
