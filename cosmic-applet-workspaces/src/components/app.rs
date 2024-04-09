@@ -17,6 +17,8 @@ use crate::config;
 use crate::wayland::{WorkspaceEvent, WorkspaceList};
 use crate::wayland_subscription::{workspaces, WorkspacesUpdate};
 
+use std::process::Command as ShellCommand;
+
 pub fn run() -> cosmic::iced::Result {
     cosmic::applet::run::<IcedWorkspacesApplet>(true, ())
 }
@@ -39,6 +41,7 @@ enum Message {
     WorkspaceUpdate(WorkspacesUpdate),
     WorkspacePressed(ObjectId),
     WheelScrolled(ScrollDelta),
+    WorkspaceOverview,
 }
 
 impl cosmic::Application for IcedWorkspacesApplet {
@@ -114,6 +117,9 @@ impl cosmic::Application for IcedWorkspacesApplet {
                     let _ = tx.try_send(WorkspaceEvent::Scroll(delta));
                 }
             }
+            Message::WorkspaceOverview => {
+                let _ = ShellCommand::new("cosmic-workspaces").spawn();
+            }
         }
         Command::none()
     }
@@ -157,7 +163,10 @@ impl cosmic::Application for IcedWorkspacesApplet {
             } else {
                 [self.core.applet.suggested_padding(), 0]
             })
-            .on_press(Message::WorkspacePressed(w.2.clone()))
+            .on_press(match w.1 {
+                Some(zcosmic_workspace_handle_v1::State::Active) => Message::WorkspaceOverview,
+                _ => Message::WorkspacePressed(w.2.clone()),
+            })
             .padding(0);
 
             Some(
