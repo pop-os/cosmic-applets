@@ -42,9 +42,7 @@ use cosmic_protocols::{
     screencopy::v2::client::{
         zcosmic_screencopy_frame_v2, zcosmic_screencopy_manager_v2, zcosmic_screencopy_session_v2,
     },
-    toplevel_info::v1::client::zcosmic_toplevel_handle_v1::{
-        self, State as ToplevelUpdateState, ZcosmicToplevelHandleV1,
-    },
+    toplevel_info::v1::client::zcosmic_toplevel_handle_v1::{self, ZcosmicToplevelHandleV1},
     toplevel_management::v1::client::zcosmic_toplevel_manager_v1,
     workspace::v1::client::zcosmic_workspace_handle_v1::State as WorkspaceUpdateState,
 };
@@ -141,9 +139,7 @@ impl WorkspaceHandler for AppData {
             .collect::<Vec<_>>();
         let _ = self
             .tx
-            .unbounded_send(WaylandUpdate::Workspace(
-                active_workspaces.clone(),
-            ));
+            .unbounded_send(WaylandUpdate::Workspace(active_workspaces.clone()));
     }
 }
 

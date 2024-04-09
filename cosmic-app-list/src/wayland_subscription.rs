@@ -118,6 +118,13 @@ pub enum ToplevelUpdate {
 }
 
 #[derive(Clone, Debug)]
+pub enum OutputUpdate {
+    Add(WlOutput, OutputInfo),
+    Update(WlOutput, OutputInfo),
+    Remove(WlOutput),
+}
+
+#[derive(Clone, Debug)]
 pub enum WaylandRequest {
     Toplevel(ToplevelRequest),
     TokenRequest {
