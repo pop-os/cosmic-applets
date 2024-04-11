@@ -10,3 +10,4 @@
 /usr/bin/cosmic-applets /usr/bin/cosmic-applet-tiling
 /usr/bin/cosmic-applets /usr/bin/cosmic-applet-time
 /usr/bin/cosmic-applets /usr/bin/cosmic-applet-workspaces
+/usr/bin/cosmic-applets /usr/bin/cosmic-applet-input-sources
