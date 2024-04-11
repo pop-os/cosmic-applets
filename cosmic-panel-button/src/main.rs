@@ -1,4 +1,5 @@
-use cosmic::applet::cosmic_panel_config::PanelAnchor;
+use cosmic::applet::cosmic_panel_config::{PanelAnchor, PanelSize};
+use cosmic::applet::Size;
 use cosmic::iced::Length;
 use cosmic::iced_widget::{row, text};
 use cosmic::widget::vertical_space;
@@ -55,10 +56,13 @@ impl cosmic::Application for Button {
     }
 
     fn view(&self) -> cosmic::Element<Msg> {
-        if matches!(
+        if (matches!(
             self.core.applet.anchor,
             PanelAnchor::Left | PanelAnchor::Right
-        ) && self.desktop.icon.is_some()
+        ) || !matches!(
+            self.core.applet.size,
+            Size::PanelSize(PanelSize::XS) | Size::PanelSize(PanelSize::S)
+        )) && self.desktop.icon.is_some()
         {
             self.core
                 .applet
