@@ -26,6 +26,7 @@ fn main() -> cosmic::iced::Result {
         "cosmic-applet-tiling" => cosmic_applet_tiling::run(),
         "cosmic-applet-time" => cosmic_applet_time::run(),
         "cosmic-applet-workspaces" => cosmic_applet_workspaces::run(),
+        "cosmic-applet-input-sources" => cosmic_applet_input_sources::run(),
         _ => return Ok(()),
     }
 }

@@ -1,0 +1,13 @@
+[Desktop Entry]
+Name=Cosmic Applet Input Sources
+Comment=Applet for Cosmic Panel
+Type=Application
+Exec=cosmic-applet-input-sources
+Terminal=false
+Categories=Cosmic;Iced;
+Keywords=Cosmic;Iced;
+# Translators: Do NOT translate or transliterate this text (this is an icon file name)!
+Icon=com.system76.CosmicAppletInputSources
+StartupNotify=true
+NoDisplay=true
+X-CosmicApplet=true
