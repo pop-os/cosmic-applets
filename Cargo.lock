@@ -965,12 +965,11 @@ dependencies = [
  "anyhow",
  "i18n-embed",
  "i18n-embed-fl",
- "image 0.25.0",
  "libcosmic",
- "memmap2 0.9.4",
  "once_cell",
  "rust-embed",
- "rustix 0.38.32",
+ "serde_json",
+ "swaybar-types",
  "tokio",
  "tracing",
  "tracing-log",
@@ -4962,6 +4961,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "swaybar-types"
+version = "3.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a2c0b435952b89d872f882cf7ae0756303ef68d310bfa44b9c8012fda88ae143"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "switcheroo-control"
 version = "0.1.0"
 source = "git+https://github.com/pop-os/dbus-settings-bindings#c81f428acec4c8633efb62b4f8284202dad9a492"
@@ -5863,7 +5872,7 @@ dependencies = [
  "js-sys",
  "log",
  "naga",
- "parking_lot 0.11.2",
+ "parking_lot 0.12.1",
  "profiling",
  "raw-window-handle 0.6.0",
  "smallvec",
@@ -5890,7 +5899,7 @@ dependencies = [
  "log",
  "naga",
  "once_cell",
- "parking_lot 0.11.2",
+ "parking_lot 0.12.1",
  "profiling",
  "raw-window-handle 0.6.0",
  "rustc-hash",
@@ -5930,7 +5939,7 @@ dependencies = [
  "naga",
  "objc",
  "once_cell",
- "parking_lot 0.11.2",
+ "parking_lot 0.12.1",
  "profiling",
  "range-alloc",
  "raw-window-handle 0.6.0",
