@@ -49,7 +49,8 @@ impl App {
     }
 
     fn resize_window(&self) -> Command<Msg> {
-        let icon_size = self.core.applet.suggested_size().0 as u32 + APPLET_PADDING * 2;
+        let icon_size = self.core.applet.suggested_size(true).0 as u32
+            + self.core.applet.suggested_padding(true) as u32 * 2;
         let n = self.menus.len() as u32;
         resize_window(window::Id::MAIN, 1.max(icon_size * n), icon_size)
     }

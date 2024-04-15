@@ -48,6 +48,7 @@ use cosmic::theme::Button;
 use cosmic::theme::Container;
 use cosmic::widget::button;
 use cosmic::widget::divider;
+use cosmic::widget::horizontal_space;
 use cosmic::widget::rectangle_tracker::rectangle_tracker_subscription;
 use cosmic::widget::rectangle_tracker::RectangleTracker;
 use cosmic::widget::rectangle_tracker::RectangleUpdate;
@@ -112,32 +113,38 @@ pub fn load_applications_for_app_ids_sorted<'a, 'b>(
 struct AppletIconData {
     icon_size: u16,
     icon_spacing: f32,
-    dot_size: f32,
+    dot_radius: f32,
     dot_spacing: f32,
-    padding: [u16; 2],
+    padding: Padding,
 }
 
 impl AppletIconData {
     fn new(applet: &Context) -> Self {
-        let suggested_size = applet.suggested_size().0;
-        let (icon_size, icon_spacing, dot_size, dot_spacing, p_padding) = match applet.size {
-            Size::PanelSize(PanelSize::XL) => (10 + suggested_size, 0.0, 2.0, 4.0, 5),
-            Size::PanelSize(PanelSize::L) => (10 + suggested_size, 0.0, 2.0, 4.0, 5),
-            Size::PanelSize(PanelSize::M) => (10 + suggested_size, 0.0, 2.0, 4.0, 5),
-            Size::PanelSize(PanelSize::S) => (16 + suggested_size, 0.0, 1.0, 2.0, 3),
-            Size::PanelSize(PanelSize::XS) => (8 + suggested_size, 0.0, 1.0, 2.0, 3),
-            Size::Hardcoded(_) => (10 + suggested_size, 4.0, 0.0, 4.0, 5),
+        let icon_size = applet.suggested_size(false).0;
+        let padding = applet.suggested_padding(false);
+
+        let (icon_spacing, dot_radius, dot_spacing) = match applet.size {
+            Size::PanelSize(PanelSize::XL) => (0.0, 2.0, 4.0),
+            Size::PanelSize(PanelSize::L) | Size::PanelSize(PanelSize::M) | Size::Hardcoded(_) => {
+                (0.0, 2.0, 4.0)
+            }
+            Size::PanelSize(PanelSize::XS) | Size::PanelSize(PanelSize::S) => (0.0, 1.0, 2.0),
         };
+
+        let padding = padding as f32;
+
         let padding = match applet.anchor {
-            PanelAnchor::Bottom | PanelAnchor::Top => [0, p_padding],
-            PanelAnchor::Left | PanelAnchor::Right => [p_padding, 0],
+            PanelAnchor::Top => [padding, padding, padding - (dot_radius * 2. + 1.), padding],
+            PanelAnchor::Bottom => [padding - (dot_radius * 2. + 1.), padding, padding, padding],
+            PanelAnchor::Left => [padding, padding, padding, padding - (dot_radius * 2. + 1.)],
+            PanelAnchor::Right => [padding, padding - (dot_radius * 2. + 1.), padding, padding],
         };
         AppletIconData {
             icon_size,
             icon_spacing,
-            dot_size,
+            dot_radius,
             dot_spacing,
-            padding,
+            padding: padding.into(),
         }
     }
 }
@@ -185,6 +192,7 @@ impl DockItem {
         interaction_enabled: bool,
         gpus: Option<&[Gpu]>,
         is_focused: bool,
+        dot_border_radius: [f32; 4],
     ) -> Element<'_, Message> {
         let Self {
             toplevels,
@@ -197,19 +205,11 @@ impl DockItem {
 
         let cosmic_icon = desktop_info.icon.as_cosmic_icon().size(app_icon.icon_size);
 
-        let dot_spacer = (0..1)
-            .map(|_| {
-                container(vertical_space(Length::Fixed(0.0)))
-                    .padding(app_icon.dot_size)
-                    .into()
-            })
-            .collect_vec();
-
         let dots = if toplevels.is_empty() {
             (0..1)
                 .map(|_| {
                     container(vertical_space(Length::Fixed(0.0)))
-                        .padding(app_icon.dot_size)
+                        .padding(app_icon.dot_radius)
                         .into()
                 })
                 .collect_vec()
@@ -217,15 +217,15 @@ impl DockItem {
             (0..min(toplevels.len(), 3))
                 .map(|_| {
                     container(vertical_space(Length::Fixed(0.0)))
-                        .padding(app_icon.dot_size)
+                        .padding(app_icon.dot_radius)
                         .style(<Theme as container::StyleSheet>::Style::Custom(Box::new(
-                            |theme| container::Appearance {
+                            move |theme| container::Appearance {
                                 text_color: Some(Color::TRANSPARENT),
                                 background: Some(Background::Color(
                                     theme.cosmic().on_bg_color().into(),
                                 )),
                                 border: Border {
-                                    radius: 4.0.into(),
+                                    radius: dot_border_radius.into(),
                                     width: 0.0,
                                     color: Color::TRANSPARENT,
                                 },
@@ -241,35 +241,31 @@ impl DockItem {
         let icon_wrapper: Element<_> = match applet.anchor {
             PanelAnchor::Left => row(vec![
                 column(dots).spacing(app_icon.dot_spacing).into(),
+                horizontal_space(Length::Fixed(1.0)).into(),
                 cosmic_icon.into(),
-                column(dot_spacer).spacing(app_icon.dot_spacing).into(),
             ])
             .align_items(iced::Alignment::Center)
-            .spacing(1)
             .into(),
             PanelAnchor::Right => row(vec![
-                column(dot_spacer).spacing(app_icon.dot_spacing).into(),
                 cosmic_icon.into(),
+                horizontal_space(Length::Fixed(1.0)).into(),
                 column(dots).spacing(app_icon.dot_spacing).into(),
             ])
             .align_items(iced::Alignment::Center)
-            .spacing(1)
             .into(),
             PanelAnchor::Top => column(vec![
                 row(dots).spacing(app_icon.dot_spacing).into(),
+                vertical_space(Length::Fixed(1.0)).into(),
                 cosmic_icon.into(),
-                row(dot_spacer).spacing(app_icon.dot_spacing).into(),
             ])
             .align_items(iced::Alignment::Center)
-            .spacing(1)
             .into(),
             PanelAnchor::Bottom => column(vec![
-                row(dot_spacer).spacing(app_icon.dot_spacing).into(),
                 cosmic_icon.into(),
+                vertical_space(Length::Fixed(1.0)).into(),
                 row(dots).spacing(app_icon.dot_spacing).into(),
             ])
             .align_items(iced::Alignment::Center)
-            .spacing(1)
             .into(),
         };
 
@@ -898,7 +894,7 @@ impl cosmic::Application for CosmicAppList {
                 }
             }
             Message::DndEnter(x, y) => {
-                let item_size = self.core.applet.suggested_size().0;
+                let item_size = self.core.applet.suggested_size(false).0;
                 let pos_in_list = match self.core.applet.anchor {
                     PanelAnchor::Top | PanelAnchor::Bottom => x,
                     PanelAnchor::Left | PanelAnchor::Right => y,
@@ -929,7 +925,7 @@ impl cosmic::Application for CosmicAppList {
             }
             Message::DndMotion(x, y) => {
                 if let Some(DndOffer { preview_index, .. }) = self.dnd_offer.as_mut() {
-                    let item_size = self.core.applet.suggested_size().0;
+                    let item_size = self.core.applet.suggested_size(false).0;
                     let pos_in_list = match self.core.applet.anchor {
                         PanelAnchor::Top | PanelAnchor::Bottom => x,
                         PanelAnchor::Left | PanelAnchor::Right => y,
@@ -1231,6 +1227,8 @@ impl cosmic::Application for CosmicAppList {
 
     fn view(&self) -> Element<Message> {
         let focused_item = self.currently_active_toplevel();
+        let theme = self.core.system_theme();
+        let dot_radius = theme.cosmic().radius_xs();
         let app_icon = AppletIconData::new(&self.core.applet);
         let is_horizontal = match self.core.applet.anchor {
             PanelAnchor::Top | PanelAnchor::Bottom => true,
@@ -1249,6 +1247,7 @@ impl cosmic::Application for CosmicAppList {
                         .toplevels
                         .iter()
                         .any(|y| focused_item.contains(&y.0)),
+                    theme.cosmic().radius_xs(),
                 )
             })
             .collect();
@@ -1266,6 +1265,7 @@ impl cosmic::Application for CosmicAppList {
                     false,
                     self.gpus.as_deref(),
                     item.toplevels.iter().any(|y| focused_item.contains(&y.0)),
+                    dot_radius,
                 ),
             );
         } else if self.is_listening_for_dnd && self.favorite_list.is_empty() {
@@ -1273,9 +1273,9 @@ impl cosmic::Application for CosmicAppList {
             favorites.push(
                 container(
                     cosmic::widget::icon::from_name("starred-symbolic.symbolic")
-                        .size(self.core.applet.suggested_size().0),
+                        .size(self.core.applet.suggested_size(false).0),
                 )
-                .padding(8)
+                .padding(self.core.applet.suggested_padding(false))
                 .into(),
             );
         }
@@ -1293,6 +1293,7 @@ impl cosmic::Application for CosmicAppList {
                         .toplevels
                         .iter()
                         .any(|y| focused_item.contains(&y.0)),
+                    dot_radius,
                 )
             })
             .collect();
@@ -1359,7 +1360,7 @@ impl cosmic::Application for CosmicAppList {
         } else {
             vec![
                 cosmic::widget::icon::from_name("com.system76.CosmicAppList")
-                    .size(self.core.applet.suggested_size().0)
+                    .size(self.core.applet.suggested_size(false).0)
                     .into(),
             ]
         };
@@ -1381,7 +1382,7 @@ impl cosmic::Application for CosmicAppList {
             ),
         };
         if self.active_list.is_empty() && self.favorite_list.is_empty() {
-            let suggested_size = self.core.applet.suggested_size();
+            let suggested_size = self.core.applet.suggested_size(false);
             content = content.width(suggested_size.0).height(suggested_size.1);
         }
         if self.popup.is_some() {
@@ -1399,7 +1400,7 @@ impl cosmic::Application for CosmicAppList {
             item.desktop_info
                 .icon
                 .as_cosmic_icon()
-                .size(self.core.applet.suggested_size().0)
+                .size(self.core.applet.suggested_size(false).0)
                 .into()
         } else if let Some((_popup_id, id, popup_type)) = self.popup.as_ref().filter(|p| id == p.0)
         {
@@ -1551,7 +1552,7 @@ impl cosmic::Application for CosmicAppList {
                 },
             }
         } else {
-            let suggested = self.core.applet.suggested_size();
+            let suggested = self.core.applet.suggested_size(false);
             iced::widget::row!()
                 .width(Length::Fixed(suggested.0 as f32))
                 .height(Length::Fixed(suggested.1 as f32))

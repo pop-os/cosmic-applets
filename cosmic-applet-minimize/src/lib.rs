@@ -124,7 +124,7 @@ impl cosmic::Application for Minimize {
     }
 
     fn view(&self) -> Element<Message> {
-        let (width, _) = self.core.applet.suggested_size();
+        let (width, _) = self.core.applet.suggested_size(false);
         let theme = self.core.system_theme().cosmic();
         let space_xxs = theme.space_xxs();
         let icon_buttons = self.apps.iter().map(|(handle, _, data, img)| {
