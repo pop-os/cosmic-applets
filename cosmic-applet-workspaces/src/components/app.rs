@@ -138,8 +138,8 @@ impl cosmic::Application for IcedWorkspacesApplet {
             let content = row!(
                 content,
                 vertical_space(Length::Fixed(
-                    (self.core.applet.suggested_size().1 + 2 * self.core.applet.suggested_padding())
-                        as f32
+                    (self.core.applet.suggested_size(true).1
+                        + 2 * self.core.applet.suggested_padding(true)) as f32
                 ))
             )
             .align_items(cosmic::iced::Alignment::Center);
@@ -147,8 +147,8 @@ impl cosmic::Application for IcedWorkspacesApplet {
             let content = column!(
                 content,
                 horizontal_space(Length::Fixed(
-                    (self.core.applet.suggested_size().0 + 2 * self.core.applet.suggested_padding())
-                        as f32
+                    (self.core.applet.suggested_size(true).0
+                        + 2 * self.core.applet.suggested_padding(true)) as f32
                 ))
             )
             .align_items(cosmic::iced::Alignment::Center);
@@ -159,9 +159,9 @@ impl cosmic::Application for IcedWorkspacesApplet {
                     .align_y(Vertical::Center),
             )
             .padding(if horizontal {
-                [0, self.core.applet.suggested_padding()]
+                [0, self.core.applet.suggested_padding(true)]
             } else {
-                [self.core.applet.suggested_padding(), 0]
+                [self.core.applet.suggested_padding(true), 0]
             })
             .on_press(match w.1 {
                 Some(zcosmic_workspace_handle_v1::State::Active) => Message::WorkspaceOverview,
