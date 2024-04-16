@@ -1,12 +1,10 @@
+use crate::backend::{power_profile_subscription, Power, PowerProfileRequest, PowerProfileUpdate};
 use crate::backlight::{
     screen_backlight_subscription, ScreenBacklightRequest, ScreenBacklightUpdate,
 };
 use crate::config;
 use crate::dgpu::{dgpu_subscription, Entry, GpuUpdate};
 use crate::fl;
-use crate::power_daemon::{
-    power_profile_subscription, Power, PowerProfileRequest, PowerProfileUpdate,
-};
 use crate::upower_device::{device_subscription, DeviceDbusEvent};
 use crate::upower_kbdbacklight::{
     kbd_backlight_subscription, KeyboardBacklightRequest, KeyboardBacklightUpdate,
