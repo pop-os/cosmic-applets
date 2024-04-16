@@ -16,9 +16,6 @@ use std::collections::BTreeMap;
 
 use crate::{components::status_menu, subscriptions::status_notifier_watcher};
 
-// XXX copied from libcosmic
-const APPLET_PADDING: u32 = 8;
-
 #[derive(Clone, Debug)]
 pub enum Msg {
     Closed(window::Id),
