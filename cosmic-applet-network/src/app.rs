@@ -292,6 +292,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                             && success
                         {
                             self.new_connection = None;
+                            self.show_visible_networks = false;
                         }
                     } else if let NetworkManagerRequest::Password(ssid, _) = &req {
                         if let Some(
@@ -302,6 +303,9 @@ impl cosmic::Application for CosmicNetworkApplet {
                             if !success && ssid == &access_point.ssid {
                                 self.new_connection =
                                     Some(NewConnectionState::Failure(access_point.clone()));
+                            } else {
+                                self.new_connection = None;
+                                self.show_visible_networks = false;
                             }
                         }
                     }
