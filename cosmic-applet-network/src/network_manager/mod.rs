@@ -4,15 +4,15 @@ pub mod current_networks;
 pub mod devices;
 pub mod wireless_enabled;
 
-use std::{collections::HashMap, fmt::Debug, ops::Deref, time::Duration};
+use std::{collections::HashMap, fmt::Debug, time::Duration};
 
 use cosmic::iced::{self, subscription};
 use cosmic_dbus_networkmanager::{
+    active_connection::ActiveConnection,
     device::SpecificDevice,
     interface::{
         active_connection::ActiveConnectionProxy,
-        enums::{self, ActiveConnectionState},
-        enums::{DeviceType, NmConnectivityState},
+        enums::{self, ActiveConnectionState, DeviceType, NmConnectivityState},
     },
     nm::NetworkManager,
     settings::{connection::Settings, NetworkManagerSettings},
@@ -21,9 +21,9 @@ use futures::{
     channel::mpsc::{unbounded, UnboundedReceiver, UnboundedSender},
     SinkExt, StreamExt,
 };
-use tokio::{process::Command, time::timeout};
+use tokio::process::Command;
 use zbus::{
-    zvariant::{self, ObjectPath, OwnedObjectPath, Value},
+    zvariant::{self, Value},
     Connection,
 };
 
@@ -167,7 +167,6 @@ async fn start_listening(
                     _ = output.send(response).await;
                 }
                 Some(NetworkManagerRequest::Password(ssid, password)) => {
-                    // Create a connection
                     let nm_state = NetworkManagerState::new(&conn).await.unwrap_or_default();
                     let success = nm_state
                         .connect_wifi(&conn, &ssid, Some(&password))
@@ -193,81 +192,13 @@ async fn start_listening(
                     }
                 }
                 Some(NetworkManagerRequest::SelectAccessPoint(ssid)) => {
-                    let s = match NetworkManagerSettings::new(&conn).await {
-                        Ok(s) => s,
-                        Err(_) => return State::Finished,
-                    };
-                    // find known connection with matching ssid and activate
-
-                    for c in s.list_connections().await.unwrap_or_default() {
-                        let settings = match c.get_settings().await.ok() {
-                            Some(s) => s,
-                            None => continue,
-                        };
-
-                        let cur_ssid = settings
-                            .get("802-11-wireless")
-                            .and_then(|w| w.get("ssid"))
-                            .cloned()
-                            .and_then(|ssid| ssid.try_into().ok())
-                            .and_then(|ssid| String::from_utf8(ssid).ok());
-
-                        if cur_ssid.as_ref() != Some(&ssid) {
-                            continue;
-                        }
-
-                        let success = if let Ok(path) = network_manager
-                            .deref()
-                            .activate_connection(
-                                c.deref().path(),
-                                &ObjectPath::try_from("/").unwrap(),
-                                &ObjectPath::try_from("/").unwrap(),
-                            )
-                            .await
-                        {
-                            let dummy = ActiveConnectionProxy::new(&conn).await.unwrap();
-                            let active = ActiveConnectionProxy::builder(&conn)
-                                .path(path)
-                                .unwrap()
-                                .destination(dummy.destination())
-                                .unwrap()
-                                .interface(dummy.interface())
-                                .unwrap()
-                                .build()
-                                .await
-                                .unwrap();
-                            let mut state = enums::ActiveConnectionState::from(
-                                active.state().await.unwrap_or_default(),
-                            );
-                            while let enums::ActiveConnectionState::Activating = state {
-                                if let Ok(Some(s)) = timeout(
-                                    Duration::from_secs(20),
-                                    active.receive_state_changed().await.next(),
-                                )
-                                .await
-                                {
-                                    state = s.get().await.unwrap_or_default().into();
-                                } else {
-                                    break;
-                                }
-                            }
-                            matches!(state, enums::ActiveConnectionState::Activated)
-                        } else {
-                            false
-                        };
-                        _ = output
-                            .send(NetworkManagerEvent::RequestResponse {
-                                req: NetworkManagerRequest::SelectAccessPoint(ssid.clone()),
-                                success,
-                                state: NetworkManagerState::new(&conn).await.unwrap_or_default(),
-                            })
-                            .await;
-
-                        return State::Waiting(conn, rx);
-                    }
-
                     let state = NetworkManagerState::new(&conn).await.unwrap_or_default();
-                    let success = state.connect_wifi(&conn, &ssid, None).await.is_ok();
+                    let success = if let Err(err) = state.connect_wifi(&conn, &ssid, None).await {
+                        tracing::error!("Failed to connect to access point: {:?}", err);
+                        false
+                    } else {
+                        true
+                    };
 
                     _ = output
                         .send(NetworkManagerEvent::RequestResponse {
@@ -496,7 +427,6 @@ impl NetworkManagerState {
                 continue;
             }
 
-            // first check if the conn exists
             let s = NetworkManagerSettings::new(conn).await?;
             let known_conns = s.list_connections().await.unwrap_or_default();
             let mut known_conn = None;
@@ -532,16 +462,21 @@ impl NetworkManagerState {
 
                 nm.activate_connection(known_conn, &device).await?
             } else {
-                nm.add_and_activate_connection(conn_settings, device.path(), &ap.path)
+                let (_, active_conn) = nm
+                    .add_and_activate_connection(conn_settings, device.path(), &ap.path)
                     .await?;
-                let active_conns = nm.active_connections().await.unwrap_or_default();
-                let Some(active_conn) = active_conns
-                    .into_iter()
-                    .find(|ac| ac.cached_id() == Ok(Some(ssid.to_string())))
-                else {
-                    return Err(anyhow::anyhow!("No active connection found"));
-                };
-                active_conn
+                let dummy = ActiveConnectionProxy::new(&conn).await?;
+                let active = ActiveConnectionProxy::builder(&conn)
+                    .path(active_conn)
+                    .unwrap()
+                    .destination(dummy.destination().to_owned())
+                    .unwrap()
+                    .interface(dummy.interface().to_owned())
+                    .unwrap()
+                    .build()
+                    .await
+                    .unwrap();
+                ActiveConnection::from(active)
             };
             let mut state =
                 enums::ActiveConnectionState::from(active_conn.state().await.unwrap_or_default());
