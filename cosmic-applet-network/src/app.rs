@@ -293,8 +293,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                         {
                             self.new_connection = None;
                         }
-                    }
-                    if let NetworkManagerRequest::Password(ssid, _) = &req {
+                    } else if let NetworkManagerRequest::Password(ssid, _) = &req {
                         if let Some(
                             NewConnectionState::EnterPassword { access_point, .. }
                             | NewConnectionState::Waiting(access_point),
