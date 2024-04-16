@@ -134,8 +134,8 @@ impl AppletIconData {
         let padding = padding as f32;
 
         let padding = match applet.anchor {
-            PanelAnchor::Top => [padding, padding, padding - (dot_radius * 2. + 1.), padding],
-            PanelAnchor::Bottom => [padding - (dot_radius * 2. + 1.), padding, padding, padding],
+            PanelAnchor::Top => [padding - (dot_radius * 2. + 1.), padding, padding, padding],
+            PanelAnchor::Bottom => [padding, padding, padding - (dot_radius * 2. + 1.), padding],
             PanelAnchor::Left => [padding, padding, padding, padding - (dot_radius * 2. + 1.)],
             PanelAnchor::Right => [padding, padding - (dot_radius * 2. + 1.), padding, padding],
         };
