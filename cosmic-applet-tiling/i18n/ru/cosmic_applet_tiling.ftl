@@ -1,14 +1,20 @@
-tile-windows = Автоматически размещать окна
-shortcuts = Горячие клавиши
+tile-windows = Автоматическое размещение окон
+tile-current = Размещать на текущем раб. месте 
+shortcuts = Сочетания клавиш
 navigate-windows = Навигация по окнам
-move-window = Перемещение окон
+move-window = Перемещение окна
 toggle-floating-window = Переключение плавающего окна
-view-all-shortcuts = Просмотреть все сочетания клавиш...
-active-hint = Подсветка активных окон
+view-all-shortcuts = Все сочетания клавиш...
+active-hint = Подсветка активного окна
 gaps = Зазоры
 floating-window-exceptions = Исключения окон для размещения...
 window-management-settings = Параметры управления окнами...
-
+all-workspaces = Все места
+per-workspace = Выборочно
 super = Super
 shift = Shift
 arrow-keys = стрелки
+tiled = Размещаются
+floating = Плавают
+autotile-behavior = Рабочие места для размещения
+new-workspace = Окна на новых местах
