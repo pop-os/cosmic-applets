@@ -1,4 +1,5 @@
-tile-windows = 自動的にウィンドウを調整する
+tile-windows = 自動的にウィンドウをタイル
+tile-current = 自動的に現在のワークスペースをタイル
 shortcuts = ショートカット
 navigate-windows = ウィンドウを動き回る
 move-window = ウィンドウを動かす
@@ -8,7 +9,12 @@ active-hint = アクティブヒント
 gaps = 間隔
 floating-window-exceptions = フローティングウィンドウの除外...
 window-management-settings = ウィンドウマネジメント設定...
-
+all-workspaces = 全てのワークスペース
+per-workspace = 各ワークスペース
 super = スーパー
 shift = シフト
 arrow-keys = 矢印キー
+tiled = タイル型
+floating = フローティング
+autotile-behavior = ワークスペースのウィンドウをタイル
+new-workspace = 新しいワークスペースの行動

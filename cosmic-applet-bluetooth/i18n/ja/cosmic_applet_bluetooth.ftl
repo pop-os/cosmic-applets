@@ -9,4 +9,4 @@ unsuccessful = ペアリングが失敗しました。
 check-device = {$deviceName}は電源オンで近くてペアリング準備ができたかと確かめてください。
 try-again = もう一度試す
 discoverable = 発見可能
-pairable = ペアリング出来る
+pairable = ペアリング可能
