@@ -11,6 +11,7 @@ connected = 接続
 connecting = 接続中
 connect = 接続する
 cancel = キャンセル
+settings = ネットワーク設定...
 visible-wireless-networks = 見えるワイヤレス・ネットワーク
 enter-password = パスワードまたは暗号化鍵を入力してください。
 router-wps-button = 「WPS」ボタンを押すことでも接続できます。
