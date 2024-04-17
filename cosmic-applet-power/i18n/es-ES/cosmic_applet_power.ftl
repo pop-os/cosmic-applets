@@ -16,5 +16,5 @@ confirm-question =
         [shutdown] El ordenador se apagará
         [lock-screen] La pantalla se bloqueará
         [log-out] La sesión se cerrará
-        *[other] Esta acción se realizará
+        *[other] La acción seleccionada se realizará
     } en { $countdown } segundos.
