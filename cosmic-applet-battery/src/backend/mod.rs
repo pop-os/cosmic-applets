@@ -34,11 +34,25 @@ pub enum BackendType {
 }
 
 impl BackendType {
-    fn next(self) -> Self {
+    fn next(self) -> Option<Self> {
         match self {
-            Self::S76PowerDaemon => Self::PowerProfilesDaemon,
-            Self::PowerProfilesDaemon => Self::S76PowerDaemon,
+            Self::S76PowerDaemon => Some(Self::PowerProfilesDaemon),
+            Self::PowerProfilesDaemon => None,
         }
+    }
+}
+
+pub async fn get_power_backend<'a>(
+    conn: &'a Connection,
+    backend_type: &BackendType,
+) -> Result<Backend<'a>> {
+    match backend_type {
+        BackendType::S76PowerDaemon => PowerDaemonProxy::new(conn)
+            .await
+            .map(Backend::S76PowerDaemon),
+        BackendType::PowerProfilesDaemon => PowerProfilesProxy::new(conn)
+            .await
+            .map(Backend::PowerProfilesDaemon),
     }
 }
 
@@ -121,30 +135,18 @@ async fn start_listening(
                     return State::Finished;
                 }
             };
-            let backend = match backend_type {
-                BackendType::S76PowerDaemon => {
-                    match PowerDaemonProxy::new(&conn)
-                        .await
-                        .map_err(|e| e.to_string())
-                    {
-                        Ok(p) => Backend::S76PowerDaemon(p),
-                        Err(e) => {
-                            _ = output.send(PowerProfileUpdate::Error(e)).await;
-                            return State::Connecting(backend_type.next());
-                        }
-                    }
-                }
-                BackendType::PowerProfilesDaemon => {
-                    match PowerProfilesProxy::new(&conn)
-                        .await
-                        .map_err(|e| e.to_string())
-                    {
-                        Ok(p) => Backend::PowerProfilesDaemon(p),
-                        Err(e) => {
-                            _ = output.send(PowerProfileUpdate::Error(e)).await;
-                            return State::Connecting(backend_type.next());
-                        }
-                    }
+            let backend = match get_power_backend(&conn, &backend_type)
+                .await
+                .map_err(|e| e.to_string())
+            {
+                Ok(b) => b,
+                Err(e) => {
+                    _ = output.send(PowerProfileUpdate::Error(e)).await;
+                    if let Some(next_type) = backend_type.next() {
+                        return State::Connecting(next_type);
+                    } else {
+                        return State::Finished;
+                    };
                 }
             };
             // Successful connection
@@ -152,7 +154,11 @@ async fn start_listening(
                 Ok(p) => p,
                 Err(e) => {
                     _ = output.send(PowerProfileUpdate::Error(e)).await;
-                    return State::Connecting(backend_type.next());
+                    if let Some(next_type) = backend_type.next() {
+                        return State::Connecting(next_type);
+                    } else {
+                        return State::Finished;
+                    };
                 }
             };
             let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
@@ -160,30 +166,14 @@ async fn start_listening(
             State::Waiting(conn, rx, backend_type)
         }
         State::Waiting(conn, mut rx, backend_type) => {
-            let backend = match backend_type {
-                BackendType::S76PowerDaemon => {
-                    match PowerDaemonProxy::new(&conn)
-                        .await
-                        .map_err(|e| e.to_string())
-                    {
-                        Ok(p) => Backend::S76PowerDaemon(p),
-                        Err(e) => {
-                            _ = output.send(PowerProfileUpdate::Error(e)).await;
-                            return State::Connecting(backend_type);
-                        }
-                    }
-                }
-                BackendType::PowerProfilesDaemon => {
-                    match PowerProfilesProxy::new(&conn)
-                        .await
-                        .map_err(|e| e.to_string())
-                    {
-                        Ok(p) => Backend::PowerProfilesDaemon(p),
-                        Err(e) => {
-                            _ = output.send(PowerProfileUpdate::Error(e)).await;
-                            return State::Connecting(backend_type);
-                        }
-                    }
+            let backend = match get_power_backend(&conn, &backend_type)
+                .await
+                .map_err(|e| e.to_string())
+            {
+                Ok(b) => b,
+                Err(e) => {
+                    _ = output.send(PowerProfileUpdate::Error(e)).await;
+                    return State::Connecting(backend_type);
                 }
             };
 
