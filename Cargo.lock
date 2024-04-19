@@ -1132,6 +1132,7 @@ dependencies = [
  "cosmic-applet-notifications",
  "cosmic-applet-power",
  "cosmic-applet-status-area",
+ "cosmic-applet-status-line",
  "cosmic-applet-tiling",
  "cosmic-applet-time",
  "cosmic-applet-workspaces",
