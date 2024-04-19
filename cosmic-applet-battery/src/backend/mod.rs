@@ -109,7 +109,7 @@ pub fn power_profile_subscription<I: 'static + Hash + Copy + Send + Sync + Debug
 #[derive(Debug)]
 pub enum State {
     Ready,
-    Connecting(BackendType),
+    Connecting(BackendType, Connection),
     Waiting(
         Connection,
         UnboundedReceiver<PowerProfileRequest>,
@@ -125,9 +125,6 @@ async fn start_listening(
     match state {
         State::Ready => {
             // Default to s76 powerdaemon
-            State::Connecting(BackendType::default())
-        }
-        State::Connecting(backend_type) => {
             let conn = match Connection::system().await.map_err(|e| e.to_string()) {
                 Ok(conn) => conn,
                 Err(e) => {
@@ -135,6 +132,9 @@ async fn start_listening(
                     return State::Finished;
                 }
             };
+            State::Connecting(BackendType::default(), conn)
+        }
+        State::Connecting(backend_type, conn) => {
             let backend = match get_power_backend(&conn, &backend_type)
                 .await
                 .map_err(|e| e.to_string())
@@ -143,7 +143,7 @@ async fn start_listening(
                 Err(e) => {
                     _ = output.send(PowerProfileUpdate::Error(e)).await;
                     if let Some(next_type) = backend_type.next() {
-                        return State::Connecting(next_type);
+                        return State::Connecting(next_type, conn);
                     } else {
                         return State::Finished;
                     };
@@ -155,7 +155,7 @@ async fn start_listening(
                 Err(e) => {
                     _ = output.send(PowerProfileUpdate::Error(e)).await;
                     if let Some(next_type) = backend_type.next() {
-                        return State::Connecting(next_type);
+                        return State::Connecting(next_type, conn);
                     } else {
                         return State::Finished;
                     };
@@ -173,7 +173,7 @@ async fn start_listening(
                 Ok(b) => b,
                 Err(e) => {
                     _ = output.send(PowerProfileUpdate::Error(e)).await;
-                    return State::Connecting(backend_type);
+                    return State::Connecting(backend_type, conn);
                 }
             };
 
