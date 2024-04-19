@@ -92,7 +92,10 @@ fn block_view(block: &protocol::Block) -> cosmic::Element<Msg> {
         .color
         .map(cosmic::theme::Text::Color)
         .unwrap_or(cosmic::theme::Text::Default);
-    cosmic::widget::text(&block.full_text).style(theme).into()
+    cosmic::widget::text(&block.full_text)
+        .size(14)
+        .style(theme)
+        .into()
 }
 
 pub fn run() -> iced::Result {
