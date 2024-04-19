@@ -1,0 +1,12 @@
+bluetooth = Bluetooth
+other-devices = Perangkat Bluetooth Lainnya
+settings = Pengaturan Bluetooth...
+connected = Terhubung
+confirm-pin = Mohon konfirmasi bahwa PIN berikut sesuai dengan yang ditampilkan pada {$deviceName}
+confirm = Konfirmasi
+cancel = Batalkan
+unsuccessful = Gagal Terhubung
+check-device = Pastikan {$deviceName} dalam keadaan menyala, dalam jangkauan, dan siap untuk disambungkan.
+try-again = Coba Lagi
+discoverable = Terdeteksi
+pairable = Dapat Disambungkan
