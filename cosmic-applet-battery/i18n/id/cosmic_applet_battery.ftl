@@ -1,0 +1,15 @@
+cosmic-applet-button = Tombol Cosmic
+battery = Baterai
+battery-desc = Penggunaan daya dan kinerja yang dikurangi.
+balanced = Seimbang
+balanced-desc = Kinerja dan penggunaan baterai standar.
+performance = Kinerja Tinggi
+performance-desc = Kinerja dan penggunaan daya yang tinggi.
+max-charge = Tingkatkan masa pakai baterai Anda dengan mengatur nilai pengisian maksimum 80%
+seconds = d
+minutes = m  
+hours = j
+until-empty = hingga kosong
+power-settings = Pengaturan Daya dan Baterai...
+dgpu-running = GPU Diskrit aktif dan dapat mengurangi masa pakai baterai
+dgpu-applications = Aplikasi yang menggunakan {$gpu_name} GPU Diskrit
