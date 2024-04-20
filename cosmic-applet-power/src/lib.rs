@@ -66,6 +66,19 @@ enum PowerAction {
     Shutdown,
 }
 
+impl PowerAction {
+    fn perform(self) -> iced::Command<cosmic::app::Message<Message>> {
+        let msg = |m| cosmic::app::message::app(Message::Zbus(m));
+        match self {
+            PowerAction::Lock => iced::Command::perform(lock(), msg),
+            PowerAction::LogOut => iced::Command::perform(log_out(), msg),
+            PowerAction::Suspend => iced::Command::perform(suspend(), msg),
+            PowerAction::Restart => iced::Command::perform(restart(), msg),
+            PowerAction::Shutdown => iced::Command::perform(shutdown(), msg),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 enum Message {
     Countdown,
@@ -171,17 +184,7 @@ impl cosmic::Application for Power {
             }
             Message::Confirm => {
                 if let Some((id, a, _)) = self.action_to_confirm.take() {
-                    let msg = |m| cosmic::app::message::app(Message::Zbus(m));
-                    Command::batch(vec![
-                        destroy_layer_surface(id),
-                        match a {
-                            PowerAction::Lock => iced::Command::perform(lock(), msg),
-                            PowerAction::LogOut => iced::Command::perform(log_out(), msg),
-                            PowerAction::Suspend => iced::Command::perform(suspend(), msg),
-                            PowerAction::Restart => iced::Command::perform(restart(), msg),
-                            PowerAction::Shutdown => iced::Command::perform(shutdown(), msg),
-                        },
-                    ])
+                    Command::batch(vec![destroy_layer_surface(id), a.perform()])
                 } else {
                     Command::none()
                 }
@@ -200,17 +203,7 @@ impl cosmic::Application for Power {
                         let a = *a;
 
                         self.action_to_confirm = None;
-                        let msg = |m: zbus::Result<()>| cosmic::app::message::app(Message::Zbus(m));
-                        return Command::batch(vec![
-                            destroy_layer_surface(id),
-                            match a {
-                                PowerAction::Lock => iced::Command::perform(lock(), msg),
-                                PowerAction::LogOut => iced::Command::perform(log_out(), msg),
-                                PowerAction::Suspend => iced::Command::perform(suspend(), msg),
-                                PowerAction::Restart => iced::Command::perform(restart(), msg),
-                                PowerAction::Shutdown => iced::Command::perform(shutdown(), msg),
-                            },
-                        ]);
+                        return Command::batch(vec![destroy_layer_surface(id), a.perform()]);
                     }
                 }
                 Command::none()
