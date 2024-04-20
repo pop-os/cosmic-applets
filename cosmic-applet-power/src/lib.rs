@@ -164,17 +164,22 @@ impl cosmic::Application for Power {
                 Command::none()
             }
             Message::Action(action) => {
-                let id = window::Id::unique();
-                self.action_to_confirm = Some((id, action, COUNTDOWN_LENGTH));
-                get_layer_surface(SctkLayerSurfaceSettings {
-                    id,
-                    keyboard_interactivity: KeyboardInteractivity::None,
-                    anchor: Anchor::all(),
-                    namespace: "dialog".into(),
-                    size: Some((None, None)),
-                    size_limits: Limits::NONE.min_width(1.0).min_height(1.0),
-                    ..Default::default()
-                })
+                // Ask for user confirmation of non-destructive actions only
+                if matches!(action, PowerAction::Lock | PowerAction::Suspend) {
+                    action.perform()
+                } else {
+                    let id = window::Id::unique();
+                    self.action_to_confirm = Some((id, action, COUNTDOWN_LENGTH));
+                    get_layer_surface(SctkLayerSurfaceSettings {
+                        id,
+                        keyboard_interactivity: KeyboardInteractivity::None,
+                        anchor: Anchor::all(),
+                        namespace: "dialog".into(),
+                        size: Some((None, None)),
+                        size_limits: Limits::NONE.min_width(1.0).min_height(1.0),
+                        ..Default::default()
+                    })
+                }
             }
             Message::Zbus(result) => {
                 if let Err(e) = result {
