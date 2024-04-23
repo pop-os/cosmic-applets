@@ -401,6 +401,10 @@ impl CaptureData {
             .unwrap();
         let (width, height) = formats.buffer_size;
 
+        if width == 0 || height == 0 {
+            return None;
+        }
+
         // XXX
         if !formats
             .shm_formats
