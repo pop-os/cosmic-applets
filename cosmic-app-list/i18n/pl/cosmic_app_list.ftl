@@ -1,9 +1,9 @@
 cosmic-app-list = Lista Apek Doku Cosmic
-favorite = Ulubione
-unfavorite = Nie Ulubione
+favorite = Przypnij
+unfavorite = Odepnij
 quit = Zamknij
 quit-all = Zamknij Wszystkie
 new-window = Nowe Okno
 run = Uruchom
 run-on = Uruchom na {$gpu}
-run-on-default = (Default)
+run-on-default = (Domyślnie)
