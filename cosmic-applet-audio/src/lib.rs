@@ -87,11 +87,11 @@ impl Audio {
         let output_volume = volume_to_percent(volume);
         if volume.is_muted() {
             self.icon_name = "audio-volume-muted-symbolic".to_string();
-        } else if output_volume < 0.33 {
+        } else if output_volume < 33.0 {
             self.icon_name = "audio-volume-low-symbolic".to_string();
-        } else if output_volume < 0.66 {
+        } else if output_volume < 66.0 {
             self.icon_name = "audio-volume-medium-symbolic".to_string();
-        } else if output_volume <= 1.00 {
+        } else if output_volume <= 100.0 {
             self.icon_name = "audio-volume-high-symbolic".to_string();
         } else {
             self.icon_name = "audio-volume-overamplified-symbolic".to_string();
@@ -113,9 +113,9 @@ impl Audio {
         let input_volume = volume_to_percent(volume);
         if volume.is_muted() || input_volume == 0.0 {
             self.input_icon_name = "microphone-sensitivity-muted-symbolic".to_string();
-        } else if input_volume < 0.33 {
+        } else if input_volume < 33.0 {
             self.input_icon_name = "microphone-sensitivity-low-symbolic".to_string();
-        } else if input_volume < 0.66 {
+        } else if input_volume < 66.0 {
             self.input_icon_name = "microphone-sensitivity-medium-symbolic".to_string();
         } else {
             self.input_icon_name = "microphone-sensitivity-high-symbolic".to_string();
