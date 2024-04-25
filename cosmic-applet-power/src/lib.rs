@@ -66,6 +66,19 @@ enum PowerAction {
     Shutdown,
 }
 
+impl PowerAction {
+    fn perform(self) -> iced::Command<cosmic::app::Message<Message>> {
+        let msg = |m| cosmic::app::message::app(Message::Zbus(m));
+        match self {
+            PowerAction::Lock => iced::Command::perform(lock(), msg),
+            PowerAction::LogOut => iced::Command::perform(log_out(), msg),
+            PowerAction::Suspend => iced::Command::perform(suspend(), msg),
+            PowerAction::Restart => iced::Command::perform(restart(), msg),
+            PowerAction::Shutdown => iced::Command::perform(shutdown(), msg),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 enum Message {
     Countdown,
@@ -151,17 +164,22 @@ impl cosmic::Application for Power {
                 Command::none()
             }
             Message::Action(action) => {
-                let id = window::Id::unique();
-                self.action_to_confirm = Some((id, action, COUNTDOWN_LENGTH));
-                get_layer_surface(SctkLayerSurfaceSettings {
-                    id,
-                    keyboard_interactivity: KeyboardInteractivity::None,
-                    anchor: Anchor::all(),
-                    namespace: "dialog".into(),
-                    size: Some((None, None)),
-                    size_limits: Limits::NONE.min_width(1.0).min_height(1.0),
-                    ..Default::default()
-                })
+                // Ask for user confirmation of non-destructive actions only
+                if matches!(action, PowerAction::Lock | PowerAction::Suspend) {
+                    action.perform()
+                } else {
+                    let id = window::Id::unique();
+                    self.action_to_confirm = Some((id, action, COUNTDOWN_LENGTH));
+                    get_layer_surface(SctkLayerSurfaceSettings {
+                        id,
+                        keyboard_interactivity: KeyboardInteractivity::None,
+                        anchor: Anchor::all(),
+                        namespace: "dialog".into(),
+                        size: Some((None, None)),
+                        size_limits: Limits::NONE.min_width(1.0).min_height(1.0),
+                        ..Default::default()
+                    })
+                }
             }
             Message::Zbus(result) => {
                 if let Err(e) = result {
@@ -171,17 +189,7 @@ impl cosmic::Application for Power {
             }
             Message::Confirm => {
                 if let Some((id, a, _)) = self.action_to_confirm.take() {
-                    let msg = |m| cosmic::app::message::app(Message::Zbus(m));
-                    Command::batch(vec![
-                        destroy_layer_surface(id),
-                        match a {
-                            PowerAction::Lock => iced::Command::perform(lock(), msg),
-                            PowerAction::LogOut => iced::Command::perform(log_out(), msg),
-                            PowerAction::Suspend => iced::Command::perform(suspend(), msg),
-                            PowerAction::Restart => iced::Command::perform(restart(), msg),
-                            PowerAction::Shutdown => iced::Command::perform(shutdown(), msg),
-                        },
-                    ])
+                    Command::batch(vec![destroy_layer_surface(id), a.perform()])
                 } else {
                     Command::none()
                 }
@@ -200,17 +208,7 @@ impl cosmic::Application for Power {
                         let a = *a;
 
                         self.action_to_confirm = None;
-                        let msg = |m: zbus::Result<()>| cosmic::app::message::app(Message::Zbus(m));
-                        return Command::batch(vec![
-                            destroy_layer_surface(id),
-                            match a {
-                                PowerAction::Lock => iced::Command::perform(lock(), msg),
-                                PowerAction::LogOut => iced::Command::perform(log_out(), msg),
-                                PowerAction::Suspend => iced::Command::perform(suspend(), msg),
-                                PowerAction::Restart => iced::Command::perform(restart(), msg),
-                                PowerAction::Shutdown => iced::Command::perform(shutdown(), msg),
-                            },
-                        ]);
+                        return Command::batch(vec![destroy_layer_surface(id), a.perform()]);
                     }
                 }
                 Command::none()

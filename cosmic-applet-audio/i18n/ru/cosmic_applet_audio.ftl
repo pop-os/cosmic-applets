@@ -4,3 +4,4 @@ show-media-controls = Показывать элементы управления
 sound-settings = Параметры звука...
 disconnected = PulseAudio отключен
 no-device = Устройство не выбрано
+unknown-artist = Неизвестный

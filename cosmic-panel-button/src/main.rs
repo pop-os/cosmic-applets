@@ -67,13 +67,13 @@ impl cosmic::Application for Button {
             let content = row!(
                 text(&self.desktop.name).size(14.0),
                 vertical_space(Length::Fixed(
-                    (self.core.applet.suggested_size().1 + 2 * self.core.applet.suggested_padding())
-                        as f32
+                    (self.core.applet.suggested_size(true).1
+                        + 2 * self.core.applet.suggested_padding(true)) as f32
                 ))
             )
             .align_items(iced::Alignment::Center);
             cosmic::widget::button(content)
-                .padding([0, self.core.applet.suggested_padding()])
+                .padding([0, self.core.applet.suggested_padding(false)])
                 .style(cosmic::theme::Button::AppletIcon)
         }
         .on_press(Msg::Press)

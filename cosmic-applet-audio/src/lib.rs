@@ -32,7 +32,7 @@ use cosmic::{Element, Theme};
 use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
 use iced::wayland::popup::{destroy_popup, get_popup};
 use iced::widget::container;
-use libpulse_binding::volume::VolumeLinear;
+use libpulse_binding::volume::Volume;
 use mpris2_zbus::player::PlaybackStatus;
 use mpris_subscription::MprisRequest;
 use mpris_subscription::MprisUpdate;
@@ -84,7 +84,7 @@ impl Audio {
         };
 
         let volume = output.volume.avg();
-        let output_volume = VolumeLinear::from(volume).0;
+        let output_volume = volume_to_percent(volume);
         if volume.is_muted() {
             self.icon_name = "audio-volume-muted-symbolic".to_string();
         } else if output_volume < 0.33 {
@@ -110,7 +110,7 @@ impl Audio {
         };
 
         let volume = input.volume.avg();
-        let input_volume = VolumeLinear::from(volume).0;
+        let input_volume = volume_to_percent(volume);
         if volume.is_muted() || input_volume == 0.0 {
             self.input_icon_name = "microphone-sensitivity-muted-symbolic".to_string();
         } else if input_volume < 0.33 {
@@ -335,10 +335,9 @@ impl cosmic::Application for Audio {
                 }
             }
             Message::SetOutputVolume(vol) => {
-                self.current_output.as_mut().map(|o| {
-                    o.volume
-                        .set(o.volume.len(), VolumeLinear(vol / 100.0).into())
-                });
+                self.current_output
+                    .as_mut()
+                    .map(|o| o.volume.set(o.volume.len(), percent_to_volume(vol)));
                 self.apply_output_volume();
                 if let PulseState::Connected(connection) = &mut self.pulse_state {
                     if let Some(device) = &self.current_output {
@@ -352,10 +351,9 @@ impl cosmic::Application for Audio {
                 }
             }
             Message::SetInputVolume(vol) => {
-                self.current_input.as_mut().map(|i| {
-                    i.volume
-                        .set(i.volume.len(), VolumeLinear(vol / 100.0).into())
-                });
+                self.current_input
+                    .as_mut()
+                    .map(|i| i.volume.set(i.volume.len(), percent_to_volume(vol)));
                 self.apply_input_volume();
                 if let PulseState::Connected(connection) = &mut self.pulse_state {
                     if let Some(device) = &self.current_input {
@@ -596,20 +594,18 @@ impl cosmic::Application for Audio {
 
     fn view_window(&self, _id: window::Id) -> Element<Message> {
         let audio_disabled = matches!(self.pulse_state, PulseState::Disconnected(_));
-        let out_f64 = VolumeLinear::from(
+        let out_f64 = volume_to_percent(
             self.current_output
                 .as_ref()
                 .map(|o| o.volume.avg())
                 .unwrap_or_default(),
-        )
-        .0 * 100.0;
-        let in_f64 = VolumeLinear::from(
+        );
+        let in_f64 = volume_to_percent(
             self.current_input
                 .as_ref()
                 .map(|o| o.volume.avg())
                 .unwrap_or_default(),
-        )
-        .0 * 100.0;
+        );
 
         let mut audio_content = if audio_disabled {
             column![padded_control(
@@ -867,4 +863,16 @@ impl Default for IsOpen {
     fn default() -> Self {
         Self::None
     }
+}
+
+fn volume_to_percent(volume: Volume) -> f64 {
+    volume.0 as f64 * 100. / Volume::NORMAL.0 as f64
+}
+
+fn percent_to_volume(percent: f64) -> Volume {
+    Volume(
+        (percent / 100. * Volume::NORMAL.0 as f64)
+            .clamp(0., Volume::NORMAL.0 as f64)
+            .round() as u32,
+    )
 }

@@ -21,17 +21,20 @@ resolver = "2"
 
 [workspace.dependencies]
 anyhow = "1.0.81"
-cctk = { git = "https://github.com/pop-os/cosmic-protocols", package = "cosmic-client-toolkit", rev = "1cc4a13" }
+cctk = { git = "https://github.com/pop-os/cosmic-protocols", package = "cosmic-client-toolkit", rev = "e4e6f8c" }
 cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols", default-features = false, features = [
     "client",
-], rev = "1cc4a13" }
+], rev = "e4e6f8c" }
 cosmic-time = { git = "https://github.com/pop-os/cosmic-time", default-features = false, features = [
     "libcosmic",
     "once_cell",
 ] }
 futures = "0.3"
 futures-util = "0.3"
-i18n-embed = { version = "0.14.1", features = ["fluent-system", "desktop-requester"] }
+i18n-embed = { version = "0.14.1", features = [
+    "fluent-system",
+    "desktop-requester",
+] }
 i18n-embed-fl = "0.8"
 libcosmic = { git = "https://github.com/pop-os/libcosmic", default-features = false, features = [
     "applet",
@@ -56,4 +59,4 @@ lto = "fat"
 ignored = ["libcosmic"]
 
 [patch."https://github.com/Smithay/client-toolkit"]
-sctk = { git = "https://github.com/smithay/client-toolkit//", package = "smithay-client-toolkit", rev = "e63ab5f" }
+sctk = { git = "https://github.com/smithay/client-toolkit//", package = "smithay-client-toolkit", rev = "3bed072" }

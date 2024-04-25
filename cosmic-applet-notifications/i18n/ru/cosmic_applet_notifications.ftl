@@ -7,7 +7,7 @@ minutes-ago = { NUMBER($duration) ->
     *[other] {$duration} мин назад
 }
 show-less = Показать меньше
-show-more = Показать на {$more} больше
+show-more = Показать ещё {$more}
 clear-all = Очистить все уведомления
 do-not-disturb = Не беспокоить
 notification-settings = Параметры уведомлений...

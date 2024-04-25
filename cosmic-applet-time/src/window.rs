@@ -249,8 +249,8 @@ impl cosmic::Application for Window {
                 row!(
                     cosmic::widget::text(self.now.format(format).to_string()).size(14),
                     container(vertical_space(Length::Fixed(
-                        (self.core.applet.suggested_size().1
-                            + 2 * self.core.applet.suggested_padding())
+                        (self.core.applet.suggested_size(true).1
+                            + 2 * self.core.applet.suggested_padding(true))
                             as f32
                     )))
                 )
@@ -276,7 +276,7 @@ impl cosmic::Application for Window {
                 date_time_col = date_time_col.push(
                     // TODO better calendar icon?
                     icon::from_name("calendar-go-today-symbolic")
-                        .size(self.core.applet.suggested_size().0)
+                        .size(self.core.applet.suggested_size(true).0)
                         .symbolic(true),
                 );
                 for d in self.now.format("%x").to_string().split('/') {
@@ -287,8 +287,8 @@ impl cosmic::Application for Window {
                 column!(
                     date_time_col,
                     horizontal_space(Length::Fixed(
-                        (self.core.applet.suggested_size().0
-                            + 2 * self.core.applet.suggested_padding())
+                        (self.core.applet.suggested_size(true).0
+                            + 2 * self.core.applet.suggested_padding(true))
                             as f32
                     ))
                 )
@@ -296,9 +296,9 @@ impl cosmic::Application for Window {
             )
         })
         .padding(if horizontal {
-            [0, self.core.applet.suggested_padding()]
+            [0, self.core.applet.suggested_padding(true)]
         } else {
-            [self.core.applet.suggested_padding(), 0]
+            [self.core.applet.suggested_padding(true), 0]
         })
         .on_press(Message::TogglePopup)
         .style(cosmic::theme::Button::AppletIcon);

@@ -1,5 +1,5 @@
 use crate::wayland_subscription::{
-    ToplevelRequest, ToplevelUpdate, WaylandImage, WaylandRequest, WaylandUpdate,
+    OutputUpdate, ToplevelRequest, ToplevelUpdate, WaylandImage, WaylandRequest, WaylandUpdate,
 };
 use std::{
     os::{
@@ -42,9 +42,7 @@ use cosmic_protocols::{
     screencopy::v2::client::{
         zcosmic_screencopy_frame_v2, zcosmic_screencopy_manager_v2, zcosmic_screencopy_session_v2,
     },
-    toplevel_info::v1::client::zcosmic_toplevel_handle_v1::{
-        self, State as ToplevelUpdateState, ZcosmicToplevelHandleV1,
-    },
+    toplevel_info::v1::client::zcosmic_toplevel_handle_v1::{self, ZcosmicToplevelHandleV1},
     toplevel_management::v1::client::zcosmic_toplevel_manager_v1,
     workspace::v1::client::zcosmic_workspace_handle_v1::State as WorkspaceUpdateState,
 };
@@ -58,6 +56,7 @@ struct AppData {
     tx: UnboundedSender<WaylandUpdate>,
     conn: Connection,
     queue_handle: QueueHandle<Self>,
+    output_state: OutputState,
     workspace_state: WorkspaceState,
     toplevel_info_state: ToplevelInfoState,
     toplevel_manager_state: ToplevelManagerState,
@@ -66,7 +65,6 @@ struct AppData {
     seat_state: SeatState,
     shm_state: Shm,
     activation_state: Option<ActivationState>,
-    output_state: OutputState,
 }
 
 // Workspace and toplevel handling
@@ -83,14 +81,30 @@ impl OutputHandler for AppData {
         _qh: &QueueHandle<Self>,
         output: wl_output::WlOutput,
     ) {
+        if let Some(info) = self.output_state.info(&output) {
+            let _ = self
+                .tx
+                .unbounded_send(WaylandUpdate::Output(OutputUpdate::Add(
+                    output.clone(),
+                    info.clone(),
+                )));
+        }
     }
 
     fn update_output(
         &mut self,
         _conn: &Connection,
         _qh: &QueueHandle<Self>,
-        _output: wl_output::WlOutput,
+        output: wl_output::WlOutput,
     ) {
+        if let Some(info) = self.output_state.info(&output) {
+            let _ = self
+                .tx
+                .unbounded_send(WaylandUpdate::Output(OutputUpdate::Update(
+                    output.clone(),
+                    info.clone(),
+                )));
+        }
     }
 
     fn output_destroyed(
@@ -99,6 +113,9 @@ impl OutputHandler for AppData {
         _qh: &QueueHandle<Self>,
         output: wl_output::WlOutput,
     ) {
+        let _ = self
+            .tx
+            .unbounded_send(WaylandUpdate::Output(OutputUpdate::Remove(output.clone())));
     }
 }
 
@@ -108,19 +125,21 @@ impl WorkspaceHandler for AppData {
     }
 
     fn done(&mut self) {
-        'workspaces_loop: for group in self.workspace_state.workspace_groups() {
-            for workspace in &group.workspaces {
-                if workspace
-                    .state
-                    .contains(&WEnum::Value(WorkspaceUpdateState::Active))
-                {
-                    let _ = self
-                        .tx
-                        .unbounded_send(WaylandUpdate::Workspace(workspace.handle.clone()));
-                    break 'workspaces_loop;
-                }
-            }
-        }
+        let active_workspaces = self
+            .workspace_state
+            .workspace_groups()
+            .iter()
+            .filter_map(|x| {
+                x.workspaces.iter().find(|w| {
+                    w.state
+                        .contains(&WEnum::Value(WorkspaceUpdateState::Active))
+                })
+            })
+            .map(|workspace| workspace.handle.clone())
+            .collect::<Vec<_>>();
+        let _ = self
+            .tx
+            .unbounded_send(WaylandUpdate::Workspace(active_workspaces.clone()));
     }
 }
 
@@ -667,14 +686,14 @@ pub(crate) fn wayland_handler(
         return;
     }
     let registry_state = RegistryState::new(&globals);
-    let workspace_state = WorkspaceState::new(&registry_state, &qh); // Create before toplevel info state
 
     let mut app_data = AppData {
         exit: false,
         tx,
         conn,
         queue_handle: qh.clone(),
-        workspace_state,
+        output_state: OutputState::new(&globals, &qh),
+        workspace_state: WorkspaceState::new(&registry_state, &qh),
         toplevel_info_state: ToplevelInfoState::new(&registry_state, &qh),
         toplevel_manager_state: ToplevelManagerState::new(&registry_state, &qh),
         screencopy_state: ScreencopyState::new(&globals, &qh),
@@ -682,7 +701,6 @@ pub(crate) fn wayland_handler(
         seat_state: SeatState::new(&globals, &qh),
         shm_state: Shm::bind(&globals, &qh).unwrap(),
         activation_state: ActivationState::bind::<AppData>(&globals, &qh).ok(),
-        output_state: OutputState::new(&globals, &qh),
     };
 
     loop {
