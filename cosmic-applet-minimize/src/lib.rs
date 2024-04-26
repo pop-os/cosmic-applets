@@ -125,6 +125,7 @@ impl cosmic::Application for Minimize {
 
     fn view(&self) -> Element<Message> {
         let (width, _) = self.core.applet.suggested_size(false);
+        let padding = self.core.applet.suggested_padding(false);
         let theme = self.core.system_theme().cosmic();
         let space_xxs = theme.space_xxs();
         let icon_buttons = self.apps.iter().map(|(handle, _, data, img)| {
@@ -134,7 +135,7 @@ impl cosmic::Application for Minimize {
                     &data.icon,
                     width as f32,
                     Message::Activate(handle.clone()),
-                    space_xxs,
+                    padding,
                 )),
                 data.name.clone(),
                 // tooltip::Position::FollowCursor,
@@ -164,7 +165,6 @@ impl cosmic::Application for Minimize {
                 .height(Length::Shrink)
                 .width(Length::Shrink)
                 .spacing(space_xxs)
-                .padding([0, space_xxs])
                 .into()
         } else {
             Column::with_children(icon_buttons)
@@ -172,7 +172,6 @@ impl cosmic::Application for Minimize {
                 .height(Length::Shrink)
                 .width(Length::Shrink)
                 .spacing(space_xxs)
-                .padding([space_xxs, 0])
                 .into()
         }
     }

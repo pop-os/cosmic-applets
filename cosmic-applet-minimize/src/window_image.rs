@@ -48,8 +48,8 @@ where
                     } else {
                         Element::from(
                             icon.as_cosmic_icon()
-                                .width(Length::Fixed(size))
-                                .height(Length::Fixed(size)),
+                                .width(Length::Fixed((size - border * 2.0).max(0.)))
+                                .height(Length::Fixed((size - border * 2.0).max(0.))),
                         )
                     })
                     .style(Container::Custom(Box::new(move |theme| {
@@ -68,14 +68,15 @@ where
                 )
                 .align_x(cosmic::iced_core::alignment::Horizontal::Center)
                 .align_y(cosmic::iced_core::alignment::Vertical::Center)
-                .height(Length::Fixed(size))
-                .width(Length::Fixed(size)),
+                .height(Length::Fixed(size + padding as f32 * 2.0))
+                .width(Length::Fixed(size + padding as f32 * 2.0))
+                .padding(padding),
             )
             .on_press(on_press)
             .width(Length::Shrink)
             .height(Length::Shrink)
             .style(Button::AppletIcon)
-            .padding(padding)
+            .padding(0)
             .into(),
             icon: icon
                 .as_cosmic_icon()
@@ -129,10 +130,11 @@ impl<'a, Msg> Widget<Msg, cosmic::Theme, cosmic::Renderer> for WindowImage<'a, M
             .image_button
             .as_widget()
             .layout(button, renderer, limits);
+        let img_node = &button_node.children()[0].children()[0];
 
-        let button_bounds = button_node.size();
-        let icon_width = button_bounds.width / 3.0;
-        let icon_height = button_bounds.height / 3.0;
+        let button_bounds = img_node.size();
+        let icon_width = button_bounds.width.max(button_bounds.height) / 3.0;
+        let icon_height = button_bounds.height.max(button_bounds.width) / 3.0;
         let icon = &mut children[1];
         let icon_node = self
             .icon
@@ -142,7 +144,10 @@ impl<'a, Msg> Widget<Msg, cosmic::Theme, cosmic::Renderer> for WindowImage<'a, M
                 renderer,
                 &Limits::NONE.width(icon_width).height(icon_height),
             )
-            .translate(Vector::new(2. * icon_width, 2. * icon_height));
+            .translate(Vector::new(
+                img_node.bounds().x + 2. * button_bounds.width / 3.0,
+                img_node.bounds().y + 2. * button_bounds.height / 3.0,
+            ));
 
         layout::Node::with_children(
             limits.resolve(Length::Shrink, Length::Shrink, button_node.size()),
