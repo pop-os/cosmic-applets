@@ -6,6 +6,26 @@ mod mouse_area;
 
 use crate::{localize::localize, pulse::DeviceInfo};
 use config::AudioAppletConfig;
+use cosmic::cctk::sctk::reexports::calloop;
+use cosmic::cctk::sctk::reexports::protocols::xdg::shell::client::xdg_positioner::Anchor;
+use cosmic::cosmic_config::CosmicConfigEntry;
+use cosmic::iced::widget;
+use cosmic::iced::Limits;
+use cosmic::iced::Point;
+use cosmic::iced::Rectangle;
+use cosmic::iced::{
+    self,
+    widget::{column, row, slider, text},
+    window, Alignment, Length, Size, Subscription,
+};
+use cosmic::iced_runtime::core::alignment::Horizontal;
+use cosmic::iced_style::application;
+use cosmic::widget::button;
+use cosmic::widget::horizontal_space;
+use cosmic::widget::Column;
+use cosmic::widget::Row;
+use cosmic::widget::{divider, icon};
+use cosmic::Renderer;
 use cosmic::{
     app::Command,
     applet::{
@@ -25,6 +45,7 @@ use cosmic::{
     widget::{button, divider, horizontal_space, icon, Column, Row},
     Element, Renderer, Theme,
 };
+use cosmic::{Element, Theme};
 use cosmic_settings_subscriptions::pulse as sub_pulse;
 use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
 use iced::{
@@ -136,6 +157,7 @@ pub enum Message {
     Token(TokenUpdate),
     OpenSettings,
     PulseSub(sub_pulse::Event),
+    Popup2,
 }
 
 impl Audio {
@@ -618,6 +640,30 @@ impl cosmic::Application for Audio {
                     }
                 }
             },
+            Message::Popup2 => {
+                if let Some(p) = self.popup.as_ref() {
+                    let mut popup_settings = self.core.applet.get_popup_settings(
+                        p.clone(),
+                        window::Id::unique(),
+                        None,
+                        None,
+                        None,
+                    );
+                    popup_settings.positioner.anchor = Anchor::Left;
+                    popup_settings.positioner.anchor_rect = Rectangle::<i32> {
+                        x: 50,
+                        y: 50,
+                        width: 200,
+                        height: 200,
+                    };
+                    popup_settings.positioner.size_limits = Limits::NONE
+                        .min_height(1.0)
+                        .min_width(1.0)
+                        .max_width(300.0)
+                        .max_height(400.0);
+                    return get_popup(popup_settings);
+                }
+            }
         };
 
         Command::none()
@@ -863,7 +909,7 @@ impl cosmic::Application for Audio {
             )
             .padding([0, 24]),
             padded_control(divider::horizontal::default()),
-            menu_button(text(fl!("sound-settings")).size(14)).on_press(Message::OpenSettings)
+            menu_button(text(fl!("sound-settings")).size(14)).on_press(Message::Popup2)
         ]
         .align_items(Alignment::Start)
         .padding([8, 0]);

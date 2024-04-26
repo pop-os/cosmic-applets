@@ -16,3 +16,4 @@ tracing-log.workspace = true
 tracing-subscriber.workspace = true
 tracing.workspace = true
 zbus.workspace = true
+tokio = { version = "1.36.0", features = ["sync", "macros"] }

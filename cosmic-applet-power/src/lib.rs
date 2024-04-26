@@ -115,6 +115,7 @@ impl cosmic::Application for Power {
     }
 
     fn init(core: cosmic::app::Core, _flags: ()) -> (Self, Command<Message>) {
+        panic!("init");
         (
             Self {
                 core,
