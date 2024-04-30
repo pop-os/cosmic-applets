@@ -173,9 +173,10 @@ impl cosmic::Application for App {
     fn view(&self) -> cosmic::Element<'_, Msg> {
         let children = self.menus.iter().map(|(id, menu)| {
             match menu.icon_pixmap() {
-                Some(icon) if menu.icon_name() == "" => {
-                    self.core.applet.icon_button_from_handle(icon.clone())
-                }
+                Some(icon) if menu.icon_name() == "" => self
+                    .core
+                    .applet
+                    .icon_button_from_handle(icon.clone().symbolic(true)),
                 _ => self.core.applet.icon_button(menu.icon_name()),
             }
             .on_press(Msg::TogglePopup(*id))
