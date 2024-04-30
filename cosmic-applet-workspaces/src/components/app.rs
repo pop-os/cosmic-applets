@@ -143,26 +143,23 @@ impl cosmic::Application for IcedWorkspacesApplet {
             self.core.applet.anchor,
             PanelAnchor::Top | PanelAnchor::Bottom
         );
+        let suggested_total =
+            self.core.applet.suggested_size(true).0 + self.core.applet.suggested_padding(true) * 2;
+        let suggested_window_size = self.core.applet.suggested_window_size();
         let buttons = self.workspaces.iter().filter_map(|w| {
             let content = self.core.applet.text(w.0.clone()).font(FONT_BOLD);
 
-            let content = row!(
-                content,
-                vertical_space(Length::Fixed(
-                    (self.core.applet.suggested_size(true).1
-                        + 2 * self.core.applet.suggested_padding(true)) as f32
-                ))
-            )
-            .align_items(cosmic::iced::Alignment::Center);
+            let (width, height) = if self.core.applet.is_horizontal() {
+                (suggested_total as f32, suggested_window_size.1.get() as f32)
+            } else {
+                (suggested_window_size.0.get() as f32, suggested_total as f32)
+            };
 
-            let content = column!(
-                content,
-                horizontal_space(Length::Fixed(
-                    (self.core.applet.suggested_size(true).0
-                        + 2 * self.core.applet.suggested_padding(true)) as f32
-                ))
-            )
-            .align_items(cosmic::iced::Alignment::Center);
+            let content = row!(content, vertical_space(Length::Fixed(height)))
+                .align_items(cosmic::iced::Alignment::Center);
+
+            let content = column!(content, horizontal_space(Length::Fixed(width)))
+                .align_items(cosmic::iced::Alignment::Center);
 
             let btn = button(
                 container(content)

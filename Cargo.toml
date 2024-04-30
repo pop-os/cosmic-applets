@@ -58,14 +58,21 @@ serde = { version = "1.0.152", features = ["derive"] }
 freedesktop-desktop-entry = "0.6.1"
 
 [profile.release]
-<<<<<<< Updated upstream
-lto = "fat"
-=======
+# lto = "fat"
 opt-level = 1
->>>>>>> Stashed changes
 
 [workspace.metadata.cargo-machete]
 ignored = ["libcosmic"]
 # [patch."https://github.com/pop-os/libcosmic"]
 # cosmic-config = { git = "https://github.com/pop-os/libcosmic//" }
 # libcosmic = { git = "https://github.com/pop-os/libcosmic//" }
+
+[patch."https://github.com/Smithay/client-toolkit"]
+sctk = { git = "https://github.com/smithay/client-toolkit//", package = "smithay-client-toolkit", rev = "3bed072" }
+[patch.'https://github.com/pop-os/libcosmic']
+# libcosmic = { git = "https://github.com/pop-os/libcosmic//", branch = "theme-export-gtk" }
+# cosmic-config = { git = "https://github.com/pop-os/libcosmic//", branch = "theme-export-gtk" }
+# cosmic-theme = { git = "https://github.com/pop-os/libcosmic//", branch = "theme-export-gtk" }
+libcosmic = { path = "../libcosmic" }
+cosmic-config = { path = "../libcosmic/cosmic-config" }
+cosmic-theme = { path = "../libcosmic/cosmic-theme" }
