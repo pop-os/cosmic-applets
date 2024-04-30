@@ -238,6 +238,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                     if let Some(tx) = &self.screen_sender {
                         let _ = tx.send(ScreenBacklightRequest::Get);
                     }
+                    self.timeline = Timeline::new();
 
                     let new_id = window::Id::unique();
                     self.popup.replace(new_id);

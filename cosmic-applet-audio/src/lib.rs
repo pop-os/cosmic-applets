@@ -310,6 +310,7 @@ impl cosmic::Application for Audio {
                     }
                     let new_id = window::Id::unique();
                     self.popup.replace(new_id);
+                    self.timeline = Timeline::new();
 
                     let mut popup_settings = self.core.applet.get_popup_settings(
                         window::Id::MAIN,
