@@ -22,14 +22,12 @@ source = "git+https://github.com/wash2/accesskit.git?branch=winit-0.29#26f729169
 dependencies = [
  "accesskit",
  "accesskit_consumer",
- "async-channel",
- "async-executor",
- "async-task",
  "atspi",
  "futures-lite 1.13.0",
- "futures-util",
  "once_cell",
  "serde",
+ "tokio",
+ "tokio-stream",
  "zbus 3.15.2",
 ]
 
@@ -162,7 +160,7 @@ version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dd884d7c72877a94102c3715f3b1cd09ff4fac28221add3e57cfbe25c236d093"
 dependencies = [
- "async-fs 2.1.2",
+ "async-fs",
  "async-net",
  "enumflags2",
  "futures-channel",
@@ -223,18 +221,6 @@ dependencies = [
  "fastrand 2.1.0",
  "futures-lite 2.3.0",
  "slab",
-]
-
-[[package]]
-name = "async-fs"
-version = "1.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "279cf904654eeebfa37ac9bb1598880884924aab82e290aa65c9e77a0e142e06"
-dependencies = [
- "async-lock 2.8.0",
- "autocfg",
- "blocking",
- "futures-lite 1.13.0",
 ]
 
 [[package]]
@@ -723,12 +709,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "clipboard_macos"
+version = "0.1.0"
+source = "git+https://github.com/pop-os/window_clipboard.git?tag=pop-dnd-8#7c59b07b9172d8e0401f7e06609e1050575309c9"
+dependencies = [
+ "objc",
+ "objc-foundation",
+ "objc_id",
+]
+
+[[package]]
 name = "clipboard_wayland"
 version = "0.2.2"
 source = "git+https://github.com/pop-os/window_clipboard.git?tag=pop-dnd-7#a5be70405574e98c292537fd3b01a1352550b9bf"
 dependencies = [
- "dnd",
- "mime 0.1.0",
+ "dnd 0.1.0 (git+https://github.com/pop-os/window_clipboard.git?tag=pop-dnd-7)",
+ "mime 0.1.0 (git+https://github.com/pop-os/window_clipboard.git?tag=pop-dnd-7)",
+ "smithay-clipboard",
+]
+
+[[package]]
+name = "clipboard_wayland"
+version = "0.2.2"
+source = "git+https://github.com/pop-os/window_clipboard.git?tag=pop-dnd-8#7c59b07b9172d8e0401f7e06609e1050575309c9"
+dependencies = [
+ "dnd 0.1.0 (git+https://github.com/pop-os/window_clipboard.git?tag=pop-dnd-8)",
+ "mime 0.1.0 (git+https://github.com/pop-os/window_clipboard.git?tag=pop-dnd-8)",
  "smithay-clipboard",
 ]
 
@@ -736,6 +742,15 @@ dependencies = [
 name = "clipboard_x11"
 version = "0.4.2"
 source = "git+https://github.com/pop-os/window_clipboard.git?tag=pop-dnd-7#a5be70405574e98c292537fd3b01a1352550b9bf"
+dependencies = [
+ "thiserror",
+ "x11rb",
+]
+
+[[package]]
+name = "clipboard_x11"
+version = "0.4.2"
+source = "git+https://github.com/pop-os/window_clipboard.git?tag=pop-dnd-8#7c59b07b9172d8e0401f7e06609e1050575309c9"
 dependencies = [
  "thiserror",
  "x11rb",
@@ -1083,6 +1098,7 @@ dependencies = [
  "once_cell",
  "rust-embed 8.4.0",
  "rustix 0.38.34",
+ "tokio",
  "tracing",
  "tracing-log",
  "tracing-subscriber",
@@ -1207,14 +1223,13 @@ dependencies = [
 [[package]]
 name = "cosmic-config"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic#f820eb7ffe8ad6e5931f481469eeb79d1a68ab50"
 dependencies = [
  "atomicwrites",
  "cosmic-config-derive",
  "cosmic-settings-daemon",
  "dirs 5.0.1",
  "futures-util",
- "iced_futures",
+ "iced_futures 0.12.0",
  "known-folders",
  "notify",
  "once_cell",
@@ -1229,7 +1244,6 @@ dependencies = [
 [[package]]
 name = "cosmic-config-derive"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic#f820eb7ffe8ad6e5931f481469eeb79d1a68ab50"
 dependencies = [
  "quote",
  "syn 1.0.109",
@@ -1327,7 +1341,7 @@ version = "0.1.0"
 source = "git+https://github.com/pop-os/cosmic-settings-subscriptions#c19240ad2c9f11ef5cec8ed8c70255c3dc9ae8d4"
 dependencies = [
  "futures",
- "iced_futures",
+ "iced_futures 0.12.0 (git+https://github.com/pop-os/libcosmic)",
  "libpulse-binding",
  "log",
  "rustix 0.38.34",
@@ -1362,7 +1376,6 @@ dependencies = [
 [[package]]
 name = "cosmic-theme"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic#f820eb7ffe8ad6e5931f481469eeb79d1a68ab50"
 dependencies = [
  "almost",
  "cosmic-config",
@@ -1511,7 +1524,7 @@ version = "0.19.0"
 source = "git+https://github.com/gfx-rs/wgpu?rev=20fda69#20fda698341efbdc870b8027d6d49f5bf3f36109"
 dependencies = [
  "bitflags 2.5.0",
- "libloading 0.7.4",
+ "libloading 0.8.3",
  "winapi",
 ]
 
@@ -1792,7 +1805,19 @@ version = "0.1.0"
 source = "git+https://github.com/pop-os/window_clipboard.git?tag=pop-dnd-7#a5be70405574e98c292537fd3b01a1352550b9bf"
 dependencies = [
  "bitflags 2.5.0",
- "mime 0.1.0",
+ "mime 0.1.0 (git+https://github.com/pop-os/window_clipboard.git?tag=pop-dnd-7)",
+ "raw-window-handle",
+ "smithay-client-toolkit 0.19.1",
+ "smithay-clipboard",
+]
+
+[[package]]
+name = "dnd"
+version = "0.1.0"
+source = "git+https://github.com/pop-os/window_clipboard.git?tag=pop-dnd-8#7c59b07b9172d8e0401f7e06609e1050575309c9"
+dependencies = [
+ "bitflags 2.5.0",
+ "mime 0.1.0 (git+https://github.com/pop-os/window_clipboard.git?tag=pop-dnd-8)",
  "raw-window-handle",
  "smithay-client-toolkit 0.19.1",
  "smithay-clipboard",
@@ -2783,25 +2808,23 @@ dependencies = [
 [[package]]
 name = "iced"
 version = "0.12.0"
-source = "git+https://github.com/pop-os/libcosmic#f820eb7ffe8ad6e5931f481469eeb79d1a68ab50"
 dependencies = [
- "dnd",
+ "dnd 0.1.0 (git+https://github.com/pop-os/window_clipboard.git?tag=pop-dnd-8)",
  "iced_accessibility",
- "iced_core",
- "iced_futures",
+ "iced_core 0.12.0",
+ "iced_futures 0.12.0",
  "iced_renderer",
  "iced_sctk",
  "iced_widget",
  "image 0.24.9",
- "mime 0.1.0",
+ "mime 0.1.0 (git+https://github.com/pop-os/window_clipboard.git?tag=pop-dnd-8)",
  "thiserror",
- "window_clipboard",
+ "window_clipboard 0.4.1 (git+https://github.com/pop-os/window_clipboard.git?tag=pop-dnd-8)",
 ]
 
 [[package]]
 name = "iced_accessibility"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic#f820eb7ffe8ad6e5931f481469eeb79d1a68ab50"
 dependencies = [
  "accesskit",
  "accesskit_unix",
@@ -2810,13 +2833,12 @@ dependencies = [
 [[package]]
 name = "iced_core"
 version = "0.12.0"
-source = "git+https://github.com/pop-os/libcosmic#f820eb7ffe8ad6e5931f481469eeb79d1a68ab50"
 dependencies = [
  "bitflags 2.5.0",
- "dnd",
+ "dnd 0.1.0 (git+https://github.com/pop-os/window_clipboard.git?tag=pop-dnd-8)",
  "iced_accessibility",
  "log",
- "mime 0.1.0",
+ "mime 0.1.0 (git+https://github.com/pop-os/window_clipboard.git?tag=pop-dnd-8)",
  "num-traits",
  "palette",
  "raw-window-handle",
@@ -2825,8 +2847,38 @@ dependencies = [
  "smol_str",
  "thiserror",
  "web-time",
- "window_clipboard",
+ "window_clipboard 0.4.1 (git+https://github.com/pop-os/window_clipboard.git?tag=pop-dnd-8)",
  "xxhash-rust",
+]
+
+[[package]]
+name = "iced_core"
+version = "0.12.0"
+source = "git+https://github.com/pop-os/libcosmic#f820eb7ffe8ad6e5931f481469eeb79d1a68ab50"
+dependencies = [
+ "bitflags 2.5.0",
+ "dnd 0.1.0 (git+https://github.com/pop-os/window_clipboard.git?tag=pop-dnd-7)",
+ "log",
+ "mime 0.1.0 (git+https://github.com/pop-os/window_clipboard.git?tag=pop-dnd-7)",
+ "num-traits",
+ "raw-window-handle",
+ "smol_str",
+ "thiserror",
+ "web-time",
+ "window_clipboard 0.4.1 (git+https://github.com/pop-os/window_clipboard.git?tag=pop-dnd-7)",
+ "xxhash-rust",
+]
+
+[[package]]
+name = "iced_futures"
+version = "0.12.0"
+dependencies = [
+ "futures",
+ "iced_core 0.12.0",
+ "log",
+ "tokio",
+ "wasm-bindgen-futures",
+ "wasm-timer",
 ]
 
 [[package]]
@@ -2835,9 +2887,8 @@ version = "0.12.0"
 source = "git+https://github.com/pop-os/libcosmic#f820eb7ffe8ad6e5931f481469eeb79d1a68ab50"
 dependencies = [
  "futures",
- "iced_core",
+ "iced_core 0.12.0 (git+https://github.com/pop-os/libcosmic)",
  "log",
- "tokio",
  "wasm-bindgen-futures",
  "wasm-timer",
 ]
@@ -2845,15 +2896,14 @@ dependencies = [
 [[package]]
 name = "iced_graphics"
 version = "0.12.0"
-source = "git+https://github.com/pop-os/libcosmic#f820eb7ffe8ad6e5931f481469eeb79d1a68ab50"
 dependencies = [
  "bitflags 2.5.0",
  "bytemuck",
  "cosmic-text",
  "glam",
  "half",
- "iced_core",
- "iced_futures",
+ "iced_core 0.12.0",
+ "iced_futures 0.12.0",
  "image 0.24.9",
  "kamadak-exif",
  "log",
@@ -2869,7 +2919,6 @@ dependencies = [
 [[package]]
 name = "iced_renderer"
 version = "0.12.0"
-source = "git+https://github.com/pop-os/libcosmic#f820eb7ffe8ad6e5931f481469eeb79d1a68ab50"
 dependencies = [
  "iced_graphics",
  "iced_tiny_skia",
@@ -2881,26 +2930,24 @@ dependencies = [
 [[package]]
 name = "iced_runtime"
 version = "0.12.0"
-source = "git+https://github.com/pop-os/libcosmic#f820eb7ffe8ad6e5931f481469eeb79d1a68ab50"
 dependencies = [
- "dnd",
+ "dnd 0.1.0 (git+https://github.com/pop-os/window_clipboard.git?tag=pop-dnd-8)",
  "iced_accessibility",
- "iced_core",
- "iced_futures",
+ "iced_core 0.12.0",
+ "iced_futures 0.12.0",
  "smithay-client-toolkit 0.19.1",
  "thiserror",
- "window_clipboard",
+ "window_clipboard 0.4.1 (git+https://github.com/pop-os/window_clipboard.git?tag=pop-dnd-8)",
 ]
 
 [[package]]
 name = "iced_sctk"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic#f820eb7ffe8ad6e5931f481469eeb79d1a68ab50"
 dependencies = [
  "enum-repr",
  "float-cmp",
  "futures",
- "iced_futures",
+ "iced_futures 0.12.0",
  "iced_graphics",
  "iced_runtime",
  "iced_style",
@@ -2912,7 +2959,7 @@ dependencies = [
  "tracing",
  "wayland-backend",
  "wayland-protocols 0.32.1",
- "window_clipboard",
+ "window_clipboard 0.4.1 (git+https://github.com/pop-os/window_clipboard.git?tag=pop-dnd-8)",
  "xkbcommon",
  "xkbcommon-dl",
  "xkeysym",
@@ -2921,9 +2968,8 @@ dependencies = [
 [[package]]
 name = "iced_style"
 version = "0.12.0"
-source = "git+https://github.com/pop-os/libcosmic#f820eb7ffe8ad6e5931f481469eeb79d1a68ab50"
 dependencies = [
- "iced_core",
+ "iced_core 0.12.0",
  "once_cell",
  "palette",
 ]
@@ -2931,7 +2977,6 @@ dependencies = [
 [[package]]
 name = "iced_tiny_skia"
 version = "0.12.0"
-source = "git+https://github.com/pop-os/libcosmic#f820eb7ffe8ad6e5931f481469eeb79d1a68ab50"
 dependencies = [
  "bytemuck",
  "cosmic-text",
@@ -2948,7 +2993,6 @@ dependencies = [
 [[package]]
 name = "iced_wgpu"
 version = "0.12.0"
-source = "git+https://github.com/pop-os/libcosmic#f820eb7ffe8ad6e5931f481469eeb79d1a68ab50"
 dependencies = [
  "bitflags 2.5.0",
  "bytemuck",
@@ -2974,9 +3018,8 @@ dependencies = [
 [[package]]
 name = "iced_widget"
 version = "0.12.0"
-source = "git+https://github.com/pop-os/libcosmic#f820eb7ffe8ad6e5931f481469eeb79d1a68ab50"
 dependencies = [
- "dnd",
+ "dnd 0.1.0 (git+https://github.com/pop-os/window_clipboard.git?tag=pop-dnd-8)",
  "iced_renderer",
  "iced_runtime",
  "iced_style",
@@ -2985,7 +3028,7 @@ dependencies = [
  "smithay-client-toolkit 0.19.1",
  "thiserror",
  "unicode-segmentation",
- "window_clipboard",
+ "window_clipboard 0.4.1 (git+https://github.com/pop-os/window_clipboard.git?tag=pop-dnd-8)",
 ]
 
 [[package]]
@@ -3655,7 +3698,6 @@ checksum = "97b3888a4aecf77e811145cadf6eef5901f4782c53886191b2f693f24761847c"
 [[package]]
 name = "libcosmic"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic#f820eb7ffe8ad6e5931f481469eeb79d1a68ab50"
 dependencies = [
  "apply",
  "ashpd",
@@ -3671,8 +3713,8 @@ dependencies = [
  "freedesktop-desktop-entry 0.5.2",
  "freedesktop-icons",
  "iced",
- "iced_core",
- "iced_futures",
+ "iced_core 0.12.0",
+ "iced_futures 0.12.0",
  "iced_renderer",
  "iced_runtime",
  "iced_sctk",
@@ -3989,6 +4031,14 @@ dependencies = [
 name = "mime"
 version = "0.1.0"
 source = "git+https://github.com/pop-os/window_clipboard.git?tag=pop-dnd-7#a5be70405574e98c292537fd3b01a1352550b9bf"
+dependencies = [
+ "smithay-clipboard",
+]
+
+[[package]]
+name = "mime"
+version = "0.1.0"
+source = "git+https://github.com/pop-os/window_clipboard.git?tag=pop-dnd-8#7c59b07b9172d8e0401f7e06609e1050575309c9"
 dependencies = [
  "smithay-clipboard",
 ]
@@ -5309,7 +5359,7 @@ checksum = "3c5e1a9a646d36c3599cd173a41282daf47c44583ad367b8e6837255952e5c67"
 [[package]]
 name = "smithay-client-toolkit"
 version = "0.18.0"
-source = "git+https://github.com/smithay/client-toolkit?rev=3bed072#3bed072b966022f5f929d12f3aff089b1ace980b"
+source = "git+https://github.com/smithay/client-toolkit//?rev=3bed072#3bed072b966022f5f929d12f3aff089b1ace980b"
 dependencies = [
  "bitflags 2.5.0",
  "bytemuck",
@@ -6537,7 +6587,7 @@ dependencies = [
  "js-sys",
  "khronos-egl",
  "libc",
- "libloading 0.7.4",
+ "libloading 0.8.3",
  "log",
  "metal",
  "naga",
@@ -6610,11 +6660,26 @@ version = "0.4.1"
 source = "git+https://github.com/pop-os/window_clipboard.git?tag=pop-dnd-7#a5be70405574e98c292537fd3b01a1352550b9bf"
 dependencies = [
  "clipboard-win",
- "clipboard_macos",
- "clipboard_wayland",
- "clipboard_x11",
- "dnd",
- "mime 0.1.0",
+ "clipboard_macos 0.1.0 (git+https://github.com/pop-os/window_clipboard.git?tag=pop-dnd-7)",
+ "clipboard_wayland 0.2.2 (git+https://github.com/pop-os/window_clipboard.git?tag=pop-dnd-7)",
+ "clipboard_x11 0.4.2 (git+https://github.com/pop-os/window_clipboard.git?tag=pop-dnd-7)",
+ "dnd 0.1.0 (git+https://github.com/pop-os/window_clipboard.git?tag=pop-dnd-7)",
+ "mime 0.1.0 (git+https://github.com/pop-os/window_clipboard.git?tag=pop-dnd-7)",
+ "raw-window-handle",
+ "thiserror",
+]
+
+[[package]]
+name = "window_clipboard"
+version = "0.4.1"
+source = "git+https://github.com/pop-os/window_clipboard.git?tag=pop-dnd-8#7c59b07b9172d8e0401f7e06609e1050575309c9"
+dependencies = [
+ "clipboard-win",
+ "clipboard_macos 0.1.0 (git+https://github.com/pop-os/window_clipboard.git?tag=pop-dnd-8)",
+ "clipboard_wayland 0.2.2 (git+https://github.com/pop-os/window_clipboard.git?tag=pop-dnd-8)",
+ "clipboard_x11 0.4.2 (git+https://github.com/pop-os/window_clipboard.git?tag=pop-dnd-8)",
+ "dnd 0.1.0 (git+https://github.com/pop-os/window_clipboard.git?tag=pop-dnd-8)",
+ "mime 0.1.0 (git+https://github.com/pop-os/window_clipboard.git?tag=pop-dnd-8)",
  "raw-window-handle",
  "thiserror",
 ]
@@ -6960,15 +7025,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "675d170b632a6ad49804c8cf2105d7c31eddd3312555cffd4b740e08e97c25e6"
 dependencies = [
  "async-broadcast 0.5.1",
- "async-executor",
- "async-fs 1.6.0",
- "async-io 1.13.0",
- "async-lock 2.8.0",
  "async-process 1.8.1",
  "async-recursion",
- "async-task",
  "async-trait",
- "blocking",
  "byteorder",
  "derivative",
  "enumflags2",
@@ -6985,6 +7044,7 @@ dependencies = [
  "serde_repr",
  "sha1",
  "static_assertions",
+ "tokio",
  "tracing",
  "uds_windows",
  "winapi",
@@ -7002,7 +7062,7 @@ checksum = "989c3977a7aafa97b12b9a35d21cdcff9b0d2289762b14683f45d66b1ba6c48f"
 dependencies = [
  "async-broadcast 0.7.1",
  "async-executor",
- "async-fs 2.1.2",
+ "async-fs",
  "async-io 2.3.3",
  "async-lock 3.4.0",
  "async-process 2.2.3",

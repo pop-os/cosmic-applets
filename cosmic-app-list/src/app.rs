@@ -1274,7 +1274,7 @@ impl cosmic::Application for CosmicAppList {
             );
         }
 
-        let active: Vec<_> = self
+        let mut active: Vec<_> = self
             .active_list
             .iter()
             .map(|dock_item| {
@@ -1292,7 +1292,28 @@ impl cosmic::Application for CosmicAppList {
                 )
             })
             .collect();
-
+        let window_size = self.core.applet.configure.as_ref();
+        let max_num = if self.core.applet.is_horizontal() {
+            let suggested_width = self.core.applet.suggested_size(false).0
+                + self.core.applet.suggested_padding(false) * 2;
+            window_size
+                .and_then(|w| w.new_size.0)
+                .map(|b| b.get() / suggested_width as u32)
+                .unwrap_or(u32::MAX) as usize
+        } else {
+            let suggested_height = self.core.applet.suggested_size(false).1
+                + self.core.applet.suggested_padding(false) * 2;
+            window_size
+                .and_then(|w| w.new_size.1)
+                .map(|b| b.get() / suggested_height as u32)
+                .unwrap_or(u32::MAX) as usize
+        }
+        .max(4);
+        if max_num < favorites.len() + active.len() {
+            let active_leftover = max_num.saturating_sub(favorites.len());
+            favorites.truncate(max_num - active_leftover);
+            active.truncate(active_leftover);
+        }
         let (w, h, favorites, active, divider) = if is_horizontal {
             (
                 Length::Shrink,
