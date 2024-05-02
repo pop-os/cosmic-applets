@@ -818,9 +818,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                     .push(scrollable(Column::with_children(list_col)).height(Length::Fixed(300.0)));
             }
         }
-        content = content.push(padded_control(divider::horizontal::default()));
-        content = content
-            .push(menu_button(text(fl!("settings")).size(14)).on_press(Message::OpenSettings));
+
         self.core
             .applet
             .popup_container(content.padding([8, 0, 8, 0]))
