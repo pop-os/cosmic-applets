@@ -32,6 +32,7 @@ use cosmic::iced::widget::vertical_rule;
 use cosmic::iced::widget::vertical_space;
 use cosmic::iced::widget::{column, dnd_source, mouse_area, row, Column, Row};
 use cosmic::iced::Color;
+use cosmic::iced::Vector;
 use cosmic::iced::{window, Subscription};
 use cosmic::iced_core::Border;
 use cosmic::iced_core::Padding;
@@ -294,7 +295,7 @@ impl DockItem {
                         .unwrap_or_else(|| Message::Popup(desktop_info.id.clone()))
                 }),
             )
-            .on_drag(|_| Message::StartDrag(desktop_info.id.clone()))
+            .on_drag(|_, _| Message::StartDrag(desktop_info.id.clone()))
             .on_cancelled(Message::DragFinished)
             .on_finished(Message::DragFinished)
         } else {
@@ -873,7 +874,7 @@ impl cosmic::Application for CosmicAppList {
                             DndAction::Copy
                         },
                         window::Id::MAIN,
-                        Some(DndIcon::Custom(icon_id)),
+                        Some((DndIcon::Custom(icon_id), Vector::default())),
                         Box::new(toplevel_group),
                     );
                 }
