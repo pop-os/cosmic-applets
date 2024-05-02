@@ -191,6 +191,26 @@ async fn start_listening(
     match state {
         State::Ready => {
             if let Ok((upower, device)) = display_device().await {
+                if let Ok(devices) = upower.enumerate_devices().await {
+                    let mut has_battery = false;
+                    for device in devices {
+                        let Ok(d) = DeviceProxy::builder(upower.connection()).path(device) else {
+                            continue;
+                        };
+                        let Ok(d) = d.build().await else {
+                            continue;
+                        };
+                        if d.type_().await.unwrap_or_default() == 2
+                            && d.power_supply().await.unwrap_or_default()
+                        {
+                            has_battery = true;
+                            break;
+                        }
+                    }
+                    if !has_battery {
+                        std::process::exit(0);
+                    }
+                }
                 _ = output
                     .send(DeviceDbusEvent::Update {
                         on_battery: upower
