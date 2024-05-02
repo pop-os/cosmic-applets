@@ -31,7 +31,6 @@ pub struct Window {
     config_helper: Config,
     autotile_behavior_model: segmented_button::SingleSelectModel,
     new_workspace_behavior_model: segmented_button::SingleSelectModel,
-    autotile_global_entity: Entity,
     new_workspace_entity: Entity,
     /// may not match the config value if behavior is per-workspace
     autotiled: bool,
@@ -48,7 +47,6 @@ pub enum Message {
     ToggleTileWindows(chain::Toggler, bool),
     ToggleActiveHint(chain::Toggler, bool),
     MyConfigUpdate(Box<CosmicCompConfig>),
-    TileMode(Entity),
     WorkspaceUpdate(WorkspacesUpdate),
     NewWorkspace(Entity),
 }
@@ -121,7 +119,6 @@ impl cosmic::Application for Window {
             config_helper,
             autotile_behavior_model,
             new_workspace_behavior_model,
-            autotile_global_entity,
             new_workspace_entity,
             workspace_tx: None,
             tile_windows: id::Toggler::unique(),
@@ -274,27 +271,6 @@ impl cosmic::Application for Window {
 
                 self.config = *c;
             }
-            Message::TileMode(e) => {
-                let behavior = if e == self.autotile_global_entity {
-                    TileBehavior::Global
-                } else {
-                    TileBehavior::PerWorkspace
-                };
-
-                self.config.autotile_behavior = behavior;
-                self.autotile_behavior_model.activate(e);
-                let helper = self.config_helper.clone();
-                let need_to_reset_autotile = self.autotiled != self.config.autotile
-                    && matches!(behavior, TileBehavior::Global);
-                if need_to_reset_autotile {
-                    self.autotiled = self.config.autotile;
-                }
-                thread::spawn(move || {
-                    if let Err(err) = helper.set("autotile_behavior", behavior) {
-                        error!(?err, "Failed to set autotile_behavior {behavior:?}");
-                    }
-                });
-            }
             Message::NewWorkspace(e) => {
                 let autotile_new = self.new_workspace_entity == e;
                 self.config.autotile = autotile_new;
@@ -320,7 +296,6 @@ impl cosmic::Application for Window {
     }
 
     fn view_window(&self, _id: Id) -> Element<Self::Message> {
-        let space_xxs = self.core.system_theme().cosmic().space_xxs();
         let mut new_workspace_behavior_button =
             segmented_control::horizontal(&self.new_workspace_behavior_model);
         if matches!(self.config.autotile_behavior, TileBehavior::PerWorkspace) {
@@ -344,22 +319,11 @@ impl cosmic::Application for Window {
                 .width(Length::Fill),
             ))
             .width(Length::Fill),
-            padded_control(
-                column![
-                    divider::horizontal::default(),
-                    column![
-                        text(fl!("autotile-behavior")).size(14),
-                        segmented_control::horizontal(&self.autotile_behavior_model)
-                            .on_activate(Message::TileMode)
-                    ],
-                    divider::horizontal::default(),
-                    column![
-                        text(fl!("new-workspace")).size(14),
-                        new_workspace_behavior_button,
-                    ]
-                ]
-                .spacing(space_xxs)
-            ),
+            padded_control(divider::horizontal::default(),),
+            padded_control(column![
+                text(fl!("new-workspace")).size(14),
+                new_workspace_behavior_button,
+            ]),
             padded_control(divider::horizontal::default()),
             padded_control(row!(
                 text(fl!("navigate-windows")).size(14).width(Length::Fill),
