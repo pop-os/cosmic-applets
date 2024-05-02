@@ -1,0 +1,13 @@
+[Desktop Entry]
+Name=Cosmic Applet Status Line
+Comment=Applet for status lines via i3bar/swaybar protocol
+Type=Application
+Exec=cosmic-applet-status-line
+Terminal=false
+Categories=Cosmic;Iced;
+Keywords=Cosmic;Iced;
+# Translators: Do NOT translate or transliterate this text (this is an icon file name)!
+Icon=com.system76.CosmicAppletStatusLine
+StartupNotify=true
+NoDisplay=true
+X-CosmicApplet=true

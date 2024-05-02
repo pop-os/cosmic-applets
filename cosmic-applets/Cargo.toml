@@ -13,6 +13,7 @@ cosmic-applet-network = { path = "../cosmic-applet-network" }
 cosmic-applet-notifications = { path = "../cosmic-applet-notifications" }
 cosmic-applet-power = { path = "../cosmic-applet-power" }
 cosmic-applet-status-area = { path = "../cosmic-applet-status-area" }
+cosmic-applet-status-line = { path = "../cosmic-applet-status-line" }
 cosmic-applet-tiling = { path = "../cosmic-applet-tiling" }
 cosmic-applet-time = { path = "../cosmic-applet-time" }
 cosmic-applet-workspaces = { path = "../cosmic-applet-workspaces" }
