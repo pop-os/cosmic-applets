@@ -374,9 +374,6 @@ impl cosmic::Application for Notifications {
         .text_size(14)
         .width(Length::Fill)]);
 
-        let settings = menu_button(text(fl!("notification-settings")).size(14))
-            .on_press(Message::OpenSettings);
-
         let notifications = if self.cards.is_empty() {
             row![container(
                 column![
@@ -539,10 +536,9 @@ impl cosmic::Application for Notifications {
         let main_content = column![
             padded_control(divider::horizontal::default()),
             notifications,
-            padded_control(divider::horizontal::default())
         ];
 
-        let content = column![do_not_disturb, main_content, settings]
+        let content = column![do_not_disturb, main_content]
             .align_items(Alignment::Start)
             .padding([8, 0]);
 
