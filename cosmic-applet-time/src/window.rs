@@ -1,3 +1,6 @@
+// Copyright 2023 System76 <info@system76.com>
+// SPDX-License-Identifier: GPL-3.0-only
+
 use cosmic::applet::{menu_button, padded_control};
 use cosmic::cctk::sctk::reexports::calloop;
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};

@@ -1,3 +1,6 @@
+// Copyright 2023 System76 <info@system76.com>
+// SPDX-License-Identifier: GPL-3.0-only
+
 use crate::wayland::{self, WorkspaceEvent, WorkspaceList};
 use cctk::sctk::reexports::calloop::channel::SyncSender;
 use cosmic::iced::{

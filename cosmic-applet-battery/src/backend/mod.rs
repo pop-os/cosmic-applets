@@ -1,3 +1,6 @@
+// Copyright 2023 System76 <info@system76.com>
+// SPDX-License-Identifier: GPL-3.0-only
+
 use cosmic::iced::{self, futures::SinkExt, subscription};
 use std::fmt::Debug;
 use std::hash::Hash;

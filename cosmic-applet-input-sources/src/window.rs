@@ -1,3 +1,6 @@
+// Copyright 2024 System76 <info@system76.com>
+// SPDX-License-Identifier: GPL-3.0-only
+
 use crate::config::{Config, CONFIG_VERSION};
 #[allow(unused_imports)]
 use crate::fl;
@@ -16,6 +19,7 @@ use cosmic::prelude::*;
 use cosmic::widget;
 use cosmic_comp_config::CosmicCompConfig;
 use xkb_data::KeyboardLayouts;
+
 pub const ID: &str = "com.system76.CosmicAppletInputSources";
 
 pub struct Window {
@@ -29,6 +33,7 @@ pub struct Window {
     layouts: KeyboardLayouts,
     active_layouts: Vec<ActiveLayout>,
 }
+
 #[derive(Clone, Debug)]
 pub enum Message {
     Config(Config),
@@ -38,6 +43,7 @@ pub enum Message {
     SetActiveLayout(ActiveLayout),
     KeyboardSettings,
 }
+
 #[derive(Debug)]
 pub struct Flags {
     pub config_handler: Option<cosmic_config::Config>,
@@ -46,6 +52,7 @@ pub struct Flags {
     pub comp_config_handler: Option<cosmic_config::Config>,
     pub layouts: KeyboardLayouts,
 }
+
 impl cosmic::Application for Window {
     type Executor = cosmic::SingleThreadExecutor;
     type Flags = Flags;
@@ -145,7 +152,7 @@ impl cosmic::Application for Window {
                     if let Err(err) =
                         comp_config_handler.set("xkb_config", &self.comp_config.xkb_config)
                     {
-                        eprint!("Failed to set config 'xkb_config' {err}");
+                        tracing::error!("Failed to set config 'xkb_config' {err}");
                     }
                 }
             }
@@ -204,9 +211,10 @@ impl cosmic::Application for Window {
         )
         .map(|update| {
             if !update.errors.is_empty() {
-                eprintln!(
+                tracing::error!(
                     "errors loading config {:?}: {:?}",
-                    update.keys, update.errors
+                    update.keys,
+                    update.errors
                 );
             }
             Message::Config(update.config)
@@ -216,9 +224,10 @@ impl cosmic::Application for Window {
             .watch_config("com.system76.CosmicComp")
             .map(|update| {
                 if !update.errors.is_empty() {
-                    eprintln!(
+                    tracing::error!(
                         "errors loading config {:?}: {:?}",
-                        update.keys, update.errors
+                        update.keys,
+                        update.errors
                     );
                 }
                 Message::CompConfig(update.config)
@@ -278,6 +287,7 @@ impl Window {
         active_layouts
     }
 }
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct ActiveLayout {
     layout: String,

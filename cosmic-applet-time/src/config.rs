@@ -1,3 +1,6 @@
+// Copyright 2023 System76 <info@system76.com>
+// SPDX-License-Identifier: GPL-3.0-only
+
 use cosmic::cosmic_config::cosmic_config_derive::CosmicConfigEntry;
 use cosmic::cosmic_config::{self, CosmicConfigEntry};
 

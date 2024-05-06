@@ -1,3 +1,6 @@
+// Copyright 2023 System76 <info@system76.com>
+// SPDX-License-Identifier: GPL-3.0-only
+
 // TODO: `g_bus_own_name` like abstraction in zbus
 
 #![allow(non_snake_case)]

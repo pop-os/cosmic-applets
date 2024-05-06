@@ -1,3 +1,6 @@
+// Copyright 2023 System76 <info@system76.com>
+// SPDX-License-Identifier: GPL-3.0-only
+
 // TODO: Both this and server proxy could emit same events, have way to generate stream from either?
 
 use cosmic::iced;

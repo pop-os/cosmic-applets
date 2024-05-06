@@ -1,3 +1,6 @@
+// Copyright 2023 System76 <info@system76.com>
+// SPDX-License-Identifier: GPL-3.0-only
+
 mod localize;
 pub(crate) mod wayland_handler;
 pub(crate) mod wayland_subscription;
