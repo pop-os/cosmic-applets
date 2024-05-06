@@ -15,7 +15,7 @@ use cosmic::iced_sctk::commands::layer_surface::{
     destroy_layer_surface, get_layer_surface, Anchor, KeyboardInteractivity,
 };
 use cosmic::iced_widget::mouse_area;
-use cosmic::widget::{button, divider, icon};
+use cosmic::widget::{button, divider, horizontal_space, icon, vertical_space, Column};
 use cosmic::Renderer;
 
 use cosmic::iced::{
@@ -287,6 +287,7 @@ impl cosmic::Application for Power {
 
             self.core.applet.popup_container(content).into()
         } else if matches!(self.action_to_confirm, Some((c_id, _, _)) if c_id == id) {
+            let cosmic_theme = self.core.system_theme().cosmic();
             let (_, power_action, countdown) = self.action_to_confirm.as_ref().unwrap();
             let action = match power_action {
                 PowerAction::Lock => "lock-screen",
@@ -307,19 +308,27 @@ impl cosmic::Application for Power {
                     HashMap::from_iter(vec![("action", action), ("countdown", countdown)])
                 ))
                 .primary_action(
-                    button(
-                        text(fl!("confirm", HashMap::from_iter(vec![("action", action)]))).size(14),
-                    )
+                    button(min_width_and_height(
+                        text(fl!("confirm", HashMap::from_iter(vec![("action", action)])))
+                            .size(14)
+                            .into(),
+                        142.0,
+                        32.0,
+                    ))
+                    .padding([0, cosmic_theme.space_s()])
                     .id(CONFIRM_ID.clone())
-                    .padding(8)
                     .style(theme::Button::Suggested)
                     .on_press(Message::Confirm),
                 )
                 .secondary_action(
-                    button(text(fl!("cancel")).size(14))
-                        .padding(8)
-                        .style(theme::Button::Standard)
-                        .on_press(Message::Cancel),
+                    button(min_width_and_height(
+                        text(fl!("cancel")).size(14).into(),
+                        142.0,
+                        32.0,
+                    ))
+                    .padding([0, cosmic_theme.space_s()])
+                    .style(theme::Button::Standard)
+                    .on_press(Message::Cancel),
                 )
                 .icon(text_icon(
                     match power_action {
@@ -334,10 +343,14 @@ impl cosmic::Application for Power {
 
             if matches!(power_action, PowerAction::Shutdown) {
                 dialog = dialog.tertiary_action(
-                    button(text(fl!("restart")).size(14))
-                        .padding(8)
-                        .style(theme::Button::Link)
-                        .on_press(Message::Action(PowerAction::Restart)),
+                    button(min_width_and_height(
+                        text(fl!("restart")).size(14).into(),
+                        Length::Shrink,
+                        32.0,
+                    ))
+                    .padding([0, cosmic_theme.space_s()])
+                    .style(theme::Button::Link)
+                    .on_press(Message::Action(PowerAction::Restart)),
                 );
             }
 
@@ -441,4 +454,16 @@ async fn log_out() -> zbus::Result<()> {
         }
     }
     Ok(())
+}
+
+fn min_width_and_height<'a>(
+    e: Element<'a, Message>,
+    width: impl Into<Length>,
+    height: impl Into<Length>,
+) -> Column<'a, Message> {
+    column![
+        row![e, vertical_space(height)].align_items(Alignment::Center),
+        horizontal_space(width)
+    ]
+    .align_items(Alignment::Center)
 }
