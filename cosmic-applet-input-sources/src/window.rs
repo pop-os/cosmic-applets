@@ -162,14 +162,11 @@ impl cosmic::Application for Window {
 
     fn view(&self) -> Element<Self::Message> {
         let suggested = self.core.applet.suggested_padding(true);
-        widget::button(
-            widget::text(
-                self.active_layouts
-                    .first()
-                    .map_or(String::new(), |l| l.layout.clone()),
-            )
-            .size(14),
-        )
+        widget::button(widget::text::body(
+            self.active_layouts
+                .first()
+                .map_or(String::new(), |l| l.layout.clone()),
+        ))
         .style(cosmic::theme::Button::AppletIcon)
         .padding([suggested / 2, suggested])
         .on_press(Message::TogglePopup)
@@ -181,8 +178,8 @@ impl cosmic::Application for Window {
             widget::column::with_capacity(4 + self.active_layouts.len()).padding([8, 0]);
         for layout in &self.active_layouts {
             let group = widget::column::with_capacity(2)
-                .push(widget::text(layout.description.clone()).size(16))
-                .push(widget::text(layout.layout.clone()).size(14));
+                .push(widget::text::body(layout.description.clone()))
+                .push(widget::text::caption(layout.layout.clone()));
             content_list = content_list.push(
                 applet::menu_button(group).on_press(Message::SetActiveLayout(layout.clone())),
             );
@@ -190,9 +187,9 @@ impl cosmic::Application for Window {
         content_list = content_list.extend(
             [
                 applet::padded_control(widget::divider::horizontal::default()).apply(Element::from),
-                applet::menu_button(widget::text(fl!("show-keyboard-layout"))).into(),
+                applet::menu_button(widget::text::body(fl!("show-keyboard-layout"))).into(),
                 applet::padded_control(widget::divider::horizontal::default()).into(),
-                applet::menu_button(widget::text(fl!("keyboard-settings")))
+                applet::menu_button(widget::text::body(fl!("keyboard-settings")))
                     .on_press(Message::KeyboardSettings)
                     .into(),
             ]
