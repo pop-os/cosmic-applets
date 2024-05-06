@@ -9,7 +9,7 @@ restart = Reiniciar
 shutdown = Apagar
 confirm = Vale
 cancel = Cancelar
-confirm-question = 
+confirm-body = 
     ¿Está bien? { $action ->
         [restart] El ordenador se reiniciará
         [suspend] El ordenador se suspenderá

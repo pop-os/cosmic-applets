@@ -9,7 +9,7 @@ restart = Uudelleenkäynnistä
 shutdown = Sammuta
 confirm = Varmista
 cancel = Peruuta
-confirm-question = 
+confirm-body = 
     Oletko Varma? { $action ->
         [restart] { restart }
         [suspend] { suspend }

@@ -9,7 +9,7 @@ restart = Поново покрени
 shutdown = Искључи
 confirm = Потврди
 cancel = Откажи
-confirm-question = 
+confirm-body = 
     Јесте ли сигурни? { $action ->
         [restart] Поновно покретање
         [suspend] Стање спавања

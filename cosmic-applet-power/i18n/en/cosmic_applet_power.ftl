@@ -9,13 +9,29 @@ restart = Restart
 shutdown = Shutdown
 confirm = Confirm
 cancel = Cancel
-confirm-question = 
-    Are you sure? { $action ->
+confirm-button = {
+    $action -> 
+        [restart] { restart }
+        [suspend] { suspend}
+        [shutdown] Power off
+        [log-out] { log-out }
+        *[other] { confirm}
+}
+confirm-title = 
+    { $action -> 
         [restart] { restart }
         [suspend] { suspend }
         [shutdown] { shutdown }
-        [lock-screen] Locking the screen
-        [log-out] Logging out
-        *[other] The selected action
-    } will continue in { $countdown } seconds.
+        [log-out] { log-out }
+        *[other] Apply the selected action
+    } now?
+confirm-body = 
+    The system will { $action ->
+        [restart] restart
+        [suspend] suspend
+        [shutdown] power off
+        [lock-screen] lock the screen
+        [log-out] log out
+        *[other] apply the selected action
+    } automatically in { $countdown } seconds.
 

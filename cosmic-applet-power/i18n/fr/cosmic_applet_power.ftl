@@ -9,7 +9,7 @@ restart = Redémarrer
 shutdown = Éteindre
 confirm = Confirmer
 cancel = Annuler
-confirm-question = 
+confirm-body = 
     Êtes-vous sûr ? { $action ->
         [restart] Redémarrer l'ordinateur
         [suspend] Mettre en veille

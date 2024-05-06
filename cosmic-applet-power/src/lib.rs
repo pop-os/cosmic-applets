@@ -10,7 +10,6 @@ use cosmic::iced::event::{listen_with, PlatformSpecific};
 use cosmic::iced::time;
 use cosmic::iced::wayland::actions::layer_surface::SctkLayerSurfaceSettings;
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
-use cosmic::iced_core::{Border, Shadow};
 use cosmic::iced_runtime::core::layout::Limits;
 use cosmic::iced_sctk::commands::layer_surface::{
     destroy_layer_surface, get_layer_surface, Anchor, KeyboardInteractivity,
@@ -19,7 +18,6 @@ use cosmic::iced_widget::mouse_area;
 use cosmic::widget::{button, divider, icon};
 use cosmic::Renderer;
 
-use cosmic::iced::Color;
 use cosmic::iced::{
     widget::{self, column, container, row, space::Space, text},
     window, Alignment, Length, Subscription,
@@ -31,6 +29,7 @@ use cosmic::{app::Command, Element, Theme};
 use logind_zbus::manager::ManagerProxy;
 use logind_zbus::session::{SessionProxy, SessionType};
 use logind_zbus::user::UserProxy;
+use once_cell::sync::Lazy;
 use rustix::process::getuid;
 use zbus::Connection;
 
@@ -48,6 +47,7 @@ pub fn run() -> cosmic::iced::Result {
 }
 
 const COUNTDOWN_LENGTH: u8 = 60;
+static CONFIRM_ID: Lazy<iced::id::Id> = Lazy::new(|| iced::id::Id::new("confirm-id"));
 
 #[derive(Default)]
 struct Power {
@@ -89,6 +89,7 @@ enum Message {
     Cancel,
     Zbus(Result<(), zbus::Error>),
     Closed(window::Id),
+    LayerFocus,
 }
 
 impl cosmic::Application for Power {
@@ -126,6 +127,9 @@ impl cosmic::Application for Power {
             cosmic::iced::Event::PlatformSpecific(PlatformSpecific::Wayland(
                 wayland::Event::Layer(LayerEvent::Unfocused, ..),
             )) => Some(Message::Cancel),
+            cosmic::iced::Event::PlatformSpecific(PlatformSpecific::Wayland(
+                wayland::Event::Layer(LayerEvent::Focused, ..),
+            )) => Some(Message::LayerFocus),
             _ => None,
         }));
         if self.action_to_confirm.is_some() {
@@ -219,6 +223,7 @@ impl cosmic::Application for Power {
                 }
                 Command::none()
             }
+            Message::LayerFocus => button::focus(CONFIRM_ID.clone()),
         }
     }
 
@@ -290,53 +295,58 @@ impl cosmic::Application for Power {
                 PowerAction::Restart => "restart",
                 PowerAction::Shutdown => "shutdown",
             };
+
+            let title = fl!(
+                "confirm-title",
+                HashMap::from_iter(vec![("action", action)])
+            );
             let countdown = &countdown.to_string();
-            let content = column![
-                text(fl!(
-                    "confirm-question",
+            let mut dialog = cosmic::widget::dialog(title)
+                .body(fl!(
+                    "confirm-body",
                     HashMap::from_iter(vec![("action", action), ("countdown", countdown)])
                 ))
-                .size(16),
-                row![
-                    button(text(fl!("confirm")).size(14))
-                        .padding(8)
-                        .style(theme::Button::Suggested)
-                        .on_press(Message::Confirm),
+                .primary_action(
+                    button(
+                        text(fl!("confirm", HashMap::from_iter(vec![("action", action)]))).size(14),
+                    )
+                    .id(CONFIRM_ID.clone())
+                    .padding(8)
+                    .style(theme::Button::Suggested)
+                    .on_press(Message::Confirm),
+                )
+                .secondary_action(
                     button(text(fl!("cancel")).size(14))
                         .padding(8)
                         .style(theme::Button::Standard)
                         .on_press(Message::Cancel),
-                ]
-                .spacing(24)
-            ]
-            .align_items(Alignment::Center)
-            .spacing(12)
-            .padding(24);
-            mouse_area(
-                container(
-                    container(content)
-                        .style(cosmic::theme::Container::custom(|theme| {
-                            container::Appearance {
-                                icon_color: Some(theme.cosmic().background.on.into()),
-                                text_color: Some(theme.cosmic().background.on.into()),
-                                background: Some(
-                                    Color::from(theme.cosmic().background.base).into(),
-                                ),
-                                border: Border {
-                                    radius: 12.0.into(),
-                                    width: 2.0,
-                                    color: theme.cosmic().bg_divider().into(),
-                                },
-                                shadow: Shadow::default(),
-                            }
-                        }))
-                        .width(Length::Shrink)
-                        .height(Length::Shrink),
                 )
-                .align_x(Horizontal::Center)
-                .align_y(Vertical::Center)
-                .width(Length::Fill)
-                .height(Length::Fill),
+                .icon(text_icon(
+                    match power_action {
+                        PowerAction::Lock => "system-lock-screen-symbolic",
+                        PowerAction::LogOut => "system-log-out-symbolic",
+                        PowerAction::Suspend => "system-suspend-symbolic",
+                        PowerAction::Restart => "system-restart-symbolic",
+                        PowerAction::Shutdown => "system-shutdown-symbolic",
+                    },
+                    60,
+                ));
+
+            if matches!(power_action, PowerAction::Shutdown) {
+                dialog = dialog.tertiary_action(
+                    button(text(fl!("restart")).size(14))
+                        .padding(8)
+                        .style(theme::Button::Link)
+                        .on_press(Message::Action(PowerAction::Restart)),
+                );
+            }
+
+            mouse_area(
+                container(dialog)
+                    .align_x(Horizontal::Center)
+                    .align_y(Vertical::Center)
+                    .width(Length::Fill)
+                    .height(Length::Fill),
             )
             .on_press(Message::Cancel)
             .on_right_press(Message::Cancel)
