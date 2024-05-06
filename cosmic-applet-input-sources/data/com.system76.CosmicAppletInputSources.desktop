@@ -1,6 +1,6 @@
 [Desktop Entry]
-Name=Cosmic Applet Input Sources
-Comment=Applet for Cosmic Panel
+Name=Input Sources
+Comment=Display the current and available input sources
 Type=Application
 Exec=cosmic-applet-input-sources
 Terminal=false
