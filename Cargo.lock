@@ -1242,8 +1242,13 @@ dependencies = [
 name = "cosmic-panel-button"
 version = "0.1.0"
 dependencies = [
+ "cosmic-config",
  "freedesktop-desktop-entry",
  "libcosmic",
+ "serde",
+ "tracing",
+ "tracing-log",
+ "tracing-subscriber",
 ]
 
 [[package]]
