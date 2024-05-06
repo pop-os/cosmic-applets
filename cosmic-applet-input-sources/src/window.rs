@@ -49,13 +49,17 @@ impl cosmic::Application for Window {
     type Executor = cosmic::SingleThreadExecutor;
     type Flags = Flags;
     type Message = Message;
+
     const APP_ID: &'static str = ID;
+
     fn core(&self) -> &Core {
         &self.core
     }
+
     fn core_mut(&mut self) -> &mut Core {
         &mut self.core
     }
+
     fn init(
         core: Core,
         flags: Self::Flags,
@@ -73,9 +77,11 @@ impl cosmic::Application for Window {
         };
         (window, Command::none())
     }
+
     fn on_close_requested(&self, id: window::Id) -> Option<Message> {
         Some(Message::PopupClosed(id))
     }
+
     fn update(&mut self, message: Self::Message) -> Command<cosmic::app::Message<Self::Message>> {
         match message {
             Message::Config(config) => self.config = config,
@@ -146,8 +152,9 @@ impl cosmic::Application for Window {
         }
         Command::none()
     }
+
     fn view(&self) -> Element<Self::Message> {
-        let suggested = self.core.applet.suggested_padding();
+        let suggested = self.core.applet.suggested_padding(true);
         widget::button(
             widget::text(
                 self.active_layouts
@@ -161,6 +168,7 @@ impl cosmic::Application for Window {
         .on_press(Message::TogglePopup)
         .into()
     }
+
     fn view_window(&self, _id: Id) -> Element<Self::Message> {
         let mut content_list =
             widget::column::with_capacity(4 + self.active_layouts.len()).padding([8, 0]);
@@ -186,6 +194,7 @@ impl cosmic::Application for Window {
 
         self.core.applet.popup_container(content_list).into()
     }
+
     fn subscription(&self) -> Subscription<Self::Message> {
         struct ConfigSubscription;
         let config = cosmic_config::config_subscription(
