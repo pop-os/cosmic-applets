@@ -1,5 +1,5 @@
 [Desktop Entry]
-Name=Cosmic Applet Time
+Name=Date, Time, and Calendar
 Type=Application
 Exec=cosmic-applet-time
 Terminal=false

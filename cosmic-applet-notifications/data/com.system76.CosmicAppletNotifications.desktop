@@ -1,5 +1,5 @@
 [Desktop Entry]
-Name=Cosmic Applet Notifications
+Name=Notifications Center
 Type=Application
 Exec=cosmic-applet-notifications
 Terminal=false

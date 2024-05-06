@@ -1,6 +1,5 @@
 [Desktop Entry]
-Name=Cosmic Applet Minimize Windows
-Comment=Applet for Cosmic Panel
+Name=Minimized Windows
 Type=Application
 Exec=cosmic-applet-minimize
 Terminal=false
