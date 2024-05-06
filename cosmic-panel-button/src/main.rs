@@ -1,15 +1,21 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
+use config::{CosmicPanelButtonConfig, IndividualConfig, Override};
 use cosmic::applet::cosmic_panel_config::PanelAnchor;
 use cosmic::iced::Length;
 use cosmic::iced_widget::{row, text};
 use cosmic::widget::vertical_space;
 use cosmic::{app, iced, iced_style::application, theme::Theme};
+use cosmic_config::{Config, CosmicConfigEntry};
 use freedesktop_desktop_entry::DesktopEntry;
 use std::{env, fs, process::Command};
 
-#[derive(Clone, Default)]
+mod config;
+
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+#[derive(Debug, Clone, Default)]
 struct Desktop {
     name: String,
     icon: Option<String>,
@@ -19,11 +25,13 @@ struct Desktop {
 struct Button {
     core: cosmic::app::Core,
     desktop: Desktop,
+    config: IndividualConfig,
 }
 
 #[derive(Debug, Clone)]
 enum Msg {
     Press,
+    ConfigUpdated(CosmicPanelButtonConfig),
 }
 
 impl cosmic::Application for Button {
@@ -33,7 +41,22 @@ impl cosmic::Application for Button {
     const APP_ID: &'static str = "com.system76.CosmicPanelButton";
 
     fn init(core: cosmic::app::Core, desktop: Desktop) -> (Self, app::Command<Msg>) {
-        (Self { core, desktop }, app::Command::none())
+        let config = Config::new(Self::APP_ID, CosmicPanelButtonConfig::VERSION)
+            .ok()
+            .and_then(|c| CosmicPanelButtonConfig::get_entry(&c).ok())
+            .unwrap_or_default()
+            .configs
+            .get(&core.applet.panel_type.to_string())
+            .cloned()
+            .unwrap_or_default();
+        (
+            Self {
+                core,
+                desktop,
+                config,
+            },
+            app::Command::none(),
+        )
     }
 
     fn core(&self) -> &cosmic::app::Core {
@@ -53,15 +76,27 @@ impl cosmic::Application for Button {
             Msg::Press => {
                 let _ = Command::new("sh").arg("-c").arg(&self.desktop.exec).spawn();
             }
+            Msg::ConfigUpdated(conf) => {
+                self.config = conf
+                    .configs
+                    .get(&self.core.applet.panel_type.to_string())
+                    .cloned()
+                    .unwrap_or_default();
+            }
         }
         app::Command::none()
     }
 
     fn view(&self) -> cosmic::Element<Msg> {
-        if matches!(
-            self.core.applet.anchor,
-            PanelAnchor::Left | PanelAnchor::Right
-        ) && self.desktop.icon.is_some()
+        // currently, panel being anchored to the left or right is a hard
+        // override for icon, later if text is updated to wrap, we may
+        // use Override::Text to override this behavior
+        if self.desktop.icon.is_some()
+            && matches!(
+                self.core.applet.anchor,
+                PanelAnchor::Left | PanelAnchor::Right
+            )
+            || matches!(self.config.force_presentation, Some(Override::Icon))
         {
             self.core
                 .applet
@@ -82,13 +117,25 @@ impl cosmic::Application for Button {
         .on_press(Msg::Press)
         .into()
     }
+
+    fn subscription(&self) -> iced::Subscription<Self::Message> {
+        self.core.watch_config(Self::APP_ID).map(|u| {
+            for why in u.errors {
+                tracing::error!(why = why.to_string(), "Error watching config");
+            }
+            Msg::ConfigUpdated(u.config)
+        })
+    }
 }
 
 pub fn main() -> iced::Result {
+    tracing_subscriber::fmt::init();
+    let _ = tracing_log::LogTracer::init();
+    tracing::info!("Starting panel button applet with version {VERSION}");
+
     let id = env::args()
         .nth(1)
         .expect("Requires desktop file id as argument.");
-
     let filename = format!("{id}.desktop");
     let mut desktop = None;
     for mut path in freedesktop_desktop_entry::default_paths() {
