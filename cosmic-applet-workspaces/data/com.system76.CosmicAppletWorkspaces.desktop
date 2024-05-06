@@ -1,6 +1,5 @@
 [Desktop Entry]
-Name=Cosmic Applet Workspaces
-Comment=Applet for Cosmic Panel
+Name=Numbered Workspaces
 Type=Application
 Exec=cosmic-applet-workspaces
 Terminal=false

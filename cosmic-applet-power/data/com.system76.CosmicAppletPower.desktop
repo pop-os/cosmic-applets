@@ -1,6 +1,5 @@
 [Desktop Entry]
-Name=Cosmic Applet Power
-Comment=Applet for Cosmic Panel
+Name=User Session
 Type=Application
 Exec=cosmic-applet-power
 Terminal=false

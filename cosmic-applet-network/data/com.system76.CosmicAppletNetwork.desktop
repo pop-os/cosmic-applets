@@ -1,6 +1,5 @@
 [Desktop Entry]
-Name=Cosmic Applet Network
-Comment=Applet for Cosmic Panel
+Name=Network
 Type=Application
 Exec=cosmic-applet-network
 Terminal=false

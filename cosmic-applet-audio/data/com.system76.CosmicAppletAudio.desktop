@@ -1,7 +1,6 @@
 [Desktop Entry]
-Name=Cosmic Applet Audio
+Name=Sound
 Name[ko]=코스믹 오디오 애플릿
-Comment=Applet for Cosmic Panel
 Comment[ko]=코스믹 패널용 애플릿
 Type=Application
 Exec=cosmic-applet-audio

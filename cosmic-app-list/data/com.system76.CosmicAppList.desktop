@@ -1,6 +1,5 @@
 [Desktop Entry]
-Name=Cosmic Dock App List
-Comment=Applet for Cosmic Panel
+Name=App Tray
 Type=Application
 Exec=cosmic-app-list
 Terminal=false

@@ -1,6 +1,5 @@
 [Desktop Entry]
-Name=Cosmic Applet Bluetooth
-Comment=COSMIC Panel Applet for managing bluetooth
+Name=Bluetooth
 Type=Application
 Exec=cosmic-applet-bluetooth
 Terminal=false
