@@ -38,12 +38,13 @@ pub enum Message {
     SetActiveLayout(ActiveLayout),
     KeyboardSettings,
 }
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Flags {
     pub config_handler: Option<cosmic_config::Config>,
     pub config: Config,
     pub comp_config: CosmicCompConfig,
     pub comp_config_handler: Option<cosmic_config::Config>,
+    pub layouts: KeyboardLayouts,
 }
 impl cosmic::Application for Window {
     type Executor = cosmic::SingleThreadExecutor;
@@ -64,10 +65,9 @@ impl cosmic::Application for Window {
         core: Core,
         flags: Self::Flags,
     ) -> (Self, Command<cosmic::app::Message<Self::Message>>) {
-        let layouts = xkb_data::keyboard_layouts().unwrap();
         let window = Window {
             comp_config_handler: flags.comp_config_handler,
-            layouts,
+            layouts: flags.layouts,
             core,
             config: flags.config,
             config_handler: flags.config_handler,

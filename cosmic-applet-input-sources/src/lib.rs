@@ -9,6 +9,15 @@ mod localize;
 mod window;
 pub fn run() -> cosmic::iced::Result {
     localize::localize();
+
+    let layouts = match xkb_data::keyboard_layouts() {
+        Ok(layouts) => layouts,
+        Err(why) => {
+            tracing::error!("could not get keyboard layouts data: {:?}", why);
+            return Ok(());
+        }
+    };
+
     let (config_handler, config) = match cosmic_config::Config::new(window::ID, CONFIG_VERSION) {
         Ok(config_handler) => {
             let config = match Config::get_entry(&config_handler) {
@@ -46,8 +55,9 @@ pub fn run() -> cosmic::iced::Result {
     let flags = Flags {
         comp_config,
         comp_config_handler,
-        config_handler: config_handler,
-        config: config,
+        config_handler,
+        config,
+        layouts,
     };
     cosmic::applet::run::<Window>(true, flags)
 }
