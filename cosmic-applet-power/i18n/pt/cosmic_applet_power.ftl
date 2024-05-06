@@ -9,7 +9,7 @@ restart = Reiniciar
 shutdown = Encerrar
 confirm = Confirmar
 cancel = Cancelar
-confirm-question = 
+confirm-body = 
     Tem a certeza? { $action ->
         [restart] { restart }
         [suspend] { suspend }

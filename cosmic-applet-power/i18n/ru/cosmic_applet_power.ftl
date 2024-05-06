@@ -9,7 +9,7 @@ restart = Перезагрузка
 shutdown = Выключение
 confirm = Подтвердить
 cancel = Отмена
-confirm-question = 
+confirm-body = 
     Вы уверены? { $action ->
         [restart] Перезагрузка
         [suspend] Переход в режим сна

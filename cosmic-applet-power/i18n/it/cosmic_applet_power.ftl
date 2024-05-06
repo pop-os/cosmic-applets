@@ -9,7 +9,7 @@ restart = Riavvia
 shutdown = Spegni
 confirm = Conferma
 cancel = Annulla
-confirm-question = 
+confirm-body = 
     Confermi? { $action ->
         [restart] { restart }
         [suspend] { suspend }

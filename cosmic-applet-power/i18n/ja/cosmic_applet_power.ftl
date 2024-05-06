@@ -9,7 +9,7 @@ restart = 再起動
 shutdown = シャットダウン
 confirm = 確認
 cancel = キャンセル
-confirm-question = 
+confirm-body = 
     よろしいでしょうか？ { $countdown }秒後にシステムは自動的に{ $action ->
         [restart] { restart }
         [suspend] { suspend }
