@@ -98,9 +98,9 @@ impl cosmic::Application for Button {
             )
             || matches!(self.config.force_presentation, Some(Override::Icon))
         {
-            self.core
-                .applet
-                .icon_button(self.desktop.icon.as_ref().unwrap())
+            self.core.applet.icon_button_from_handle(
+                cosmic::widget::icon::from_name(self.desktop.icon.clone().unwrap()).handle(),
+            )
         } else {
             let content = row!(
                 text(&self.desktop.name).size(14.0),
