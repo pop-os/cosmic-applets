@@ -1,3 +1,6 @@
+// Copyright 2023 System76 <info@system76.com>
+// SPDX-License-Identifier: GPL-3.0-only
+
 use crate::wayland_subscription::WorkspacesUpdate;
 use crate::{fl, wayland_subscription};
 use cctk::sctk::reexports::calloop::channel::SyncSender;

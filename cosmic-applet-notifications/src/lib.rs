@@ -1,9 +1,12 @@
+// Copyright 2023 System76 <info@system76.com>
+// SPDX-License-Identifier: GPL-3.0-only
+
 mod localize;
 mod subscriptions;
 use cosmic::applet::token::subscription::{
     activation_token_subscription, TokenRequest, TokenUpdate,
 };
-use cosmic::applet::{menu_button, menu_control_padding, padded_control};
+use cosmic::applet::{menu_control_padding, padded_control};
 use cosmic::cctk::sctk::reexports::calloop;
 use cosmic::cosmic_config::{Config, CosmicConfigEntry};
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};

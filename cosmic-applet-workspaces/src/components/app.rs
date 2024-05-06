@@ -1,3 +1,6 @@
+// Copyright 2023 System76 <info@system76.com>
+// SPDX-License-Identifier: GPL-3.0-only
+
 use cctk::sctk::reexports::{calloop::channel::SyncSender, client::backend::ObjectId};
 use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::event;

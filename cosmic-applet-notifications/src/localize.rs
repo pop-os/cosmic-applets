@@ -1,4 +1,5 @@
-// SPDX-License-Identifier: MPL-2.0-only
+// Copyright 2023 System76 <info@system76.com>
+// SPDX-License-Identifier: GPL-3.0-only
 
 use cosmic_time::once_cell::sync::Lazy;
 use i18n_embed::{

@@ -1,3 +1,6 @@
+// Copyright 2023 System76 <info@system76.com>
+// SPDX-License-Identifier: GPL-3.0-only
+
 use chrono::{Datelike, Days, NaiveDate, Weekday};
 
 /// Gets the first date that will be visible on the calender

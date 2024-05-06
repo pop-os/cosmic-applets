@@ -1,3 +1,6 @@
+// Copyright 2023 System76 <info@system76.com>
+// SPDX-License-Identifier: GPL-3.0-only
+
 // TODO: use udev to monitor for brightness changes?
 // How should key bindings be handled? Need something like gnome-settings-daemon?
 
