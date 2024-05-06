@@ -10,7 +10,7 @@ shutdown = シャットダウン
 confirm = 確認
 cancel = キャンセル
 confirm-body = 
-    よろしいでしょうか？ { $countdown }秒後にシステムは自動的に{ $action ->
+    { $countdown }秒後にシステムは自動的に{ $action ->
         [restart] { restart }
         [suspend] { suspend }
         [shutdown] { shutdown }

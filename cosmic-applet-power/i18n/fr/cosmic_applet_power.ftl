@@ -10,7 +10,7 @@ shutdown = Éteindre
 confirm = Confirmer
 cancel = Annuler
 confirm-body = 
-    Êtes-vous sûr ? { $action ->
+    { $action ->
         [restart] Redémarrer l'ordinateur
         [suspend] Mettre en veille
         [shutdown] Éteindre l'ordinateur
