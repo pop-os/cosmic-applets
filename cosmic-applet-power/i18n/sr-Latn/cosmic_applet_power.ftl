@@ -10,7 +10,7 @@ shutdown = Isključi
 confirm = Potvrdi
 cancel = Otkaži
 confirm-body = 
-    Jeste li sigurni? { $action ->
+    { $action ->
         [restart] Ponovno pokretanje
         [suspend] Stanje spavanja
         [shutdown] Isključivanje

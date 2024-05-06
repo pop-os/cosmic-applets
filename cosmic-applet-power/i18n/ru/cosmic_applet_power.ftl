@@ -10,7 +10,7 @@ shutdown = Выключение
 confirm = Подтвердить
 cancel = Отмена
 confirm-body = 
-    Вы уверены? { $action ->
+    { $action ->
         [restart] Перезагрузка
         [suspend] Переход в режим сна
         [shutdown] Выключение

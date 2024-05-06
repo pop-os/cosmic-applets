@@ -10,7 +10,7 @@ shutdown = Afsluiten
 confirm = Bevestigen
 cancel = Annuleren
 confirm-body = 
-    Weet je het zeker? { $action ->
+    { $action ->
         [restart] { restart }
         [suspend] { suspend }
         [shutdown] { shutdown }

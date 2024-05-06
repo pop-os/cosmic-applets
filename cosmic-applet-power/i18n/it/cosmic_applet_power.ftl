@@ -10,7 +10,7 @@ shutdown = Spegni
 confirm = Conferma
 cancel = Annulla
 confirm-body = 
-    Confermi? { $action ->
+    { $action ->
         [restart] { restart }
         [suspend] { suspend }
         [shutdown] { shutdown }

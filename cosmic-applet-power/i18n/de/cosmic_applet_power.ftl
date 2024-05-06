@@ -9,7 +9,7 @@ restart = Neustart
 shutdown = Ausschalten
 confirm = Bestätigen
 cancel = Abbrechen
-confirm-body = Sind Sie sicher? { $action ->
+confirm-body = { $action ->
         [restart] Ihr System wird
         [suspend] Ihr System wird
         [shutdown] Ihr System wird

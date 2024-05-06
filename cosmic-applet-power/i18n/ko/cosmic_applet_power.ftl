@@ -10,7 +10,7 @@ shutdown = 시스템 종료
 confirm = 확인
 cancel = 취소
 confirm-body = 
-    계속하시겠습니까? { $countdown }초 후 { $action ->
+    { $countdown }초 후 { $action ->
         [restart] { restart }
         [suspend] { suspend }
         [shutdown] { shutdown }

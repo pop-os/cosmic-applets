@@ -10,7 +10,7 @@ shutdown = Sammuta
 confirm = Varmista
 cancel = Peruuta
 confirm-body = 
-    Oletko Varma? { $action ->
+    { $action ->
         [restart] { restart }
         [suspend] { suspend }
         [shutdown] { shutdown }
