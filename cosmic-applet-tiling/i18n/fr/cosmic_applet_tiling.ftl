@@ -1,5 +1,5 @@
-tile-windows = Automatiquement ajuster les fenêtres
-tile-current = Automatiquement ajuster le bureau actuel
+tile-windows = Ajuster automatiquement les fenêtres
+tile-current = Ajuster automatiquement le bureau actuel
 shortcuts = Raccourcis
 navigate-windows = Naviguer les fenêtres
 move-window = Déplacer la fenêtre
@@ -17,4 +17,4 @@ arrow-keys = flèches
 tiled = Ajusté
 floating = Flottante
 autotile-behavior = Ajuster les fenêtes
-new-workspace = New workspace behavior
+new-workspace = Comportement des nouveaux bureaux
