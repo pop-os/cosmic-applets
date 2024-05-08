@@ -13,6 +13,7 @@ use cosmic::{
         window, Subscription,
     },
     iced_style::application,
+    widget::mouse_area,
     Theme,
 };
 use std::collections::BTreeMap;
@@ -26,6 +27,7 @@ pub enum Msg {
     StatusMenu((usize, status_menu::Msg)),
     StatusNotifier(status_notifier_watcher::Event),
     TogglePopup(usize),
+    Hovered(usize),
 }
 
 #[derive(Default)]
@@ -138,25 +140,79 @@ impl cosmic::Application for App {
                 } else {
                     None
                 };
-                // Reuse popup if a different menu is opened.
-                // Had issue creating new one. Does it make a difference?
                 if self.open_menu.is_some() {
-                    if self.popup.is_none() {
-                        let id = self.next_popup_id();
-                        let popup_settings = self.core.applet.get_popup_settings(
-                            window::Id::MAIN,
-                            id,
-                            None,
-                            None,
-                            None,
-                        );
-                        self.popup = Some(id);
-                        return get_popup(popup_settings);
+                    let mut cmds = Vec::new();
+                    if let Some(id) = self.popup.take() {
+                        cmds.push(destroy_popup(id));
                     }
+                    let popup_id = self.next_popup_id();
+                    let mut popup_settings = self.core.applet.get_popup_settings(
+                        window::Id::MAIN,
+                        popup_id,
+                        None,
+                        None,
+                        None,
+                    );
+                    self.popup = Some(popup_id);
+                    let i = self.menus.keys().position(|&i| i == id).unwrap();
+                    if matches!(
+                        self.core.applet.anchor,
+                        PanelAnchor::Left | PanelAnchor::Right
+                    ) {
+                        let suggested_size = self.core.applet.suggested_size(false).1
+                            + 2 * self.core.applet.suggested_padding(false);
+                        popup_settings.positioner.anchor_rect.y = i as i32 * suggested_size as i32;
+                    } else {
+                        let suggested_size = self.core.applet.suggested_size(false).0
+                            + 2 * self.core.applet.suggested_padding(false);
+                        popup_settings.positioner.anchor_rect.x = i as i32 * suggested_size as i32;
+                    }
+                    cmds.push(get_popup(popup_settings));
+                    return Command::batch(cmds);
                 } else if let Some(id) = self.popup {
                     return destroy_popup(id);
                 }
                 Command::none()
+            }
+            Msg::Hovered(id) => {
+                let mut cmds = Vec::new();
+                if let Some(old_id) = self.open_menu.take() {
+                    if old_id != id {
+                        if let Some(popup_id) = self.popup.take() {
+                            cmds.push(destroy_popup(popup_id));
+                        }
+                        self.open_menu = Some(id);
+                    } else {
+                        self.open_menu = Some(old_id);
+                        return Command::none();
+                    }
+                } else {
+                    return Command::none();
+                }
+                let popup_id = self.next_popup_id();
+                let mut popup_settings = self.core.applet.get_popup_settings(
+                    window::Id::MAIN,
+                    popup_id,
+                    None,
+                    None,
+                    None,
+                );
+                self.popup = Some(popup_id);
+                let i = self.menus.keys().position(|&i| i == id).unwrap();
+                if matches!(
+                    self.core.applet.anchor,
+                    PanelAnchor::Left | PanelAnchor::Right
+                ) {
+                    let suggested_size = self.core.applet.suggested_size(false).1
+                        + 2 * self.core.applet.suggested_padding(false);
+                    popup_settings.positioner.anchor_rect.y = i as i32 * suggested_size as i32;
+                } else {
+                    let suggested_size = self.core.applet.suggested_size(false).0
+                        + 2 * self.core.applet.suggested_padding(false);
+                    popup_settings.positioner.anchor_rect.x = i as i32 * suggested_size as i32;
+                }
+                cmds.push(get_popup(popup_settings));
+                Command::batch(cmds)
             }
         }
     }
@@ -175,14 +231,17 @@ impl cosmic::Application for App {
 
     fn view(&self) -> cosmic::Element<'_, Msg> {
         let children = self.menus.iter().map(|(id, menu)| {
-            match menu.icon_pixmap() {
-                Some(icon) if menu.icon_name() == "" => self
-                    .core
-                    .applet
-                    .icon_button_from_handle(icon.clone().symbolic(true)),
-                _ => self.core.applet.icon_button(menu.icon_name()),
-            }
-            .on_press(Msg::TogglePopup(*id))
+            mouse_area(
+                match menu.icon_pixmap() {
+                    Some(icon) if menu.icon_name() == "" => self
+                        .core
+                        .applet
+                        .icon_button_from_handle(icon.clone().symbolic(true)),
+                    _ => self.core.applet.icon_button(menu.icon_name()),
+                }
+                .on_press(Msg::TogglePopup(*id)),
+            )
+            .on_mouse_enter(Msg::Hovered(*id))
             .into()
         });
         if matches!(
