@@ -16,6 +16,7 @@ use cosmic::applet::token::subscription::{
 };
 use cosmic::cctk::sctk::reexports::calloop;
 use cosmic::cosmic_config::CosmicConfigEntry;
+use cosmic::iced::event::listen_with;
 use cosmic::iced::widget;
 use cosmic::iced::Limits;
 use cosmic::iced::{
@@ -32,6 +33,7 @@ use cosmic::widget::Row;
 use cosmic::widget::{divider, icon};
 use cosmic::Renderer;
 use cosmic::{Element, Theme};
+use cosmic_time::Duration;
 use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
 use iced::wayland::popup::{destroy_popup, get_popup};
 use iced::widget::container;
@@ -72,6 +74,7 @@ pub struct Audio {
     config: AudioAppletConfig,
     player_status: Option<mpris_subscription::PlayerStatus>,
     token_tx: Option<calloop::channel::Sender<TokenRequest>>,
+    waiting: bool,
 }
 
 impl Audio {
@@ -151,6 +154,9 @@ pub enum Message {
     MprisRequest(MprisRequest),
     Token(TokenUpdate),
     OpenSettings,
+    Wait,
+    WaitDone,
+    CursorLeft,
 }
 
 impl Audio {
@@ -283,6 +289,7 @@ impl cosmic::Application for Audio {
                 icon_name: "audio-volume-high-symbolic".to_string(),
                 input_icon_name: "audio-input-microphone-symbolic".to_string(),
                 token_tx: None,
+                waiting: true,
                 ..Default::default()
             },
             Command::none(),
@@ -489,6 +496,11 @@ impl cosmic::Application for Audio {
                 self.player_status = None;
             }
             Message::MprisRequest(r) => {
+                // HACK avoid activating MPRIS from a panel popup auto-click event
+                // instead, open the popup
+                if self.waiting {
+                    return self.update(Message::TogglePopup);
+                }
                 let Some(player_status) = self.player_status.as_ref() else {
                     tracing::error!("No player found");
                     return Command::none();
@@ -550,6 +562,18 @@ impl cosmic::Application for Audio {
                     cosmic::process::spawn(cmd);
                 }
             },
+            Message::Wait => {
+                self.waiting = true;
+                return Command::perform(tokio::time::sleep(Duration::from_millis(20)), |_| {
+                    cosmic::app::Message::App(Message::WaitDone)
+                });
+            }
+            Message::WaitDone => {
+                self.waiting = false;
+            }
+            Message::CursorLeft => {
+                self.waiting = true;
+            }
         };
 
         Command::none()
@@ -561,6 +585,15 @@ impl cosmic::Application for Audio {
             self.timeline
                 .as_subscription()
                 .map(|(_, now)| Message::Frame(now)),
+            listen_with(|e, _status| match e {
+                cosmic::iced::Event::Mouse(cosmic::iced::mouse::Event::CursorEntered) => {
+                    Some(Message::Wait)
+                }
+                cosmic::iced::Event::Mouse(cosmic::iced::mouse::Event::CursorLeft) => {
+                    Some(Message::CursorLeft)
+                }
+                _ => None,
+            }),
             self.core.watch_config(Self::APP_ID).map(|u| {
                 for err in u.errors {
                     tracing::error!(?err, "Error watching config");
