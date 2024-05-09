@@ -590,33 +590,31 @@ impl cosmic::Application for CosmicBatteryApplet {
             }
 
             content.push(
-                menu_button(row![
-                    text(fl!(
-                        "dgpu-applications",
-                        gpu_name = if self.gpus.len() == 1 {
-                            String::new()
-                        } else {
-                            format!("\"{}\"", gpu.name)
-                        }
-                    ))
-                    .size(14)
-                    .width(Length::Fill)
-                    .height(Length::Fixed(24.0))
-                    .vertical_alignment(Vertical::Center),
-                    container(
-                        icon::from_name(if gpu.toggled {
-                            "go-down-symbolic"
-                        } else {
-                            "go-up-symbolic"
-                        })
+                menu_button(
+                    row![
+                        text(fl!(
+                            "dgpu-applications",
+                            gpu_name = format!("\"{}\"", gpu.name)
+                        ))
                         .size(14)
-                        .symbolic(true)
-                    )
-                    .align_x(Horizontal::Center)
-                    .align_y(Vertical::Center)
-                    .width(Length::Fixed(24.0))
-                    .height(Length::Fixed(24.0)),
-                ])
+                        .width(Length::Fill)
+                        .vertical_alignment(Vertical::Center),
+                        container(
+                            icon::from_name(if gpu.toggled {
+                                "go-down-symbolic"
+                            } else {
+                                "go-up-symbolic"
+                            })
+                            .size(14)
+                            .symbolic(true)
+                        )
+                        .align_x(Horizontal::Center)
+                        .align_y(Vertical::Center)
+                        .width(Length::Fixed(24.0))
+                        .height(Length::Fixed(24.0)),
+                    ]
+                    .align_items(Alignment::Center),
+                )
                 .on_press(Message::ToggleGpuApps(key.clone()))
                 .into(),
             );
