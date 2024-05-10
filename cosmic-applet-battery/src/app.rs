@@ -594,7 +594,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                     row![
                         text(fl!(
                             "dgpu-applications",
-                            gpu_name = format!("\"{}\"", gpu.name)
+                            gpu_name = format!("\"{}\"", gpu.name.trim())
                         ))
                         .size(14)
                         .width(Length::Fill)
