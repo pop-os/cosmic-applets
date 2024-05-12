@@ -287,10 +287,10 @@ impl cosmic::Application for Window {
         );
         let button = cosmic::widget::button(if horizontal {
             let time = match (self.config.military_time, self.config.show_seconds) {
-                (true, true) => "%-I:%M:%S %p",
-                (true, false) => "%-I:%M %p",
-                (false, true) => "%H:%M:%S",
-                (false, false) => "%H:%M",
+                (true, true) => "%H:%M:%S",
+                (true, false) => "%H:%M",
+                (false, true) => "%-I:%M:%S %p",
+                (false, false) => "%-I:%M %p",
             };
 
             let format = if self.config.show_date_in_top_panel {
