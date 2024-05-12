@@ -345,8 +345,16 @@ impl cosmic::Application for Window {
                         .size(self.core.applet.suggested_size(true).0)
                         .symbolic(true),
                 );
-                for d in self.format_time(&self.now, "%x").split('/') {
-                    date_time_col = date_time_col.push(text(d.to_string()).size(14));
+
+                let date_format = if self.config.day_before_month {
+                    "%d-%m-%y"
+                } else {
+                    "%m-%d-%y"
+                };
+
+                for d in date_format.split("-") {
+                    let str = self.format_time(&self.now, d);
+                    date_time_col = date_time_col.push(text(str).size(14));
                 }
             }
             Element::from(
@@ -460,7 +468,10 @@ impl cosmic::Application for Window {
 
 impl Window {
     fn format_time<'a>(&self, time: &DateTime<Local>, fmt: &'a str) -> String {
-        time.format_localized(fmt, self.locale).to_string()
+        time.format(fmt).to_string()
+        // cause problem with military time when the locale is not english.
+        // PM will not be displayed
+        //time.format_localized(fmt, self.locale).to_string()
     }
 
     fn format_date<'a>(&self, time: &NaiveDate, fmt: &'a str) -> String {
