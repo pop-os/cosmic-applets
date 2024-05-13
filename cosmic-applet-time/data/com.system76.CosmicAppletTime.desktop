@@ -10,5 +10,5 @@ Icon=com.system76.CosmicAppletTime-symbolic
 NoDisplay=true
 X-CosmicApplet=true
 X-HostWaylandDisplay=true
-X-CosmicHoverPopup=true
+X-CosmicHoverPopup=Auto
 

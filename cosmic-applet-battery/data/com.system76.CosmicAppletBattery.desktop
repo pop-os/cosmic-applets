@@ -12,4 +12,4 @@ Icon=com.system76.CosmicAppletBattery-symbolic
 StartupNotify=true
 NoDisplay=true
 X-CosmicApplet=true
-X-CosmicHoverPopup=true
+X-CosmicHoverPopup=Start

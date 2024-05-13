@@ -10,4 +10,4 @@ Icon=com.system76.CosmicAppletNotifications-symbolic
 NoDisplay=true
 X-CosmicApplet=true
 X-NotificationsApplet=true
-X-CosmicHoverPopup=true
+X-CosmicHoverPopup=Auto
