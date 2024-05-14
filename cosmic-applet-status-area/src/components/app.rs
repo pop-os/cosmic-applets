@@ -108,6 +108,15 @@ impl cosmic::Application for App {
                 }
                 status_notifier_watcher::Event::Registered(name) => {
                     let (state, cmd) = status_menu::State::new(name);
+                    if let Some((id, m)) = self
+                        .menus
+                        .iter_mut()
+                        .find(|(_, prev_state)| prev_state.name() == state.name())
+                    {
+                        *m = state;
+                        let id = *id;
+                        return cmd.map(move |msg| app::message::app(Msg::StatusMenu((id, msg))));
+                    }
                     let id = self.next_menu_id();
                     self.menus.insert(id, state);
                     Command::batch([
