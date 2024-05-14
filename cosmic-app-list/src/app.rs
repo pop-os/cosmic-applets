@@ -298,6 +298,7 @@ impl DockItem {
                         .unwrap_or_else(|| Message::Popup(desktop_info.id.clone()))
                 }),
             )
+            .drag_threshold(16.)
             .on_drag(|_, _| Message::StartDrag(desktop_info.id.clone()))
             .on_cancelled(Message::DragFinished)
             .on_finished(Message::DragFinished)
