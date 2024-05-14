@@ -453,7 +453,7 @@ impl cosmic::Application for CosmicNetworkApplet {
 
     fn view_window(&self, _id: window::Id) -> Element<Message> {
         let mut vpn_ethernet_col = column![];
-        let mut known_wifi = column![];
+        let mut known_wifi = Vec::new();
         for conn in &self.nm_state.active_conns {
             match conn {
                 ActiveConnectionInfo::Vpn { name, ip_addresses } => {
@@ -556,7 +556,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                         ),
                         _ => {}
                     };
-                    known_wifi = known_wifi.push(
+                    known_wifi.push(Element::from(
                         column![menu_button(
                             Row::with_children(btn_content)
                                 .align_items(Alignment::Center)
@@ -564,7 +564,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                         )
                         .on_press(Message::Disconnect(name.clone()))]
                         .align_items(Alignment::Center),
-                    );
+                    ));
                 }
             };
         }
@@ -665,9 +665,15 @@ impl cosmic::Application for CosmicNetworkApplet {
                     DeviceState::Activated => btn.on_press(Message::Disconnect(known.ssid.clone())),
                     _ => btn,
                 };
-                known_wifi = known_wifi.push(row![btn].align_items(Alignment::Center));
+                known_wifi.push(Element::from(row![btn].align_items(Alignment::Center)));
             }
-            content = content.push(known_wifi);
+
+            let has_known_wifi = !known_wifi.is_empty();
+            content = content.push(Column::with_children(known_wifi));
+            if has_known_wifi {
+                content = content.push(padded_control(divider::horizontal::default()));
+            }
+
             let dropdown_icon = if self.show_visible_networks {
                 "go-down-symbolic"
             } else {
@@ -686,7 +692,6 @@ impl cosmic::Application for CosmicNetworkApplet {
                     .height(Length::Fixed(24.0)),
             ])
             .on_press(Message::ToggleVisibleNetworks);
-            content = content.push(padded_control(divider::horizontal::default()));
             content = content.push(available_connections_btn);
         }
         if self.show_visible_networks {
