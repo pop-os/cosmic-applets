@@ -17,9 +17,12 @@ use cctk::{
 };
 use cosmic_protocols::workspace::v1::client::zcosmic_workspace_handle_v1;
 use futures::{channel::mpsc, executor::block_on, SinkExt};
-use std::os::{
-    fd::{FromRawFd, RawFd},
-    unix::net::UnixStream,
+use std::{
+    os::{
+        fd::{FromRawFd, RawFd},
+        unix::net::UnixStream,
+    },
+    time::{Duration, Instant},
 };
 use wayland_client::backend::ObjectId;
 use wayland_client::{
@@ -32,7 +35,7 @@ use wayland_client::{Connection, QueueHandle, WEnum};
 #[derive(Debug, Clone)]
 pub enum WorkspaceEvent {
     Activate(ObjectId),
-    Scroll(f64),
+    Scroll(f64, bool),
 }
 pub type WorkspaceList = Vec<(String, Option<zcosmic_workspace_handle_v1::State>, ObjectId)>;
 
@@ -80,6 +83,8 @@ pub fn spawn_workspaces(tx: mpsc::Sender<WorkspaceList>) -> SyncSender<Workspace
                 running: true,
                 have_workspaces: false,
                 scroll: 0.0,
+                next_scroll: None,
+                last_scroll: Instant::now(),
             };
             let loop_handle = event_loop.handle();
             loop_handle
@@ -100,15 +105,32 @@ pub fn spawn_workspaces(tx: mpsc::Sender<WorkspaceList>) -> SyncSender<Workspace
                                 .commit();
                         }
                     }
-                    Event::Msg(WorkspaceEvent::Scroll(v)) => {
-                        // reset scroll if we're scrolling in the opposite direction
-                        if state.scroll * v < 0.0 {
+                    Event::Msg(WorkspaceEvent::Scroll(v, debounce)) => {
+                        let dur = if debounce {
+                            Duration::from_millis(350)
+                        } else {
+                            Duration::from_millis(200)
+                        };
+                        if state.last_scroll.elapsed() > Duration::from_millis(100)
+                            || state.scroll * v < 0.0
+                        {
+                            state.next_scroll = None;
                             state.scroll = 0.0;
                         }
+                        state.last_scroll = Instant::now();
+
                         state.scroll += v;
+                        if let Some(next) = state.next_scroll {
+                            if next > Instant::now() {
+                                return;
+                            }
+                            state.next_scroll = None;
+                        }
+
                         if state.scroll.abs() < 1.0 {
                             return;
                         }
+                        state.next_scroll = Some(Instant::now() + dur);
                         if let Some((w_g, w_i)) = state
                             .workspace_state
                             .workspace_groups()
@@ -190,6 +212,8 @@ pub struct State {
     workspace_state: WorkspaceState,
     have_workspaces: bool,
     scroll: f64,
+    next_scroll: Option<Instant>,
+    last_scroll: Instant,
 }
 
 impl State {

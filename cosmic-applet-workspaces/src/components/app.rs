@@ -112,12 +112,12 @@ impl cosmic::Application for IcedWorkspacesApplet {
                 }
             }
             Message::WheelScrolled(delta) => {
-                let delta = match delta {
-                    ScrollDelta::Lines { x, y } => x + y,
-                    ScrollDelta::Pixels { x, y } => x + y,
-                } as f64;
+                let (delta, debounce) = match delta {
+                    ScrollDelta::Lines { x, y } => ((x + y) as f64, false),
+                    ScrollDelta::Pixels { x, y } => ((x + y) as f64, true),
+                };
                 if let Some(tx) = self.workspace_tx.as_mut() {
-                    let _ = tx.try_send(WorkspaceEvent::Scroll(delta));
+                    let _ = tx.try_send(WorkspaceEvent::Scroll(delta, debounce));
                 }
             }
             Message::WorkspaceOverview => {
