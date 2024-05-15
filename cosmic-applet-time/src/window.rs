@@ -250,7 +250,7 @@ impl cosmic::Application for Window {
             };
             Element::from(
                 row!(
-                    cosmic::widget::text(self.now.format(format).to_string()).size(14),
+                    self.core.applet.text(self.now.format(format).to_string()),
                     container(vertical_space(Length::Fixed(
                         (self.core.applet.suggested_size(true).1
                             + 2 * self.core.applet.suggested_padding(true))
@@ -262,14 +262,14 @@ impl cosmic::Application for Window {
         } else {
             let mut date_time_col = if self.config.military_time {
                 column![
-                    text(self.now.format("%H").to_string()).size(14),
-                    text(self.now.format("%M").to_string()).size(14),
+                    self.core.applet.text(self.now.format("%H").to_string()),
+                    self.core.applet.text(self.now.format("%M").to_string())
                 ]
             } else {
                 column![
-                    text(self.now.format("%I").to_string()).size(14),
-                    text(self.now.format("%M").to_string()).size(14),
-                    text(self.now.format("%p").to_string()).size(14),
+                    self.core.applet.text(self.now.format("%I").to_string()),
+                    self.core.applet.text(self.now.format("%M").to_string()),
+                    self.core.applet.text(self.now.format("%p").to_string()),
                 ]
             }
             .align_items(Alignment::Center)
@@ -283,7 +283,7 @@ impl cosmic::Application for Window {
                         .symbolic(true),
                 );
                 for d in self.now.format("%x").to_string().split('/') {
-                    date_time_col = date_time_col.push(text(d.to_string()).size(14));
+                    date_time_col = date_time_col.push(self.core.applet.text(d.to_string()));
                 }
             }
             Element::from(

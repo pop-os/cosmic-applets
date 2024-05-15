@@ -136,7 +136,7 @@ impl cosmic::Application for IcedWorkspacesApplet {
             PanelAnchor::Top | PanelAnchor::Bottom
         );
         let buttons = self.workspaces.iter().filter_map(|w| {
-            let content = text(w.0.clone()).font(FONT_BOLD).size(16);
+            let content = self.core.applet.text(w.0.clone()).font(FONT_BOLD);
 
             let content = row!(
                 content,
