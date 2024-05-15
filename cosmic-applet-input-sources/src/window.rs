@@ -105,7 +105,7 @@ impl cosmic::Application for Window {
                     popup_settings.positioner.size_limits = Limits::NONE
                         .max_width(372.0)
                         .min_width(300.0)
-                        .min_height(200.0)
+                        .min_height(1.)
                         .max_height(1080.0);
                     get_popup(popup_settings)
                 }
@@ -184,16 +184,14 @@ impl cosmic::Application for Window {
                 applet::menu_button(group).on_press(Message::SetActiveLayout(layout.clone())),
             );
         }
-        content_list = content_list.extend(
-            [
+        if !self.active_layouts.is_empty() {
+            content_list = content_list.push(
                 applet::padded_control(widget::divider::horizontal::default()).apply(Element::from),
-                applet::menu_button(widget::text::body(fl!("show-keyboard-layout"))).into(),
-                applet::padded_control(widget::divider::horizontal::default()).into(),
-                applet::menu_button(widget::text::body(fl!("keyboard-settings")))
-                    .on_press(Message::KeyboardSettings)
-                    .into(),
-            ]
-            .into_iter(),
+            );
+        }
+        content_list = content_list.push(
+            applet::menu_button(widget::text::body(fl!("keyboard-settings")))
+                .on_press(Message::KeyboardSettings),
         );
 
         self.core.applet.popup_container(content_list).into()
