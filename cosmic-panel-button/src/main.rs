@@ -103,7 +103,7 @@ impl cosmic::Application for Button {
             )
         } else {
             let content = row!(
-                text(&self.desktop.name).size(14.0),
+                self.core.applet.text(&self.desktop.name),
                 vertical_space(Length::Fixed(
                     (self.core.applet.suggested_size(true).1
                         + 2 * self.core.applet.suggested_padding(true)) as f32
