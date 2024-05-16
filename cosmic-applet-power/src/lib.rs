@@ -172,7 +172,10 @@ impl cosmic::Application for Power {
             }
             Message::Action(action) => {
                 // Ask for user confirmation of non-destructive actions only
-                if matches!(action, PowerAction::Lock | PowerAction::Suspend) {
+                if matches!(action, PowerAction::Lock | PowerAction::Suspend)
+                    || matches!(action, PowerAction::Restart)
+                        && matches!(self.action_to_confirm, Some((_, PowerAction::Shutdown, _)))
+                {
                     action.perform()
                 } else {
                     let id = window::Id::unique();
