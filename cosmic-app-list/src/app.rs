@@ -34,6 +34,7 @@ use cosmic::iced::widget::dnd_listener;
 use cosmic::iced::widget::vertical_rule;
 use cosmic::iced::widget::vertical_space;
 use cosmic::iced::widget::{column, dnd_source, mouse_area, row, Column, Row};
+use cosmic::iced::window::icon;
 use cosmic::iced::Color;
 use cosmic::iced::Vector;
 use cosmic::iced::{window, Subscription};
@@ -194,6 +195,7 @@ impl DockItem {
         applet: &Context,
         rectangle_tracker: Option<&RectangleTracker<u32>>,
         interaction_enabled: bool,
+        dnd_source_enabled: bool,
         gpus: Option<&[Gpu]>,
         is_focused: bool,
         dot_border_radius: [f32; 4],
@@ -278,30 +280,35 @@ impl DockItem {
             .selected(is_focused)
             .style(app_list_icon_style(is_focused));
 
-        let icon_button = if interaction_enabled {
-            dnd_source(
-                mouse_area(
-                    icon_button
-                        .on_press_maybe(if toplevels.is_empty() {
-                            launch_on_preferred_gpu(desktop_info, gpus)
-                        } else if toplevels.len() == 1 {
-                            toplevels.first().map(|t| Message::Toggle(t.0.clone()))
-                        } else {
-                            Some(Message::TopLevelListPopup(desktop_info.id.clone()))
-                        })
-                        .width(Length::Shrink)
-                        .height(Length::Shrink),
-                )
-                .on_right_release(Message::Popup(desktop_info.id.clone()))
-                .on_middle_release({
-                    launch_on_preferred_gpu(desktop_info, gpus)
-                        .unwrap_or_else(|| Message::Popup(desktop_info.id.clone()))
-                }),
+        let icon_button: Element<_> = if interaction_enabled {
+            mouse_area(
+                icon_button
+                    .on_press_maybe(if toplevels.is_empty() {
+                        launch_on_preferred_gpu(desktop_info, gpus)
+                    } else if toplevels.len() == 1 {
+                        toplevels.first().map(|t| Message::Toggle(t.0.clone()))
+                    } else {
+                        Some(Message::TopLevelListPopup(desktop_info.id.clone()))
+                    })
+                    .width(Length::Shrink)
+                    .height(Length::Shrink),
             )
-            .drag_threshold(16.)
-            .on_drag(|_, _| Message::StartDrag(desktop_info.id.clone()))
-            .on_cancelled(Message::DragFinished)
-            .on_finished(Message::DragFinished)
+            .on_right_release(Message::Popup(desktop_info.id.clone()))
+            .on_middle_release({
+                launch_on_preferred_gpu(desktop_info, gpus)
+                    .unwrap_or_else(|| Message::Popup(desktop_info.id.clone()))
+            })
+            .into()
+        } else {
+            icon_button.into()
+        };
+
+        let icon_button = if dnd_source_enabled && interaction_enabled {
+            dnd_source(icon_button)
+                .drag_threshold(16.)
+                .on_drag(|_, _| Message::StartDrag(desktop_info.id.clone()))
+                .on_cancelled(Message::DragFinished)
+                .on_finished(Message::DragFinished)
         } else {
             dnd_source(icon_button)
         };
@@ -1247,6 +1254,7 @@ impl cosmic::Application for CosmicAppList {
                     &self.core.applet,
                     self.rectangle_tracker.as_ref(),
                     self.popup.is_none(),
+                    self.config.enable_drag_source,
                     self.gpus.as_deref(),
                     dock_item
                         .toplevels
@@ -1268,6 +1276,7 @@ impl cosmic::Application for CosmicAppList {
                     &self.core.applet,
                     None,
                     false,
+                    self.config.enable_drag_source,
                     self.gpus.as_deref(),
                     item.toplevels.iter().any(|y| focused_item.contains(&y.0)),
                     dot_radius,
@@ -1293,6 +1302,7 @@ impl cosmic::Application for CosmicAppList {
                     &self.core.applet,
                     self.rectangle_tracker.as_ref(),
                     self.popup.is_none(),
+                    self.config.enable_drag_source,
                     self.gpus.as_deref(),
                     dock_item
                         .toplevels
