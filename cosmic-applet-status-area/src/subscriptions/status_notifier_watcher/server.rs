@@ -30,7 +30,7 @@ impl StatusNotifierWatcher {
         #[zbus(header)] hdr: MessageHeader<'_>,
         #[zbus(signal_context)] ctxt: SignalContext<'_>,
     ) {
-        let sender = hdr.sender().unwrap().unwrap();
+        let sender = hdr.sender().unwrap();
         let service = if service.starts_with('/') {
             format!("{}{}", sender, service)
         } else {

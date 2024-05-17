@@ -18,11 +18,12 @@
 //!
 //! …consequently `zbus-xmlgen` did not generate code for the above interfaces.
 
-use zbus::dbus_proxy;
+use zbus::proxy;
 
-#[dbus_proxy(
+#[proxy(
     interface = "com.system76.PowerDaemon",
-    default_path = "/com/system76/PowerDaemon"
+    default_path = "/com/system76/PowerDaemon",
+    assume_defaults = true
 )]
 trait PowerDaemon {
     /// Balanced method
@@ -70,10 +71,10 @@ trait PowerDaemon {
     fn set_graphics_power(&self, power: bool) -> zbus::Result<()>;
 
     /// HotPlugDetect signal
-    #[dbus_proxy(signal)]
+    #[zbus(signal)]
     fn hot_plug_detect(&self, port: u64) -> zbus::Result<()>;
 
     /// PowerProfileSwitch signal
-    #[dbus_proxy(signal)]
+    #[zbus(signal)]
     fn power_profile_switch(&self, profile: &str) -> zbus::Result<()>;
 }

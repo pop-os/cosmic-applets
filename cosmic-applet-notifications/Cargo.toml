@@ -17,13 +17,24 @@ tokio = { version = "1.36.0", features = [
     "io-util",
     "io-std",
 ] }
-cosmic-notifications-config = { git = "https://github.com/pop-os/cosmic-notifications" }
 cosmic-notifications-util = { git = "https://github.com/pop-os/cosmic-notifications" }
-i18n-embed-fl.workspace = true
-i18n-embed.workspace = true
-rust-embed.workspace = true
-tracing-log.workspace = true
+cosmic-notifications-config = { git = "https://github.com/pop-os/cosmic-notifications" }
+# cosmic-notifications-util = { path = "../../cosmic-notifications-daemon/cosmic-notifications-util" }
+# cosmic-notifications-config = { path = "../../cosmic-notifications-daemon/cosmic-notifications-config" }
+tracing = "0.1"
+ron = "0.8"
+sendfd = { version = "0.4", features = ["tokio"] }
+bytemuck = "1"
 tracing-subscriber.workspace = true
-tracing.workspace = true
-url = "2.5.0"
+tracing-log.workspace = true
 zbus.workspace = true
+zbus.features = ["tokio", "p2p"]
+# Application i18n
+i18n-embed = { version = "0.13.4", features = [
+    "fluent-system",
+    "desktop-requester",
+] }
+i18n-embed-fl = "0.6.4"
+rust-embed = "6.3.0"
+rust-embed-utils = "7.5.0"
+url = "2.5.0"

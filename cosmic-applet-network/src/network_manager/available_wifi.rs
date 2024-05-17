@@ -41,7 +41,7 @@ pub async fn handle_wireless_device(device: WirelessDevice<'_>) -> zbus::Result<
                 strength,
                 state,
                 working: false,
-                path: ap.path().to_owned(),
+                path: ap.inner().path().to_owned(),
             },
         );
     }

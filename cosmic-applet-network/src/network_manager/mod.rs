@@ -23,7 +23,7 @@ use futures::{
 };
 use tokio::process::Command;
 use zbus::{
-    zvariant::{self, Value},
+    zvariant::{self, OwnedValue, Value},
     Connection,
 };
 
@@ -452,7 +452,9 @@ impl NetworkManagerState {
                     let map = (
                         s.0.to_string(),
                         s.1.iter()
-                            .map(|(k, v)| (k.to_string(), v.clone().into()))
+                            .filter_map(|(k, v)| {
+                                OwnedValue::try_from(v).map(|v| (k.to_string(), v)).ok()
+                            })
                             .collect::<HashMap<_, _>>(),
                     );
                     map
@@ -463,15 +465,13 @@ impl NetworkManagerState {
                 nm.activate_connection(known_conn, &device).await?
             } else {
                 let (_, active_conn) = nm
-                    .add_and_activate_connection(conn_settings, device.path(), &ap.path)
+                    .add_and_activate_connection(conn_settings, device.inner().path(), &ap.path)
                     .await?;
-                let dummy = ActiveConnectionProxy::new(&conn).await?;
+                let dummy = ActiveConnectionProxy::new(&conn, active_conn).await?;
                 let active = ActiveConnectionProxy::builder(&conn)
-                    .path(active_conn)
+                    .destination(dummy.inner().destination().to_owned())
                     .unwrap()
-                    .destination(dummy.destination().to_owned())
-                    .unwrap()
-                    .interface(dummy.interface().to_owned())
+                    .interface(dummy.inner().interface().to_owned())
                     .unwrap()
                     .build()
                     .await

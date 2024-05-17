@@ -10,9 +10,9 @@
 //! section of the zbus documentation.
 //!
 
-use zbus::dbus_proxy;
+use zbus::proxy;
 
-#[dbus_proxy(
+#[proxy(
     interface = "org.freedesktop.UPower.PowerProfiles",
     default_path = "/org/freedesktop/UPower/PowerProfiles",
     assume_defaults = true
@@ -25,40 +25,40 @@ trait PowerProfiles {
     fn release_profile(&self, cookie: u32) -> zbus::Result<()>;
 
     /// ProfileReleased signal
-    #[dbus_proxy(signal)]
+    #[zbus(signal)]
     fn profile_released(&self, cookie: u32) -> zbus::Result<()>;
 
     /// Actions property
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn actions(&self) -> zbus::Result<Vec<String>>;
 
     /// ActiveProfile property
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn active_profile(&self) -> zbus::Result<String>;
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn set_active_profile(&self, value: &str) -> zbus::Result<()>;
 
     /// ActiveProfileHolds property
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn active_profile_holds(
         &self,
     ) -> zbus::Result<Vec<std::collections::HashMap<String, zbus::zvariant::OwnedValue>>>;
 
     /// PerformanceDegraded property
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn performance_degraded(&self) -> zbus::Result<String>;
 
     /// PerformanceInhibited property
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn performance_inhibited(&self) -> zbus::Result<String>;
 
     /// Profiles property
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn profiles(
         &self,
     ) -> zbus::Result<Vec<std::collections::HashMap<String, zbus::zvariant::OwnedValue>>>;
 
     /// Version property
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn version(&self) -> zbus::Result<String>;
 }

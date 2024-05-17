@@ -13,7 +13,7 @@ futures.workspace = true
 futures-util.workspace = true
 i18n-embed-fl.workspace = true
 i18n-embed.workspace = true
-itertools = "0.12.1"
+itertools = "0.13.0"
 libcosmic.workspace = true
 rust-embed.workspace = true
 tokio = { version = "1.36.0", features = ["full"] }

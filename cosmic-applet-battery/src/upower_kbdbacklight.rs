@@ -6,9 +6,9 @@
 use cosmic::iced::{self, futures::SinkExt, subscription};
 use std::{fmt::Debug, hash::Hash};
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
-use zbus::dbus_proxy;
+use zbus::proxy;
 
-#[dbus_proxy(
+#[proxy(
     default_service = "org.freedesktop.UPower",
     interface = "org.freedesktop.UPower.KbdBacklight",
     default_path = "/org/freedesktop/UPower/KbdBacklight"
@@ -24,11 +24,11 @@ trait KbdBacklight {
     fn set_brightness(&self, value: i32) -> zbus::Result<()>;
 
     /// BrightnessChanged signal
-    #[dbus_proxy(signal)]
+    #[zbus(signal)]
     fn brightness_changed(&self, value: i32) -> zbus::Result<()>;
 
     /// BrightnessChangedWithSource signal
-    #[dbus_proxy(signal)]
+    #[zbus(signal)]
     fn brightness_changed_with_source(&self, value: i32, source: &str) -> zbus::Result<()>;
 }
 

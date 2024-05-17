@@ -10,7 +10,7 @@ use crate::subscriptions::status_notifier_item::StatusNotifierItem;
 // TODO: Don't use trait object
 pub type EventStream = Pin<Box<dyn Stream<Item = Event> + Send>>;
 
-#[zbus::dbus_proxy(
+#[zbus::proxy(
     interface = "org.kde.StatusNotifierWatcher",
     default_service = "org.kde.StatusNotifierWatcher",
     default_path = "/StatusNotifierWatcher"
@@ -18,13 +18,13 @@ pub type EventStream = Pin<Box<dyn Stream<Item = Event> + Send>>;
 trait StatusNotifierWatcher {
     fn register_status_notifier_host(&self, name: &str) -> zbus::Result<()>;
 
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn registered_status_notifier_items(&self) -> zbus::Result<Vec<String>>;
 
-    #[dbus_proxy(signal)]
+    #[zbus(signal)]
     fn status_notifier_item_registered(&self, name: &str) -> zbus::Result<()>;
 
-    #[dbus_proxy(signal)]
+    #[zbus(signal)]
     fn status_notifier_item_unregistered(&self, name: &str) -> zbus::Result<()>;
 }
 

@@ -19,9 +19,9 @@
 //!
 //! …consequently `zbus-xmlgen` did not generate code for the above interfaces.
 
-use zbus::dbus_proxy;
+use zbus::proxy;
 
-#[dbus_proxy(
+#[proxy(
     interface = "org.freedesktop.Notifications",
     default_service = "org.freedesktop.Notifications",
     default_path = "/org/freedesktop/Notifications"
@@ -50,10 +50,10 @@ trait Notifications {
     ) -> zbus::Result<u32>;
 
     /// ActionInvoked signal
-    #[dbus_proxy(signal)]
+    #[zbus(signal)]
     fn action_invoked(&self, id: u32, action_key: &str) -> zbus::Result<()>;
 
     /// NotificationClosed signal
-    #[dbus_proxy(signal)]
+    #[zbus(signal)]
     fn notification_closed(&self, id: u32, reason: u32) -> zbus::Result<()>;
 }

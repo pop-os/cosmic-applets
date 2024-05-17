@@ -19,7 +19,7 @@ use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 
 const BACKLIGHT_SYSDIR: &str = "/sys/class/backlight";
 
-#[zbus::dbus_proxy(
+#[zbus::proxy(
     default_service = "org.freedesktop.login1",
     interface = "org.freedesktop.login1.Session",
     default_path = "/org/freedesktop/login1/session/auto"
