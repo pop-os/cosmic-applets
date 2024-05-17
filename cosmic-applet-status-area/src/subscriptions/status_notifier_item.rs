@@ -106,16 +106,16 @@ async fn get_layout(menu_proxy: DBusMenuProxy<'static>) -> Result<Layout, String
     }
 }
 
-#[zbus::dbus_proxy(interface = "org.kde.StatusNotifierItem")]
+#[zbus::proxy(interface = "org.kde.StatusNotifierItem")]
 trait StatusNotifierItem {
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn icon_name(&self) -> zbus::Result<String>;
 
     // https://www.freedesktop.org/wiki/Specifications/StatusNotifierItem/Icons
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn icon_pixmap(&self) -> zbus::Result<Vec<Icon>>;
 
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn menu(&self) -> zbus::Result<zvariant::OwnedObjectPath>;
 }
 
@@ -224,7 +224,7 @@ impl Layout {
     }
 }
 
-#[zbus::dbus_proxy(interface = "com.canonical.dbusmenu")]
+#[zbus::proxy(interface = "com.canonical.dbusmenu")]
 trait DBusMenu {
     fn get_layout(
         &self,
@@ -236,6 +236,6 @@ trait DBusMenu {
     fn event(&self, id: i32, event_id: &str, data: &OwnedValue, timestamp: u32)
         -> zbus::Result<()>;
 
-    #[dbus_proxy(signal)]
+    #[zbus(signal)]
     fn layout_updated(&self, revision: u32, parent: i32) -> zbus::Result<()>;
 }

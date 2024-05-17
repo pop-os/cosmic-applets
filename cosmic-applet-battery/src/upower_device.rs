@@ -10,10 +10,10 @@ use cosmic::iced::{
 };
 
 use std::{fmt::Debug, hash::Hash};
-use zbus::dbus_proxy;
+use zbus::proxy;
 
 use crate::upower::UPowerProxy;
-#[dbus_proxy(
+#[proxy(
     default_service = "org.freedesktop.UPower",
     interface = "org.freedesktop.UPower.Device"
 )]
@@ -33,123 +33,123 @@ trait Device {
     fn refresh(&self) -> zbus::Result<()>;
 
     /// BatteryLevel property
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn battery_level(&self) -> zbus::Result<u32>;
 
     /// Capacity property
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn capacity(&self) -> zbus::Result<f64>;
 
     /// ChargeCycles property
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn charge_cycles(&self) -> zbus::Result<i32>;
 
     /// Energy property
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn energy(&self) -> zbus::Result<f64>;
 
     /// EnergyEmpty property
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn energy_empty(&self) -> zbus::Result<f64>;
 
     /// EnergyFull property
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn energy_full(&self) -> zbus::Result<f64>;
 
     /// EnergyFullDesign property
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn energy_full_design(&self) -> zbus::Result<f64>;
 
     /// EnergyRate property
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn energy_rate(&self) -> zbus::Result<f64>;
 
     /// HasHistory property
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn has_history(&self) -> zbus::Result<bool>;
 
     /// HasStatistics property
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn has_statistics(&self) -> zbus::Result<bool>;
 
     /// IconName property
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn icon_name(&self) -> zbus::Result<String>;
 
     /// IsPresent property
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn is_present(&self) -> zbus::Result<bool>;
 
     /// IsRechargeable property
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn is_rechargeable(&self) -> zbus::Result<bool>;
 
     /// Luminosity property
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn luminosity(&self) -> zbus::Result<f64>;
 
     /// Model property
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn model(&self) -> zbus::Result<String>;
 
     /// NativePath property
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn native_path(&self) -> zbus::Result<String>;
 
     /// Online property
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn online(&self) -> zbus::Result<bool>;
 
     /// Percentage property
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn percentage(&self) -> zbus::Result<f64>;
 
     /// PowerSupply property
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn power_supply(&self) -> zbus::Result<bool>;
 
     /// Serial property
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn serial(&self) -> zbus::Result<String>;
 
     /// State property
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn state(&self) -> zbus::Result<u32>;
 
     /// Technology property
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn technology(&self) -> zbus::Result<u32>;
 
     /// Temperature property
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn temperature(&self) -> zbus::Result<f64>;
 
     /// TimeToEmpty property
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn time_to_empty(&self) -> zbus::Result<i64>;
 
     /// TimeToFull property
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn time_to_full(&self) -> zbus::Result<i64>;
 
     /// Type property
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn type_(&self) -> zbus::Result<u32>;
 
     /// UpdateTime property
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn update_time(&self) -> zbus::Result<u64>;
 
     /// Vendor property
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn vendor(&self) -> zbus::Result<String>;
 
     /// Voltage property
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn voltage(&self) -> zbus::Result<f64>;
 
     /// WarningLevel property
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn warning_level(&self) -> zbus::Result<u32>;
 }
 
@@ -194,7 +194,8 @@ async fn start_listening(
                 if let Ok(devices) = upower.enumerate_devices().await {
                     let mut has_battery = false;
                     for device in devices {
-                        let Ok(d) = DeviceProxy::builder(upower.connection()).path(device) else {
+                        let Ok(d) = DeviceProxy::builder(upower.inner().connection()).path(device)
+                        else {
                             continue;
                         };
                         let Ok(d) = d.build().await else {

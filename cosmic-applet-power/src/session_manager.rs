@@ -21,9 +21,9 @@
 //!
 //! …consequently `zbus-xmlgen` did not generate code for the above interfaces.
 
-use zbus::dbus_proxy;
+use zbus::proxy;
 
-#[dbus_proxy(interface = "org.gnome.SessionManager", assume_defaults = true)]
+#[proxy(interface = "org.gnome.SessionManager", assume_defaults = true)]
 trait SessionManager {
     /// CanRebootToFirmwareSetup method
     fn can_reboot_to_firmware_setup(&self) -> zbus::Result<bool>;
@@ -99,42 +99,42 @@ trait SessionManager {
     fn unregister_client(&self, client_id: &zbus::zvariant::ObjectPath<'_>) -> zbus::Result<()>;
 
     /// ClientAdded signal
-    #[dbus_proxy(signal)]
+    #[zbus(signal)]
     fn client_added(&self, id: zbus::zvariant::ObjectPath<'_>) -> zbus::Result<()>;
 
     /// ClientRemoved signal
-    #[dbus_proxy(signal)]
+    #[zbus(signal)]
     fn client_removed(&self, id: zbus::zvariant::ObjectPath<'_>) -> zbus::Result<()>;
 
     /// InhibitorAdded signal
-    #[dbus_proxy(signal)]
+    #[zbus(signal)]
     fn inhibitor_added(&self, id: zbus::zvariant::ObjectPath<'_>) -> zbus::Result<()>;
 
     /// InhibitorRemoved signal
-    #[dbus_proxy(signal)]
+    #[zbus(signal)]
     fn inhibitor_removed(&self, id: zbus::zvariant::ObjectPath<'_>) -> zbus::Result<()>;
 
     /// SessionOver signal
-    #[dbus_proxy(signal)]
+    #[zbus(signal)]
     fn session_over(&self) -> zbus::Result<()>;
 
     /// SessionRunning signal
-    #[dbus_proxy(signal)]
+    #[zbus(signal)]
     fn session_running(&self) -> zbus::Result<()>;
 
     /// InhibitedActions property
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn inhibited_actions(&self) -> zbus::Result<u32>;
 
     /// Renderer property
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn renderer(&self) -> zbus::Result<String>;
 
     /// SessionIsActive property
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn session_is_active(&self) -> zbus::Result<bool>;
 
     /// SessionName property
-    #[dbus_proxy(property)]
+    #[zbus(property)]
     fn session_name(&self) -> zbus::Result<String>;
 }

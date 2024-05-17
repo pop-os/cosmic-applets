@@ -1,9 +1,9 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
-use zbus::dbus_proxy;
+use zbus::proxy;
 
-#[dbus_proxy(
+#[proxy(
     interface = "com.system76.CosmicSession",
     default_service = "com.system76.CosmicSession",
     default_path = "/com/system76/CosmicSession"

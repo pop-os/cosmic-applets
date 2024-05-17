@@ -13,9 +13,9 @@ use std::{
 
 use tracing::{error, trace};
 use zbus::{
-    dbus_proxy,
+    connection::Builder,
     export::futures_util::{SinkExt, StreamExt},
-    ConnectionBuilder,
+    proxy,
 };
 
 #[derive(Debug)]
@@ -80,13 +80,13 @@ pub fn notifications(proxy: NotificationsAppletProxy<'static>) -> Subscription<N
     )
 }
 
-#[dbus_proxy(
+#[proxy(
     default_service = "com.system76.NotificationsApplet",
     interface = "com.system76.NotificationsApplet",
     default_path = "/com/system76/NotificationsApplet"
 )]
 trait NotificationsApplet {
-    #[dbus_proxy(signal)]
+    #[zbus(signal)]
     fn notify(
         &self,
         app_name: &str,
@@ -108,7 +108,7 @@ pub async fn get_proxy() -> anyhow::Result<NotificationsAppletProxy<'static>> {
     let stream = unsafe { std::os::unix::net::UnixStream::from_raw_fd(raw_fd) };
     stream.set_nonblocking(true)?;
     let stream = tokio::net::UnixStream::from_std(stream)?;
-    let conn = ConnectionBuilder::socket(stream).p2p().build().await?;
+    let conn = Builder::socket(stream).p2p().build().await?;
     trace!("Applet connection created");
     let proxy = NotificationsAppletProxy::new(&conn).await?;
 

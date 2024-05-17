@@ -106,7 +106,7 @@ impl MprisPlayer {
     }
 
     fn name(&self) -> &BusName {
-        self.player.destination()
+        self.player.inner().destination()
     }
 }
 
