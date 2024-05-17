@@ -387,11 +387,7 @@ impl cosmic::Application for Window {
     }
 }
 
-fn date_button(
-    day: u32,
-    is_month: bool,
-    is_day: bool,
-) -> Button<'static, Message, cosmic::Theme, cosmic::Renderer> {
+fn date_button(day: u32, is_month: bool, is_day: bool) -> Button<'static, Message> {
     let style = if is_day {
         cosmic::widget::button::Style::Suggested
     } else {

@@ -818,7 +818,7 @@ fn revealer_head(
     title: String,
     selected: String,
     toggle: Message,
-) -> cosmic::widget::Button<'static, Message, cosmic::Theme, Renderer> {
+) -> cosmic::widget::Button<'static, Message> {
     menu_button(column![
         text(title).width(Length::Fill).size(14),
         text(selected).size(10),
