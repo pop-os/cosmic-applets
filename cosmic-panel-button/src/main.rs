@@ -2,9 +2,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use config::{CosmicPanelButtonConfig, IndividualConfig, Override};
-use cosmic::applet::cosmic_panel_config::PanelAnchor;
+use cosmic::applet::cosmic_panel_config::{PanelAnchor, PanelSize};
+use cosmic::applet::Size;
 use cosmic::iced::Length;
-use cosmic::iced_widget::{row, text};
+use cosmic::iced_widget::row;
 use cosmic::widget::vertical_space;
 use cosmic::{app, iced, iced_style::application, theme::Theme};
 use cosmic_config::{Config, CosmicConfigEntry};
@@ -97,6 +98,13 @@ impl cosmic::Application for Button {
                 PanelAnchor::Left | PanelAnchor::Right
             )
             || matches!(self.config.force_presentation, Some(Override::Icon))
+            || matches!(
+                (&self.core.applet.size, &self.config.force_presentation),
+                (
+                    Size::PanelSize(PanelSize::M | PanelSize::L | PanelSize::XL),
+                    None
+                )
+            )
         {
             self.core.applet.icon_button_from_handle(
                 cosmic::widget::icon::from_name(self.desktop.icon.clone().unwrap()).handle(),
