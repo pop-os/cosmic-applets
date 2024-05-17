@@ -14,11 +14,22 @@ pub enum TopLevelFilter {
     ConfiguredOutput,
 }
 
-#[derive(Debug, Clone, Default, Deserialize, Serialize, PartialEq, Eq, CosmicConfigEntry)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, CosmicConfigEntry)]
 #[version = 1]
 pub struct AppListConfig {
     pub filter_top_levels: Option<TopLevelFilter>,
     pub favorites: Vec<String>,
+    pub enable_drag_source: bool,
+}
+
+impl Default for AppListConfig {
+    fn default() -> Self {
+        Self {
+            filter_top_levels: None,
+            favorites: Vec::new(),
+            enable_drag_source: true,
+        }
+    }
 }
 
 impl AppListConfig {
