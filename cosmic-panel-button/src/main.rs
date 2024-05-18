@@ -122,7 +122,7 @@ impl cosmic::Application for Button {
                 .padding([0, self.core.applet.suggested_padding(false)])
                 .style(cosmic::theme::Button::AppletIcon)
         }
-        .on_press(Msg::Press)
+        .on_press_down(Msg::Press)
         .into()
     }
 
