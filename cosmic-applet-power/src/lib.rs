@@ -382,10 +382,7 @@ impl cosmic::Application for Power {
     }
 }
 
-fn power_buttons(
-    name: &str,
-    msg: String,
-) -> cosmic::widget::Button<Message, cosmic::Theme, Renderer> {
+fn power_buttons(name: &str, msg: String) -> cosmic::widget::Button<Message> {
     cosmic::widget::button(
         column![text_icon(name, 40), text(msg).size(14)]
             .spacing(4)

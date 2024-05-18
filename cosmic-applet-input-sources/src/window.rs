@@ -162,11 +162,13 @@ impl cosmic::Application for Window {
 
     fn view(&self) -> Element<Self::Message> {
         let suggested = self.core.applet.suggested_padding(true);
-        widget::button(widget::text::body(
-            self.active_layouts
-                .first()
-                .map_or(String::new(), |l| l.layout.clone()),
-        ))
+        widget::button(
+            self.core.applet.text(
+                self.active_layouts
+                    .first()
+                    .map_or(String::new(), |l| l.layout.clone()),
+            ),
+        )
         .style(cosmic::theme::Button::AppletIcon)
         .padding([suggested / 2, suggested])
         .on_press(Message::TogglePopup)

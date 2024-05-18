@@ -445,7 +445,7 @@ async fn try_get_gpus() -> Option<Vec<Gpu>> {
 
 pub fn menu_button<'a, Message>(
     content: impl Into<Element<'a, Message>>,
-) -> cosmic::widget::Button<'a, Message, cosmic::Theme, cosmic::Renderer> {
+) -> cosmic::widget::Button<'a, Message> {
     cosmic::widget::Button::new(content)
         .style(Button::AppletMenu)
         .padding(menu_control_padding())
@@ -461,7 +461,7 @@ pub fn toplevel_button<'a, Msg>(
     title: String,
     text_size: f32,
     is_focused: bool,
-) -> cosmic::widget::Button<'a, Msg, cosmic::Theme, cosmic::Renderer>
+) -> cosmic::widget::Button<'a, Msg>
 where
     Msg: 'static + Clone,
 {
