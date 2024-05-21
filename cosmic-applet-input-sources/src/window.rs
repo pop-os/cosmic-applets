@@ -8,6 +8,7 @@ use cosmic::app::Core;
 use cosmic::applet::{self};
 use cosmic::cosmic_config::{self, ConfigSet};
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
+use cosmic::iced::widget::{column, row};
 use cosmic::iced::window::Id;
 #[allow(unused_imports)]
 use cosmic::iced::{alignment, Alignment, Length};
@@ -16,7 +17,7 @@ use cosmic::iced_futures::Subscription;
 use cosmic::iced_runtime::core::window;
 use cosmic::iced_style::application;
 use cosmic::prelude::*;
-use cosmic::widget;
+use cosmic::widget::{self, horizontal_space, vertical_space};
 use cosmic_comp_config::CosmicCompConfig;
 use xkb_data::KeyboardLayouts;
 
@@ -161,17 +162,37 @@ impl cosmic::Application for Window {
     }
 
     fn view(&self) -> Element<Self::Message> {
-        let suggested = self.core.applet.suggested_padding(true);
-        widget::button(
-            self.core.applet.text(
-                self.active_layouts
-                    .first()
-                    .map_or(String::new(), |l| l.layout.clone()),
-            ),
+        let input_source_text = self.core.applet.text(
+            self.active_layouts
+                .first()
+                .map_or(String::new(), |l| l.layout.clone()),
+        );
+
+        cosmic::widget::button(
+            row!(
+                column!(
+                    input_source_text,
+                    horizontal_space(Length::Fixed(
+                        (self.core.applet.suggested_size(true).0
+                            + 2 * self.core.applet.suggested_padding(true))
+                            as f32
+                    ))
+                )
+                .width(Length::Shrink)
+                .height(Length::Shrink)
+                .align_items(Alignment::Center),
+                vertical_space(Length::Fixed(
+                    (self.core.applet.suggested_size(true).1
+                        + 2 * self.core.applet.suggested_padding(true)) as f32
+                ))
+            )
+            .align_items(Alignment::Center)
+            .width(Length::Shrink)
+            .height(Length::Shrink),
         )
-        .style(cosmic::theme::Button::AppletIcon)
-        .padding([suggested / 2, suggested])
         .on_press(Message::TogglePopup)
+        .padding(self.core.applet.suggested_padding(true))
+        .style(cosmic::theme::Button::AppletIcon)
         .into()
     }
 

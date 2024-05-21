@@ -63,5 +63,5 @@ pub fn run() -> cosmic::iced::Result {
         config,
         layouts,
     };
-    cosmic::applet::run::<Window>(true, flags)
+    cosmic::applet::run::<Window>(false, flags)
 }
