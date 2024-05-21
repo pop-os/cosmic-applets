@@ -1,7 +1,7 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
-use crate::wayland::{self};
+use crate::wayland::{self, AppRequest};
 use cctk::sctk::reexports::calloop::channel::SyncSender;
 use cosmic::iced::{
     self,
@@ -18,7 +18,7 @@ pub static WAYLAND_RX: Lazy<Mutex<Option<mpsc::Receiver<TilingState>>>> =
 #[derive(Debug, Clone)]
 pub enum WorkspacesUpdate {
     State(TilingState),
-    Started(SyncSender<TilingState>),
+    Started(SyncSender<AppRequest>),
     Errored,
 }
 
@@ -74,7 +74,7 @@ pub enum State {
 
 pub struct WorkspacesWatcher {
     rx: mpsc::Receiver<TilingState>,
-    tx: SyncSender<TilingState>,
+    tx: SyncSender<AppRequest>,
 }
 
 impl WorkspacesWatcher {

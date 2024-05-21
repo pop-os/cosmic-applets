@@ -1,6 +1,7 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
+use crate::wayland::AppRequest;
 use crate::wayland_subscription::WorkspacesUpdate;
 use crate::{fl, wayland_subscription};
 use cctk::sctk::reexports::calloop::channel::SyncSender;
@@ -36,7 +37,7 @@ pub struct Window {
     new_workspace_entity: Entity,
     /// may not match the config value if behavior is per-workspace
     autotiled: bool,
-    workspace_tx: Option<SyncSender<TilingState>>,
+    workspace_tx: Option<SyncSender<AppRequest>>,
     tile_windows: id::Toggler,
     active_hint: id::Toggler,
 }
@@ -199,7 +200,7 @@ impl cosmic::Application for Window {
                         TilingState::FloatingOnly
                     };
 
-                    if let Err(err) = tx.send(state) {
+                    if let Err(err) = tx.send(AppRequest::TilingState(state)) {
                         error!("Failed to send the tiling state update. {err:?}")
                     }
                 }
@@ -241,6 +242,19 @@ impl cosmic::Application for Window {
                 self.new_workspace_behavior_model.activate(e);
                 // set the config autotile behavior
                 let helper = self.config_helper.clone();
+
+                if let Some(tx) = self.workspace_tx.as_ref() {
+                    let state = if autotile_new {
+                        TilingState::TilingEnabled
+                    } else {
+                        TilingState::FloatingOnly
+                    };
+
+                    if let Err(err) = tx.send(AppRequest::DefaultBehavior(state)) {
+                        error!("Failed to send the tiling state update. {err:?}")
+                    }
+                }
+
                 thread::spawn(move || {
                     if let Err(err) = helper.set("autotile", autotile_new) {
                         error!(?err, "Failed to set autotile {autotile_new:?}");
@@ -260,7 +274,7 @@ impl cosmic::Application for Window {
     }
 
     fn view_window(&self, _id: Id) -> Element<Self::Message> {
-        let mut new_workspace_behavior_button =
+        let new_workspace_behavior_button =
             segmented_control::horizontal(&self.new_workspace_behavior_model)
                 .on_activate(Message::NewWorkspace);
         let content_list = column![

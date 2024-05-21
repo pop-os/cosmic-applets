@@ -9,15 +9,22 @@ use cctk::{
         reexports::{calloop, calloop_wayland_source::WaylandSource, client as wayland_client},
         registry::{ProvidesRegistryState, RegistryState},
     },
+    toplevel_info::{ToplevelInfoHandler, ToplevelInfoState},
     wayland_client::WEnum,
     workspace::{WorkspaceHandler, WorkspaceState},
 };
 use cosmic::iced::futures;
-use cosmic_protocols::workspace::v1::client::zcosmic_workspace_handle_v1::{self, TilingState};
+use cosmic_protocols::{
+    toplevel_info::v1::client::zcosmic_toplevel_handle_v1,
+    workspace::v1::client::zcosmic_workspace_handle_v1::{self, TilingState},
+};
 use futures::{channel::mpsc, executor::block_on, SinkExt};
-use std::os::{
-    fd::{FromRawFd, RawFd},
-    unix::net::UnixStream,
+use std::{
+    collections::HashSet,
+    os::{
+        fd::{FromRawFd, RawFd},
+        unix::net::UnixStream,
+    },
 };
 use tracing::error;
 use wayland_client::{
@@ -26,7 +33,13 @@ use wayland_client::{
 };
 use wayland_client::{Connection, QueueHandle};
 
-pub fn spawn_workspaces(tx: mpsc::Sender<TilingState>) -> SyncSender<TilingState> {
+#[derive(Debug, Clone)]
+pub enum AppRequest {
+    TilingState(TilingState),
+    DefaultBehavior(TilingState),
+}
+
+pub fn spawn_workspaces(tx: mpsc::Sender<TilingState>) -> SyncSender<AppRequest> {
     let (workspaces_tx, workspaces_rx) = calloop::channel::sync_channel(100);
 
     let socket = std::env::var("X_PRIVILEGED_WAYLAND_SOCKET")
@@ -64,6 +77,8 @@ pub fn spawn_workspaces(tx: mpsc::Sender<TilingState>) -> SyncSender<TilingState
                 output_state: OutputState::new(&globals, &qhandle),
                 configured_output,
                 workspace_state: WorkspaceState::new(&registry_state, &qhandle),
+                toplevel_info_state: ToplevelInfoState::new(&registry_state, &qhandle),
+                workspaces_with_previous_toplevel: HashSet::new(),
                 registry_state,
                 expected_output: None,
                 tx,
@@ -73,7 +88,7 @@ pub fn spawn_workspaces(tx: mpsc::Sender<TilingState>) -> SyncSender<TilingState
             let loop_handle = event_loop.handle();
             loop_handle
                 .insert_source(workspaces_rx, |e, _, state| match e {
-                    Event::Msg(autotile) => {
+                    Event::Msg(AppRequest::TilingState(autotile)) => {
                         if let Some(w) =
                             state
                                 .workspace_state
@@ -100,6 +115,25 @@ pub fn spawn_workspaces(tx: mpsc::Sender<TilingState>) -> SyncSender<TilingState
                                 .unwrap()
                                 .commit();
                         }
+                    }
+                    Event::Msg(AppRequest::DefaultBehavior(tiling)) => {
+                        for w in state
+                            .workspace_state
+                            .workspace_groups()
+                            .iter()
+                            .flat_map(|g| g.workspaces.iter())
+                            .filter(|w| {
+                                !state.workspaces_with_previous_toplevel.contains(&w.handle)
+                            })
+                        {
+                            w.handle.set_tiling_state(tiling);
+                        }
+                        state
+                            .workspace_state
+                            .workspace_manager()
+                            .get()
+                            .unwrap()
+                            .commit();
                     }
                     Event::Closed => {
                         if let Ok(workspace_manager) =
@@ -134,6 +168,9 @@ pub struct State {
     output_state: OutputState,
     registry_state: RegistryState,
     workspace_state: WorkspaceState,
+    toplevel_info_state: ToplevelInfoState,
+    workspaces_with_previous_toplevel:
+        HashSet<zcosmic_workspace_handle_v1::ZcosmicWorkspaceHandleV1>,
     have_workspaces: bool,
 }
 
@@ -228,6 +265,53 @@ impl WorkspaceHandler for State {
     }
 }
 
+impl ToplevelInfoHandler for State {
+    fn toplevel_info_state(&mut self) -> &mut ToplevelInfoState {
+        &mut self.toplevel_info_state
+    }
+
+    fn new_toplevel(
+        &mut self,
+        _conn: &Connection,
+        _qh: &QueueHandle<Self>,
+        toplevel: &zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1,
+    ) {
+        let Some(w) = self
+            .toplevel_info_state
+            .info(&toplevel)
+            .map(|t| t.workspace.clone())
+        else {
+            return;
+        };
+        self.workspaces_with_previous_toplevel.extend(w);
+    }
+
+    fn update_toplevel(
+        &mut self,
+        _conn: &Connection,
+        _qh: &QueueHandle<Self>,
+        toplevel: &zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1,
+    ) {
+        let Some(w) = self
+            .toplevel_info_state
+            .info(&toplevel)
+            .map(|t| t.workspace.clone())
+        else {
+            return;
+        };
+        self.workspaces_with_previous_toplevel.extend(w);
+    }
+
+    fn toplevel_closed(
+        &mut self,
+        _conn: &Connection,
+        _qh: &QueueHandle<Self>,
+        _toplevel: &zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1,
+    ) {
+    }
+}
+
+cctk::delegate_toplevel_info!(State);
 cctk::delegate_workspace!(State);
 sctk::delegate_output!(State);
 sctk::delegate_registry!(State);
