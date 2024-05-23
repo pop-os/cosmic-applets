@@ -242,11 +242,14 @@ impl cosmic::Application for Window {
             let format = match (
                 self.config.military_time,
                 self.config.show_date_in_top_panel,
+                self.config.show_day_name_in_top_panel,
             ) {
-                (true, true) => "%b %-d %H:%M",
-                (true, false) => "%H:%M",
-                (false, true) => "%b %-d %-I:%M %p",
-                (false, false) => "%-I:%M %p",
+                (true, true, false) => "%b %-d %H:%M",
+                (true, true, true) => "%A %-d %b %H:%M",
+                (true, false, false) => "%H:%M",
+                (false, true, false) => "%b %-d %-I:%M %p",
+                (false, false, false) => "%-I:%M %p",
+                _ => "%H:%M"
             };
             Element::from(
                 row!(
