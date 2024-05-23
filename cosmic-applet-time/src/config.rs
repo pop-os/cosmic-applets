@@ -17,11 +17,11 @@ pub struct TimeAppletConfig {
 impl Default for TimeAppletConfig {
     fn default() -> Self {
         Self {
-            military_time: true,
+            military_time: false,
             first_day_of_week: 6,
             show_date_in_top_panel: true,
-            show_seconds: true,
-            show_day_name: true,
+            show_seconds: false,
+            show_day_name: false,
         }
     }
 }

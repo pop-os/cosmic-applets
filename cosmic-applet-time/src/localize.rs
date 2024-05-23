@@ -46,3 +46,15 @@ pub fn localize() {
         eprintln!("Error while loading language for App List {}", error);
     }
 }
+
+pub fn weekday_localized(weekday: &chrono::Weekday) -> String {
+    match weekday {
+        chrono::Weekday::Mon => fl!("mon"),
+        chrono::Weekday::Tue => fl!("tue"),
+        chrono::Weekday::Wed => fl!("wed"),
+        chrono::Weekday::Thu => fl!("thu"),
+        chrono::Weekday::Fri => fl!("fri"),
+        chrono::Weekday::Sat => fl!("sat"),
+        chrono::Weekday::Sun => fl!("sun"),
+    }
+}
