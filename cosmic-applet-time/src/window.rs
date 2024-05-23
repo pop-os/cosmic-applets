@@ -399,7 +399,9 @@ impl cosmic::Application for Window {
 
             let formated = self.format(time_bag, &self.now);
 
-            for p in formated.split(':') {
+            tracing::error!("{}", formated);
+
+            for p in formated.split(&[':', ' ']) {
                 elements.push(self.core.applet.text(p.to_owned()).into());
             }
 
