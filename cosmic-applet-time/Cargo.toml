@@ -15,3 +15,4 @@ tokio = { version = "1.36.0", features = ["time"] }
 tracing-log.workspace = true
 tracing-subscriber.workspace = true
 tracing.workspace = true
+icu = { version = "1.4.0", features = ["experimental", "compiled_data", "icu_datetime_experimental"]}

@@ -1,6 +1,10 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
+use std::str::FromStr;
+use std::time::Duration;
+
+use chrono::{Datelike, DurationRound, Timelike};
 use cosmic::applet::{menu_button, padded_control};
 use cosmic::cctk::sctk::reexports::calloop;
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
@@ -11,6 +15,7 @@ use cosmic::iced::{
 };
 use cosmic::iced_core::alignment::{Horizontal, Vertical};
 use cosmic::iced_style::application;
+use cosmic::iced_widget::{horizontal_rule, Column};
 use cosmic::widget::{button, container, divider, grid, horizontal_space, Button, Grid, Space};
 use cosmic::{app, applet::cosmic_panel_config::PanelAnchor, Command};
 use cosmic::{
@@ -18,7 +23,12 @@ use cosmic::{
     Element, Theme,
 };
 
-use chrono::{DateTime, Datelike, DurationRound, Local, Months, NaiveDate, Weekday};
+use icu::calendar::{DateTime, Iso};
+use icu::datetime::options::components::{self, Bag};
+use icu::datetime::options::preferences;
+use icu::datetime::{DateTimeFormatter, DateTimeFormatterOptions};
+use icu::locid::Locale;
+use tracing::error;
 
 use crate::config::TimeAppletConfig;
 use crate::fl;
@@ -34,16 +44,34 @@ enum Every {
     Second,
 }
 
+impl Every {
+    fn from_show_sec(show_sec: bool) -> Self {
+        if show_sec {
+            Every::Second
+        } else {
+            Every::Minute
+        }
+    }
+
+    fn to_duration(&self) -> Duration {
+        match self {
+            Every::Minute => Duration::from_secs(60),
+            Every::Second => Duration::from_secs(1),
+        }
+    }
+}
+
 pub struct Window {
     core: cosmic::app::Core,
     popup: Option<window::Id>,
     update_at: Every,
-    now: DateTime<Local>,
-    date_selected: NaiveDate,
+    now: chrono::DateTime<chrono::Local>,
+    date_selected: chrono::NaiveDate,
     rectangle_tracker: Option<RectangleTracker<u32>>,
     rectangle: Rectangle,
     token_tx: Option<calloop::channel::Sender<TokenRequest>>,
     config: TimeAppletConfig,
+    locale: Locale,
 }
 
 #[derive(Debug, Clone)]
@@ -60,6 +88,31 @@ pub enum Message {
     ConfigChanged(TimeAppletConfig),
 }
 
+impl Window {
+    fn format(&self, bag: Bag) -> String {
+        let options = DateTimeFormatterOptions::Components(bag);
+
+        let dtf =
+            DateTimeFormatter::try_new_experimental(&self.locale.clone().into(), options).unwrap();
+
+        let datetime = DateTime::try_new_gregorian_datetime(
+            self.now.year(),
+            self.now.month() as u8,
+            self.now.day() as u8,
+            self.now.hour() as u8,
+            self.now.minute() as u8,
+            self.now.second() as u8,
+        )
+        .unwrap()
+        .to_iso()
+        .to_any();
+
+        dtf.format(&datetime)
+            .expect("can't format value")
+            .to_string()
+    }
+}
+
 impl cosmic::Application for Window {
     type Message = Message;
     type Executor = cosmic::SingleThreadExecutor;
@@ -70,18 +123,41 @@ impl cosmic::Application for Window {
         core: app::Core,
         _flags: Self::Flags,
     ) -> (Self, cosmic::iced::Command<app::Message<Self::Message>>) {
-        let now = Local::now();
+        fn get_local() -> Result<Locale, Box<dyn std::error::Error>> {
+            let locale = std::env::var("LANG")?;
+            let locale = locale
+                .split(".")
+                .next()
+                .ok_or(format!("Can't split the locale {locale}"))?;
+
+            let locale = Locale::from_str(&locale).map_err(|e| format!("{e:?}"))?;
+            Ok(locale)
+        }
+
+        let locale = match get_local() {
+            Ok(locale) => locale,
+            Err(e) => {
+                tracing::error!("can't get locale {e}");
+                Locale::default()
+            }
+        };
+
+        let config = TimeAppletConfig::default();
+
+        let now = chrono::Local::now();
+
         (
             Self {
                 core,
                 popup: None,
-                update_at: Every::Minute,
+                update_at: Every::from_show_sec(config.show_seconds),
                 now,
-                date_selected: NaiveDate::from(now.naive_local()),
+                date_selected: chrono::NaiveDate::from(now.naive_local()),
                 rectangle_tracker: None,
                 rectangle: Rectangle::default(),
                 token_tx: None,
                 config: TimeAppletConfig::default(),
+                locale,
             },
             Command::none(),
         )
@@ -102,7 +178,7 @@ impl cosmic::Application for Window {
     fn subscription(&self) -> Subscription<Message> {
         Subscription::batch(vec![
             rectangle_tracker_subscription(0).map(|e| Message::Rectangle(e.1)),
-            time_subscription(self.update_at).map(|_| Message::Tick),
+            cosmic::iced::time::every(self.update_at.to_duration()).map(|_| Message::Tick),
             activation_token_subscription(0).map(Message::Token),
             self.core.watch_config(Self::APP_ID).map(|u| {
                 for err in u.errors {
@@ -122,7 +198,7 @@ impl cosmic::Application for Window {
                 if let Some(p) = self.popup.take() {
                     destroy_popup(p)
                 } else {
-                    self.date_selected = NaiveDate::from(self.now.naive_local());
+                    self.date_selected = chrono::NaiveDate::from(self.now.naive_local());
 
                     let new_id = window::Id::unique();
                     self.popup.replace(new_id);
@@ -150,7 +226,7 @@ impl cosmic::Application for Window {
                 }
             }
             Message::Tick => {
-                self.now = Local::now();
+                self.now = chrono::Local::now();
                 Command::none()
             }
             Message::Rectangle(u) => {
@@ -179,7 +255,10 @@ impl cosmic::Application for Window {
                 Command::none()
             }
             Message::PreviousMonth => {
-                if let Some(date) = self.date_selected.checked_sub_months(Months::new(1)) {
+                if let Some(date) = self
+                    .date_selected
+                    .checked_sub_months(chrono::Months::new(1))
+                {
                     self.date_selected = date;
                 } else {
                     tracing::error!("invalid naivedate");
@@ -187,7 +266,10 @@ impl cosmic::Application for Window {
                 Command::none()
             }
             Message::NextMonth => {
-                if let Some(date) = self.date_selected.checked_add_months(Months::new(1)) {
+                if let Some(date) = self
+                    .date_selected
+                    .checked_add_months(chrono::Months::new(1))
+                {
                     self.date_selected = date;
                 } else {
                     tracing::error!("invalid naivedate");
@@ -238,54 +320,114 @@ impl cosmic::Application for Window {
             self.core.applet.anchor,
             PanelAnchor::Top | PanelAnchor::Bottom
         );
+
         let button = cosmic::widget::button(if horizontal {
-            let format = match (
-                self.config.military_time,
-                self.config.show_date_in_top_panel,
-            ) {
-                (true, true) => "%b %-d %H:%M",
-                (true, false) => "%H:%M",
-                (false, true) => "%b %-d %-I:%M %p",
-                (false, false) => "%-I:%M %p",
-            };
-            Element::from(
-                row!(
-                    self.core.applet.text(self.now.format(format).to_string()),
-                    container(vertical_space(Length::Fixed(
-                        (self.core.applet.suggested_size(true).1
-                            + 2 * self.core.applet.suggested_padding(true))
-                            as f32
-                    )))
-                )
-                .align_items(Alignment::Center),
-            )
-        } else {
-            let mut date_time_col = if self.config.military_time {
-                column![
-                    self.core.applet.text(self.now.format("%H").to_string()),
-                    self.core.applet.text(self.now.format("%M").to_string())
-                ]
-            } else {
-                column![
-                    self.core.applet.text(self.now.format("%I").to_string()),
-                    self.core.applet.text(self.now.format("%M").to_string()),
-                    self.core.applet.text(self.now.format("%p").to_string()),
-                ]
-            }
-            .align_items(Alignment::Center)
-            .spacing(4);
+
+            let mut elements = Vec::new();
+
+
             if self.config.show_date_in_top_panel {
-                date_time_col = date_time_col.push(vertical_space(Length::Fixed(4.0)));
-                date_time_col = date_time_col.push(
-                    // TODO better calendar icon?
-                    icon::from_name("calendar-go-today-symbolic")
-                        .size(self.core.applet.suggested_size(true).0)
-                        .symbolic(true),
-                );
-                for d in self.now.format("%x").to_string().split('/') {
-                    date_time_col = date_time_col.push(self.core.applet.text(d.to_string()));
+
+                let mut date_bag = Bag::empty();
+
+                if self.config.show_day_name {
+                    date_bag.weekday = Some(components::Text::Short);
                 }
+
+                date_bag.day = Some(components::Day::NumericDayOfMonth);
+                date_bag.month = Some(components::Month::Long);
+
+                elements.push(self.core.applet.text(self.format(date_bag)).into());
+
+                elements.push(horizontal_space(Length::Fixed(14.0)).into())
             }
+
+
+            let mut time_bag = Bag::empty();
+
+            time_bag.hour = Some(components::Numeric::Numeric);
+            time_bag.minute = Some(components::Numeric::Numeric);
+
+            if self.config.show_seconds {
+                time_bag.second = Some(components::Numeric::Numeric);
+            }
+
+            let hour_cycle = if self.config.military_time {
+                preferences::HourCycle::H23
+            } else {
+                preferences::HourCycle::H12
+            };
+
+            time_bag.preferences = Some(preferences::Bag::from_hour_cycle(hour_cycle));
+
+            elements.push(self.core.applet.text(self.format(time_bag)).into());
+            
+            row(elements)
+            .align_items(Alignment::Center)
+            .into()
+
+            // Element::from(
+            //     row!(
+            //         row(elements),
+            //         container(vertical_space(Length::Fixed(
+            //             (self.core.applet.suggested_size(true).1
+            //                 + 2 * self.core.applet.suggested_padding(true))
+            //                 as f32
+            //         )))
+            //     )
+            //     .align_items(Alignment::Center),
+            // )
+        } else { // vertical layout
+
+            let mut elements = Vec::new();
+
+            if self.config.show_date_in_top_panel {
+
+                let mut date_bag = Bag::empty();
+           
+                date_bag.day = Some(components::Day::NumericDayOfMonth);
+                date_bag.month = Some(components::Month::Long);
+
+                let formated = self.format(date_bag);
+                
+                
+
+                for p in formated.split(" ") {
+                    elements.push(self.core.applet.text(p.to_owned()).into());
+                }
+
+                // elements.push(horizontal_rule(2).width(Length::FillPortion(3)).into())
+            }
+
+
+            let mut time_bag: Bag = Bag::empty();
+
+            time_bag.hour = Some(components::Numeric::Numeric);
+            time_bag.minute = Some(components::Numeric::Numeric);
+
+            if self.config.show_seconds {
+                time_bag.second = Some(components::Numeric::Numeric);
+            }
+
+            let hour_cycle = if self.config.military_time {
+                preferences::HourCycle::H23
+            } else {
+                preferences::HourCycle::H12
+            };
+
+            time_bag.preferences = Some(preferences::Bag::from_hour_cycle(hour_cycle));
+
+            let formated = self.format(time_bag);
+
+            for p in formated.split(":") {
+                elements.push(self.core.applet.text(p.to_owned()).into());
+            }
+
+
+            let date_time_col = Column::with_children(elements)
+                .align_items(Alignment::Center)
+                .spacing(4);
+         
             Element::from(
                 column!(
                     date_time_col,
@@ -314,8 +456,22 @@ impl cosmic::Application for Window {
     }
 
     fn view_window(&self, _id: window::Id) -> Element<Message> {
-        let date = text(self.date_selected.format("%B %-d, %Y").to_string()).size(18);
-        let day_of_week = text(self.date_selected.format("%A").to_string()).size(14);
+
+
+        let mut date_bag = Bag::empty();
+
+        date_bag.month = Some(components::Month::Long);
+        date_bag.day = Some(components::Day::NumericDayOfMonth);
+        date_bag.year = Some(components::Year::Numeric);
+
+        let date = text(self.format(date_bag)).size(18);
+
+
+        let mut day_of_week_bag = Bag::empty();
+
+        day_of_week_bag.day = Some(components::Day::DayOfWeekInMonth);
+
+        let day_of_week = text(self.format(day_of_week_bag)).size(14);
 
         let month_controls = row![
             button::icon(icon::from_name("go-previous-symbolic"))
@@ -328,8 +484,8 @@ impl cosmic::Application for Window {
 
         // Calender
         let mut calender: Grid<'_, Message> = grid().width(Length::Fill);
-        let mut first_day_of_week =
-            Weekday::try_from(self.config.first_day_of_week).unwrap_or(Weekday::Sun);
+        let mut first_day_of_week = chrono::Weekday::try_from(self.config.first_day_of_week)
+            .unwrap_or(chrono::Weekday::Sun);
         for _ in 0..7 {
             calender = calender.push(
                 text(first_day_of_week)
@@ -409,19 +565,4 @@ fn date_button(day: u32, is_month: bool, is_day: bool) -> Button<'static, Messag
     } else {
         button
     }
-}
-
-fn time_subscription(update_at: Every) -> Subscription<()> {
-    subscription::unfold("time-sub", (), move |()| async move {
-        let now = Local::now();
-        let update_delay = match update_at {
-            Every::Minute => chrono::TimeDelta::minutes(1),
-            Every::Second => chrono::TimeDelta::seconds(1),
-        };
-        let duration = ((now + update_delay).duration_trunc(update_delay).unwrap() - now)
-            .to_std()
-            .unwrap();
-        tokio::time::sleep(duration).await;
-        ((), ())
-    })
 }

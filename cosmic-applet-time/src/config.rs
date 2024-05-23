@@ -10,14 +10,18 @@ pub struct TimeAppletConfig {
     pub military_time: bool,
     pub first_day_of_week: u8,
     pub show_date_in_top_panel: bool,
+    pub show_seconds: bool,
+    pub show_day_name: bool,
 }
 
 impl Default for TimeAppletConfig {
     fn default() -> Self {
         Self {
-            military_time: false,
+            military_time: true,
             first_day_of_week: 6,
             show_date_in_top_panel: true,
+            show_seconds: true,
+            show_day_name: true,
         }
     }
 }
