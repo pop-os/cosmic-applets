@@ -153,7 +153,7 @@ impl cosmic::Application for Window {
     fn subscription(&self) -> Subscription<Message> {
         Subscription::batch(vec![
             rectangle_tracker_subscription(0).map(|e| Message::Rectangle(e.1)),
-            cosmic::iced::time::every(Duration::from_secs(1)).map(|_| Message::Tick),
+            cosmic::iced::time::every(Duration::from_secs(60)).map(|_| Message::Tick),
             activation_token_subscription(0).map(Message::Token),
             self.core.watch_config(Self::APP_ID).map(|u| {
                 for err in u.errors {
@@ -324,10 +324,6 @@ impl cosmic::Application for Window {
             time_bag.hour = Some(components::Numeric::Numeric);
             time_bag.minute = Some(components::Numeric::Numeric);
 
-            if self.config.show_seconds {
-                time_bag.second = Some(components::Numeric::Numeric);
-            }
-
             let hour_cycle = if self.config.military_time {
                 preferences::HourCycle::H23
             } else {
@@ -382,10 +378,6 @@ impl cosmic::Application for Window {
 
             time_bag.hour = Some(components::Numeric::Numeric);
             time_bag.minute = Some(components::Numeric::Numeric);
-
-            if self.config.show_seconds {
-                time_bag.second = Some(components::Numeric::Numeric);
-            }
 
             let hour_cycle = if self.config.military_time {
                 preferences::HourCycle::H23
