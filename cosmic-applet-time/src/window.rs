@@ -404,7 +404,7 @@ impl cosmic::Application for Window {
 
             tracing::error!("{}", formated);
 
-            for p in formated.split(&[':', ' ']) {
+            for p in formated.split_whitespace().flat_map(|s| s.split(':')) {
                 elements.push(self.core.applet.text(p.to_owned()).into());
             }
 
