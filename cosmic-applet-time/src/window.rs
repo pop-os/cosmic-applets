@@ -3,7 +3,6 @@
 
 use std::str::FromStr;
 
-
 use chrono::{Datelike, DurationRound, Timelike};
 use cosmic::applet::{menu_button, padded_control};
 use cosmic::cctk::sctk::reexports::calloop;
