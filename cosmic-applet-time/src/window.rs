@@ -14,7 +14,7 @@ use cosmic::iced::{
 };
 use cosmic::iced_core::alignment::{Horizontal, Vertical};
 use cosmic::iced_style::application;
-use cosmic::iced_widget::Column;
+use cosmic::iced_widget::{horizontal_rule, Column};
 use cosmic::widget::{button, container, divider, grid, horizontal_space, Button, Grid, Space};
 use cosmic::{app, applet::cosmic_panel_config::PanelAnchor, Command};
 use cosmic::{
@@ -42,7 +42,6 @@ use cosmic::applet::token::subscription::{
 pub struct Window {
     core: cosmic::app::Core,
     popup: Option<window::Id>,
-    update_at: Every,
     now: chrono::DateTime<chrono::Local>,
     date_selected: chrono::NaiveDate,
     rectangle_tracker: Option<RectangleTracker<u32>>,
@@ -122,15 +121,12 @@ impl cosmic::Application for Window {
             }
         };
 
-        let config = TimeAppletConfig::default();
-
         let now: chrono::prelude::DateTime<chrono::prelude::Local> = chrono::Local::now();
 
         (
             Self {
                 core,
                 popup: None,
-                update_at: Every::from_show_sec(config.show_seconds),
                 now,
                 date_selected: chrono::NaiveDate::from(now.naive_local()),
                 rectangle_tracker: None,
@@ -158,7 +154,7 @@ impl cosmic::Application for Window {
     fn subscription(&self) -> Subscription<Message> {
         Subscription::batch(vec![
             rectangle_tracker_subscription(0).map(|e| Message::Rectangle(e.1)),
-            cosmic::iced::time::every(self.update_at.duration()).map(|_| Message::Tick),
+            cosmic::iced::time::every(Duration::from_secs(1)).map(|_| Message::Tick),
             activation_token_subscription(0).map(Message::Token),
             self.core.watch_config(Self::APP_ID).map(|u| {
                 for err in u.errors {
@@ -320,7 +316,7 @@ impl cosmic::Application for Window {
                         .text(self.format(date_bag, &self.now))
                         .into(),
                 );
-
+                
                 elements.push(horizontal_space(Length::Fixed(14.0)).into())
             }
 
@@ -401,8 +397,6 @@ impl cosmic::Application for Window {
             time_bag.preferences = Some(preferences::Bag::from_hour_cycle(hour_cycle));
 
             let formated = self.format(time_bag, &self.now);
-
-            tracing::error!("{}", formated);
 
             for p in formated.split_whitespace().flat_map(|s| s.split(':')) {
                 elements.push(self.core.applet.text(p.to_owned()).into());
@@ -543,28 +537,5 @@ fn date_button(day: u32, is_month: bool, is_day: bool) -> Button<'static, Messag
         button.on_press(Message::SelectDay(day))
     } else {
         button
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-enum Every {
-    Minute,
-    Second,
-}
-
-impl Every {
-    fn from_show_sec(show_sec: bool) -> Self {
-        if show_sec {
-            Every::Second
-        } else {
-            Every::Minute
-        }
-    }
-
-    fn duration(&self) -> Duration {
-        match self {
-            Every::Minute => Duration::from_secs(60),
-            Every::Second => Duration::from_secs(1),
-        }
     }
 }
