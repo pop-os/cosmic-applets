@@ -310,7 +310,7 @@ impl cosmic::Application for Window {
         );
 
         let button = cosmic::widget::button(if horizontal {
-            let mut elements = Vec::new();
+            let mut time: Vec<Cow<'static, str>> = Vec::new();
 
             if self.config.show_date_in_top_panel {
                 let mut date_bag = Bag::empty();
@@ -322,14 +322,7 @@ impl cosmic::Application for Window {
                 date_bag.day = Some(components::Day::NumericDayOfMonth);
                 date_bag.month = Some(components::Month::Long);
 
-                elements.push(
-                    self.core
-                        .applet
-                        .text(self.format(date_bag, &self.now))
-                        .into(),
-                );
-
-                elements.push(text(" ").into());
+                time.push(format!("{} ", self.format(date_bag, &self.now)).into());
             }
 
             let mut time_bag = Bag::empty();
@@ -345,12 +338,7 @@ impl cosmic::Application for Window {
 
             time_bag.preferences = Some(preferences::Bag::from_hour_cycle(hour_cycle));
 
-            elements.push(
-                self.core
-                    .applet
-                    .text(self.format(time_bag, &self.now))
-                    .into(),
-            );
+            time.push(self.format(time_bag, &self.now).into());
 
             Element::from(
                 row!(
