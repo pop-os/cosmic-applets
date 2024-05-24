@@ -316,7 +316,7 @@ impl cosmic::Application for Window {
             if self.config.show_date_in_top_panel {
                 let mut date_bag = Bag::empty();
 
-                if self.config.show_day_name {
+                if self.config.show_weekday {
                     date_bag.weekday = Some(components::Text::Short);
                 }
 
