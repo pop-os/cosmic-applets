@@ -316,7 +316,7 @@ impl cosmic::Application for Window {
                         .text(self.format(date_bag, &self.now))
                         .into(),
                 );
-                
+
                 elements.push(horizontal_space(Length::Fixed(14.0)).into())
             }
 
@@ -398,6 +398,8 @@ impl cosmic::Application for Window {
 
             let formated = self.format(time_bag, &self.now);
 
+            // todo: split using formatToParts when it is implemented
+            // https://github.com/unicode-org/icu4x/issues/4936#issuecomment-2128812667
             for p in formated.split_whitespace().flat_map(|s| s.split(':')) {
                 elements.push(self.core.applet.text(p.to_owned()).into());
             }
