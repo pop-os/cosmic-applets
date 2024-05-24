@@ -372,7 +372,7 @@ impl cosmic::Application for Window {
 
                 let formated = self.format(date_bag, &self.now);
 
-                for p in formated.split(' ') {
+                for p in formated.split_whitespace() {
                     elements.push(self.core.applet.text(p.to_owned()).into());
                 }
 
