@@ -342,7 +342,7 @@ impl cosmic::Application for Window {
 
             Element::from(
                 row!(
-                    row(elements),
+                    self.core.applet.text(time.concat()),
                     container(vertical_space(Length::Fixed(
                         (self.core.applet.suggested_size(true).1
                             + 2 * self.core.applet.suggested_padding(true))
