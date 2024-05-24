@@ -376,8 +376,11 @@ impl cosmic::Application for Window {
                     elements.push(self.core.applet.text(p.to_owned()).into());
                 }
 
-                // todo: this rules break everythings, date no longer visible
-                // elements.push(horizontal_rule(2).width(Length::FillPortion(3)).into())
+                elements.push(
+                    horizontal_rule(2)
+                        .width(self.core.applet.suggested_size(true).0)
+                        .into(),
+                )
             }
 
             let mut time_bag: Bag = Bag::empty();
