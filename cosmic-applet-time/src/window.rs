@@ -2,11 +2,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use std::str::FromStr;
-use std::time::Duration;
 
-use chrono::{Datelike, Timelike};
+
+use chrono::{Datelike, DurationRound, Timelike};
 use cosmic::applet::{menu_button, padded_control};
 use cosmic::cctk::sctk::reexports::calloop;
+use cosmic::iced::subscription;
 use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
 use cosmic::iced::{
     widget::{column, row, text, vertical_space},
@@ -151,9 +152,22 @@ impl cosmic::Application for Window {
     }
 
     fn subscription(&self) -> Subscription<Message> {
+        fn time_subscription() -> Subscription<()> {
+            subscription::unfold("time-sub", (), move |()| async move {
+                let now = chrono::Local::now();
+                let update_delay = chrono::TimeDelta::minutes(1);
+
+                let duration = ((now + update_delay).duration_trunc(update_delay).unwrap() - now)
+                    .to_std()
+                    .unwrap();
+                tokio::time::sleep(duration).await;
+                ((), ())
+            })
+        }
+
         Subscription::batch(vec![
             rectangle_tracker_subscription(0).map(|e| Message::Rectangle(e.1)),
-            cosmic::iced::time::every(Duration::from_secs(60)).map(|_| Message::Tick),
+            time_subscription().map(|_| Message::Tick),
             activation_token_subscription(0).map(Message::Token),
             self.core.watch_config(Self::APP_ID).map(|u| {
                 for err in u.errors {
@@ -316,7 +330,7 @@ impl cosmic::Application for Window {
                         .into(),
                 );
 
-                elements.push(horizontal_space(Length::Fixed(14.0)).into())
+                elements.push(text(" ").into());
             }
 
             let mut time_bag = Bag::empty();
