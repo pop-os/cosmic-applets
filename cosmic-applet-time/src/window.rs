@@ -30,7 +30,6 @@ use icu::locid::Locale;
 
 use crate::config::TimeAppletConfig;
 use crate::fl;
-use crate::localize::weekday_localized;
 use crate::time::get_calender_first;
 use cosmic::applet::token::subscription::{
     activation_token_subscription, TokenRequest, TokenUpdate,
@@ -458,12 +457,25 @@ impl cosmic::Application for Window {
         ];
 
         // Calender
+
         let mut calender: Grid<'_, Message> = grid().width(Length::Fill);
         let mut first_day_of_week = chrono::Weekday::try_from(self.config.first_day_of_week)
             .unwrap_or(chrono::Weekday::Sun);
+
+        let first_day = get_calender_first(
+            self.date_selected.year(),
+            self.date_selected.month(),
+            first_day_of_week,
+        );
+
+        let mut weekday_bag = Bag::empty();
+        weekday_bag.weekday = Some(components::Text::Short);
+
+        let mut day_iter = first_day.iter_days();
+
         for _ in 0..7 {
             calender = calender.push(
-                text(weekday_localized(&first_day_of_week))
+                text(self.format(weekday_bag, &day_iter.next().unwrap()))
                     .size(12)
                     .width(Length::Fixed(36.0))
                     .horizontal_alignment(Horizontal::Center),
@@ -473,12 +485,7 @@ impl cosmic::Application for Window {
         }
         calender = calender.insert_row();
 
-        let monday = get_calender_first(
-            self.date_selected.year(),
-            self.date_selected.month(),
-            first_day_of_week,
-        );
-        let mut day_iter = monday.iter_days();
+        let mut day_iter = first_day.iter_days();
         for i in 0..42 {
             if i > 0 && i % 7 == 0 {
                 calender = calender.insert_row();
