@@ -1500,12 +1500,12 @@ impl cosmic::Application for CosmicAppList {
                     }
                     if is_favorite {
                         content = content.push(
-                            menu_button(iced::widget::text(fl!("unfavorite")))
+                            menu_button(iced::widget::text(fl!("unpin")))
                                 .on_press(Message::UnFavorite(desktop_info.id.clone())),
                         )
                     } else if let Some(_) = desktop_info.exec.clone() {
                         content = content.push(
-                            menu_button(iced::widget::text(fl!("favorite")))
+                            menu_button(iced::widget::text(fl!("pin")))
                                 .on_press(Message::Favorite(desktop_info.id.clone())),
                         )
                     }
