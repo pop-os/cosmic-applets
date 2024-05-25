@@ -1,6 +1,6 @@
 cosmic-app-list = Telakoitu Cosmic sovellusluettelo
-favorite = Suosikki
-unfavorite = Inhokki
+pin = Suosikki
+unpin = Inhokki
 quit = Sulje
 quit-all = Sulje Kaikki
 new-window = Uusi Ikkuna

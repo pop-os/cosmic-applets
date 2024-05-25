@@ -1,6 +1,6 @@
 cosmic-app-list = Lista applicazioni - Cosmic dock
-favorite = Aggiungi ai preferiti
-unfavorite = Rimuovi dai preferiti
+pin = Aggiungi ai preferiti
+unpin = Rimuovi dai preferiti
 quit = Chiudi
 quit-all = Chiudi Tutto
 new-window = Nuova finestra

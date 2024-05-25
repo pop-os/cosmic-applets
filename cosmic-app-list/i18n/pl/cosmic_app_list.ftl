@@ -1,6 +1,6 @@
 cosmic-app-list = Lista Apek Doku Cosmic
-favorite = Przypnij
-unfavorite = Odepnij
+pin = Przypnij
+unpin = Odepnij
 quit = Zamknij
 quit-all = Zamknij Wszystkie
 new-window = Nowe Okno
