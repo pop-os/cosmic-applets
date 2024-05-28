@@ -16,7 +16,7 @@ pub enum AppListEvent {
     WindowList(Vec<Toplevel>),
     Add(Toplevel),
     Remove(Toplevel),
-    Favorite((String, bool)),
+    PinApp((String, bool)),
     Refresh,
 }
 
