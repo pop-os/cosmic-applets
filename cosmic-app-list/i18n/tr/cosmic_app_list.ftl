@@ -1,0 +1,9 @@
+cosmic-app-list = Cosmic Dock Uygulama Listesi
+favorite = Favorile
+unfavorite = Favorilerden çıkar
+quit = Çıkış
+quit-all = Tümünden çık
+new-window = Yeni pencere
+run = Çalıştır
+run-on = {$gpu} üzerinden çalıştır
+run-on-default = (Varsayılan)

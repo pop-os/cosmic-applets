@@ -1,0 +1,15 @@
+cosmic-applet-button = Cosmic Buton
+battery = Pil
+battery-desc = Daha az güç kullanımı ve performans.
+balanced = Dengeli
+balanced-desc = Standart performans ve güç kullanımı.
+performance = Yüksek performans
+performance-desc = Yüksek performans ve güç kullanımı.
+max-charge = Maksimum şarj değerini %80 olarak ayarlayarak pilinizin ömrünü artırın
+saniye = sn
+minutes = dk
+hours = sa
+until-empty = bitene kadar
+power-settings = Güç ve Pil Ayarları...
+dgpu-running = Harici GPU etkin ve pil ömrünü kısaltabilir
+dgpu-applications = {$gpu_name} harici GPU'yu kullanan uygulamalar
