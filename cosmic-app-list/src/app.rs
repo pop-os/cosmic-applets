@@ -446,7 +446,7 @@ async fn try_get_gpus() -> Option<Vec<Gpu>> {
 pub fn menu_button<'a, Message>(
     content: impl Into<Element<'a, Message>>,
 ) -> cosmic::widget::Button<'a, Message> {
-    cosmic::widget::Button::new(content)
+    cosmic::widget::button(content)
         .style(Button::AppletMenu)
         .padding(menu_control_padding())
         .width(Length::Fill)
@@ -466,7 +466,7 @@ where
     Msg: 'static + Clone,
 {
     let border = 1.0;
-    cosmic::widget::Button::new(
+    cosmic::widget::button(
         container(
             column![
                 container(if let Some(img) = img {
@@ -1060,12 +1060,21 @@ impl cosmic::Application for CosmicAppList {
                     }
                     WaylandUpdate::Toplevel(event) => match event {
                         ToplevelUpdate::Add(handle, mut info) => {
+                            let new_desktop_info = load_applications_for_app_ids_sorted(
+                                None,
+                                std::iter::once(&*info.app_id),
+                                true,
+                            )
+                            .into_iter()
+                            .next()
+                            .unwrap();
+
                             if let Some(t) = self
                                 .active_list
                                 .iter_mut()
                                 .chain(self.pinned_list.iter_mut())
                                 .find(|DockItem { desktop_info, .. }| {
-                                    app_id_or_fallback_matches(&info.app_id, desktop_info)
+                                    desktop_info == &new_desktop_info
                                 })
                             {
                                 t.toplevels.push((handle, info, None));
@@ -1074,18 +1083,11 @@ impl cosmic::Application for CosmicAppList {
                                     info.app_id = format!("Unknown Application {}", self.item_ctr);
                                 }
                                 self.item_ctr += 1;
-                                let desktop_info = load_applications_for_app_ids_sorted(
-                                    None,
-                                    std::iter::once(&*info.app_id),
-                                    true,
-                                )
-                                .into_iter()
-                                .next()
-                                .unwrap();
+
                                 self.active_list.push(DockItem {
                                     id: self.item_ctr,
                                     toplevels: vec![(handle, info, None)],
-                                    desktop_info,
+                                    desktop_info: new_desktop_info,
                                 });
                             }
                         }
