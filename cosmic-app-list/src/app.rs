@@ -21,7 +21,6 @@ use cctk::wayland_client::protocol::wl_seat::WlSeat;
 use cosmic::applet::cosmic_panel_config::PanelSize;
 use cosmic::applet::Size;
 use cosmic::cosmic_config::{Config, CosmicConfigEntry};
-use cosmic::desktop;
 use cosmic::desktop::load_applications_for_app_ids;
 use cosmic::desktop::DesktopEntryData;
 use cosmic::iced;
@@ -89,14 +88,6 @@ static MIME_TYPE: &str = "text/uri-list";
 
 pub fn run() -> cosmic::iced::Result {
     cosmic::applet::run::<CosmicAppList>(true, ())
-}
-
-pub fn load_applications_for_app_ids_sorted<'a, 'b>(
-    locale: impl Into<Option<&'a str>>,
-    app_ids: impl Iterator<Item = &'b str> + Clone,
-    fill_missing_ones: bool,
-) -> Vec<DesktopEntryData> {
-    desktop::load_applications_for_app_ids(locale, app_ids.clone(), fill_missing_ones, false)
 }
 
 #[derive(Debug, Clone)]
@@ -1036,14 +1027,13 @@ impl cosmic::Application for CosmicAppList {
                     }
                     WaylandUpdate::Toplevel(event) => match event {
                         ToplevelUpdate::Add(handle, mut info) => {
-                            let new_desktop_info = load_applications_for_app_ids_sorted(
+                            let new_desktop_info = load_applications_for_app_ids(
                                 None,
-                                std::iter::once(&*info.app_id),
+                                std::iter::once(info.app_id.as_str()),
                                 true,
+                                false,
                             )
-                            .into_iter()
-                            .next()
-                            .unwrap();
+                            .remove(0);
 
                             if let Some(t) = self
                                 .active_list
@@ -1175,36 +1165,38 @@ impl cosmic::Application for CosmicAppList {
                 self.config = config;
                 // drain to active list
                 for item in self.pinned_list.drain(..) {
-                    self.active_list.push(item);
+                    if !item.toplevels.is_empty() {
+                        self.active_list.push(item);
+                    }
                 }
 
                 // pull back configured items into the favorites list
-                self.pinned_list = load_applications_for_app_ids(
-                    None,
-                    self.config.favorites.iter().map(|e| e.as_str()),
-                    true,
-                    false,
-                )
-                .into_iter()
-                .zip(&self.config.favorites)
-                .map(|(de, original_id)| {
-                    if let Some(p) = self
-                        .active_list
-                        .iter()
-                        .position(|dock_item| dock_item.desktop_info.id == de.id)
-                    {
-                        self.active_list.remove(p)
-                    } else {
-                        self.item_ctr += 1;
-                        DockItem {
-                            id: self.item_ctr,
-                            toplevels: Default::default(),
-                            desktop_info: de,
-                            original_app_id: original_id.clone(),
-                        }
-                    }
-                })
-                .collect();
+                self.pinned_list =
+                    load_applications_for_app_ids(None, self.config.favorites.iter().map(|e| e.as_str()), true, false)
+                        .into_iter()
+                        .zip(&self.config.favorites)
+                        .map(|(de, original_id)| {
+                            if let Some(p) = self
+                                .active_list
+                                .iter()
+                                // match using heuristic id
+                                .position(|dock_item| dock_item.desktop_info.id == de.id)
+                            {
+                                let mut d = self.active_list.remove(p);
+                                // but use the id from the config
+                                d.original_app_id = original_id.clone();
+                                d
+                            } else {
+                                self.item_ctr += 1;
+                                DockItem {
+                                    id: self.item_ctr,
+                                    toplevels: Default::default(),
+                                    desktop_info: de,
+                                    original_app_id: original_id.clone(),
+                                }
+                            }
+                        })
+                        .collect();
             }
             Message::CloseRequested(id) => {
                 if Some(id) == self.popup.as_ref().map(|p| p.0) {
