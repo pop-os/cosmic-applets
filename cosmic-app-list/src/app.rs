@@ -334,7 +334,7 @@ struct CosmicAppList {
     subscription_ctr: u32,
     item_ctr: u32,
     active_list: Vec<DockItem>,
-    favorite_list: Vec<DockItem>,
+    pinned_list: Vec<DockItem>,
     dnd_source: Option<(window::Id, DockItem, DndAction)>,
     config: AppListConfig,
     wayland_sender: Option<Sender<WaylandRequest>>,
@@ -358,8 +358,8 @@ pub enum PopupType {
 #[derive(Debug, Clone)]
 enum Message {
     Wayland(WaylandUpdate),
-    Favorite(String),
-    UnFavorite(String),
+    PinApp(String),
+    UnpinApp(String),
     Popup(String),
     TopLevelListPopup(String),
     GpuRequest(Option<Vec<Gpu>>),
@@ -620,15 +620,15 @@ impl cosmic::Application for CosmicAppList {
             .unwrap_or_default();
         let mut self_ = Self {
             core,
-            favorite_list: load_applications_for_app_ids_sorted(
+            pinned_list: load_applications_for_app_ids_sorted(
                 None,
                 config.favorites.iter().map(|s| &**s),
                 true,
             )
             .into_iter()
             .enumerate()
-            .map(|(favorite_ctr, e)| DockItem {
-                id: favorite_ctr as u32,
+            .map(|(pinned_ctr, e)| DockItem {
+                id: pinned_ctr as u32,
                 toplevels: Default::default(),
                 desktop_info: e,
             })
@@ -636,7 +636,7 @@ impl cosmic::Application for CosmicAppList {
             config,
             ..Default::default()
         };
-        self_.item_ctr = self_.favorite_list.len() as u32;
+        self_.item_ctr = self_.pinned_list.len() as u32;
 
         (
             self_,
@@ -666,7 +666,7 @@ impl cosmic::Application for CosmicAppList {
                 if let Some(toplevel_group) = self
                     .active_list
                     .iter()
-                    .chain(self.favorite_list.iter())
+                    .chain(self.pinned_list.iter())
                     .find(|t| t.desktop_info.id == id)
                 {
                     let rectangle = match self.rectangles.get(&toplevel_group.id) {
@@ -710,7 +710,7 @@ impl cosmic::Application for CosmicAppList {
                 if let Some(toplevel_group) = self
                     .active_list
                     .iter()
-                    .chain(self.favorite_list.iter())
+                    .chain(self.pinned_list.iter())
                     .find(|t| t.desktop_info.id == id)
                 {
                     for (ref handle, _, _) in &toplevel_group.toplevels {
@@ -770,33 +770,33 @@ impl cosmic::Application for CosmicAppList {
                     return get_popup(popup_settings);
                 }
             }
-            Message::Favorite(id) => {
+            Message::PinApp(id) => {
                 if let Some(i) = self
                     .active_list
                     .iter()
                     .position(|t| t.desktop_info.id == id)
                 {
                     let entry = self.active_list.remove(i);
-                    self.favorite_list.push(entry);
+                    self.pinned_list.push(entry);
                 }
 
                 self.config
-                    .add_favorite(id, &Config::new(APP_ID, AppListConfig::VERSION).unwrap());
+                    .add_pinned(id, &Config::new(APP_ID, AppListConfig::VERSION).unwrap());
                 if let Some((popup_id, _toplevel, _)) = self.popup.take() {
                     return destroy_popup(popup_id);
                 }
             }
-            Message::UnFavorite(id) => {
-                self.config.remove_favorite(
+            Message::UnpinApp(id) => {
+                self.config.remove_pinned(
                     id.clone(),
                     &Config::new(APP_ID, AppListConfig::VERSION).unwrap(),
                 );
                 if let Some(i) = self
-                    .favorite_list
+                    .pinned_list
                     .iter()
                     .position(|t| t.desktop_info.id == id)
                 {
-                    let entry = self.favorite_list.remove(i);
+                    let entry = self.pinned_list.remove(i);
                     self.rectangles.remove(&entry.id);
                     if !entry.toplevels.is_empty() {
                         self.active_list.push(entry);
@@ -832,7 +832,7 @@ impl cosmic::Application for CosmicAppList {
                 if let Some(toplevel_group) = self
                     .active_list
                     .iter()
-                    .chain(self.favorite_list.iter())
+                    .chain(self.pinned_list.iter())
                     .find(|t| t.desktop_info.id == id)
                 {
                     for (handle, _, _) in &toplevel_group.toplevels {
@@ -848,7 +848,7 @@ impl cosmic::Application for CosmicAppList {
                 }
             }
             Message::StartDrag(id) => {
-                if let Some((is_favorite, toplevel_group)) = self
+                if let Some((is_pinned, toplevel_group)) = self
                     .active_list
                     .iter()
                     .find_map(|t| {
@@ -860,12 +860,12 @@ impl cosmic::Application for CosmicAppList {
                     })
                     .or_else(|| {
                         if let Some(pos) = self
-                            .favorite_list
+                            .pinned_list
                             .iter()
                             .position(|t| t.desktop_info.id == id)
                         {
-                            let t = self.favorite_list.remove(pos);
-                            self.config.remove_favorite(
+                            let t = self.pinned_list.remove(pos);
+                            self.config.remove_pinned(
                                 t.desktop_info.id.clone(),
                                 &Config::new(APP_ID, AppListConfig::VERSION).unwrap(),
                             );
@@ -879,7 +879,7 @@ impl cosmic::Application for CosmicAppList {
                     self.dnd_source = Some((icon_id, toplevel_group.clone(), DndAction::empty()));
                     return start_drag(
                         vec![MIME_TYPE.to_string()],
-                        if is_favorite {
+                        if is_pinned {
                             DndAction::all()
                         } else {
                             DndAction::Copy
@@ -893,7 +893,7 @@ impl cosmic::Application for CosmicAppList {
             Message::DragFinished => {
                 if let Some((_, mut toplevel_group, _)) = self.dnd_source.take() {
                     if !self
-                        .favorite_list
+                        .pinned_list
                         .iter()
                         .chain(self.active_list.iter())
                         .any(|t| t.desktop_info.id == toplevel_group.desktop_info.id)
@@ -911,8 +911,8 @@ impl cosmic::Application for CosmicAppList {
                     PanelAnchor::Top | PanelAnchor::Bottom => x,
                     PanelAnchor::Left | PanelAnchor::Right => y,
                 };
-                let num_favs = self.favorite_list.len();
-                let index = index_in_list(num_favs, item_size as f32, 4.0, None, pos_in_list);
+                let num_pinned = self.pinned_list.len();
+                let index = index_in_list(num_pinned, item_size as f32, 4.0, None, pos_in_list);
                 self.dnd_offer = Some(DndOffer {
                     preview_index: index,
                     ..DndOffer::default()
@@ -942,9 +942,9 @@ impl cosmic::Application for CosmicAppList {
                         PanelAnchor::Top | PanelAnchor::Bottom => x,
                         PanelAnchor::Left | PanelAnchor::Right => y,
                     };
-                    let num_favs = self.favorite_list.len();
+                    let num_pinned = self.pinned_list.len();
                     let index = index_in_list(
-                        num_favs,
+                        num_pinned,
                         item_size as f32,
                         4.0,
                         Some(*preview_index),
@@ -975,7 +975,7 @@ impl cosmic::Application for CosmicAppList {
                 {
                     self.item_ctr += 1;
 
-                    if let Some((pos, is_favorite)) = self
+                    if let Some((pos, is_pinned)) = self
                         .active_list
                         .iter()
                         .position(|DockItem { desktop_info, .. }| {
@@ -983,7 +983,7 @@ impl cosmic::Application for CosmicAppList {
                         })
                         .map(|pos| (pos, false))
                         .or_else(|| {
-                            self.favorite_list
+                            self.pinned_list
                                 .iter()
                                 .position(|DockItem { desktop_info, .. }| {
                                     desktop_info.id == dock_item.desktop_info.id
@@ -991,8 +991,8 @@ impl cosmic::Application for CosmicAppList {
                                 .map(|pos| (pos, true))
                         })
                     {
-                        let t = if is_favorite {
-                            self.favorite_list.remove(pos)
+                        let t = if is_pinned {
+                            self.pinned_list.remove(pos)
                         } else {
                             self.active_list.remove(pos)
                         };
@@ -1001,10 +1001,10 @@ impl cosmic::Application for CosmicAppList {
                     dock_item.id = self.item_ctr;
 
                     if dock_item.desktop_info.exec.is_some() {
-                        self.favorite_list
-                            .insert(index.min(self.favorite_list.len()), dock_item);
-                        self.config.update_favorites(
-                            self.favorite_list
+                        self.pinned_list
+                            .insert(index.min(self.pinned_list.len()), dock_item);
+                        self.config.update_pinned(
+                            self.pinned_list
                                 .iter()
                                 .map(|dock_item| dock_item.desktop_info.id.clone())
                                 .collect(),
@@ -1023,7 +1023,7 @@ impl cosmic::Application for CosmicAppList {
                         'img_update: for x in self
                             .active_list
                             .iter_mut()
-                            .chain(self.favorite_list.iter_mut())
+                            .chain(self.pinned_list.iter_mut())
                         {
                             if let Some((_, _, ref mut handle_img)) = x
                                 .toplevels
@@ -1036,7 +1036,7 @@ impl cosmic::Application for CosmicAppList {
                         }
                     }
                     WaylandUpdate::Finished => {
-                        for t in &mut self.favorite_list {
+                        for t in &mut self.pinned_list {
                             t.toplevels.clear();
                         }
                         self.active_list.clear();
@@ -1063,7 +1063,7 @@ impl cosmic::Application for CosmicAppList {
                             if let Some(t) = self
                                 .active_list
                                 .iter_mut()
-                                .chain(self.favorite_list.iter_mut())
+                                .chain(self.pinned_list.iter_mut())
                                 .find(|DockItem { desktop_info, .. }| {
                                     app_id_or_fallback_matches(&info.app_id, desktop_info)
                                 })
@@ -1093,7 +1093,7 @@ impl cosmic::Application for CosmicAppList {
                             for t in self
                                 .active_list
                                 .iter_mut()
-                                .chain(self.favorite_list.iter_mut())
+                                .chain(self.pinned_list.iter_mut())
                             {
                                 t.toplevels.retain(|(t_handle, _, _)| t_handle != &handle);
                             }
@@ -1107,7 +1107,7 @@ impl cosmic::Application for CosmicAppList {
                             'toplevel_loop: for toplevel_list in self
                                 .active_list
                                 .iter_mut()
-                                .chain(self.favorite_list.iter_mut())
+                                .chain(self.pinned_list.iter_mut())
                             {
                                 for (t_handle, t_info, _) in &mut toplevel_list.toplevels {
                                     if &handle == t_handle {
@@ -1195,12 +1195,12 @@ impl cosmic::Application for CosmicAppList {
             Message::ConfigUpdated(config) => {
                 self.config = config;
                 // drain to active list
-                for item in self.favorite_list.drain(..) {
+                for item in self.pinned_list.drain(..) {
                     self.active_list.push(item);
                 }
 
-                // pull back configured items into the favorites list
-                self.favorite_list = load_applications_for_app_ids_sorted(
+                // pull back configured items into the pinned app list
+                self.pinned_list = load_applications_for_app_ids_sorted(
                     None,
                     self.config.favorites.iter().map(|s| &**s),
                     true,
@@ -1247,7 +1247,7 @@ impl cosmic::Application for CosmicAppList {
             PanelAnchor::Left | PanelAnchor::Right => false,
         };
         let mut favorites: Vec<_> = self
-            .favorite_list
+            .pinned_list
             .iter()
             .map(|dock_item| {
                 dock_item.as_icon(
@@ -1282,8 +1282,8 @@ impl cosmic::Application for CosmicAppList {
                     dot_radius,
                 ),
             );
-        } else if self.is_listening_for_dnd && self.favorite_list.is_empty() {
-            // show star indicating favorite_list is drag target
+        } else if self.is_listening_for_dnd && self.pinned_list.is_empty() {
+            // show star indicating pinned_list is drag target
             favorites.push(
                 container(
                     cosmic::widget::icon::from_name("starred-symbolic.symbolic")
@@ -1364,11 +1364,11 @@ impl cosmic::Application for CosmicAppList {
                 }
             });
 
-        let show_favorites =
-            !self.favorite_list.is_empty() || self.dnd_offer.is_some() || self.is_listening_for_dnd;
-        let content_list: Vec<Element<_>> = if show_favorites && !self.active_list.is_empty() {
+        let show_pinned =
+            !self.pinned_list.is_empty() || self.dnd_offer.is_some() || self.is_listening_for_dnd;
+        let content_list: Vec<Element<_>> = if show_pinned && !self.active_list.is_empty() {
             vec![favorites.into(), divider, active]
-        } else if show_favorites {
+        } else if show_pinned {
             vec![favorites.into()]
         } else if !self.active_list.is_empty() {
             vec![active]
@@ -1396,7 +1396,7 @@ impl cosmic::Application for CosmicAppList {
                     .width(w),
             ),
         };
-        if self.active_list.is_empty() && self.favorite_list.is_empty() {
+        if self.active_list.is_empty() && self.pinned_list.is_empty() {
             let suggested_size = self.core.applet.suggested_size(false);
             content = content.width(suggested_size.0).height(suggested_size.1);
         }
@@ -1424,7 +1424,7 @@ impl cosmic::Application for CosmicAppList {
                 desktop_info,
                 ..
             }) = self
-                .favorite_list
+                .pinned_list
                 .iter()
                 .chain(self.active_list.iter())
                 .find(|i| i.id == *id)
@@ -1433,7 +1433,7 @@ impl cosmic::Application for CosmicAppList {
             };
             match popup_type {
                 PopupType::RightClickMenu => {
-                    let is_favorite = self
+                    let is_pinned = self
                         .config
                         .favorites
                         .iter()
@@ -1498,15 +1498,15 @@ impl cosmic::Application for CosmicAppList {
                         content = content.push(list_col);
                         content = content.push(divider::horizontal::default());
                     }
-                    if is_favorite {
+                    if is_pinned {
                         content = content.push(
-                            menu_button(iced::widget::text(fl!("unfavorite")))
-                                .on_press(Message::UnFavorite(desktop_info.id.clone())),
+                            menu_button(iced::widget::text(fl!("unpin")))
+                                .on_press(Message::UnpinApp(desktop_info.id.clone())),
                         )
                     } else if let Some(_) = desktop_info.exec.clone() {
                         content = content.push(
-                            menu_button(iced::widget::text(fl!("favorite")))
-                                .on_press(Message::Favorite(desktop_info.id.clone())),
+                            menu_button(iced::widget::text(fl!("pin")))
+                                .on_press(Message::PinApp(desktop_info.id.clone())),
                         )
                     }
 
@@ -1639,7 +1639,7 @@ impl CosmicAppList {
         let current_output = self.core.applet.output_name.clone();
         let mut focused_toplevels: Vec<ZcosmicToplevelHandleV1> = Vec::new();
         let active_workspaces = self.active_workspaces.clone();
-        for toplevel_list in self.active_list.iter().chain(self.favorite_list.iter()) {
+        for toplevel_list in self.active_list.iter().chain(self.pinned_list.iter()) {
             for (t_handle, t_info, _) in &toplevel_list.toplevels {
                 if t_info.state.contains(&State::Activated)
                     && active_workspaces

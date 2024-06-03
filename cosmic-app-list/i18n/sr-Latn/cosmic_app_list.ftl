@@ -1,6 +1,9 @@
-cosmic-app-list = Cosmic Traka - lista aplikacija
-favorite = Dodaj u omiljene
-unfavorite = Ukloni iz omiljenih
-quit = Izađi
-quit-all = Izađi iz svega
+cosmic-app-list = Lista aplikacija
+pin = Prikači
+unpin = Otkači
+quit = Zatvori
+quit-all = Zatvori sve
 new-window = Novi prozor
+run = Pokreni
+run-on = Pokreni na {$gpu}
+run-on-default = (podrazumevano)
