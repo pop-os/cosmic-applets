@@ -1,6 +1,6 @@
-cosmic-app-list = Cosmic Dock Uygulama Listesi
-favorite = Favorile
-unfavorite = Favorilerden çıkar
+cosmic-app-list = Uygulama Çekmecesi
+pin = Sabitle
+unpin = Sabitlemeyi kaldır
 quit = Çıkış
 quit-all = Tümünden çık
 new-window = Yeni pencere
