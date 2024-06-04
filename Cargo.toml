@@ -54,7 +54,7 @@ tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 tracing-log = "0.2.0"
 cosmic-config = { git = "https://github.com/pop-os/libcosmic" }
 serde = { version = "1.0.152", features = ["derive"] }
-freedesktop-desktop-entry = "0.5.4"
+freedesktop-desktop-entry = "0.6.0"
 
 [profile.release]
 lto = "fat"
@@ -67,10 +67,3 @@ ignored = ["libcosmic"]
 
 [patch."https://github.com/Smithay/client-toolkit"]
 sctk = { git = "https://github.com/smithay/client-toolkit//", package = "smithay-client-toolkit", rev = "3bed072" }
-
-
-[patch."https://github.com/pop-os/libcosmic"]
-libcosmic = { path = "../libcosmic" }
-
-[patch.crates-io]
-freedesktop-desktop-entry = { path = "../freedesktop-desktop-entry" }
