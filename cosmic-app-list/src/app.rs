@@ -21,7 +21,6 @@ use cctk::wayland_client::protocol::wl_seat::WlSeat;
 use cosmic::applet::cosmic_panel_config::PanelSize;
 use cosmic::applet::Size;
 use cosmic::cosmic_config::{Config, CosmicConfigEntry};
-use cosmic::desktop;
 use cosmic::desktop::IconSource;
 use cosmic::iced;
 use cosmic::iced::event::listen_with;
@@ -185,8 +184,9 @@ impl DockItem {
 
         let app_icon = AppletIconData::new(applet);
 
-        let cosmic_icon =
-            IconSource::from_unknown(desktop_info.icon().unwrap_or_default()).as_cosmic_icon();
+        let cosmic_icon = IconSource::from_unknown(desktop_info.icon().unwrap_or_default())
+            .as_cosmic_icon()
+            .size(app_icon.icon_size);
 
         let dots = if toplevels.is_empty() {
             (0..1)
