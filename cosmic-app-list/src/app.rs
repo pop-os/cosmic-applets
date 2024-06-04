@@ -586,13 +586,13 @@ where
 
     let entries = srcs
         .iter()
-        .filter_map(|(p, data)| DesktopEntry::from_str(p, data, &[] as &[&str]).ok())
+        .filter_map(|(p, data)| DesktopEntry::from_str(p, data, locales).ok())
         .collect::<Vec<_>>();
 
     ids.iter()
         .map(|id| {
             fde::matching::get_best_match(
-                locales,
+                &[id],
                 &entries,
                 fde::matching::MatchAppIdOptions::default(),
             )
