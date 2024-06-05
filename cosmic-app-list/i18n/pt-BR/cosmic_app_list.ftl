@@ -1,6 +1,6 @@
-cosmic-app-list = Lista de Aplicativos Cosmic Dock
-pin = Favorito
-unpin = Não Favorito
+cosmic-app-list = Bandeja de Aplicativo
+pin = Fixar
+unpin = Remover
 quit = Sair
 quit-all = Sair de Todos
 new-window = Nova Janela
