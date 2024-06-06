@@ -40,7 +40,7 @@ impl AppListConfig {
         }
     }
 
-    pub fn remove_pinned(&mut self, id: String, config: &Config) {
+    pub fn remove_pinned(&mut self, id: &str, config: &Config) {
         if let Some(pos) = self.favorites.iter().position(|e| e == &id) {
             self.favorites.remove(pos);
             let _ = self.write_entry(config);

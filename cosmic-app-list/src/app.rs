@@ -21,9 +21,7 @@ use cctk::wayland_client::protocol::wl_seat::WlSeat;
 use cosmic::applet::cosmic_panel_config::PanelSize;
 use cosmic::applet::Size;
 use cosmic::cosmic_config::{Config, CosmicConfigEntry};
-use cosmic::desktop::{
-    app_id_or_fallback_matches, load_applications_for_app_ids, DesktopEntryData,
-};
+use cosmic::desktop::IconSource;
 use cosmic::iced;
 use cosmic::iced::event::listen_with;
 use cosmic::iced::wayland::actions::data_device::DataFromMimeType;
@@ -34,7 +32,6 @@ use cosmic::iced::widget::dnd_listener;
 use cosmic::iced::widget::vertical_rule;
 use cosmic::iced::widget::vertical_space;
 use cosmic::iced::widget::{column, dnd_source, mouse_area, row, Column, Row};
-use cosmic::iced::window::icon;
 use cosmic::iced::Color;
 use cosmic::iced::Vector;
 use cosmic::iced::{window, Subscription};
@@ -70,6 +67,9 @@ use cosmic::{Element, Theme};
 use cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::State;
 use cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1;
 use cosmic_protocols::workspace::v1::client::zcosmic_workspace_handle_v1::ZcosmicWorkspaceHandleV1;
+use freedesktop_desktop_entry as fde;
+use freedesktop_desktop_entry::get_languages_from_env;
+use freedesktop_desktop_entry::DesktopEntry;
 use futures::future::pending;
 use iced::widget::container;
 use iced::Alignment;
@@ -79,6 +79,7 @@ use itertools::Itertools;
 use rand::{thread_rng, Rng};
 use std::cmp::min;
 use std::collections::HashMap;
+use std::fs;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::Duration;
@@ -90,28 +91,6 @@ static MIME_TYPE: &str = "text/uri-list";
 
 pub fn run() -> cosmic::iced::Result {
     cosmic::applet::run::<CosmicAppList>(true, ())
-}
-
-pub fn load_applications_for_app_ids_sorted<'a, 'b>(
-    locale: impl Into<Option<&'a str>>,
-    app_ids: impl Iterator<Item = &'b str> + Clone,
-    fill_missing_ones: bool,
-) -> Vec<DesktopEntryData> {
-    let mut ret = load_applications_for_app_ids(locale, app_ids.clone(), fill_missing_ones, false);
-    ret.sort_by(|a, b| {
-        app_ids
-            .clone()
-            .position(|id| id == a.id)
-            .unwrap_or(usize::MAX)
-            .cmp(
-                &app_ids
-                    .clone()
-                    .position(|id| id == b.id)
-                    .unwrap_or(usize::MAX),
-            )
-    });
-
-    ret
 }
 
 #[derive(Debug, Clone)]
@@ -154,18 +133,26 @@ impl AppletIconData {
     }
 }
 
-#[derive(Debug, Clone, Default)]
+type DockItemId = u32;
+
+#[derive(Debug, Clone)]
 struct DockItem {
-    id: u32,
+    // ID used internally in the applet. Each dock item
+    // have an unique id
+    id: DockItemId,
     toplevels: Vec<(ZcosmicToplevelHandleV1, ToplevelInfo, Option<WaylandImage>)>,
-    desktop_info: DesktopEntryData,
+    // Information found in the .desktop file
+    desktop_info: DesktopEntry<'static>,
+    // We must use this because the id in `DesktopEntry` is an estimation.
+    // Thus, if we unpin an item, we want to be sure to use the real id
+    original_app_id: String,
 }
 
 impl DataFromMimeType for DockItem {
     fn from_mime_type(&self, mime_type: &str) -> Option<Vec<u8>> {
-        if mime_type == MIME_TYPE && self.desktop_info.path.is_some() {
+        if mime_type == MIME_TYPE {
             Some(
-                Url::from_file_path(self.desktop_info.path.as_deref().unwrap())
+                Url::from_file_path(&self.desktop_info.path)
                     .ok()?
                     .to_string()
                     .as_bytes()
@@ -178,18 +165,6 @@ impl DataFromMimeType for DockItem {
 }
 
 impl DockItem {
-    fn new(
-        id: u32,
-        toplevels: Vec<(ZcosmicToplevelHandleV1, ToplevelInfo, Option<WaylandImage>)>,
-        desktop_info: DesktopEntryData,
-    ) -> Self {
-        Self {
-            id,
-            toplevels,
-            desktop_info,
-        }
-    }
-
     fn as_icon(
         &self,
         applet: &Context,
@@ -209,7 +184,9 @@ impl DockItem {
 
         let app_icon = AppletIconData::new(applet);
 
-        let cosmic_icon = desktop_info.icon.as_cosmic_icon().size(app_icon.icon_size);
+        let cosmic_icon = IconSource::from_unknown(desktop_info.icon().unwrap_or_default())
+            .as_cosmic_icon()
+            .size(app_icon.icon_size);
 
         let dots = if toplevels.is_empty() {
             (0..1)
@@ -288,15 +265,14 @@ impl DockItem {
                     } else if toplevels.len() == 1 {
                         toplevels.first().map(|t| Message::Toggle(t.0.clone()))
                     } else {
-                        Some(Message::TopLevelListPopup(desktop_info.id.clone()))
+                        Some(Message::TopLevelListPopup(*id))
                     })
                     .width(Length::Shrink)
                     .height(Length::Shrink),
             )
-            .on_right_release(Message::Popup(desktop_info.id.clone()))
+            .on_right_release(Message::Popup(*id))
             .on_middle_release({
-                launch_on_preferred_gpu(desktop_info, gpus)
-                    .unwrap_or_else(|| Message::Popup(desktop_info.id.clone()))
+                launch_on_preferred_gpu(desktop_info, gpus).unwrap_or_else(|| Message::Popup(*id))
             })
             .into()
         } else {
@@ -306,7 +282,7 @@ impl DockItem {
         let icon_button = if dnd_source_enabled && interaction_enabled {
             dnd_source(icon_button)
                 .drag_threshold(16.)
-                .on_drag(|_, _| Message::StartDrag(desktop_info.id.clone()))
+                .on_drag(|_, _| Message::StartDrag(*id))
                 .on_cancelled(Message::DragFinished)
                 .on_finished(Message::DragFinished)
         } else {
@@ -330,7 +306,7 @@ struct DndOffer {
 #[derive(Clone, Default)]
 struct CosmicAppList {
     core: cosmic::app::Core,
-    popup: Option<(window::Id, u32, PopupType)>,
+    popup: Option<(window::Id, DockItemId, PopupType)>,
     subscription_ctr: u32,
     item_ctr: u32,
     active_list: Vec<DockItem>,
@@ -339,13 +315,14 @@ struct CosmicAppList {
     config: AppListConfig,
     wayland_sender: Option<Sender<WaylandRequest>>,
     seat: Option<WlSeat>,
-    rectangle_tracker: Option<RectangleTracker<u32>>,
-    rectangles: HashMap<u32, iced::Rectangle>,
+    rectangle_tracker: Option<RectangleTracker<DockItemId>>,
+    rectangles: HashMap<DockItemId, iced::Rectangle>,
     dnd_offer: Option<DndOffer>,
     is_listening_for_dnd: bool,
     gpus: Option<Vec<Gpu>>,
     active_workspaces: Vec<ZcosmicWorkspaceHandleV1>,
     output_list: HashMap<WlOutput, OutputInfo>,
+    locales: Vec<String>,
 }
 
 #[derive(Clone, PartialEq)]
@@ -358,10 +335,10 @@ pub enum PopupType {
 #[derive(Debug, Clone)]
 enum Message {
     Wayland(WaylandUpdate),
-    PinApp(String),
-    UnpinApp(String),
-    Popup(String),
-    TopLevelListPopup(String),
+    PinApp(DockItemId),
+    UnpinApp(DockItemId),
+    Popup(DockItemId),
+    TopLevelListPopup(DockItemId),
     GpuRequest(Option<Vec<Gpu>>),
     CloseRequested(window::Id),
     ClosePopup,
@@ -372,8 +349,8 @@ enum Message {
     Ignore,
     NewSeat(WlSeat),
     RemovedSeat(WlSeat),
-    Rectangle(RectangleUpdate<u32>),
-    StartDrag(String), // id of the DockItem
+    Rectangle(RectangleUpdate<DockItemId>),
+    StartDrag(DockItemId),
     DragFinished,
     DndEnter(f32, f32),
     DndExit,
@@ -446,7 +423,7 @@ async fn try_get_gpus() -> Option<Vec<Gpu>> {
 pub fn menu_button<'a, Message>(
     content: impl Into<Element<'a, Message>>,
 ) -> cosmic::widget::Button<'a, Message> {
-    cosmic::widget::Button::new(content)
+    cosmic::widget::button(content)
         .style(Button::AppletMenu)
         .padding(menu_control_padding())
         .width(Length::Fill)
@@ -466,7 +443,7 @@ where
     Msg: 'static + Clone,
 {
     let border = 1.0;
-    cosmic::widget::Button::new(
+    cosmic::widget::button(
         container(
             column![
                 container(if let Some(img) = img {
@@ -598,6 +575,33 @@ fn app_list_icon_style(selected: bool) -> cosmic::theme::Button {
     }
 }
 
+fn load_desktop_entries_from_app_ids<I, L>(ids: &[I], locales: &[L]) -> Vec<DesktopEntry<'static>>
+where
+    I: AsRef<str>,
+    L: AsRef<str>,
+{
+    let srcs = fde::Iter::new(fde::default_paths())
+        .filter_map(|p| fs::read_to_string(&p).ok().and_then(|e| Some((p, e))))
+        .collect::<Vec<_>>();
+
+    let entries = srcs
+        .iter()
+        .filter_map(|(p, data)| DesktopEntry::from_str(p, data, locales).ok())
+        .collect::<Vec<_>>();
+
+    ids.iter()
+        .map(|id| {
+            fde::matching::get_best_match(
+                &[id],
+                &entries,
+                fde::matching::MatchAppIdOptions::default(),
+            )
+            .unwrap_or(&fde::DesktopEntry::from_appid(id.as_ref()))
+            .to_owned()
+        })
+        .collect_vec()
+}
+
 pub fn menu_control_padding() -> Padding {
     let theme = cosmic::theme::active();
     let cosmic = theme.cosmic();
@@ -618,28 +622,30 @@ impl cosmic::Application for CosmicAppList {
             .ok()
             .and_then(|c| AppListConfig::get_entry(&c).ok())
             .unwrap_or_default();
-        let mut self_ = Self {
+
+        let locales = get_languages_from_env();
+
+        let mut app_list = Self {
             core,
-            pinned_list: load_applications_for_app_ids_sorted(
-                None,
-                config.favorites.iter().map(|s| &**s),
-                true,
-            )
-            .into_iter()
-            .enumerate()
-            .map(|(pinned_ctr, e)| DockItem {
-                id: pinned_ctr as u32,
-                toplevels: Default::default(),
-                desktop_info: e,
-            })
-            .collect(),
+            pinned_list: load_desktop_entries_from_app_ids(&config.favorites, &locales)
+                .into_iter()
+                .zip(&config.favorites)
+                .enumerate()
+                .map(|(pinned_ctr, (e, original_id))| DockItem {
+                    id: pinned_ctr as u32,
+                    toplevels: Default::default(),
+                    desktop_info: e,
+                    original_app_id: original_id.clone(),
+                })
+                .collect(),
             config,
+            locales,
             ..Default::default()
         };
-        self_.item_ctr = self_.pinned_list.len() as u32;
+        app_list.item_ctr = app_list.pinned_list.len() as u32;
 
         (
-            self_,
+            app_list,
             Command::perform(try_get_gpus(), |gpus| {
                 cosmic::app::Message::App(Message::GpuRequest(gpus))
             }),
@@ -667,7 +673,7 @@ impl cosmic::Application for CosmicAppList {
                     .active_list
                     .iter()
                     .chain(self.pinned_list.iter())
-                    .find(|t| t.desktop_info.id == id)
+                    .find(|t| t.id == id)
                 {
                     let rectangle = match self.rectangles.get(&toplevel_group.id) {
                         Some(r) => r,
@@ -711,7 +717,7 @@ impl cosmic::Application for CosmicAppList {
                     .active_list
                     .iter()
                     .chain(self.pinned_list.iter())
-                    .find(|t| t.desktop_info.id == id)
+                    .find(|t| t.id == id)
                 {
                     for (ref handle, _, _) in &toplevel_group.toplevels {
                         if let Some(tx) = self.wayland_sender.as_ref() {
@@ -770,33 +776,29 @@ impl cosmic::Application for CosmicAppList {
                     return get_popup(popup_settings);
                 }
             }
+
             Message::PinApp(id) => {
-                if let Some(i) = self
-                    .active_list
-                    .iter()
-                    .position(|t| t.desktop_info.id == id)
-                {
+                if let Some(i) = self.active_list.iter().position(|t| t.id == id) {
                     let entry = self.active_list.remove(i);
+                    self.config.add_pinned(
+                        entry.original_app_id.clone(),
+                        &Config::new(APP_ID, AppListConfig::VERSION).unwrap(),
+                    );
                     self.pinned_list.push(entry);
                 }
-
-                self.config
-                    .add_pinned(id, &Config::new(APP_ID, AppListConfig::VERSION).unwrap());
                 if let Some((popup_id, _toplevel, _)) = self.popup.take() {
                     return destroy_popup(popup_id);
                 }
             }
             Message::UnpinApp(id) => {
-                self.config.remove_pinned(
-                    id.clone(),
-                    &Config::new(APP_ID, AppListConfig::VERSION).unwrap(),
-                );
-                if let Some(i) = self
-                    .pinned_list
-                    .iter()
-                    .position(|t| t.desktop_info.id == id)
-                {
+                if let Some(i) = self.pinned_list.iter().position(|t| t.id == id) {
                     let entry = self.pinned_list.remove(i);
+
+                    self.config.remove_pinned(
+                        &entry.original_app_id,
+                        &Config::new(APP_ID, AppListConfig::VERSION).unwrap(),
+                    );
+
                     self.rectangles.remove(&entry.id);
                     if !entry.toplevels.is_empty() {
                         self.active_list.push(entry);
@@ -833,7 +835,7 @@ impl cosmic::Application for CosmicAppList {
                     .active_list
                     .iter()
                     .chain(self.pinned_list.iter())
-                    .find(|t| t.desktop_info.id == id)
+                    .find(|t| t.desktop_info.id() == id)
                 {
                     for (handle, _, _) in &toplevel_group.toplevels {
                         if let Some(tx) = self.wayland_sender.as_ref() {
@@ -852,21 +854,17 @@ impl cosmic::Application for CosmicAppList {
                     .active_list
                     .iter()
                     .find_map(|t| {
-                        if t.desktop_info.id == id {
+                        if t.id == id {
                             Some((false, t.clone()))
                         } else {
                             None
                         }
                     })
                     .or_else(|| {
-                        if let Some(pos) = self
-                            .pinned_list
-                            .iter()
-                            .position(|t| t.desktop_info.id == id)
-                        {
+                        if let Some(pos) = self.pinned_list.iter().position(|t| t.id == id) {
                             let t = self.pinned_list.remove(pos);
                             self.config.remove_pinned(
-                                t.desktop_info.id.clone(),
+                                &t.original_app_id,
                                 &Config::new(APP_ID, AppListConfig::VERSION).unwrap(),
                             );
                             Some((true, t))
@@ -896,7 +894,7 @@ impl cosmic::Application for CosmicAppList {
                         .pinned_list
                         .iter()
                         .chain(self.active_list.iter())
-                        .any(|t| t.desktop_info.id == toplevel_group.desktop_info.id)
+                        .any(|t| t.desktop_info.id() == toplevel_group.desktop_info.id())
                         && !toplevel_group.toplevels.is_empty()
                     {
                         self.item_ctr += 1;
@@ -959,9 +957,14 @@ impl cosmic::Application for CosmicAppList {
             }
             Message::DndData(file_path) => {
                 if let Some(DndOffer { dock_item, .. }) = self.dnd_offer.as_mut() {
-                    if let Some(di) = cosmic::desktop::load_desktop_file(None, file_path) {
+                    if let Ok(de) = fde::DesktopEntry::from_path(file_path, &self.locales) {
                         self.item_ctr += 1;
-                        *dock_item = Some(DockItem::new(self.item_ctr, Vec::new(), di));
+                        *dock_item = Some(DockItem {
+                            id: self.item_ctr,
+                            toplevels: Vec::new(),
+                            original_app_id: de.id().to_string(),
+                            desktop_info: de,
+                        });
                     }
                 }
             }
@@ -978,16 +981,12 @@ impl cosmic::Application for CosmicAppList {
                     if let Some((pos, is_pinned)) = self
                         .active_list
                         .iter()
-                        .position(|DockItem { desktop_info, .. }| {
-                            desktop_info.id == dock_item.desktop_info.id
-                        })
+                        .position(|de| de.original_app_id == dock_item.original_app_id)
                         .map(|pos| (pos, false))
                         .or_else(|| {
                             self.pinned_list
                                 .iter()
-                                .position(|DockItem { desktop_info, .. }| {
-                                    desktop_info.id == dock_item.desktop_info.id
-                                })
+                                .position(|de| de.original_app_id == dock_item.original_app_id)
                                 .map(|pos| (pos, true))
                         })
                     {
@@ -1000,13 +999,13 @@ impl cosmic::Application for CosmicAppList {
                     };
                     dock_item.id = self.item_ctr;
 
-                    if dock_item.desktop_info.exec.is_some() {
+                    if dock_item.desktop_info.exec().is_some() {
                         self.pinned_list
                             .insert(index.min(self.pinned_list.len()), dock_item);
                         self.config.update_pinned(
                             self.pinned_list
                                 .iter()
-                                .map(|dock_item| dock_item.desktop_info.id.clone())
+                                .map(|dock_item| dock_item.original_app_id.clone())
                                 .collect(),
                             &Config::new(APP_ID, AppListConfig::VERSION).unwrap(),
                         );
@@ -1060,12 +1059,16 @@ impl cosmic::Application for CosmicAppList {
                     }
                     WaylandUpdate::Toplevel(event) => match event {
                         ToplevelUpdate::Add(handle, mut info) => {
+                            let new_desktop_info =
+                                load_desktop_entries_from_app_ids(&[&info.app_id], &self.locales)
+                                    .remove(0);
+
                             if let Some(t) = self
                                 .active_list
                                 .iter_mut()
                                 .chain(self.pinned_list.iter_mut())
                                 .find(|DockItem { desktop_info, .. }| {
-                                    app_id_or_fallback_matches(&info.app_id, desktop_info)
+                                    desktop_info.id() == new_desktop_info.id()
                                 })
                             {
                                 t.toplevels.push((handle, info, None));
@@ -1074,18 +1077,12 @@ impl cosmic::Application for CosmicAppList {
                                     info.app_id = format!("Unknown Application {}", self.item_ctr);
                                 }
                                 self.item_ctr += 1;
-                                let desktop_info = load_applications_for_app_ids_sorted(
-                                    None,
-                                    std::iter::once(&*info.app_id),
-                                    true,
-                                )
-                                .into_iter()
-                                .next()
-                                .unwrap();
+
                                 self.active_list.push(DockItem {
                                     id: self.item_ctr,
+                                    original_app_id: info.app_id.clone(),
                                     toplevels: vec![(handle, info, None)],
-                                    desktop_info,
+                                    desktop_info: new_desktop_info,
                                 });
                             }
                         }
@@ -1196,33 +1193,38 @@ impl cosmic::Application for CosmicAppList {
                 self.config = config;
                 // drain to active list
                 for item in self.pinned_list.drain(..) {
-                    self.active_list.push(item);
+                    if !item.toplevels.is_empty() {
+                        self.active_list.push(item);
+                    }
                 }
 
-                // pull back configured items into the pinned app list
-                self.pinned_list = load_applications_for_app_ids_sorted(
-                    None,
-                    self.config.favorites.iter().map(|s| &**s),
-                    true,
-                )
-                .into_iter()
-                .map(|new_dock_item| {
-                    if let Some(p) = self
-                        .active_list
-                        .iter()
-                        .position(|dock_item| dock_item.desktop_info.id == new_dock_item.id)
-                    {
-                        self.active_list.remove(p)
-                    } else {
-                        self.item_ctr += 1;
-                        DockItem {
-                            id: self.item_ctr,
-                            toplevels: Default::default(),
-                            desktop_info: new_dock_item,
-                        }
-                    }
-                })
-                .collect();
+                // pull back configured items into the favorites list
+                self.pinned_list =
+                    load_desktop_entries_from_app_ids(&self.config.favorites, &self.locales)
+                        .into_iter()
+                        .zip(&self.config.favorites)
+                        .map(|(de, original_id)| {
+                            if let Some(p) = self
+                                .active_list
+                                .iter()
+                                // match using heuristic id
+                                .position(|dock_item| dock_item.desktop_info.id() == de.id())
+                            {
+                                let mut d = self.active_list.remove(p);
+                                // but use the id from the config
+                                d.original_app_id = original_id.clone();
+                                d
+                            } else {
+                                self.item_ctr += 1;
+                                DockItem {
+                                    id: self.item_ctr,
+                                    toplevels: Default::default(),
+                                    desktop_info: de,
+                                    original_app_id: original_id.clone(),
+                                }
+                            }
+                        })
+                        .collect();
             }
             Message::CloseRequested(id) => {
                 if Some(id) == self.popup.as_ref().map(|p| p.0) {
@@ -1412,49 +1414,45 @@ impl cosmic::Application for CosmicAppList {
 
     fn view_window(&self, id: window::Id) -> Element<Message> {
         if let Some((_, item, _)) = self.dnd_source.as_ref().filter(|s| s.0 == id) {
-            item.desktop_info
-                .icon
+            IconSource::from_unknown(item.desktop_info.icon().unwrap_or_default())
                 .as_cosmic_icon()
                 .size(self.core.applet.suggested_size(false).0)
                 .into()
         } else if let Some((_popup_id, id, popup_type)) = self.popup.as_ref().filter(|p| id == p.0)
         {
-            let Some(DockItem {
-                toplevels,
-                desktop_info,
-                ..
-            }) = self
-                .pinned_list
-                .iter()
-                .chain(self.active_list.iter())
-                .find(|i| i.id == *id)
-            else {
-                return iced::widget::text("").into();
+            let (
+                DockItem {
+                    toplevels,
+                    desktop_info,
+                    ..
+                },
+                is_pinned,
+            ) = match self.pinned_list.iter().find(|i| i.id == *id) {
+                Some(e) => (e, true),
+                None => match self.active_list.iter().find(|i| i.id == *id) {
+                    Some(e) => (e, false),
+                    None => return iced::widget::text("").into(),
+                },
             };
+
             match popup_type {
                 PopupType::RightClickMenu => {
-                    let is_pinned = self
-                        .config
-                        .favorites
-                        .iter()
-                        .any(|x| app_id_or_fallback_matches(x, desktop_info));
-
                     let mut content = column![container(
-                        iced::widget::text(&desktop_info.name)
+                        iced::widget::text(&desktop_info.name(&self.locales).unwrap_or_default())
                             .horizontal_alignment(Horizontal::Center)
                     )
                     .padding(menu_control_padding()),]
                     .padding([8, 0])
                     .align_items(Alignment::Center);
 
-                    if let Some(exec) = desktop_info.exec.clone() {
+                    if let Some(exec) = desktop_info.exec() {
                         if !toplevels.is_empty() {
                             content = content.push(
                                 menu_button(iced::widget::text(fl!("new-window")))
-                                    .on_press(Message::Exec(exec, None)),
+                                    .on_press(Message::Exec(exec.to_string(), None)),
                             );
                         } else if let Some(gpus) = self.gpus.as_ref() {
-                            let default_idx = if desktop_info.prefers_dgpu {
+                            let default_idx = if desktop_info.prefers_non_default_gpu() {
                                 gpus.iter().position(|gpu| !gpu.default).unwrap_or(0)
                             } else {
                                 gpus.iter().position(|gpu| gpu.default).unwrap_or(0)
@@ -1470,13 +1468,13 @@ impl cosmic::Application for CosmicAppList {
                                             String::new()
                                         }
                                     )))
-                                    .on_press(Message::Exec(exec.clone(), Some(i))),
+                                    .on_press(Message::Exec(exec.to_string(), Some(i))),
                                 );
                             }
                         } else {
                             content = content.push(
                                 menu_button(iced::widget::text(fl!("run")))
-                                    .on_press(Message::Exec(exec, None)),
+                                    .on_press(Message::Exec(exec.to_string(), None)),
                             );
                         }
                         content = content.push(divider::horizontal::default());
@@ -1501,12 +1499,12 @@ impl cosmic::Application for CosmicAppList {
                     if is_pinned {
                         content = content.push(
                             menu_button(iced::widget::text(fl!("unpin")))
-                                .on_press(Message::UnpinApp(desktop_info.id.clone())),
+                                .on_press(Message::UnpinApp(*id)),
                         )
-                    } else if let Some(_) = desktop_info.exec.clone() {
+                    } else if desktop_info.exec().is_some() {
                         content = content.push(
                             menu_button(iced::widget::text(fl!("pin")))
-                                .on_press(Message::PinApp(desktop_info.id.clone())),
+                                .on_press(Message::PinApp(*id)),
                         )
                     }
 
@@ -1514,11 +1512,11 @@ impl cosmic::Application for CosmicAppList {
                         0 => content,
                         1 => content.push(
                             menu_button(iced::widget::text(fl!("quit")))
-                                .on_press(Message::Quit(desktop_info.id.clone())),
+                                .on_press(Message::Quit(desktop_info.id().to_string())),
                         ),
                         _ => content.push(
                             menu_button(iced::widget::text(&fl!("quit-all")))
-                                .on_press(Message::Quit(desktop_info.id.clone())),
+                                .on_press(Message::Quit(desktop_info.id().to_string())),
                         ),
                     };
                     self.core.applet.popup_container(content).into()
@@ -1540,7 +1538,7 @@ impl cosmic::Application for CosmicAppList {
                                 Message::Toggle(handle.clone()),
                                 title,
                                 10.0,
-                                self.currently_active_toplevel().contains(&handle),
+                                self.currently_active_toplevel().contains(handle),
                             ));
                         }
                         self.core.applet.popup_container(content).into()
@@ -1559,7 +1557,7 @@ impl cosmic::Application for CosmicAppList {
                                 Message::Toggle(handle.clone()),
                                 title,
                                 10.0,
-                                self.currently_active_toplevel().contains(&handle),
+                                self.currently_active_toplevel().contains(handle),
                             ));
                         }
                         self.core.applet.popup_container(content).into()
@@ -1659,21 +1657,18 @@ impl CosmicAppList {
     }
 }
 
-fn launch_on_preferred_gpu(
-    desktop_info: &DesktopEntryData,
-    gpus: Option<&[Gpu]>,
-) -> Option<Message> {
-    let Some(exec) = desktop_info.exec.clone() else {
+fn launch_on_preferred_gpu(desktop_info: &DesktopEntry, gpus: Option<&[Gpu]>) -> Option<Message> {
+    let Some(exec) = desktop_info.exec() else {
         return None;
     };
 
     let gpu_idx = gpus.map(|gpus| {
-        if desktop_info.prefers_dgpu {
+        if desktop_info.prefers_non_default_gpu() {
             gpus.iter().position(|gpu| !gpu.default).unwrap_or(0)
         } else {
             gpus.iter().position(|gpu| gpu.default).unwrap_or(0)
         }
     });
 
-    Some(Message::Exec(exec, gpu_idx))
+    Some(Message::Exec(exec.to_string(), gpu_idx))
 }
