@@ -54,13 +54,14 @@ use cosmic::widget::horizontal_space;
 use cosmic::widget::rectangle_tracker::rectangle_tracker_subscription;
 use cosmic::widget::rectangle_tracker::RectangleTracker;
 use cosmic::widget::rectangle_tracker::RectangleUpdate;
+use cosmic::widget::text;
+use cosmic::Apply;
 use cosmic::{
     applet::{cosmic_panel_config::PanelAnchor, Context},
     Command,
 };
 use cosmic::{
     iced::Limits,
-    iced_widget::text,
     widget::{image::Handle, Image},
 };
 use cosmic::{Element, Theme};
@@ -420,15 +421,6 @@ async fn try_get_gpus() -> Option<Vec<Gpu>> {
     Some(gpus)
 }
 
-pub fn menu_button<'a, Message>(
-    content: impl Into<Element<'a, Message>>,
-) -> cosmic::widget::Button<'a, Message> {
-    cosmic::widget::button(content)
-        .style(Button::AppletMenu)
-        .padding(menu_control_padding())
-        .width(Length::Fill)
-}
-
 const TOPLEVEL_BUTTON_WIDTH: f32 = 160.0;
 const TOPLEVEL_BUTTON_HEIGHT: f32 = 130.0;
 
@@ -436,7 +428,6 @@ pub fn toplevel_button<'a, Msg>(
     img: Option<WaylandImage>,
     on_press: Msg,
     title: String,
-    text_size: f32,
     is_focused: bool,
 ) -> cosmic::widget::Button<'a, Msg>
 where
@@ -473,14 +464,9 @@ where
                 .padding(border as u16)
                 .height(Length::Fill)
                 .width(Length::Fill),
-                container(
-                    text(title)
-                        .size(text_size)
-                        .horizontal_alignment(Horizontal::Center),
-                )
-                .height(Length::Fixed(14.0))
-                .width(Length::Fill)
-                .center_x(),
+                container(text::body(title).horizontal_alignment(Horizontal::Center),)
+                    .width(Length::Fill)
+                    .center_x(),
             ]
             .spacing(4)
             .align_items(Alignment::Center),
@@ -605,7 +591,7 @@ where
 pub fn menu_control_padding() -> Padding {
     let theme = cosmic::theme::active();
     let cosmic = theme.cosmic();
-    [cosmic.space_xxs(), cosmic.space_m()].into()
+    [0, cosmic.space_m()].into()
 }
 
 impl cosmic::Application for CosmicAppList {
@@ -1431,24 +1417,28 @@ impl cosmic::Application for CosmicAppList {
                 Some(e) => (e, true),
                 None => match self.active_list.iter().find(|i| i.id == *id) {
                     Some(e) => (e, false),
-                    None => return iced::widget::text("").into(),
+                    None => return text::body("").into(),
                 },
             };
 
             match popup_type {
                 PopupType::RightClickMenu => {
-                    let mut content = column![container(
-                        iced::widget::text(&desktop_info.name(&self.locales).unwrap_or_default())
-                            .horizontal_alignment(Horizontal::Center)
-                    )
-                    .padding(menu_control_padding()),]
-                    .padding([8, 0])
-                    .align_items(Alignment::Center);
+                    fn menu_button(label: String) -> cosmic::widget::Button<'static, Message> {
+                        text::body(label)
+                            .height(36)
+                            .vertical_alignment(iced::alignment::Vertical::Center)
+                            .apply(cosmic::widget::button)
+                            .style(Button::AppletMenu)
+                            .padding(menu_control_padding())
+                            .width(Length::Fill)
+                    }
+
+                    let mut content = column![].padding([8, 0]).align_items(Alignment::Center);
 
                     if let Some(exec) = desktop_info.exec() {
                         if !toplevels.is_empty() {
                             content = content.push(
-                                menu_button(iced::widget::text(fl!("new-window")))
+                                menu_button(fl!("new-window"))
                                     .on_press(Message::Exec(exec.to_string(), None)),
                             );
                         } else if let Some(gpus) = self.gpus.as_ref() {
@@ -1459,7 +1449,7 @@ impl cosmic::Application for CosmicAppList {
                             };
                             for (i, gpu) in gpus.iter().enumerate() {
                                 content = content.push(
-                                    menu_button(iced::widget::text(format!(
+                                    menu_button(format!(
                                         "{} {}",
                                         fl!("run-on", gpu = gpu.name.clone()),
                                         if i == default_idx {
@@ -1467,13 +1457,13 @@ impl cosmic::Application for CosmicAppList {
                                         } else {
                                             String::new()
                                         }
-                                    )))
+                                    ))
                                     .on_press(Message::Exec(exec.to_string(), Some(i))),
                                 );
                             }
                         } else {
                             content = content.push(
-                                menu_button(iced::widget::text(fl!("run")))
+                                menu_button(fl!("run"))
                                     .on_press(Message::Exec(exec.to_string(), None)),
                             );
                         }
@@ -1489,33 +1479,28 @@ impl cosmic::Application for CosmicAppList {
                                 info.title.clone()
                             };
                             list_col = list_col.push(
-                                menu_button(iced::widget::text(title))
-                                    .on_press(Message::Activate(handle.clone())),
+                                menu_button(title).on_press(Message::Activate(handle.clone())),
                             );
                         }
                         content = content.push(list_col);
                         content = content.push(divider::horizontal::default());
                     }
                     if is_pinned {
-                        content = content.push(
-                            menu_button(iced::widget::text(fl!("unpin")))
-                                .on_press(Message::UnpinApp(*id)),
-                        )
+                        content =
+                            content.push(menu_button(fl!("unpin")).on_press(Message::UnpinApp(*id)))
                     } else if desktop_info.exec().is_some() {
-                        content = content.push(
-                            menu_button(iced::widget::text(fl!("pin")))
-                                .on_press(Message::PinApp(*id)),
-                        )
+                        content =
+                            content.push(menu_button(fl!("pin")).on_press(Message::PinApp(*id)))
                     }
 
                     content = match toplevels.len() {
                         0 => content,
                         1 => content.push(
-                            menu_button(iced::widget::text(fl!("quit")))
+                            menu_button(fl!("quit"))
                                 .on_press(Message::Quit(desktop_info.id().to_string())),
                         ),
                         _ => content.push(
-                            menu_button(iced::widget::text(&fl!("quit-all")))
+                            menu_button(fl!("quit-all"))
                                 .on_press(Message::Quit(desktop_info.id().to_string())),
                         ),
                     };
@@ -1537,7 +1522,6 @@ impl cosmic::Application for CosmicAppList {
                                 img.clone(),
                                 Message::Toggle(handle.clone()),
                                 title,
-                                10.0,
                                 self.currently_active_toplevel().contains(handle),
                             ));
                         }
@@ -1556,7 +1540,6 @@ impl cosmic::Application for CosmicAppList {
                                 img.clone(),
                                 Message::Toggle(handle.clone()),
                                 title,
-                                10.0,
                                 self.currently_active_toplevel().contains(handle),
                             ));
                         }

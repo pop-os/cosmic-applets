@@ -5,11 +5,11 @@ use cctk::sctk::reexports::{calloop::channel::SyncSender, client::backend::Objec
 use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::event;
 use cosmic::iced::mouse::{self, ScrollDelta};
-use cosmic::iced::widget::{button, column, container, row, text};
+use cosmic::iced::widget::{button, column, row};
 use cosmic::iced::{Event::Mouse, Length, Subscription};
 use cosmic::iced_core::{Background, Border};
 use cosmic::iced_style::application;
-use cosmic::widget::{horizontal_space, vertical_space};
+use cosmic::widget::{container, horizontal_space, vertical_space};
 use cosmic::{applet::cosmic_panel_config::PanelAnchor, font::FONT_BOLD, Command};
 use cosmic::{Element, Theme};
 
