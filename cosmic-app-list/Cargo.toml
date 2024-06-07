@@ -32,6 +32,7 @@ tokio = { version = "1.36.0", features = [
 tracing-log.workspace = true
 tracing-subscriber.workspace = true
 tracing.workspace = true
+tracing-journald.workspace = true
 url = "2.5.0"
 zbus.workspace = true
 freedesktop-desktop-entry.workspace = true

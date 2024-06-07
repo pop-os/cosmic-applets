@@ -919,6 +919,7 @@ dependencies = [
  "switcheroo-control",
  "tokio",
  "tracing",
+ "tracing-journald",
  "tracing-log",
  "tracing-subscriber",
  "url",
@@ -2214,16 +2215,18 @@ dependencies = [
 [[package]]
 name = "freedesktop-desktop-entry"
 version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4fefe79ec93a6aeaa938981fe3e11b4ed1b2f9deacc6bb631585bc48252d1bfa"
+source = "git+https://github.com/wiiznokes/freedesktop-desktop-entry?rev=5c24bcb82e19edda7fcba3b93e70449d763f5018#5c24bcb82e19edda7fcba3b93e70449d763f5018"
 dependencies = [
  "dirs 5.0.1",
  "gettext-rs",
+ "log",
  "memchr",
  "strsim 0.11.1",
  "textdistance",
  "thiserror",
+ "udev",
  "xdg",
+ "zbus 4.2.2",
 ]
 
 [[package]]
@@ -5859,6 +5862,17 @@ checksum = "c06d3da6113f116aaee68e4d601191614c9053067f9ab7f6edbcb161237daa54"
 dependencies = [
  "once_cell",
  "valuable",
+]
+
+[[package]]
+name = "tracing-journald"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ba316a74e8fc3c3896a850dba2375928a9fa171b085ecddfc7c054d39970f3fd"
+dependencies = [
+ "libc",
+ "tracing-core",
+ "tracing-subscriber",
 ]
 
 [[package]]

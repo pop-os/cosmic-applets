@@ -78,6 +78,7 @@ use iced::Background;
 use iced::Length;
 use itertools::Itertools;
 use rand::{thread_rng, Rng};
+use tracing::info;
 use std::cmp::min;
 use std::collections::HashMap;
 use std::fs;
@@ -611,6 +612,8 @@ impl cosmic::Application for CosmicAppList {
 
         let locales = get_languages_from_env();
 
+        info!("fav: {:?}", &config.favorites);
+
         let mut app_list = Self {
             core,
             pinned_list: load_desktop_entries_from_app_ids(&config.favorites, &locales)
@@ -1045,6 +1048,9 @@ impl cosmic::Application for CosmicAppList {
                     }
                     WaylandUpdate::Toplevel(event) => match event {
                         ToplevelUpdate::Add(handle, mut info) => {
+
+                            info!("add: {:?}", &info.app_id);
+
                             let new_desktop_info =
                                 load_desktop_entries_from_app_ids(&[&info.app_id], &self.locales)
                                     .remove(0);
