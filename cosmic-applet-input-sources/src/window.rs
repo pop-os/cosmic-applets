@@ -191,7 +191,6 @@ impl cosmic::Application for Window {
             .height(Length::Shrink),
         )
         .on_press(Message::TogglePopup)
-        .padding(self.core.applet.suggested_padding(true))
         .style(cosmic::theme::Button::AppletIcon)
         .into()
     }
