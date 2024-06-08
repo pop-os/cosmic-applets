@@ -2215,7 +2215,7 @@ dependencies = [
 [[package]]
 name = "freedesktop-desktop-entry"
 version = "0.6.0"
-source = "git+https://github.com/wiiznokes/freedesktop-desktop-entry?rev=1ee14ea450408c379bb02e29501d656db396395c#1ee14ea450408c379bb02e29501d656db396395c"
+source = "git+https://github.com/wiiznokes/freedesktop-desktop-entry?rev=d70abc15dcfcc447e4967be85f5c4882b0f4bd3a#d70abc15dcfcc447e4967be85f5c4882b0f4bd3a"
 dependencies = [
  "dirs 5.0.1",
  "gettext-rs",
