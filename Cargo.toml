@@ -51,11 +51,10 @@ rustix = { version = "0.38", features = ["fs", "process"] }
 zbus = { version = "4.2.1", default-features = false, features = ["tokio"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
-tracing-journald = "0.3.0"
 tracing-log = "0.2.0"
 cosmic-config = { git = "https://github.com/pop-os/libcosmic" }
 serde = { version = "1.0.152", features = ["derive"] }
-freedesktop-desktop-entry = "0.6.0"
+freedesktop-desktop-entry = "0.6.1"
 
 [profile.release]
 lto = "fat"
@@ -70,5 +69,5 @@ ignored = ["libcosmic"]
 sctk = { git = "https://github.com/smithay/client-toolkit//", package = "smithay-client-toolkit", rev = "3bed072" }
 
 [patch."crates-io"]
-freedesktop-desktop-entry = { git = "https://github.com/wiiznokes/freedesktop-desktop-entry", rev = "33fdccbafe8205112100adadfaa607da5df0c53a"}
+# freedesktop-desktop-entry = { git = "https://github.com/wiiznokes/freedesktop-desktop-entry", rev = "33fdccbafe8205112100adadfaa607da5df0c53a"}
 # freedesktop-desktop-entry = { path = "../freedesktop-desktop-entry" }

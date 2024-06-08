@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2021"
 license = "GPL-3.0"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
 anyhow.workspace = true
 cctk.workspace = true
@@ -32,7 +31,6 @@ tokio = { version = "1.36.0", features = [
 tracing-log.workspace = true
 tracing-subscriber.workspace = true
 tracing.workspace = true
-tracing-journald.workspace = true
 url = "2.5.0"
 zbus.workspace = true
 freedesktop-desktop-entry.workspace = true
