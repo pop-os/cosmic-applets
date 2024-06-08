@@ -2215,7 +2215,7 @@ dependencies = [
 [[package]]
 name = "freedesktop-desktop-entry"
 version = "0.6.0"
-source = "git+https://github.com/wiiznokes/freedesktop-desktop-entry?rev=fc93a8436b48ee5e7ac1fc3945d7710353422434#fc93a8436b48ee5e7ac1fc3945d7710353422434"
+source = "git+https://github.com/wiiznokes/freedesktop-desktop-entry?rev=1ee14ea450408c379bb02e29501d656db396395c#1ee14ea450408c379bb02e29501d656db396395c"
 dependencies = [
  "dirs 5.0.1",
  "gettext-rs",
@@ -2224,9 +2224,7 @@ dependencies = [
  "strsim 0.11.1",
  "textdistance",
  "thiserror",
- "udev",
  "xdg",
- "zbus 4.2.2",
 ]
 
 [[package]]
