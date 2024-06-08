@@ -70,4 +70,5 @@ ignored = ["libcosmic"]
 sctk = { git = "https://github.com/smithay/client-toolkit//", package = "smithay-client-toolkit", rev = "3bed072" }
 
 [patch."crates-io"]
-freedesktop-desktop-entry = { git = "https://github.com/wiiznokes/freedesktop-desktop-entry", rev = "251de84bff2d760325e8f5a5dc64e6f627ccb96f"}
+freedesktop-desktop-entry = { git = "https://github.com/wiiznokes/freedesktop-desktop-entry", rev = "430409d35419e6ba988823f5cb2c4eae67f90499"}
+# freedesktop-desktop-entry = { path = "../freedesktop-desktop-entry" }
