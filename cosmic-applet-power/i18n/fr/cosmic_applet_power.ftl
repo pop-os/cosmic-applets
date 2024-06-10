@@ -9,13 +9,29 @@ restart = Redémarrer
 shutdown = Éteindre
 confirm = Confirmer
 cancel = Annuler
-confirm-body = 
-    { $action ->
-        [restart] Redémarrer l'ordinateur
+confirm-button = {
+    $action ->
+        [restart] { restart }
         [suspend] Mettre en veille
-        [shutdown] Éteindre l'ordinateur
-        [lock-screen] Verrouiller la session
-        [log-out] Déconnecter l'utilisateur
+        [shutdown] {shutdown }
+        [log-out] { log-out }
+        *[other] { confirm }
+}
+confirm-title =
+    { $action ->
+        [restart] { restart }
+        [suspend] Mettre le système en veille
+        [shutdown] { shutdown }
+        [log-out] Quitter toutes les applications et se déconnecter
         *[other] Appliquer l'option choisie
-    } dans { $countdown } secondes.
+    } maintenant ?
+confirm-body =
+    Vous allez { $action ->
+        [restart] redémarrer l'ordinateur
+        [suspend] mettre l'ordinateur en veille
+        [shutdown] éteindre l'ordinateur
+        [lock-screen] verrouiller la session
+        [log-out] déconnecter l'utilisateur
+        *[other]appliquer l'option choisie
+    } automatiquement dans { $countdown } secondes.
 

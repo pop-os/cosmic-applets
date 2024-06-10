@@ -7,8 +7,24 @@ log-out-shortcut = Ctrl + Alt + Supr
 suspend = Suspender
 restart = Reiniciar
 shutdown = Apagar
-confirm = Vale
+confirm = Confirmar
 cancel = Cancelar
+confirm-button = {
+    $action ->
+        [restart] { restart }
+        [suspend] { suspend }
+        [shutdown] { shutdown }
+        [log-out] { log-out }
+        *[other] { confirm }
+}
+confirm-title =
+    ¿{ $action ->
+        [restart] { restart }
+        [suspend] { suspend }
+        [shutdown] { shutdown }
+        [log-out] Salir de todas las aplicaciones y la sesión
+        *[other] Realizar la acción seleccionada
+    } ahora?
 confirm-body = 
     { $action ->
         [restart] El ordenador se reiniciará
@@ -17,4 +33,4 @@ confirm-body =
         [lock-screen] La pantalla se bloqueará
         [log-out] La sesión se cerrará
         *[other] La acción seleccionada se realizará
-    } en { $countdown } segundos.
+    } automáticamente en { $countdown } segundos.
