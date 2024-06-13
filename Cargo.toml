@@ -22,10 +22,10 @@ resolver = "2"
 
 [workspace.dependencies]
 anyhow = "1.0.81"
-cctk = { git = "https://github.com/pop-os/cosmic-protocols", package = "cosmic-client-toolkit", rev = "e4e6f8c" }
+cctk = { git = "https://github.com/pop-os/cosmic-protocols", package = "cosmic-client-toolkit", rev = "c8d3a1c" }
 cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols", default-features = false, features = [
     "client",
-], rev = "e4e6f8c" }
+], rev = "c8d3a1c" }
 cosmic-time = { git = "https://github.com/pop-os/cosmic-time", default-features = false, features = [
     "libcosmic",
     "once_cell",
@@ -64,8 +64,3 @@ ignored = ["libcosmic"]
 # [patch."https://github.com/pop-os/libcosmic"]
 # cosmic-config = { git = "https://github.com/pop-os/libcosmic//" }
 # libcosmic = { git = "https://github.com/pop-os/libcosmic//" }
-
-[patch."https://github.com/Smithay/client-toolkit"]
-sctk = { git = "https://github.com/smithay/client-toolkit//", package = "smithay-client-toolkit", rev = "3bed072" }
-
-[patch."crates-io"]
