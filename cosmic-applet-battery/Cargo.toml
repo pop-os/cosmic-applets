@@ -19,3 +19,5 @@ tracing-subscriber.workspace = true
 tracing.workspace = true
 udev = "0.8"
 zbus.workspace = true
+# TODO branch
+upower_dbus = { git = "https://github.com/pop-os/dbus-settings-bindings", branch = "upower" }
