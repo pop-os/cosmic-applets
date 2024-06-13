@@ -8,7 +8,6 @@ mod backend;
 mod config;
 mod dgpu;
 mod localize;
-mod upower;
 mod upower_device;
 mod upower_kbdbacklight;
 
