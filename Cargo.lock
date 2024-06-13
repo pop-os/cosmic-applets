@@ -950,6 +950,7 @@ dependencies = [
 name = "cosmic-applet-battery"
 version = "0.1.0"
 dependencies = [
+ "cosmic-settings-subscriptions",
  "cosmic-time",
  "drm",
  "futures",
@@ -1317,6 +1318,21 @@ name = "cosmic-settings-daemon"
 version = "0.1.0"
 source = "git+https://github.com/pop-os/dbus-settings-bindings#badfc6a0bbe7c93927fe32692795699a675ae4c4"
 dependencies = [
+ "zbus 4.2.2",
+]
+
+[[package]]
+name = "cosmic-settings-subscriptions"
+version = "0.1.0"
+source = "git+https://github.com/pop-os/cosmic-settings-subscriptions#a223eb4d32773e7b1170696f8b2d2d7ab54fa2e1"
+dependencies = [
+ "futures",
+ "iced_futures",
+ "libpulse-binding",
+ "log",
+ "rustix 0.38.34",
+ "tokio",
+ "upower_dbus",
  "zbus 4.2.2",
 ]
 

@@ -8,10 +8,6 @@ use crate::backlight::{
 use crate::config;
 use crate::dgpu::{dgpu_subscription, Entry, GpuUpdate};
 use crate::fl;
-use crate::upower_device::{device_subscription, DeviceDbusEvent};
-use crate::upower_kbdbacklight::{
-    kbd_backlight_subscription, KeyboardBacklightRequest, KeyboardBacklightUpdate,
-};
 use cosmic::applet::cosmic_panel_config::PanelAnchor;
 use cosmic::applet::token::subscription::{
     activation_token_subscription, TokenRequest, TokenUpdate,
@@ -32,6 +28,10 @@ use cosmic::iced_widget::{Column, Row};
 use cosmic::widget::{divider, horizontal_space, icon, scrollable, vertical_space};
 use cosmic::Command;
 use cosmic::{Element, Theme};
+use cosmic_settings_subscriptions::upower::{
+    device::{device_subscription, DeviceDbusEvent},
+    kbdbacklight::{kbd_backlight_subscription, KeyboardBacklightRequest, KeyboardBacklightUpdate},
+};
 use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
 
 use std::collections::HashMap;
