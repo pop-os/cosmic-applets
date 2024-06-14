@@ -218,6 +218,33 @@ async fn start_listening(
                         })
                         .await;
                 }
+                Some(NetworkManagerRequest::Forget(ssid)) => {
+                    let s = NetworkManagerSettings::new(&conn).await.unwrap();
+                    let known_conns = s.list_connections().await.unwrap_or_default();
+                    let mut success = false;
+                    for c in known_conns {
+                        let settings = c.get_settings().await.ok().unwrap_or_default();
+                        let s = Settings::new(settings);
+                        if s.wifi
+                            .clone()
+                            .and_then(|w| w.ssid)
+                            .and_then(|ssid| String::from_utf8(ssid).ok())
+                            .is_some_and(|s| s == ssid)
+                        {
+                            _ = c.delete().await;
+                            success = true;
+                            break;
+                        }
+                    }
+                    let state = NetworkManagerState::new(&conn).await.unwrap_or_default();
+                    _ = output
+                        .send(NetworkManagerEvent::RequestResponse {
+                            req: NetworkManagerRequest::Forget(ssid.clone()),
+                            success,
+                            state,
+                        })
+                        .await;
+                }
                 _ => {
                     return State::Finished;
                 }
@@ -236,6 +263,7 @@ pub enum NetworkManagerRequest {
     SelectAccessPoint(String),
     Disconnect(String),
     Password(String, String),
+    Forget(String),
     Reload,
 }
 
@@ -432,6 +460,7 @@ impl NetworkManagerState {
             let mut known_conn = None;
             for c in known_conns {
                 let settings = c.get_settings().await.ok().unwrap_or_default();
+
                 let s = Settings::new(settings);
                 if let Some(cur_ssid) = s
                     .wifi
@@ -445,22 +474,12 @@ impl NetworkManagerState {
                     }
                 }
             }
+
             let active_conn = if let Some(known_conn) = known_conn.as_ref() {
                 // update settings if needed
-                let mut settings = known_conn.get_settings().await.ok().unwrap_or_default();
-                settings.extend(conn_settings.iter().map(|s| {
-                    let map = (
-                        s.0.to_string(),
-                        s.1.iter()
-                            .filter_map(|(k, v)| {
-                                OwnedValue::try_from(v).map(|v| (k.to_string(), v)).ok()
-                            })
-                            .collect::<HashMap<_, _>>(),
-                    );
-                    map
-                }));
-
-                known_conn.update(conn_settings).await?;
+                if password.is_some() {
+                    known_conn.update(conn_settings).await?;
+                }
 
                 nm.activate_connection(known_conn, &device).await?
             } else {
@@ -473,11 +492,14 @@ impl NetworkManagerState {
                     .unwrap()
                     .interface(dummy.inner().interface().to_owned())
                     .unwrap()
+                    .path(dummy.inner().path().to_owned())
+                    .unwrap()
                     .build()
                     .await
                     .unwrap();
                 ActiveConnection::from(active)
             };
+            _ = tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
             let mut state =
                 enums::ActiveConnectionState::from(active_conn.state().await.unwrap_or_default());
             return match state {
