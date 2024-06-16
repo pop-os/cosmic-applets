@@ -17,3 +17,4 @@ enter-password = Wprowadź hasło lub klucz szyfrowania
 router-wps-button = Możesz się również połączyć wciskając przycisk "WPS" na routerze
 unable-to-connect = Nie można połączyć się z siecią
 check-wifi-connection = Upewnij się, że Wi-Fi ma połączenie z internetem oraz hasło jest poprawne
+reset = Reset
