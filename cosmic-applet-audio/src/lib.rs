@@ -65,8 +65,6 @@ pub struct Audio {
     outputs: Vec<DeviceInfo>,
     inputs: Vec<DeviceInfo>,
     pulse_state: PulseState,
-    icon_name: String,
-    input_icon_name: String,
     popup: Option<window::Id>,
     timeline: Timeline,
     config: AudioAppletConfig,
@@ -77,51 +75,47 @@ pub struct Audio {
 impl Audio {
     fn update_output(&mut self, output: Option<DeviceInfo>) {
         self.current_output = output;
-        self.apply_output_volume();
     }
 
-    fn apply_output_volume(&mut self) {
+    fn output_icon_name(&self) -> &'static str {
         let Some(output) = self.current_output.as_ref() else {
-            self.icon_name = "audio-volume-muted-symbolic".to_string();
-            return;
+            return "audio-volume-muted-symbolic";
         };
 
         let volume = output.volume.avg();
         let output_volume = volume_to_percent(volume);
         if volume.is_muted() {
-            self.icon_name = "audio-volume-muted-symbolic".to_string();
+            "audio-volume-muted-symbolic"
         } else if output_volume < 33.0 {
-            self.icon_name = "audio-volume-low-symbolic".to_string();
+            "audio-volume-low-symbolic"
         } else if output_volume < 66.0 {
-            self.icon_name = "audio-volume-medium-symbolic".to_string();
+            "audio-volume-medium-symbolic"
         } else if output_volume <= 100.0 {
-            self.icon_name = "audio-volume-high-symbolic".to_string();
+            "audio-volume-high-symbolic"
         } else {
-            self.icon_name = "audio-volume-overamplified-symbolic".to_string();
+            "audio-volume-overamplified-symbolic"
         }
     }
 
     fn update_input(&mut self, input: Option<DeviceInfo>) {
         self.current_input = input;
-        self.apply_input_volume();
     }
 
-    fn apply_input_volume(&mut self) {
+    fn input_icon_name(&self) -> &'static str {
         let Some(input) = self.current_input.as_ref() else {
-            self.input_icon_name = "microphone-sensitivity-muted-symbolic".to_string();
-            return;
+            return "microphone-sensitivity-muted-symbolic";
         };
 
         let volume = input.volume.avg();
         let input_volume = volume_to_percent(volume);
         if volume.is_muted() || input_volume == 0.0 {
-            self.input_icon_name = "microphone-sensitivity-muted-symbolic".to_string();
+            "microphone-sensitivity-muted-symbolic"
         } else if input_volume < 33.0 {
-            self.input_icon_name = "microphone-sensitivity-low-symbolic".to_string();
+            "microphone-sensitivity-low-symbolic"
         } else if input_volume < 66.0 {
-            self.input_icon_name = "microphone-sensitivity-medium-symbolic".to_string();
+            "microphone-sensitivity-medium-symbolic"
         } else {
-            self.input_icon_name = "microphone-sensitivity-high-symbolic".to_string();
+            "microphone-sensitivity-high-symbolic"
         }
     }
 }
@@ -280,8 +274,6 @@ impl cosmic::Application for Audio {
                 current_input: None,
                 outputs: vec![],
                 inputs: vec![],
-                icon_name: "audio-volume-high-symbolic".to_string(),
-                input_icon_name: "audio-input-microphone-symbolic".to_string(),
                 token_tx: None,
                 ..Default::default()
             },
@@ -342,7 +334,6 @@ impl cosmic::Application for Audio {
                 self.current_output
                     .as_mut()
                     .map(|o| o.volume.set(o.volume.len(), percent_to_volume(vol)));
-                self.apply_output_volume();
                 if let PulseState::Connected(connection) = &mut self.pulse_state {
                     if let Some(device) = &self.current_output {
                         if let Some(name) = &device.name {
@@ -358,7 +349,6 @@ impl cosmic::Application for Audio {
                 self.current_input
                     .as_mut()
                     .map(|i| i.volume.set(i.volume.len(), percent_to_volume(vol)));
-                self.apply_input_volume();
                 if let PulseState::Connected(connection) = &mut self.pulse_state {
                     if let Some(device) = &self.current_input {
                         if let Some(name) = &device.name {
@@ -576,7 +566,7 @@ impl cosmic::Application for Audio {
         let btn = self
             .core
             .applet
-            .icon_button(&self.icon_name)
+            .icon_button(self.output_icon_name())
             .on_press(Message::TogglePopup);
         if let Some(playback_buttons) = self.playback_buttons() {
             match self.core.applet.anchor {
@@ -622,7 +612,7 @@ impl cosmic::Application for Audio {
             column![
                 padded_control(
                     row![
-                        icon::from_name(self.icon_name.as_str())
+                        icon::from_name(self.output_icon_name())
                             .size(24)
                             .symbolic(true),
                         slider(0.0..=100.0, out_f64, Message::SetOutputVolume)
@@ -637,7 +627,7 @@ impl cosmic::Application for Audio {
                 ),
                 padded_control(
                     row![
-                        icon::from_name(self.input_icon_name.as_str())
+                        icon::from_name(self.input_icon_name())
                             .size(24)
                             .symbolic(true),
                         slider(0.0..=100.0, in_f64, Message::SetInputVolume)
