@@ -5,6 +5,7 @@ edition = "2021"
 license = "GPL-3.0"
 
 [dependencies]
+cosmic-settings-subscriptions.workspace = true
 cosmic-time.workspace = true
 drm = "0.11.1"
 futures.workspace = true
@@ -19,6 +20,3 @@ tracing-subscriber.workspace = true
 tracing.workspace = true
 udev = "0.8"
 zbus.workspace = true
-# TODO branch
-upower_dbus = { git = "https://github.com/pop-os/dbus-settings-bindings", branch = "upower" }
-cosmic-settings-subscriptions = { git = "https://github.com/pop-os/cosmic-settings-subscriptions" }

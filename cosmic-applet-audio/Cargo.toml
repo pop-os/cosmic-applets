@@ -5,6 +5,7 @@ edition = "2021"
 license = "GPL-3.0"
 
 [dependencies]
+cosmic-settings-subscriptions.workspace = true
 cosmic-time.workspace = true
 i18n-embed-fl.workspace = true
 i18n-embed.workspace = true

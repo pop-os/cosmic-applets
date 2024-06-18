@@ -32,6 +32,7 @@ use cosmic::widget::Row;
 use cosmic::widget::{divider, icon};
 use cosmic::Renderer;
 use cosmic::{Element, Theme};
+use cosmic_settings_subscriptions::pulse as sub_pulse;
 use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
 use iced::wayland::popup::{destroy_popup, get_popup};
 use iced::widget::container;
@@ -64,6 +65,10 @@ pub struct Audio {
     current_input: Option<DeviceInfo>,
     outputs: Vec<DeviceInfo>,
     inputs: Vec<DeviceInfo>,
+    sink_mute: bool,
+    sink_volume: u32,
+    source_mute: bool,
+    source_volume: u32,
     pulse_state: PulseState,
     popup: Option<window::Id>,
     timeline: Timeline,
@@ -78,19 +83,13 @@ impl Audio {
     }
 
     fn output_icon_name(&self) -> &'static str {
-        let Some(output) = self.current_output.as_ref() else {
-            return "audio-volume-muted-symbolic";
-        };
-
-        let volume = output.volume.avg();
-        let output_volume = volume_to_percent(volume);
-        if volume.is_muted() {
+        if self.sink_mute || self.sink_volume == 0 {
             "audio-volume-muted-symbolic"
-        } else if output_volume < 33.0 {
+        } else if self.sink_volume < 33 {
             "audio-volume-low-symbolic"
-        } else if output_volume < 66.0 {
+        } else if self.sink_volume < 66 {
             "audio-volume-medium-symbolic"
-        } else if output_volume <= 100.0 {
+        } else if self.sink_volume <= 100 {
             "audio-volume-high-symbolic"
         } else {
             "audio-volume-overamplified-symbolic"
@@ -102,17 +101,11 @@ impl Audio {
     }
 
     fn input_icon_name(&self) -> &'static str {
-        let Some(input) = self.current_input.as_ref() else {
-            return "microphone-sensitivity-muted-symbolic";
-        };
-
-        let volume = input.volume.avg();
-        let input_volume = volume_to_percent(volume);
-        if volume.is_muted() || input_volume == 0.0 {
+        if self.source_mute || self.source_volume == 0 {
             "microphone-sensitivity-muted-symbolic"
-        } else if input_volume < 33.0 {
+        } else if self.source_volume < 33 {
             "microphone-sensitivity-low-symbolic"
-        } else if input_volume < 66.0 {
+        } else if self.source_volume < 66 {
             "microphone-sensitivity-medium-symbolic"
         } else {
             "microphone-sensitivity-high-symbolic"
@@ -145,6 +138,7 @@ pub enum Message {
     MprisRequest(MprisRequest),
     Token(TokenUpdate),
     OpenSettings,
+    PulseSub(sub_pulse::Event),
 }
 
 impl Audio {
@@ -540,6 +534,20 @@ impl cosmic::Application for Audio {
                     cosmic::process::spawn(cmd);
                 }
             },
+            Message::PulseSub(event) => match event {
+                sub_pulse::Event::SinkVolume(value) => {
+                    self.sink_volume = value;
+                }
+                sub_pulse::Event::SinkMute(value) => {
+                    self.sink_mute = value;
+                }
+                sub_pulse::Event::SourceVolume(value) => {
+                    self.source_volume = value;
+                }
+                sub_pulse::Event::SourceMute(value) => {
+                    self.source_mute = value;
+                }
+            },
         };
 
         Command::none()
@@ -559,6 +567,7 @@ impl cosmic::Application for Audio {
             }),
             mpris_subscription::mpris_subscription(0).map(Message::Mpris),
             activation_token_subscription(0).map(Message::Token),
+            sub_pulse::subscription().map(Message::PulseSub),
         ])
     }
 
