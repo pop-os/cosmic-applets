@@ -26,6 +26,7 @@ cctk = { git = "https://github.com/pop-os/cosmic-protocols", package = "cosmic-c
 cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols", default-features = false, features = [
     "client",
 ], rev = "c8d3a1c" }
+cosmic-settings-subscriptions = { git = "https://github.com/pop-os/cosmic-settings-subscriptions" }
 cosmic-time = { git = "https://github.com/pop-os/cosmic-time", default-features = false, features = [
     "libcosmic",
     "once_cell",

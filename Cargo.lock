@@ -929,6 +929,7 @@ dependencies = [
 name = "cosmic-applet-audio"
 version = "0.1.1"
 dependencies = [
+ "cosmic-settings-subscriptions",
  "cosmic-time",
  "i18n-embed 0.14.1",
  "i18n-embed-fl 0.8.0",
@@ -964,7 +965,6 @@ dependencies = [
  "tracing-log",
  "tracing-subscriber",
  "udev",
- "upower_dbus",
  "zbus 4.2.2",
 ]
 
@@ -5308,7 +5308,7 @@ checksum = "3c5e1a9a646d36c3599cd173a41282daf47c44583ad367b8e6837255952e5c67"
 [[package]]
 name = "smithay-client-toolkit"
 version = "0.18.0"
-source = "git+https://github.com/smithay/client-toolkit?rev=3bed072#3bed072b966022f5f929d12f3aff089b1ace980b"
+source = "git+https://github.com/smithay/client-toolkit//?rev=3bed072#3bed072b966022f5f929d12f3aff089b1ace980b"
 dependencies = [
  "bitflags 2.5.0",
  "bytemuck",
