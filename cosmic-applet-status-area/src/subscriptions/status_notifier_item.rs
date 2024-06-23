@@ -156,7 +156,10 @@ pub struct LayoutProps {
     #[zvariant(rename = "icon-name")]
     icon_name: Option<String>,
     disposition: Option<String>,
-    shortcut: Option<String>,
+    // If this field has a different type, this causes the whole type to fail
+    // to parse, due to a zvariant bug.
+    // https://github.com/dbus2/zbus/issues/856
+    // shortcut: Option<String>,
 }
 
 impl zvariant::Type for LayoutProps {
@@ -217,10 +220,6 @@ impl Layout {
 
     pub fn disposition(&self) -> Option<&str> {
         self.1.disposition.as_deref()
-    }
-
-    pub fn shortcut(&self) -> Option<&str> {
-        self.1.shortcut.as_deref()
     }
 }
 
