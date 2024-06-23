@@ -84,10 +84,18 @@ impl State {
         self.item.layout_subscription().map(Msg::Layout)
     }
 
-    pub fn about_to_show(&self) {
+    pub fn opened(&self) {
         let menu_proxy = self.item.menu_proxy().clone();
         tokio::spawn(async move {
+            let _ = menu_proxy.event(0, "opened", &0i32.into(), 0).await;
             let _ = menu_proxy.about_to_show(0).await;
+        });
+    }
+
+    pub fn closed(&self) {
+        let menu_proxy = self.item.menu_proxy().clone();
+        tokio::spawn(async move {
+            let _ = menu_proxy.event(0, "closed", &0i32.into(), 0).await;
         });
     }
 }
