@@ -150,6 +150,8 @@ impl cosmic::Application for App {
                     None
                 };
                 if self.open_menu.is_some() {
+                    self.menus[&id].about_to_show();
+
                     let mut cmds = Vec::new();
                     if let Some(id) = self.popup.take() {
                         cmds.push(destroy_popup(id));
