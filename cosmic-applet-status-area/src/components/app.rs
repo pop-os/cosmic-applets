@@ -150,11 +150,11 @@ impl cosmic::Application for App {
                     None
                 };
                 if self.open_menu.is_some() {
-                    self.menus[&id].about_to_show();
+                    self.menus[&id].opened();
 
                     let mut cmds = Vec::new();
-                    if let Some(id) = self.popup.take() {
-                        cmds.push(destroy_popup(id));
+                    if let Some(popup_id) = self.popup.take() {
+                        cmds.push(destroy_popup(popup_id));
                     }
                     let popup_id = self.next_popup_id();
                     let mut popup_settings = self.core.applet.get_popup_settings(
@@ -180,8 +180,10 @@ impl cosmic::Application for App {
                     }
                     cmds.push(get_popup(popup_settings));
                     return Command::batch(cmds);
-                } else if let Some(id) = self.popup {
-                    return destroy_popup(id);
+                } else if let Some(popup_id) = self.popup {
+                    self.menus[&id].closed();
+
+                    return destroy_popup(popup_id);
                 }
                 Command::none()
             }
