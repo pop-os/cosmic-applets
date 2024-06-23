@@ -1467,6 +1467,23 @@ impl cosmic::Application for CosmicAppList {
                                     .on_press(Message::Exec(exec.to_string(), None)),
                             );
                         }
+                        for action in desktop_info.actions().into_iter().flatten() {
+                            if action == "new-window" {
+                                continue;
+                            }
+
+                            let Some(exec) = desktop_info.action_entry(action, "Exec") else {
+                                continue;
+                            };
+                            let Some(name) =
+                                desktop_info.action_entry_localized(action, "Name", &self.locales)
+                            else {
+                                continue;
+                            };
+                            content = content.push(
+                                menu_button(name.into()).on_press(Message::Exec(exec.into(), None)),
+                            );
+                        }
                         content = content.push(divider::horizontal::default());
                     }
 
