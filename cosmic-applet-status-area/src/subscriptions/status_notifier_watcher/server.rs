@@ -7,7 +7,6 @@
 
 use futures::prelude::*;
 use zbus::{
-    dbus_interface,
     fdo::{DBusProxy, RequestNameFlags, RequestNameReply},
     names::{BusName, UniqueName, WellKnownName},
     MessageHeader, Result, SignalContext,
@@ -22,7 +21,7 @@ struct StatusNotifierWatcher {
     items: Vec<(UniqueName<'static>, String)>,
 }
 
-#[dbus_interface(name = "org.kde.StatusNotifierWatcher")]
+#[zbus::interface(name = "org.kde.StatusNotifierWatcher")]
 impl StatusNotifierWatcher {
     async fn register_status_notifier_item(
         &mut self,
@@ -47,35 +46,35 @@ impl StatusNotifierWatcher {
         // XXX emit registed/unregistered
     }
 
-    #[dbus_interface(property)]
+    #[zbus(property)]
     fn registered_status_notifier_items(&self) -> Vec<String> {
         self.items.iter().map(|(_, x)| x.clone()).collect()
     }
 
-    #[dbus_interface(property)]
+    #[zbus(property)]
     fn is_status_notifier_host_registered(&self) -> bool {
         true
     }
 
-    #[dbus_interface(property)]
+    #[zbus(property)]
     fn protocol_version(&self) -> i32 {
         0
     }
 
-    #[dbus_interface(signal)]
+    #[zbus(signal)]
     async fn status_notifier_item_registered(ctxt: &SignalContext<'_>, service: &str)
         -> Result<()>;
 
-    #[dbus_interface(signal)]
+    #[zbus(signal)]
     async fn status_notifier_item_unregistered(
         ctxt: &SignalContext<'_>,
         service: &str,
     ) -> Result<()>;
 
-    #[dbus_interface(signal)]
+    #[zbus(signal)]
     async fn status_notifier_host_registered(ctxt: &SignalContext<'_>) -> Result<()>;
 
-    #[dbus_interface(signal)]
+    #[zbus(signal)]
     async fn status_notifier_host_unregistered(ctxt: &SignalContext<'_>) -> Result<()>;
 }
 
