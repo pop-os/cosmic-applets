@@ -83,6 +83,13 @@ impl State {
     pub fn subscription(&self) -> iced::Subscription<Msg> {
         self.item.layout_subscription().map(Msg::Layout)
     }
+
+    pub fn about_to_show(&self) {
+        let menu_proxy = self.item.menu_proxy().clone();
+        tokio::spawn(async move {
+            let _ = menu_proxy.about_to_show(0).await;
+        });
+    }
 }
 
 fn layout_view(layout: &Layout, expanded: Option<i32>) -> cosmic::Element<Msg> {
