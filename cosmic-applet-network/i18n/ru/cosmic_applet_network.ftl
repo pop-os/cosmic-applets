@@ -1,7 +1,7 @@
 network = Сеть
 airplane-mode = Авиарежим
 airplane-mode-on = Авиарежим включен
-turn-off-airplane-mode = Выключите, чтобы включить Wi-Fi, Bluetooth и мобильную широкополосную связь.
+turn-off-airplane-mode = Выключите, чтобы включить Wi-Fi, Bluetooth и мобильную связь.
 wifi = Wi-Fi
 ipv4 = Адрес IPv4
 ipv6 = Адрес IPv6
@@ -16,4 +16,5 @@ visible-wireless-networks = Видимые беспроводные сети
 enter-password = Введите пароль или ключ шифрования
 router-wps-button = Подключение также можно выполнить, нажав кнопку "WPS" на маршрутизаторе
 unable-to-connect = Невозможно подключиться к сети
-check-wifi-connection = Убедитесь, что Wi-Fi подключен к Интернету и пароль верен
+check-wifi-connection = Убедитесь, что Wi-Fi подключён к Интернету и пароль введён верно
+reset = Сброс

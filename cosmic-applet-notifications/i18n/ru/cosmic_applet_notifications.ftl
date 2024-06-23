@@ -1,10 +1,10 @@
 hours-ago = { NUMBER($duration) -> 
     [1] 1 час назад
-    *[other] {$duration} ч назад
+    *[other] {$duration} ч. назад
 }
 minutes-ago = { NUMBER($duration) -> 
     [1] 1 минуту назад
-    *[other] {$duration} мин назад
+    *[other] {$duration} мин. назад
 }
 show-less = Показать меньше
 show-more = Показать ещё {$more}
