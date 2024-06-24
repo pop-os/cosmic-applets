@@ -2,7 +2,7 @@ power = Питание
 settings = Параметры...
 lock-screen = Блокировка экрана
 lock-screen-shortcut = Super + Escape
-log-out = Выйти из системы
+log-out = Выход из системы
 log-out-shortcut = Ctrl + Alt + Delete
 suspend = Спящий режим
 restart = Перезагрузка
@@ -33,5 +33,5 @@ confirm-body =
         [lock-screen] заблокирует экран
         [log-out] выполнит выход
         *[other] выполнит выбранное действие
-    } через { $countdown } сек.
+    } автоматически через { $countdown } сек.
 
