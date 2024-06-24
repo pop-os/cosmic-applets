@@ -1,6 +1,6 @@
 network = Сеть
 airplane-mode = Авиарежим
-airplane-mode-on = Авиарежим включен
+airplane-mode-on = Авиарежим включён
 turn-off-airplane-mode = Выключите, чтобы включить Wi-Fi, Bluetooth и мобильную связь.
 wifi = Wi-Fi
 ipv4 = Адрес IPv4
