@@ -14,7 +14,7 @@ Comment[ru]=Апплет для панели Cosmic
 Type=Application
 Exec=cosmic-panel-button com.system76.CosmicAppLibrary
 Terminal=false
-Categories=Cosmic;Iced;
+Categories=X-COSMIC;X-ICED;
 Keywords=Cosmic;Iced;
 # Translators: Do NOT translate or transliterate this text (this is an icon file name)!
 Icon=com.system76.CosmicPanelAppButton
