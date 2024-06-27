@@ -119,7 +119,7 @@ impl cosmic::Application for Button {
             )
             .align_items(iced::Alignment::Center);
             cosmic::widget::button(content)
-                .padding([0, self.core.applet.suggested_padding(false)])
+                .padding([0, self.core.applet.suggested_padding(true)])
                 .style(cosmic::theme::Button::AppletIcon)
         }
         .on_press_down(Msg::Press)
