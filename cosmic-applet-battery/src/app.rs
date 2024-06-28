@@ -229,10 +229,8 @@ impl cosmic::Application for CosmicBatteryApplet {
                 }
             }
             Message::SetScreenBrightness(brightness) => {
-                let brightness = ((brightness as f64 / 100.0) * self.max_screen_brightness.max(1) as f64) as i32;
                 self.screen_brightness = brightness;
                 self.update_display();
-                //self.update_display((brightness as f64 / 100.0).clamp(0.01, 1.0));
                 if let Some(tx) = &self.settings_daemon_sender {
                     let _ = tx.send(settings_daemon::Request::SetDisplayBrightness(
                         self.screen_brightness,
@@ -367,7 +365,7 @@ impl cosmic::Application for CosmicBatteryApplet {
             Message::ZbusConnection(Ok(conn)) => {
                 self.zbus_connection = Some(conn);
             }
-            Message::SettingsDaemon(event) => match dbg!(event) {
+            Message::SettingsDaemon(event) => match event {
                 settings_daemon::Event::Sender(tx) => {
                     self.settings_daemon_sender = Some(tx);
                 }
@@ -531,8 +529,8 @@ impl cosmic::Application for CosmicBatteryApplet {
                         .size(24)
                         .symbolic(true),
                     slider(
-                        1..=100,
-                        (dbg!(self.screen_brightness_percent()) * 100.0) as i32,
+                        1..=self.max_screen_brightness,
+                        self.screen_brightness,
                         Message::SetScreenBrightness
                     ),
                     text(format!("{:.0}%", self.screen_brightness_percent() * 100.))
