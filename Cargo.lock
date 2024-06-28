@@ -5,12 +5,12 @@ version = 3
 [[package]]
 name = "accesskit"
 version = "0.12.2"
-source = "git+https://github.com/wash2/accesskit.git?branch=winit-0.29#5f9b61c8264000d001499c902562422e13efa7a8"
+source = "git+https://github.com/wash2/accesskit.git?branch=winit-0.29#26f729169cd849970af02be62289606c63572d2d"
 
 [[package]]
 name = "accesskit_consumer"
 version = "0.17.0"
-source = "git+https://github.com/wash2/accesskit.git?branch=winit-0.29#5f9b61c8264000d001499c902562422e13efa7a8"
+source = "git+https://github.com/wash2/accesskit.git?branch=winit-0.29#26f729169cd849970af02be62289606c63572d2d"
 dependencies = [
  "accesskit",
 ]
@@ -18,7 +18,7 @@ dependencies = [
 [[package]]
 name = "accesskit_unix"
 version = "0.7.1"
-source = "git+https://github.com/wash2/accesskit.git?branch=winit-0.29#5f9b61c8264000d001499c902562422e13efa7a8"
+source = "git+https://github.com/wash2/accesskit.git?branch=winit-0.29#26f729169cd849970af02be62289606c63572d2d"
 dependencies = [
  "accesskit",
  "accesskit_consumer",
@@ -1238,7 +1238,7 @@ dependencies = [
 [[package]]
 name = "cosmic-dbus-networkmanager"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/dbus-settings-bindings#badfc6a0bbe7c93927fe32692795699a675ae4c4"
+source = "git+https://github.com/pop-os/dbus-settings-bindings#1fdfcc8045e6732fc54b2c945008e89999a6cf71"
 dependencies = [
  "bitflags 2.5.0",
  "derive_builder",
@@ -1316,7 +1316,7 @@ dependencies = [
 [[package]]
 name = "cosmic-settings-daemon"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/dbus-settings-bindings#badfc6a0bbe7c93927fe32692795699a675ae4c4"
+source = "git+https://github.com/pop-os/dbus-settings-bindings#1fdfcc8045e6732fc54b2c945008e89999a6cf71"
 dependencies = [
  "zbus 4.2.2",
 ]
@@ -1324,7 +1324,7 @@ dependencies = [
 [[package]]
 name = "cosmic-settings-subscriptions"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/cosmic-settings-subscriptions#a223eb4d32773e7b1170696f8b2d2d7ab54fa2e1"
+source = "git+https://github.com/pop-os/cosmic-settings-subscriptions#3a4e58559149fd5bf4d1d2c93229b2920ce03695"
 dependencies = [
  "futures",
  "iced_futures",
@@ -1332,6 +1332,7 @@ dependencies = [
  "log",
  "rustix 0.38.34",
  "tokio",
+ "tokio-stream",
  "upower_dbus",
  "zbus 4.2.2",
 ]
@@ -1510,7 +1511,7 @@ version = "0.19.0"
 source = "git+https://github.com/gfx-rs/wgpu?rev=20fda69#20fda698341efbdc870b8027d6d49f5bf3f36109"
 dependencies = [
  "bitflags 2.5.0",
- "libloading 0.8.3",
+ "libloading 0.7.4",
  "winapi",
 ]
 
@@ -1773,7 +1774,7 @@ version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "330c60081dcc4c72131f8eb70510f1ac07223e5d4163db481a04a0befcffa412"
 dependencies = [
- "libloading 0.8.3",
+ "libloading 0.7.4",
 ]
 
 [[package]]
@@ -2607,7 +2608,7 @@ dependencies = [
  "bitflags 2.5.0",
  "com",
  "libc",
- "libloading 0.8.3",
+ "libloading 0.7.4",
  "thiserror",
  "widestring",
  "winapi",
@@ -4023,7 +4024,7 @@ dependencies = [
 [[package]]
 name = "mpris2-zbus"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/dbus-settings-bindings#badfc6a0bbe7c93927fe32692795699a675ae4c4"
+source = "git+https://github.com/pop-os/dbus-settings-bindings#1fdfcc8045e6732fc54b2c945008e89999a6cf71"
 dependencies = [
  "futures-util",
  "serde",
@@ -5308,7 +5309,7 @@ checksum = "3c5e1a9a646d36c3599cd173a41282daf47c44583ad367b8e6837255952e5c67"
 [[package]]
 name = "smithay-client-toolkit"
 version = "0.18.0"
-source = "git+https://github.com/smithay/client-toolkit//?rev=3bed072#3bed072b966022f5f929d12f3aff089b1ace980b"
+source = "git+https://github.com/smithay/client-toolkit?rev=3bed072#3bed072b966022f5f929d12f3aff089b1ace980b"
 dependencies = [
  "bitflags 2.5.0",
  "bytemuck",
@@ -5533,7 +5534,7 @@ dependencies = [
 [[package]]
 name = "switcheroo-control"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/dbus-settings-bindings#badfc6a0bbe7c93927fe32692795699a675ae4c4"
+source = "git+https://github.com/pop-os/dbus-settings-bindings#1fdfcc8045e6732fc54b2c945008e89999a6cf71"
 dependencies = [
  "zbus 4.2.2",
 ]
@@ -6077,7 +6078,7 @@ checksum = "f962df74c8c05a667b5ee8bcf162993134c104e96440b663c8daa176dc772d8c"
 [[package]]
 name = "upower_dbus"
 version = "0.3.2"
-source = "git+https://github.com/pop-os/dbus-settings-bindings?branch=upower#eb5cd58587db538fee38da45d560dc92631b8f99"
+source = "git+https://github.com/pop-os/dbus-settings-bindings#1fdfcc8045e6732fc54b2c945008e89999a6cf71"
 dependencies = [
  "serde",
  "serde_repr",
@@ -6536,7 +6537,7 @@ dependencies = [
  "js-sys",
  "khronos-egl",
  "libc",
- "libloading 0.8.3",
+ "libloading 0.7.4",
  "log",
  "metal",
  "naga",

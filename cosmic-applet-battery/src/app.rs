@@ -2,9 +2,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use crate::backend::{power_profile_subscription, Power, PowerProfileRequest, PowerProfileUpdate};
-use crate::backlight::{
-    screen_backlight_subscription, ScreenBacklightRequest, ScreenBacklightUpdate,
-};
 use crate::config;
 use crate::dgpu::{dgpu_subscription, Entry, GpuUpdate};
 use crate::fl;
@@ -28,9 +25,14 @@ use cosmic::iced_widget::{Column, Row};
 use cosmic::widget::{divider, horizontal_space, icon, scrollable, vertical_space};
 use cosmic::Command;
 use cosmic::{Element, Theme};
-use cosmic_settings_subscriptions::upower::{
-    device::{device_subscription, DeviceDbusEvent},
-    kbdbacklight::{kbd_backlight_subscription, KeyboardBacklightRequest, KeyboardBacklightUpdate},
+use cosmic_settings_subscriptions::{
+    settings_daemon,
+    upower::{
+        device::{device_subscription, DeviceDbusEvent},
+        kbdbacklight::{
+            kbd_backlight_subscription, KeyboardBacklightRequest, KeyboardBacklightUpdate,
+        },
+    },
 };
 use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
 
@@ -79,14 +81,16 @@ struct CosmicBatteryApplet {
     gpus: HashMap<PathBuf, GPUData>,
     time_remaining: Duration,
     kbd_brightness: Option<f64>,
-    screen_brightness: f64,
+    max_screen_brightness: i32,
+    screen_brightness: i32,
     popup: Option<window::Id>,
-    screen_sender: Option<UnboundedSender<ScreenBacklightRequest>>,
+    settings_daemon_sender: Option<UnboundedSender<settings_daemon::Request>>,
     kbd_sender: Option<UnboundedSender<KeyboardBacklightRequest>>,
     power_profile: Power,
     power_profile_sender: Option<UnboundedSender<PowerProfileRequest>>,
     timeline: Timeline,
     token_tx: Option<calloop::channel::Sender<TokenRequest>>,
+    zbus_connection: Option<zbus::Connection>,
 }
 
 impl CosmicBatteryApplet {
@@ -119,14 +123,18 @@ impl CosmicBatteryApplet {
             format!("cosmic-applet-battery-level-{battery_percent}-{limited}{charging}symbolic",);
     }
 
-    fn update_display(&mut self, mut percent: f64) {
-        percent = percent.clamp(0.01, 1.0);
-        self.screen_brightness = percent;
-        let screen_brightness = if self.screen_brightness < 0.011 {
+    fn screen_brightness_percent(&self) -> f64 {
+        (self.screen_brightness as f64 / self.max_screen_brightness.max(1) as f64).clamp(0.01, 1.0)
+    }
+
+    fn update_display(&mut self) {
+        let percent = self.screen_brightness_percent();
+
+        let screen_brightness = if percent < 0.011 {
             "off"
-        } else if self.screen_brightness < 0.333 {
+        } else if percent < 0.333 {
             "low"
-        } else if self.screen_brightness < 0.666 {
+        } else if percent < 0.666 {
             "medium"
         } else {
             "high"
@@ -156,9 +164,7 @@ enum Message {
     SetScreenBrightness(i32),
     SetChargingLimit(chain::Toggler, bool),
     UpdateKbdBrightness(Option<f64>),
-    UpdateScreenBrightness(f64),
     InitKbdBacklight(UnboundedSender<KeyboardBacklightRequest>),
-    InitScreenBacklight(UnboundedSender<ScreenBacklightRequest>, f64),
     GpuOn(PathBuf, String, Option<Vec<Entry>>),
     GpuOff(PathBuf),
     ToggleGpuApps(PathBuf),
@@ -169,6 +175,8 @@ enum Message {
     Frame(Instant),
     Token(TokenUpdate),
     OpenSettings,
+    SettingsDaemon(settings_daemon::Event),
+    ZbusConnection(zbus::Result<zbus::Connection>),
 }
 
 impl cosmic::Application for CosmicBatteryApplet {
@@ -193,7 +201,9 @@ impl cosmic::Application for CosmicBatteryApplet {
 
                 ..Default::default()
             },
-            Command::none(),
+            cosmic::iced::Command::perform(zbus::Connection::session(), |res| {
+                cosmic::app::Message::App(Message::ZbusConnection(res))
+            }),
         )
     }
 
@@ -219,9 +229,14 @@ impl cosmic::Application for CosmicBatteryApplet {
                 }
             }
             Message::SetScreenBrightness(brightness) => {
-                self.update_display((brightness as f64 / 100.0).clamp(0.01, 1.0));
-                if let Some(tx) = &self.screen_sender {
-                    let _ = tx.send(ScreenBacklightRequest::Set(self.screen_brightness));
+                let brightness = ((brightness as f64 / 100.0) * self.max_screen_brightness.max(1) as f64) as i32;
+                self.screen_brightness = brightness;
+                self.update_display();
+                //self.update_display((brightness as f64 / 100.0).clamp(0.01, 1.0));
+                if let Some(tx) = &self.settings_daemon_sender {
+                    let _ = tx.send(settings_daemon::Request::SetDisplayBrightness(
+                        self.screen_brightness,
+                    ));
                 }
             }
             Message::SetChargingLimit(chain, enable) => {
@@ -237,9 +252,6 @@ impl cosmic::Application for CosmicBatteryApplet {
                 } else {
                     if let Some(tx) = &self.kbd_sender {
                         let _ = tx.send(KeyboardBacklightRequest::Get);
-                    }
-                    if let Some(tx) = &self.screen_sender {
-                        let _ = tx.send(ScreenBacklightRequest::Get);
                     }
                     self.timeline = Timeline::new();
 
@@ -278,14 +290,6 @@ impl cosmic::Application for CosmicBatteryApplet {
             Message::InitKbdBacklight(tx) => {
                 self.kbd_sender = Some(tx);
             }
-            Message::InitScreenBacklight(tx, brightness) => {
-                let _ = tx.send(ScreenBacklightRequest::Get);
-                self.screen_sender = Some(tx);
-                self.update_display(brightness);
-            }
-            Message::UpdateScreenBrightness(b) => {
-                self.update_display(b);
-            }
             Message::InitProfile(tx, profile) => {
                 self.power_profile_sender.replace(tx);
                 self.power_profile = profile;
@@ -294,9 +298,6 @@ impl cosmic::Application for CosmicBatteryApplet {
                 self.power_profile = profile;
                 if let Some(tx) = &self.kbd_sender {
                     let _ = tx.send(KeyboardBacklightRequest::Get);
-                }
-                if let Some(tx) = &self.screen_sender {
-                    let _ = tx.send(ScreenBacklightRequest::Get);
                 }
             }
             Message::SelectProfile(profile) => {
@@ -360,6 +361,24 @@ impl cosmic::Application for CosmicBatteryApplet {
                     data.toggled = !data.toggled;
                 }
             }
+            Message::ZbusConnection(Err(err)) => {
+                tracing::error!("Failed to connect to session dbus: {}", err);
+            }
+            Message::ZbusConnection(Ok(conn)) => {
+                self.zbus_connection = Some(conn);
+            }
+            Message::SettingsDaemon(event) => match dbg!(event) {
+                settings_daemon::Event::Sender(tx) => {
+                    self.settings_daemon_sender = Some(tx);
+                }
+                settings_daemon::Event::MaxDisplayBrightness(max_brightness) => {
+                    // XXX option
+                    self.max_screen_brightness = max_brightness;
+                }
+                settings_daemon::Event::DisplayBrightness(brightness) => {
+                    self.screen_brightness = brightness;
+                }
+            },
         }
         Command::none()
     }
@@ -513,10 +532,10 @@ impl cosmic::Application for CosmicBatteryApplet {
                         .symbolic(true),
                     slider(
                         1..=100,
-                        (self.screen_brightness * 100.0) as i32,
+                        (dbg!(self.screen_brightness_percent()) * 100.0) as i32,
                         Message::SetScreenBrightness
                     ),
-                    text(format!("{:.0}%", self.screen_brightness * 100.0))
+                    text(format!("{:.0}%", self.screen_brightness_percent() * 100.))
                         .size(16)
                         .width(Length::Fixed(40.0))
                         .horizontal_alignment(Horizontal::Right)
@@ -655,7 +674,7 @@ impl cosmic::Application for CosmicBatteryApplet {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        Subscription::batch(vec![
+        let mut subscriptions = vec![
             device_subscription(0).map(
                 |DeviceDbusEvent::Update {
                      on_battery,
@@ -671,10 +690,6 @@ impl cosmic::Application for CosmicBatteryApplet {
                 KeyboardBacklightUpdate::Brightness(b) => Message::UpdateKbdBrightness(b),
                 KeyboardBacklightUpdate::Sender(tx) => Message::InitKbdBacklight(tx),
             }),
-            screen_backlight_subscription(0).map(|e| match e {
-                ScreenBacklightUpdate::Update(b) => Message::UpdateScreenBrightness(b),
-                ScreenBacklightUpdate::Init(tx, b) => Message::InitScreenBacklight(tx, b),
-            }),
             power_profile_subscription(0).map(|event| match event {
                 PowerProfileUpdate::Update { profile } => Message::Profile(profile),
                 PowerProfileUpdate::Init(tx, p) => Message::InitProfile(p, tx),
@@ -688,7 +703,11 @@ impl cosmic::Application for CosmicBatteryApplet {
                 .as_subscription()
                 .map(|(_, now)| Message::Frame(now)),
             activation_token_subscription(0).map(Message::Token),
-        ])
+        ];
+        if let Some(conn) = self.zbus_connection.clone() {
+            subscriptions.push(settings_daemon::subscription(conn).map(Message::SettingsDaemon));
+        }
+        Subscription::batch(subscriptions)
     }
 
     fn on_close_requested(&self, id: window::Id) -> Option<Message> {
