@@ -2,83 +2,51 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use crate::config;
-use crate::config::AppListConfig;
-use crate::config::APP_ID;
+use crate::config::{AppListConfig, APP_ID};
 use crate::fl;
-use crate::wayland_subscription::wayland_subscription;
-use crate::wayland_subscription::OutputUpdate;
-use crate::wayland_subscription::ToplevelRequest;
-use crate::wayland_subscription::ToplevelUpdate;
-use crate::wayland_subscription::WaylandImage;
-use crate::wayland_subscription::WaylandRequest;
-use crate::wayland_subscription::WaylandUpdate;
+use crate::wayland_subscription::{
+    wayland_subscription, OutputUpdate, ToplevelRequest, ToplevelUpdate, WaylandImage,
+    WaylandRequest, WaylandUpdate,
+};
 use cctk::sctk::output::OutputInfo;
 use cctk::sctk::reexports::calloop::channel::Sender;
 use cctk::toplevel_info::ToplevelInfo;
 use cctk::wayland_client::protocol::wl_data_device_manager::DndAction;
 use cctk::wayland_client::protocol::wl_output::WlOutput;
 use cctk::wayland_client::protocol::wl_seat::WlSeat;
-use cosmic::applet::cosmic_panel_config::PanelSize;
-use cosmic::applet::Size;
+use cosmic::applet::cosmic_panel_config::{PanelAnchor, PanelSize};
+use cosmic::applet::{Context, Size};
 use cosmic::cosmic_config::{Config, CosmicConfigEntry};
 use cosmic::desktop::IconSource;
-use cosmic::iced;
 use cosmic::iced::event::listen_with;
-use cosmic::iced::wayland::actions::data_device::DataFromMimeType;
-use cosmic::iced::wayland::actions::data_device::DndIcon;
-use cosmic::iced::wayland::popup::destroy_popup;
-use cosmic::iced::wayland::popup::get_popup;
-use cosmic::iced::widget::dnd_listener;
-use cosmic::iced::widget::vertical_rule;
-use cosmic::iced::widget::vertical_space;
-use cosmic::iced::widget::{column, dnd_source, mouse_area, row, Column, Row};
-use cosmic::iced::Color;
-use cosmic::iced::Vector;
-use cosmic::iced::{window, Subscription};
-use cosmic::iced_core::Border;
-use cosmic::iced_core::Padding;
-use cosmic::iced_core::Shadow;
-use cosmic::iced_runtime::core::alignment::Horizontal;
-use cosmic::iced_runtime::core::event;
-use cosmic::iced_sctk::commands::data_device::accept_mime_type;
-use cosmic::iced_sctk::commands::data_device::finish_dnd;
-use cosmic::iced_sctk::commands::data_device::request_dnd_data;
-use cosmic::iced_sctk::commands::data_device::set_actions;
-use cosmic::iced_sctk::commands::data_device::start_drag;
+use cosmic::iced::wayland::actions::data_device::{DataFromMimeType, DndIcon};
+use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
+use cosmic::iced::widget::{
+    column, dnd_listener, dnd_source, horizontal_space, mouse_area, row, vertical_rule,
+    vertical_space, Column, Row,
+};
+use cosmic::iced::{window, Color, Limits, Subscription, Vector};
+use cosmic::iced_core::{Border, Padding, Shadow};
+use cosmic::iced_runtime::core::{alignment::Horizontal, event};
+use cosmic::iced_sctk::commands::data_device::{
+    accept_mime_type, finish_dnd, request_dnd_data, set_actions, start_drag,
+};
 use cosmic::iced_style::application;
-use cosmic::theme::Button;
-use cosmic::theme::Container;
-use cosmic::widget::button;
-use cosmic::widget::divider;
-use cosmic::widget::horizontal_space;
-use cosmic::widget::rectangle_tracker::rectangle_tracker_subscription;
-use cosmic::widget::rectangle_tracker::RectangleTracker;
-use cosmic::widget::rectangle_tracker::RectangleUpdate;
-use cosmic::widget::text;
-use cosmic::Apply;
-use cosmic::{
-    applet::{cosmic_panel_config::PanelAnchor, Context},
-    Command,
+use cosmic::theme::{Button, Container};
+use cosmic::widget::rectangle_tracker::{
+    rectangle_tracker_subscription, RectangleTracker, RectangleUpdate,
 };
-use cosmic::{
-    iced::Limits,
-    widget::{image::Handle, Image},
-};
-use cosmic::{Element, Theme};
+use cosmic::widget::{button, divider, image::Handle, text, Image};
+use cosmic::{iced, Apply, Command, Element, Theme};
 use cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::State;
 use cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1;
 use cosmic_protocols::workspace::v1::client::zcosmic_workspace_handle_v1::ZcosmicWorkspaceHandleV1;
 use freedesktop_desktop_entry as fde;
-use freedesktop_desktop_entry::get_languages_from_env;
-use freedesktop_desktop_entry::DesktopEntry;
+use freedesktop_desktop_entry::{get_languages_from_env, DesktopEntry};
 use futures::future::pending;
-use iced::widget::container;
-use iced::Alignment;
-use iced::Background;
-use iced::Length;
+use iced::{widget::container, Alignment, Background, Length};
 use itertools::Itertools;
 use rand::{thread_rng, Rng};
-use std::cmp::min;
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
@@ -99,7 +67,6 @@ struct AppletIconData {
     icon_size: u16,
     icon_spacing: f32,
     dot_radius: f32,
-    dot_spacing: f32,
     padding: Padding,
 }
 
@@ -108,12 +75,12 @@ impl AppletIconData {
         let icon_size = applet.suggested_size(false).0;
         let padding = applet.suggested_padding(false);
 
-        let (icon_spacing, dot_radius, dot_spacing) = match applet.size {
-            Size::PanelSize(PanelSize::XL) => (0.0, 2.0, 4.0),
+        let (icon_spacing, dot_radius) = match applet.size {
+            Size::PanelSize(PanelSize::XL) => (0.0, 2.0),
             Size::PanelSize(PanelSize::L) | Size::PanelSize(PanelSize::M) | Size::Hardcoded(_) => {
-                (0.0, 2.0, 4.0)
+                (0.0, 2.0)
             }
-            Size::PanelSize(PanelSize::XS) | Size::PanelSize(PanelSize::S) => (0.0, 1.0, 2.0),
+            Size::PanelSize(PanelSize::XS) | Size::PanelSize(PanelSize::S) => (0.0, 1.0),
         };
 
         let padding = padding as f32;
@@ -128,7 +95,6 @@ impl AppletIconData {
             icon_size,
             icon_spacing,
             dot_radius,
-            dot_spacing,
             padding: padding.into(),
         }
     }
@@ -197,8 +163,8 @@ impl DockItem {
                         .into()
                 })
                 .collect_vec()
-        } else {
-            (0..min(toplevels.len(), 3))
+        } else if toplevels.len() == 1 {
+            (0..1)
                 .map(|_| {
                     container(vertical_space(Length::Fixed(0.0)))
                         .padding(app_icon.dot_radius)
@@ -220,11 +186,58 @@ impl DockItem {
                         .into()
                 })
                 .collect_vec()
+        } else {
+            match applet.anchor {
+                PanelAnchor::Left | PanelAnchor::Right => (0..1)
+                    .map(|_| {
+                        container(vertical_space(Length::Fixed(8.0)))
+                            .padding(app_icon.dot_radius)
+                            .style(<Theme as container::StyleSheet>::Style::Custom(Box::new(
+                                move |theme| container::Appearance {
+                                    text_color: Some(Color::TRANSPARENT),
+                                    background: Some(Background::Color(
+                                        theme.cosmic().on_bg_color().into(),
+                                    )),
+                                    border: Border {
+                                        radius: dot_border_radius.into(),
+                                        width: 0.0,
+                                        color: Color::TRANSPARENT,
+                                    },
+                                    shadow: Shadow::default(),
+                                    icon_color: Some(Color::TRANSPARENT),
+                                },
+                            )))
+                            .into()
+                    })
+                    .collect_vec(),
+                PanelAnchor::Top | PanelAnchor::Bottom => (0..1)
+                    .map(|_| {
+                        container(horizontal_space(Length::Fixed(8.0)))
+                            .padding(app_icon.dot_radius)
+                            .style(<Theme as container::StyleSheet>::Style::Custom(Box::new(
+                                move |theme| container::Appearance {
+                                    text_color: Some(Color::TRANSPARENT),
+                                    background: Some(Background::Color(
+                                        theme.cosmic().on_bg_color().into(),
+                                    )),
+                                    border: Border {
+                                        radius: dot_border_radius.into(),
+                                        width: 0.0,
+                                        color: Color::TRANSPARENT,
+                                    },
+                                    shadow: Shadow::default(),
+                                    icon_color: Some(Color::TRANSPARENT),
+                                },
+                            )))
+                            .into()
+                    })
+                    .collect_vec(),
+            }
         };
 
         let icon_wrapper: Element<_> = match applet.anchor {
             PanelAnchor::Left => row(vec![
-                column(dots).spacing(app_icon.dot_spacing).into(),
+                column(dots).into(),
                 horizontal_space(Length::Fixed(1.0)).into(),
                 cosmic_icon.into(),
             ])
@@ -233,12 +246,12 @@ impl DockItem {
             PanelAnchor::Right => row(vec![
                 cosmic_icon.into(),
                 horizontal_space(Length::Fixed(1.0)).into(),
-                column(dots).spacing(app_icon.dot_spacing).into(),
+                column(dots).into(),
             ])
             .align_items(iced::Alignment::Center)
             .into(),
             PanelAnchor::Top => column(vec![
-                row(dots).spacing(app_icon.dot_spacing).into(),
+                row(dots).into(),
                 vertical_space(Length::Fixed(1.0)).into(),
                 cosmic_icon.into(),
             ])
@@ -247,7 +260,7 @@ impl DockItem {
             PanelAnchor::Bottom => column(vec![
                 cosmic_icon.into(),
                 vertical_space(Length::Fixed(1.0)).into(),
-                row(dots).spacing(app_icon.dot_spacing).into(),
+                row(dots).into(),
             ])
             .align_items(iced::Alignment::Center)
             .into(),
