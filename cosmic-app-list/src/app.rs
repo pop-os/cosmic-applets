@@ -1,57 +1,68 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
-use crate::config;
-use crate::config::{AppListConfig, APP_ID};
-use crate::fl;
-use crate::wayland_subscription::{
-    wayland_subscription, OutputUpdate, ToplevelRequest, ToplevelUpdate, WaylandImage,
-    WaylandRequest, WaylandUpdate,
+use crate::{
+    config,
+    config::{AppListConfig, APP_ID},
+    fl,
+    wayland_subscription::{
+        wayland_subscription, OutputUpdate, ToplevelRequest, ToplevelUpdate, WaylandImage,
+        WaylandRequest, WaylandUpdate,
+    },
 };
-use cctk::sctk::output::OutputInfo;
-use cctk::sctk::reexports::calloop::channel::Sender;
-use cctk::toplevel_info::ToplevelInfo;
-use cctk::wayland_client::protocol::wl_data_device_manager::DndAction;
-use cctk::wayland_client::protocol::wl_output::WlOutput;
-use cctk::wayland_client::protocol::wl_seat::WlSeat;
-use cosmic::applet::cosmic_panel_config::{PanelAnchor, PanelSize};
-use cosmic::applet::{Context, Size};
-use cosmic::cosmic_config::{Config, CosmicConfigEntry};
-use cosmic::desktop::IconSource;
-use cosmic::iced::event::listen_with;
-use cosmic::iced::wayland::actions::data_device::{DataFromMimeType, DndIcon};
-use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
-use cosmic::iced::widget::{
-    column, dnd_listener, dnd_source, horizontal_space, mouse_area, row, vertical_rule,
-    vertical_space, Column, Row,
+use cctk::{
+    sctk::{output::OutputInfo, reexports::calloop::channel::Sender},
+    toplevel_info::ToplevelInfo,
+    wayland_client::protocol::{
+        wl_data_device_manager::DndAction, wl_output::WlOutput, wl_seat::WlSeat,
+    },
 };
-use cosmic::iced::{window, Color, Limits, Subscription, Vector};
-use cosmic::iced_core::{Border, Padding, Shadow};
-use cosmic::iced_runtime::core::{alignment::Horizontal, event};
-use cosmic::iced_sctk::commands::data_device::{
-    accept_mime_type, finish_dnd, request_dnd_data, set_actions, start_drag,
+use cosmic::{
+    applet::{
+        cosmic_panel_config::{PanelAnchor, PanelSize},
+        Context, Size,
+    },
+    cosmic_config::{Config, CosmicConfigEntry},
+    desktop::IconSource,
+    iced,
+    iced::{
+        event::listen_with,
+        wayland::{
+            actions::data_device::{DataFromMimeType, DndIcon},
+            popup::{destroy_popup, get_popup},
+        },
+        widget::{
+            column, dnd_listener, dnd_source, mouse_area, row, vertical_rule, vertical_space,
+            Column, Row,
+        },
+        window, Color, Limits, Subscription, Vector,
+    },
+    iced_core::{Border, Padding, Shadow},
+    iced_runtime::core::{alignment::Horizontal, event},
+    iced_sctk::commands::data_device::{
+        accept_mime_type, finish_dnd, request_dnd_data, set_actions, start_drag,
+    },
+    iced_style::application,
+    theme::{Button, Container},
+    widget::{
+        button, divider, horizontal_space,
+        image::Handle,
+        rectangle_tracker::{rectangle_tracker_subscription, RectangleTracker, RectangleUpdate},
+        text, Image,
+    },
+    Apply, Command, Element, Theme,
 };
-use cosmic::iced_style::application;
-use cosmic::theme::{Button, Container};
-use cosmic::widget::rectangle_tracker::{
-    rectangle_tracker_subscription, RectangleTracker, RectangleUpdate,
+use cosmic_protocols::{
+    toplevel_info::v1::client::zcosmic_toplevel_handle_v1::{State, ZcosmicToplevelHandleV1},
+    workspace::v1::client::zcosmic_workspace_handle_v1::ZcosmicWorkspaceHandleV1,
 };
-use cosmic::widget::{button, divider, image::Handle, text, Image};
-use cosmic::{iced, Apply, Command, Element, Theme};
-use cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::State;
-use cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1;
-use cosmic_protocols::workspace::v1::client::zcosmic_workspace_handle_v1::ZcosmicWorkspaceHandleV1;
 use freedesktop_desktop_entry as fde;
 use freedesktop_desktop_entry::{get_languages_from_env, DesktopEntry};
 use futures::future::pending;
 use iced::{widget::container, Alignment, Background, Length};
 use itertools::Itertools;
 use rand::{thread_rng, Rng};
-use std::collections::HashMap;
-use std::fs;
-use std::path::PathBuf;
-use std::str::FromStr;
-use std::time::Duration;
+use std::{collections::HashMap, fs, path::PathBuf, str::FromStr, time::Duration};
 use switcheroo_control::Gpu;
 use tokio::time::sleep;
 use url::Url;
