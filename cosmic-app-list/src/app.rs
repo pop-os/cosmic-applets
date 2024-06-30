@@ -67,6 +67,7 @@ struct AppletIconData {
     icon_size: u16,
     icon_spacing: f32,
     dot_radius: f32,
+    bar_size: f32,
     padding: Padding,
 }
 
@@ -75,12 +76,12 @@ impl AppletIconData {
         let icon_size = applet.suggested_size(false).0;
         let padding = applet.suggested_padding(false);
 
-        let (icon_spacing, dot_radius) = match applet.size {
-            Size::PanelSize(PanelSize::XL) => (0.0, 2.0),
-            Size::PanelSize(PanelSize::L) | Size::PanelSize(PanelSize::M) | Size::Hardcoded(_) => {
-                (0.0, 2.0)
+        let (icon_spacing, dot_radius, bar_size) = match applet.size {
+            Size::PanelSize(PanelSize::XL) | Size::PanelSize(PanelSize::L) => (0.0, 2.0, 12.0),
+            Size::PanelSize(PanelSize::M) => (0.0, 2.0, 8.0),
+            Size::PanelSize(PanelSize::S) | Size::PanelSize(PanelSize::XS) | Size::Hardcoded(_) => {
+                (0.0, 1.0, 8.0)
             }
-            Size::PanelSize(PanelSize::XS) | Size::PanelSize(PanelSize::S) => (0.0, 1.0),
         };
 
         let padding = padding as f32;
@@ -95,6 +96,7 @@ impl AppletIconData {
             icon_size,
             icon_spacing,
             dot_radius,
+            bar_size,
             padding: padding.into(),
         }
     }
@@ -190,7 +192,7 @@ impl DockItem {
             match applet.anchor {
                 PanelAnchor::Left | PanelAnchor::Right => (0..1)
                     .map(|_| {
-                        container(vertical_space(Length::Fixed(8.0)))
+                        container(vertical_space(app_icon.bar_size))
                             .padding(app_icon.dot_radius)
                             .style(<Theme as container::StyleSheet>::Style::Custom(Box::new(
                                 move |theme| container::Appearance {
@@ -212,7 +214,7 @@ impl DockItem {
                     .collect_vec(),
                 PanelAnchor::Top | PanelAnchor::Bottom => (0..1)
                     .map(|_| {
-                        container(horizontal_space(Length::Fixed(8.0)))
+                        container(horizontal_space(app_icon.bar_size))
                             .padding(app_icon.dot_radius)
                             .style(<Theme as container::StyleSheet>::Style::Custom(Box::new(
                                 move |theme| container::Appearance {
