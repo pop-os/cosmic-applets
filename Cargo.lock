@@ -1324,7 +1324,7 @@ dependencies = [
 [[package]]
 name = "cosmic-settings-subscriptions"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/cosmic-settings-subscriptions#3a4e58559149fd5bf4d1d2c93229b2920ce03695"
+source = "git+https://github.com/pop-os/cosmic-settings-subscriptions#21cc79434fa24f1fbd6dc4e8d394aa51d5ee12d9"
 dependencies = [
  "futures",
  "iced_futures",
@@ -1511,7 +1511,7 @@ version = "0.19.0"
 source = "git+https://github.com/gfx-rs/wgpu?rev=20fda69#20fda698341efbdc870b8027d6d49f5bf3f36109"
 dependencies = [
  "bitflags 2.5.0",
- "libloading 0.7.4",
+ "libloading 0.8.3",
  "winapi",
 ]
 
@@ -1774,7 +1774,7 @@ version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "330c60081dcc4c72131f8eb70510f1ac07223e5d4163db481a04a0befcffa412"
 dependencies = [
- "libloading 0.7.4",
+ "libloading 0.8.3",
 ]
 
 [[package]]
@@ -2608,7 +2608,7 @@ dependencies = [
  "bitflags 2.5.0",
  "com",
  "libc",
- "libloading 0.7.4",
+ "libloading 0.8.3",
  "thiserror",
  "widestring",
  "winapi",
@@ -6476,7 +6476,7 @@ dependencies = [
  "js-sys",
  "log",
  "naga",
- "parking_lot 0.11.2",
+ "parking_lot 0.12.3",
  "profiling",
  "raw-window-handle",
  "smallvec",
@@ -6503,7 +6503,7 @@ dependencies = [
  "log",
  "naga",
  "once_cell",
- "parking_lot 0.11.2",
+ "parking_lot 0.12.3",
  "profiling",
  "raw-window-handle",
  "rustc-hash",
@@ -6537,13 +6537,13 @@ dependencies = [
  "js-sys",
  "khronos-egl",
  "libc",
- "libloading 0.7.4",
+ "libloading 0.8.3",
  "log",
  "metal",
  "naga",
  "objc",
  "once_cell",
- "parking_lot 0.11.2",
+ "parking_lot 0.12.3",
  "profiling",
  "range-alloc",
  "raw-window-handle",

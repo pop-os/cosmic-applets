@@ -80,7 +80,8 @@ struct CosmicBatteryApplet {
     on_battery: bool,
     gpus: HashMap<PathBuf, GPUData>,
     time_remaining: Duration,
-    kbd_brightness: Option<f64>,
+    max_kbd_brightness: Option<i32>,
+    kbd_brightness: Option<i32>,
     max_screen_brightness: i32,
     screen_brightness: i32,
     popup: Option<window::Id>,
@@ -163,8 +164,7 @@ enum Message {
     SetKbdBrightness(i32),
     SetScreenBrightness(i32),
     SetChargingLimit(chain::Toggler, bool),
-    UpdateKbdBrightness(Option<f64>),
-    InitKbdBacklight(UnboundedSender<KeyboardBacklightRequest>),
+    KeyboardBacklight(KeyboardBacklightUpdate),
     GpuOn(PathBuf, String, Option<Vec<Entry>>),
     GpuOff(PathBuf),
     ToggleGpuApps(PathBuf),
@@ -222,7 +222,6 @@ impl cosmic::Application for CosmicBatteryApplet {
         match message {
             Message::Frame(now) => self.timeline.now(now),
             Message::SetKbdBrightness(brightness) => {
-                let brightness = (brightness as f64 / 100.0).clamp(0., 1.);
                 self.kbd_brightness = Some(brightness);
                 if let Some(tx) = &self.kbd_sender {
                     let _ = tx.send(KeyboardBacklightRequest::Set(brightness));
@@ -282,12 +281,17 @@ impl cosmic::Application for CosmicBatteryApplet {
                 self.update_battery(percent, on_battery);
                 self.time_remaining = Duration::from_secs(time_to_empty as u64);
             }
-            Message::UpdateKbdBrightness(b) => {
-                self.kbd_brightness = b;
-            }
-            Message::InitKbdBacklight(tx) => {
-                self.kbd_sender = Some(tx);
-            }
+            Message::KeyboardBacklight(event) => match event {
+                KeyboardBacklightUpdate::Sender(tx) => {
+                    self.kbd_sender = Some(tx);
+                }
+                KeyboardBacklightUpdate::MaxBrightness(max_brightness) => {
+                    self.max_kbd_brightness = Some(max_brightness);
+                }
+                KeyboardBacklightUpdate::Brightness(brightness) => {
+                    self.kbd_brightness = Some(brightness);
+                }
+            },
             Message::InitProfile(tx, profile) => {
                 self.power_profile_sender.replace(tx);
                 self.power_profile = profile;
@@ -543,27 +547,32 @@ impl cosmic::Application for CosmicBatteryApplet {
             .into(),
         ];
 
-        if let Some(kbd_brightness) = self.kbd_brightness {
-            content.push(
-                padded_control(
-                    row![
-                        icon::from_name("keyboard-brightness-symbolic")
-                            .size(24)
-                            .symbolic(true),
-                        slider(
-                            0..=100,
-                            (kbd_brightness * 100.0) as i32,
-                            Message::SetKbdBrightness
-                        ),
-                        text(format!("{:.0}%", kbd_brightness * 100.0))
+        if let Some(max_kbd_brightness) = self.max_kbd_brightness {
+            if let Some(kbd_brightness) = self.kbd_brightness {
+                content.push(
+                    padded_control(
+                        row![
+                            icon::from_name("keyboard-brightness-symbolic")
+                                .size(24)
+                                .symbolic(true),
+                            slider(
+                                0..=max_kbd_brightness,
+                                kbd_brightness,
+                                Message::SetKbdBrightness
+                            ),
+                            text(format!(
+                                "{:.0}%",
+                                100. * kbd_brightness as f64 / max_kbd_brightness as f64
+                            ))
                             .size(16)
                             .width(Length::Fixed(40.0))
                             .horizontal_alignment(Horizontal::Right)
-                    ]
-                    .spacing(12),
-                )
-                .into(),
-            );
+                        ]
+                        .spacing(12),
+                    )
+                    .into(),
+                );
+            }
         }
 
         content.push(padded_control(divider::horizontal::default()).into());
@@ -684,10 +693,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                     time_to_empty,
                 },
             ),
-            kbd_backlight_subscription(0).map(|event| match event {
-                KeyboardBacklightUpdate::Brightness(b) => Message::UpdateKbdBrightness(b),
-                KeyboardBacklightUpdate::Sender(tx) => Message::InitKbdBacklight(tx),
-            }),
+            kbd_backlight_subscription(0).map(Message::KeyboardBacklight),
             power_profile_subscription(0).map(|event| match event {
                 PowerProfileUpdate::Update { profile } => Message::Profile(profile),
                 PowerProfileUpdate::Init(tx, p) => Message::InitProfile(p, tx),
