@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 mod localize;
+mod mouse_area;
 
 use crate::localize::localize;
 use crate::pulse::DeviceInfo;
@@ -135,6 +136,7 @@ enum IsOpen {
 
 #[derive(Debug, Clone)]
 pub enum Message {
+    Ignore,
     SetOutputVolume(f64),
     SetInputVolume(f64),
     OutputToggle,
@@ -304,6 +306,7 @@ impl cosmic::Application for Audio {
     fn update(&mut self, message: Message) -> Command<Message> {
         match message {
             Message::Frame(now) => self.timeline.now(now),
+            Message::Ignore => {}
             Message::TogglePopup => {
                 if let Some(p) = self.popup.take() {
                     return destroy_popup(p);
@@ -578,6 +581,21 @@ impl cosmic::Application for Audio {
             .applet
             .icon_button(&self.icon_name)
             .on_press(Message::TogglePopup);
+        let btn = crate::mouse_area::MouseArea::new(btn).on_mouse_wheel(|delta| {
+            let change = match delta {
+                iced::mouse::ScrollDelta::Lines { x, y } => (x + y) * 5.,
+                iced::mouse::ScrollDelta::Pixels { y, .. } => y / 40.3125,
+            };
+            if change.abs() < f32::EPSILON {
+                return Message::Ignore;
+            }
+            let new_volume = self
+                .current_output
+                .as_ref()
+                .map_or(0f64, |v| volume_to_percent(v.volume.avg()) + change as f64)
+                .clamp(0.0, 100.0);
+            Message::SetOutputVolume(new_volume)
+        });
         if let Some(playback_buttons) = self.playback_buttons() {
             match self.core.applet.anchor {
                 PanelAnchor::Left | PanelAnchor::Right => {
