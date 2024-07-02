@@ -82,8 +82,8 @@ struct CosmicBatteryApplet {
     time_remaining: Duration,
     max_kbd_brightness: Option<i32>,
     kbd_brightness: Option<i32>,
-    max_screen_brightness: i32,
-    screen_brightness: i32,
+    max_screen_brightness: Option<i32>,
+    screen_brightness: Option<i32>,
     popup: Option<window::Id>,
     settings_daemon_sender: Option<UnboundedSender<settings_daemon::Request>>,
     kbd_sender: Option<UnboundedSender<KeyboardBacklightRequest>>,
@@ -124,21 +124,26 @@ impl CosmicBatteryApplet {
             format!("cosmic-applet-battery-level-{battery_percent}-{limited}{charging}symbolic",);
     }
 
-    fn screen_brightness_percent(&self) -> f64 {
-        (self.screen_brightness as f64 / self.max_screen_brightness.max(1) as f64).clamp(0.01, 1.0)
+    fn screen_brightness_percent(&self) -> Option<f64> {
+        Some(
+            (self.screen_brightness? as f64 / self.max_screen_brightness?.max(1) as f64)
+                .clamp(0.01, 1.0),
+        )
     }
 
     fn update_display(&mut self) {
-        let percent = self.screen_brightness_percent();
-
-        let screen_brightness = if percent < 0.011 {
-            "off"
-        } else if percent < 0.333 {
-            "low"
-        } else if percent < 0.666 {
-            "medium"
+        let screen_brightness = if let Some(percent) = self.screen_brightness_percent() {
+            if percent < 0.011 {
+                "off"
+            } else if percent < 0.333 {
+                "low"
+            } else if percent < 0.666 {
+                "medium"
+            } else {
+                "high"
+            }
         } else {
-            "high"
+            "off"
         }
         .to_string();
 
@@ -224,12 +229,10 @@ impl cosmic::Application for CosmicBatteryApplet {
                 }
             }
             Message::SetScreenBrightness(brightness) => {
-                self.screen_brightness = brightness;
+                self.screen_brightness = Some(brightness);
                 self.update_display();
                 if let Some(tx) = &self.settings_daemon_sender {
-                    let _ = tx.send(settings_daemon::Request::SetDisplayBrightness(
-                        self.screen_brightness,
-                    ));
+                    let _ = tx.send(settings_daemon::Request::SetDisplayBrightness(brightness));
                 }
             }
             Message::SetChargingLimit(chain, enable) => {
@@ -375,11 +378,10 @@ impl cosmic::Application for CosmicBatteryApplet {
                     self.settings_daemon_sender = Some(tx);
                 }
                 settings_daemon::Event::MaxDisplayBrightness(max_brightness) => {
-                    // XXX option
-                    self.max_screen_brightness = max_brightness;
+                    self.max_screen_brightness = Some(max_brightness);
                 }
                 settings_daemon::Event::DisplayBrightness(brightness) => {
-                    self.screen_brightness = brightness;
+                    self.screen_brightness = Some(brightness);
                 }
             },
         }
@@ -528,25 +530,35 @@ impl cosmic::Application for CosmicBatteryApplet {
             )
             .into(),
             padded_control(divider::horizontal::default()).into(),
-            padded_control(
-                row![
-                    icon::from_name(self.display_icon_name.as_str())
-                        .size(24)
-                        .symbolic(true),
-                    slider(
-                        1..=self.max_screen_brightness,
-                        self.screen_brightness,
-                        Message::SetScreenBrightness
-                    ),
-                    text(format!("{:.0}%", self.screen_brightness_percent() * 100.))
-                        .size(16)
-                        .width(Length::Fixed(40.0))
-                        .horizontal_alignment(Horizontal::Right)
-                ]
-                .spacing(12),
-            )
-            .into(),
         ];
+
+        if let Some(max_screen_brightness) = self.max_screen_brightness {
+            if let Some(screen_brightness) = self.max_screen_brightness {
+                content.push(
+                    padded_control(
+                        row![
+                            icon::from_name(self.display_icon_name.as_str())
+                                .size(24)
+                                .symbolic(true),
+                            slider(
+                                1..=max_screen_brightness,
+                                screen_brightness,
+                                Message::SetScreenBrightness
+                            ),
+                            text(format!(
+                                "{:.0}%",
+                                self.screen_brightness_percent().unwrap_or(0.) * 100.
+                            ))
+                            .size(16)
+                            .width(Length::Fixed(40.0))
+                            .horizontal_alignment(Horizontal::Right)
+                        ]
+                        .spacing(12),
+                    )
+                    .into(),
+                );
+            }
+        }
 
         if let Some(max_kbd_brightness) = self.max_kbd_brightness {
             if let Some(kbd_brightness) = self.kbd_brightness {
