@@ -156,15 +156,11 @@ impl CosmicBatteryApplet {
 enum Message {
     TogglePopup,
     CloseRequested(window::Id),
-    Update {
-        on_battery: bool,
-        percent: f64,
-        time_to_empty: i64,
-    },
     SetKbdBrightness(i32),
     SetScreenBrightness(i32),
     SetChargingLimit(chain::Toggler, bool),
     KeyboardBacklight(KeyboardBacklightUpdate),
+    UpowerDevice(DeviceDbusEvent),
     GpuOn(PathBuf, String, Option<Vec<Entry>>),
     GpuOff(PathBuf),
     ToggleGpuApps(PathBuf),
@@ -273,14 +269,19 @@ impl cosmic::Application for CosmicBatteryApplet {
                     return get_popup(popup_settings);
                 }
             }
-            Message::Update {
-                on_battery,
-                percent,
-                time_to_empty,
-            } => {
-                self.update_battery(percent, on_battery);
-                self.time_remaining = Duration::from_secs(time_to_empty as u64);
-            }
+            Message::UpowerDevice(event) => match event {
+                DeviceDbusEvent::Update {
+                    on_battery,
+                    percent,
+                    time_to_empty,
+                } => {
+                    self.update_battery(percent, on_battery);
+                    self.time_remaining = Duration::from_secs(time_to_empty as u64);
+                }
+                DeviceDbusEvent::NoBattery => {
+                    std::process::exit(0);
+                }
+            },
             Message::KeyboardBacklight(event) => match event {
                 KeyboardBacklightUpdate::Sender(tx) => {
                     self.kbd_sender = Some(tx);
@@ -682,17 +683,7 @@ impl cosmic::Application for CosmicBatteryApplet {
 
     fn subscription(&self) -> Subscription<Message> {
         let mut subscriptions = vec![
-            device_subscription(0).map(
-                |DeviceDbusEvent::Update {
-                     on_battery,
-                     percent,
-                     time_to_empty,
-                 }| Message::Update {
-                    on_battery,
-                    percent,
-                    time_to_empty,
-                },
-            ),
+            device_subscription(0).map(Message::UpowerDevice),
             kbd_backlight_subscription(0).map(Message::KeyboardBacklight),
             power_profile_subscription(0).map(|event| match event {
                 PowerProfileUpdate::Update { profile } => Message::Profile(profile),
