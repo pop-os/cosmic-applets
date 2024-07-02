@@ -184,9 +184,11 @@ impl DockItem {
                         .style(<Theme as container::StyleSheet>::Style::Custom(Box::new(
                             move |theme| container::Appearance {
                                 text_color: Some(Color::TRANSPARENT),
-                                background: Some(Background::Color(
-                                    theme.cosmic().on_bg_color().into(),
-                                )),
+                                background: if is_focused {
+                                    Some(Background::Color(theme.cosmic().accent_color().into()))
+                                } else {
+                                    Some(Background::Color(theme.cosmic().on_bg_color().into()))
+                                },
                                 border: Border {
                                     radius: dot_border_radius.into(),
                                     width: 0.0,
@@ -208,9 +210,13 @@ impl DockItem {
                             .style(<Theme as container::StyleSheet>::Style::Custom(Box::new(
                                 move |theme| container::Appearance {
                                     text_color: Some(Color::TRANSPARENT),
-                                    background: Some(Background::Color(
-                                        theme.cosmic().on_bg_color().into(),
-                                    )),
+                                    background: if is_focused {
+                                        Some(Background::Color(
+                                            theme.cosmic().accent_color().into(),
+                                        ))
+                                    } else {
+                                        Some(Background::Color(theme.cosmic().on_bg_color().into()))
+                                    },
                                     border: Border {
                                         radius: dot_border_radius.into(),
                                         width: 0.0,
@@ -230,9 +236,13 @@ impl DockItem {
                             .style(<Theme as container::StyleSheet>::Style::Custom(Box::new(
                                 move |theme| container::Appearance {
                                     text_color: Some(Color::TRANSPARENT),
-                                    background: Some(Background::Color(
-                                        theme.cosmic().on_bg_color().into(),
-                                    )),
+                                    background: if is_focused {
+                                        Some(Background::Color(
+                                            theme.cosmic().accent_color().into(),
+                                        ))
+                                    } else {
+                                        Some(Background::Color(theme.cosmic().on_bg_color().into()))
+                                    },
                                     border: Border {
                                         radius: dot_border_radius.into(),
                                         width: 0.0,
