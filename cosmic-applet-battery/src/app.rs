@@ -533,7 +533,7 @@ impl cosmic::Application for CosmicBatteryApplet {
         ];
 
         if let Some(max_screen_brightness) = self.max_screen_brightness {
-            if let Some(screen_brightness) = self.max_screen_brightness {
+            if let Some(screen_brightness) = self.screen_brightness {
                 content.push(
                     padded_control(
                         row![
