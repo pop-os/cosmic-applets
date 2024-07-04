@@ -65,10 +65,6 @@ pub struct Audio {
     current_input: Option<DeviceInfo>,
     outputs: Vec<DeviceInfo>,
     inputs: Vec<DeviceInfo>,
-    sink_mute: bool,
-    sink_volume: u32,
-    source_mute: bool,
-    source_volume: u32,
     pulse_state: PulseState,
     popup: Option<window::Id>,
     timeline: Timeline,
@@ -83,13 +79,15 @@ impl Audio {
     }
 
     fn output_icon_name(&self) -> &'static str {
-        if self.sink_mute || self.sink_volume == 0 {
+        let volume = self.current_output_volume_percent();
+        let mute = self.current_output_mute();
+        if mute || volume == 0. {
             "audio-volume-muted-symbolic"
-        } else if self.sink_volume < 33 {
+        } else if volume < 33. {
             "audio-volume-low-symbolic"
-        } else if self.sink_volume < 66 {
+        } else if volume < 66. {
             "audio-volume-medium-symbolic"
-        } else if self.sink_volume <= 100 {
+        } else if volume <= 100. {
             "audio-volume-high-symbolic"
         } else {
             "audio-volume-overamplified-symbolic"
@@ -101,11 +99,13 @@ impl Audio {
     }
 
     fn input_icon_name(&self) -> &'static str {
-        if self.source_mute || self.source_volume == 0 {
+        let volume = self.current_input_volume_percent();
+        let mute = self.current_input_mute();
+        if mute || volume == 0. {
             "microphone-sensitivity-muted-symbolic"
-        } else if self.source_volume < 33 {
+        } else if volume < 33. {
             "microphone-sensitivity-low-symbolic"
-        } else if self.source_volume < 66 {
+        } else if volume < 66. {
             "microphone-sensitivity-medium-symbolic"
         } else {
             "microphone-sensitivity-high-symbolic"
@@ -250,6 +250,38 @@ impl Audio {
                 }
             }
         })
+    }
+
+    fn current_output_volume_percent(&self) -> f64 {
+        volume_to_percent(
+            self.current_output
+                .as_ref()
+                .map(|o| o.volume.avg())
+                .unwrap_or_default(),
+        )
+    }
+
+    fn current_input_volume_percent(&self) -> f64 {
+        volume_to_percent(
+            self.current_input
+                .as_ref()
+                .map(|o| o.volume.avg())
+                .unwrap_or_default(),
+        )
+    }
+
+    fn current_output_mute(&self) -> bool {
+        self.current_output
+            .as_ref()
+            .map(|o| o.mute)
+            .unwrap_or_default()
+    }
+
+    fn current_input_mute(&self) -> bool {
+        self.current_input
+            .as_ref()
+            .map(|o| o.mute)
+            .unwrap_or_default()
     }
 }
 
@@ -536,16 +568,28 @@ impl cosmic::Application for Audio {
             },
             Message::PulseSub(event) => match event {
                 sub_pulse::Event::SinkVolume(value) => {
-                    self.sink_volume = value;
+                    self.current_output.as_mut().map(|output| {
+                        output
+                            .volume
+                            .set(output.volume.len(), percent_to_volume(value as f64))
+                    });
                 }
                 sub_pulse::Event::SinkMute(value) => {
-                    self.sink_mute = value;
+                    if let Some(output) = self.current_output.as_mut() {
+                        output.mute = value;
+                    }
                 }
                 sub_pulse::Event::SourceVolume(value) => {
-                    self.source_volume = value;
+                    self.current_input.as_mut().map(|input| {
+                        input
+                            .volume
+                            .set(input.volume.len(), percent_to_volume(value as f64))
+                    });
                 }
                 sub_pulse::Event::SourceMute(value) => {
-                    self.source_mute = value;
+                    if let Some(input) = self.current_input.as_mut() {
+                        input.mute = value;
+                    }
                 }
             },
         };
@@ -597,18 +641,8 @@ impl cosmic::Application for Audio {
 
     fn view_window(&self, _id: window::Id) -> Element<Message> {
         let audio_disabled = matches!(self.pulse_state, PulseState::Disconnected(_));
-        let out_f64 = volume_to_percent(
-            self.current_output
-                .as_ref()
-                .map(|o| o.volume.avg())
-                .unwrap_or_default(),
-        );
-        let in_f64 = volume_to_percent(
-            self.current_input
-                .as_ref()
-                .map(|o| o.volume.avg())
-                .unwrap_or_default(),
-        );
+        let out_f64 = self.current_output_volume_percent();
+        let in_f64 = self.current_input_volume_percent();
 
         let mut audio_content = if audio_disabled {
             column![padded_control(
