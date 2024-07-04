@@ -124,6 +124,8 @@ enum IsOpen {
 pub enum Message {
     SetOutputVolume(f64),
     SetInputVolume(f64),
+    SetOutputMute(bool),
+    SetInputMute(bool),
     OutputToggle,
     InputToggle,
     OutputChanged(String),
@@ -387,6 +389,34 @@ impl cosmic::Application for Audio {
                     }
                 }
             }
+            Message::SetOutputMute(mute) => {
+                if let Some(output) = self.current_output.as_mut() {
+                    output.mute = mute;
+                }
+                if let PulseState::Connected(connection) = &mut self.pulse_state {
+                    if let Some(device) = &self.current_output {
+                        if let Some(name) = &device.name {
+                            connection
+                                .send(pulse::Message::SetSinkMuteByName(name.clone(), device.mute))
+                        }
+                    }
+                }
+            }
+            Message::SetInputMute(mute) => {
+                if let Some(input) = self.current_input.as_mut() {
+                    input.mute = mute;
+                }
+                if let PulseState::Connected(connection) = &mut self.pulse_state {
+                    if let Some(device) = &self.current_input {
+                        if let Some(name) = &device.name {
+                            connection.send(pulse::Message::SetSourceMuteByName(
+                                name.clone(),
+                                device.mute,
+                            ))
+                        }
+                    }
+                }
+            }
             Message::OutputChanged(val) => {
                 if let Some(conn) = self.pulse_state.connection() {
                     if let Some(val) = self.outputs.iter().find(|o| o.name.as_ref() == Some(&val)) {
@@ -643,6 +673,8 @@ impl cosmic::Application for Audio {
         let audio_disabled = matches!(self.pulse_state, PulseState::Disconnected(_));
         let out_f64 = self.current_output_volume_percent();
         let in_f64 = self.current_input_volume_percent();
+        let out_mute = self.current_output_mute();
+        let in_mute = self.current_input_mute();
 
         let mut audio_content = if audio_disabled {
             column![padded_control(
@@ -655,9 +687,15 @@ impl cosmic::Application for Audio {
             column![
                 padded_control(
                     row![
-                        icon::from_name(self.output_icon_name())
-                            .size(24)
-                            .symbolic(true),
+                        button::icon(
+                            icon::from_name(self.output_icon_name())
+                                .size(24)
+                                .symbolic(true),
+                        )
+                        .style(cosmic::theme::Button::Icon)
+                        .icon_size(24)
+                        .line_height(24)
+                        .on_press(Message::SetOutputMute(!out_mute)),
                         slider(0.0..=100.0, out_f64, Message::SetOutputVolume)
                             .width(Length::FillPortion(5)),
                         text(format!("{}%", out_f64.round()))
@@ -670,9 +708,15 @@ impl cosmic::Application for Audio {
                 ),
                 padded_control(
                     row![
-                        icon::from_name(self.input_icon_name())
-                            .size(24)
-                            .symbolic(true),
+                        button::icon(
+                            icon::from_name(self.input_icon_name())
+                                .size(24)
+                                .symbolic(true),
+                        )
+                        .style(cosmic::theme::Button::Icon)
+                        .icon_size(24)
+                        .line_height(24)
+                        .on_press(Message::SetInputMute(!in_mute)),
                         slider(0.0..=100.0, in_f64, Message::SetInputVolume)
                             .width(Length::FillPortion(5)),
                         text(format!("{}%", in_f64.round()))
