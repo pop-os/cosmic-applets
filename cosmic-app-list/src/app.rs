@@ -86,12 +86,13 @@ impl AppletIconData {
     fn new(applet: &Context) -> Self {
         let icon_size = applet.suggested_size(false).0;
         let padding = applet.suggested_padding(false);
+        let icon_spacing = 0.0;
 
-        let (icon_spacing, dot_radius, bar_size) = match applet.size {
-            Size::PanelSize(PanelSize::XL) | Size::PanelSize(PanelSize::L) => (0.0, 2.0, 12.0),
-            Size::PanelSize(PanelSize::M) => (0.0, 2.0, 8.0),
+        let (dot_radius, bar_size) = match applet.size {
+            Size::PanelSize(PanelSize::XL) | Size::PanelSize(PanelSize::L) => (2.0, 12.0),
+            Size::PanelSize(PanelSize::M) => (2.0, 8.0),
             Size::PanelSize(PanelSize::S) | Size::PanelSize(PanelSize::XS) | Size::Hardcoded(_) => {
-                (0.0, 1.0, 8.0)
+                (1.0, 8.0)
             }
         };
 
@@ -176,86 +177,42 @@ impl DockItem {
                         .into()
                 })
                 .collect_vec()
-        } else if toplevels.len() == 1 {
+        } else {
             (0..1)
                 .map(|_| {
-                    container(vertical_space(Length::Fixed(0.0)))
-                        .padding(app_icon.dot_radius)
-                        .style(<Theme as container::StyleSheet>::Style::Custom(Box::new(
-                            move |theme| container::Appearance {
-                                text_color: Some(Color::TRANSPARENT),
-                                background: if is_focused {
-                                    Some(Background::Color(theme.cosmic().accent_color().into()))
-                                } else {
-                                    Some(Background::Color(theme.cosmic().on_bg_color().into()))
-                                },
-                                border: Border {
-                                    radius: dot_border_radius.into(),
-                                    width: 0.0,
-                                    color: Color::TRANSPARENT,
-                                },
-                                shadow: Shadow::default(),
-                                icon_color: Some(Color::TRANSPARENT),
+                    container(if toplevels.len() == 1 {
+                        vertical_space(Length::Fixed(0.0))
+                    } else {
+                        match applet.anchor {
+                            PanelAnchor::Left | PanelAnchor::Right => {
+                                vertical_space(app_icon.bar_size)
+                            }
+                            PanelAnchor::Top | PanelAnchor::Bottom => {
+                                horizontal_space(app_icon.bar_size)
+                            }
+                        }
+                    })
+                    .padding(app_icon.dot_radius)
+                    .style(<Theme as container::StyleSheet>::Style::Custom(Box::new(
+                        move |theme| container::Appearance {
+                            text_color: Some(Color::TRANSPARENT),
+                            background: if is_focused {
+                                Some(Background::Color(theme.cosmic().accent_color().into()))
+                            } else {
+                                Some(Background::Color(theme.cosmic().on_bg_color().into()))
                             },
-                        )))
-                        .into()
+                            border: Border {
+                                radius: dot_border_radius.into(),
+                                width: 0.0,
+                                color: Color::TRANSPARENT,
+                            },
+                            shadow: Shadow::default(),
+                            icon_color: Some(Color::TRANSPARENT),
+                        },
+                    )))
+                    .into()
                 })
                 .collect_vec()
-        } else {
-            match applet.anchor {
-                PanelAnchor::Left | PanelAnchor::Right => (0..1)
-                    .map(|_| {
-                        container(vertical_space(app_icon.bar_size))
-                            .padding(app_icon.dot_radius)
-                            .style(<Theme as container::StyleSheet>::Style::Custom(Box::new(
-                                move |theme| container::Appearance {
-                                    text_color: Some(Color::TRANSPARENT),
-                                    background: if is_focused {
-                                        Some(Background::Color(
-                                            theme.cosmic().accent_color().into(),
-                                        ))
-                                    } else {
-                                        Some(Background::Color(theme.cosmic().on_bg_color().into()))
-                                    },
-                                    border: Border {
-                                        radius: dot_border_radius.into(),
-                                        width: 0.0,
-                                        color: Color::TRANSPARENT,
-                                    },
-                                    shadow: Shadow::default(),
-                                    icon_color: Some(Color::TRANSPARENT),
-                                },
-                            )))
-                            .into()
-                    })
-                    .collect_vec(),
-                PanelAnchor::Top | PanelAnchor::Bottom => (0..1)
-                    .map(|_| {
-                        container(horizontal_space(app_icon.bar_size))
-                            .padding(app_icon.dot_radius)
-                            .style(<Theme as container::StyleSheet>::Style::Custom(Box::new(
-                                move |theme| container::Appearance {
-                                    text_color: Some(Color::TRANSPARENT),
-                                    background: if is_focused {
-                                        Some(Background::Color(
-                                            theme.cosmic().accent_color().into(),
-                                        ))
-                                    } else {
-                                        Some(Background::Color(theme.cosmic().on_bg_color().into()))
-                                    },
-                                    border: Border {
-                                        radius: dot_border_radius.into(),
-                                        width: 0.0,
-                                        color: Color::TRANSPARENT,
-                                    },
-                                    shadow: Shadow::default(),
-                                    icon_color: Some(Color::TRANSPARENT),
-                                },
-                            )))
-                            .into()
-                    })
-                    .collect_vec(),
-            }
         };
 
         let icon_wrapper: Element<_> = match applet.anchor {
