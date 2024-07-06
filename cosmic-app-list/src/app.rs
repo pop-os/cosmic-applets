@@ -90,10 +90,8 @@ impl AppletIconData {
 
         let (dot_radius, bar_size) = match applet.size {
             Size::PanelSize(PanelSize::XL) | Size::PanelSize(PanelSize::L) => (2.0, 12.0),
-            Size::PanelSize(PanelSize::M) => (2.0, 8.0),
-            Size::PanelSize(PanelSize::S) | Size::PanelSize(PanelSize::XS) | Size::Hardcoded(_) => {
-                (1.0, 8.0)
-            }
+            Size::PanelSize(PanelSize::M) | Size::Hardcoded(_) => (2.0, 8.0),
+            Size::PanelSize(PanelSize::S) | Size::PanelSize(PanelSize::XS) => (1.0, 8.0),
         };
 
         let padding = padding as f32;
