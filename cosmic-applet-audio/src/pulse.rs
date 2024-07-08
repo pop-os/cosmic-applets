@@ -173,6 +173,8 @@ pub enum Message {
     SetDefaultSource(DeviceInfo),
     SetSinkVolumeByName(String, ChannelVolumes),
     SetSourceVolumeByName(String, ChannelVolumes),
+    SetSinkMuteByName(String, bool),
+    SetSourceMuteByName(String, bool),
 }
 
 struct PulseHandle {
@@ -289,6 +291,27 @@ impl PulseHandle {
                                     None => continue,
                                 };
                                 server.set_source_volume_by_name(&name, &channel_volumes)
+                            }
+                            Message::SetSinkMuteByName(name, mute) => {
+                                let server = match server.as_mut() {
+                                    Some(s) => s,
+                                    None => continue,
+                                };
+
+                                let op =
+                                    server.introspector.set_sink_mute_by_name(&name, mute, None);
+                                server.wait_for_result(op).ok();
+                            }
+                            Message::SetSourceMuteByName(name, mute) => {
+                                let server = match server.as_mut() {
+                                    Some(s) => s,
+                                    None => continue,
+                                };
+
+                                let op = server
+                                    .introspector
+                                    .set_source_mute_by_name(&name, mute, None);
+                                server.wait_for_result(op).ok();
                             }
                             Message::UpdateConnection => {
                                 tracing::info!(
