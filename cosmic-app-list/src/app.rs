@@ -86,7 +86,7 @@ impl AppletIconData {
     fn new(applet: &Context) -> Self {
         let icon_size = applet.suggested_size(false).0;
         let padding = applet.suggested_padding(false);
-        let icon_spacing = 0.0;
+        let icon_spacing = 4.0;
 
         let (dot_radius, bar_size) = match applet.size {
             Size::PanelSize(PanelSize::XL) | Size::PanelSize(PanelSize::L) => (2.0, 12.0),
