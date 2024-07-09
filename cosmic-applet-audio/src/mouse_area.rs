@@ -1,16 +1,13 @@
 //! A container for capturing mouse events.
 
-use cosmic::iced_renderer::core::widget::OperationOutputWrapper;
-use cosmic::iced_renderer::core::Point;
+use cosmic::iced_renderer::core::{widget::OperationOutputWrapper, Point};
 
-use cosmic::iced_core::event::{self, Event};
-use cosmic::iced_core::layout;
-use cosmic::iced_core::mouse;
-use cosmic::iced_core::overlay;
-use cosmic::iced_core::renderer;
-use cosmic::iced_core::touch;
-use cosmic::iced_core::widget::{tree, Operation, Tree};
-use cosmic::iced_core::{Clipboard, Element, Layout, Length, Rectangle, Shell, Size, Widget};
+use cosmic::iced_core::{
+    event::{self, Event},
+    layout, mouse, overlay, renderer, touch,
+    widget::{tree, Operation, Tree},
+    Clipboard, Element, Layout, Length, Rectangle, Shell, Size, Widget,
+};
 
 /// Emit messages on mouse events.
 #[allow(missing_debug_implementations)]

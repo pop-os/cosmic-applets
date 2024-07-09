@@ -2,15 +2,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use cosmic::iced::{self, futures::SinkExt, subscription};
-use std::fmt::Debug;
-use std::hash::Hash;
-use tokio::sync::mpsc::UnboundedReceiver;
-use tokio::sync::mpsc::UnboundedSender;
-use zbus::Connection;
-use zbus::Result;
+use std::{fmt::Debug, hash::Hash};
+use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
+use zbus::{Connection, Result};
 
-use self::power_daemon::PowerDaemonProxy;
-use self::power_profiles::PowerProfilesProxy;
+use self::{power_daemon::PowerDaemonProxy, power_profiles::PowerProfilesProxy};
 
 mod power_daemon;
 mod power_profiles;

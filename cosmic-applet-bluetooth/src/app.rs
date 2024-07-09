@@ -2,14 +2,13 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use crate::bluetooth::{BluerDeviceStatus, BluerRequest, BluerState};
-use cosmic::applet::token::subscription::{
-    activation_token_subscription, TokenRequest, TokenUpdate,
-};
-use cosmic::cctk::sctk::reexports::calloop;
-
-use cosmic::applet::{menu_button, padded_control};
-use cosmic::Command;
 use cosmic::{
+    applet::token::subscription::{activation_token_subscription, TokenRequest, TokenUpdate},
+    cctk::sctk::reexports::calloop,
+};
+
+use cosmic::{
+    applet::{menu_button, padded_control},
     iced::{
         self,
         wayland::popup::{destroy_popup, get_popup},
@@ -23,15 +22,16 @@ use cosmic::{
     },
     iced_style::application,
     widget::{button, divider, icon},
-    Element, Theme,
+    Command, Element, Theme,
 };
 use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
-use std::collections::HashMap;
-use std::time::Duration;
+use std::{collections::HashMap, time::Duration};
 use tokio::sync::mpsc::Sender;
 
-use crate::bluetooth::{bluetooth_subscription, BluerDevice, BluerEvent};
-use crate::{config, fl};
+use crate::{
+    bluetooth::{bluetooth_subscription, BluerDevice, BluerEvent},
+    config, fl,
+};
 
 static BLUETOOTH_ENABLED: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
 

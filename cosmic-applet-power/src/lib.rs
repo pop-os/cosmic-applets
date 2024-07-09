@@ -1,37 +1,43 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
-use std::collections::HashMap;
-use std::process;
-use std::time::Duration;
+use std::{collections::HashMap, process, time::Duration};
 
-use cosmic::applet::{menu_button, padded_control};
-use cosmic::iced;
-use cosmic::iced::alignment::{Horizontal, Vertical};
-use cosmic::iced::event::wayland::{self, LayerEvent};
-use cosmic::iced::event::{listen_with, PlatformSpecific};
-use cosmic::iced::time;
-use cosmic::iced::wayland::actions::layer_surface::SctkLayerSurfaceSettings;
-use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
-use cosmic::iced_runtime::core::layout::Limits;
-use cosmic::iced_sctk::commands::layer_surface::{
-    destroy_layer_surface, get_layer_surface, Anchor, KeyboardInteractivity,
+use cosmic::{
+    app::Command,
+    applet::{menu_button, padded_control},
+    iced,
+    iced::{
+        alignment::{Horizontal, Vertical},
+        event::{
+            listen_with,
+            wayland::{self, LayerEvent},
+            PlatformSpecific,
+        },
+        time,
+        wayland::{
+            actions::layer_surface::SctkLayerSurfaceSettings,
+            popup::{destroy_popup, get_popup},
+        },
+        widget::{self, column, container, row, space::Space, text},
+        window, Alignment, Length, Subscription,
+    },
+    iced_runtime::core::layout::Limits,
+    iced_sctk::commands::layer_surface::{
+        destroy_layer_surface, get_layer_surface, Anchor, KeyboardInteractivity,
+    },
+    iced_style::application,
+    iced_widget::mouse_area,
+    theme,
+    widget::{button, divider, horizontal_space, icon, vertical_space, Column},
+    Element, Renderer, Theme,
 };
-use cosmic::iced_widget::mouse_area;
-use cosmic::widget::{button, divider, horizontal_space, icon, vertical_space, Column};
-use cosmic::Renderer;
 
-use cosmic::iced::{
-    widget::{self, column, container, row, space::Space, text},
-    window, Alignment, Length, Subscription,
+use logind_zbus::{
+    manager::ManagerProxy,
+    session::{SessionProxy, SessionType},
+    user::UserProxy,
 };
-use cosmic::iced_style::application;
-use cosmic::theme;
-use cosmic::{app::Command, Element, Theme};
-
-use logind_zbus::manager::ManagerProxy;
-use logind_zbus::session::{SessionProxy, SessionType};
-use logind_zbus::user::UserProxy;
 use once_cell::sync::Lazy;
 use rustix::process::getuid;
 use zbus::Connection;
@@ -40,8 +46,7 @@ pub mod cosmic_session;
 mod localize;
 pub mod session_manager;
 
-use crate::cosmic_session::CosmicSessionProxy;
-use crate::session_manager::SessionManagerProxy;
+use crate::{cosmic_session::CosmicSessionProxy, session_manager::SessionManagerProxy};
 
 pub fn run() -> cosmic::iced::Result {
     localize::localize();

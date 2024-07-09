@@ -4,43 +4,36 @@
 mod localize;
 mod mouse_area;
 
-use crate::localize::localize;
-use crate::pulse::DeviceInfo;
+use crate::{localize::localize, pulse::DeviceInfo};
 use config::AudioAppletConfig;
-use cosmic::app::Command;
-use cosmic::applet::cosmic_panel_config::PanelAnchor;
-use cosmic::applet::menu_button;
-use cosmic::applet::menu_control_padding;
-use cosmic::applet::padded_control;
-use cosmic::applet::token::subscription::{
-    activation_token_subscription, TokenRequest, TokenUpdate,
+use cosmic::{
+    app::Command,
+    applet::{
+        cosmic_panel_config::PanelAnchor,
+        menu_button, menu_control_padding, padded_control,
+        token::subscription::{activation_token_subscription, TokenRequest, TokenUpdate},
+    },
+    cctk::sctk::reexports::calloop,
+    cosmic_config::CosmicConfigEntry,
+    iced::{
+        self, widget,
+        widget::{column, row, slider, text},
+        window, Alignment, Length, Limits, Subscription,
+    },
+    iced_runtime::core::alignment::Horizontal,
+    iced_style::application,
+    widget::{button, divider, horizontal_space, icon, Column, Row},
+    Element, Renderer, Theme,
 };
-use cosmic::cctk::sctk::reexports::calloop;
-use cosmic::cosmic_config::CosmicConfigEntry;
-use cosmic::iced::widget;
-use cosmic::iced::Limits;
-use cosmic::iced::{
-    self,
-    widget::{column, row, slider, text},
-    window, Alignment, Length, Subscription,
-};
-use cosmic::iced_runtime::core::alignment::Horizontal;
-use cosmic::iced_style::application;
-use cosmic::widget::button;
-use cosmic::widget::horizontal_space;
-use cosmic::widget::Column;
-use cosmic::widget::Row;
-use cosmic::widget::{divider, icon};
-use cosmic::Renderer;
-use cosmic::{Element, Theme};
 use cosmic_settings_subscriptions::pulse as sub_pulse;
 use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
-use iced::wayland::popup::{destroy_popup, get_popup};
-use iced::widget::container;
+use iced::{
+    wayland::popup::{destroy_popup, get_popup},
+    widget::container,
+};
 use libpulse_binding::volume::Volume;
 use mpris2_zbus::player::PlaybackStatus;
-use mpris_subscription::MprisRequest;
-use mpris_subscription::MprisUpdate;
+use mpris_subscription::{MprisRequest, MprisUpdate};
 
 mod config;
 mod mpris_subscription;

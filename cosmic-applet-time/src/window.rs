@@ -1,37 +1,42 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
-use std::borrow::Cow;
-use std::str::FromStr;
+use std::{borrow::Cow, str::FromStr};
 
 use chrono::{Datelike, DurationRound, Timelike};
-use cosmic::applet::{menu_button, padded_control};
-use cosmic::cctk::sctk::reexports::calloop;
-use cosmic::iced::subscription;
-use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
-use cosmic::iced::{
-    widget::{column, row, text, vertical_space},
-    window, Alignment, Length, Rectangle, Subscription,
-};
-use cosmic::iced_core::alignment::{Horizontal, Vertical};
-use cosmic::iced_style::application;
-use cosmic::iced_widget::{horizontal_rule, Column};
-use cosmic::widget::{button, container, divider, grid, horizontal_space, Button, Grid, Space};
-use cosmic::{app, applet::cosmic_panel_config::PanelAnchor, Command};
 use cosmic::{
-    widget::{icon, rectangle_tracker::*},
-    Element, Theme,
+    app,
+    applet::{cosmic_panel_config::PanelAnchor, menu_button, padded_control},
+    cctk::sctk::reexports::calloop,
+    iced::{
+        subscription,
+        wayland::popup::{destroy_popup, get_popup},
+        widget::{column, row, text, vertical_space},
+        window, Alignment, Length, Rectangle, Subscription,
+    },
+    iced_core::alignment::{Horizontal, Vertical},
+    iced_style::application,
+    iced_widget::{horizontal_rule, Column},
+    widget::{
+        button, container, divider, grid, horizontal_space, icon, rectangle_tracker::*, Button,
+        Grid, Space,
+    },
+    Command, Element, Theme,
 };
 
-use icu::calendar::DateTime;
-use icu::datetime::options::components::{self, Bag};
-use icu::datetime::options::preferences;
-use icu::datetime::{DateTimeFormatter, DateTimeFormatterOptions};
-use icu::locid::Locale;
+use icu::{
+    calendar::DateTime,
+    datetime::{
+        options::{
+            components::{self, Bag},
+            preferences,
+        },
+        DateTimeFormatter, DateTimeFormatterOptions,
+    },
+    locid::Locale,
+};
 
-use crate::config::TimeAppletConfig;
-use crate::fl;
-use crate::time::get_calender_first;
+use crate::{config::TimeAppletConfig, fl, time::get_calender_first};
 use cosmic::applet::token::subscription::{
     activation_token_subscription, TokenRequest, TokenUpdate,
 };

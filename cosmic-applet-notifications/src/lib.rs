@@ -3,33 +3,33 @@
 
 mod localize;
 mod subscriptions;
-use cosmic::applet::token::subscription::{
-    activation_token_subscription, TokenRequest, TokenUpdate,
+use cosmic::{
+    applet::{
+        menu_control_padding, padded_control,
+        token::subscription::{activation_token_subscription, TokenRequest, TokenUpdate},
+    },
+    cctk::sctk::reexports::calloop,
+    cosmic_config::{Config, CosmicConfigEntry},
+    iced::{
+        wayland::popup::{destroy_popup, get_popup},
+        widget::{column, row, text},
+        window, Alignment, Length, Limits, Subscription,
+    },
+    iced_core::alignment::Horizontal,
+    Command,
 };
-use cosmic::applet::{menu_control_padding, padded_control};
-use cosmic::cctk::sctk::reexports::calloop;
-use cosmic::cosmic_config::{Config, CosmicConfigEntry};
-use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
-use cosmic::iced::Limits;
-use cosmic::iced::{
-    widget::{column, row, text},
-    window, Alignment, Length, Subscription,
+
+use cosmic::{iced_futures::futures::executor::block_on, iced_style::application};
+
+use cosmic::{
+    iced_widget::{scrollable, Column},
+    widget::{button, container, divider, icon},
+    Element, Theme,
 };
-use cosmic::iced_core::alignment::Horizontal;
-use cosmic::Command;
-
-use cosmic::iced_futures::futures::executor::block_on;
-use cosmic::iced_style::application;
-
-use cosmic::iced_widget::{scrollable, Column};
-use cosmic::widget::{button, container, divider, icon};
-use cosmic::{Element, Theme};
 use cosmic_notifications_config::NotificationsConfig;
 use cosmic_notifications_util::{Image, Notification};
 use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
-use std::borrow::Cow;
-use std::collections::HashMap;
-use std::path::PathBuf;
+use std::{borrow::Cow, collections::HashMap, path::PathBuf};
 use subscriptions::notifications::NotificationsAppletProxy;
 use tokio::sync::mpsc::Sender;
 use tracing::info;

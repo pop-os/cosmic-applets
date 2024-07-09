@@ -1,14 +1,12 @@
 use std::collections::HashSet;
 
-use cosmic::app::Command;
-use cosmic::applet::token::subscription::{
-    activation_token_subscription, TokenRequest, TokenUpdate,
-};
-use cosmic::applet::{menu_button, menu_control_padding, padded_control};
-use cosmic::cctk::sctk::reexports::calloop;
-use cosmic::iced_widget::Row;
-use cosmic::widget::icon::from_name;
 use cosmic::{
+    app::Command,
+    applet::{
+        menu_button, menu_control_padding, padded_control,
+        token::subscription::{activation_token_subscription, TokenRequest, TokenUpdate},
+    },
+    cctk::sctk::reexports::calloop,
     iced::{
         wayland::popup::{destroy_popup, get_popup},
         widget::{column, row},
@@ -20,7 +18,10 @@ use cosmic::{
         window,
     },
     iced_style::application,
-    widget::{button, container, divider, icon, scrollable, text, text_input, Column},
+    iced_widget::Row,
+    widget::{
+        button, container, divider, icon, icon::from_name, scrollable, text, text_input, Column,
+    },
     Element, Theme,
 };
 use cosmic_dbus_networkmanager::interface::enums::{
@@ -31,15 +32,13 @@ use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
 use futures::channel::mpsc::UnboundedSender;
 use zbus::Connection;
 
-use crate::network_manager::active_conns::active_conns_subscription;
-use crate::network_manager::devices::devices_subscription;
-use crate::network_manager::wireless_enabled::wireless_enabled_subscription;
-use crate::network_manager::NetworkManagerState;
 use crate::{
     config, fl,
     network_manager::{
-        available_wifi::AccessPoint, current_networks::ActiveConnectionInfo,
-        network_manager_subscription, NetworkManagerEvent, NetworkManagerRequest,
+        active_conns::active_conns_subscription, available_wifi::AccessPoint,
+        current_networks::ActiveConnectionInfo, devices::devices_subscription,
+        network_manager_subscription, wireless_enabled::wireless_enabled_subscription,
+        NetworkManagerEvent, NetworkManagerRequest, NetworkManagerState,
     },
 };
 
