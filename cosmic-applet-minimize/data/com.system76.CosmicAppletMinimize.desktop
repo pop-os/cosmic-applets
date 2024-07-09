@@ -3,8 +3,8 @@ Name=Minimized Windows
 Type=Application
 Exec=cosmic-applet-minimize
 Terminal=false
-Categories=Cosmic;Iced;
-Keywords=Cosmic;Iced;
+Categories=COSMIC;Iced;
+Keywords=COSMIC;Iced;
 # Translators: Do NOT translate or transliterate this text (this is an icon file name)!
 Icon=com.system76.CosmicAppletMinimize
 StartupNotify=true
