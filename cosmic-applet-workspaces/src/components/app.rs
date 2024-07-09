@@ -2,23 +2,31 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use cctk::sctk::reexports::{calloop::channel::SyncSender, client::backend::ObjectId};
-use cosmic::iced::alignment::{Horizontal, Vertical};
-use cosmic::iced::event;
-use cosmic::iced::mouse::{self, ScrollDelta};
-use cosmic::iced::widget::{button, column, row};
-use cosmic::iced::{Event::Mouse, Length, Subscription};
-use cosmic::iced_core::{Background, Border};
-use cosmic::iced_style::application;
-use cosmic::widget::{container, horizontal_space, vertical_space};
-use cosmic::{applet::cosmic_panel_config::PanelAnchor, font::FONT_BOLD, Command};
-use cosmic::{Element, Theme};
+use cosmic::{
+    applet::cosmic_panel_config::PanelAnchor,
+    font::FONT_BOLD,
+    iced::{
+        alignment::{Horizontal, Vertical},
+        event,
+        mouse::{self, ScrollDelta},
+        widget::{button, column, row},
+        Event::Mouse,
+        Length, Subscription,
+    },
+    iced_core::{Background, Border},
+    iced_style::application,
+    widget::{container, horizontal_space, vertical_space},
+    Command, Element, Theme,
+};
 
 use cosmic_protocols::workspace::v1::client::zcosmic_workspace_handle_v1;
 use std::cmp::Ordering;
 
-use crate::config;
-use crate::wayland::{WorkspaceEvent, WorkspaceList};
-use crate::wayland_subscription::{workspaces, WorkspacesUpdate};
+use crate::{
+    config,
+    wayland::{WorkspaceEvent, WorkspaceList},
+    wayland_subscription::{workspaces, WorkspacesUpdate},
+};
 
 use std::process::Command as ShellCommand;
 

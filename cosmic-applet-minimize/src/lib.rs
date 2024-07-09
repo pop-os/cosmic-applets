@@ -7,19 +7,23 @@ pub(crate) mod wayland_subscription;
 pub(crate) mod window_image;
 
 use crate::localize::localize;
-use cosmic::app::Command;
-use cosmic::applet::cosmic_panel_config::PanelAnchor;
-use cosmic::cctk::cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1;
-use cosmic::cctk::sctk::reexports::calloop;
-use cosmic::cctk::toplevel_info::ToplevelInfo;
-use cosmic::desktop::DesktopEntryData;
-use cosmic::iced::{widget::text, Length, Subscription};
+use cosmic::{
+    app::Command,
+    applet::cosmic_panel_config::PanelAnchor,
+    cctk::{
+        cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1,
+        sctk::reexports::calloop, toplevel_info::ToplevelInfo,
+    },
+    desktop::DesktopEntryData,
+    iced::{widget::text, Length, Subscription},
+};
 
-use cosmic::iced_style::application;
-use cosmic::iced_widget::{Column, Row};
+use cosmic::{
+    iced_style::application,
+    iced_widget::{Column, Row},
+};
 
-use cosmic::widget::tooltip;
-use cosmic::{Element, Theme};
+use cosmic::{widget::tooltip, Element, Theme};
 use wayland_subscription::{
     ToplevelRequest, ToplevelUpdate, WaylandImage, WaylandRequest, WaylandUpdate,
 };

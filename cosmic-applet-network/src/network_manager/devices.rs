@@ -2,8 +2,7 @@ use super::{NetworkManagerEvent, NetworkManagerState};
 use cosmic::iced::{self, subscription};
 use cosmic_dbus_networkmanager::nm::NetworkManager;
 use futures::{SinkExt, StreamExt};
-use std::fmt::Debug;
-use std::hash::Hash;
+use std::{fmt::Debug, hash::Hash};
 use zbus::Connection;
 
 pub fn devices_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(

@@ -1,13 +1,14 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
-use std::cell::RefCell;
-use std::{rc::Rc, thread};
+use std::{cell::RefCell, rc::Rc, thread};
 
 extern crate libpulse_binding as pulse;
 
-use cosmic::iced::{self, subscription};
-use cosmic::iced_futures::futures::{self, SinkExt};
+use cosmic::{
+    iced::{self, subscription},
+    iced_futures::futures::{self, SinkExt},
+};
 use cosmic_time::once_cell::sync::Lazy;
 
 use libpulse_binding::{

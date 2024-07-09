@@ -24,13 +24,12 @@ use std::{
     },
     time::{Duration, Instant},
 };
-use wayland_client::backend::ObjectId;
 use wayland_client::{
+    backend::ObjectId,
     globals::registry_queue_init,
     protocol::wl_output::{self, WlOutput},
-    Proxy,
+    Connection, Proxy, QueueHandle, WEnum,
 };
-use wayland_client::{Connection, QueueHandle, WEnum};
 
 #[derive(Debug, Clone)]
 pub enum WorkspaceEvent {

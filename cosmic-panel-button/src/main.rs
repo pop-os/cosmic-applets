@@ -2,12 +2,19 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use config::{CosmicPanelButtonConfig, IndividualConfig, Override};
-use cosmic::applet::cosmic_panel_config::{PanelAnchor, PanelSize};
-use cosmic::applet::Size;
-use cosmic::iced::Length;
-use cosmic::iced_widget::row;
-use cosmic::widget::vertical_space;
-use cosmic::{app, iced, iced_style::application, theme::Theme};
+use cosmic::{
+    app,
+    applet::{
+        cosmic_panel_config::{PanelAnchor, PanelSize},
+        Size,
+    },
+    iced,
+    iced::Length,
+    iced_style::application,
+    iced_widget::row,
+    theme::Theme,
+    widget::vertical_space,
+};
 use cosmic_config::{Config, CosmicConfigEntry};
 use freedesktop_desktop_entry::DesktopEntry;
 use std::{env, fs, process::Command};

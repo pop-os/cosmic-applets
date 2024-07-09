@@ -4,20 +4,24 @@
 use crate::config::{Config, CONFIG_VERSION};
 #[allow(unused_imports)]
 use crate::fl;
-use cosmic::app::Core;
-use cosmic::applet::{self};
-use cosmic::cosmic_config::{self, ConfigSet};
-use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
-use cosmic::iced::widget::{column, row};
-use cosmic::iced::window::Id;
 #[allow(unused_imports)]
 use cosmic::iced::{alignment, Alignment, Length};
-use cosmic::iced::{Command, Limits};
-use cosmic::iced_futures::Subscription;
-use cosmic::iced_runtime::core::window;
-use cosmic::iced_style::application;
-use cosmic::prelude::*;
-use cosmic::widget::{self, horizontal_space, vertical_space};
+use cosmic::{
+    app::Core,
+    applet::{self},
+    cosmic_config::{self, ConfigSet},
+    iced::{
+        wayland::popup::{destroy_popup, get_popup},
+        widget::{column, row},
+        window::Id,
+        Command, Limits,
+    },
+    iced_futures::Subscription,
+    iced_runtime::core::window,
+    iced_style::application,
+    prelude::*,
+    widget::{self, horizontal_space, vertical_space},
+};
 use cosmic_comp_config::CosmicCompConfig;
 use xkb_data::KeyboardLayouts;
 

@@ -1,30 +1,32 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
-use crate::backend::{power_profile_subscription, Power, PowerProfileRequest, PowerProfileUpdate};
-use crate::config;
-use crate::dgpu::{dgpu_subscription, Entry, GpuUpdate};
-use crate::fl;
-use cosmic::applet::cosmic_panel_config::PanelAnchor;
-use cosmic::applet::token::subscription::{
-    activation_token_subscription, TokenRequest, TokenUpdate,
+use crate::{
+    backend::{power_profile_subscription, Power, PowerProfileRequest, PowerProfileUpdate},
+    config,
+    dgpu::{dgpu_subscription, Entry, GpuUpdate},
+    fl,
 };
-use cosmic::applet::{menu_button, padded_control};
-use cosmic::cctk::sctk::reexports::calloop;
-use cosmic::iced::alignment::Horizontal;
-use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
-use cosmic::iced::{
-    widget::{column, container, row, slider, text},
-    window, Alignment, Length, Subscription,
+use cosmic::{
+    applet::{
+        cosmic_panel_config::PanelAnchor,
+        menu_button, padded_control,
+        token::subscription::{activation_token_subscription, TokenRequest, TokenUpdate},
+    },
+    cctk::sctk::reexports::calloop,
+    iced::{
+        alignment::Horizontal,
+        wayland::popup::{destroy_popup, get_popup},
+        widget::{column, container, row, slider, text},
+        window, Alignment, Length, Subscription,
+    },
+    iced_core::{alignment::Vertical, Background, Border, Color, Shadow},
+    iced_runtime::core::layout::Limits,
+    iced_style::application,
+    iced_widget::{Column, Row},
+    widget::{divider, horizontal_space, icon, scrollable, vertical_space},
+    Command, Element, Theme,
 };
-use cosmic::iced_core::alignment::Vertical;
-use cosmic::iced_core::{Background, Border, Color, Shadow};
-use cosmic::iced_runtime::core::layout::Limits;
-use cosmic::iced_style::application;
-use cosmic::iced_widget::{Column, Row};
-use cosmic::widget::{divider, horizontal_space, icon, scrollable, vertical_space};
-use cosmic::Command;
-use cosmic::{Element, Theme};
 use cosmic_settings_subscriptions::{
     settings_daemon,
     upower::{
@@ -36,9 +38,7 @@ use cosmic_settings_subscriptions::{
 };
 use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
 
-use std::collections::HashMap;
-use std::path::PathBuf;
-use std::time::Duration;
+use std::{collections::HashMap, path::PathBuf, time::Duration};
 use tokio::sync::mpsc::UnboundedSender;
 
 // XXX improve

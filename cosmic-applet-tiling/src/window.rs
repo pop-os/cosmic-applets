@@ -1,26 +1,32 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
-use crate::wayland::AppRequest;
-use crate::wayland_subscription::WorkspacesUpdate;
-use crate::{fl, wayland_subscription};
+use crate::{
+    fl, wayland::AppRequest, wayland_subscription, wayland_subscription::WorkspacesUpdate,
+};
 use cctk::sctk::reexports::calloop::channel::SyncSender;
-use cosmic::app::Core;
-use cosmic::applet::padded_control;
-use cosmic::cosmic_config::{Config, ConfigSet, CosmicConfigEntry};
-use cosmic::iced::wayland::popup::{destroy_popup, get_popup};
-use cosmic::iced::window::Id;
-use cosmic::iced::{Command, Length, Limits, Subscription};
-use cosmic::iced_style::application;
-use cosmic::iced_widget::{column, row};
-use cosmic::widget::segmented_button::{Entity, SingleSelectModel};
-use cosmic::widget::{container, divider, segmented_button, segmented_control, spin_button, text};
-use cosmic::{Element, Theme};
+use cosmic::{
+    app::Core,
+    applet::padded_control,
+    cosmic_config::{Config, ConfigSet, CosmicConfigEntry},
+    iced::{
+        wayland::popup::{destroy_popup, get_popup},
+        window::Id,
+        Command, Length, Limits, Subscription,
+    },
+    iced_style::application,
+    iced_widget::{column, row},
+    widget::{
+        container, divider, segmented_button,
+        segmented_button::{Entity, SingleSelectModel},
+        segmented_control, spin_button, text,
+    },
+    Element, Theme,
+};
 use cosmic_comp_config::{CosmicCompConfig, TileBehavior};
 use cosmic_protocols::workspace::v1::client::zcosmic_workspace_handle_v1::TilingState;
 use cosmic_time::{anim, chain, id, Timeline};
-use std::thread;
-use std::time::Instant;
+use std::{thread, time::Instant};
 use tracing::error;
 
 const ID: &str = "com.system76.CosmicAppletTiling";

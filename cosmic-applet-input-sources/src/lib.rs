@@ -3,8 +3,7 @@
 
 use crate::window::Window;
 use config::{Config, CONFIG_VERSION};
-use cosmic::cosmic_config;
-use cosmic::cosmic_config::CosmicConfigEntry;
+use cosmic::{cosmic_config, cosmic_config::CosmicConfigEntry};
 mod config;
 use cosmic_comp_config::CosmicCompConfig;
 use window::Flags;

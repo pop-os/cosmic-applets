@@ -30,8 +30,8 @@ use tracing::error;
 use wayland_client::{
     globals::registry_queue_init,
     protocol::wl_output::{self, WlOutput},
+    Connection, QueueHandle,
 };
-use wayland_client::{Connection, QueueHandle};
 
 #[derive(Debug, Clone)]
 pub enum AppRequest {
