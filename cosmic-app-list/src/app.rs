@@ -1481,8 +1481,8 @@ impl cosmic::Application for CosmicAppList {
                     if !toplevels.is_empty() {
                         let mut list_col = column![];
                         for (handle, info, _) in toplevels {
-                            let title = if info.title.len() > 20 {
-                                format!("{:.24}...", &info.title)
+                            let title = if info.title.len() > 32 {
+                                format!("{:.30}...", &info.title)
                             } else {
                                 info.title.clone()
                             };
@@ -1521,8 +1521,8 @@ impl cosmic::Application for CosmicAppList {
                             .align_items(Alignment::Center)
                             .spacing(8);
                         for (handle, info, img) in toplevels {
-                            let title = if info.title.len() > 26 {
-                                format!("{:.23}...", &info.title)
+                            let title = if info.title.len() > 18 {
+                                format!("{:.16}...", &info.title)
                             } else {
                                 info.title.clone()
                             };
@@ -1539,8 +1539,8 @@ impl cosmic::Application for CosmicAppList {
                         let mut content =
                             row![].padding(8).align_items(Alignment::Center).spacing(8);
                         for (handle, info, img) in toplevels {
-                            let title = if info.title.len() > 26 {
-                                format!("{:.23}...", &info.title)
+                            let title = if info.title.len() > 18 {
+                                format!("{:.16}...", &info.title)
                             } else {
                                 info.title.clone()
                             };
