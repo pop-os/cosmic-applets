@@ -685,14 +685,13 @@ impl cosmic::Application for CosmicBatteryApplet {
                         .into(),
                 );
             }
+            content.push(padded_control(divider::horizontal::default()).into());
         }
+
         content.push(
-            menu_button(row![text(fl!("power-settings"))
-                .size(14)
-                .width(Length::Fill)
-                .horizontal_alignment(Horizontal::Left)])
-            .on_press(Message::OpenSettings)
-            .into(),
+            menu_button(text(fl!("power-settings")).size(14).width(Length::Fill))
+                .on_press(Message::OpenSettings)
+                .into(),
         );
 
         self.core
