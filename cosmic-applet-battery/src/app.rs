@@ -686,6 +686,18 @@ impl cosmic::Application for CosmicBatteryApplet {
                 );
             }
         }
+        content.push(
+            menu_button(
+                row![
+                    text(fl!("power-settings"))
+                    .size(14)
+                    .width(Length::Fill)
+                    .horizontal_alignment(Horizontal::Left),
+                ]
+            )
+            .on_press(Message::OpenSettings)
+            .into(),
+        );
 
         self.core
             .applet
