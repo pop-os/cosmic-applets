@@ -1,12 +1,11 @@
 [Desktop Entry]
 Name=Workspaces Button
 Name[pt]=Botão de áreas de trabalho do painel Cosmic
-Comment[pt]=Applet para o painel Cosmic
 Type=Application
 Exec=cosmic-panel-button com.system76.CosmicWorkspaces
 Terminal=false
-Categories=Cosmic;Iced;
-Keywords=Cosmic;Iced;
+Categories=COSMIC;Iced;
+Keywords=COSMIC;Iced;
 # Translators: Do NOT translate or transliterate this text (this is an icon file name)!
 Icon=com.system76.CosmicPanelWorkspacesButton
 StartupNotify=true

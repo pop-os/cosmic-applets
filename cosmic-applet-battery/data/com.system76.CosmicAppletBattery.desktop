@@ -1,12 +1,11 @@
 [Desktop Entry]
-Name=Power and Battery
+Name=Power & Battery
 Name[ko]=코스믹 배터리 애플릿
-Comment[ko]=코스믹 패널용 애플릿
 Type=Application
 Exec=cosmic-applet-battery
 Terminal=false
-Categories=Cosmic;Iced;
-Keywords=Cosmic;Iced;
+Categories=COSMIC;Iced;
+Keywords=COSMIC;Iced;
 # Translators: Do NOT translate or transliterate this text (this is an icon file name)!
 Icon=com.system76.CosmicAppletBattery-symbolic
 StartupNotify=true

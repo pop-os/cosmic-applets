@@ -1,12 +1,11 @@
 [Desktop Entry]
 Name=Notifications Tray
 Name[pt]=Área de estado do applet Cosmic
-Comment[pt]=Applet para o painel Cosmic
 Type=Application
 Exec=cosmic-applet-status-area
 Terminal=false
-Categories=GNOME;GTK;
-Keywords=Gnome;GTK;
+Categories=COSMIC;Iced;
+Keywords=COSMIC;Iced;
 # Translators: Do NOT translate or transliterate this text (this is an icon file name)!
 Icon=com.system76.CosmicAppletStatusArea
 StartupNotify=true
