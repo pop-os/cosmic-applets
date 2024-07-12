@@ -24,8 +24,8 @@ use cosmic::{
     },
     cosmic_config::{Config, CosmicConfigEntry},
     desktop::IconSource,
-    iced,
     iced::{
+        self,
         event::listen_with,
         wayland::{
             actions::data_device::{DataFromMimeType, DndIcon},
@@ -113,13 +113,30 @@ impl AppletIconData {
     }
 }
 
-type DockItemId = u32;
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum DockItemId {
+    Item(u32),
+    ActiveOverflow,
+    FavoritesOverflow,
+}
+
+impl From<u32> for DockItemId {
+    fn from(id: u32) -> Self {
+        DockItemId::Item(id)
+    }
+}
+
+impl From<usize> for DockItemId {
+    fn from(id: usize) -> Self {
+        DockItemId::Item(id as u32)
+    }
+}
 
 #[derive(Debug, Clone)]
 struct DockItem {
     // ID used internally in the applet. Each dock item
     // have an unique id
-    id: DockItemId,
+    id: u32,
     toplevels: Vec<(ZcosmicToplevelHandleV1, ToplevelInfo, Option<WaylandImage>)>,
     // Information found in the .desktop file
     desktop_info: DesktopEntry<'static>,
@@ -148,12 +165,13 @@ impl DockItem {
     fn as_icon(
         &self,
         applet: &Context,
-        rectangle_tracker: Option<&RectangleTracker<u32>>,
+        rectangle_tracker: Option<&RectangleTracker<DockItemId>>,
         interaction_enabled: bool,
         dnd_source_enabled: bool,
         gpus: Option<&[Gpu]>,
         is_focused: bool,
         dot_border_radius: [f32; 4],
+        window_id: window::Id,
     ) -> Element<'_, Message> {
         let Self {
             toplevels,
@@ -258,14 +276,15 @@ impl DockItem {
                     } else if toplevels.len() == 1 {
                         toplevels.first().map(|t| Message::Toggle(t.0.clone()))
                     } else {
-                        Some(Message::TopLevelListPopup(*id))
+                        Some(Message::TopLevelListPopup((*id).into(), window_id))
                     })
                     .width(Length::Shrink)
                     .height(Length::Shrink),
             )
-            .on_right_release(Message::Popup(*id))
+            .on_right_release(Message::Popup((*id).into(), window_id))
             .on_middle_release({
-                launch_on_preferred_gpu(desktop_info, gpus).unwrap_or_else(|| Message::Popup(*id))
+                launch_on_preferred_gpu(desktop_info, gpus)
+                    .unwrap_or_else(|| Message::Popup((*id).into(), window_id))
             })
             .into()
         } else {
@@ -275,7 +294,7 @@ impl DockItem {
         let icon_button = if dnd_source_enabled && interaction_enabled {
             dnd_source(icon_button)
                 .drag_threshold(16.)
-                .on_drag(|_, _| Message::StartDrag(*id))
+                .on_drag(|_, _| Message::StartDrag((*id).into()))
                 .on_cancelled(Message::DragFinished)
                 .on_finished(Message::DragFinished)
         } else {
@@ -283,7 +302,7 @@ impl DockItem {
         };
 
         if let Some(tracker) = rectangle_tracker {
-            tracker.container(*id, icon_button).into()
+            tracker.container((*id).into(), icon_button).into()
         } else {
             icon_button.into()
         }
@@ -296,10 +315,18 @@ struct DndOffer {
     preview_index: usize,
 }
 
+#[derive(Debug, Clone)]
+pub struct Popup {
+    parent: window::Id,
+    id: window::Id,
+    dock_item: DockItem,
+    popup_type: PopupType,
+}
+
 #[derive(Clone, Default)]
 struct CosmicAppList {
     core: cosmic::app::Core,
-    popup: Option<(window::Id, DockItemId, PopupType)>,
+    popup: Option<Popup>,
     subscription_ctr: u32,
     item_ctr: u32,
     active_list: Vec<DockItem>,
@@ -316,9 +343,11 @@ struct CosmicAppList {
     active_workspaces: Vec<ZcosmicWorkspaceHandleV1>,
     output_list: HashMap<WlOutput, OutputInfo>,
     locales: Vec<String>,
+    overflow_favorites_popup: Option<window::Id>,
+    overflow_active_popup: Option<window::Id>,
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum PopupType {
     RightClickMenu,
     TopLevelList,
@@ -328,10 +357,10 @@ pub enum PopupType {
 #[derive(Debug, Clone)]
 enum Message {
     Wayland(WaylandUpdate),
-    PinApp(DockItemId),
-    UnpinApp(DockItemId),
-    Popup(DockItemId),
-    TopLevelListPopup(DockItemId),
+    PinApp(u32),
+    UnpinApp(u32),
+    Popup(u32, window::Id),
+    TopLevelListPopup(u32, window::Id),
     GpuRequest(Option<Vec<Gpu>>),
     CloseRequested(window::Id),
     ClosePopup,
@@ -343,7 +372,7 @@ enum Message {
     NewSeat(WlSeat),
     RemovedSeat(WlSeat),
     Rectangle(RectangleUpdate<DockItemId>),
-    StartDrag(DockItemId),
+    StartDrag(u32),
     DragFinished,
     DndEnter(f32, f32),
     DndExit,
@@ -354,6 +383,8 @@ enum Message {
     StopListeningForDnd,
     IncrementSubscriptionCtr,
     ConfigUpdated(AppListConfig),
+    OpenFavorites,
+    OpenActive,
 }
 
 fn index_in_list(
@@ -643,9 +674,23 @@ impl cosmic::Application for CosmicAppList {
         message: Self::Message,
     ) -> iced::Command<cosmic::app::Message<Self::Message>> {
         match message {
-            Message::Popup(id) => {
-                if let Some((popup_id, _toplevel, _)) = self.popup.take() {
-                    return destroy_popup(popup_id);
+            Message::Popup(id, parent_window_id) => {
+                if let Some(Popup {
+                    parent,
+                    id: popup_id,
+                    ..
+                }) = self.popup.take()
+                {
+                    if parent == parent_window_id {
+                        return destroy_popup(popup_id);
+                    } else {
+                        self.overflow_active_popup = None;
+                        self.overflow_favorites_popup = None;
+                        return Command::batch(vec![
+                            destroy_popup(popup_id),
+                            destroy_popup(parent),
+                        ]);
+                    }
                 }
                 if let Some(toplevel_group) = self
                     .active_list
@@ -653,16 +698,25 @@ impl cosmic::Application for CosmicAppList {
                     .chain(self.pinned_list.iter())
                     .find(|t| t.id == id)
                 {
-                    let rectangle = match self.rectangles.get(&toplevel_group.id) {
+                    let rectangle = match self.rectangles.get(&toplevel_group.id.into()) {
                         Some(r) => r,
-                        None => return Command::none(),
+                        None => {
+                            tracing::error!("No rectangle found for toplevel group");
+                            return Command::none();
+                        }
                     };
+                    dbg!("create popup2");
 
                     let new_id = window::Id::unique();
-                    self.popup = Some((new_id, toplevel_group.id, PopupType::RightClickMenu));
+                    self.popup = Some(Popup {
+                        parent: parent_window_id,
+                        id: new_id,
+                        dock_item: toplevel_group.clone(),
+                        popup_type: PopupType::RightClickMenu,
+                    });
 
                     let mut popup_settings = self.core.applet.get_popup_settings(
-                        window::Id::MAIN,
+                        parent_window_id,
                         new_id,
                         None,
                         None,
@@ -687,9 +741,23 @@ impl cosmic::Application for CosmicAppList {
                     return Command::batch([gpu_update, get_popup(popup_settings)]);
                 }
             }
-            Message::TopLevelListPopup(id) => {
-                if let Some((popup_id, _toplevel, _)) = self.popup.take() {
-                    return destroy_popup(popup_id);
+            Message::TopLevelListPopup(id, parent_window_id) => {
+                if let Some(Popup {
+                    parent,
+                    id: popup_id,
+                    ..
+                }) = self.popup.take()
+                {
+                    if parent == parent_window_id {
+                        return destroy_popup(popup_id);
+                    } else {
+                        self.overflow_active_popup = None;
+                        self.overflow_favorites_popup = None;
+                        return Command::batch(vec![
+                            destroy_popup(popup_id),
+                            destroy_popup(parent),
+                        ]);
+                    }
                 }
                 if let Some(toplevel_group) = self
                     .active_list
@@ -703,16 +771,21 @@ impl cosmic::Application for CosmicAppList {
                         }
                     }
 
-                    let rectangle = match self.rectangles.get(&toplevel_group.id) {
+                    let rectangle = match self.rectangles.get(&toplevel_group.id.into()) {
                         Some(r) => r,
                         None => return Command::none(),
                     };
 
                     let new_id = window::Id::unique();
-                    self.popup = Some((new_id, toplevel_group.id, PopupType::TopLevelList));
+                    self.popup = Some(Popup {
+                        parent: parent_window_id,
+                        id: new_id,
+                        dock_item: toplevel_group.clone(),
+                        popup_type: PopupType::TopLevelList,
+                    });
 
                     let mut popup_settings = self.core.applet.get_popup_settings(
-                        window::Id::MAIN,
+                        parent_window_id,
                         new_id,
                         None,
                         None,
@@ -764,7 +837,7 @@ impl cosmic::Application for CosmicAppList {
                     );
                     self.pinned_list.push(entry);
                 }
-                if let Some((popup_id, _toplevel, _)) = self.popup.take() {
+                if let Some(Popup { id: popup_id, .. }) = self.popup.take() {
                     return destroy_popup(popup_id);
                 }
             }
@@ -777,12 +850,12 @@ impl cosmic::Application for CosmicAppList {
                         &Config::new(APP_ID, AppListConfig::VERSION).unwrap(),
                     );
 
-                    self.rectangles.remove(&entry.id);
+                    self.rectangles.remove(&entry.id.into());
                     if !entry.toplevels.is_empty() {
                         self.active_list.push(entry);
                     }
                 }
-                if let Some((popup_id, _toplevel, _)) = self.popup.take() {
+                if let Some(Popup { id: popup_id, .. }) = self.popup.take() {
                     return destroy_popup(popup_id);
                 }
             }
@@ -791,7 +864,7 @@ impl cosmic::Application for CosmicAppList {
                     let _ = tx.send(WaylandRequest::Toplevel(ToplevelRequest::Activate(handle)));
                 }
                 if let Some(p) = self.popup.take() {
-                    return destroy_popup(p.0);
+                    return destroy_popup(p.id);
                 }
             }
             Message::Toggle(handle) => {
@@ -805,7 +878,7 @@ impl cosmic::Application for CosmicAppList {
                     ));
                 }
                 if let Some(p) = self.popup.take() {
-                    return destroy_popup(p.0);
+                    return destroy_popup(p.id);
                 }
             }
             Message::Quit(id) => {
@@ -823,7 +896,7 @@ impl cosmic::Application for CosmicAppList {
                         }
                     }
                 }
-                if let Some((popup_id, _toplevel, _)) = self.popup.take() {
+                if let Some(Popup { id: popup_id, .. }) = self.popup.take() {
                     return destroy_popup(popup_id);
                 }
             }
@@ -1155,7 +1228,7 @@ impl cosmic::Application for CosmicAppList {
             Message::Ignore => {}
             Message::ClosePopup => {
                 if let Some(p) = self.popup.take() {
-                    return destroy_popup(p.0);
+                    return destroy_popup(p.id);
                 }
             }
             Message::StartListeningForDnd => {
@@ -1205,12 +1278,86 @@ impl cosmic::Application for CosmicAppList {
                         .collect();
             }
             Message::CloseRequested(id) => {
-                if Some(id) == self.popup.as_ref().map(|p| p.0) {
+                if Some(id) == self.popup.as_ref().map(|p| p.id) {
                     self.popup = None;
+                }
+                if self.overflow_active_popup.is_some_and(|p| p == id) {
+                    self.overflow_active_popup = None;
+                }
+                if self.overflow_favorites_popup.is_some_and(|p| p == id) {
+                    self.overflow_favorites_popup = None;
                 }
             }
             Message::GpuRequest(gpus) => {
                 self.gpus = gpus;
+            }
+            Message::OpenActive => {
+                let create_new = self.overflow_active_popup.is_none();
+                let mut cmds = vec![self.close_popups()];
+
+                // create a popup with the active list
+                if create_new {
+                    let new_id = window::Id::unique();
+                    self.overflow_active_popup = Some(new_id);
+                    let rectangle = self.rectangles.get(&DockItemId::ActiveOverflow);
+                    let mut popup_settings = self.core.applet.get_popup_settings(
+                        window::Id::MAIN,
+                        new_id,
+                        None,
+                        None,
+                        None,
+                    );
+                    if let Some(iced::Rectangle {
+                        x,
+                        y,
+                        width,
+                        height,
+                    }) = rectangle
+                    {
+                        popup_settings.positioner.anchor_rect = iced::Rectangle::<i32> {
+                            x: *x as i32,
+                            y: *y as i32,
+                            width: *width as i32,
+                            height: *height as i32,
+                        };
+                    }
+                    cmds.push(get_popup(popup_settings));
+                }
+                return Command::batch(cmds);
+            }
+            Message::OpenFavorites => {
+                let create_new = self.overflow_favorites_popup.is_none();
+                let mut cmds = vec![self.close_popups()];
+
+                // create a popup with the favorites list
+                if create_new {
+                    let new_id = window::Id::unique();
+                    self.overflow_favorites_popup = Some(new_id);
+                    let rectangle = self.rectangles.get(&DockItemId::FavoritesOverflow);
+                    let mut popup_settings = self.core.applet.get_popup_settings(
+                        window::Id::MAIN,
+                        new_id,
+                        None,
+                        None,
+                        None,
+                    );
+                    if let Some(iced::Rectangle {
+                        x,
+                        y,
+                        width,
+                        height,
+                    }) = rectangle
+                    {
+                        popup_settings.positioner.anchor_rect = iced::Rectangle::<i32> {
+                            x: *x as i32,
+                            y: *y as i32,
+                            width: *width as i32,
+                            height: *height as i32,
+                        };
+                    }
+                    cmds.push(get_popup(popup_settings));
+                }
+                return Command::batch(cmds);
             }
         }
 
@@ -1226,9 +1373,29 @@ impl cosmic::Application for CosmicAppList {
             PanelAnchor::Top | PanelAnchor::Bottom => true,
             PanelAnchor::Left | PanelAnchor::Right => false,
         };
-        let mut favorites: Vec<_> = self
-            .pinned_list
+        let (favorite_popup_cutoff, active_popup_cutoff) = self.panel_overflow_lengths();
+        let mut favorite_to_remove = if let Some(cutoff) = favorite_popup_cutoff {
+            if cutoff < self.pinned_list.len() {
+                self.pinned_list.len() - cutoff + 1
+            } else {
+                0
+            }
+        } else {
+            0
+        };
+        let favorites: Vec<_> = (&mut self.pinned_list.iter().rev())
+            .filter(|f| {
+                if favorite_to_remove > 0 && f.toplevels.is_empty() {
+                    favorite_to_remove -= 1;
+                    false
+                } else {
+                    true
+                }
+            })
+            .collect();
+        let mut favorites: Vec<_> = favorites[favorite_to_remove..]
             .iter()
+            .rev()
             .map(|dock_item| {
                 dock_item.as_icon(
                     &self.core.applet,
@@ -1241,9 +1408,33 @@ impl cosmic::Application for CosmicAppList {
                         .iter()
                         .any(|y| focused_item.contains(&y.0)),
                     theme.cosmic().radius_xs(),
+                    window::Id::MAIN,
                 )
             })
             .collect();
+
+        if favorite_popup_cutoff.is_some() {
+            // button to show more favorites
+            let icon = match self.core.applet.anchor {
+                PanelAnchor::Bottom => "go-up-symbolic",
+                PanelAnchor::Left => "go-next-symbolic",
+                PanelAnchor::Right => "go-previous-symbolic",
+                PanelAnchor::Top => "go-down-symbolic",
+            };
+            let btn = self
+                .core
+                .applet
+                .icon_button(icon)
+                .on_press(Message::OpenFavorites);
+            let btn: Element<_> = if let Some(rectangle_tracker) = self.rectangle_tracker.as_ref() {
+                rectangle_tracker
+                    .container(DockItemId::FavoritesOverflow, btn)
+                    .into()
+            } else {
+                btn.into()
+            };
+            favorites.push(btn);
+        }
 
         if let Some((item, index)) = self
             .dnd_offer
@@ -1260,6 +1451,7 @@ impl cosmic::Application for CosmicAppList {
                     self.gpus.as_deref(),
                     item.toplevels.iter().any(|y| focused_item.contains(&y.0)),
                     dot_radius,
+                    window::Id::MAIN,
                 ),
             );
         } else if self.is_listening_for_dnd && self.pinned_list.is_empty() {
@@ -1274,8 +1466,15 @@ impl cosmic::Application for CosmicAppList {
             );
         }
 
-        let mut active: Vec<_> = self
-            .active_list
+        let mut active: Vec<_> = self.active_list[..active_popup_cutoff
+            .map(|n| {
+                if n < self.active_list.len() {
+                    n.saturating_sub(1)
+                } else {
+                    n
+                }
+            })
+            .unwrap_or(self.active_list.len())]
             .iter()
             .map(|dock_item| {
                 dock_item.as_icon(
@@ -1289,9 +1488,34 @@ impl cosmic::Application for CosmicAppList {
                         .iter()
                         .any(|y| focused_item.contains(&y.0)),
                     dot_radius,
+                    window::Id::MAIN,
                 )
             })
             .collect();
+
+        if active_popup_cutoff.is_some_and(|n| n < self.active_list.len()) {
+            // button to show more active
+            let icon = match self.core.applet.anchor {
+                PanelAnchor::Bottom => "go-up-symbolic",
+                PanelAnchor::Left => "go-next-symbolic",
+                PanelAnchor::Right => "go-previous-symbolic",
+                PanelAnchor::Top => "go-down-symbolic",
+            };
+            let btn = self
+                .core
+                .applet
+                .icon_button(icon)
+                .on_press(Message::OpenActive);
+            let btn: Element<_> = if let Some(rectangle_tracker) = self.rectangle_tracker.as_ref() {
+                rectangle_tracker
+                    .container(DockItemId::ActiveOverflow, btn)
+                    .into()
+            } else {
+                btn.into()
+            };
+            active.push(btn);
+        }
+
         let window_size = self.core.applet.configure.as_ref();
         let max_num = if self.core.applet.is_horizontal() {
             let suggested_width = self.core.applet.suggested_size(false).0
@@ -1412,12 +1636,18 @@ impl cosmic::Application for CosmicAppList {
     }
 
     fn view_window(&self, id: window::Id) -> Element<Message> {
+        let theme = self.core.system_theme();
+
         if let Some((_, item, _)) = self.dnd_source.as_ref().filter(|s| s.0 == id) {
             IconSource::from_unknown(item.desktop_info.icon().unwrap_or_default())
                 .as_cosmic_icon()
                 .size(self.core.applet.suggested_size(false).0)
                 .into()
-        } else if let Some((_popup_id, id, popup_type)) = self.popup.as_ref().filter(|p| id == p.0)
+        } else if let Some(Popup {
+            dock_item: DockItem { id, .. },
+            popup_type,
+            ..
+        }) = self.popup.as_ref().filter(|p| id == p.id)
         {
             let (
                 DockItem {
@@ -1599,6 +1829,144 @@ impl cosmic::Application for CosmicAppList {
                     }
                 },
             }
+        } else if self
+            .overflow_active_popup
+            .as_ref()
+            .is_some_and(|overflow_id| overflow_id == &id)
+        {
+            let (_favorite_popup_cutoff, active_popup_cutoff) = self.panel_overflow_lengths();
+
+            let focused_item = self.currently_active_toplevel();
+            let dot_radius = theme.cosmic().radius_xs();
+            // show the overflow popup for active list
+            let active: Vec<_> = self.active_list[active_popup_cutoff
+                .map(|n| {
+                    if n < self.active_list.len() {
+                        n.saturating_sub(1)
+                    } else {
+                        n - 1
+                    }
+                })
+                .unwrap_or(self.active_list.len() - 1)..]
+                .iter()
+                .map(|dock_item| {
+                    dock_item.as_icon(
+                        &self.core.applet,
+                        self.rectangle_tracker.as_ref(),
+                        self.popup.is_none(),
+                        self.config.enable_drag_source,
+                        self.gpus.as_deref(),
+                        dock_item
+                            .toplevels
+                            .iter()
+                            .any(|y| focused_item.contains(&y.0)),
+                        dot_radius,
+                        id,
+                    )
+                })
+                .collect();
+            let content = match &self.core.applet.anchor {
+                PanelAnchor::Left | PanelAnchor::Right => container(
+                    Column::with_children(active)
+                        .spacing(4.0)
+                        .align_items(Alignment::Center)
+                        .width(Length::Shrink)
+                        .height(Length::Shrink),
+                ),
+                PanelAnchor::Top | PanelAnchor::Bottom => container(
+                    Row::with_children(active)
+                        .spacing(4.0)
+                        .align_items(Alignment::Center)
+                        .width(Length::Shrink)
+                        .height(Length::Shrink),
+                ),
+            };
+            // send clear popup on press content if there is an active popup
+            let content: Element<_> = if self.popup.is_some() {
+                mouse_area(content)
+                    .on_right_release(Message::ClosePopup)
+                    .on_press(Message::ClosePopup)
+                    .into()
+            } else {
+                content.into()
+            };
+            self.core.applet.popup_container(content).into()
+        } else if self
+            .overflow_favorites_popup
+            .as_ref()
+            .is_some_and(|popup_id| popup_id == &id)
+        {
+            let (favorite_popup_cutoff, _active_popup_cutoff) = self.panel_overflow_lengths();
+
+            let focused_item = self.currently_active_toplevel();
+            let dot_radius = theme.cosmic().radius_xs();
+            // show the overflow popup for favorites list
+            let mut favorite_to_remove = if let Some(cutoff) = favorite_popup_cutoff {
+                if cutoff < self.pinned_list.len() {
+                    self.pinned_list.len() - cutoff + 1
+                } else {
+                    0
+                }
+            } else {
+                0
+            };
+            let mut favorites_extra = Vec::with_capacity(favorite_to_remove);
+            let mut favorites: Vec<_> = (&mut self.pinned_list.iter().rev())
+                .filter(|f| {
+                    if favorite_to_remove > 0 && f.toplevels.is_empty() {
+                        favorite_to_remove -= 1;
+                        true
+                    } else {
+                        favorites_extra.push(*f);
+                        false
+                    }
+                })
+                .collect();
+            favorites.extend(favorites_extra[..favorite_to_remove].into_iter().cloned());
+            let favorites: Vec<_> = favorites
+                .iter()
+                .rev()
+                .map(|dock_item| {
+                    dock_item.as_icon(
+                        &self.core.applet,
+                        self.rectangle_tracker.as_ref(),
+                        self.popup.is_none(),
+                        self.config.enable_drag_source,
+                        self.gpus.as_deref(),
+                        dock_item
+                            .toplevels
+                            .iter()
+                            .any(|y| focused_item.contains(&y.0)),
+                        dot_radius,
+                        id,
+                    )
+                })
+                .collect();
+            let content = match &self.core.applet.anchor {
+                PanelAnchor::Left | PanelAnchor::Right => container(
+                    Column::with_children(favorites)
+                        .spacing(4.0)
+                        .align_items(Alignment::Center)
+                        .width(Length::Shrink)
+                        .height(Length::Shrink),
+                ),
+                PanelAnchor::Top | PanelAnchor::Bottom => container(
+                    Row::with_children(favorites)
+                        .spacing(4.0)
+                        .align_items(Alignment::Center)
+                        .width(Length::Shrink)
+                        .height(Length::Shrink),
+                ),
+            };
+            let content: Element<_> = if self.popup.is_some() {
+                mouse_area(content)
+                    .on_right_release(Message::ClosePopup)
+                    .on_press(Message::ClosePopup)
+                    .into()
+            } else {
+                content.into()
+            };
+            self.core.applet.popup_container(content).into()
         } else {
             let suggested = self.core.applet.suggested_size(false);
             iced::widget::row!()
@@ -1665,6 +2033,84 @@ impl cosmic::Application for CosmicAppList {
 }
 
 impl CosmicAppList {
+    /// Close any open popups.
+    fn close_popups(&mut self) -> Command<cosmic::app::Message<Message>> {
+        let mut commands = Vec::new();
+        if let Some(popup) = self.popup.take() {
+            commands.push(destroy_popup(popup.id));
+        }
+        if let Some(popup) = self.overflow_active_popup.take() {
+            commands.push(destroy_popup(popup));
+        }
+        if let Some(popup) = self.overflow_favorites_popup.take() {
+            commands.push(destroy_popup(popup));
+        }
+        Command::batch(commands)
+    }
+    /// Returns the length of the group in the favorite list after which items are displayed in a popup.
+    /// Shrink the favorite list until it only has active windows, or until it fits in the length provided.
+    fn panel_overflow_lengths(&self) -> (Option<usize>, Option<usize>) {
+        let mut favorite_index;
+        let mut active_index = None;
+        let Some(max_major_axis_len) = self.core.applet.configure.as_ref().and_then(|c| {
+            // if we have a configure for width and height, we're in a overflow popup
+            match self.core.applet.anchor {
+                PanelAnchor::Top | PanelAnchor::Bottom => c.new_size.0,
+                PanelAnchor::Left | PanelAnchor::Right => c.new_size.1,
+            }
+        }) else {
+            return (None, active_index);
+        };
+        let mut max_major_axis_len = max_major_axis_len.get();
+        // tracing::error!("{} {}", max_major_axis_len, self.pinned_list.len());
+        // subtract the divider width
+        max_major_axis_len -= 1;
+        let applet_icon = AppletIconData::new(&self.core.applet);
+
+        let button_total_size = self.core.applet.suggested_size(true).0
+            + self.core.applet.suggested_padding(true) * 2
+            + applet_icon.icon_spacing as u16;
+
+        let favorite_active_cnt = self
+            .pinned_list
+            .iter()
+            .filter(|t| !t.toplevels.is_empty())
+            .count();
+
+        // initial calculation of favorite_index
+        let btn_count = max_major_axis_len / button_total_size as u32;
+        if btn_count >= self.pinned_list.len() as u32 + self.active_list.len() as u32 {
+            return (None, active_index);
+        } else {
+            favorite_index = (btn_count as usize).min(favorite_active_cnt).max(2);
+        }
+        // tracing::error!(
+        //     "{}, {}, {}, {}",
+        //     btn_count,
+        //     button_total_size,
+        //     favorite_active_cnt,
+        //     favorite_index
+        // );
+        // calculation of active_index based on favorite_index if there is still not enough space
+        let active_index_max = (btn_count as i32)
+            - (self.pinned_list.len() as i32).saturating_sub(favorite_index as i32);
+        if active_index_max >= self.active_list.len() as i32 {
+            active_index = Some(self.active_list.len());
+        } else {
+            active_index = Some((active_index_max.max(2) as usize).min(self.active_list.len()));
+        }
+
+        // final calculation of favorite_index if there is still not enough space
+        if let Some(active_index) = active_index {
+            let favorite_index_max = (btn_count as i32) - active_index as i32;
+            favorite_index = favorite_index_max.max(2) as usize;
+        } else {
+            favorite_index = (btn_count as usize).min(self.pinned_list.len());
+        }
+        // tracing::error!("{} {} {:?}", btn_count, favorite_index, active_index);
+        return (Some(favorite_index), active_index);
+    }
+
     fn currently_active_toplevel(&self) -> Vec<ZcosmicToplevelHandleV1> {
         if self.active_workspaces.is_empty() {
             return Vec::new();
