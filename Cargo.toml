@@ -26,11 +26,18 @@ cctk = { git = "https://github.com/pop-os/cosmic-protocols", package = "cosmic-c
 cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols", default-features = false, features = [
     "client",
 ], rev = "c8d3a1c" }
-cosmic-settings-subscriptions = { git = "https://github.com/pop-os/cosmic-settings-subscriptions" }
-cosmic-time = { git = "https://github.com/pop-os/cosmic-time", default-features = false, features = [
+# cosmic-settings-subscriptions = { git = "https://github.com/pop-os/cosmic-settings-subscriptions" }
+cosmic-settings-subscriptions = { path = "../cosmic-settings-subscriptions" }
+# cosmic-time = { git = "https://github.com/pop-os/cosmic-time", default-features = false, features = [
+#     "libcosmic",
+#     "once_cell",
+# ] }
+cosmic-time = { path = "../cosmic-time", default-features = false, features = [
     "libcosmic",
     "once_cell",
 ] }
+
+
 futures = "0.3"
 futures-util = "0.3"
 i18n-embed = { version = "0.14.1", features = [
@@ -38,7 +45,7 @@ i18n-embed = { version = "0.14.1", features = [
     "desktop-requester",
 ] }
 i18n-embed-fl = "0.8"
-libcosmic = { git = "https://github.com/pop-os/libcosmic", default-features = false, features = [
+libcosmic = { path = "../libcosmic", features = [
     "applet",
     "applet-token",
     "tokio",
@@ -76,3 +83,8 @@ sctk = { git = "https://github.com/smithay/client-toolkit//", package = "smithay
 libcosmic = { path = "../libcosmic" }
 cosmic-config = { path = "../libcosmic/cosmic-config" }
 cosmic-theme = { path = "../libcosmic/cosmic-theme" }
+iced = { path = "../libcosmic/iced" }
+cosmic-time = { path = "../cosmic-time", default-features = false, features = [
+    "libcosmic",
+    "once_cell",
+] }
