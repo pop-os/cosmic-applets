@@ -13,5 +13,5 @@ X-CosmicApplet=true
 X-MinimizeApplet=5
 # Indicate that the applet should be shrunk if the panel is too small to fit it
 X-OverflowPriority=100
-X-OverflowMinSize=5
+X-OverflowMinSize=4
 X-HostWaylandDisplay=true
