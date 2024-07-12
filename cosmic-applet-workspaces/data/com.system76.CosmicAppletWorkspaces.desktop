@@ -10,3 +10,5 @@ StartupNotify=true
 NoDisplay=true
 X-CosmicApplet=true
 X-HostWaylandDisplay=true
+X-OverflowPriority=5
+X-OverflowMinSize=4

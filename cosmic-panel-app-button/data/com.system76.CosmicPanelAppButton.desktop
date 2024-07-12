@@ -15,3 +15,4 @@ Icon=com.system76.CosmicPanelAppButton
 StartupNotify=true
 NoDisplay=true
 X-CosmicApplet=true
+X-OverflowPriority=10

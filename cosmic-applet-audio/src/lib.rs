@@ -6,26 +6,6 @@ mod mouse_area;
 
 use crate::{localize::localize, pulse::DeviceInfo};
 use config::AudioAppletConfig;
-use cosmic::cctk::sctk::reexports::calloop;
-use cosmic::cctk::sctk::reexports::protocols::xdg::shell::client::xdg_positioner::Anchor;
-use cosmic::cosmic_config::CosmicConfigEntry;
-use cosmic::iced::widget;
-use cosmic::iced::Limits;
-use cosmic::iced::Point;
-use cosmic::iced::Rectangle;
-use cosmic::iced::{
-    self,
-    widget::{column, row, slider, text},
-    window, Alignment, Length, Size, Subscription,
-};
-use cosmic::iced_runtime::core::alignment::Horizontal;
-use cosmic::iced_style::application;
-use cosmic::widget::button;
-use cosmic::widget::horizontal_space;
-use cosmic::widget::Column;
-use cosmic::widget::Row;
-use cosmic::widget::{divider, icon};
-use cosmic::Renderer;
 use cosmic::{
     app::Command,
     applet::{
@@ -33,19 +13,18 @@ use cosmic::{
         menu_button, menu_control_padding, padded_control,
         token::subscription::{activation_token_subscription, TokenRequest, TokenUpdate},
     },
-    cctk::sctk::reexports::calloop,
+    cctk::sctk::reexports::{calloop, protocols::xdg::shell::client::xdg_positioner::Anchor},
     cosmic_config::CosmicConfigEntry,
     iced::{
-        self, widget,
-        widget::{column, row, slider, text},
-        window, Alignment, Length, Limits, Subscription,
+        self,
+        widget::{self, column, row, slider, text},
+        window, Alignment, Length, Limits, Rectangle, Subscription,
     },
     iced_runtime::core::alignment::Horizontal,
     iced_style::application,
     widget::{button, divider, horizontal_space, icon, Column, Row},
     Element, Renderer, Theme,
 };
-use cosmic::{Element, Theme};
 use cosmic_settings_subscriptions::pulse as sub_pulse;
 use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
 use iced::{
@@ -708,7 +687,13 @@ impl cosmic::Application for Audio {
                 .clamp(0.0, 100.0);
             Message::SetOutputVolume(new_volume)
         });
-        if let Some(playback_buttons) = self.playback_buttons() {
+        let playback_buttons = (!self.core.applet.configure.as_ref().is_some_and(|c| {
+            // if we have a configure for width and height, we're in a overflow popup
+            c.new_size.0.is_some() && c.new_size.1.is_some()
+        }))
+        .then(|| self.playback_buttons());
+
+        if let Some(Some(playback_buttons)) = playback_buttons {
             match self.core.applet.anchor {
                 PanelAnchor::Left | PanelAnchor::Right => {
                     Column::with_children(vec![playback_buttons, btn.into()])

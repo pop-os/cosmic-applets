@@ -47,6 +47,33 @@ struct IcedWorkspacesApplet {
     layout: Layout,
 }
 
+impl IcedWorkspacesApplet {
+    /// returns the index of the workspace button after which which must be moved to a popup
+    /// if it exists.
+    fn popup_index(&self) -> Option<usize> {
+        let mut index = None;
+        let Some(max_major_axis_len) = self.core.applet.configure.as_ref().and_then(|c| {
+            // if we have a configure for width and height, we're in a overflow popup
+            match self.core.applet.anchor {
+                PanelAnchor::Top | PanelAnchor::Bottom => c.new_size.0,
+                PanelAnchor::Left | PanelAnchor::Right => c.new_size.1,
+            }
+        }) else {
+            return index;
+        };
+        let button_total_size = self.core.applet.suggested_size(true).0
+            + self.core.applet.suggested_padding(true) * 2
+            + 4;
+        let btn_count = max_major_axis_len.get() / button_total_size as u32;
+        if btn_count >= self.workspaces.len() as u32 {
+            index = None;
+        } else {
+            index = Some((btn_count as usize).min(self.workspaces.len()));
+        }
+        index
+    }
+}
+
 #[derive(Debug, Clone)]
 enum Message {
     WorkspaceUpdate(WorkspacesUpdate),
@@ -146,7 +173,9 @@ impl cosmic::Application for IcedWorkspacesApplet {
         let suggested_total =
             self.core.applet.suggested_size(true).0 + self.core.applet.suggested_padding(true) * 2;
         let suggested_window_size = self.core.applet.suggested_window_size();
-        let buttons = self.workspaces.iter().filter_map(|w| {
+        let popup_index = self.popup_index().unwrap_or(self.workspaces.len());
+
+        let buttons = self.workspaces[..popup_index].iter().filter_map(|w| {
             let content = self.core.applet.text(w.0.clone()).font(FONT_BOLD);
 
             let (width, height) = if self.core.applet.is_horizontal() {
@@ -245,6 +274,8 @@ impl cosmic::Application for IcedWorkspacesApplet {
                 .into(),
             )
         });
+        // TODO if there is a popup_index, create a button with a popup for the remaining workspaces
+        // Should it appear on hover or on click?
         let layout_section: Element<_> = match self.layout {
             Layout::Row => row(buttons).spacing(4).into(),
             Layout::Column => column(buttons).spacing(4).into(),
