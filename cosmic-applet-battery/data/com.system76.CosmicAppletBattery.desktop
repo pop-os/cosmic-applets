@@ -12,3 +12,4 @@ StartupNotify=true
 NoDisplay=true
 X-CosmicApplet=true
 X-CosmicHoverPopup=Start
+X-OverflowPriority=10

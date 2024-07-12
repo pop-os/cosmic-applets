@@ -658,7 +658,12 @@ impl cosmic::Application for CosmicBatteryApplet {
                 .into(),
             );
 
-            if gpu.toggled {
+            if gpu.toggled
+                && !self.core.applet.configure.as_ref().is_some_and(|c| {
+                    // if we have a configure for width and height, we're in a overflow popup
+                    c.new_size.0.is_some() && c.new_size.1.is_some()
+                })
+            {
                 let app_list = gpu.app_list.as_ref().unwrap();
                 let mut list_apps = Vec::with_capacity(app_list.len());
                 for app in app_list {

@@ -13,3 +13,4 @@ NoDisplay=true
 X-CosmicApplet=true
 # Indicates that the auto-hover click should go to the "end" of the hover popup
 X-CosmicHoverPopup=End
+X-OverflowPriority=10

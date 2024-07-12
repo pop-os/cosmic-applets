@@ -11,3 +11,4 @@ NoDisplay=true
 X-CosmicApplet=true
 X-NotificationsApplet=true
 X-CosmicHoverPopup=Auto
+X-OverflowPriority=10
