@@ -15,7 +15,14 @@ use cosmic::{
         sctk::reexports::calloop, toplevel_info::ToplevelInfo,
     },
     desktop::DesktopEntryData,
-    iced::{widget::text, Length, Subscription},
+    iced::{
+        self,
+        wayland::popup::{destroy_popup, get_popup},
+        widget::text,
+        window::{self},
+        Length, Subscription,
+    },
+    widget::mouse_area,
 };
 
 use cosmic::{
@@ -43,12 +50,41 @@ struct Minimize {
         Option<WaylandImage>,
     )>,
     tx: Option<calloop::channel::Sender<WaylandRequest>>,
+    overflow_popup: Option<window::Id>,
+}
+
+impl Minimize {
+    fn max_icon_count(&self) -> Option<usize> {
+        let mut index = None;
+        let Some(max_major_axis_len) = self.core.applet.configure.as_ref().and_then(|c| {
+            // if we have a configure for width and height, we're in a overflow popup
+            match self.core.applet.anchor {
+                PanelAnchor::Top | PanelAnchor::Bottom => c.new_size.0,
+                PanelAnchor::Left | PanelAnchor::Right => c.new_size.1,
+            }
+        }) else {
+            return index;
+        };
+        let button_total_size = self.core.applet.suggested_size(true).0
+            + self.core.applet.suggested_padding(true) * 2
+            + 4;
+        let btn_count = max_major_axis_len.get() / button_total_size as u32;
+        if btn_count >= self.apps.len() as u32 {
+            index = None;
+        } else {
+            index = Some((btn_count as usize).max(2).min(self.apps.len()));
+        }
+        index
+    }
 }
 
 #[derive(Debug, Clone)]
 enum Message {
     Wayland(WaylandUpdate),
     Activate(ZcosmicToplevelHandleV1),
+    Closed(window::Id),
+    OpenOverflowPopup,
+    CloseOverflowPopup,
 }
 
 impl cosmic::Application for Minimize {
@@ -122,6 +158,50 @@ impl cosmic::Application for Minimize {
                     let _ = tx.send(WaylandRequest::Toplevel(ToplevelRequest::Activate(handle)));
                 }
             }
+            Message::Closed(id) => {
+                if self.overflow_popup.is_some_and(|i| i == id) {
+                    self.overflow_popup = None;
+                }
+            }
+            Message::OpenOverflowPopup => {
+                if let Some(id) = self.overflow_popup.take() {
+                    return destroy_popup(id);
+                } else {
+                    let new_id = window::Id::unique();
+                    let pos = self.max_icon_count().unwrap_or_default();
+
+                    self.overflow_popup = Some(new_id);
+                    let icon_size = self.core.applet.suggested_size(true).0 as u32
+                        + 2 * self.core.applet.suggested_padding(true) as u32;
+                    let spacing = self.core.system_theme().cosmic().space_xxs() as u32;
+                    let major_axis_len = (icon_size + spacing) * (pos.saturating_sub(1) as u32);
+                    let rectangle = match self.core.applet.anchor {
+                        PanelAnchor::Top | PanelAnchor::Bottom => iced::Rectangle {
+                            x: major_axis_len as i32,
+                            y: 0,
+                            width: icon_size as i32,
+                            height: icon_size as i32,
+                        },
+                        PanelAnchor::Left | PanelAnchor::Right => iced::Rectangle {
+                            x: 0,
+                            y: major_axis_len as i32,
+                            width: icon_size as i32,
+                            height: icon_size as i32,
+                        },
+                    };
+                    let mut popup_settings = self.core.applet.get_popup_settings(
+                        window::Id::MAIN,
+                        new_id,
+                        None,
+                        None,
+                        None,
+                    );
+                    popup_settings.positioner.anchor_rect = rectangle;
+
+                    return get_popup(popup_settings);
+                }
+            }
+            Message::CloseOverflowPopup => todo!(),
         };
         Command::none()
     }
@@ -131,39 +211,68 @@ impl cosmic::Application for Minimize {
     }
 
     fn view(&self) -> Element<Message> {
+        let max_icon_count = self
+            .max_icon_count()
+            .map(|n| {
+                if n < self.apps.len() {
+                    n - 1
+                } else {
+                    self.apps.len()
+                }
+            })
+            .unwrap_or(self.apps.len());
         let (width, _) = self.core.applet.suggested_size(false);
         let padding = self.core.applet.suggested_padding(false);
         let theme = self.core.system_theme().cosmic();
         let space_xxs = theme.space_xxs();
-        let icon_buttons = self.apps.iter().map(|(handle, _, data, img)| {
-            tooltip(
-                Element::from(crate::window_image::WindowImage::new(
-                    img.clone(),
-                    &data.icon,
-                    width as f32,
-                    Message::Activate(handle.clone()),
-                    padding,
-                )),
-                data.name.clone(),
-                // tooltip::Position::FollowCursor,
-                // FIXME tooltip fails to appear when created as indicated in design
-                // maybe it should be a subsurface
-                match self.core.applet.anchor {
-                    PanelAnchor::Left => tooltip::Position::Right,
-                    PanelAnchor::Right => tooltip::Position::Left,
-                    PanelAnchor::Top => tooltip::Position::Bottom,
-                    PanelAnchor::Bottom => tooltip::Position::Top,
-                },
-            )
-            .snap_within_viewport(false)
-            .text_shaping(text::Shaping::Advanced)
-            .into()
-        });
+        let icon_buttons = self.apps[..max_icon_count]
+            .iter()
+            .map(|(handle, _, data, img)| {
+                tooltip(
+                    Element::from(crate::window_image::WindowImage::new(
+                        img.clone(),
+                        &data.icon,
+                        width as f32,
+                        Message::Activate(handle.clone()),
+                        padding,
+                    )),
+                    data.name.clone(),
+                    // tooltip::Position::FollowCursor,
+                    // FIXME tooltip fails to appear when created as indicated in design
+                    // maybe it should be a subsurface
+                    match self.core.applet.anchor {
+                        PanelAnchor::Left => tooltip::Position::Right,
+                        PanelAnchor::Right => tooltip::Position::Left,
+                        PanelAnchor::Top => tooltip::Position::Bottom,
+                        PanelAnchor::Bottom => tooltip::Position::Top,
+                    },
+                )
+                .snap_within_viewport(false)
+                .text_shaping(text::Shaping::Advanced)
+                .into()
+            });
+        let overflow_btn = if max_icon_count < self.apps.len() {
+            let icon = match self.core.applet.anchor {
+                PanelAnchor::Bottom => "go-up-symbolic",
+                PanelAnchor::Left => "go-next-symbolic",
+                PanelAnchor::Right => "go-previous-symbolic",
+                PanelAnchor::Top => "go-down-symbolic",
+            };
+            let btn = self
+                .core
+                .applet
+                .icon_button(icon)
+                .on_press(Message::OpenOverflowPopup);
+
+            Some(btn.into())
+        } else {
+            None
+        };
 
         // TODO optional dividers on ends if detects app list neighbor
         // not sure the best way to tell if there is an adjacent app-list
-
-        if matches!(
+        let icon_buttons = icon_buttons.chain(overflow_btn.into_iter());
+        let content = if matches!(
             self.core.applet.anchor,
             PanelAnchor::Top | PanelAnchor::Bottom
         ) {
@@ -180,6 +289,88 @@ impl cosmic::Application for Minimize {
                 .width(Length::Shrink)
                 .spacing(space_xxs)
                 .into()
+        };
+        if self.overflow_popup.is_some() {
+            mouse_area(content)
+                .on_press(Message::CloseOverflowPopup)
+                .into()
+        } else {
+            content
         }
+    }
+
+    fn view_window(&self, _id: window::Id) -> Element<Self::Message> {
+        let max_icon_count = self
+            .max_icon_count()
+            .map(|n| {
+                if n < self.apps.len() {
+                    n - 1
+                } else {
+                    self.apps.len()
+                }
+            })
+            .unwrap_or(self.apps.len());
+        let (width, _) = self.core.applet.suggested_size(false);
+        let padding = self.core.applet.suggested_padding(false);
+        let theme = self.core.system_theme().cosmic();
+        let space_xxs = theme.space_xxs();
+        let icon_buttons = self.apps[max_icon_count..]
+            .iter()
+            .map(|(handle, _, data, img)| {
+                tooltip(
+                    Element::from(crate::window_image::WindowImage::new(
+                        img.clone(),
+                        &data.icon,
+                        width as f32,
+                        Message::Activate(handle.clone()),
+                        padding,
+                    )),
+                    data.name.clone(),
+                    // tooltip::Position::FollowCursor,
+                    // FIXME tooltip fails to appear when created as indicated in design
+                    // maybe it should be a subsurface
+                    match self.core.applet.anchor {
+                        PanelAnchor::Left => tooltip::Position::Right,
+                        PanelAnchor::Right => tooltip::Position::Left,
+                        PanelAnchor::Top => tooltip::Position::Bottom,
+                        PanelAnchor::Bottom => tooltip::Position::Top,
+                    },
+                )
+                .snap_within_viewport(false)
+                .text_shaping(text::Shaping::Advanced)
+                .into()
+            });
+
+        // TODO optional dividers on ends if detects app list neighbor
+        // not sure the best way to tell if there is an adjacent app-list
+
+        self.core
+            .applet
+            .popup_container(
+                if matches!(
+                    self.core.applet.anchor,
+                    PanelAnchor::Top | PanelAnchor::Bottom
+                ) {
+                    Element::from(
+                        Row::with_children(icon_buttons)
+                            .align_items(cosmic::iced_core::Alignment::Center)
+                            .height(Length::Shrink)
+                            .width(Length::Shrink)
+                            .spacing(space_xxs),
+                    )
+                } else {
+                    Column::with_children(icon_buttons)
+                        .align_items(cosmic::iced_core::Alignment::Center)
+                        .height(Length::Shrink)
+                        .width(Length::Shrink)
+                        .spacing(space_xxs)
+                        .into()
+                },
+            )
+            .into()
+    }
+
+    fn on_close_requested(&self, id: window::Id) -> Option<Self::Message> {
+        Some(Message::Closed(id))
     }
 }
