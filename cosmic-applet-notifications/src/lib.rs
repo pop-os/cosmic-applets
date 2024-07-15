@@ -237,7 +237,7 @@ impl cosmic::Application for Notifications {
                         false,
                         fl!("show-more", HashMap::from_iter(vec![("more", "1")])),
                         fl!("show-less"),
-                        fl!("clear-all"),
+                        fl!("clear-group"),
                     ));
                 }
             }
