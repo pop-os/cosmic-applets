@@ -8,6 +8,7 @@ minutes-ago = { NUMBER($duration) ->
 }
 show-less = Prikaži manje
 show-more = Prikaži još {$more}
+clear-group = Obriši grupu
 clear-all = Obriši sva obaveštenja
 do-not-disturb = Ne uznemiravaj
 notification-settings = Podešavanja obaveštenja...
