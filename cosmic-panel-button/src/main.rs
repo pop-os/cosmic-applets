@@ -16,7 +16,7 @@ use cosmic::{
     widget::vertical_space,
 };
 use cosmic_config::{Config, CosmicConfigEntry};
-use freedesktop_desktop_entry::DesktopEntry;
+use freedesktop_desktop_entry::{get_languages_from_env, DesktopEntry};
 use std::{env, fs, process::Command};
 
 mod config;
@@ -153,20 +153,22 @@ pub fn main() -> iced::Result {
         .expect("Requires desktop file id as argument.");
     let filename = format!("{id}.desktop");
     let mut desktop = None;
+    let locales = get_languages_from_env();
     for mut path in freedesktop_desktop_entry::default_paths() {
         path.push(&filename);
         if let Ok(bytes) = fs::read_to_string(&path) {
-            if let Ok(entry) = DesktopEntry::decode(&path, &bytes) {
-                desktop =
-                    Some(Desktop {
-                        name: entry.name(None).map(|x| x.to_string()).unwrap_or_else(|| {
-                            panic!("Desktop file '{filename}' doesn't have `Name`")
-                        }),
-                        icon: entry.icon().map(|x| x.to_string()),
-                        exec: entry.exec().map(|x| x.to_string()).unwrap_or_else(|| {
-                            panic!("Desktop file '{filename}' doesn't have `Exec`")
-                        }),
-                    });
+            if let Ok(entry) = DesktopEntry::from_str(&path, &bytes, &locales) {
+                desktop = Some(Desktop {
+                    name: entry
+                        .name(&locales)
+                        .map(|x| x.to_string())
+                        .unwrap_or_else(|| panic!("Desktop file '{filename}' doesn't have `Name`")),
+                    icon: entry.icon().map(|x| x.to_string()),
+                    exec: entry
+                        .exec()
+                        .map(|x| x.to_string())
+                        .unwrap_or_else(|| panic!("Desktop file '{filename}' doesn't have `Exec`")),
+                });
                 break;
             }
         }
