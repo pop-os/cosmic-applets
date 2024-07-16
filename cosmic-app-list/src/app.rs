@@ -2084,13 +2084,7 @@ impl CosmicAppList {
         } else {
             favorite_index = (btn_count as usize).min(favorite_active_cnt).max(2);
         }
-        // tracing::error!(
-        //     "{}, {}, {}, {}",
-        //     btn_count,
-        //     button_total_size,
-        //     favorite_active_cnt,
-        //     favorite_index
-        // );
+
         // calculation of active_index based on favorite_index if there is still not enough space
         let active_index_max = (btn_count as i32)
             - (self.pinned_list.len() as i32).saturating_sub(favorite_index as i32);
