@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use crate::{
-    config,
-    config::{AppListConfig, APP_ID},
     fl,
     wayland_subscription::{
         wayland_subscription, OutputUpdate, ToplevelRequest, ToplevelUpdate, WaylandImage,
@@ -53,6 +51,7 @@ use cosmic::{
     },
     Apply, Command, Element, Theme,
 };
+use cosmic_app_list_config::{AppListConfig, APP_ID};
 use cosmic_protocols::{
     toplevel_info::v1::client::zcosmic_toplevel_handle_v1::{State, ZcosmicToplevelHandleV1},
     workspace::v1::client::zcosmic_workspace_handle_v1::ZcosmicWorkspaceHandleV1,
@@ -621,7 +620,7 @@ impl cosmic::Application for CosmicAppList {
     type Message = Message;
     type Executor = cosmic::SingleThreadExecutor;
     type Flags = ();
-    const APP_ID: &'static str = config::APP_ID;
+    const APP_ID: &'static str = APP_ID;
 
     fn init(
         core: cosmic::app::Core,

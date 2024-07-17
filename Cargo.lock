@@ -887,6 +887,7 @@ name = "cosmic-app-list"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "cosmic-app-list-config",
  "cosmic-client-toolkit",
  "cosmic-protocols",
  "freedesktop-desktop-entry 0.6.2",
@@ -909,6 +910,14 @@ dependencies = [
  "tracing-subscriber",
  "url",
  "zbus 4.3.1",
+]
+
+[[package]]
+name = "cosmic-app-list-config"
+version = "0.1.0"
+dependencies = [
+ "libcosmic",
+ "serde",
 ]
 
 [[package]]
