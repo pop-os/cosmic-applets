@@ -40,7 +40,7 @@ i18n-embed = { version = "0.14.1", features = [
     "desktop-requester",
 ] }
 i18n-embed-fl = "0.8"
-libcosmic = { git = "https://github.com/pop-os/libcosmic", features = [
+libcosmic = { git = "https://github.com/pop-os/libcosmic", default-features = false, features = [
     "applet",
     "applet-token",
     "tokio",
@@ -60,31 +60,10 @@ serde = { version = "1.0.152", features = ["derive"] }
 freedesktop-desktop-entry = "0.6.1"
 
 [profile.release]
-# lto = "fat"
-opt-level = 1
+lto = "fat"
 
 [workspace.metadata.cargo-machete]
 ignored = ["libcosmic"]
 # [patch."https://github.com/pop-os/libcosmic"]
 # cosmic-config = { git = "https://github.com/pop-os/libcosmic//" }
 # libcosmic = { git = "https://github.com/pop-os/libcosmic//" }
-
-[patch."https://github.com/Smithay/client-toolkit"]
-sctk = { package = "smithay-client-toolkit", version = "0.19.2" }
-# [patch.'https://github.com/pop-os/libcosmic']
-# libcosmic = { git = "https://github.com/pop-os/libcosmic//" }
-# cosmic-config = { git = "https://github.com/pop-os/libcosmic//" }
-# cosmic-theme = { git = "https://github.com/pop-os/libcosmic//" }
-# cosmic-time = { git = "https://github.com/pop-os/cosmic-time", default-features = false, features = [
-#     "libcosmic",
-#     "once_cell",
-# ] }
-# iced_futures = { git = "https://github.com/pop-os/libcosmic//" }
-# libcosmic = { path = "../libcosmic" }
-# cosmic-config = { path = "../libcosmic/cosmic-config" }
-# cosmic-theme = { path = "../libcosmic/cosmic-theme" }
-# iced = { path = "../libcosmic/iced" }
-# cosmic-time = { path = "../cosmic-time", default-features = false, features = [
-#     "libcosmic",
-#     "once_cell",
-# ] }
