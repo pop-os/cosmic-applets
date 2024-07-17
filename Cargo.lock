@@ -1069,7 +1069,6 @@ dependencies = [
  "once_cell",
  "rust-embed 8.5.0",
  "rustix 0.38.34",
- "tokio",
  "tracing",
  "tracing-log",
  "tracing-subscriber",
@@ -1177,7 +1176,7 @@ source = "git+https://github.com/pop-os/cosmic-protocols?rev=c8d3a1c#c8d3a1c3d40
 dependencies = [
  "cosmic-protocols",
  "libc",
- "smithay-client-toolkit",
+ "smithay-client-toolkit 0.19.2",
  "wayland-client",
 ]
 
@@ -1280,7 +1279,7 @@ dependencies = [
  "cosmic-config",
  "ron",
  "serde",
- "smithay-client-toolkit",
+ "smithay-client-toolkit 0.18.0",
  "tracing",
  "wayland-protocols-wlr 0.2.0",
  "xdg-shell-wrapper-config",
@@ -1781,7 +1780,7 @@ dependencies = [
  "bitflags 2.6.0",
  "mime 0.1.0",
  "raw-window-handle",
- "smithay-client-toolkit",
+ "smithay-client-toolkit 0.19.2",
  "smithay-clipboard",
 ]
 
@@ -2814,7 +2813,7 @@ dependencies = [
  "palette",
  "raw-window-handle",
  "serde",
- "smithay-client-toolkit",
+ "smithay-client-toolkit 0.19.2",
  "smol_str",
  "thiserror",
  "web-time",
@@ -2880,7 +2879,7 @@ dependencies = [
  "iced_accessibility",
  "iced_core",
  "iced_futures",
- "smithay-client-toolkit",
+ "smithay-client-toolkit 0.19.2",
  "thiserror",
  "window_clipboard",
 ]
@@ -2900,7 +2899,7 @@ dependencies = [
  "itertools 0.12.1",
  "lazy_static",
  "raw-window-handle",
- "smithay-client-toolkit",
+ "smithay-client-toolkit 0.19.2",
  "thiserror",
  "tracing",
  "wayland-backend",
@@ -2957,7 +2956,7 @@ dependencies = [
  "raw-window-handle",
  "resvg",
  "rustix 0.38.34",
- "smithay-client-toolkit",
+ "smithay-client-toolkit 0.19.2",
  "tiny-xlib",
  "wayland-backend",
  "wayland-client",
@@ -2978,7 +2977,7 @@ dependencies = [
  "iced_style",
  "num-traits",
  "ouroboros",
- "smithay-client-toolkit",
+ "smithay-client-toolkit 0.19.2",
  "thiserror",
  "unicode-segmentation",
  "window_clipboard",
@@ -5330,6 +5329,33 @@ checksum = "3c5e1a9a646d36c3599cd173a41282daf47c44583ad367b8e6837255952e5c67"
 
 [[package]]
 name = "smithay-client-toolkit"
+version = "0.18.0"
+source = "git+https://github.com/smithay/client-toolkit?rev=3bed072#3bed072b966022f5f929d12f3aff089b1ace980b"
+dependencies = [
+ "bitflags 2.6.0",
+ "bytemuck",
+ "calloop",
+ "calloop-wayland-source",
+ "cursor-icon",
+ "libc",
+ "log",
+ "memmap2 0.9.4",
+ "pkg-config",
+ "rustix 0.38.34",
+ "thiserror",
+ "wayland-backend",
+ "wayland-client",
+ "wayland-csd-frame",
+ "wayland-cursor",
+ "wayland-protocols 0.31.2",
+ "wayland-protocols-wlr 0.2.0",
+ "wayland-scanner",
+ "xkbcommon",
+ "xkeysym",
+]
+
+[[package]]
+name = "smithay-client-toolkit"
 version = "0.19.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3457dea1f0eb631b4034d61d4d8c32074caa6cd1ab2d59f2327bd8461e2c0016"
@@ -5363,7 +5389,7 @@ source = "git+https://github.com/pop-os/smithay-clipboard?tag=pop-dnd-5#d099e82a
 dependencies = [
  "libc",
  "raw-window-handle",
- "smithay-client-toolkit",
+ "smithay-client-toolkit 0.19.2",
  "wayland-backend",
 ]
 
