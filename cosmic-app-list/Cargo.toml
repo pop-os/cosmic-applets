@@ -5,6 +5,7 @@ edition = "2021"
 license = "GPL-3.0"
 
 [dependencies]
+cosmic-app-list-config = { path = "cosmic-app-list-config" }
 anyhow.workspace = true
 cctk.workspace = true
 cosmic-protocols.workspace = true

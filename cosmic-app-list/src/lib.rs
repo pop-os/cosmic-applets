@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 mod app;
-mod config;
 mod localize;
 mod wayland_handler;
 mod wayland_subscription;

@@ -1,0 +1,11 @@
+[package]
+name = "cosmic-app-list-config"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+libcosmic.workspace = true
+libcosmic.features = []
+serde = { version = "1.0", features = ["derive"] }
