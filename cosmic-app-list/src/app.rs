@@ -705,7 +705,6 @@ impl cosmic::Application for CosmicAppList {
                             return Command::none();
                         }
                     };
-                    dbg!("create popup2");
 
                     let new_id = window::Id::unique();
                     self.popup = Some(Popup {
@@ -1321,6 +1320,28 @@ impl cosmic::Application for CosmicAppList {
                             height: *height as i32,
                         };
                     }
+                    let applet_suggested_size = self.core.applet.suggested_size(false).0
+                        + 2 * self.core.applet.suggested_padding(false);
+                    let (_favorite_popup_cutoff, active_popup_cutoff) =
+                        self.panel_overflow_lengths();
+                    let popup_applet_count = self.active_list.len().saturating_sub(
+                        (active_popup_cutoff.unwrap_or_default()).saturating_sub(1) as usize,
+                    ) as f32;
+                    let popup_applet_size = applet_suggested_size as f32 * popup_applet_count
+                        + 4.0 * (popup_applet_count - 1.);
+                    let (max_width, max_height) = match self.core.applet.anchor {
+                        PanelAnchor::Top | PanelAnchor::Bottom => {
+                            (popup_applet_size, applet_suggested_size as f32)
+                        }
+                        PanelAnchor::Left | PanelAnchor::Right => {
+                            (applet_suggested_size as f32, popup_applet_size)
+                        }
+                    };
+                    popup_settings.positioner.size_limits = Limits::NONE
+                        .max_width(max_width)
+                        .min_width(1.)
+                        .max_height(max_height)
+                        .min_height(1.);
                     cmds.push(get_popup(popup_settings));
                 }
                 return Command::batch(cmds);
@@ -1355,6 +1376,28 @@ impl cosmic::Application for CosmicAppList {
                             height: *height as i32,
                         };
                     }
+                    let applet_suggested_size = self.core.applet.suggested_size(false).0
+                        + 2 * self.core.applet.suggested_padding(false);
+                    let (favorite_popup_cutoff, _active_popup_cutoff) =
+                        self.panel_overflow_lengths();
+                    let popup_applet_count = self.pinned_list.len().saturating_sub(
+                        favorite_popup_cutoff.unwrap_or_default().saturating_sub(1) as usize,
+                    ) as f32;
+                    let popup_applet_size = applet_suggested_size as f32 * popup_applet_count
+                        + 4.0 * (popup_applet_count - 1.);
+                    let (max_width, max_height) = match self.core.applet.anchor {
+                        PanelAnchor::Top | PanelAnchor::Bottom => {
+                            (popup_applet_size, applet_suggested_size as f32)
+                        }
+                        PanelAnchor::Left | PanelAnchor::Right => {
+                            (applet_suggested_size as f32, popup_applet_size)
+                        }
+                    };
+                    popup_settings.positioner.size_limits = Limits::NONE
+                        .max_width(max_width)
+                        .min_width(1.)
+                        .max_height(max_height)
+                        .min_height(1.);
                     cmds.push(get_popup(popup_settings));
                 }
                 return Command::batch(cmds);
