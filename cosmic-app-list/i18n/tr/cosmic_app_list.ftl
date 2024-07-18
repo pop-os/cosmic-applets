@@ -1,6 +1,5 @@
 cosmic-app-list = Uygulama Çekmecesi
 pin = Sabitle
-unpin = Sabitlemeyi kaldır
 quit = Çıkış
 quit-all = Tümünden çık
 new-window = Yeni pencere

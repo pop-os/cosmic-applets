@@ -1,6 +1,5 @@
 cosmic-app-list = Cosmic Dock-App-Liste
 pin = Favorisieren
-unpin = Entfavorisieren
 quit = Beenden
 quit-all = Alle beenden
 new-window = Neues Fenster
