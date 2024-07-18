@@ -4,7 +4,7 @@ Name[pt]=Botão de áreas de trabalho do painel Cosmic
 Type=Application
 Exec=cosmic-panel-button com.system76.CosmicWorkspaces
 Terminal=false
-Categories=COSMIC;Iced;
+Categories=COSMIC;
 Keywords=COSMIC;Iced;
 # Translators: Do NOT translate or transliterate this text (this is an icon file name)!
 Icon=com.system76.CosmicPanelWorkspacesButton

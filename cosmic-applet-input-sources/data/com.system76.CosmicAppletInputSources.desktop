@@ -3,7 +3,7 @@ Name=Input Sources
 Type=Application
 Exec=cosmic-applet-input-sources
 Terminal=false
-Categories=COSMIC;Iced;
+Categories=COSMIC;
 Keywords=COSMIC;Iced;
 # Translators: Do NOT translate or transliterate this text (this is an icon file name)!
 Icon=com.system76.CosmicAppletInputSources-symbolic
