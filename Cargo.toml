@@ -58,8 +58,7 @@ serde = { version = "1.0.152", features = ["derive"] }
 freedesktop-desktop-entry = "0.6.1"
 
 [profile.release]
-#lto = "fat"
-opt-level = 1
+lto = "fat"
 
 [workspace.metadata.cargo-machete]
 ignored = ["libcosmic"]
