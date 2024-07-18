@@ -1,6 +1,5 @@
 cosmic-app-list = App Tray
-pin = Pin
-unpin = Unpin
+pin = Pin to app tray
 quit = Quit
 quit-all = Quit All
 new-window = New Window

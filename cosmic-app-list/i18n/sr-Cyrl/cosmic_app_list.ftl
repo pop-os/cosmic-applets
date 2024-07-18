@@ -1,6 +1,5 @@
-cosmic-app-list = Листа апликација
-pin = Прикачи
-unpin = Откачи
+cosmic-app-list = Трака апликација
+pin = Закачи за траку апликација
 quit = Затвори
 quit-all = Затвори све
 new-window = Нови прозор

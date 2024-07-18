@@ -42,10 +42,11 @@ use cosmic::{
     iced_sctk::commands::data_device::{
         accept_mime_type, finish_dnd, request_dnd_data, set_actions, start_drag,
     },
-    iced_style::application,
+    iced_style::{application, svg},
     theme::{Button, Container},
     widget::{
-        button, divider, horizontal_space,
+        button, divider, horizontal_space, icon,
+        icon::from_name,
         image::Handle,
         rectangle_tracker::{rectangle_tracker_subscription, RectangleTracker, RectangleUpdate},
         text, Image,
@@ -62,7 +63,7 @@ use futures::future::pending;
 use iced::{widget::container, Alignment, Background, Length};
 use itertools::Itertools;
 use rand::{thread_rng, Rng};
-use std::{collections::HashMap, fs, path::PathBuf, str::FromStr, time::Duration};
+use std::{collections::HashMap, fs, path::PathBuf, rc::Rc, str::FromStr, time::Duration};
 use switcheroo_control::Gpu;
 use tokio::time::sleep;
 use url::Url;
@@ -582,7 +583,7 @@ where
 pub fn menu_control_padding() -> Padding {
     let theme = cosmic::theme::active();
     let cosmic = theme.cosmic();
-    [0, cosmic.space_m()].into()
+    [cosmic.space_xxs(), cosmic.space_m()].into()
 }
 
 impl cosmic::Application for CosmicAppList {
@@ -1414,11 +1415,11 @@ impl cosmic::Application for CosmicAppList {
 
             match popup_type {
                 PopupType::RightClickMenu => {
-                    fn menu_button(label: String) -> cosmic::widget::Button<'static, Message> {
-                        text::body(label)
+                    fn menu_button<'a, Message>(
+                        content: impl Into<Element<'a, Message>>,
+                    ) -> cosmic::widget::Button<'a, Message> {
+                        cosmic::widget::button(content)
                             .height(36)
-                            .vertical_alignment(iced::alignment::Vertical::Center)
-                            .apply(cosmic::widget::button)
                             .style(Button::AppletMenu)
                             .padding(menu_control_padding())
                             .width(Length::Fill)
@@ -1429,7 +1430,7 @@ impl cosmic::Application for CosmicAppList {
                     if let Some(exec) = desktop_info.exec() {
                         if !toplevels.is_empty() {
                             content = content.push(
-                                menu_button(fl!("new-window"))
+                                menu_button(text::body(fl!("new-window")))
                                     .on_press(Message::Exec(exec.to_string(), None)),
                             );
                         } else if let Some(gpus) = self.gpus.as_ref() {
@@ -1440,7 +1441,7 @@ impl cosmic::Application for CosmicAppList {
                             };
                             for (i, gpu) in gpus.iter().enumerate() {
                                 content = content.push(
-                                    menu_button(format!(
+                                    menu_button(text::body(format!(
                                         "{} {}",
                                         fl!("run-on", gpu = gpu.name.clone()),
                                         if i == default_idx {
@@ -1448,13 +1449,13 @@ impl cosmic::Application for CosmicAppList {
                                         } else {
                                             String::new()
                                         }
-                                    ))
+                                    )))
                                     .on_press(Message::Exec(exec.to_string(), Some(i))),
                                 );
                             }
                         } else {
                             content = content.push(
-                                menu_button(fl!("run"))
+                                menu_button(text::body(fl!("run")))
                                     .on_press(Message::Exec(exec.to_string(), None)),
                             );
                         }
@@ -1472,7 +1473,8 @@ impl cosmic::Application for CosmicAppList {
                                 continue;
                             };
                             content = content.push(
-                                menu_button(name.into()).on_press(Message::Exec(exec.into(), None)),
+                                menu_button(text::body(name))
+                                    .on_press(Message::Exec(exec.into(), None)),
                             );
                         }
                         content = content.push(divider::horizontal::default());
@@ -1487,31 +1489,52 @@ impl cosmic::Application for CosmicAppList {
                                 info.title.clone()
                             };
                             list_col = list_col.push(
-                                menu_button(title).on_press(Message::Activate(handle.clone())),
+                                menu_button(text::body(title))
+                                    .on_press(Message::Activate(handle.clone())),
                             );
                         }
                         content = content.push(list_col);
                         content = content.push(divider::horizontal::default());
                     }
-                    if is_pinned {
-                        content =
-                            content.push(menu_button(fl!("unpin")).on_press(Message::UnpinApp(*id)))
-                    } else if desktop_info.exec().is_some() {
-                        content =
-                            content.push(menu_button(fl!("pin")).on_press(Message::PinApp(*id)))
-                    }
 
-                    content = match toplevels.len() {
-                        0 => content,
-                        1 => content.push(
-                            menu_button(fl!("quit"))
-                                .on_press(Message::Quit(desktop_info.id().to_string())),
-                        ),
-                        _ => content.push(
-                            menu_button(fl!("quit-all"))
-                                .on_press(Message::Quit(desktop_info.id().to_string())),
-                        ),
-                    };
+                    let svg_accent = Rc::new(|theme: &cosmic::Theme| {
+                        let color = theme.cosmic().accent_color().into();
+                        svg::Appearance { color: Some(color) }
+                    });
+                    content = content.push(
+                        menu_button(
+                            if is_pinned {
+                                row![
+                                    icon(from_name("checkbox-checked-symbolic").into())
+                                        .size(16)
+                                        .style(cosmic::theme::Svg::Custom(svg_accent.clone())),
+                                    text::body(fl!("pin"))
+                                ]
+                            } else {
+                                row![text::body(fl!("pin"))]
+                            }
+                            .spacing(8),
+                        )
+                        .on_press(if is_pinned {
+                            Message::UnpinApp(*id)
+                        } else {
+                            Message::PinApp(*id)
+                        }),
+                    );
+
+                    if toplevels.len() > 0 {
+                        content = content.push(divider::horizontal::default());
+                        content = match toplevels.len() {
+                            1 => content.push(
+                                menu_button(text::body(fl!("quit")))
+                                    .on_press(Message::Quit(desktop_info.id().to_string())),
+                            ),
+                            _ => content.push(
+                                menu_button(text::body(fl!("quit-all")))
+                                    .on_press(Message::Quit(desktop_info.id().to_string())),
+                            ),
+                        };
+                    }
                     self.core.applet.popup_container(content).into()
                 }
                 PopupType::TopLevelList => match self.core.applet.anchor {
