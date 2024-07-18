@@ -3,7 +3,7 @@ Name=App Tray
 Type=Application
 Exec=cosmic-app-list
 Terminal=false
-Categories=COSMIC;Iced;
+Categories=COSMIC;
 Keywords=COSMIC;Iced;
 # Translators: Do NOT translate or transliterate this text (this is an icon file name)!
 Icon=com.system76.CosmicAppList

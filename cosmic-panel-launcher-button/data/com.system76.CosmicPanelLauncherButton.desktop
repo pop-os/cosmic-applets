@@ -3,7 +3,7 @@ Name=Launcher Button
 Type=Application
 Exec=cosmic-panel-button com.system76.CosmicLauncher
 Terminal=false
-Categories=COSMIC;Iced;
+Categories=COSMIC;
 Keywords=COSMIC;Iced;
 # Translators: Do NOT translate or transliterate this text (this is an icon file name)!
 Icon=com.system76.CosmicPanelLauncherButton
