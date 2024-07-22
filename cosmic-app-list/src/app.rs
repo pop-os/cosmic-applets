@@ -1484,7 +1484,7 @@ impl cosmic::Application for CosmicAppList {
             .and_then(|o| o.dock_item.as_ref().map(|item| (item, o.preview_index)))
         {
             favorites.insert(
-                index,
+                index.min(favorites.len()),
                 item.as_icon(
                     &self.core.applet,
                     None,
