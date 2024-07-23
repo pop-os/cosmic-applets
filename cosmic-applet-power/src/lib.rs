@@ -35,7 +35,7 @@ use cosmic::{
 
 use logind_zbus::{
     manager::ManagerProxy,
-    session::{SessionProxy, SessionType},
+    session::{SessionClass, SessionProxy, SessionType},
     user::UserProxy,
 };
 use once_cell::sync::Lazy;
@@ -435,16 +435,29 @@ async fn lock() -> zbus::Result<()> {
         .await?;
     // Lock all non-TTY sessions of this user
     let sessions = user.sessions().await?;
+    let mut locked_successfully = false;
     for (_, session_path) in sessions {
-        let session = SessionProxy::builder(&connection)
+        let Ok(session) = SessionProxy::builder(&connection)
             .path(session_path)?
             .build()
-            .await?;
-        if session.type_().await? != SessionType::TTY {
-            session.lock().await?;
+            .await
+        else {
+            continue;
+        };
+
+        if session.class().await == Ok(SessionClass::User)
+            && session.type_().await? != SessionType::TTY
+            && session.lock().await.is_ok()
+        {
+            locked_successfully = true;
         }
     }
-    Ok(())
+
+    if locked_successfully {
+        Ok(())
+    } else {
+        Err(zbus::Error::Failure("locking session failed".to_string()))
+    }
 }
 
 async fn log_out() -> zbus::Result<()> {
