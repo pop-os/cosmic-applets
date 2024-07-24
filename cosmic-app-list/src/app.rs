@@ -1416,8 +1416,12 @@ impl cosmic::Application for CosmicAppList {
             PanelAnchor::Left | PanelAnchor::Right => false,
         };
         let divider_padding = match self.core.applet.size {
-            Size::PanelSize(PanelSize::XL) | Size::PanelSize(PanelSize::L) | Size::PanelSize(PanelSize::M) => 8,
-            Size::PanelSize(PanelSize::S) | Size::PanelSize(PanelSize::XS) | Size::Hardcoded(_) => 4,
+            Size::PanelSize(PanelSize::XL)
+            | Size::PanelSize(PanelSize::L)
+            | Size::PanelSize(PanelSize::M) => 8,
+            Size::PanelSize(PanelSize::S) | Size::PanelSize(PanelSize::XS) | Size::Hardcoded(_) => {
+                4
+            }
         };
         let (favorite_popup_cutoff, active_popup_cutoff) = self.panel_overflow_lengths();
         let mut favorite_to_remove = if let Some(cutoff) = favorite_popup_cutoff {
@@ -1590,7 +1594,10 @@ impl cosmic::Application for CosmicAppList {
                 Length::Shrink,
                 dnd_listener(row(favorites).spacing(app_icon.icon_spacing)),
                 row(active).spacing(app_icon.icon_spacing).into(),
-                container(vertical_rule(1)).height(Length::Fill).padding([divider_padding, 0]).into(),
+                container(vertical_rule(1))
+                    .height(Length::Fill)
+                    .padding([divider_padding, 0])
+                    .into(),
             )
         } else {
             (
