@@ -613,7 +613,7 @@ where
 pub fn menu_control_padding() -> Padding {
     let theme = cosmic::theme::active();
     let cosmic = theme.cosmic();
-    [cosmic.space_xxs(), cosmic.space_m()].into()
+    [cosmic.space_xxs(), cosmic.space_s()].into()
 }
 
 impl cosmic::Application for CosmicAppList {
@@ -1415,6 +1415,10 @@ impl cosmic::Application for CosmicAppList {
             PanelAnchor::Top | PanelAnchor::Bottom => true,
             PanelAnchor::Left | PanelAnchor::Right => false,
         };
+        let divider_padding = match self.core.applet.size {
+            Size::PanelSize(PanelSize::XL) | Size::PanelSize(PanelSize::L) | Size::PanelSize(PanelSize::M) => 8,
+            Size::PanelSize(PanelSize::S) | Size::PanelSize(PanelSize::XS) | Size::Hardcoded(_) => 4,
+        };
         let (favorite_popup_cutoff, active_popup_cutoff) = self.panel_overflow_lengths();
         let mut favorite_to_remove = if let Some(cutoff) = favorite_popup_cutoff {
             if cutoff < self.pinned_list.len() {
@@ -1586,7 +1590,7 @@ impl cosmic::Application for CosmicAppList {
                 Length::Shrink,
                 dnd_listener(row(favorites).spacing(app_icon.icon_spacing)),
                 row(active).spacing(app_icon.icon_spacing).into(),
-                container(vertical_rule(1)).height(Length::Fill).into(),
+                container(vertical_rule(1)).height(Length::Fill).padding([divider_padding, 0]).into(),
             )
         } else {
             (
@@ -1596,6 +1600,7 @@ impl cosmic::Application for CosmicAppList {
                 column(active).spacing(app_icon.icon_spacing).into(),
                 container(divider::horizontal::default())
                     .width(Length::Fill)
+                    .padding([0, divider_padding])
                     .into(),
             )
         };
@@ -1776,8 +1781,8 @@ impl cosmic::Application for CosmicAppList {
                     if !toplevels.is_empty() {
                         let mut list_col = column![];
                         for (handle, info, _) in toplevels {
-                            let title = if info.title.len() > 32 {
-                                format!("{:.30}...", &info.title)
+                            let title = if info.title.len() > 34 {
+                                format!("{:.32}...", &info.title)
                             } else {
                                 info.title.clone()
                             };
