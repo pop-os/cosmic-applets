@@ -319,7 +319,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
                         cmd.env("XDG_ACTIVATION_TOKEN", &token);
                         cmd.env("DESKTOP_STARTUP_ID", &token);
                     }
-                    cosmic::process::spawn(cmd);
+                    tokio::spawn(cosmic::process::spawn(cmd));
                 }
             },
             Message::Frame(instant) => self.timeline.now(instant),

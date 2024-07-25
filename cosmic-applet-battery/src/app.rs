@@ -341,7 +341,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                         cmd.env("XDG_ACTIVATION_TOKEN", &token);
                         cmd.env("DESKTOP_STARTUP_ID", &token);
                     }
-                    cosmic::process::spawn(cmd);
+                    tokio::spawn(cosmic::process::spawn(cmd));
                 }
             },
             Message::GpuOn(path, name, app_list) => {

@@ -179,6 +179,7 @@ impl ActivationHandler for AppData {
     fn new_token(&mut self, token: String, data: &ExecRequestData) {
         let _ = self.tx.unbounded_send(WaylandUpdate::ActivationToken {
             token: Some(token),
+            app_id: data.app_id().map(|x| x.to_owned()),
             exec: data.exec.clone(),
             gpu_idx: data.gpu_idx,
         });
@@ -678,6 +679,7 @@ pub(crate) fn wayland_handler(
                     } else {
                         let _ = state.tx.unbounded_send(WaylandUpdate::ActivationToken {
                             token: None,
+                            app_id: Some(app_id),
                             exec,
                             gpu_idx,
                         });

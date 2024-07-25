@@ -107,6 +107,7 @@ pub enum WaylandUpdate {
     Output(OutputUpdate),
     ActivationToken {
         token: Option<String>,
+        app_id: Option<String>,
         exec: String,
         gpu_idx: Option<usize>,
     },
