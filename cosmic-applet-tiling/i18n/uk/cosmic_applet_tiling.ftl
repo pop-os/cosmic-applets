@@ -1,14 +1,20 @@
 tile-windows = Автоматичне укладання вікон
+tile-current = Автоматичне укладання в поточному робочому просторі
 shortcuts = Клавіатурні скорочення
-navigate-windows = Навігація вікнами
+navigate-windows = Перехід між вікнами
 move-window = Перемістити вікно
-toggle-floating-window = Плаваюче вікно
+toggle-floating-window = Перемкнути плавучість вікна
 view-all-shortcuts = Переглянути всі клав. скорочення...
 active-hint = Активна підказка
 gaps = Відступи
 floating-window-exceptions = Винятки для плаваючих вікон...
 window-management-settings = Параметри керування вікнами...
-
+all-workspaces = На всіх робочих просторах
+per-workspace = На окремому робочому просторі
 super = Super
 shift = Shift
 arrow-keys = стрілочки
+tiled = Укладання
+floating = Плавання
+autotile-behavior = Укладати вікна на робочих просторах
+new-workspace = Поведінка на новому робочому просторі
