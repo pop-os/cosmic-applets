@@ -382,7 +382,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                         let mut browser = std::process::Command::new("xdg-open");
                         browser.arg("http://204.pop-os.org/");
 
-                        cosmic::process::spawn(browser);
+                        tokio::spawn(cosmic::process::spawn(browser));
                     }
 
                     self.update_nm_state(state);
@@ -500,7 +500,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                         cmd.env("XDG_ACTIVATION_TOKEN", &token);
                         cmd.env("DESKTOP_STARTUP_ID", &token);
                     }
-                    cosmic::process::spawn(cmd);
+                    tokio::spawn(cosmic::process::spawn(cmd));
                 }
             },
             Message::ResetFailedKnownSsid(ssid) => {

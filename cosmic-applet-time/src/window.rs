@@ -297,7 +297,7 @@ impl cosmic::Application for Window {
                             cmd.env("XDG_ACTIVATION_TOKEN", &token);
                             cmd.env("DESKTOP_STARTUP_ID", &token);
                         }
-                        cosmic::process::spawn(cmd);
+                        tokio::spawn(cosmic::process::spawn(cmd));
                     }
                 }
                 Command::none()

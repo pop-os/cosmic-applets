@@ -1178,6 +1178,7 @@ impl cosmic::Application for CosmicAppList {
                     },
                     WaylandUpdate::ActivationToken {
                         token,
+                        app_id,
                         exec,
                         gpu_idx,
                     } => {
@@ -1194,8 +1195,8 @@ impl cosmic::Application for CosmicAppList {
                                     .map(|(k, v)| (k.clone(), v.clone())),
                             );
                         }
-                        tokio::task::spawn_blocking(|| {
-                            cosmic::desktop::spawn_desktop_exec(exec, envs);
+                        tokio::spawn(async move {
+                            cosmic::desktop::spawn_desktop_exec(exec, envs, app_id.as_deref()).await
                         });
                     }
                 }
