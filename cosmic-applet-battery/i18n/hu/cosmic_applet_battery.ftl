@@ -1,0 +1,15 @@
+cosmic-applet-button = Cosmic Gomb
+battery = Akkumulátor
+battery-desc = Csökkentett energiafogyasztás és teljesítmény.
+balanced = Kiegyensúlyozott
+balanced-desc = Normál teljesítmény és akkumulátorhasználat.
+performance = Nagy teljesítmény
+performance-desc = Nagy teljesítmény és energiafogyasztás.
+max-charge = Növelje az akkumulátor élettartamát a maximális töltési érték 80%-os beállításával
+seconds = s
+minutes = m
+hours = h
+until-empty = lemerülésig
+power-settings = Tápellátás és akkumulátor beállítások...
+dgpu-running = A dedikált GPU aktív, és csökkentheti az akkumulátor élettartamát
+dgpu-applications = A {$gpu_name} dedikált GPU-t használó alkalmazások

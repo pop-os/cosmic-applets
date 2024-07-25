@@ -1,0 +1,12 @@
+bluetooth = Bluetooth
+other-devices = Egyéb Bluetooth-eszközök
+settings = Bluetooth Beállítások...
+connected = Csatlakoztatva
+confirm-pin = Kérjük, ellenőrizze, hogy a következő PIN-kód megegyezik-e a(z) {$deviceName} eszközön megjelenő PIN-kóddal
+confirm = Megerősít
+cancel = Mégse
+unsuccessful = A párosítás sikertelen
+check-device = Győződjön meg arról, hogy a(z) {$deviceName} be van kapcsolva, hatótávolságon belül van, és készen áll a párosításra.
+try-again = Próbáld újra
+discoverable = Felfedezhető
+pairable = Párosítható
