@@ -1,10 +1,10 @@
 hours-ago = { NUMBER($duration) -> 
-    [1] 1 годину тому
+    [one] {$duration} годину тому
     [few] {$duration} години тому
     *[other] {$duration} годин тому
 }
 minutes-ago = { NUMBER($duration) -> 
-    [1] 1 хвилину тому
+    [one] {$duration} хвилину тому
     [few] {$duration} хвилини тому
     *[other] {$duration} хвилин тому
 }
