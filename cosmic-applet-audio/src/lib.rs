@@ -617,7 +617,7 @@ impl cosmic::Application for Audio {
                         input.mute = value;
                     }
                 }
-            }
+            },
         };
 
         Command::none()
