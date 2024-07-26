@@ -33,5 +33,8 @@ confirm-body =
         [lock-screen] заблокує екран
         [log-out] виконає вихід
         *[other] Виконати вибрану дію
-    } автоматично за { $countdown } секунд.
-
+    } автоматично за { $countdown } { $countdown ->
+        [one] секунду
+        [few] секунди
+        *[other] секунд
+    }.
