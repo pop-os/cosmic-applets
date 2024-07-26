@@ -23,7 +23,7 @@ use futures::{
 };
 use tokio::process::Command;
 use zbus::{
-    zvariant::{self, OwnedValue, Value},
+    zvariant::{self, Value},
     Connection,
 };
 

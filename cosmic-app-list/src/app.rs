@@ -49,7 +49,7 @@ use cosmic::{
         rectangle_tracker::{rectangle_tracker_subscription, RectangleTracker, RectangleUpdate},
         text, Image,
     },
-    Apply, Command, Element, Theme,
+    Command, Element, Theme,
 };
 use cosmic_app_list_config::{AppListConfig, APP_ID};
 use cosmic_protocols::{
