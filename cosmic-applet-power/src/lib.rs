@@ -30,7 +30,7 @@ use cosmic::{
     iced_widget::mouse_area,
     theme,
     widget::{button, divider, horizontal_space, icon, vertical_space, Column},
-    Element, Renderer, Theme,
+    Element, Theme,
 };
 
 use logind_zbus::{
