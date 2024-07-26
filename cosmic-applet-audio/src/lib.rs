@@ -136,7 +136,6 @@ pub enum Message {
     Token(TokenUpdate),
     OpenSettings,
     PulseSub(sub_pulse::Event),
-    Popup2,
 }
 
 impl Audio {
@@ -618,30 +617,6 @@ impl cosmic::Application for Audio {
                         input.mute = value;
                     }
                 }
-            },
-            Message::Popup2 => {
-                if let Some(p) = self.popup.as_ref() {
-                    let mut popup_settings = self.core.applet.get_popup_settings(
-                        p.clone(),
-                        window::Id::unique(),
-                        None,
-                        None,
-                        None,
-                    );
-                    popup_settings.positioner.anchor = Anchor::Left;
-                    popup_settings.positioner.anchor_rect = Rectangle::<i32> {
-                        x: 50,
-                        y: 50,
-                        width: 200,
-                        height: 200,
-                    };
-                    popup_settings.positioner.size_limits = Limits::NONE
-                        .min_height(1.0)
-                        .min_width(1.0)
-                        .max_width(300.0)
-                        .max_height(400.0);
-                    return get_popup(popup_settings);
-                }
             }
         };
 
@@ -894,7 +869,7 @@ impl cosmic::Application for Audio {
             )
             .padding([0, 24]),
             padded_control(divider::horizontal::default()),
-            menu_button(text(fl!("sound-settings")).size(14)).on_press(Message::Popup2)
+            menu_button(text(fl!("sound-settings")).size(14)).on_press(Message::OpenSettings)
         ]
         .align_items(Alignment::Start)
         .padding([8, 0]);
