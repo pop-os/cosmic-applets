@@ -31,8 +31,8 @@ confirm-body =
         [suspend] przejdzie w stan uśpienia
         [shutdown] wyłączy się
         [lock-screen] zablokuje ekran
-        [log-out] log out
-        *[other] apply the selected action
+        [log-out] wyloguje się
+        *[other] wykona wybraną akcję
     } za { $countdown ->
         [1] sekundę.
         [few] {$countdown} sekundy
