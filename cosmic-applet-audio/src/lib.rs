@@ -855,7 +855,7 @@ impl cosmic::Application for Audio {
         let content = column![
             audio_content,
             padded_control(divider::horizontal::default()),
-            container(
+            padded_control(
                 anim!(
                     // toggler
                     SHOW_MEDIA_CONTROLS,
@@ -867,7 +867,7 @@ impl cosmic::Application for Audio {
                 .text_size(14)
                 .width(Length::Fill)
             )
-            .padding([0, 24]),
+            .padding([8, 24]),
             // padded_control(divider::horizontal::default()),
             // menu_button(text(fl!("sound-settings")).size(14)).on_press(Message::OpenSettings)
         ]
