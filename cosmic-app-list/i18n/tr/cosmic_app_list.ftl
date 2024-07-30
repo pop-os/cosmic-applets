@@ -1,8 +1,8 @@
 cosmic-app-list = Uygulama Çekmecesi
 pin = Sabitle
-quit = Çıkış
+quit = Çık
 quit-all = Tümünden çık
 new-window = Yeni pencere
 run = Çalıştır
-run-on = {$gpu} üzerinden çalıştır
-run-on-default = (Varsayılan)
+run-on = {$gpu} üzerinde çalıştır
+run-on-default = (Öntanımlı)

@@ -1,6 +1,6 @@
 network = Ağ
-airplane-mode = Uçak modu
-airplane-mode-on = Uçak modu açık
+airplane-mode = Uçak kipi
+airplane-mode-on = Uçak kipi açık
 turn-off-airplane-mode = Wi-Fi, Bluetooth ve mobil geniş bandı etkinleştirmek için kapatın.
 wifi = Wi-Fi
 ipv4 = IPv4 Adres
@@ -17,3 +17,4 @@ enter-password = Parolayı veya şifreleme anahtarını girin
 router-wps-button = Yönlendiricideki "WPS" düğmesine basarak da bağlanabilirsiniz
 unable-to-connect = Ağa bağlanılamadı
 check-wifi-connection = Wi-Fi'nin internete bağlı olduğundan ve parolanın doğru olduğundan emin olun
+reset = Sıfırla
