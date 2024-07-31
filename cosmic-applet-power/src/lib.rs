@@ -354,14 +354,7 @@ impl cosmic::Application for Power {
 
             if matches!(power_action, PowerAction::Shutdown) {
                 dialog = dialog.tertiary_action(
-                    button(min_width_and_height(
-                        text(fl!("restart")).size(14).into(),
-                        Length::Shrink,
-                        32.0,
-                    ))
-                    .padding([0, cosmic_theme.space_s()])
-                    .style(theme::Button::Link)
-                    .on_press(Message::Action(PowerAction::Restart)),
+                    button::text(fl!("restart")).on_press(Message::Action(PowerAction::Restart)),
                 );
             }
 
