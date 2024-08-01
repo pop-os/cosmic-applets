@@ -366,7 +366,7 @@ impl cosmic::Application for Window {
                 let mut date_bag = Bag::empty();
 
                 date_bag.day = Some(components::Day::NumericDayOfMonth);
-                date_bag.month = Some(components::Month::Long);
+                date_bag.month = Some(components::Month::Short);
 
                 let formated = self.format(date_bag, &self.now);
 
