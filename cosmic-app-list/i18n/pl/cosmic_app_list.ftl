@@ -1,4 +1,4 @@
-cosmic-app-list = Lista Apek Doku Cosmic
+cosmic-app-list = Zasobnik Aplikacji
 pin = Przypnij do zasobnika apek
 quit = Zamknij
 quit-all = Zamknij Wszystkie
