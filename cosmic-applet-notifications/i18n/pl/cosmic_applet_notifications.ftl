@@ -10,6 +10,7 @@ minutes-ago = { NUMBER($duration) ->
 }
 show-less = Pokaż Mniej
 show-more = Pokaż {$more} Więcej
+clear-group = Wyczyść grupę
 clear-all = Wyczyść Wszystkie Powiadomienia
 do-not-disturb = Nie Przeszkadzać
 notification-settings = Centrum Powiadomień...
