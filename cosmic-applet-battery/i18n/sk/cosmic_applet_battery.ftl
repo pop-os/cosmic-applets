@@ -1,0 +1,15 @@
+cosmic-applet-button = Cosmic Button
+battery = Batéria
+battery-desc = Obmedzená spotreba energie a výkonu.
+balanced = Vyvážený
+balanced-desc = Štandardný výkon a spotreba energie.
+performance = Vysoký výkon
+performance-desc = Vysoký výkon a spotreba energie.
+max-charge = Predlžiť životnosť batérie nastavením maximálnej úrovne nabitia na 80%
+seconds = s
+minutes = m
+hours = h
+until-empty = pokiaľ prázdne
+power-settings = Nastavenia napájania a batérie...
+dgpu-running = Diskrétne GPU sa práve používa. To môže ovplyvniť životnosť batérie.
+dgpu-applications = Aplikácie, ktoré používajú {$gpu_name} diskrétne GPU
