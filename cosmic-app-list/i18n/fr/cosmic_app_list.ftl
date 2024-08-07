@@ -1,5 +1,5 @@
-cosmic-app-list = Liste des applictions COSMIC
-pin = Mettre en favori
+cosmic-app-list = Barre des applications
+pin = Fixer à la barre
 quit = Quitter
 quit-all = Tout quitter
 new-window = Nouvelle fenêtre
