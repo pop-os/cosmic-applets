@@ -423,7 +423,7 @@ impl cosmic::Application for Window {
         } else {
             [self.core.applet.suggested_padding(true), 0]
         })
-        .on_press(Message::TogglePopup)
+        .on_press_down(Message::TogglePopup)
         .style(cosmic::theme::Button::AppletIcon);
 
         if let Some(tracker) = self.rectangle_tracker.as_ref() {

@@ -275,7 +275,7 @@ impl cosmic::Application for Window {
         self.core
             .applet
             .icon_button(if self.autotiled { ON } else { OFF })
-            .on_press(Message::TogglePopup)
+            .on_press_down(Message::TogglePopup)
             .into()
     }
 
