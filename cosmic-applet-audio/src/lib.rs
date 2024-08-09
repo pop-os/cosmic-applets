@@ -646,7 +646,7 @@ impl cosmic::Application for Audio {
             .core
             .applet
             .icon_button(self.output_icon_name())
-            .on_press(Message::TogglePopup);
+            .on_press_down(Message::TogglePopup);
         let btn = crate::mouse_area::MouseArea::new(btn).on_mouse_wheel(|delta| {
             let change = match delta {
                 iced::mouse::ScrollDelta::Lines { x, y } => (x + y) * 5.,

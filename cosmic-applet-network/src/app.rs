@@ -543,7 +543,7 @@ impl cosmic::Application for CosmicNetworkApplet {
         self.core
             .applet
             .icon_button(&self.icon_name)
-            .on_press(Message::TogglePopup)
+            .on_press_down(Message::TogglePopup)
             .into()
     }
 
