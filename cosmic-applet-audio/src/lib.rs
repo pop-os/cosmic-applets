@@ -817,14 +817,22 @@ impl cosmic::Application for Audio {
                 fl!("unknown-artist")
             };
 
-            elements.push(column![text(title).size(14), text(artists).size(10),].into());
-            elements.push(horizontal_space(Length::Fill).into());
+            elements.push(
+                column![
+                    text(title).size(14).width(Length::Shrink),
+                    text(artists).size(10).width(Length::Shrink),
+                ]
+                .width(Length::FillPortion(5))
+                .into(),
+            );
 
+            let mut control_elements = Vec::with_capacity(4);
+            control_elements.push(horizontal_space(Length::Fill).into());
             if let Some(go_prev) = self.go_previous(32) {
-                elements.push(go_prev);
+                control_elements.push(go_prev);
             }
             if let Some(play) = self.is_play() {
-                elements.push(
+                control_elements.push(
                     button::icon(
                         icon::from_name(if play { PLAY } else { PAUSE })
                             .size(32)
@@ -841,8 +849,16 @@ impl cosmic::Application for Audio {
                 );
             }
             if let Some(go_next) = self.go_next(32) {
-                elements.push(go_next);
+                control_elements.push(go_next);
             }
+            let control_cnt = control_elements.len() as u16;
+            elements.push(
+                Row::with_children(control_elements)
+                    .align_items(Alignment::Center)
+                    .width(Length::FillPortion(control_cnt.saturating_add(1)))
+                    .spacing(8)
+                    .into(),
+            );
 
             audio_content = audio_content.push(padded_control(divider::horizontal::default()));
             audio_content = audio_content.push(
