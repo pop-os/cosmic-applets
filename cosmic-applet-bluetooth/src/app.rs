@@ -1,7 +1,7 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
-use crate::bluetooth::{BluerDeviceStatus, BluerRequest, BluerState};
+use crate::bluetooth::{BluerDeviceStatus, BluerRequest, BluerState, DeviceProperty};
 use cosmic::{
     applet::token::subscription::{activation_token_subscription, TokenRequest, TokenUpdate},
     cctk::sctk::reexports::calloop,
@@ -366,6 +366,26 @@ impl cosmic::Application for CosmicBluetoothApplet {
             ]
             .align_items(Alignment::Center)
             .spacing(12);
+
+            if let Some(DeviceProperty::BatteryPercentage(battery)) = dev
+                .properties
+                .iter()
+                .find(|p| matches!(p, DeviceProperty::BatteryPercentage(_)))
+            {
+                let status = row!(
+                    icon::from_name("battery").symbolic(true).size(14),
+                    text(format!("{}%", battery)).size(14)
+                )
+                .align_items(Alignment::Center)
+                .spacing(2)
+                .width(Length::Shrink);
+
+                let content = container(status)
+                    .align_x(Horizontal::Right)
+                    .align_y(Vertical::Center);
+
+                row = row.push(content);
+            }
 
             match &dev.status {
                 BluerDeviceStatus::Connected => {
