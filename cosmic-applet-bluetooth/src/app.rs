@@ -372,8 +372,13 @@ impl cosmic::Application for CosmicBluetoothApplet {
                 .iter()
                 .find(|p| matches!(p, DeviceProperty::BatteryPercentage(_)))
             {
+                let icon = match *battery {
+                    b if b >= 20 && b < 40 => "battery-low",
+                    b if b < 20 => "battery-caution",
+                    _ => "battery",
+                };
                 let status = row!(
-                    icon::from_name("battery").symbolic(true).size(14),
+                    icon::from_name(icon).symbolic(true).size(14),
                     text(format!("{}%", battery)).size(14)
                 )
                 .align_items(Alignment::Center)
