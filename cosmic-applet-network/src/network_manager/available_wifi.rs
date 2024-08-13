@@ -7,7 +7,10 @@ use itertools::Itertools;
 use std::collections::HashMap;
 use zbus::zvariant::ObjectPath;
 
-pub async fn handle_wireless_device(device: WirelessDevice<'_>) -> zbus::Result<Vec<AccessPoint>> {
+pub async fn handle_wireless_device(
+    device: WirelessDevice<'_>,
+    iface: Option<String>,
+) -> zbus::Result<Vec<AccessPoint>> {
     device.request_scan(HashMap::new()).await?;
     let mut scan_changed = device.receive_last_scan_changed().await;
     if let Some(t) = scan_changed.next().await {
@@ -26,6 +29,7 @@ pub async fn handle_wireless_device(device: WirelessDevice<'_>) -> zbus::Result<
         .unwrap_or_else(|| DeviceState::Unknown);
     // Sort by strength and remove duplicates
     let mut aps = HashMap::<String, AccessPoint>::new();
+    let iface = iface.unwrap_or("".to_string());
     for ap in access_points {
         let ssid = String::from_utf8_lossy(&ap.ssid().await?.clone()).into_owned();
         let strength = ap.strength().await?;
@@ -42,6 +46,7 @@ pub async fn handle_wireless_device(device: WirelessDevice<'_>) -> zbus::Result<
                 state,
                 working: false,
                 path: ap.inner().path().to_owned(),
+                interface: iface.clone(),
             },
         );
     }
@@ -59,4 +64,5 @@ pub struct AccessPoint {
     pub state: DeviceState,
     pub working: bool,
     pub path: ObjectPath<'static>,
+    pub interface: String,
 }

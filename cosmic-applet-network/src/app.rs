@@ -550,6 +550,12 @@ impl cosmic::Application for CosmicNetworkApplet {
     fn view_window(&self, _id: window::Id) -> Element<Message> {
         let mut vpn_ethernet_col = column![];
         let mut known_wifi = Vec::new();
+        let mut count_access_points = std::collections::HashMap::new();
+        for access_point in &self.nm_state.wireless_access_points {
+            *count_access_points
+                .entry(access_point.ssid.clone())
+                .or_insert(0) += 1;
+        }
         for conn in &self.nm_state.active_conns {
             match conn {
                 ActiveConnectionInfo::Vpn { name, ip_addresses } => {
@@ -617,11 +623,21 @@ impl cosmic::Application for CosmicNetworkApplet {
                     ip_addresses,
                     state,
                     strength,
+                    iface,
                     ..
                 } => {
                     let mut ipv4 = Vec::with_capacity(ip_addresses.len());
+                    let has_duplicates = *count_access_points.entry(name.clone()).or_insert(0) > 1;
                     for addr in ip_addresses {
-                        ipv4.push(text(format!("{}: {}", fl!("ipv4"), addr)).size(12).into());
+                        ipv4.push(
+                            text(if has_duplicates {
+                                format!("{}: {} {}: {}", fl!("ipv4"), addr, fl!("iface"), iface)
+                            } else {
+                                format!("{}: {}", fl!("ipv4"), addr)
+                            })
+                            .size(12)
+                            .into(),
+                        );
                     }
                     let mut btn_content = vec![
                         icon::from_name(wifi_icon(*strength))
@@ -750,7 +766,19 @@ impl cosmic::Application for CosmicNetworkApplet {
                             .symbolic(true)
                             .into(),
                     );
-                    btn_content.push(ssid.into());
+                    let ifaces = vec![text(format!("{}: {}", fl!("iface"), &known.interface))
+                        .size(12)
+                        .into()];
+
+                    if *count_access_points.entry(known.ssid.clone()).or_insert(0) > 1 {
+                        btn_content.push(
+                            column![ssid, Column::with_children(ifaces)]
+                                .width(Length::Fill)
+                                .into(),
+                        );
+                    } else {
+                        btn_content.push(ssid.into());
+                    }
                 }
 
                 if self.failed_known_ssids.contains(&known.ssid) {
@@ -911,12 +939,26 @@ impl cosmic::Application for CosmicNetworkApplet {
                     {
                         continue;
                     }
+
+                    let mut ifaces = vec![];
+                    if *count_access_points.entry(ap.ssid.clone()).or_insert(0) > 1 {
+                        ifaces.push(
+                            text(format!("{}: {}", fl!("iface"), &ap.interface))
+                                .size(10)
+                                .into(),
+                        );
+                    }
+                    let wifi_text = column![
+                        text::body(&ap.ssid).vertical_alignment(Vertical::Center),
+                        Column::with_children(ifaces)
+                    ];
+
                     let button = menu_button(
                         row![
                             icon::from_name(wifi_icon(ap.strength))
                                 .size(16)
                                 .symbolic(true),
-                            text::body(&ap.ssid).vertical_alignment(Vertical::Center)
+                            wifi_text,
                         ]
                         .align_items(Alignment::Center)
                         .spacing(12),

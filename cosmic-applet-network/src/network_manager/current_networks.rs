@@ -53,6 +53,7 @@ pub async fn active_connections(
                             hw_address: wireless_device.hw_address().await?,
                             state,
                             strength: access_point.strength().await.unwrap_or_default(),
+                            iface: device.interface().await?,
                         });
                     }
                 }
@@ -93,6 +94,7 @@ pub enum ActiveConnectionInfo {
         hw_address: String,
         state: ActiveConnectionState,
         strength: u8,
+        iface: String,
     },
     Vpn {
         name: String,
