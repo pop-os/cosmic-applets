@@ -18,3 +18,4 @@ router-wps-button = You can also connect by pressing the "WPS" button on the rou
 unable-to-connect = Unable to connect to network
 check-wifi-connection = Make sure Wi-Fi is connected to the internet and the password is correct
 reset = Reset
+iface = iface
