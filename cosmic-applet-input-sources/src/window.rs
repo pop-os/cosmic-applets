@@ -194,7 +194,7 @@ impl cosmic::Application for Window {
             .width(Length::Shrink)
             .height(Length::Shrink),
         )
-        .on_press(Message::TogglePopup)
+        .on_press_down(Message::TogglePopup)
         .style(cosmic::theme::Button::AppletIcon)
         .into()
     }
