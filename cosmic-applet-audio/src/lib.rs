@@ -867,9 +867,9 @@ impl cosmic::Application for Audio {
                 .text_size(14)
                 .width(Length::Fill)
             )
-            .padding([8, 24]),
-            // padded_control(divider::horizontal::default()),
-            // menu_button(text(fl!("sound-settings")).size(14)).on_press(Message::OpenSettings)
+            .padding([4, 24]),
+            padded_control(divider::horizontal::default()),
+            menu_button(text(fl!("sound-settings")).size(14)).on_press(Message::OpenSettings)
         ]
         .align_items(Alignment::Start)
         .padding([8, 0]);
