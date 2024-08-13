@@ -166,15 +166,19 @@ async fn start_listening(
                     };
                     _ = output.send(response).await;
                 }
-                Some(NetworkManagerRequest::Password(ssid, password)) => {
+                Some(NetworkManagerRequest::Password(ssid, password, iface)) => {
                     let nm_state = NetworkManagerState::new(&conn).await.unwrap_or_default();
                     let success = nm_state
-                        .connect_wifi(&conn, &ssid, Some(&password))
+                        .connect_wifi(&conn, &ssid, Some(&password), &iface)
                         .await
                         .is_ok();
 
                     let status = Some(NetworkManagerEvent::RequestResponse {
-                        req: NetworkManagerRequest::Password(ssid.clone(), password.clone()),
+                        req: NetworkManagerRequest::Password(
+                            ssid.clone(),
+                            password.clone(),
+                            iface.clone(),
+                        ),
                         success,
                         state: NetworkManagerState::new(&conn).await.unwrap_or_default(),
                     });
@@ -184,25 +188,29 @@ async fn start_listening(
                     } else {
                         _ = output
                             .send(NetworkManagerEvent::RequestResponse {
-                                req: NetworkManagerRequest::Password(ssid, password),
+                                req: NetworkManagerRequest::Password(ssid, password, iface),
                                 success: false,
                                 state: NetworkManagerState::new(&conn).await.unwrap_or_default(),
                             })
                             .await;
                     }
                 }
-                Some(NetworkManagerRequest::SelectAccessPoint(ssid)) => {
+                Some(NetworkManagerRequest::SelectAccessPoint(ssid, iface)) => {
                     let state = NetworkManagerState::new(&conn).await.unwrap_or_default();
-                    let success = if let Err(err) = state.connect_wifi(&conn, &ssid, None).await {
-                        tracing::error!("Failed to connect to access point: {:?}", err);
-                        false
-                    } else {
-                        true
-                    };
+                    let success =
+                        if let Err(err) = state.connect_wifi(&conn, &ssid, None, &iface).await {
+                            tracing::error!("Failed to connect to access point: {:?}", err);
+                            false
+                        } else {
+                            true
+                        };
 
                     _ = output
                         .send(NetworkManagerEvent::RequestResponse {
-                            req: NetworkManagerRequest::SelectAccessPoint(ssid.clone()),
+                            req: NetworkManagerRequest::SelectAccessPoint(
+                                ssid.clone(),
+                                iface.clone(),
+                            ),
                             success,
                             state: NetworkManagerState::new(&conn).await.unwrap_or_default(),
                         })
@@ -260,9 +268,9 @@ async fn start_listening(
 pub enum NetworkManagerRequest {
     SetAirplaneMode(bool),
     SetWiFi(bool),
-    SelectAccessPoint(String),
+    SelectAccessPoint(String, String),
     Disconnect(String),
-    Password(String, String),
+    Password(String, String, String),
     Forget(String),
     Reload,
 }
@@ -401,6 +409,7 @@ impl NetworkManagerState {
         conn: &Connection,
         ssid: &str,
         password: Option<&str>,
+        iface: &str,
     ) -> anyhow::Result<()> {
         let nm = NetworkManager::new(conn).await?;
 
@@ -417,7 +426,7 @@ impl NetworkManagerState {
         let Some(ap) = self
             .wireless_access_points
             .iter()
-            .find(|ap| ap.ssid == ssid)
+            .find(|ap| ap.ssid == ssid && ap.interface == iface)
         else {
             return Err(anyhow::anyhow!("Access point not found"));
         };
@@ -431,6 +440,7 @@ impl NetworkManagerState {
                 "connection",
                 HashMap::from([
                     ("id", Value::Str(ssid.into())),
+                    ("iface", Value::Str(iface.into())),
                     ("type", Value::Str("802-11-wireless".into())),
                 ]),
             ),
@@ -452,6 +462,9 @@ impl NetworkManagerState {
                 device.device_type().await.unwrap_or(DeviceType::Other),
                 DeviceType::Wifi
             ) {
+                continue;
+            }
+            if device.interface().await.unwrap_or("".to_string()) != iface {
                 continue;
             }
 
