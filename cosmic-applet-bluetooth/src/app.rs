@@ -5,6 +5,7 @@ use crate::bluetooth::{BluerDeviceStatus, BluerRequest, BluerState, DeviceProper
 use cosmic::{
     applet::token::subscription::{activation_token_subscription, TokenRequest, TokenUpdate},
     cctk::sctk::reexports::calloop,
+    widget::text::body,
 };
 
 use cosmic::{
@@ -379,7 +380,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
                 };
                 let status = row!(
                     icon::from_name(icon).symbolic(true).size(14),
-                    text(format!("{}%", battery)).size(14)
+                    body(format!("{}%", battery))
                 )
                 .align_items(Alignment::Center)
                 .spacing(2)
