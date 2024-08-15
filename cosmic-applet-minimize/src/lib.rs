@@ -262,7 +262,7 @@ impl cosmic::Application for Minimize {
                 .core
                 .applet
                 .icon_button(icon)
-                .on_press(Message::OpenOverflowPopup);
+                .on_press_down(Message::OpenOverflowPopup);
 
             Some(btn.into())
         } else {
