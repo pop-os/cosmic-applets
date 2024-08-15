@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 jobs:
   formatting:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@nightly
@@ -19,11 +19,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly-2023-11-18
+          toolchain: 1.80.1
           components: clippy
       - name: install dependencies
         run: sudo apt install -y libxkbcommon-dev libwayland-dev libdbus-1-dev libpulse-dev libinput-dev
       - uses: actions-rs-plus/clippy-check@v2
         with:
-          toolchain: nightly-2023-11-18
+          toolchain: 1.80.1
           args: --all --all-targets --all-features
