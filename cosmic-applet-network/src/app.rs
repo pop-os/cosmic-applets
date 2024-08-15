@@ -700,12 +700,12 @@ impl cosmic::Application for CosmicNetworkApplet {
                 .text_size(14)
                 .width(Length::Fill)
             ),
-            padded_control(divider::horizontal::default()),
         ]
         .align_items(Alignment::Center);
         if self.nm_state.airplane_mode {
             content = content.push(
                 column!(
+                    padded_control(divider::horizontal::default()),
                     icon::from_name("airplane-mode-symbolic")
                         .size(48)
                         .symbolic(true),
@@ -713,97 +713,104 @@ impl cosmic::Application for CosmicNetworkApplet {
                     text(fl!("turn-off-airplane-mode")).size(12)
                 )
                 .spacing(8)
+                .padding([0, 0, 8, 0])
                 .align_items(Alignment::Center)
                 .width(Length::Fill),
             );
         } else {
-            for known in &self.nm_state.known_access_points {
-                let mut btn_content = Vec::with_capacity(2);
+            if self.nm_state.wifi_enabled {
+                content = content.push(padded_control(divider::horizontal::default()));
+                for known in &self.nm_state.known_access_points {
+                    let mut btn_content = Vec::with_capacity(2);
+                    let ssid = text(&known.ssid).size(14).width(Length::Fill);
+                    if known.working {
+                        btn_content.push(
+                            icon::from_name("network-wireless-acquiring-symbolic")
+                                .size(24)
+                                .symbolic(true)
+                                .into(),
+                        );
+                        btn_content.push(ssid.into());
+                        btn_content.push(
+                            icon::from_name("process-working-symbolic")
+                                .size(24)
+                                .symbolic(true)
+                                .into(),
+                        );
+                    } else if matches!(known.state, DeviceState::Unavailable) {
+                        btn_content.push(
+                            icon::from_name("network-wireless-disconnected-symbolic")
+                                .size(24)
+                                .symbolic(true)
+                                .into(),
+                        );
+                        btn_content.push(ssid.into());
+                    } else {
+                        btn_content.push(
+                            icon::from_name(wifi_icon(known.strength))
+                                .size(24)
+                                .symbolic(true)
+                                .into(),
+                        );
+                        btn_content.push(ssid.into());
+                    }
 
-                let ssid = text(&known.ssid).size(14).width(Length::Fill);
-                if known.working {
-                    btn_content.push(
-                        icon::from_name("network-wireless-acquiring-symbolic")
-                            .size(24)
-                            .symbolic(true)
-                            .into(),
-                    );
-                    btn_content.push(ssid.into());
-                    btn_content.push(
-                        icon::from_name("process-working-symbolic")
-                            .size(24)
-                            .symbolic(true)
-                            .into(),
-                    );
-                } else if matches!(known.state, DeviceState::Unavailable) {
-                    btn_content.push(
-                        icon::from_name("network-wireless-disconnected-symbolic")
-                            .size(24)
-                            .symbolic(true)
-                            .into(),
-                    );
-                    btn_content.push(ssid.into());
-                } else {
-                    btn_content.push(
-                        icon::from_name(wifi_icon(known.strength))
-                            .size(24)
-                            .symbolic(true)
-                            .into(),
-                    );
-                    btn_content.push(ssid.into());
-                }
-
-                if self.failed_known_ssids.contains(&known.ssid) {
-                    btn_content.push(
-                        cosmic::widget::button::icon(from_name("view-refresh-symbolic").size(16))
+                    if self.failed_known_ssids.contains(&known.ssid) {
+                        btn_content.push(
+                            cosmic::widget::button::icon(
+                                from_name("view-refresh-symbolic").size(16),
+                            )
                             .icon_size(16)
                             .on_press(Message::ResetFailedKnownSsid(known.ssid.clone()))
                             .into(),
-                    )
+                        )
+                    }
+
+                    let mut btn = menu_button(
+                        Row::with_children(btn_content)
+                            .align_items(Alignment::Center)
+                            .spacing(8),
+                    );
+                    btn = match known.state {
+                        DeviceState::Failed
+                        | DeviceState::Unknown
+                        | DeviceState::Unmanaged
+                        | DeviceState::Disconnected
+                        | DeviceState::NeedAuth => {
+                            btn.on_press(Message::ActivateKnownWifi(known.ssid.clone()))
+                        }
+                        DeviceState::Activated => {
+                            btn.on_press(Message::Disconnect(known.ssid.clone()))
+                        }
+                        _ => btn,
+                    };
+                    known_wifi.push(Element::from(row![btn].align_items(Alignment::Center)));
                 }
 
-                let mut btn = menu_button(
-                    Row::with_children(btn_content)
-                        .align_items(Alignment::Center)
-                        .spacing(8),
-                );
-                btn = match known.state {
-                    DeviceState::Failed
-                    | DeviceState::Unknown
-                    | DeviceState::Unmanaged
-                    | DeviceState::Disconnected
-                    | DeviceState::NeedAuth => {
-                        btn.on_press(Message::ActivateKnownWifi(known.ssid.clone()))
-                    }
-                    DeviceState::Activated => btn.on_press(Message::Disconnect(known.ssid.clone())),
-                    _ => btn,
+                let has_known_wifi = !known_wifi.is_empty();
+                content = content.push(Column::with_children(known_wifi));
+                if has_known_wifi {
+                    content = content.push(padded_control(divider::horizontal::default()));
+                }
+
+                let dropdown_icon = if self.show_visible_networks {
+                    "go-down-symbolic"
+                } else {
+                    "go-next-symbolic"
                 };
-                known_wifi.push(Element::from(row![btn].align_items(Alignment::Center)));
+                let available_connections_btn = menu_button(row![
+                    text::body(fl!("visible-wireless-networks"))
+                        .width(Length::Fill)
+                        .vertical_alignment(Vertical::Center),
+                    container(icon::from_name(dropdown_icon).size(14).symbolic(true))
+                        .align_x(Horizontal::Center)
+                        .align_y(Vertical::Center)
+                        .width(Length::Fixed(24.0))
+                        .height(Length::Fixed(24.0)),
+                ])
+                .on_press(Message::ToggleVisibleNetworks);
+                content = content.push(available_connections_btn);
             }
-
-            let has_known_wifi = !known_wifi.is_empty();
-            content = content.push(Column::with_children(known_wifi));
-            if has_known_wifi {
-                content = content.push(padded_control(divider::horizontal::default()));
-            }
-
-            let dropdown_icon = if self.show_visible_networks {
-                "go-down-symbolic"
-            } else {
-                "go-next-symbolic"
-            };
-            let available_connections_btn = menu_button(row![
-                text::body(fl!("visible-wireless-networks"))
-                    .width(Length::Fill)
-                    .vertical_alignment(Vertical::Center),
-                container(icon::from_name(dropdown_icon).size(14).symbolic(true))
-                    .align_x(Horizontal::Center)
-                    .align_y(Vertical::Center)
-                    .width(Length::Fixed(24.0))
-                    .height(Length::Fixed(24.0)),
-            ])
-            .on_press(Message::ToggleVisibleNetworks);
-            content = content.push(available_connections_btn);
         }
         if self.show_visible_networks {
             if let Some(new_conn_state) = self.new_connection.as_ref() {
