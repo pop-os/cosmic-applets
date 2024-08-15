@@ -883,7 +883,7 @@ impl cosmic::Application for Audio {
                 .text_size(14)
                 .width(Length::Fill)
             )
-            .padding([4, 24]),
+            .padding([8, 24]),
             padded_control(divider::horizontal::default()),
             menu_button(text(fl!("sound-settings")).size(14)).on_press(Message::OpenSettings)
         ]

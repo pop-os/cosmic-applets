@@ -387,6 +387,7 @@ impl cosmic::Application for Notifications {
             )
             .width(Length::Fill)
             .align_x(Horizontal::Center)]
+            .padding([8, 0])
             .spacing(12)
         } else {
             let mut notifs: Vec<Element<_>> = Vec::with_capacity(self.cards.len());

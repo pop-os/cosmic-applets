@@ -448,12 +448,13 @@ impl cosmic::Application for Window {
 
         let month_controls = row![
             button::icon(icon::from_name("go-previous-symbolic"))
-                .padding([0, 12])
+                .padding(8)
                 .on_press(Message::PreviousMonth),
             button::icon(icon::from_name("go-next-symbolic"))
-                .padding([0, 12])
+                .padding(8)
                 .on_press(Message::NextMonth)
-        ];
+        ]
+        .spacing(8);
 
         // Calender
 
@@ -505,6 +506,7 @@ impl cosmic::Application for Window {
                 Space::with_width(Length::Fill),
                 month_controls,
             ]
+            .align_items(Alignment::Center)
             .padding([12, 20]),
             calender.padding([0, 12].into()),
             padded_control(divider::horizontal::default()),
