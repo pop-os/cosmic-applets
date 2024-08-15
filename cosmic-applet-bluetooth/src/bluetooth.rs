@@ -3,10 +3,12 @@
 
 use std::{collections::HashMap, fmt::Debug, hash::Hash, mem, sync::Arc, time::Duration};
 
+pub use bluer::DeviceProperty;
 use bluer::{
     agent::{Agent, AgentHandle},
-    Adapter, Address, DeviceProperty, Session, Uuid,
+    Adapter, Address, Session, Uuid,
 };
+
 use cosmic::iced::{
     self,
     futures::{SinkExt, StreamExt},
