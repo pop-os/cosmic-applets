@@ -252,7 +252,7 @@ impl cosmic::Application for App {
                         .icon_button_from_handle(icon.clone().symbolic(true)),
                     _ => self.core.applet.icon_button(menu.icon_name()),
                 }
-                .on_press(Msg::TogglePopup(*id)),
+                .on_press_down(Msg::TogglePopup(*id)),
             )
             .on_mouse_enter(Msg::Hovered(*id))
             .into()
