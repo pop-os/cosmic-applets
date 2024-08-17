@@ -9,12 +9,14 @@ use cosmic::{
     applet::{cosmic_panel_config::PanelAnchor, menu_button, padded_control},
     cctk::sctk::reexports::calloop,
     iced::{
+        futures::{FutureExt, TryFutureExt},
         subscription,
         wayland::popup::{destroy_popup, get_popup},
         widget::{column, row, text, vertical_space},
         window, Alignment, Length, Rectangle, Subscription,
     },
     iced_core::alignment::{Horizontal, Vertical},
+    iced_runtime::command,
     iced_style::application,
     iced_widget::{horizontal_rule, Column},
     widget::{
@@ -23,6 +25,8 @@ use cosmic::{
     },
     Command, Element, Theme,
 };
+use timedate_zbus::TimeDateProxy;
+use zbus::Connection;
 
 use icu::{
     calendar::DateTime,
@@ -47,17 +51,20 @@ use cosmic::applet::token::subscription::{
 pub struct Window {
     core: cosmic::app::Core,
     popup: Option<window::Id>,
-    now: chrono::DateTime<chrono::Local>,
+    now: chrono::DateTime<chrono::FixedOffset>,
+    timezone: Option<chrono_tz::Tz>,
     date_selected: chrono::NaiveDate,
     rectangle_tracker: Option<RectangleTracker<u32>>,
     rectangle: Rectangle,
     token_tx: Option<calloop::channel::Sender<TokenRequest>>,
     config: TimeAppletConfig,
     locale: Locale,
+    conn: Option<Connection>,
 }
 
 #[derive(Debug, Clone)]
 pub enum Message {
+    Init(Option<Connection>),
     TogglePopup,
     CloseRequested(window::Id),
     Tick,
@@ -68,6 +75,7 @@ pub enum Message {
     OpenDateTimeSettings,
     Token(TokenUpdate),
     ConfigChanged(TimeAppletConfig),
+    TimezoneUpdate(Option<String>),
 }
 
 impl Window {
@@ -126,21 +134,28 @@ impl cosmic::Application for Window {
             }
         };
 
-        let now: chrono::prelude::DateTime<chrono::prelude::Local> = chrono::Local::now();
+        // Chrono evaluates the local timezone once whereby it's stored in a thread local
+        // variable but never updated
+        // Instead of using the local timezone, we will store an offset that is updated if the
+        // timezone is ever externally changed
+        let now: chrono::DateTime<chrono::FixedOffset> = chrono::Local::now().fixed_offset();
 
         (
             Self {
                 core,
                 popup: None,
                 now,
+                timezone: None,
                 date_selected: chrono::NaiveDate::from(now.naive_local()),
                 rectangle_tracker: None,
                 rectangle: Rectangle::default(),
                 token_tx: None,
                 config: TimeAppletConfig::default(),
                 locale,
+                conn: None,
             },
-            Command::none(),
+            Command::single(command::Action::Future(Box::pin(Connection::system())))
+                .map(|res| Message::Init(res.ok()).into()),
         )
     }
 
@@ -170,10 +185,57 @@ impl cosmic::Application for Window {
             })
         }
 
+        let conn = self.conn.clone();
+        fn timezone_subscription(conn: Option<Connection>) -> Subscription<Message> {
+            use cosmic::iced_futures::futures::StreamExt;
+            let Some(conn) = conn else {
+                return Subscription::none();
+            };
+
+            // Update applet's timezone if the system's timezone changes
+            subscription::unfold("timezone-sub", (), move |_| {
+                let conn = conn.clone();
+                async move {
+                    TimeDateProxy::new(&conn)
+                        .inspect_err(|e| {
+                            tracing::error!("Failed to connect to timedate endpoint: {e:?}")
+                        })
+                        .then(|proxy| async move {
+                            let Ok(proxy) = proxy else {
+                                return (Message::TimezoneUpdate(None), ());
+                            };
+                            proxy
+                                .receive_timezone_changed()
+                                .then(|stream| stream.into_future())
+                                .then(|(prop_opt, _)| async move {
+                                    if let Some(property) = prop_opt {
+                                        property
+                                            .get()
+                                            .await
+                                            .inspect_err(|e| {
+                                                tracing::error!(
+                                                    "Failed to receive time zone update: {e:?}"
+                                                )
+                                            })
+                                            .ok()
+                                            .map(|tz| (Message::TimezoneUpdate(Some(tz)), ()))
+                                            .unwrap_or((Message::TimezoneUpdate(None), ()))
+                                    } else {
+                                        (Message::TimezoneUpdate(None), ())
+                                    }
+                                })
+                                .await
+                        })
+                        .await
+                }
+            })
+        }
+
         Subscription::batch(vec![
             rectangle_tracker_subscription(0).map(|e| Message::Rectangle(e.1)),
             time_subscription().map(|_| Message::Tick),
             activation_token_subscription(0).map(Message::Token),
+            timezone_subscription(conn),
             self.core.watch_config(Self::APP_ID).map(|u| {
                 for err in u.errors {
                     tracing::error!(?err, "Error watching config");
@@ -188,6 +250,10 @@ impl cosmic::Application for Window {
         message: Self::Message,
     ) -> cosmic::iced::Command<app::Message<Self::Message>> {
         match message {
+            Message::Init(conn) => {
+                self.conn = conn;
+                Command::none()
+            }
             Message::TogglePopup => {
                 if let Some(p) = self.popup.take() {
                     destroy_popup(p)
@@ -220,7 +286,10 @@ impl cosmic::Application for Window {
                 }
             }
             Message::Tick => {
-                self.now = chrono::Local::now();
+                self.now = self
+                    .timezone
+                    .map(|tz| chrono::Local::now().with_timezone(&tz).fixed_offset())
+                    .unwrap_or_else(|| chrono::Local::now().into());
                 Command::none()
             }
             Message::Rectangle(u) => {
@@ -305,6 +374,16 @@ impl cosmic::Application for Window {
             Message::ConfigChanged(c) => {
                 self.config = c;
                 Command::none()
+            }
+            Message::TimezoneUpdate(timezone) => {
+                if let Some(timezone) =
+                    timezone.and_then(|timezone| timezone.parse::<chrono_tz::Tz>().ok())
+                {
+                    self.now = chrono::Local::now().with_timezone(&timezone).fixed_offset();
+                    self.timezone = Some(timezone);
+                }
+
+                self.update(Message::Tick)
             }
         }
     }
