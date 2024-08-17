@@ -6,6 +6,7 @@ license = "GPL-3.0"
 
 [dependencies]
 chrono = { version = "0.4.35", features = ["clock"] }
+chrono-tz = "0.9"
 i18n-embed-fl.workspace = true
 i18n-embed.workspace = true
 libcosmic.workspace = true
@@ -16,3 +17,5 @@ tracing-log.workspace = true
 tracing-subscriber.workspace = true
 tracing.workspace = true
 icu = { version = "1.4.0", features = ["experimental", "compiled_data", "icu_datetime_experimental"]}
+zbus.workspace = true
+timedate-zbus = { git = "https://github.com/pop-os/dbus-settings-bindings" }
