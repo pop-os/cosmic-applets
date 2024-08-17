@@ -1,5 +1,5 @@
-cosmic-app-list = Lista de aplicaciones Cosmic
-pin = Añadir a favoritos
+cosmic-app-list = Bandeja de aplicaciones
+pin = Fijar a la bandeja
 quit = Cerrar
 quit-all = Cerrar todas
 new-window = Nueva ventana
