@@ -3,7 +3,7 @@
 
 use std::{borrow::Cow, str::FromStr};
 
-use chrono::{Datelike, DurationRound, Timelike};
+use chrono::{Datelike, Timelike};
 use cosmic::{
     app,
     applet::{cosmic_panel_config::PanelAnchor, menu_button, padded_control},
@@ -25,6 +25,7 @@ use cosmic::{
     Command, Element, Theme,
 };
 use timedate_zbus::TimeDateProxy;
+use tokio::{sync::watch, time};
 
 use icu::{
     calendar::DateTime,
@@ -56,6 +57,7 @@ pub struct Window {
     rectangle: Rectangle,
     token_tx: Option<calloop::channel::Sender<TokenRequest>>,
     config: TimeAppletConfig,
+    show_seconds_tx: watch::Sender<bool>,
     locale: Locale,
 }
 
@@ -134,7 +136,10 @@ impl cosmic::Application for Window {
         // variable but never updated
         // Instead of using the local timezone, we will store an offset that is updated if the
         // timezone is ever externally changed
-        let now: chrono::DateTime<chrono::FixedOffset> = chrono::Local::now().fixed_offset();
+        let now = chrono::Local::now().fixed_offset();
+
+        // Synch `show_seconds` from the config within the time subscription
+        let (show_seconds_tx, _) = watch::channel(true);
 
         (
             Self {
@@ -147,6 +152,7 @@ impl cosmic::Application for Window {
                 rectangle: Rectangle::default(),
                 token_tx: None,
                 config: TimeAppletConfig::default(),
+                show_seconds_tx,
                 locale,
             },
             Command::none(),
@@ -166,16 +172,56 @@ impl cosmic::Application for Window {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        fn time_subscription() -> Subscription<()> {
-            subscription::unfold("time-sub", (), move |()| async move {
-                let now = chrono::Local::now();
-                let update_delay = chrono::TimeDelta::minutes(1);
+        fn time_subscription(mut show_seconds: watch::Receiver<bool>) -> Subscription<Message> {
+            subscription::channel("time-sub", 1, |mut output| async move {
+                // Mark this receiver's state as changed so that it always receives an initial
+                // update during the loop below
+                // This allows us to avoid duplicating code from the loop
+                show_seconds.mark_changed();
+                let mut period = 1;
+                let mut timer = time::interval(time::Duration::from_secs(period));
+                timer.set_missed_tick_behavior(time::MissedTickBehavior::Skip);
 
-                let duration = ((now + update_delay).duration_trunc(update_delay).unwrap() - now)
-                    .to_std()
-                    .unwrap();
-                tokio::time::sleep(duration).await;
-                ((), ())
+                loop {
+                    tokio::select! {
+                        _ = timer.tick() => {
+                            #[cfg(debug_assertions)]
+                            if let Err(err) = output.send(Message::Tick).await {
+                                tracing::error!(?err, "Failed sending tick request to applet");
+                            }
+                            #[cfg(not(debug_assertions))]
+                            let _ = output.send(Message::Tick).await;
+
+                            // Calculate a delta if we're ticking per minute to keep ticks stable
+                            // Based on i3status-rust
+                            let current = chrono::Local::now().second() as u64 % period;
+                            if current != 0 {
+                                timer.reset_after(time::Duration::from_secs(period - current));
+                            }
+                        },
+                        // Update timer if the user toggles show_seconds
+                        Ok(()) = show_seconds.changed() => {
+                            let seconds = *show_seconds.borrow_and_update();
+                            if seconds {
+                                period = 1;
+                                // Subsecond precision isn't needed; skip calculating offset
+                                let period = time::Duration::from_secs(period);
+                                let start = time::Instant::now() + period;
+                                timer = time::interval_at(start, period);
+                            } else {
+                                period = 60;
+                                let delta = time::Duration::from_secs(period - chrono::Utc::now().second() as u64 % period);
+                                let now = time::Instant::now();
+                                // Start ticking from the next minute to update the time properly
+                                let start = now + delta;
+                                let period = time::Duration::from_secs(period);
+                                timer = time::interval_at(start, period);
+                            }
+
+                            timer.set_missed_tick_behavior(time::MissedTickBehavior::Skip);
+                        }
+                    }
+                }
             })
         }
 
@@ -219,9 +265,10 @@ impl cosmic::Application for Window {
             })
         }
 
+        let show_seconds_rx = self.show_seconds_tx.subscribe();
         Subscription::batch(vec![
             rectangle_tracker_subscription(0).map(|e| Message::Rectangle(e.1)),
-            time_subscription().map(|_| Message::Tick),
+            time_subscription(show_seconds_rx),
             activation_token_subscription(0).map(Message::Token),
             timezone_subscription(),
             self.core.watch_config(Self::APP_ID).map(|u| {
@@ -356,6 +403,15 @@ impl cosmic::Application for Window {
                 Command::none()
             }
             Message::ConfigChanged(c) => {
+                // Don't interrupt the tick subscription unless necessary
+                self.show_seconds_tx.send_if_modified(|show_seconds| {
+                    if *show_seconds == c.show_seconds {
+                        false
+                    } else {
+                        *show_seconds = c.show_seconds;
+                        true
+                    }
+                });
                 self.config = c;
                 Command::none()
             }
@@ -396,6 +452,10 @@ impl cosmic::Application for Window {
 
             time_bag.hour = Some(components::Numeric::Numeric);
             time_bag.minute = Some(components::Numeric::Numeric);
+            time_bag.second = self
+                .config
+                .show_seconds
+                .then_some(components::Numeric::Numeric);
 
             let hour_cycle = if self.config.military_time {
                 preferences::HourCycle::H23
