@@ -9,14 +9,13 @@ use cosmic::{
     applet::{cosmic_panel_config::PanelAnchor, menu_button, padded_control},
     cctk::sctk::reexports::calloop,
     iced::{
-        futures::{FutureExt, TryFutureExt},
+        futures::{channel::mpsc, SinkExt, StreamExt, TryFutureExt},
         subscription,
         wayland::popup::{destroy_popup, get_popup},
         widget::{column, row, text, vertical_space},
         window, Alignment, Length, Rectangle, Subscription,
     },
     iced_core::alignment::{Horizontal, Vertical},
-    iced_runtime::command,
     iced_style::application,
     iced_widget::{horizontal_rule, Column},
     widget::{
@@ -26,7 +25,6 @@ use cosmic::{
     Command, Element, Theme,
 };
 use timedate_zbus::TimeDateProxy;
-use zbus::Connection;
 
 use icu::{
     calendar::DateTime,
@@ -59,12 +57,10 @@ pub struct Window {
     token_tx: Option<calloop::channel::Sender<TokenRequest>>,
     config: TimeAppletConfig,
     locale: Locale,
-    conn: Option<Connection>,
 }
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    Init(Option<Connection>),
     TogglePopup,
     CloseRequested(window::Id),
     Tick,
@@ -75,7 +71,7 @@ pub enum Message {
     OpenDateTimeSettings,
     Token(TokenUpdate),
     ConfigChanged(TimeAppletConfig),
-    TimezoneUpdate(Option<String>),
+    TimezoneUpdate(String),
 }
 
 impl Window {
@@ -152,10 +148,8 @@ impl cosmic::Application for Window {
                 token_tx: None,
                 config: TimeAppletConfig::default(),
                 locale,
-                conn: None,
             },
-            Command::single(command::Action::Future(Box::pin(Connection::system())))
-                .map(|res| Message::Init(res.ok()).into()),
+            Command::none(),
         )
     }
 
@@ -185,49 +179,43 @@ impl cosmic::Application for Window {
             })
         }
 
-        let conn = self.conn.clone();
-        fn timezone_subscription(conn: Option<Connection>) -> Subscription<Message> {
-            use cosmic::iced_futures::futures::StreamExt;
-            let Some(conn) = conn else {
-                return Subscription::none();
-            };
+        // Update applet's timezone if the system's timezone changes
+        async fn timezone_update(output: &mut mpsc::Sender<Message>) -> zbus::Result<()> {
+            let conn = zbus::Connection::system().await?;
+            let proxy = TimeDateProxy::new(&conn).await?;
 
-            // Update applet's timezone if the system's timezone changes
-            subscription::unfold("timezone-sub", (), move |_| {
-                let conn = conn.clone();
-                async move {
-                    TimeDateProxy::new(&conn)
-                        .inspect_err(|e| {
-                            tracing::error!("Failed to connect to timedate endpoint: {e:?}")
-                        })
-                        .then(|proxy| async move {
-                            let Ok(proxy) = proxy else {
-                                return (Message::TimezoneUpdate(None), ());
-                            };
-                            proxy
-                                .receive_timezone_changed()
-                                .then(|stream| stream.into_future())
-                                .then(|(prop_opt, _)| async move {
-                                    if let Some(property) = prop_opt {
-                                        property
-                                            .get()
-                                            .await
-                                            .inspect_err(|e| {
-                                                tracing::error!(
-                                                    "Failed to receive time zone update: {e:?}"
-                                                )
-                                            })
-                                            .ok()
-                                            .map(|tz| (Message::TimezoneUpdate(Some(tz)), ()))
-                                            .unwrap_or((Message::TimezoneUpdate(None), ()))
-                                    } else {
-                                        (Message::TimezoneUpdate(None), ())
-                                    }
-                                })
-                                .await
-                        })
-                        .await
+            // The stream always returns the current timezone as its first item even if it wasn't
+            // updated. If the proxy is recreated in a loop somehow, the resulting stream will
+            // always yield an update immediately which could lead to spammed false updates.
+            while let Some(property) = proxy.receive_timezone_changed().await.next().await {
+                let tz = property.get().await?;
+                output
+                    .send(Message::TimezoneUpdate(tz))
+                    .map_err(|e| {
+                        zbus::Error::InputOutput(std::sync::Arc::new(std::io::Error::other(e)))
+                    })
+                    .await?;
+            }
+
+            Ok(())
+        }
+
+        fn timezone_subscription() -> Subscription<Message> {
+            subscription::channel("timezone-sub", 1, |mut output| async move {
+                'retry: loop {
+                    match timezone_update(&mut output).await {
+                        Ok(()) => break 'retry,
+                        Err(err) => {
+                            tracing::error!(
+                                ?err,
+                                "Automatic timezone updater failed; retrying in one minute"
+                            );
+                            tokio::time::sleep(std::time::Duration::from_secs(60)).await;
+                        }
+                    }
                 }
+
+                std::future::pending().await
             })
         }
 
@@ -235,7 +223,7 @@ impl cosmic::Application for Window {
             rectangle_tracker_subscription(0).map(|e| Message::Rectangle(e.1)),
             time_subscription().map(|_| Message::Tick),
             activation_token_subscription(0).map(Message::Token),
-            timezone_subscription(conn),
+            timezone_subscription(),
             self.core.watch_config(Self::APP_ID).map(|u| {
                 for err in u.errors {
                     tracing::error!(?err, "Error watching config");
@@ -250,10 +238,6 @@ impl cosmic::Application for Window {
         message: Self::Message,
     ) -> cosmic::iced::Command<app::Message<Self::Message>> {
         match message {
-            Message::Init(conn) => {
-                self.conn = conn;
-                Command::none()
-            }
             Message::TogglePopup => {
                 if let Some(p) = self.popup.take() {
                     destroy_popup(p)
@@ -376,9 +360,7 @@ impl cosmic::Application for Window {
                 Command::none()
             }
             Message::TimezoneUpdate(timezone) => {
-                if let Some(timezone) =
-                    timezone.and_then(|timezone| timezone.parse::<chrono_tz::Tz>().ok())
-                {
+                if let Ok(timezone) = timezone.parse::<chrono_tz::Tz>() {
                     self.now = chrono::Local::now().with_timezone(&timezone).fixed_offset();
                     self.timezone = Some(timezone);
                 }
