@@ -430,7 +430,7 @@ impl cosmic::Application for CosmicBatteryApplet {
     fn view_window(&self, _id: window::Id) -> Element<Message> {
         let name = text(fl!("battery")).size(14);
         let description = text(if !self.on_battery {
-            format!("{}%", self.battery_percent)
+            format!("{:.0}%", self.battery_percent)
         } else {
             format!(
                 "{} {} ({:.0}%)",
