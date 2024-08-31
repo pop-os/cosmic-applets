@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use crate::{
-    backend::{power_profile_subscription, Power, PowerProfileRequest, PowerProfileUpdate},
+    backend::{
+        power_profile_subscription, set_charging_limit, Power, PowerProfileRequest,
+        PowerProfileUpdate,
+    },
     config,
     dgpu::{dgpu_subscription, Entry, GpuUpdate},
     fl,
@@ -154,6 +157,12 @@ impl CosmicBatteryApplet {
     fn set_charging_limit(&mut self, limit: bool) {
         self.charging_limit = limit;
         self.update_battery(self.battery_percent, self.on_battery);
+
+        if limit {
+            if let Ok(success) = set_charging_limit() {
+                self.charging_limit = success;
+            }
+        }
     }
 }
 
