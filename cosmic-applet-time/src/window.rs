@@ -114,7 +114,7 @@ impl cosmic::Application for Window {
         _flags: Self::Flags,
     ) -> (Self, cosmic::iced::Command<app::Message<Self::Message>>) {
         fn get_local() -> Result<Locale, Box<dyn std::error::Error>> {
-            let locale = std::env::var("LANG")?;
+            let locale = std::env::var("LC_TIME").or_else(|_| std::env::var("LANG"))?;
             let locale = locale
                 .split('.')
                 .next()
