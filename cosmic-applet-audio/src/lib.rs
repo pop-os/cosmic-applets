@@ -17,7 +17,7 @@ use cosmic::{
     cosmic_config::CosmicConfigEntry,
     iced::{
         self,
-        widget::{self, column, row, slider, text as iced_text},
+        widget::{self, column, row, slider},
         window, Alignment, Length, Limits, Rectangle, Subscription,
     },
     iced_runtime::core::alignment::Horizontal,
@@ -911,7 +911,7 @@ fn revealer(
             column![revealer_head(open, title, selected, toggle)].width(Length::Fill),
             |col, (id, name)| {
                 col.push(
-                    menu_button(iced_text(name).size(14))
+                    menu_button(text::body(name.clone()))
                         .on_press(change(id.clone()))
                         .width(Length::Fill)
                         .padding([8, 48]),
