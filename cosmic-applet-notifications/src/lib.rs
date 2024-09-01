@@ -12,7 +12,7 @@ use cosmic::{
     cosmic_config::{Config, CosmicConfigEntry},
     iced::{
         wayland::popup::{destroy_popup, get_popup},
-        widget::{column, row, text as iced_text},
+        widget::{column, row},
         window, Alignment, Length, Limits, Subscription,
     },
     iced_core::alignment::Horizontal,
@@ -375,10 +375,11 @@ impl cosmic::Application for Notifications {
         .width(Length::Fill)]);
 
         let notifications = if self.cards.is_empty() {
+            let no_notifications = String::from(fl!("no-notifications"));
             row![container(
                 column![
                     text_icon("cosmic-applet-notification-symbolic", 40),
-                    iced_text(&fl!("no-notifications")).size(14.0)
+                    text::body(no_notifications)
                 ]
                 .align_items(Alignment::Center)
             )
