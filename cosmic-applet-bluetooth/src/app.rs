@@ -5,7 +5,6 @@ use crate::bluetooth::{BluerDeviceStatus, BluerRequest, BluerState, DeviceProper
 use cosmic::{
     applet::token::subscription::{activation_token_subscription, TokenRequest, TokenUpdate},
     cctk::sctk::reexports::calloop,
-    widget::text::body,
 };
 
 use cosmic::{
@@ -13,7 +12,7 @@ use cosmic::{
     iced::{
         self,
         wayland::popup::{destroy_popup, get_popup},
-        widget::{column, container, row, scrollable, text, Column},
+        widget::{column, container, row, scrollable, Column},
         Alignment, Length, Subscription,
     },
     iced_runtime::core::{
@@ -22,7 +21,7 @@ use cosmic::{
         window,
     },
     iced_style::application,
-    widget::{button, divider, icon},
+    widget::{button, divider, icon, text},
     Command, Element, Theme,
 };
 use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
@@ -359,8 +358,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
         }) {
             let mut row = row![
                 icon::from_name(dev.icon.as_str()).size(16).symbolic(true),
-                text(dev.name.clone())
-                    .size(14)
+                text::body(dev.name.clone())
                     .horizontal_alignment(Horizontal::Left)
                     .vertical_alignment(Vertical::Center)
                     .width(Length::Fill)
@@ -380,7 +378,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
                 };
                 let status = row!(
                     icon::from_name(icon).symbolic(true).size(14),
-                    body(format!("{}%", battery))
+                    text::body(format!("{}%", battery))
                 )
                 .align_items(Alignment::Center)
                 .spacing(2)
@@ -396,8 +394,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
             match &dev.status {
                 BluerDeviceStatus::Connected => {
                     row = row.push(
-                        text(fl!("connected"))
-                            .size(14)
+                        text::body(fl!("connected"))
                             .horizontal_alignment(Horizontal::Right)
                             .vertical_alignment(Vertical::Center),
                     );
@@ -459,8 +456,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
             "go-next-symbolic"
         };
         let available_connections_btn = menu_button(row![
-            text(fl!("other-devices"))
-                .size(14)
+            text::body(fl!("other-devices"))
                 .width(Length::Fill)
                 .height(Length::Fixed(24.0))
                 .vertical_alignment(Vertical::Center),
@@ -471,8 +467,10 @@ impl cosmic::Application for CosmicBluetoothApplet {
                 .height(Length::Fixed(24.0))
         ])
         .on_press(Message::ToggleVisibleDevices(!self.show_visible_devices));
-        content = content.push(padded_control(divider::horizontal::default()));
-        content = content.push(available_connections_btn);
+        if self.bluer_state.bluetooth_enabled {
+            content = content.push(padded_control(divider::horizontal::default()));
+            content = content.push(available_connections_btn);
+        }
         let mut list_column: Vec<Element<'_, Message>> =
             Vec::with_capacity(self.bluer_state.devices.len());
 
@@ -482,56 +480,50 @@ impl cosmic::Application for CosmicBluetoothApplet {
                     icon::from_name(device.icon.as_str())
                         .size(16)
                         .symbolic(true),
-                    text(&device.name)
-                        .size(14)
+                    text::body(&device.name)
                         .horizontal_alignment(Horizontal::Left)
                         .vertical_alignment(Vertical::Center)
                         .width(Length::Fill)
                 ]),
                 padded_control(
-                    text(fl!(
+                    text::body(fl!(
                         "confirm-pin",
                         HashMap::from_iter(vec![("deviceName", device.name.clone())])
                     ))
                     .horizontal_alignment(Horizontal::Left)
                     .vertical_alignment(Vertical::Center)
                     .width(Length::Fill)
-                    .size(14)
                 ),
                 padded_control(
-                    text(pin)
+                    text::title3(pin)
                         .horizontal_alignment(Horizontal::Center)
                         .vertical_alignment(Vertical::Center)
-                        .width(Length::Fixed(280.0))
-                        .size(22)
+                        .width(Length::Fixed(280.0)) //.size(22)
                 )
                 .align_x(Horizontal::Center),
                 padded_control(
                     row![
                         button(
-                            text(fl!("cancel"))
-                                .size(14)
-                                .width(Length::Fill)
-                                .height(Length::Fixed(24.0))
+                            text::body(fl!("cancel"))
                                 .vertical_alignment(Vertical::Center)
                                 .horizontal_alignment(Horizontal::Center)
                         )
-                        .padding([8, 24])
-                        .width(Length::Fill)
+                        .padding([4, 0])
+                        .height(Length::Fixed(28.0))
+                        .width(Length::Fixed(105.0))
                         .on_press(Message::Cancel),
                         button(
-                            text(fl!("confirm"))
-                                .size(14)
-                                .height(Length::Fixed(24.0))
+                            text::body(fl!("confirm"))
                                 .vertical_alignment(Vertical::Center)
                                 .horizontal_alignment(Horizontal::Center)
                         )
-                        .padding([8, 24])
-                        .width(Length::Fill)
+                        .padding([4, 0])
+                        .height(Length::Fixed(28.0))
+                        .width(Length::Fixed(105.0))
                         .on_press(Message::Confirm),
                     ]
                     .spacing(self.core.system_theme().cosmic().space_xxs())
-                    .width(Length::Fill)
+                    .width(Length::Shrink)
                     .align_items(Alignment::Center)
                 )
                 .align_x(Horizontal::Center)
@@ -552,9 +544,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
             }) {
                 let row = row![
                     icon::from_name(dev.icon.as_str()).size(16).symbolic(true),
-                    text(dev.name.clone())
-                        .horizontal_alignment(Horizontal::Left)
-                        .size(14),
+                    text::body(dev.name.clone()).horizontal_alignment(Horizontal::Left),
                 ]
                 .align_items(Alignment::Center)
                 .spacing(12);
