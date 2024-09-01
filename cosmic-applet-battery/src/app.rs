@@ -155,11 +155,8 @@ impl CosmicBatteryApplet {
     }
 
     fn set_charging_limit(&mut self, limit: bool) {
+        self.charging_limit = limit;
         self.update_battery(self.battery_percent, self.on_battery);
-
-        if let Ok(success) = set_charging_limit(limit) {
-            self.charging_limit = success;
-        }
     }
 }
 
@@ -247,12 +244,18 @@ impl cosmic::Application for CosmicBatteryApplet {
                     let _ = tx.send(settings_daemon::Request::SetDisplayBrightness(brightness));
                 }
             }
-            Message::InitChargingLimit(limit) => {
-                self.set_charging_limit(limit);
+            Message::InitChargingLimit(enable) => {
+                self.set_charging_limit(enable);
             }
             Message::SetChargingLimit(chain, enable) => {
                 self.timeline.set_chain(chain).start();
                 self.set_charging_limit(enable);
+
+                if enable {
+                    return cosmic::iced::Command::perform(set_charging_limit(), |_| {
+                        cosmic::app::Message::None
+                    });
+                }
             }
             Message::Errored(why) => {
                 tracing::error!("{}", why);
