@@ -556,7 +556,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                     let mut ipv4 = Vec::with_capacity(ip_addresses.len() + 1);
                     ipv4.push(text::body(name).into());
                     for addr in ip_addresses {
-                        ipv4.push(text(format!("{}: {}", fl!("ipv4"), addr)).size(10).into());
+                        ipv4.push(text::caption(format!("{}: {}", fl!("ipv4"), addr)).into());
                     }
                     vpn_ethernet_col = vpn_ethernet_col.push(column![
                         row![
@@ -584,7 +584,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                     ip_addresses,
                 } => {
                     let mut ipv4 = Vec::with_capacity(ip_addresses.len() + 1);
-                    ipv4.push(text(name).size(14).into());
+                    ipv4.push(text::body(name).into());
                     for addr in ip_addresses {
                         ipv4.push(text(format!("{}: {}", fl!("ipv4"), addr)).size(12).into());
                     }
@@ -628,7 +628,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                             .size(24)
                             .symbolic(true)
                             .into(),
-                        column![text(name).size(14), Column::with_children(ipv4)]
+                        column![text::body(name), Column::with_children(ipv4)]
                             .width(Length::Fill)
                             .into(),
                     ];
@@ -709,7 +709,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                     icon::from_name("airplane-mode-symbolic")
                         .size(48)
                         .symbolic(true),
-                    text(fl!("airplane-mode-on")).size(14),
+                    text::body(fl!("airplane-mode-on")),
                     text(fl!("turn-off-airplane-mode")).size(12)
                 )
                 .spacing(8)
@@ -722,7 +722,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                 content = content.push(padded_control(divider::horizontal::default()));
                 for known in &self.nm_state.known_access_points {
                     let mut btn_content = Vec::with_capacity(2);
-                    let ssid = text(&known.ssid).size(14).width(Length::Fill);
+                    let ssid = text::body(&known.ssid).width(Length::Fill);
                     if known.working {
                         btn_content.push(
                             icon::from_name("network-wireless-acquiring-symbolic")
@@ -858,7 +858,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                             icon::from_name("network-wireless-acquiring-symbolic")
                                 .size(24)
                                 .symbolic(true),
-                            text(&access_point.ssid).size(14),
+                            text::body(&access_point.ssid),
                         ]
                         .align_items(Alignment::Center)
                         .width(Length::Fill)
@@ -880,7 +880,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                                 icon::from_name("network-wireless-error-symbolic")
                                     .size(24)
                                     .symbolic(true),
-                                text(&access_point.ssid).size(14),
+                                text::body(&access_point.ssid),
                             ]
                             .align_items(Alignment::Center)
                             .spacing(12),

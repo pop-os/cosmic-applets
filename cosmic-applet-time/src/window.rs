@@ -12,15 +12,15 @@ use cosmic::{
         futures::{channel::mpsc, SinkExt, StreamExt, TryFutureExt},
         subscription,
         wayland::popup::{destroy_popup, get_popup},
-        widget::{column, row, text, vertical_space},
+        widget::{column, row, vertical_space},
         window, Alignment, Length, Rectangle, Subscription,
     },
     iced_core::alignment::{Horizontal, Vertical},
     iced_style::application,
     iced_widget::{horizontal_rule, Column},
     widget::{
-        button, container, divider, grid, horizontal_space, icon, rectangle_tracker::*, Button,
-        Grid, Space,
+        button, container, divider, grid, horizontal_space, icon, rectangle_tracker::*, text,
+        Button, Grid, Space,
     },
     Command, Element, Theme,
 };
@@ -565,7 +565,7 @@ impl cosmic::Application for Window {
         let mut day_of_week_bag = Bag::empty();
         day_of_week_bag.weekday = Some(components::Text::Long);
 
-        let day_of_week = text(self.format(day_of_week_bag, &self.date_selected)).size(14);
+        let day_of_week = text::body(self.format(day_of_week_bag, &self.date_selected));
 
         let month_controls = row![
             button::icon(icon::from_name("go-previous-symbolic"))
@@ -631,7 +631,7 @@ impl cosmic::Application for Window {
             .padding([12, 20]),
             calender.padding([0, 12].into()),
             padded_control(divider::horizontal::default()),
-            menu_button(text(fl!("datetime-settings")).size(14))
+            menu_button(text::body(fl!("datetime-settings")))
                 .on_press(Message::OpenDateTimeSettings),
         ]
         .padding([8, 0]);

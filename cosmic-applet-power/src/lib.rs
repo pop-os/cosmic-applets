@@ -19,7 +19,7 @@ use cosmic::{
             actions::layer_surface::SctkLayerSurfaceSettings,
             popup::{destroy_popup, get_popup},
         },
-        widget::{self, column, container, row, space::Space, text},
+        widget::{self, column, container, row, space::Space},
         window, Alignment, Length, Subscription,
     },
     iced_runtime::core::layout::Limits,
@@ -29,7 +29,7 @@ use cosmic::{
     iced_style::application,
     iced_widget::mouse_area,
     theme,
-    widget::{button, divider, horizontal_space, icon, vertical_space, Column},
+    widget::{button, divider, horizontal_space, icon, text, vertical_space, Column},
     Element, Theme,
 };
 
@@ -248,15 +248,15 @@ impl cosmic::Application for Power {
 
     fn view_window(&self, id: window::Id) -> Element<Message> {
         if matches!(self.popup, Some(p) if p == id) {
-            let settings = menu_button(text(fl!("settings")).size(14)).on_press(Message::Settings);
+            let settings = menu_button(text::body(fl!("settings"))).on_press(Message::Settings);
 
             let session = column![
                 menu_button(
                     row![
                         text_icon("system-lock-screen-symbolic", 24),
-                        text(fl!("lock-screen")).size(14),
+                        text::body(fl!("lock-screen")),
                         Space::with_width(Length::Fill),
-                        text(fl!("lock-screen-shortcut")).size(14),
+                        text::body(fl!("lock-screen-shortcut")),
                     ]
                     .align_items(Alignment::Center)
                     .spacing(8)
@@ -265,9 +265,9 @@ impl cosmic::Application for Power {
                 menu_button(
                     row![
                         text_icon("system-log-out-symbolic", 24),
-                        text(fl!("log-out")).size(14),
+                        text::body(fl!("log-out")),
                         Space::with_width(Length::Fill),
-                        text(fl!("log-out-shortcut")).size(14),
+                        text::body(fl!("log-out-shortcut")),
                     ]
                     .align_items(Alignment::Center)
                     .spacing(8)
@@ -320,8 +320,7 @@ impl cosmic::Application for Power {
                 ))
                 .primary_action(
                     button(min_width_and_height(
-                        text(fl!("confirm", HashMap::from_iter(vec![("action", action)])))
-                            .size(14)
+                        text::body(fl!("confirm", HashMap::from_iter(vec![("action", action)])))
                             .into(),
                         142.0,
                         32.0,
@@ -333,7 +332,7 @@ impl cosmic::Application for Power {
                 )
                 .secondary_action(
                     button(min_width_and_height(
-                        text(fl!("cancel")).size(14).into(),
+                        text::body(fl!("cancel")).into(),
                         142.0,
                         32.0,
                     ))
@@ -382,7 +381,7 @@ impl cosmic::Application for Power {
 
 fn power_buttons(name: &str, msg: String) -> cosmic::widget::Button<Message> {
     cosmic::widget::button(
-        column![text_icon(name, 40), text(msg).size(14)]
+        column![text_icon(name, 40), text::body(msg)]
             .spacing(4)
             .align_items(Alignment::Center)
             .width(Length::Fill),

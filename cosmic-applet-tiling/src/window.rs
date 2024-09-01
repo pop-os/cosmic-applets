@@ -298,29 +298,26 @@ impl cosmic::Application for Window {
             .width(Length::Fill),
             padded_control(divider::horizontal::default(),),
             padded_control(column![
-                text(fl!("new-workspace")).size(14),
+                text::body(fl!("new-workspace")),
                 new_workspace_behavior_button,
             ]),
             padded_control(divider::horizontal::default()),
             padded_control(row!(
-                text(fl!("navigate-windows")).size(14).width(Length::Fill),
-                text(format!("{} + {}", fl!("super"), fl!("arrow-keys"))).size(14),
+                text::body(fl!("navigate-windows")).width(Length::Fill),
+                text::body(format!("{} + {}", fl!("super"), fl!("arrow-keys"))),
             )),
             padded_control(row!(
-                text(fl!("move-window")).size(14).width(Length::Fill),
-                text(format!(
+                text::body(fl!("move-window")).width(Length::Fill),
+                text::body(format!(
                     "{} + {} + {}",
                     fl!("shift"),
                     fl!("super"),
                     fl!("arrow-keys")
-                ))
-                .size(14),
+                )),
             )),
             padded_control(row!(
-                text(fl!("toggle-floating-window"))
-                    .size(14)
-                    .width(Length::Fill),
-                text(format!("{} + G", fl!("super"))).size(14),
+                text::body(fl!("toggle-floating-window")).width(Length::Fill),
+                text::body(format!("{} + G", fl!("super"))),
             )),
             padded_control(divider::horizontal::default()),
             padded_control(

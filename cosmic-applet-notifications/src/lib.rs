@@ -12,20 +12,17 @@ use cosmic::{
     cosmic_config::{Config, CosmicConfigEntry},
     iced::{
         wayland::popup::{destroy_popup, get_popup},
-        widget::{column, row, text},
+        widget::{column, row, text as iced_text},
         window, Alignment, Length, Limits, Subscription,
     },
     iced_core::alignment::Horizontal,
-    Command,
+    iced_widget::{scrollable, Column},
+    widget::{button, container, divider, icon, text},
+    Command, Element, Theme,
 };
 
 use cosmic::{iced_futures::futures::executor::block_on, iced_style::application};
 
-use cosmic::{
-    iced_widget::{scrollable, Column},
-    widget::{button, container, divider, icon},
-    Element, Theme,
-};
 use cosmic_notifications_config::NotificationsConfig;
 use cosmic_notifications_util::{Image, Notification};
 use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
@@ -381,7 +378,7 @@ impl cosmic::Application for Notifications {
             row![container(
                 column![
                     text_icon("cosmic-applet-notification-symbolic", 40),
-                    text(&fl!("no-notifications")).size(14)
+                    iced_text(&fl!("no-notifications")).size(14.0)
                 ]
                 .align_items(Alignment::Center)
             )
@@ -421,7 +418,7 @@ impl cosmic::Application for Notifications {
                         .size(12)
                         .width(Length::Fill);
 
-                        let duration_since = text(duration_ago_msg(n)).size(10);
+                        let duration_since = text::caption(duration_ago_msg(n));
 
                         let close_notif = button(
                             icon::from_name("window-close-symbolic")
@@ -474,9 +471,8 @@ impl cosmic::Application for Notifications {
                                         .align_items(Alignment::Center),
                                 },
                                 column![
-                                    text(n.summary.lines().next().unwrap_or_default())
-                                        .width(Length::Fill)
-                                        .size(14),
+                                    text::body(n.summary.lines().next().unwrap_or_default())
+                                        .width(Length::Fill),
                                     text(n.body.lines().next().unwrap_or_default())
                                         .width(Length::Fill)
                                         .size(12)
