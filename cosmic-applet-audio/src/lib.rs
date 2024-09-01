@@ -17,12 +17,12 @@ use cosmic::{
     cosmic_config::CosmicConfigEntry,
     iced::{
         self,
-        widget::{self, column, row, slider, text},
+        widget::{self, column, row, slider, text as iced_text},
         window, Alignment, Length, Limits, Rectangle, Subscription,
     },
     iced_runtime::core::alignment::Horizontal,
     iced_style::application,
-    widget::{button, divider, horizontal_space, icon, Column, Row},
+    widget::{button, divider, horizontal_space, icon, text, Column, Row},
     Element, Renderer, Theme,
 };
 use cosmic_settings_subscriptions::pulse as sub_pulse;
@@ -819,8 +819,8 @@ impl cosmic::Application for Audio {
 
             elements.push(
                 column![
-                    text(title).size(14).width(Length::Shrink),
-                    text(artists).size(10).width(Length::Shrink),
+                    text::body(title).width(Length::Shrink),
+                    text::caption(artists).width(Length::Shrink),
                 ]
                 .width(Length::FillPortion(5))
                 .into(),
@@ -885,7 +885,7 @@ impl cosmic::Application for Audio {
             )
             .padding([8, 24]),
             padded_control(divider::horizontal::default()),
-            menu_button(text(fl!("sound-settings")).size(14)).on_press(Message::OpenSettings)
+            menu_button(text::body(fl!("sound-settings"))).on_press(Message::OpenSettings)
         ]
         .align_items(Alignment::Start)
         .padding([8, 0]);
@@ -911,7 +911,7 @@ fn revealer(
             column![revealer_head(open, title, selected, toggle)].width(Length::Fill),
             |col, (id, name)| {
                 col.push(
-                    menu_button(text(name).size(14))
+                    menu_button(iced_text(name).size(14))
                         .on_press(change(id.clone()))
                         .width(Length::Fill)
                         .padding([8, 48]),
@@ -930,8 +930,8 @@ fn revealer_head(
     toggle: Message,
 ) -> cosmic::widget::Button<'static, Message> {
     menu_button(column![
-        text(title).width(Length::Fill).size(14),
-        text(selected).size(10),
+        text::body(title).width(Length::Fill),
+        text::caption(selected),
     ])
     .on_press(toggle)
 }

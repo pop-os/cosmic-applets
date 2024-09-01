@@ -17,14 +17,14 @@ use cosmic::{
     iced::{
         alignment::Horizontal,
         wayland::popup::{destroy_popup, get_popup},
-        widget::{column, container, row, slider, text},
+        widget::{column, container, row, slider},
         window, Alignment, Length, Subscription,
     },
     iced_core::{alignment::Vertical, Background, Border, Color, Shadow},
     iced_runtime::core::layout::Limits,
     iced_style::application,
     iced_widget::{Column, Row},
-    widget::{divider, horizontal_space, icon, scrollable, vertical_space},
+    widget::{divider, horizontal_space, icon, scrollable, text, vertical_space},
     Command, Element, Theme,
 };
 use cosmic_settings_subscriptions::{
@@ -428,8 +428,8 @@ impl cosmic::Application for CosmicBatteryApplet {
     }
 
     fn view_window(&self, _id: window::Id) -> Element<Message> {
-        let name = text(fl!("battery")).size(14);
-        let description = text(if !self.on_battery {
+        let name = text::body(fl!("battery"));
+        let description = text::caption(if !self.on_battery {
             format!("{:.0}%", self.battery_percent)
         } else {
             format!(
@@ -438,8 +438,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                 fl!("until-empty"),
                 self.battery_percent
             )
-        })
-        .size(10);
+        });
 
         let mut content = vec![
             padded_control(
@@ -455,8 +454,8 @@ impl cosmic::Application for CosmicBatteryApplet {
             menu_button(
                 row![
                     column![
-                        text(fl!("battery")).size(14),
-                        text(fl!("battery-desc")).size(10)
+                        text::body(fl!("battery")),
+                        text::caption(fl!("battery-desc"))
                     ]
                     .width(Length::Fill),
                     if matches!(self.power_profile, Power::Battery) {
@@ -476,8 +475,8 @@ impl cosmic::Application for CosmicBatteryApplet {
             menu_button(
                 row![
                     column![
-                        text(fl!("balanced")).size(14),
-                        text(fl!("balanced-desc")).size(10)
+                        text::body(fl!("balanced")),
+                        text::caption(fl!("balanced-desc"))
                     ]
                     .width(Length::Fill),
                     if matches!(self.power_profile, Power::Balanced) {
@@ -497,8 +496,8 @@ impl cosmic::Application for CosmicBatteryApplet {
             menu_button(
                 row![
                     column![
-                        text(fl!("performance")).size(14),
-                        text(fl!("performance-desc")).size(10)
+                        text::body(fl!("performance")),
+                        text::caption(fl!("performance-desc"))
                     ]
                     .width(Length::Fill),
                     if matches!(self.power_profile, Power::Performance) {
@@ -631,11 +630,10 @@ impl cosmic::Application for CosmicBatteryApplet {
             content.push(
                 menu_button(
                     row![
-                        text(fl!(
+                        text::body(fl!(
                             "dgpu-applications",
                             gpu_name = format!("\"{}\"", gpu.name.trim())
                         ))
-                        .size(14)
                         .width(Length::Fill)
                         .vertical_alignment(Vertical::Center),
                         container(
@@ -675,7 +673,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                                 } else {
                                     container(horizontal_space(12.0))
                                 },
-                                column![text(&app.name).size(14), text(&app.secondary).size(10)]
+                                column![text::body(&app.name), text::caption(&app.secondary)]
                                     .width(Length::Fill),
                             ]
                             .spacing(8)
@@ -694,7 +692,7 @@ impl cosmic::Application for CosmicBatteryApplet {
         }
 
         content.push(
-            menu_button(text(fl!("power-settings")).size(14).width(Length::Fill))
+            menu_button(text::body(fl!("power-settings")).width(Length::Fill))
                 .on_press(Message::OpenSettings)
                 .into(),
         );
