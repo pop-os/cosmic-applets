@@ -154,10 +154,11 @@ pub fn main() -> iced::Result {
     let filename = format!("{id}.desktop");
     let mut desktop = None;
     let locales = get_languages_from_env();
+    
     for mut path in freedesktop_desktop_entry::default_paths() {
         path.push(&filename);
         if let Ok(bytes) = fs::read_to_string(&path) {
-            if let Ok(entry) = DesktopEntry::from_str(&path, &bytes, &locales) {
+            if let Ok(entry) = DesktopEntry::from_str(&path, &bytes, Some(&locales)) {
                 desktop = Some(Desktop {
                     name: entry
                         .name(&locales)
