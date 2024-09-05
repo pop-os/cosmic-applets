@@ -594,18 +594,14 @@ where
 
     let entries = srcs
         .iter()
-        .filter_map(|(p, data)| DesktopEntry::from_str(p, data, locales).ok())
+        .filter_map(|(p, data)| DesktopEntry::from_str(p, data, Some(locales)).ok())
         .collect::<Vec<_>>();
 
     ids.iter()
         .map(|id| {
-            fde::matching::get_best_match(
-                &[id],
-                &entries,
-                fde::matching::MatchAppIdOptions::default(),
-            )
-            .unwrap_or(&fde::DesktopEntry::from_appid(id.as_ref()))
-            .to_owned()
+            fde::matching::find_entry_from_appid(entries.iter(), id.as_ref())
+                .unwrap_or(&fde::DesktopEntry::from_appid(id.as_ref()))
+                .to_owned()
         })
         .collect_vec()
 }
@@ -1006,7 +1002,7 @@ impl cosmic::Application for CosmicAppList {
             }
             Message::DndData(file_path) => {
                 if let Some(DndOffer { dock_item, .. }) = self.dnd_offer.as_mut() {
-                    if let Ok(de) = fde::DesktopEntry::from_path(file_path, &self.locales) {
+                    if let Ok(de) = fde::DesktopEntry::from_path(file_path, Some(&self.locales)) {
                         self.item_ctr += 1;
                         *dock_item = Some(DockItem {
                             id: self.item_ctr,

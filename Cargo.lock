@@ -929,7 +929,7 @@ dependencies = [
  "cosmic-app-list-config",
  "cosmic-client-toolkit",
  "cosmic-protocols",
- "freedesktop-desktop-entry 0.6.2",
+ "freedesktop-desktop-entry 0.7.4",
  "futures",
  "i18n-embed 0.14.1",
  "i18n-embed-fl 0.8.0",
@@ -2271,6 +2271,22 @@ name = "freedesktop-desktop-entry"
 version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e33809936d2fa9ac78750c5c04696a7aabdb09f928454957c77a2c8247f5ff98"
+dependencies = [
+ "dirs 5.0.1",
+ "gettext-rs",
+ "log",
+ "memchr",
+ "strsim 0.11.1",
+ "textdistance",
+ "thiserror",
+ "xdg",
+]
+
+[[package]]
+name = "freedesktop-desktop-entry"
+version = "0.7.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d7e6dc222403f11572b39d551948ce4e9ff860a9bdf3307bb6018d4454a8e034"
 dependencies = [
  "dirs 5.0.1",
  "gettext-rs",
