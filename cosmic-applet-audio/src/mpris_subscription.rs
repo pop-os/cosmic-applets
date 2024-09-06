@@ -135,6 +135,15 @@ struct State {
     any_player_state_stream: futures::stream::SelectAll<zbus::PropertyStream<'static, String>>,
 }
 
+fn filter_firefox_players(players: &mut Vec<MprisPlayer>) {
+    if players
+        .iter()
+        .any(|e| e.name() == "org.mpris.MediaPlayer2.plasma-browser-integration")
+    {
+        players.retain(|e| !e.name().starts_with("org.mpris.MediaPlayer2.firefox."));
+    }
+}
+
 impl State {
     async fn new() -> Result<Self, zbus::Error> {
         let conn = Connection::session().await?;
@@ -154,6 +163,7 @@ impl State {
                 }
             }
         }
+        filter_firefox_players(&mut players);
 
         // pre-sort by path so that the same player is always selected
         players.sort_by(|a, b| a.name().cmp(&b.name()));
@@ -180,6 +190,7 @@ impl State {
             }
         };
         self.players.push(player);
+        filter_firefox_players(&mut self.players);
         self.players.sort_by(|a, b| a.name().cmp(&b.name()));
         self.update_any_player_state_stream().await;
     }
