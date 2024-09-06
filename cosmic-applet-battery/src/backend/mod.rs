@@ -207,3 +207,43 @@ pub enum PowerProfileUpdate {
     Update { profile: Power },
     Error(String),
 }
+
+// check if battery charging thresholds is set
+pub async fn get_charging_limit() -> bool {
+    if let Ok(conn) = Connection::system().await {
+        if let Ok(backend) = get_power_backend(&conn, &BackendType::S76PowerDaemon).await {
+            match backend {
+                Backend::S76PowerDaemon(proxy) => {
+                    if let Ok((start, end)) = proxy.get_charge_thresholds().await {
+                        return start > 0 || end > 0;
+                    }
+                }
+                Backend::PowerProfilesDaemon(_) => {
+                    tracing::info!("Power Profiles Daemon is not supported.");
+
+                    return false;
+                }
+            };
+        }
+    }
+    false
+}
+
+// set battery charging thresholds via s76 power_daemon
+pub async fn set_charging_limit() -> Result<()> {
+    if let Ok(conn) = Connection::system().await {
+        if let Ok(backend) = get_power_backend(&conn, &BackendType::S76PowerDaemon).await {
+            match backend {
+                Backend::S76PowerDaemon(proxy) => {
+                    let _ = proxy.set_charge_thresholds(&(70, 80)).await;
+                }
+                Backend::PowerProfilesDaemon(_) => {
+                    tracing::info!(
+                        "Setting charging limit via Power Profiles Daemon is not supported."
+                    );
+                }
+            };
+        }
+    }
+    Ok(())
+}

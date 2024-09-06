@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use crate::{
-    backend::{power_profile_subscription, Power, PowerProfileRequest, PowerProfileUpdate},
+    backend::{
+        get_charging_limit, power_profile_subscription, set_charging_limit, Power,
+        PowerProfileRequest, PowerProfileUpdate,
+    },
     config,
     dgpu::{dgpu_subscription, Entry, GpuUpdate},
     fl,
@@ -163,6 +166,7 @@ enum Message {
     CloseRequested(window::Id),
     SetKbdBrightness(i32),
     SetScreenBrightness(i32),
+    InitChargingLimit(bool),
     SetChargingLimit(chain::Toggler, bool),
     KeyboardBacklight(KeyboardBacklightUpdate),
     UpowerDevice(DeviceDbusEvent),
@@ -193,6 +197,13 @@ impl cosmic::Application for CosmicBatteryApplet {
         Self,
         cosmic::iced::Command<cosmic::app::Message<Self::Message>>,
     ) {
+        let zbus_session_cmd = cosmic::iced::Command::perform(zbus::Connection::session(), |res| {
+            cosmic::app::Message::App(Message::ZbusConnection(res))
+        });
+        let init_charging_limit_cmd =
+            cosmic::iced::Command::perform(get_charging_limit(), |limit| {
+                cosmic::app::Message::App(Message::InitChargingLimit(limit))
+            });
         (
             Self {
                 core,
@@ -202,9 +213,7 @@ impl cosmic::Application for CosmicBatteryApplet {
 
                 ..Default::default()
             },
-            cosmic::iced::Command::perform(zbus::Connection::session(), |res| {
-                cosmic::app::Message::App(Message::ZbusConnection(res))
-            }),
+            Command::batch(vec![zbus_session_cmd, init_charging_limit_cmd]),
         )
     }
 
@@ -235,9 +244,18 @@ impl cosmic::Application for CosmicBatteryApplet {
                     let _ = tx.send(settings_daemon::Request::SetDisplayBrightness(brightness));
                 }
             }
+            Message::InitChargingLimit(enable) => {
+                self.set_charging_limit(enable);
+            }
             Message::SetChargingLimit(chain, enable) => {
                 self.timeline.set_chain(chain).start();
                 self.set_charging_limit(enable);
+
+                if enable {
+                    return cosmic::iced::Command::perform(set_charging_limit(), |_| {
+                        cosmic::app::Message::None
+                    });
+                }
             }
             Message::Errored(why) => {
                 tracing::error!("{}", why);
