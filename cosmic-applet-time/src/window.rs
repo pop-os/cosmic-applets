@@ -433,26 +433,20 @@ impl cosmic::Application for Window {
         );
 
         let button = cosmic::widget::button(if horizontal {
-            let mut time: Vec<Cow<'static, str>> = Vec::new();
+            let mut bag = Bag::empty();
 
             if self.config.show_date_in_top_panel {
-                let mut date_bag = Bag::empty();
-
                 if self.config.show_weekday {
-                    date_bag.weekday = Some(components::Text::Short);
+                    bag.weekday = Some(components::Text::Short);
                 }
 
-                date_bag.day = Some(components::Day::NumericDayOfMonth);
-                date_bag.month = Some(components::Month::Long);
-
-                time.push(format!("{} ", self.format(date_bag, &self.now)).into());
+                bag.day = Some(components::Day::NumericDayOfMonth);
+                bag.month = Some(components::Month::Long);
             }
 
-            let mut time_bag = Bag::empty();
-
-            time_bag.hour = Some(components::Numeric::Numeric);
-            time_bag.minute = Some(components::Numeric::Numeric);
-            time_bag.second = self
+            bag.hour = Some(components::Numeric::Numeric);
+            bag.minute = Some(components::Numeric::Numeric);
+            bag.second = self
                 .config
                 .show_seconds
                 .then_some(components::Numeric::Numeric);
@@ -463,13 +457,11 @@ impl cosmic::Application for Window {
                 preferences::HourCycle::H12
             };
 
-            time_bag.preferences = Some(preferences::Bag::from_hour_cycle(hour_cycle));
-
-            time.push(self.format(time_bag, &self.now).into());
+            bag.preferences = Some(preferences::Bag::from_hour_cycle(hour_cycle));
 
             Element::from(
                 row!(
-                    self.core.applet.text(time.concat()),
+                    self.core.applet.text(self.format(bag, &self.now)),
                     container(vertical_space(Length::Fixed(
                         (self.core.applet.suggested_size(true).1
                             + 2 * self.core.applet.suggested_padding(true))
