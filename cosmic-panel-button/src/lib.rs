@@ -143,11 +143,7 @@ impl cosmic::Application for Button {
     }
 }
 
-pub fn main() -> iced::Result {
-    tracing_subscriber::fmt::init();
-    let _ = tracing_log::LogTracer::init();
-    tracing::info!("Starting panel button applet with version {VERSION}");
-
+pub fn run() -> iced::Result {
     let id = env::args()
         .nth(1)
         .expect("Requires desktop file id as argument.");

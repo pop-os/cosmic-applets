@@ -1214,6 +1214,7 @@ dependencies = [
  "cosmic-applet-tiling",
  "cosmic-applet-time",
  "cosmic-applet-workspaces",
+ "cosmic-panel-button",
  "libcosmic",
  "tracing",
  "tracing-log",
@@ -1317,8 +1318,6 @@ dependencies = [
  "libcosmic",
  "serde",
  "tracing",
- "tracing-log",
- "tracing-subscriber",
 ]
 
 [[package]]

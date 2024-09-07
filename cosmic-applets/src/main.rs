@@ -30,6 +30,7 @@ fn main() -> cosmic::iced::Result {
         "cosmic-applet-time" => cosmic_applet_time::run(),
         "cosmic-applet-workspaces" => cosmic_applet_workspaces::run(),
         "cosmic-applet-input-sources" => cosmic_applet_input_sources::run(),
+        "cosmic-panel-button" => cosmic_panel_button::run(),
         _ => return Ok(()),
     }
 }
