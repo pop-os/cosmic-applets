@@ -588,13 +588,8 @@ where
     I: AsRef<str>,
     L: AsRef<str>,
 {
-    let srcs = fde::Iter::new(fde::default_paths())
-        .filter_map(|p| fs::read_to_string(&p).ok().and_then(|e| Some((p, e))))
-        .collect::<Vec<_>>();
-
-    let entries = srcs
-        .iter()
-        .filter_map(|(p, data)| DesktopEntry::from_str(p, data, Some(locales)).ok())
+    let entries = fde::Iter::new(fde::default_paths())
+        .entries(Some(locales))
         .collect::<Vec<_>>();
 
     ids.iter()
