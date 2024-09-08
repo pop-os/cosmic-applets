@@ -1318,6 +1318,8 @@ dependencies = [
  "libcosmic",
  "serde",
  "tracing",
+ "tracing-log",
+ "tracing-subscriber",
 ]
 
 [[package]]

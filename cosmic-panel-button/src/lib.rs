@@ -21,8 +21,6 @@ use std::{env, fs, process::Command};
 
 mod config;
 
-const VERSION: &str = env!("CARGO_PKG_VERSION");
-
 #[derive(Debug, Clone, Default)]
 struct Desktop {
     name: String,

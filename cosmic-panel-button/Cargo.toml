@@ -8,5 +8,7 @@ license = "GPL-3.0"
 freedesktop-desktop-entry.workspace = true
 libcosmic.workspace = true
 tracing.workspace = true
+tracing-subscriber.workspace = true
+tracing-log.workspace = true
 cosmic-config.workspace = true
 serde.workspace = true
