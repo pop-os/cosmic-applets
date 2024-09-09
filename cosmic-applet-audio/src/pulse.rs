@@ -219,6 +219,7 @@ impl PulseHandle {
                 loop {
                     // This is where the we match messages from the GUI to pass to the pulse server
                     let mut msgs = Vec::new();
+                    msgs.push(to_pulse_recv.recv().await);
                     while let Ok(msg) = to_pulse_recv.try_recv() {
                         msgs.push(msg);
                     }
