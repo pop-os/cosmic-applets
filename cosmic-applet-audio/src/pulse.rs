@@ -1,7 +1,7 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
-use std::{cell::RefCell, rc::Rc, thread};
+use std::{cell::RefCell, mem, rc::Rc, thread};
 
 extern crate libpulse_binding as pulse;
 
@@ -153,9 +153,19 @@ pub struct Connection(mpsc::Sender<Message>);
 
 impl Connection {
     pub fn send(&mut self, message: Message) {
-        self.0
-            .try_send(message)
-            .expect("Send message to PulseAudio server");
+        if let Err(e) = self.0.try_send(message) {
+            match e {
+                mpsc::error::TrySendError::Closed(_) => {
+                    tracing::error!(
+                        "Failed to send message: PulseAudio server communication closed"
+                    );
+                    panic!();
+                }
+                mpsc::error::TrySendError::Full(_) => {
+                    tracing::warn!("Failed to send message to PulseAudio server: channel is full")
+                }
+            }
+        }
     }
 }
 
@@ -186,8 +196,8 @@ struct PulseHandle {
 impl PulseHandle {
     // Create pulse server thread, and bidirectional comms
     pub fn new() -> Self {
-        let (to_pulse, mut to_pulse_recv) = tokio::sync::mpsc::channel(10);
-        let (from_pulse_send, from_pulse) = tokio::sync::mpsc::channel(10);
+        let (to_pulse, mut to_pulse_recv) = tokio::sync::mpsc::channel(50);
+        let (from_pulse_send, from_pulse) = tokio::sync::mpsc::channel(50);
 
         // this thread should complete by pushing a completed message,
         // or fail message. This should never complete/fail without pushing
@@ -208,7 +218,22 @@ impl PulseHandle {
 
                 loop {
                     // This is where the we match messages from the GUI to pass to the pulse server
-                    if let Some(msg) = to_pulse_recv.recv().await {
+                    let mut msgs = Vec::new();
+                    while let Ok(msg) = to_pulse_recv.try_recv() {
+                        msgs.push(msg);
+                    }
+                    // deduplicate Messages that do not rely on response
+                    // Reverse to retain the last element instead of the first
+                    msgs.reverse();
+                    msgs.dedup_by(|a, b| match a {
+                        Message::SetSinkVolumeByName(..) | Message::SetSourceVolumeByName(..) => {
+                            mem::discriminant(a) == mem::discriminant(b)
+                        }
+                        _ => false,
+                    });
+                    msgs.reverse();
+
+                    for msg in msgs {
                         match msg {
                             Message::GetDefaultSink => {
                                 let server = match server.as_mut() {
