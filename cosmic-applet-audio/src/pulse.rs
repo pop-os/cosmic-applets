@@ -216,28 +216,31 @@ impl PulseHandle {
             rt.block_on(async {
                 let mut server: Option<PulseServer> = None;
 
-                loop {
-                    // This is where the we match messages from the GUI to pass to the pulse server
-                    let mut msgs = Vec::new();
+                let mut msgs = Vec::new();
 
+                loop {
                     if let Some(msg) = to_pulse_recv.recv().await {
                         msgs.push(msg);
                     }
+
+                    // Consume any additional messages in the channel.
                     while let Ok(msg) = to_pulse_recv.try_recv() {
+                        // Deduplicate volume change messages.
+                        if matches!(
+                            msg,
+                            Message::SetSinkVolumeByName(..) | Message::SetSourceVolumeByName(..)
+                        ) {
+                            let last_msg = msgs.last_mut().unwrap(); //
+                            if mem::discriminant(last_msg) == mem::discriminant(&msg) {
+                                *last_msg = msg;
+                                continue;
+                            }
+                        }
+
                         msgs.push(msg);
                     }
-                    // deduplicate Messages that do not rely on response
-                    // Reverse to retain the last element instead of the first
-                    msgs.reverse();
-                    msgs.dedup_by(|a, b| match a {
-                        Message::SetSinkVolumeByName(..) | Message::SetSourceVolumeByName(..) => {
-                            mem::discriminant(a) == mem::discriminant(b)
-                        }
-                        _ => false,
-                    });
-                    msgs.reverse();
 
-                    for msg in msgs {
+                    for msg in msgs.drain(..) {
                         match msg {
                             Message::GetDefaultSink => {
                                 let server = match server.as_mut() {
