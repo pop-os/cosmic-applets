@@ -222,7 +222,8 @@ impl Gpu {
                 Some(
                     smi_output
                         .lines()
-                        .filter(|line| { // smi shows an empty line filled with - when no app is running
+                        .filter(|line| {
+                            // smi shows an empty line filled with - when no app is running
                             let components = line.split_whitespace().collect::<Vec<_>>();
                             components[1].trim().ne("-") && !line.starts_with('#')
                         })
