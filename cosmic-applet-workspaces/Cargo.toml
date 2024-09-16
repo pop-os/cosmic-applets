@@ -3,7 +3,7 @@ name = "cosmic-applet-workspaces"
 version = "0.1.1"
 authors = ["Ashley Wulber <ashley@system76.com>"]
 edition = "2021"
-license = "GPL-3.0"
+license = "GPL-3.0-only"
 
 [dependencies]
 libcosmic.workspace = true
