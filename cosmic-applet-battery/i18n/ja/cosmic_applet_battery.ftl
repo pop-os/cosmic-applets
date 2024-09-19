@@ -1,4 +1,3 @@
-cosmic-applet-button = Cosmicボタン
 battery = バッテリー
 battery-desc = 性能と消費は低くなります。
 balanced = バランス

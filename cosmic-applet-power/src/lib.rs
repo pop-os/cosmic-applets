@@ -6,6 +6,7 @@ use std::{collections::HashMap, process, time::Duration};
 use cosmic::{
     app::Command,
     applet::{menu_button, padded_control},
+    cosmic_theme::Spacing,
     iced,
     iced::{
         alignment::{Horizontal, Vertical},
@@ -247,6 +248,10 @@ impl cosmic::Application for Power {
     }
 
     fn view_window(&self, id: window::Id) -> Element<Message> {
+        let Spacing {
+            space_xxs, space_s, ..
+        } = theme::active().cosmic().spacing;
+
         if matches!(self.popup, Some(p) if p == id) {
             let settings = menu_button(text::body(fl!("settings"))).on_press(Message::Settings);
 
@@ -288,9 +293,9 @@ impl cosmic::Application for Power {
 
             let content = column![
                 settings,
-                padded_control(divider::horizontal::default()),
+                padded_control(divider::horizontal::default()).padding([space_xxs, space_s]),
                 session,
-                padded_control(divider::horizontal::default()),
+                padded_control(divider::horizontal::default()).padding([space_xxs, space_s]),
                 power
             ]
             .align_items(Alignment::Start)
@@ -319,7 +324,7 @@ impl cosmic::Application for Power {
                     HashMap::from_iter(vec![("action", action), ("countdown", countdown)])
                 ))
                 .primary_action(
-                    button(min_width_and_height(
+                    button::custom(min_width_and_height(
                         text::body(fl!("confirm", HashMap::from_iter(vec![("action", action)])))
                             .into(),
                         142.0,
@@ -331,7 +336,7 @@ impl cosmic::Application for Power {
                     .on_press(Message::Confirm),
                 )
                 .secondary_action(
-                    button(min_width_and_height(
+                    button::custom(min_width_and_height(
                         text::body(fl!("cancel")).into(),
                         142.0,
                         32.0,
@@ -380,7 +385,7 @@ impl cosmic::Application for Power {
 }
 
 fn power_buttons(name: &str, msg: String) -> cosmic::widget::Button<Message> {
-    cosmic::widget::button(
+    button::custom(
         column![text_icon(name, 40), text::body(msg)]
             .spacing(4)
             .align_items(Alignment::Center)

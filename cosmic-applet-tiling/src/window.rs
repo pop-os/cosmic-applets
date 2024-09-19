@@ -4,21 +4,24 @@
 use crate::{
     fl, wayland::AppRequest, wayland_subscription, wayland_subscription::WorkspacesUpdate,
 };
-use cctk::sctk::reexports::calloop::channel::SyncSender;
+use cctk::sctk::reexports::calloop;
 use cosmic::{
     app::Core,
-    applet::padded_control,
+    applet::{menu_button, padded_control, token::subscription::TokenRequest},
     cosmic_config::{Config, ConfigSet, CosmicConfigEntry},
+    cosmic_theme::Spacing,
     iced::{
+        alignment::Horizontal,
         wayland::popup::{destroy_popup, get_popup},
         window::Id,
         Command, Length, Limits, Subscription,
     },
     iced_style::application,
     iced_widget::{column, row},
+    theme,
     widget::{
-        container, divider, segmented_button,
-        segmented_button::{Entity, SingleSelectModel},
+        container, divider,
+        segmented_button::{self, Entity, SingleSelectModel},
         segmented_control, spin_button, text,
     },
     Element, Theme,
@@ -43,9 +46,10 @@ pub struct Window {
     new_workspace_entity: Entity,
     /// may not match the config value if behavior is per-workspace
     autotiled: bool,
-    workspace_tx: Option<SyncSender<AppRequest>>,
+    workspace_tx: Option<calloop::channel::SyncSender<AppRequest>>,
     tile_windows: id::Toggler,
     active_hint: id::Toggler,
+    token_tx: Option<calloop::channel::Sender<TokenRequest>>,
 }
 
 #[derive(Clone, Debug)]
@@ -58,6 +62,7 @@ pub enum Message {
     MyConfigUpdate(Box<CosmicCompConfig>),
     WorkspaceUpdate(WorkspacesUpdate),
     NewWorkspace(Entity),
+    OpenSettings,
 }
 
 impl cosmic::Application for Window {
@@ -123,6 +128,7 @@ impl cosmic::Application for Window {
             workspace_tx: None,
             tile_windows: id::Toggler::unique(),
             active_hint: id::Toggler::unique(),
+            token_tx: None,
         };
         (window, Command::none())
     }
@@ -267,6 +273,17 @@ impl cosmic::Application for Window {
                     }
                 });
             }
+            Message::OpenSettings => {
+                let exec = "cosmic-settings window-management".to_string();
+                if let Some(tx) = self.token_tx.as_ref() {
+                    let _ = tx.send(TokenRequest {
+                        app_id: Self::APP_ID.to_string(),
+                        exec,
+                    });
+                } else {
+                    tracing::error!("Wayland tx is None");
+                };
+            }
         }
         Command::none()
     }
@@ -280,6 +297,13 @@ impl cosmic::Application for Window {
     }
 
     fn view_window(&self, _id: Id) -> Element<Self::Message> {
+        let Spacing {
+            space_xxxs,
+            space_xxs,
+            space_s,
+            ..
+        } = theme::active().cosmic().spacing;
+
         let new_workspace_behavior_button =
             segmented_control::horizontal(&self.new_workspace_behavior_model)
                 .on_activate(Message::NewWorkspace);
@@ -296,12 +320,15 @@ impl cosmic::Application for Window {
                 .width(Length::Fill),
             ))
             .width(Length::Fill),
-            padded_control(divider::horizontal::default(),),
-            padded_control(column![
-                text::body(fl!("new-workspace")),
-                new_workspace_behavior_button,
-            ]),
-            padded_control(divider::horizontal::default()),
+            padded_control(divider::horizontal::default()).padding([space_xxs, space_s]),
+            padded_control(
+                column![
+                    text::body(fl!("new-workspace")),
+                    new_workspace_behavior_button,
+                ]
+                .spacing(space_xxxs)
+            ),
+            padded_control(divider::horizontal::default()).padding([space_xxs, space_s]),
             padded_control(row!(
                 text::body(fl!("navigate-windows")).width(Length::Fill),
                 text::body(format!("{} + {}", fl!("super"), fl!("arrow-keys"))),
@@ -319,7 +346,7 @@ impl cosmic::Application for Window {
                 text::body(fl!("toggle-floating-window")).width(Length::Fill),
                 text::body(format!("{} + G", fl!("super"))),
             )),
-            padded_control(divider::horizontal::default()),
+            padded_control(divider::horizontal::default()).padding([space_xxs, space_s]),
             padded_control(
                 anim!(
                     self.active_hint,
@@ -331,6 +358,9 @@ impl cosmic::Application for Window {
                 .text_size(14)
                 .width(Length::Fill),
             ),
+            padded_control(divider::horizontal::default()).padding([space_xxs, space_s]),
+            menu_button(text::body(fl!("window-management-settings")))
+                .on_press(Message::OpenSettings)
         ]
         .padding([8, 0]);
 

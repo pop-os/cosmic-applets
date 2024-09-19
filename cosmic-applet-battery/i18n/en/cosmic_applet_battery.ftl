@@ -1,4 +1,3 @@
-cosmic-applet-button = Cosmic Button
 battery = Battery
 battery-desc = Reduced power usage and performance.
 balanced = Balanced
@@ -10,6 +9,6 @@ seconds = s
 minutes = m
 hours = h
 until-empty = until empty
-power-settings = Power and Battery Settings...
+power-settings = Power & Battery settings...
 dgpu-running = Discrete GPU is active and can reduce battery life
 dgpu-applications = Applications using {$gpu_name} discrete GPU

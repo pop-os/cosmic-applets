@@ -17,6 +17,7 @@ use cosmic::{
     },
     cctk::sctk::reexports::{calloop, protocols::xdg::shell::client::xdg_positioner::Anchor},
     cosmic_config::CosmicConfigEntry,
+    cosmic_theme::Spacing,
     iced::{
         self,
         widget::{self, column, row, slider},
@@ -24,6 +25,7 @@ use cosmic::{
     },
     iced_runtime::core::alignment::Horizontal,
     iced_style::application,
+    theme,
     widget::{button, divider, horizontal_space, icon, text, Column, Row},
     Element, Renderer, Theme,
 };
@@ -665,6 +667,9 @@ impl cosmic::Application for Audio {
                         input.mute = value;
                     }
                 }
+                sub_pulse::Event::DefaultSink(_) => {}
+                sub_pulse::Event::DefaultSource(_) => {}
+                sub_pulse::Event::CardInfo(_) => {}
             },
         };
 
@@ -735,6 +740,10 @@ impl cosmic::Application for Audio {
     }
 
     fn view_window(&self, _id: window::Id) -> Element<Message> {
+        let Spacing {
+            space_xxs, space_s, ..
+        } = theme::active().cosmic().spacing;
+
         let audio_disabled = matches!(self.pulse_state, PulseState::Disconnected(_));
         let out_mute = self.current_output_mute();
         let in_mute = self.current_input_mute();
@@ -790,7 +799,7 @@ impl cosmic::Application for Audio {
                     .spacing(12)
                     .align_items(Alignment::Center)
                 ),
-                padded_control(divider::horizontal::default()),
+                padded_control(divider::horizontal::default()).padding([space_xxs, space_s]),
                 revealer(
                     self.is_open == IsOpen::Output,
                     fl!("output"),
@@ -906,7 +915,8 @@ impl cosmic::Application for Audio {
                     .into(),
             );
 
-            audio_content = audio_content.push(padded_control(divider::horizontal::default()));
+            audio_content = audio_content
+                .push(padded_control(divider::horizontal::default()).padding([space_xxs, space_s]));
             audio_content = audio_content.push(
                 Row::with_children(elements)
                     .align_items(Alignment::Center)
@@ -916,7 +926,7 @@ impl cosmic::Application for Audio {
         }
         let content = column![
             audio_content,
-            padded_control(divider::horizontal::default()),
+            padded_control(divider::horizontal::default()).padding([space_xxs, space_s]),
             padded_control(
                 anim!(
                     // toggler
@@ -930,7 +940,7 @@ impl cosmic::Application for Audio {
                 .width(Length::Fill)
             )
             .padding([8, 24]),
-            padded_control(divider::horizontal::default()),
+            padded_control(divider::horizontal::default()).padding([space_xxs, space_s]),
             menu_button(text::body(fl!("sound-settings"))).on_press(Message::OpenSettings)
         ]
         .align_items(Alignment::Start)

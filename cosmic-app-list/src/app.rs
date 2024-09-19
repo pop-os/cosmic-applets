@@ -262,7 +262,7 @@ impl DockItem {
             .into(),
         };
 
-        let icon_button = cosmic::widget::button(icon_wrapper)
+        let icon_button = button::custom(icon_wrapper)
             .padding(app_icon.padding)
             .selected(is_focused)
             .style(app_list_icon_style(is_focused));
@@ -456,7 +456,7 @@ where
     Msg: 'static + Clone,
 {
     let border = 1.0;
-    cosmic::widget::button(
+    button::custom(
         container(
             column![
                 container(if let Some(img) = img {
@@ -1715,7 +1715,7 @@ impl cosmic::Application for CosmicAppList {
                     fn menu_button<'a, Message>(
                         content: impl Into<Element<'a, Message>>,
                     ) -> cosmic::widget::Button<'a, Message> {
-                        cosmic::widget::button(content)
+                        button::custom(content)
                             .height(36)
                             .style(Button::AppletMenu)
                             .padding(menu_control_padding())
@@ -1774,7 +1774,7 @@ impl cosmic::Application for CosmicAppList {
                                     .on_press(Message::Exec(exec.into(), None)),
                             );
                         }
-                        content = content.push(divider::horizontal::default());
+                        content = content.push(divider::horizontal::light());
                     }
 
                     if !toplevels.is_empty() {
@@ -1791,7 +1791,7 @@ impl cosmic::Application for CosmicAppList {
                             );
                         }
                         content = content.push(list_col);
-                        content = content.push(divider::horizontal::default());
+                        content = content.push(divider::horizontal::light());
                     }
 
                     let svg_accent = Rc::new(|theme: &cosmic::Theme| {
@@ -1820,7 +1820,7 @@ impl cosmic::Application for CosmicAppList {
                     );
 
                     if toplevels.len() > 0 {
-                        content = content.push(divider::horizontal::default());
+                        content = content.push(divider::horizontal::light());
                         content = match toplevels.len() {
                             1 => content.push(
                                 menu_button(text::body(fl!("quit")))

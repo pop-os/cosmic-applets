@@ -17,6 +17,7 @@ use cosmic::{
         token::subscription::{activation_token_subscription, TokenRequest, TokenUpdate},
     },
     cctk::sctk::reexports::calloop,
+    cosmic_theme::Spacing,
     iced::{
         alignment::Horizontal,
         wayland::popup::{destroy_popup, get_popup},
@@ -27,6 +28,7 @@ use cosmic::{
     iced_runtime::core::layout::Limits,
     iced_style::application,
     iced_widget::{Column, Row},
+    theme,
     widget::{divider, horizontal_space, icon, scrollable, text, vertical_space},
     Command, Element, Theme,
 };
@@ -446,6 +448,10 @@ impl cosmic::Application for CosmicBatteryApplet {
     }
 
     fn view_window(&self, _id: window::Id) -> Element<Message> {
+        let Spacing {
+            space_xxs, space_s, ..
+        } = theme::active().cosmic().spacing;
+
         let name = text::body(fl!("battery"));
         let description = text::caption(if !self.on_battery {
             format!("{:.0}%", self.battery_percent)
@@ -468,7 +474,9 @@ impl cosmic::Application for CosmicBatteryApplet {
                 .align_items(Alignment::Center),
             )
             .into(),
-            padded_control(divider::horizontal::default()).into(),
+            padded_control(divider::horizontal::default())
+                .padding([space_xxs, space_s])
+                .into(),
             menu_button(
                 row![
                     column![
@@ -532,7 +540,9 @@ impl cosmic::Application for CosmicBatteryApplet {
             )
             .on_press(Message::SelectProfile(Power::Performance))
             .into(),
-            padded_control(divider::horizontal::default()).into(),
+            padded_control(divider::horizontal::default())
+                .padding([space_xxs, space_s])
+                .into(),
             padded_control(
                 anim!(
                     //toggler
@@ -546,7 +556,9 @@ impl cosmic::Application for CosmicBatteryApplet {
                 .width(Length::Fill),
             )
             .into(),
-            padded_control(divider::horizontal::default()).into(),
+            padded_control(divider::horizontal::default())
+                .padding([space_xxs, space_s])
+                .into(),
         ];
 
         if let Some(max_screen_brightness) = self.max_screen_brightness {
@@ -605,7 +617,11 @@ impl cosmic::Application for CosmicBatteryApplet {
             }
         }
 
-        content.push(padded_control(divider::horizontal::default()).into());
+        content.push(
+            padded_control(divider::horizontal::default())
+                .padding([space_xxs, space_s])
+                .into(),
+        );
 
         if !self.gpus.is_empty() {
             content.push(
@@ -637,7 +653,11 @@ impl cosmic::Application for CosmicBatteryApplet {
                 )
                 .into(),
             );
-            content.push(padded_control(divider::horizontal::default()).into());
+            content.push(
+                padded_control(divider::horizontal::default())
+                    .padding([space_xxs, space_s])
+                    .into(),
+            );
         }
 
         for (key, gpu) in &self.gpus {
@@ -706,7 +726,11 @@ impl cosmic::Application for CosmicBatteryApplet {
                         .into(),
                 );
             }
-            content.push(padded_control(divider::horizontal::default()).into());
+            content.push(
+                padded_control(divider::horizontal::default())
+                    .padding([space_xxs, space_s])
+                    .into(),
+            );
         }
 
         content.push(

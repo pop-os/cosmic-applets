@@ -9,6 +9,7 @@ use cosmic::{
 
 use cosmic::{
     applet::{menu_button, padded_control},
+    cosmic_theme::Spacing,
     iced::{
         self,
         wayland::popup::{destroy_popup, get_popup},
@@ -21,6 +22,7 @@ use cosmic::{
         window,
     },
     iced_style::application,
+    theme,
     widget::{button, divider, icon, text},
     Command, Element, Theme,
 };
@@ -349,6 +351,10 @@ impl cosmic::Application for CosmicBluetoothApplet {
     }
 
     fn view_window(&self, _id: window::Id) -> Element<Message> {
+        let Spacing {
+            space_xxs, space_s, ..
+        } = theme::active().cosmic().spacing;
+
         let mut known_bluetooth = vec![];
         for dev in self.bluer_state.devices.iter().filter(|d| {
             !self
@@ -447,20 +453,21 @@ impl cosmic::Application for CosmicBluetoothApplet {
         .align_items(Alignment::Center)
         .padding([8, 0]);
         if !known_bluetooth.is_empty() {
-            content = content.push(padded_control(divider::horizontal::default()));
+            content = content
+                .push(padded_control(divider::horizontal::default()).padding([space_xxs, space_s]));
             content = content.push(Column::with_children(known_bluetooth));
         }
         let dropdown_icon = if self.show_visible_devices {
-            "go-down-symbolic"
+            "go-up-symbolic"
         } else {
-            "go-next-symbolic"
+            "go-down-symbolic"
         };
         let available_connections_btn = menu_button(row![
             text::body(fl!("other-devices"))
                 .width(Length::Fill)
                 .height(Length::Fixed(24.0))
                 .vertical_alignment(Vertical::Center),
-            container(icon::from_name(dropdown_icon).size(14).symbolic(true))
+            container(icon::from_name(dropdown_icon).size(16).symbolic(true))
                 .align_x(Horizontal::Center)
                 .align_y(Vertical::Center)
                 .width(Length::Fixed(24.0))
@@ -468,7 +475,8 @@ impl cosmic::Application for CosmicBluetoothApplet {
         ])
         .on_press(Message::ToggleVisibleDevices(!self.show_visible_devices));
         if self.bluer_state.bluetooth_enabled {
-            content = content.push(padded_control(divider::horizontal::default()));
+            content = content
+                .push(padded_control(divider::horizontal::default()).padding([space_xxs, space_s]));
             content = content.push(available_connections_btn);
         }
         let mut list_column: Vec<Element<'_, Message>> =
@@ -503,7 +511,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
                 .align_x(Horizontal::Center),
                 padded_control(
                     row![
-                        button(
+                        button::custom(
                             text::body(fl!("cancel"))
                                 .vertical_alignment(Vertical::Center)
                                 .horizontal_alignment(Horizontal::Center)
@@ -512,7 +520,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
                         .height(Length::Fixed(28.0))
                         .width(Length::Fixed(105.0))
                         .on_press(Message::Cancel),
-                        button(
+                        button::custom(
                             text::body(fl!("confirm"))
                                 .vertical_alignment(Vertical::Center)
                                 .horizontal_alignment(Horizontal::Center)
@@ -570,6 +578,9 @@ impl cosmic::Application for CosmicBluetoothApplet {
         } else {
             content = content.push(Column::with_children(list_column));
         }
+        // content = content
+        //    .push(padded_control(divider::horizontal::default()).padding([space_xxs, space_s]))
+        //    .push(menu_button(text::body(fl!("settings"))).on_press(Message::OpenSettings));
 
         self.core.applet.popup_container(content).into()
     }

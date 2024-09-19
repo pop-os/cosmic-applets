@@ -1,4 +1,3 @@
-cosmic-applet-button = Cosmic Painike
 battery = Akku
 battery-desc = Vähentynyt virrankulutus ja suorituskyky.
 balanced = Tasapainoitettu

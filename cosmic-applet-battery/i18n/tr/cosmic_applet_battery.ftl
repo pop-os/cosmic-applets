@@ -1,4 +1,3 @@
-cosmic-applet-button = Cosmic Düğmesi
 battery = Pil
 battery-desc = Daha az güç tüketimi ve başarım.
 balanced = Dengeli

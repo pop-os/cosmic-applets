@@ -1,4 +1,3 @@
-cosmic-applet-button = Cosmic Button
 battery = Batéria
 battery-desc = Obmedzená spotreba energie a výkonu.
 balanced = Vyvážený

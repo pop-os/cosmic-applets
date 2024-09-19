@@ -1,4 +1,3 @@
-cosmic-applet-button = Cosmic Knop
 battery = Batterij
 battery-desc = Verminderd stroom verbruik en prestatie.
 balanced = Gebalanceerd

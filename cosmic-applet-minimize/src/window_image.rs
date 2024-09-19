@@ -30,7 +30,7 @@ where
     ) -> Self {
         let border = 1.0;
         Self {
-            image_button: button(
+            image_button: button::custom(
                 container(
                     container(if let Some(img) = img {
                         let max_dim = img.img.width().max(img.img.height()).max(1);

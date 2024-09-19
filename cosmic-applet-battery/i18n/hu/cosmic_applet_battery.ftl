@@ -1,4 +1,3 @@
-cosmic-applet-button = Cosmic Gomb
 battery = Akkumulátor
 battery-desc = Csökkentett energiafogyasztás és teljesítmény.
 balanced = Kiegyensúlyozott

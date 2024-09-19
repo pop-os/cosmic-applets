@@ -10,6 +10,7 @@ use cosmic::{
     app::Core,
     applet::{self},
     cosmic_config::{self, ConfigSet},
+    cosmic_theme::Spacing,
     iced::{
         wayland::popup::{destroy_popup, get_popup},
         widget::{column, row},
@@ -20,6 +21,7 @@ use cosmic::{
     iced_runtime::core::window,
     iced_style::application,
     prelude::*,
+    theme,
     widget::{self, horizontal_space, vertical_space},
 };
 use cosmic_comp_config::CosmicCompConfig;
@@ -172,7 +174,7 @@ impl cosmic::Application for Window {
                 .map_or(String::new(), |l| l.layout.clone()),
         );
 
-        cosmic::widget::button(
+        cosmic::widget::button::custom(
             row!(
                 column!(
                     input_source_text,
@@ -200,6 +202,10 @@ impl cosmic::Application for Window {
     }
 
     fn view_window(&self, _id: Id) -> Element<Self::Message> {
+        let Spacing {
+            space_xxs, space_s, ..
+        } = theme::active().cosmic().spacing;
+
         let mut content_list =
             widget::column::with_capacity(4 + self.active_layouts.len()).padding([8, 0]);
         for layout in &self.active_layouts {
@@ -212,7 +218,9 @@ impl cosmic::Application for Window {
         }
         if !self.active_layouts.is_empty() {
             content_list = content_list.push(
-                applet::padded_control(widget::divider::horizontal::default()).apply(Element::from),
+                applet::padded_control(widget::divider::horizontal::default())
+                    .padding([space_xxs, space_s])
+                    .apply(Element::from),
             );
         }
         content_list = content_list.push(
