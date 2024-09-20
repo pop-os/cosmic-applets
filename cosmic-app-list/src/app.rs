@@ -41,7 +41,7 @@ use cosmic::{
         accept_mime_type, finish_dnd, request_dnd_data, set_actions, start_drag,
     },
     iced_style::{application, svg},
-    theme::{Button, Container},
+    theme::{self, Button, Container},
     widget::{
         button, divider, horizontal_space, icon,
         icon::from_name,
@@ -1717,12 +1717,12 @@ impl cosmic::Application for CosmicAppList {
                     ) -> cosmic::widget::Button<'a, Message> {
                         button::custom(content)
                             .height(36)
-                            .style(Button::AppletMenu)
+                            .style(Button::MenuItem)
                             .padding(menu_control_padding())
                             .width(Length::Fill)
                     }
 
-                    let mut content = column![].padding([8, 0]).align_items(Alignment::Center);
+                    let mut content = column![].align_items(Alignment::Center);
 
                     if let Some(exec) = desktop_info.exec() {
                         if !toplevels.is_empty() {
@@ -1832,7 +1832,26 @@ impl cosmic::Application for CosmicAppList {
                             ),
                         };
                     }
-                    self.core.applet.popup_container(content).into()
+                    container(content)
+                        .padding(1)
+                        //TODO: move style to libcosmic
+                        .style(theme::Container::custom(|theme| {
+                            let cosmic = theme.cosmic();
+                            let component = &cosmic.background.component;
+                            container::Appearance {
+                                icon_color: Some(component.on.into()),
+                                text_color: Some(component.on.into()),
+                                background: Some(Background::Color(component.base.into())),
+                                border: Border {
+                                    radius: 8.0.into(),
+                                    width: 1.0,
+                                    color: component.divider.into(),
+                                },
+                                ..Default::default()
+                            }
+                        }))
+                        .width(Length::Fill)
+                        .into()
                 }
                 PopupType::TopLevelList => match self.core.applet.anchor {
                     PanelAnchor::Left | PanelAnchor::Right => {
