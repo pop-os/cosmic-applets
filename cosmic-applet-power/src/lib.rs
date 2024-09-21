@@ -249,7 +249,10 @@ impl cosmic::Application for Power {
 
     fn view_window(&self, id: window::Id) -> Element<Message> {
         let Spacing {
-            space_xxs, space_s, ..
+            space_xxs,
+            space_s,
+            space_m,
+            ..
         } = theme::active().cosmic().spacing;
 
         if matches!(self.popup, Some(p) if p == id) {
@@ -264,7 +267,7 @@ impl cosmic::Application for Power {
                         text::body(fl!("lock-screen-shortcut")),
                     ]
                     .align_items(Alignment::Center)
-                    .spacing(8)
+                    .spacing(space_xxs)
                 )
                 .on_press(Message::Action(PowerAction::Lock)),
                 menu_button(
@@ -275,7 +278,7 @@ impl cosmic::Application for Power {
                         text::body(fl!("log-out-shortcut")),
                     ]
                     .align_items(Alignment::Center)
-                    .spacing(8)
+                    .spacing(space_xxs)
                 )
                 .on_press(Message::Action(PowerAction::LogOut)),
             ];
@@ -288,8 +291,8 @@ impl cosmic::Application for Power {
                 power_buttons("system-shutdown-symbolic", fl!("shutdown"))
                     .on_press(Message::Action(PowerAction::Shutdown)),
             ]
-            .spacing(24)
-            .padding([0, 24]);
+            .spacing(space_m)
+            .padding([0, space_m]);
 
             let content = column![
                 settings,
