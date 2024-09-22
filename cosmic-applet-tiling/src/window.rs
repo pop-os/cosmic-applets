@@ -4,14 +4,13 @@
 use crate::{
     fl, wayland::AppRequest, wayland_subscription, wayland_subscription::WorkspacesUpdate,
 };
-use cctk::sctk::reexports::calloop;
+use cctk::sctk::reexports::calloop::channel::SyncSender;
 use cosmic::{
     app::Core,
-    applet::{menu_button, padded_control, token::subscription::TokenRequest},
+    applet::{menu_button, padded_control},
     cosmic_config::{Config, ConfigSet, CosmicConfigEntry},
     cosmic_theme::Spacing,
     iced::{
-        alignment::Horizontal,
         wayland::popup::{destroy_popup, get_popup},
         window::Id,
         Command, Length, Limits, Subscription,
@@ -46,10 +45,9 @@ pub struct Window {
     new_workspace_entity: Entity,
     /// may not match the config value if behavior is per-workspace
     autotiled: bool,
-    workspace_tx: Option<calloop::channel::SyncSender<AppRequest>>,
+    workspace_tx: Option<SyncSender<AppRequest>>,
     tile_windows: id::Toggler,
     active_hint: id::Toggler,
-    token_tx: Option<calloop::channel::Sender<TokenRequest>>,
 }
 
 #[derive(Clone, Debug)]
@@ -128,7 +126,6 @@ impl cosmic::Application for Window {
             workspace_tx: None,
             tile_windows: id::Toggler::unique(),
             active_hint: id::Toggler::unique(),
-            token_tx: None,
         };
         (window, Command::none())
     }
@@ -274,15 +271,9 @@ impl cosmic::Application for Window {
                 });
             }
             Message::OpenSettings => {
-                let exec = "cosmic-settings window-management".to_string();
-                if let Some(tx) = self.token_tx.as_ref() {
-                    let _ = tx.send(TokenRequest {
-                        app_id: Self::APP_ID.to_string(),
-                        exec,
-                    });
-                } else {
-                    tracing::error!("Wayland tx is None");
-                };
+                let mut cmd = std::process::Command::new("cosmic-settings");
+                cmd.arg("window-management");
+                tokio::spawn(cosmic::process::spawn(cmd));
             }
         }
         Command::none()

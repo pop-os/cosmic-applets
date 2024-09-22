@@ -15,13 +15,13 @@ use cosmic::{
         menu_button, menu_control_padding, padded_control,
         token::subscription::{activation_token_subscription, TokenRequest, TokenUpdate},
     },
-    cctk::sctk::reexports::{calloop, protocols::xdg::shell::client::xdg_positioner::Anchor},
+    cctk::sctk::reexports::calloop,
     cosmic_config::CosmicConfigEntry,
     cosmic_theme::Spacing,
     iced::{
         self,
         widget::{self, column, row, slider},
-        window, Alignment, Length, Limits, Rectangle, Subscription,
+        window, Alignment, Length, Limits, Subscription,
     },
     iced_runtime::core::alignment::Horizontal,
     iced_style::application,
@@ -750,10 +750,9 @@ impl cosmic::Application for Audio {
 
         let mut audio_content = if audio_disabled {
             column![padded_control(
-                text(fl!("disconnected"))
+                text::title3(fl!("disconnected"))
                     .width(Length::Fill)
                     .horizontal_alignment(Horizontal::Center)
-                    .size(24)
             )]
         } else {
             column![

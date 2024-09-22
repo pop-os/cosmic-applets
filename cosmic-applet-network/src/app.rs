@@ -537,17 +537,6 @@ impl cosmic::Application for CosmicNetworkApplet {
                     return self.update(Message::SelectWirelessAccessPoint(ap));
                 }
             }
-            Message::OpenSettings => {
-                let exec = "cosmic-settings networking".to_string();
-                if let Some(tx) = self.token_tx.as_ref() {
-                    let _ = tx.send(TokenRequest {
-                        app_id: Self::APP_ID.to_string(),
-                        exec,
-                    });
-                } else {
-                    tracing::error!("Wayland tx is None");
-                };
-            }
         }
         Command::none()
     }

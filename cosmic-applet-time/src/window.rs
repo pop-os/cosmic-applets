@@ -1,7 +1,7 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
-use std::{borrow::Cow, str::FromStr};
+use std::str::FromStr;
 
 use chrono::{Datelike, Timelike};
 use cosmic::{
@@ -653,8 +653,7 @@ fn date_button(day: u32, is_month: bool, is_day: bool) -> Button<'static, Messag
     };
 
     let button = button::custom(
-        text(format!("{day}"))
-            .size(14.0)
+        text::body(format!("{day}"))
             .horizontal_alignment(Horizontal::Center)
             .vertical_alignment(Vertical::Center),
     )

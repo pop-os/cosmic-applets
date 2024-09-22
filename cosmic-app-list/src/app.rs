@@ -62,7 +62,7 @@ use futures::future::pending;
 use iced::{widget::container, Alignment, Background, Length};
 use itertools::Itertools;
 use rand::{thread_rng, Rng};
-use std::{collections::HashMap, fs, path::PathBuf, rc::Rc, str::FromStr, time::Duration};
+use std::{collections::HashMap, path::PathBuf, rc::Rc, str::FromStr, time::Duration};
 use switcheroo_control::Gpu;
 use tokio::time::sleep;
 use url::Url;
@@ -1716,7 +1716,7 @@ impl cosmic::Application for CosmicAppList {
                         content: impl Into<Element<'a, Message>>,
                     ) -> cosmic::widget::Button<'a, Message> {
                         button::custom(content)
-                            .height(36)
+                            .height(20 + 2 * theme::active().cosmic().space_xxs())
                             .style(Button::MenuItem)
                             .padding(menu_control_padding())
                             .width(Length::Fill)
