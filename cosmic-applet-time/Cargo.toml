@@ -2,7 +2,7 @@
 name = "cosmic-applet-time"
 version = "0.1.0"
 edition = "2021"
-license = "GPL-3.0"
+license = "GPL-3.0-only"
 
 [dependencies]
 chrono = { version = "0.4.35", features = ["clock"] }

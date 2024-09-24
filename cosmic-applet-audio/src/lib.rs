@@ -4,6 +4,8 @@
 mod localize;
 mod mouse_area;
 
+use std::time::Duration;
+
 use crate::{localize::localize, pulse::DeviceInfo};
 use config::AudioAppletConfig;
 use cosmic::{
@@ -55,6 +57,12 @@ pub fn run() -> cosmic::iced::Result {
 pub struct Audio {
     core: cosmic::app::Core,
     is_open: IsOpen,
+    output_volume: f64,
+    output_volume_debounce: bool,
+    output_volume_text: String,
+    input_volume: f64,
+    input_volume_debounce: bool,
+    input_volume_text: String,
     current_output: Option<DeviceInfo>,
     current_input: Option<DeviceInfo>,
     outputs: Vec<DeviceInfo>,
@@ -70,10 +78,15 @@ pub struct Audio {
 impl Audio {
     fn update_output(&mut self, output: Option<DeviceInfo>) {
         self.current_output = output;
+
+        if let Some(device) = self.current_output.as_ref() {
+            self.output_volume = volume_to_percent(device.volume.avg());
+            self.output_volume_text = format!("{}%", self.output_volume.round());
+        }
     }
 
     fn output_icon_name(&self) -> &'static str {
-        let volume = self.current_output_volume_percent();
+        let volume = self.output_volume;
         let mute = self.current_output_mute();
         if mute || volume == 0. {
             "audio-volume-muted-symbolic"
@@ -90,10 +103,15 @@ impl Audio {
 
     fn update_input(&mut self, input: Option<DeviceInfo>) {
         self.current_input = input;
+
+        if let Some(device) = self.current_output.as_ref() {
+            self.input_volume = volume_to_percent(device.volume.avg());
+            self.input_volume_text = format!("{}%", self.input_volume.round());
+        }
     }
 
     fn input_icon_name(&self) -> &'static str {
-        let volume = self.current_input_volume_percent();
+        let volume = self.input_volume;
         let mute = self.current_input_mute();
         if mute || volume == 0. {
             "microphone-sensitivity-muted-symbolic"
@@ -117,6 +135,8 @@ enum IsOpen {
 #[derive(Debug, Clone)]
 pub enum Message {
     Ignore,
+    ApplyOutputVolume,
+    ApplyInputVolume,
     SetOutputVolume(f64),
     SetInputVolume(f64),
     SetOutputMute(bool),
@@ -249,24 +269,6 @@ impl Audio {
         })
     }
 
-    fn current_output_volume_percent(&self) -> f64 {
-        volume_to_percent(
-            self.current_output
-                .as_ref()
-                .map(|o| o.volume.avg())
-                .unwrap_or_default(),
-        )
-    }
-
-    fn current_input_volume_percent(&self) -> f64 {
-        volume_to_percent(
-            self.current_input
-                .as_ref()
-                .map(|o| o.volume.avg())
-                .unwrap_or_default(),
-        )
-    }
-
     fn current_output_mute(&self) -> bool {
         self.current_output
             .as_ref()
@@ -355,9 +357,51 @@ impl cosmic::Application for Audio {
                 }
             }
             Message::SetOutputVolume(vol) => {
-                self.current_output
-                    .as_mut()
-                    .map(|o| o.volume.set(o.volume.len(), percent_to_volume(vol)));
+                if self.output_volume == vol {
+                    return Command::none();
+                }
+
+                self.output_volume = vol;
+                self.output_volume_text = format!("{}%", self.output_volume.round());
+
+                if self.output_volume_debounce {
+                    return Command::none();
+                }
+
+                self.output_volume_debounce = true;
+
+                return cosmic::command::future(async move {
+                    tokio::time::sleep(Duration::from_millis(64)).await;
+                    Message::ApplyOutputVolume
+                });
+            }
+            Message::SetInputVolume(vol) => {
+                if self.input_volume == vol {
+                    return Command::none();
+                }
+
+                self.input_volume = vol;
+                self.input_volume_text = format!("{}%", self.input_volume.round());
+
+                if self.input_volume_debounce {
+                    return Command::none();
+                }
+
+                self.input_volume_debounce = true;
+
+                return cosmic::command::future(async move {
+                    tokio::time::sleep(Duration::from_millis(64)).await;
+                    Message::ApplyInputVolume
+                });
+            }
+            Message::ApplyOutputVolume => {
+                self.output_volume_debounce = false;
+
+                self.current_output.as_mut().map(|o| {
+                    o.volume
+                        .set(o.volume.len(), percent_to_volume(self.output_volume))
+                });
+
                 if let PulseState::Connected(connection) = &mut self.pulse_state {
                     if let Some(device) = &self.current_output {
                         if let Some(name) = &device.name {
@@ -369,10 +413,14 @@ impl cosmic::Application for Audio {
                     }
                 }
             }
-            Message::SetInputVolume(vol) => {
-                self.current_input
-                    .as_mut()
-                    .map(|i| i.volume.set(i.volume.len(), percent_to_volume(vol)));
+            Message::ApplyInputVolume => {
+                self.input_volume_debounce = false;
+
+                self.current_input.as_mut().map(|i| {
+                    i.volume
+                        .set(i.volume.len(), percent_to_volume(self.input_volume))
+                });
+
                 if let PulseState::Connected(connection) = &mut self.pulse_state {
                     if let Some(device) = &self.current_input {
                         if let Some(name) = &device.name {
@@ -688,8 +736,6 @@ impl cosmic::Application for Audio {
 
     fn view_window(&self, _id: window::Id) -> Element<Message> {
         let audio_disabled = matches!(self.pulse_state, PulseState::Disconnected(_));
-        let out_f64 = self.current_output_volume_percent();
-        let in_f64 = self.current_input_volume_percent();
         let out_mute = self.current_output_mute();
         let in_mute = self.current_input_mute();
 
@@ -713,9 +759,9 @@ impl cosmic::Application for Audio {
                         .icon_size(24)
                         .line_height(24)
                         .on_press(Message::SetOutputMute(!out_mute)),
-                        slider(0.0..=100.0, out_f64, Message::SetOutputVolume)
+                        slider(0.0..=100.0, self.output_volume, Message::SetOutputVolume)
                             .width(Length::FillPortion(5)),
-                        text(format!("{}%", out_f64.round()))
+                        text(&self.output_volume_text)
                             .size(16)
                             .width(Length::FillPortion(1))
                             .horizontal_alignment(Horizontal::Right)
@@ -734,9 +780,9 @@ impl cosmic::Application for Audio {
                         .icon_size(24)
                         .line_height(24)
                         .on_press(Message::SetInputMute(!in_mute)),
-                        slider(0.0..=100.0, in_f64, Message::SetInputVolume)
+                        slider(0.0..=100.0, self.input_volume, Message::SetInputVolume)
                             .width(Length::FillPortion(5)),
-                        text(format!("{}%", in_f64.round()))
+                        text(&self.input_volume_text)
                             .size(16)
                             .width(Length::FillPortion(1))
                             .horizontal_alignment(Horizontal::Right)
