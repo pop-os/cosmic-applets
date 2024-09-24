@@ -1,13 +1,14 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
-use std::{borrow::Cow, str::FromStr};
+use std::str::FromStr;
 
 use chrono::{Datelike, Timelike};
 use cosmic::{
     app,
     applet::{cosmic_panel_config::PanelAnchor, menu_button, padded_control},
     cctk::sctk::reexports::calloop,
+    cosmic_theme::Spacing,
     iced::{
         futures::{channel::mpsc, SinkExt, StreamExt, TryFutureExt},
         subscription,
@@ -18,6 +19,7 @@ use cosmic::{
     iced_core::alignment::{Horizontal, Vertical},
     iced_style::application,
     iced_widget::{horizontal_rule, Column},
+    theme,
     widget::{
         button, container, divider, grid, horizontal_space, icon, rectangle_tracker::*, text,
         Button, Grid, Space,
@@ -432,7 +434,7 @@ impl cosmic::Application for Window {
             PanelAnchor::Top | PanelAnchor::Bottom
         );
 
-        let button = cosmic::widget::button(if horizontal {
+        let button = button::custom(if horizontal {
             let mut bag = Bag::empty();
 
             if self.config.show_date_in_top_panel {
@@ -547,6 +549,10 @@ impl cosmic::Application for Window {
     }
 
     fn view_window(&self, _id: window::Id) -> Element<Message> {
+        let Spacing {
+            space_xxs, space_s, ..
+        } = theme::active().cosmic().spacing;
+
         let mut date_bag = Bag::empty();
         date_bag.month = Some(components::Month::Long);
         date_bag.day = Some(components::Day::NumericDayOfMonth);
@@ -622,7 +628,7 @@ impl cosmic::Application for Window {
             .align_items(Alignment::Center)
             .padding([12, 20]),
             calender.padding([0, 12].into()),
-            padded_control(divider::horizontal::default()),
+            padded_control(divider::horizontal::default()).padding([space_xxs, space_s]),
             menu_button(text::body(fl!("datetime-settings")))
                 .on_press(Message::OpenDateTimeSettings),
         ]
@@ -641,14 +647,13 @@ impl cosmic::Application for Window {
 
 fn date_button(day: u32, is_month: bool, is_day: bool) -> Button<'static, Message> {
     let style = if is_day {
-        cosmic::widget::button::Style::Suggested
+        button::Style::Suggested
     } else {
-        cosmic::widget::button::Style::Text
+        button::Style::Text
     };
 
-    let button = button(
-        text(format!("{day}"))
-            .size(14.0)
+    let button = button::custom(
+        text::body(format!("{day}"))
             .horizontal_alignment(Horizontal::Center)
             .vertical_alignment(Vertical::Center),
     )

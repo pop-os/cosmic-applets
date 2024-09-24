@@ -1,4 +1,3 @@
-cosmic-applet-button = Pulsante Cosmic
 battery = Batteria
 battery-desc = Consumi e performance ridotte.
 balanced = Bilanciato

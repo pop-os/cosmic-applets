@@ -1,4 +1,3 @@
-cosmic-applet-button = Cosmic 按钮
 battery = 省电
 battery-desc = 降低功耗和性能
 balanced = 平衡

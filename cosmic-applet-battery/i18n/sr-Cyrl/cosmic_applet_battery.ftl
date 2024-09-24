@@ -1,4 +1,3 @@
-cosmic-applet-button = Cosmic дугме
 battery = Батерија
 battery-desc = Смањене перформансе и потрошња батерије.
 balanced = Балансирано

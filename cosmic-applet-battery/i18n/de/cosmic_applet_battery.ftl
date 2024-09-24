@@ -1,4 +1,3 @@
-cosmic-applet-button = Cosmic Taste
 battery = Akku
 battery-desc = Reduzierter Stromverbrauch und Leistung.
 balanced = Ausgeglichen

@@ -1,4 +1,3 @@
-cosmic-applet-button = Кнопка Cosmic
 battery = Аккумулятор
 battery-desc = Пониженные энергопотребление и производительность.
 balanced = Сбалансированный

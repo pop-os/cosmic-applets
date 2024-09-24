@@ -1,6 +1,6 @@
 bluetooth = Bluetooth
-other-devices = Other Bluetooth Devices
-settings = Bluetooth Settings...
+other-devices = Other Bluetooth devices
+settings = Bluetooth settings...
 connected = Connected
 confirm-pin = Please confirm that the following PIN matches the one displayed on {$deviceName}
 confirm = Confirm

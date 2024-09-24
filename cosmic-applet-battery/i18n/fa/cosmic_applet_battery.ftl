@@ -1,4 +1,3 @@
-cosmic-applet-button = دکمه Cosmic
 battery = باتری
 battery-desc = کاهش مصرف برق و عملکرد.
 balanced = متعادل

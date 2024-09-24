@@ -41,7 +41,7 @@ use cosmic::{
         accept_mime_type, finish_dnd, request_dnd_data, set_actions, start_drag,
     },
     iced_style::{application, svg},
-    theme::{Button, Container},
+    theme::{self, Button, Container},
     widget::{
         button, divider, horizontal_space, icon,
         icon::from_name,
@@ -62,7 +62,7 @@ use futures::future::pending;
 use iced::{widget::container, Alignment, Background, Length};
 use itertools::Itertools;
 use rand::{thread_rng, Rng};
-use std::{collections::HashMap, fs, path::PathBuf, rc::Rc, str::FromStr, time::Duration};
+use std::{collections::HashMap, path::PathBuf, rc::Rc, str::FromStr, time::Duration};
 use switcheroo_control::Gpu;
 use tokio::time::sleep;
 use url::Url;
@@ -262,7 +262,7 @@ impl DockItem {
             .into(),
         };
 
-        let icon_button = cosmic::widget::button(icon_wrapper)
+        let icon_button = button::custom(icon_wrapper)
             .padding(app_icon.padding)
             .selected(is_focused)
             .style(app_list_icon_style(is_focused));
@@ -456,7 +456,7 @@ where
     Msg: 'static + Clone,
 {
     let border = 1.0;
-    cosmic::widget::button(
+    button::custom(
         container(
             column![
                 container(if let Some(img) = img {
@@ -1715,14 +1715,14 @@ impl cosmic::Application for CosmicAppList {
                     fn menu_button<'a, Message>(
                         content: impl Into<Element<'a, Message>>,
                     ) -> cosmic::widget::Button<'a, Message> {
-                        cosmic::widget::button(content)
-                            .height(36)
-                            .style(Button::AppletMenu)
+                        button::custom(content)
+                            .height(20 + 2 * theme::active().cosmic().space_xxs())
+                            .style(Button::MenuItem)
                             .padding(menu_control_padding())
                             .width(Length::Fill)
                     }
 
-                    let mut content = column![].padding([8, 0]).align_items(Alignment::Center);
+                    let mut content = column![].align_items(Alignment::Center);
 
                     if let Some(exec) = desktop_info.exec() {
                         if !toplevels.is_empty() {
@@ -1774,7 +1774,7 @@ impl cosmic::Application for CosmicAppList {
                                     .on_press(Message::Exec(exec.into(), None)),
                             );
                         }
-                        content = content.push(divider::horizontal::default());
+                        content = content.push(divider::horizontal::light());
                     }
 
                     if !toplevels.is_empty() {
@@ -1791,7 +1791,7 @@ impl cosmic::Application for CosmicAppList {
                             );
                         }
                         content = content.push(list_col);
-                        content = content.push(divider::horizontal::default());
+                        content = content.push(divider::horizontal::light());
                     }
 
                     let svg_accent = Rc::new(|theme: &cosmic::Theme| {
@@ -1820,7 +1820,7 @@ impl cosmic::Application for CosmicAppList {
                     );
 
                     if toplevels.len() > 0 {
-                        content = content.push(divider::horizontal::default());
+                        content = content.push(divider::horizontal::light());
                         content = match toplevels.len() {
                             1 => content.push(
                                 menu_button(text::body(fl!("quit")))
@@ -1832,7 +1832,26 @@ impl cosmic::Application for CosmicAppList {
                             ),
                         };
                     }
-                    self.core.applet.popup_container(content).into()
+                    container(content)
+                        .padding(1)
+                        //TODO: move style to libcosmic
+                        .style(theme::Container::custom(|theme| {
+                            let cosmic = theme.cosmic();
+                            let component = &cosmic.background.component;
+                            container::Appearance {
+                                icon_color: Some(component.on.into()),
+                                text_color: Some(component.on.into()),
+                                background: Some(Background::Color(component.base.into())),
+                                border: Border {
+                                    radius: 8.0.into(),
+                                    width: 1.0,
+                                    color: component.divider.into(),
+                                },
+                                ..Default::default()
+                            }
+                        }))
+                        .width(Length::Fill)
+                        .into()
                 }
                 PopupType::TopLevelList => match self.core.applet.anchor {
                     PanelAnchor::Left | PanelAnchor::Right => {

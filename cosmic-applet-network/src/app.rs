@@ -7,6 +7,7 @@ use cosmic::{
         token::subscription::{activation_token_subscription, TokenRequest, TokenUpdate},
     },
     cctk::sctk::reexports::calloop,
+    cosmic_theme::Spacing,
     iced::{
         wayland::popup::{destroy_popup, get_popup},
         widget::{column, row},
@@ -19,6 +20,7 @@ use cosmic::{
     },
     iced_style::application,
     iced_widget::Row,
+    theme,
     widget::{
         button, container, divider, icon, icon::from_name, scrollable, text, text_input, Column,
     },
@@ -548,6 +550,10 @@ impl cosmic::Application for CosmicNetworkApplet {
     }
 
     fn view_window(&self, _id: window::Id) -> Element<Message> {
+        let Spacing {
+            space_xxs, space_s, ..
+        } = theme::active().cosmic().spacing;
+
         let mut vpn_ethernet_col = column![];
         let mut known_wifi = Vec::new();
         for conn in &self.nm_state.active_conns {
@@ -574,7 +580,8 @@ impl cosmic::Application for CosmicNetworkApplet {
                         .align_items(Alignment::Center)
                         .spacing(8)
                         .padding(menu_control_padding()),
-                        padded_control(divider::horizontal::default()),
+                        padded_control(divider::horizontal::default())
+                            .padding([space_xxs, space_s]),
                     ]);
                 }
                 ActiveConnectionInfo::Wired {
@@ -609,7 +616,8 @@ impl cosmic::Application for CosmicNetworkApplet {
                         .align_items(Alignment::Center)
                         .spacing(8)
                         .padding(menu_control_padding()),
-                        padded_control(divider::horizontal::default()),
+                        padded_control(divider::horizontal::default())
+                            .padding([space_xxs, space_s]),
                     ]);
                 }
                 ActiveConnectionInfo::WiFi {
@@ -687,7 +695,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                 .text_size(14)
                 .width(Length::Fill)
             ),
-            padded_control(divider::horizontal::default()),
+            padded_control(divider::horizontal::default()).padding([space_xxs, space_s]),
             padded_control(
                 anim!(
                     //toggler
@@ -705,7 +713,7 @@ impl cosmic::Application for CosmicNetworkApplet {
         if self.nm_state.airplane_mode {
             content = content.push(
                 column!(
-                    padded_control(divider::horizontal::default()),
+                    padded_control(divider::horizontal::default()).padding([space_xxs, space_s]),
                     icon::from_name("airplane-mode-symbolic")
                         .size(48)
                         .symbolic(true),
@@ -719,7 +727,9 @@ impl cosmic::Application for CosmicNetworkApplet {
             );
         } else {
             if self.nm_state.wifi_enabled {
-                content = content.push(padded_control(divider::horizontal::default()));
+                content = content.push(
+                    padded_control(divider::horizontal::default()).padding([space_xxs, space_s]),
+                );
                 for known in &self.nm_state.known_access_points {
                     let mut btn_content = Vec::with_capacity(2);
                     let ssid = text::body(&known.ssid).width(Length::Fill);
@@ -790,19 +800,23 @@ impl cosmic::Application for CosmicNetworkApplet {
                 let has_known_wifi = !known_wifi.is_empty();
                 content = content.push(Column::with_children(known_wifi));
                 if has_known_wifi {
-                    content = content.push(padded_control(divider::horizontal::default()));
+                    content = content.push(
+                        padded_control(divider::horizontal::default())
+                            .padding([space_xxs, space_s]),
+                    );
                 }
 
                 let dropdown_icon = if self.show_visible_networks {
-                    "go-down-symbolic"
+                    "go-up-symbolic"
                 } else {
-                    "go-next-symbolic"
+                    "go-down-symbolic"
                 };
                 let available_connections_btn = menu_button(row![
                     text::body(fl!("visible-wireless-networks"))
                         .width(Length::Fill)
+                        .height(Length::Fixed(24.0))
                         .vertical_alignment(Vertical::Center),
-                    container(icon::from_name(dropdown_icon).size(14).symbolic(true))
+                    container(icon::from_name(dropdown_icon).size(16).symbolic(true))
                         .align_x(Horizontal::Center)
                         .align_y(Vertical::Center)
                         .width(Length::Fixed(24.0))
@@ -935,6 +949,9 @@ impl cosmic::Application for CosmicNetworkApplet {
                     .push(scrollable(Column::with_children(list_col)).height(Length::Fixed(300.0)));
             }
         }
+        content = content
+            .push(padded_control(divider::horizontal::default()).padding([space_xxs, space_s]))
+            .push(menu_button(text::body(fl!("settings"))).on_press(Message::OpenSettings));
 
         self.core
             .applet

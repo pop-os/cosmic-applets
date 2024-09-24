@@ -10,6 +10,7 @@ use cosmic::{
     },
     cctk::sctk::reexports::calloop,
     cosmic_config::{Config, CosmicConfigEntry},
+    cosmic_theme::Spacing,
     iced::{
         wayland::popup::{destroy_popup, get_popup},
         widget::{column, row},
@@ -17,6 +18,7 @@ use cosmic::{
     },
     iced_core::alignment::Horizontal,
     iced_widget::{scrollable, Column},
+    theme,
     widget::{button, container, divider, icon, text},
     Command, Element, Theme,
 };
@@ -364,6 +366,10 @@ impl cosmic::Application for Notifications {
     }
 
     fn view_window(&self, _id: window::Id) -> Element<Message> {
+        let Spacing {
+            space_xxs, space_s, ..
+        } = theme::active().cosmic().spacing;
+
         let do_not_disturb = padded_control(row![anim!(
             DO_NOT_DISTURB,
             &self.timeline,
@@ -421,7 +427,7 @@ impl cosmic::Application for Notifications {
 
                         let duration_since = text::caption(duration_ago_msg(n));
 
-                        let close_notif = button(
+                        let close_notif = button::custom(
                             icon::from_name("window-close-symbolic")
                                 .size(16)
                                 .symbolic(true),
@@ -535,7 +541,7 @@ impl cosmic::Application for Notifications {
         };
 
         let main_content = column![
-            padded_control(divider::horizontal::default()),
+            padded_control(divider::horizontal::default()).padding([space_xxs, space_s]),
             notifications,
         ];
 
