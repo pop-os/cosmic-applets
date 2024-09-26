@@ -478,17 +478,19 @@ impl cosmic::Application for Window {
             let mut elements = Vec::new();
 
             if self.config.show_date_in_top_panel {
-                let mut date_bag = Bag::empty();
-
-                date_bag.day = Some(components::Day::NumericDayOfMonth);
-                date_bag.month = Some(components::Month::Short);
-
-                let formated = self.format(date_bag, &self.now);
-
-                for p in formated.split_whitespace() {
-                    elements.push(self.core.applet.text(p.to_owned()).into());
-                }
-
+                elements.push(
+                    self.core
+                        .applet
+                        .text(format!("{:02}", self.now.day()))
+                        .into(),
+                );
+                elements.push(
+                    self.core
+                        .applet
+                        .text(format!("{:02}", self.now.month()))
+                        .into(),
+                );
+                
                 elements.push(
                     horizontal_rule(2)
                         .width(self.core.applet.suggested_size(true).0)
