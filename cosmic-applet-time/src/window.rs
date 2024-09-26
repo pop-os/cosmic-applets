@@ -481,13 +481,13 @@ impl cosmic::Application for Window {
                 elements.push(
                     self.core
                         .applet
-                        .text(format!("{:02}", self.now.day()))
+                        .text(format!("{:02}", self.now.month()))
                         .into(),
                 );
                 elements.push(
                     self.core
                         .applet
-                        .text(format!("{:02}", self.now.month()))
+                        .text(format!("{:02}", self.now.day()))
                         .into(),
                 );
 
