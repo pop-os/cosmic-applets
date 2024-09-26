@@ -490,7 +490,7 @@ impl cosmic::Application for Window {
                         .text(format!("{:02}", self.now.month()))
                         .into(),
                 );
-                
+
                 elements.push(
                     horizontal_rule(2)
                         .width(self.core.applet.suggested_size(true).0)
@@ -502,6 +502,10 @@ impl cosmic::Application for Window {
 
             time_bag.hour = Some(components::Numeric::Numeric);
             time_bag.minute = Some(components::Numeric::Numeric);
+            time_bag.second = self
+                .config
+                .show_seconds
+                .then_some(components::Numeric::Numeric);
 
             let hour_cycle = if self.config.military_time {
                 preferences::HourCycle::H23
