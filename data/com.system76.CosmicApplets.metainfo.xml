@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.system76.CosmicApplets</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-only</project_license>
+  <project_group>COSMIC</project_group>
+  <developer_name>System76</developer_name>
+  <update_contact>ashley@system76.com</update_contact>
+  <url type="homepage">https://github.com/pop-os/cosmic-applets</url>
+  <url type="bugtracker">https://github.com/pop-os/cosmic-applets</url>
+  <name>COSMIC Applets</name>
+  <summary>Applets for the COSMIC panel</summary>
+  <description>
+    <p>Applets for the COSMIC panel</p>
+  </description>
+  <launchable type="desktop-id">com.system76.CosmicAppletAppList.desktop</launchable>
+  <launchable type="desktop-id">com.system76.CosmicAppletAudio.desktop</launchable>
+  <launchable type="desktop-id">com.system76.CosmicAppletBattery.desktop</launchable>
+  <launchable type="desktop-id">com.system76.CosmicAppletBluetooth.desktop</launchable>
+  <launchable type="desktop-id">com.system76.CosmicAppletInputSources.desktop</launchable>
+  <launchable type="desktop-id">com.system76.CosmicAppletMinimize.desktop</launchable>
+  <launchable type="desktop-id">com.system76.CosmicAppletNetwork.desktop</launchable>
+  <launchable type="desktop-id">com.system76.CosmicAppletNotifications.desktop</launchable>
+  <launchable type="desktop-id">com.system76.CosmicAppletPower.desktop</launchable>
+  <launchable type="desktop-id">com.system76.CosmicAppletStatusArea.desktop</launchable>
+  <launchable type="desktop-id">com.system76.CosmicAppletTiling.desktop</launchable>
+  <launchable type="desktop-id">com.system76.CosmicAppletTime.desktop</launchable>
+  <launchable type="desktop-id">com.system76.CosmicAppletWorkspaces.desktop</launchable>
+  <launchable type="desktop-id">com.system76.CosmicAppletAppButton.desktop</launchable>
+  <launchable type="desktop-id">com.system76.CosmicAppletWorkspacesButton.desktop</launchable>
+  <launchable type="desktop-id">com.system76.CosmicAppletLauncherButton.desktop</launchable>
+  <launchable type="desktop-id">com.system76.CosmicApplet.desktop</launchable>
+  <icon type="remote" width="256" height="256">https://raw.githubusercontent.com/pop-os/cosmic-applets/master/cosmic-app-list/data/icons/scalable/apps/com.system76.CosmicAppList.svg</icon>
+  <screenshots>
+  </screenshots>
+  <provides>
+    <id>com.system76.CosmicApplet</id>
+    <mimetypes>
+      <mimetype>text/plain</mimetype>
+    </mimetypes>
+    <binaries>
+      <binary>cosmic-app-list</binary>
+      <binary>cosmic-applet-audio</binary>
+      <binary>cosmic-applet-battery</binary>
+      <binary>cosmic-applet-bluetooth</binary>
+      <binary>cosmic-applet-cosmic-panel-button</binary>
+      <binary>cosmic-applet-input-sources</binary>
+      <binary>cosmic-applet-minimize</binary>
+      <binary>cosmic-applet-network</binary>
+      <binary>cosmic-applet-notifications</binary>
+      <binary>cosmic-applet-power</binary>
+      <binary>cosmic-applet-status-area</binary>
+      <binary>cosmic-applet-tiling</binary>
+      <binary>cosmic-applet-time</binary>
+      <binary>cosmic-applet-workspaces</binary>
+    </binaries>
+  </provides>
+</component>
