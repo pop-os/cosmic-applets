@@ -1,6 +1,6 @@
 power = Démarrage
-settings = Paramêtres...
-lock-screen = Vérouiller la session
+settings = Paramètres...
+lock-screen = Verrouiller la session
 lock-screen-shortcut = Super + Échap
 log-out = Se déconnecter
 log-out-shortcut = Ctrl + Alt + Supprimer
@@ -32,6 +32,6 @@ confirm-body =
         [shutdown] éteindre l'ordinateur
         [lock-screen] verrouiller la session
         [log-out] déconnecter l'utilisateur
-        *[other]appliquer l'option choisie
+        *[other] appliquer l'option choisie
     } automatiquement dans { $countdown } secondes.
 
