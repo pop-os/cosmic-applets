@@ -1,0 +1,14 @@
+battery = बैटरी
+battery-desc = कम ऊर्जा उपयोग और प्रदर्शन।
+balanced = संतुलित
+balanced-desc = मानक प्रदर्शन और बैटरी उपयोग।
+performance = उच्च प्रदर्शन
+performance-desc = उच्च प्रदर्शन और शक्ति उपयोग।
+max-charge = 80% का अधिकतम चार्ज मान सेट करके अपनी बैटरी की उम्र बढ़ाएं
+seconds = सेकेण्ड
+minutes = मिनट
+hours = घंटे
+until-empty = खाली होने तक
+power-settings = पावर और बैटरी सेटिंग्स...
+dgpu-running = डिस्क्रीट GPU सक्रिय है और बैटरी जीवन को कम कर सकता है
+dgpu-applications = {$gpu_name} डिस्क्रीट GPU का उपयोग करने वाले एप्लिकेशन
