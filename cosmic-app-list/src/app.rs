@@ -181,8 +181,7 @@ impl DockItem {
 
         let app_icon = AppletIconData::new(applet);
 
-        let cosmic_icon = IconSource::from_unknown(desktop_info.icon().unwrap_or_default())
-            .as_cosmic_icon()
+        let cosmic_icon = cosmic::widget::icon::from_name(desktop_info.icon().unwrap_or_default())
             .size(app_icon.icon_size);
 
         let dots = if toplevels.is_empty() {
