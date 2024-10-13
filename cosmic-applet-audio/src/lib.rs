@@ -106,7 +106,7 @@ impl Audio {
     fn update_input(&mut self, input: Option<DeviceInfo>) {
         self.current_input = input;
 
-        if let Some(device) = self.current_output.as_ref() {
+        if let Some(device) = self.current_input.as_ref() {
             self.input_volume = volume_to_percent(device.volume.avg());
             self.input_volume_text = format!("{}%", self.input_volume.round());
         }
