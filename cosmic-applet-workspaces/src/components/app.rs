@@ -3,20 +3,14 @@
 
 use cctk::sctk::reexports::{calloop::channel::SyncSender, client::backend::ObjectId};
 use cosmic::{
-    applet::cosmic_panel_config::PanelAnchor,
-    font::FONT_BOLD,
-    iced::{
+    applet::cosmic_panel_config::PanelAnchor, font, iced::{
         alignment::{Horizontal, Vertical},
         event,
         mouse::{self, ScrollDelta},
         widget::{button, column, row},
         Event::Mouse,
         Length, Subscription,
-    },
-    iced_core::{Background, Border},
-    iced_style::application,
-    widget::{container, horizontal_space, vertical_space},
-    Command, Element, Theme,
+    }, iced_core::{Background, Border}, iced_style::application, widget::{container, horizontal_space, vertical_space}, Command, Element, Theme
 };
 
 use cosmic_protocols::workspace::v1::client::zcosmic_workspace_handle_v1;
@@ -176,7 +170,11 @@ impl cosmic::Application for IcedWorkspacesApplet {
         let popup_index = self.popup_index().unwrap_or(self.workspaces.len());
 
         let buttons = self.workspaces[..popup_index].iter().filter_map(|w| {
-            let content = self.core.applet.text(w.0.clone()).font(FONT_BOLD);
+            let content = self
+                .core
+                .applet
+                .text(w.0.clone())
+                .font(font::bold());
 
             let (width, height) = if self.core.applet.is_horizontal() {
                 (suggested_total as f32, suggested_window_size.1.get() as f32)

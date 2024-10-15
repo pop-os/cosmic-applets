@@ -9,6 +9,7 @@ use cosmic::{
     applet::{cosmic_panel_config::PanelAnchor, menu_button, padded_control},
     cctk::sctk::reexports::calloop,
     cosmic_theme::Spacing,
+    font,
     iced::{
         futures::{channel::mpsc, SinkExt, StreamExt, TryFutureExt},
         subscription,
@@ -463,7 +464,10 @@ impl cosmic::Application for Window {
 
             Element::from(
                 row!(
-                    self.core.applet.text(self.format(bag, &self.now)),
+                    self.core
+                        .applet
+                        .text(self.format(bag, &self.now))
+                        .font(font::mono()),
                     container(vertical_space(Length::Fixed(
                         (self.core.applet.suggested_size(true).1
                             + 2 * self.core.applet.suggested_padding(true))
@@ -486,7 +490,13 @@ impl cosmic::Application for Window {
                 let formated = self.format(date_bag, &self.now);
 
                 for p in formated.split_whitespace() {
-                    elements.push(self.core.applet.text(p.to_owned()).into());
+                    elements.push(
+                        self.core
+                            .applet
+                            .text(p.to_owned())
+                            .font(font::mono())
+                            .into(),
+                    );
                 }
 
                 elements.push(
@@ -514,7 +524,13 @@ impl cosmic::Application for Window {
             // todo: split using formatToParts when it is implemented
             // https://github.com/unicode-org/icu4x/issues/4936#issuecomment-2128812667
             for p in formated.split_whitespace().flat_map(|s| s.split(':')) {
-                elements.push(self.core.applet.text(p.to_owned()).into());
+                elements.push(
+                    self.core
+                        .applet
+                        .text(p.to_owned())
+                        .font(font::mono())
+                        .into(),
+                );
             }
 
             let date_time_col = Column::with_children(elements)
