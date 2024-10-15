@@ -9,6 +9,22 @@ restart = Riavvia
 shutdown = Spegni
 confirm = Conferma
 cancel = Annulla
+confirm-button = {
+    $action -> 
+        [restart] { restart }
+        [suspend] { suspend}
+        [shutdown] Spegni
+        [log-out] { log-out }
+        *[other] { confirm}
+}
+confirm-title = 
+    { $action -> 
+        [restart] { restart }
+        [suspend] { suspend }
+        [shutdown] { shutdown }
+        [log-out] Chiudi tutte le applicazioni e termina la sessione
+        *[other] Applica l'azione selezionata
+    } now?
 confirm-body = 
     { $action ->
         [restart] { restart }
@@ -18,4 +34,3 @@ confirm-body =
         [log-out] Disconnessione in corso
         *[other] L'azione selezionata
     } verrà eseguita tra { $countdown } secondi.
-
