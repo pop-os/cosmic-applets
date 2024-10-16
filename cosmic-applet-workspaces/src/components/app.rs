@@ -4,7 +4,6 @@
 use cctk::sctk::reexports::{calloop::channel::SyncSender, client::backend::ObjectId};
 use cosmic::{
     applet::cosmic_panel_config::PanelAnchor,
-    font::FONT_BOLD,
     iced::{
         alignment::{Horizontal, Vertical},
         event,
@@ -176,7 +175,11 @@ impl cosmic::Application for IcedWorkspacesApplet {
         let popup_index = self.popup_index().unwrap_or(self.workspaces.len());
 
         let buttons = self.workspaces[..popup_index].iter().filter_map(|w| {
-            let content = self.core.applet.text(w.0.clone()).font(FONT_BOLD);
+            let content = self
+                .core
+                .applet
+                .text(w.0.clone())
+                .font(cosmic::font::bold());
 
             let (width, height) = if self.core.applet.is_horizontal() {
                 (suggested_total as f32, suggested_window_size.1.get() as f32)
