@@ -578,9 +578,9 @@ impl cosmic::Application for CosmicBluetoothApplet {
         } else {
             content = content.push(Column::with_children(list_column));
         }
-        // content = content
-        //    .push(padded_control(divider::horizontal::default()).padding([space_xxs, space_s]))
-        //    .push(menu_button(text::body(fl!("settings"))).on_press(Message::OpenSettings));
+        content = content
+            .push(padded_control(divider::horizontal::default()).padding([space_xxs, space_s]))
+            .push(menu_button(text::body(fl!("settings"))).on_press(Message::OpenSettings));
 
         self.core.applet.popup_container(content).into()
     }
