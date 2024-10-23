@@ -11,7 +11,10 @@ use std::{
     time::Duration,
 };
 
-use cosmic::iced::{self, subscription};
+use cosmic::{
+    iced::{self, Subscription},
+    iced_futures::stream,
+};
 use drm::control::Device as ControlDevice;
 use futures::{FutureExt, SinkExt};
 use tokio::{
@@ -378,13 +381,16 @@ fn all_gpus<S: AsRef<str>>(seat: S) -> io::Result<Vec<Gpu>> {
 pub fn dgpu_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
     id: I,
 ) -> iced::Subscription<GpuUpdate> {
-    subscription::channel(id, 50, move |mut output| async move {
-        let mut state = State::Ready;
+    Subscription::run_with_id(
+        id,
+        stream::channel(50, move |mut output| async move {
+            let mut state = State::Ready;
 
-        loop {
-            state = start_listening(state, &mut output).await;
-        }
-    })
+            loop {
+                state = start_listening(state, &mut output).await;
+            }
+        }),
+    )
 }
 
 #[derive(Debug)]

@@ -6,7 +6,10 @@ pub mod wireless_enabled;
 
 use std::{collections::HashMap, fmt::Debug, time::Duration};
 
-use cosmic::iced::{self, subscription};
+use cosmic::{
+    iced::{self, Subscription},
+    iced_futures::stream,
+};
 use cosmic_dbus_networkmanager::{
     active_connection::ActiveConnection,
     device::SpecificDevice,
@@ -42,13 +45,16 @@ pub enum State {
 pub fn network_manager_subscription<I: Copy + Debug + std::hash::Hash + 'static>(
     id: I,
 ) -> iced::Subscription<NetworkManagerEvent> {
-    subscription::channel(id, 50, |mut output| async move {
-        let mut state = State::Ready;
+    Subscription::run_with_id(
+        id,
+        stream::channel(50, |mut output| async move {
+            let mut state = State::Ready;
 
-        loop {
-            state = start_listening(state, &mut output).await;
-        }
-    })
+            loop {
+                state = start_listening(state, &mut output).await;
+            }
+        }),
+    )
 }
 
 async fn start_listening(

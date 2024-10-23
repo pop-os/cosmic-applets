@@ -6,7 +6,7 @@ use cctk::sctk::reexports::calloop::channel::SyncSender;
 use cosmic::iced::{
     self,
     futures::{channel::mpsc, SinkExt, StreamExt},
-    subscription,
+    stream, Subscription,
 };
 use once_cell::sync::Lazy;
 use tokio::sync::Mutex;
@@ -22,16 +22,15 @@ pub enum WorkspacesUpdate {
 }
 
 pub fn workspaces() -> iced::Subscription<WorkspacesUpdate> {
-    subscription::channel(
+    Subscription::run_with_id(
         std::any::TypeId::of::<WorkspacesUpdate>(),
-        50,
-        move |mut output| async move {
+        stream::channel(50, move |mut output| async move {
             let mut state = State::Waiting;
 
             loop {
                 state = start_listening(state, &mut output).await;
             }
-        },
+        }),
     )
 }
 

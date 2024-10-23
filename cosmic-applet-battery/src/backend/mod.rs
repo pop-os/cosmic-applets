@@ -1,7 +1,10 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
-use cosmic::iced::{self, futures::SinkExt, subscription};
+use cosmic::{
+    iced::{self, futures::SinkExt, Subscription},
+    iced_futures::stream,
+};
 use std::{fmt::Debug, hash::Hash};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use zbus::{Connection, Result};
@@ -96,13 +99,16 @@ pub async fn set_power_profile(daemon: Backend<'_>, power: Power) -> Result<()> 
 pub fn power_profile_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
     id: I,
 ) -> iced::Subscription<PowerProfileUpdate> {
-    subscription::channel(id, 50, move |mut output| async move {
-        let mut state = State::Ready;
+    Subscription::run_with_id(
+        id,
+        stream::channel(50, move |mut output| async move {
+            let mut state = State::Ready;
 
-        loop {
-            state = start_listening(state, &mut output).await;
-        }
-    })
+            loop {
+                state = start_listening(state, &mut output).await;
+            }
+        }),
+    )
 }
 
 #[derive(Debug)]

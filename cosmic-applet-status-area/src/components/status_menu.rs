@@ -18,18 +18,18 @@ pub struct State {
 }
 
 impl State {
-    pub fn new(item: StatusNotifierItem) -> (Self, iced::Command<Msg>) {
+    pub fn new(item: StatusNotifierItem) -> (Self, iced::Task<Msg>) {
         (
             Self {
                 item,
                 layout: None,
                 expanded: None,
             },
-            iced::Command::none(),
+            iced::Task::none(),
         )
     }
 
-    pub fn update(&mut self, message: Msg) -> iced::Command<Msg> {
+    pub fn update(&mut self, message: Msg) -> iced::Task<Msg> {
         match message {
             Msg::Layout(layout) => {
                 match layout {
@@ -38,7 +38,7 @@ impl State {
                     }
                     Err(err) => eprintln!("Error getting layout from icon: {}", err),
                 }
-                iced::Command::none()
+                iced::Task::none()
             }
             Msg::Click(id, is_submenu) => {
                 let menu_proxy = self.item.menu_proxy().clone();
@@ -54,7 +54,7 @@ impl State {
                 } else {
                     // TODO: Close menu?
                 }
-                iced::Command::none()
+                iced::Task::none()
             }
         }
     }
@@ -135,7 +135,7 @@ fn layout_view(layout: &Layout, expanded: Option<i32>) -> cosmic::Element<Msg> {
                 children.push(icon.into());
             }
             if let Some(icon_data) = i.icon_data() {
-                let handle = iced::widget::image::Handle::from_memory(icon_data.to_vec());
+                let handle = iced::widget::image::Handle::from_bytes(icon_data.to_vec());
                 children.insert(0, iced::widget::Image::new(handle).into());
             } else if let Some(icon_name) = i.icon_name() {
                 let icon = cosmic::widget::icon::from_name(icon_name)
@@ -177,7 +177,7 @@ fn row_button(content: Vec<cosmic::Element<Msg>>) -> cosmic::widget::Button<Msg>
     menu_button(
         iced::widget::Row::with_children(content)
             .spacing(8)
-            .align_items(iced::Alignment::Center)
+            .align_y(iced::Alignment::Center)
             .width(iced::Length::Fill),
     )
 }
