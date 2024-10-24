@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use cosmic::{
-    iced::{futures, subscription},
+    iced::{futures, stream},
     iced_futures::Subscription,
 };
 use cosmic_notifications_util::Notification;
@@ -27,10 +27,9 @@ pub enum State {
 pub fn notifications(proxy: NotificationsAppletProxy<'static>) -> Subscription<Notification> {
     struct SomeWorker;
 
-    subscription::channel(
+    Subscription::run_with_id(
         std::any::TypeId::of::<SomeWorker>(),
-        50,
-        |mut output| async move {
+        stream::channel(50, |mut output| async move {
             let mut state = State::WaitingForNotificationEvent(0);
 
             loop {
@@ -76,7 +75,7 @@ pub fn notifications(proxy: NotificationsAppletProxy<'static>) -> Subscription<N
                     }
                 }
             }
-        },
+        }),
     )
 }
 

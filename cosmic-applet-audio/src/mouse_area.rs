@@ -1,6 +1,7 @@
 //! A container for capturing mouse events.
 
-use cosmic::iced_renderer::core::{widget::OperationOutputWrapper, Point};
+use cosmic::iced::Vector;
+use cosmic::iced_renderer::core::Point;
 
 use cosmic::iced_core::{
     event::{self, Event},
@@ -170,7 +171,7 @@ where
         tree: &mut Tree,
         layout: Layout<'_>,
         renderer: &Renderer,
-        operation: &mut dyn Operation<OperationOutputWrapper<Message>>,
+        operation: &mut dyn Operation<()>,
     ) {
         self.content
             .as_widget()
@@ -253,17 +254,18 @@ where
         tree: &'b mut Tree,
         layout: Layout<'_>,
         renderer: &Renderer,
+        translation: Vector,
     ) -> Option<overlay::Element<'b, Message, Theme, Renderer>> {
         self.content
             .as_widget_mut()
-            .overlay(&mut tree.children[0], layout, renderer)
+            .overlay(&mut tree.children[0], layout, renderer, translation)
     }
     fn drag_destinations(
         &self,
         state: &Tree,
         layout: Layout<'_>,
         renderer: &Renderer,
-        dnd_rectangles: &mut cosmic::iced_style::core::clipboard::DndDestinationRectangles,
+        dnd_rectangles: &mut cosmic::iced_core::clipboard::DndDestinationRectangles,
     ) {
         if let Some(state) = state.children.iter().next() {
             self.content

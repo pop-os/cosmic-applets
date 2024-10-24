@@ -10,15 +10,15 @@ use cosmic::{
         mouse::{self, ScrollDelta},
         widget::{button, column, row},
         Event::Mouse,
-        Length, Subscription,
+        Length, Limits, Subscription,
     },
     iced_core::{Background, Border},
-    iced_style::application,
-    widget::{container, horizontal_space, vertical_space},
-    Command, Element, Theme,
+    widget::{autosize, container, horizontal_space, vertical_space, Id},
+    Element, Task, Theme,
 };
 
 use cosmic_protocols::workspace::v1::client::zcosmic_workspace_handle_v1;
+use once_cell::sync::Lazy;
 use std::cmp::Ordering;
 
 use crate::{
@@ -29,8 +29,10 @@ use crate::{
 
 use std::process::Command as ShellCommand;
 
+static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
+
 pub fn run() -> cosmic::iced::Result {
-    cosmic::applet::run::<IcedWorkspacesApplet>(true, ())
+    cosmic::applet::run::<IcedWorkspacesApplet>(())
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -51,11 +53,11 @@ impl IcedWorkspacesApplet {
     /// if it exists.
     fn popup_index(&self) -> Option<usize> {
         let mut index = None;
-        let Some(max_major_axis_len) = self.core.applet.configure.as_ref().and_then(|c| {
+        let Some(max_major_axis_len) = self.core.applet.suggested_bounds.as_ref().map(|c| {
             // if we have a configure for width and height, we're in a overflow popup
             match self.core.applet.anchor {
-                PanelAnchor::Top | PanelAnchor::Bottom => c.new_size.0,
-                PanelAnchor::Left | PanelAnchor::Right => c.new_size.1,
+                PanelAnchor::Top | PanelAnchor::Bottom => c.width as u32,
+                PanelAnchor::Left | PanelAnchor::Right => c.height as u32,
             }
         }) else {
             return index;
@@ -63,7 +65,7 @@ impl IcedWorkspacesApplet {
         let button_total_size = self.core.applet.suggested_size(true).0
             + self.core.applet.suggested_padding(true) * 2
             + 4;
-        let btn_count = max_major_axis_len.get() / button_total_size as u32;
+        let btn_count = max_major_axis_len / button_total_size as u32;
         if btn_count >= self.workspaces.len() as u32 {
             index = None;
         } else {
@@ -92,7 +94,7 @@ impl cosmic::Application for IcedWorkspacesApplet {
         _flags: Self::Flags,
     ) -> (
         Self,
-        cosmic::iced::Command<cosmic::app::Message<Self::Message>>,
+        cosmic::iced::Task<cosmic::app::Message<Self::Message>>,
     ) {
         (
             Self {
@@ -104,7 +106,7 @@ impl cosmic::Application for IcedWorkspacesApplet {
                 workspaces: Vec::new(),
                 workspace_tx: Default::default(),
             },
-            Command::none(),
+            Task::none(),
         )
     }
 
@@ -119,7 +121,7 @@ impl cosmic::Application for IcedWorkspacesApplet {
     fn update(
         &mut self,
         message: Self::Message,
-    ) -> cosmic::iced::Command<cosmic::app::Message<Self::Message>> {
+    ) -> cosmic::iced::Task<cosmic::app::Message<Self::Message>> {
         match message {
             Message::WorkspaceUpdate(msg) => match msg {
                 WorkspacesUpdate::Workspaces(mut list) => {
@@ -158,7 +160,7 @@ impl cosmic::Application for IcedWorkspacesApplet {
                 let _ = ShellCommand::new("cosmic-workspaces").spawn();
             }
         }
-        Command::none()
+        Task::none()
     }
 
     fn view(&self) -> Element<Message> {
@@ -187,11 +189,11 @@ impl cosmic::Application for IcedWorkspacesApplet {
                 (suggested_window_size.0.get() as f32, suggested_total as f32)
             };
 
-            let content = row!(content, vertical_space(Length::Fixed(height)))
-                .align_items(cosmic::iced::Alignment::Center);
+            let content = row!(content, vertical_space().height(Length::Fixed(height)))
+                .align_y(cosmic::iced::Alignment::Center);
 
-            let content = column!(content, horizontal_space(Length::Fixed(width)))
-                .align_items(cosmic::iced::Alignment::Center);
+            let content = column!(content, horizontal_space().width(Length::Fixed(width)))
+                .align_x(cosmic::iced::Alignment::Center);
 
             let btn = button(
                 container(content)
@@ -210,14 +212,14 @@ impl cosmic::Application for IcedWorkspacesApplet {
             .padding(0);
 
             Some(
-                btn.style(match w.1 {
+                btn.class(match w.1 {
                     Some(zcosmic_workspace_handle_v1::State::Active) => {
                         cosmic::theme::iced::Button::Primary
                     }
                     Some(zcosmic_workspace_handle_v1::State::Urgent) => {
                         let appearance = |theme: &Theme| {
                             let cosmic = theme.cosmic();
-                            button::Appearance {
+                            button::Style {
                                 background: Some(Background::Color(
                                     cosmic.palette.neutral_3.into(),
                                 )),
@@ -227,27 +229,31 @@ impl cosmic::Application for IcedWorkspacesApplet {
                                 },
                                 border_radius: theme.cosmic().radius_xl().into(),
                                 text_color: theme.cosmic().destructive_button.base.into(),
-                                ..button::Appearance::default()
+                                ..button::Style::default()
                             }
                         };
-                        cosmic::theme::iced::Button::Custom {
-                            active: Box::new(appearance),
-                            hover: Box::new(move |theme| button::Appearance {
-                                background: Some(Background::Color(
-                                    theme.current_container().component.hover.into(),
-                                )),
-                                border: Border {
-                                    radius: theme.cosmic().radius_xl().into(),
-                                    ..Default::default()
+                        cosmic::theme::iced::Button::Custom(Box::new(move |theme, status| {
+                            match status {
+                                button::Status::Active => appearance(theme),
+                                button::Status::Hovered => button::Style {
+                                    background: Some(Background::Color(
+                                        theme.current_container().component.hover.into(),
+                                    )),
+                                    border: Border {
+                                        radius: theme.cosmic().radius_xl().into(),
+                                        ..Default::default()
+                                    },
+                                    ..appearance(theme)
                                 },
-                                ..appearance(theme)
-                            }),
-                        }
+                                button::Status::Pressed => appearance(theme),
+                                button::Status::Disabled => appearance(theme),
+                            }
+                        }))
                     }
                     None => {
                         let appearance = |theme: &Theme| {
                             let cosmic = theme.cosmic();
-                            button::Appearance {
+                            button::Style {
                                 background: None,
                                 border: Border {
                                     radius: cosmic.radius_xl().into(),
@@ -255,22 +261,27 @@ impl cosmic::Application for IcedWorkspacesApplet {
                                 },
                                 border_radius: cosmic.radius_xl().into(),
                                 text_color: theme.current_container().component.on.into(),
-                                ..button::Appearance::default()
+                                ..button::Style::default()
                             }
                         };
-                        cosmic::theme::iced::Button::Custom {
-                            active: Box::new(appearance),
-                            hover: Box::new(move |theme| button::Appearance {
-                                background: Some(Background::Color(
-                                    theme.current_container().component.hover.into(),
-                                )),
-                                border: Border {
-                                    radius: theme.cosmic().radius_xl().into(),
-                                    ..Default::default()
+                        cosmic::theme::iced::Button::Custom(Box::new(move |theme, status| {
+                            match status {
+                                button::Status::Active => appearance(theme),
+                                button::Status::Hovered => button::Style {
+                                    background: Some(Background::Color(
+                                        theme.current_container().component.hover.into(),
+                                    )),
+                                    border: Border {
+                                        radius: theme.cosmic().radius_xl().into(),
+                                        ..Default::default()
+                                    },
+                                    ..appearance(theme)
                                 },
-                                ..appearance(theme)
-                            }),
-                        }
+                                button::Status::Pressed | button::Status::Disabled => {
+                                    appearance(theme)
+                                }
+                            }
+                        }))
                     }
                     _ => return None,
                 })
@@ -283,21 +294,35 @@ impl cosmic::Application for IcedWorkspacesApplet {
             Layout::Row => row(buttons).spacing(4).into(),
             Layout::Column => column(buttons).spacing(4).into(),
         };
+        let mut limits = Limits::NONE.min_width(1.).min_height(1.);
+        if let Some(b) = self.core.applet.suggested_bounds {
+            if b.width as i32 > 0 {
+                limits = limits.max_width(b.width);
+            }
+            if b.height as i32 > 0 {
+                limits = limits.max_height(b.height);
+            }
+        }
 
-        container(layout_section).padding(0).into()
+        autosize::autosize(
+            container(layout_section).padding(0),
+            AUTOSIZE_MAIN_ID.clone(),
+        )
+        .limits(limits)
+        .into()
     }
 
     fn subscription(&self) -> Subscription<Message> {
         Subscription::batch(vec![
             workspaces().map(Message::WorkspaceUpdate),
-            event::listen_with(|e, _| match e {
+            event::listen_with(|e, _, _| match e {
                 Mouse(mouse::Event::WheelScrolled { delta }) => Some(Message::WheelScrolled(delta)),
                 _ => None,
             }),
         ])
     }
 
-    fn style(&self) -> Option<<Theme as application::StyleSheet>::Style> {
+    fn style(&self) -> Option<cosmic::iced_runtime::Appearance> {
         Some(cosmic::applet::style())
     }
 }

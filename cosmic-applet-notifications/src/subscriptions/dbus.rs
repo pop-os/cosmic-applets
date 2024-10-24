@@ -1,13 +1,12 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
+use std::ops::Sub;
+
 use crate::subscriptions::freedesktop_proxy::NotificationsProxy;
 use cosmic::{
-    iced::{
-        futures::{self, SinkExt},
-        subscription,
-    },
-    iced_futures::Subscription,
+    iced::futures::{self, SinkExt},
+    iced_futures::{stream, Subscription},
 };
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tracing::{error, warn};
@@ -35,10 +34,9 @@ pub enum Output {
 pub fn proxy() -> Subscription<Output> {
     struct SomeWorker;
 
-    subscription::channel(
+    Subscription::run_with_id(
         std::any::TypeId::of::<SomeWorker>(),
-        50,
-        |mut output| async move {
+        stream::channel(50, |mut output| async move {
             let mut state = State::Ready;
 
             loop {
@@ -103,6 +101,6 @@ pub fn proxy() -> Subscription<Output> {
                     }
                 }
             }
-        },
+        }),
     )
 }

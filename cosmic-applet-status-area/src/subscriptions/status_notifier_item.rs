@@ -1,7 +1,10 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
-use cosmic::{iced, widget::icon};
+use cosmic::{
+    iced::{self, Subscription},
+    widget::icon,
+};
 use futures::{FutureExt, StreamExt};
 use zbus::zvariant::{self, OwnedValue};
 
@@ -82,7 +85,7 @@ impl StatusNotifierItem {
     // TODO: Only fetch changed part of layout, if that's any faster
     pub fn layout_subscription(&self) -> iced::Subscription<Result<Layout, String>> {
         let menu_proxy = self.menu_proxy.clone();
-        iced::subscription::run_with_id(
+        Subscription::run_with_id(
             format!("status-notifier-item-{}", &self.name),
             async move {
                 let initial = futures::stream::once(get_layout(menu_proxy.clone()));
