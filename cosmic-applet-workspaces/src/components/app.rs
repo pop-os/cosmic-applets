@@ -212,7 +212,24 @@ impl cosmic::Application for IcedWorkspacesApplet {
             Some(
                 btn.style(match w.1 {
                     Some(zcosmic_workspace_handle_v1::State::Active) => {
-                        cosmic::theme::iced::Button::Primary
+                        let appearance = |theme: &Theme| {
+                            button::Appearance {
+                                background: Some(Background::Color(
+                                    theme.cosmic().icon_button.selected_state_color().into(),
+                                )),
+                                border: Border {
+                                    radius: theme.cosmic().radius_xl().into(),
+                                    ..Default::default()
+                                },
+                                border_radius: theme.cosmic().radius_xl().into(),
+                                text_color: theme.current_container().component.on.into(),
+                                ..button::Appearance::default()
+                            }
+                        };
+                        cosmic::theme::iced::Button::Custom {
+                            active: Box::new(appearance),
+                            hover: Box::new(appearance),
+                        }
                     }
                     Some(zcosmic_workspace_handle_v1::State::Urgent) => {
                         let appearance = |theme: &Theme| {
@@ -234,7 +251,7 @@ impl cosmic::Application for IcedWorkspacesApplet {
                             active: Box::new(appearance),
                             hover: Box::new(move |theme| button::Appearance {
                                 background: Some(Background::Color(
-                                    theme.current_container().component.hover.into(),
+                                    theme.cosmic().icon_button.selected_state_color().into(),
                                 )),
                                 border: Border {
                                     radius: theme.cosmic().radius_xl().into(),
@@ -262,7 +279,7 @@ impl cosmic::Application for IcedWorkspacesApplet {
                             active: Box::new(appearance),
                             hover: Box::new(move |theme| button::Appearance {
                                 background: Some(Background::Color(
-                                    theme.current_container().component.hover.into(),
+                                    theme.cosmic().icon_button.selected_state_color().into(),
                                 )),
                                 border: Border {
                                     radius: theme.cosmic().radius_xl().into(),
