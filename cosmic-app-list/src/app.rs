@@ -1793,25 +1793,30 @@ impl cosmic::Application for CosmicAppList {
                             ),
                         };
                     }
-                    container(content)
-                        .padding(1)
-                        //TODO: move style to libcosmic
-                        .class(theme::Container::custom(|theme| {
-                            let cosmic = theme.cosmic();
-                            let component = &cosmic.background.component;
-                            container::Style {
-                                icon_color: Some(component.on.into()),
-                                text_color: Some(component.on.into()),
-                                background: Some(Background::Color(component.base.into())),
-                                border: Border {
-                                    radius: 8.0.into(),
-                                    width: 1.0,
-                                    color: component.divider.into(),
-                                },
-                                ..Default::default()
-                            }
-                        }))
-                        .width(Length::Fill)
+                    self.core
+                        .applet
+                        .popup_container(
+                            container(content)
+                                .padding(1)
+                                //TODO: move style to libcosmic
+                                .class(theme::Container::custom(|theme| {
+                                    let cosmic = theme.cosmic();
+                                    let component = &cosmic.background.component;
+                                    container::Style {
+                                        icon_color: Some(component.on.into()),
+                                        text_color: Some(component.on.into()),
+                                        background: Some(Background::Color(component.base.into())),
+                                        border: Border {
+                                            radius: 8.0.into(),
+                                            width: 1.0,
+                                            color: component.divider.into(),
+                                        },
+                                        ..Default::default()
+                                    }
+                                }))
+                                .height(Length::Shrink)
+                                .width(Length::Fill),
+                        )
                         .into()
                 }
                 PopupType::TopLevelList => match self.core.applet.anchor {

@@ -73,7 +73,7 @@ opt-level = 1
 
 [workspace.metadata.cargo-machete]
 ignored = ["libcosmic"]
-# [patch."https://github.com/pop-os/libcosmic"]
+[patch."https://github.com/pop-os/libcosmic"]
 # cosmic-config = { git = "https://github.com/pop-os/libcosmic//" }
 # libcosmic = { git = "https://github.com/pop-os/libcosmic//" }
 # cosmic-config = { path = "../libcosmic/cosmic-config" }
