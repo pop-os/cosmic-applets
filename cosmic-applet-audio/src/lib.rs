@@ -41,6 +41,12 @@ mod config;
 mod mpris_subscription;
 mod pulse;
 
+// Full, in this case, means 100%.
+static FULL_VOLUME: f64 = Volume::NORMAL.0 as f64;
+
+// Max volume is 150% volume.
+static MAX_VOLUME: f64 = FULL_VOLUME + (FULL_VOLUME * 0.5);
+
 static SHOW_MEDIA_CONTROLS: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
 
 const GO_BACK: &str = "media-skip-backward-symbolic";
@@ -710,7 +716,7 @@ impl cosmic::Application for Audio {
                 .current_output
                 .as_ref()
                 .map_or(0f64, |v| volume_to_percent(v.volume.avg()) + change as f64)
-                .clamp(0.0, 100.0);
+                .clamp(0.0, 150.0);
             Message::SetOutputVolume(new_volume)
         });
         let playback_buttons = (!self.core.applet.suggested_bounds.as_ref().is_some_and(|c| {
@@ -767,8 +773,9 @@ impl cosmic::Application for Audio {
                         .icon_size(24)
                         .line_height(24)
                         .on_press(Message::SetOutputMute(!out_mute)),
-                        slider(0.0..=100.0, self.output_volume, Message::SetOutputVolume)
-                            .width(Length::FillPortion(5)),
+                        slider(0.0..=150.0, self.output_volume, Message::SetOutputVolume)
+                            .width(Length::FillPortion(5))
+                            .breakpoints(&[100.]),
                         text(&self.output_volume_text)
                             .size(16)
                             .width(Length::FillPortion(1))
@@ -788,8 +795,9 @@ impl cosmic::Application for Audio {
                         .icon_size(24)
                         .line_height(24)
                         .on_press(Message::SetInputMute(!in_mute)),
-                        slider(0.0..=100.0, self.input_volume, Message::SetInputVolume)
-                            .width(Length::FillPortion(5)),
+                        slider(0.0..=150.0, self.input_volume, Message::SetInputVolume)
+                            .width(Length::FillPortion(5))
+                            .breakpoints(&[100.]),
                         text(&self.input_volume_text)
                             .size(16)
                             .width(Length::FillPortion(1))
@@ -1038,13 +1046,9 @@ impl Default for IsOpen {
 }
 
 fn volume_to_percent(volume: Volume) -> f64 {
-    volume.0 as f64 * 100. / Volume::NORMAL.0 as f64
+    volume.0 as f64 * 100. / FULL_VOLUME
 }
 
 fn percent_to_volume(percent: f64) -> Volume {
-    Volume(
-        (percent / 100. * Volume::NORMAL.0 as f64)
-            .clamp(0., Volume::NORMAL.0 as f64)
-            .round() as u32,
-    )
+    Volume((percent / 100. * FULL_VOLUME).clamp(0., MAX_VOLUME).round() as u32)
 }
