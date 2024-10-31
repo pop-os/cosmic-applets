@@ -12,14 +12,13 @@ use cosmic::{
     cosmic_config::{self, ConfigSet},
     cosmic_theme::Spacing,
     iced::{
-        wayland::popup::{destroy_popup, get_popup},
+        platform_specific::shell::commands::popup::{destroy_popup, get_popup},
         widget::{column, row},
         window::Id,
-        Command, Limits,
+        Limits, Task,
     },
     iced_futures::Subscription,
-    iced_runtime::core::window,
-    iced_style::application,
+    iced_runtime::{core::window, Appearance},
     prelude::*,
     theme,
     widget::{self, horizontal_space, vertical_space},
@@ -75,10 +74,7 @@ impl cosmic::Application for Window {
         &mut self.core
     }
 
-    fn init(
-        core: Core,
-        flags: Self::Flags,
-    ) -> (Self, Command<cosmic::app::Message<Self::Message>>) {
+    fn init(core: Core, flags: Self::Flags) -> (Self, Task<cosmic::app::Message<Self::Message>>) {
         let window = Window {
             comp_config_handler: flags.comp_config_handler,
             layouts: flags.layouts,
@@ -89,14 +85,14 @@ impl cosmic::Application for Window {
             comp_config: flags.comp_config,
             active_layouts: Vec::new(),
         };
-        (window, Command::none())
+        (window, Task::none())
     }
 
     fn on_close_requested(&self, id: window::Id) -> Option<Message> {
         Some(Message::PopupClosed(id))
     }
 
-    fn update(&mut self, message: Self::Message) -> Command<cosmic::app::Message<Self::Message>> {
+    fn update(&mut self, message: Self::Message) -> Task<cosmic::app::Message<Self::Message>> {
         match message {
             Message::Config(config) => self.config = config,
             Message::TogglePopup => {
@@ -105,17 +101,20 @@ impl cosmic::Application for Window {
                 } else {
                     let new_id = Id::unique();
                     self.popup.replace(new_id);
-                    let mut popup_settings =
-                        self.core
-                            .applet
-                            .get_popup_settings(Id::MAIN, new_id, None, None, None);
+                    let mut popup_settings = self.core.applet.get_popup_settings(
+                        self.core.main_window_id().unwrap(),
+                        new_id,
+                        None,
+                        None,
+                        None,
+                    );
                     popup_settings.positioner.size_limits = Limits::NONE
                         .max_width(372.0)
                         .min_width(300.0)
                         .min_height(1.)
                         .max_height(1080.0);
                     get_popup(popup_settings)
-                }
+                };
             }
             Message::PopupClosed(id) => {
                 if self.popup.as_ref() == Some(&id) {
@@ -137,7 +136,7 @@ impl cosmic::Application for Window {
                     .iter()
                     .position(|layout| layout == &active_layout)
                 else {
-                    return Command::none();
+                    return Task::none();
                 };
 
                 self.active_layouts.swap(0, i);
@@ -164,7 +163,7 @@ impl cosmic::Application for Window {
                 }
             }
         }
-        Command::none()
+        Task::none()
     }
 
     fn view(&self) -> Element<Self::Message> {
@@ -178,7 +177,7 @@ impl cosmic::Application for Window {
             row!(
                 column!(
                     input_source_text,
-                    horizontal_space(Length::Fixed(
+                    horizontal_space().width(Length::Fixed(
                         (self.core.applet.suggested_size(true).0
                             + 2 * self.core.applet.suggested_padding(true))
                             as f32
@@ -186,18 +185,18 @@ impl cosmic::Application for Window {
                 )
                 .width(Length::Shrink)
                 .height(Length::Shrink)
-                .align_items(Alignment::Center),
-                vertical_space(Length::Fixed(
+                .align_x(Alignment::Center),
+                vertical_space().height(Length::Fixed(
                     (self.core.applet.suggested_size(true).1
                         + 2 * self.core.applet.suggested_padding(true)) as f32
                 ))
             )
-            .align_items(Alignment::Center)
+            .align_y(Alignment::Center)
             .width(Length::Shrink)
             .height(Length::Shrink),
         )
         .on_press_down(Message::TogglePopup)
-        .style(cosmic::theme::Button::AppletIcon)
+        .class(cosmic::theme::Button::AppletIcon)
         .into()
     }
 
@@ -228,7 +227,17 @@ impl cosmic::Application for Window {
                 .on_press(Message::KeyboardSettings),
         );
 
-        self.core.applet.popup_container(content_list).into()
+        self.core
+            .applet
+            .popup_container(content_list)
+            .limits(
+                Limits::NONE
+                    .min_height(1.)
+                    .max_height(1080.)
+                    .min_width(1.)
+                    .max_width(372.),
+            )
+            .into()
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {
@@ -264,7 +273,7 @@ impl cosmic::Application for Window {
         Subscription::batch(vec![config, xbg_config])
     }
 
-    fn style(&self) -> Option<<Theme as application::StyleSheet>::Style> {
+    fn style(&self) -> Option<Appearance> {
         Some(cosmic::applet::style())
     }
 }

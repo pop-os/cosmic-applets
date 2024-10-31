@@ -1,5 +1,5 @@
 use super::{NetworkManagerEvent, NetworkManagerState};
-use cosmic::iced::{self, subscription};
+use cosmic::iced::{self, stream, Subscription};
 use cosmic_dbus_networkmanager::nm::NetworkManager;
 use futures::{SinkExt, StreamExt};
 use std::{fmt::Debug, hash::Hash};
@@ -11,15 +11,18 @@ pub fn devices_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
     conn: Connection,
 ) -> iced::Subscription<NetworkManagerEvent> {
     let initial = State::Continue(conn);
-    subscription::channel((id, has_popup), 50, move |mut output| {
-        let mut state = initial.clone();
+    Subscription::run_with_id(
+        (id, has_popup),
+        stream::channel(50, move |mut output| {
+            let mut state = initial.clone();
 
-        async move {
-            loop {
-                state = start_listening(state, has_popup, &mut output).await;
+            async move {
+                loop {
+                    state = start_listening(state, has_popup, &mut output).await;
+                }
             }
-        }
-    })
+        }),
+    )
 }
 
 #[derive(Debug, Clone)]

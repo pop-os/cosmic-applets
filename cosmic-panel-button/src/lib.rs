@@ -8,18 +8,19 @@ use cosmic::{
         cosmic_panel_config::{PanelAnchor, PanelSize},
         Size,
     },
-    iced,
-    iced::Length,
-    iced_style::application,
+    iced::{self, Length},
     iced_widget::row,
-    theme::Theme,
-    widget::vertical_space,
+    widget::{autosize, vertical_space, Id},
+    Task,
 };
 use cosmic_config::{Config, CosmicConfigEntry};
 use freedesktop_desktop_entry::{get_languages_from_env, DesktopEntry};
+use once_cell::sync::Lazy;
 use std::{env, fs, process::Command};
 
 mod config;
+
+static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
 
 #[derive(Debug, Clone, Default)]
 struct Desktop {
@@ -46,7 +47,7 @@ impl cosmic::Application for Button {
     type Flags = Desktop;
     const APP_ID: &'static str = "com.system76.CosmicPanelButton";
 
-    fn init(core: cosmic::app::Core, desktop: Desktop) -> (Self, app::Command<Msg>) {
+    fn init(core: cosmic::app::Core, desktop: Desktop) -> (Self, app::Task<Msg>) {
         let config = Config::new(Self::APP_ID, CosmicPanelButtonConfig::VERSION)
             .ok()
             .and_then(|c| CosmicPanelButtonConfig::get_entry(&c).ok())
@@ -61,7 +62,7 @@ impl cosmic::Application for Button {
                 desktop,
                 config,
             },
-            app::Command::none(),
+            Task::none(),
         )
     }
 
@@ -73,14 +74,18 @@ impl cosmic::Application for Button {
         &mut self.core
     }
 
-    fn style(&self) -> Option<<Theme as application::StyleSheet>::Style> {
+    fn style(&self) -> Option<cosmic::iced_runtime::Appearance> {
         Some(cosmic::applet::style())
     }
 
-    fn update(&mut self, message: Msg) -> app::Command<Msg> {
+    fn update(&mut self, message: Msg) -> app::Task<Msg> {
         match message {
             Msg::Press => {
-                let _ = Command::new("sh").arg("-c").arg(&self.desktop.exec).spawn();
+                let _ = Command::new("sh")
+                    .arg("-c")
+                    .arg(&self.desktop.exec)
+                    .spawn()
+                    .unwrap();
             }
             Msg::ConfigUpdated(conf) => {
                 self.config = conf
@@ -90,44 +95,48 @@ impl cosmic::Application for Button {
                     .unwrap_or_default();
             }
         }
-        app::Command::none()
+        Task::none()
     }
 
     fn view(&self) -> cosmic::Element<Msg> {
         // currently, panel being anchored to the left or right is a hard
         // override for icon, later if text is updated to wrap, we may
         // use Override::Text to override this behavior
-        if self.desktop.icon.is_some()
-            && matches!(
-                self.core.applet.anchor,
-                PanelAnchor::Left | PanelAnchor::Right
-            )
-            || matches!(self.config.force_presentation, Some(Override::Icon))
-            || matches!(
-                (&self.core.applet.size, &self.config.force_presentation),
-                (
-                    Size::PanelSize(PanelSize::M | PanelSize::L | PanelSize::XL),
-                    None
+        autosize::autosize(
+            if self.desktop.icon.is_some()
+                && matches!(
+                    self.core.applet.anchor,
+                    PanelAnchor::Left | PanelAnchor::Right
                 )
-            )
-        {
-            self.core.applet.icon_button_from_handle(
-                cosmic::widget::icon::from_name(self.desktop.icon.clone().unwrap()).handle(),
-            )
-        } else {
-            let content = row!(
-                self.core.applet.text(&self.desktop.name),
-                vertical_space(Length::Fixed(
-                    (self.core.applet.suggested_size(true).1
-                        + 2 * self.core.applet.suggested_padding(true)) as f32
-                ))
-            )
-            .align_items(iced::Alignment::Center);
-            cosmic::widget::button::custom(content)
-                .padding([0, self.core.applet.suggested_padding(true)])
-                .style(cosmic::theme::Button::AppletIcon)
-        }
-        .on_press_down(Msg::Press)
+                || matches!(self.config.force_presentation, Some(Override::Icon))
+                || matches!(
+                    (&self.core.applet.size, &self.config.force_presentation),
+                    (
+                        Size::PanelSize(PanelSize::M | PanelSize::L | PanelSize::XL),
+                        None
+                    )
+                )
+            {
+                self.core.applet.icon_button_from_handle(
+                    cosmic::widget::icon::from_name(self.desktop.icon.clone().unwrap()).handle(),
+                )
+            } else {
+                let content = row!(
+                    self.core.applet.text(&self.desktop.name),
+                    vertical_space().height(Length::Fixed(
+                        (self.core.applet.suggested_size(true).1
+                            + 2 * self.core.applet.suggested_padding(true))
+                            as f32
+                    ))
+                )
+                .align_y(iced::Alignment::Center);
+                cosmic::widget::button::custom(content)
+                    .padding([0, self.core.applet.suggested_padding(true)])
+                    .class(cosmic::theme::Button::AppletIcon)
+            }
+            .on_press_down(Msg::Press),
+            AUTOSIZE_MAIN_ID.clone(),
+        )
         .into()
     }
 
@@ -171,5 +180,5 @@ pub fn run() -> iced::Result {
     let desktop = desktop.unwrap_or_else(|| {
         panic!("Failed to find valid desktop file '{filename}' in search paths")
     });
-    cosmic::applet::run::<Button>(true, desktop)
+    cosmic::applet::run::<Button>(desktop)
 }

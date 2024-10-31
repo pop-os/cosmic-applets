@@ -20,17 +20,16 @@ use cosmic::{
     cosmic_theme::Spacing,
     iced::{
         alignment::Horizontal,
-        wayland::popup::{destroy_popup, get_popup},
+        platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
         widget::{column, container, row, slider},
         window, Alignment, Length, Subscription,
     },
     iced_core::{alignment::Vertical, Background, Border, Color, Shadow},
     iced_runtime::core::layout::Limits,
-    iced_style::application,
     iced_widget::{Column, Row},
     theme,
     widget::{divider, horizontal_space, icon, scrollable, text, vertical_space},
-    Command, Element, Theme,
+    Element, Task,
 };
 use cosmic_settings_subscriptions::{
     settings_daemon,
@@ -63,7 +62,7 @@ fn format_duration(duration: Duration) -> String {
 }
 
 pub fn run() -> cosmic::iced::Result {
-    cosmic::applet::run::<CosmicBatteryApplet>(true, ())
+    cosmic::applet::run::<CosmicBatteryApplet>(())
 }
 
 static MAX_CHARGE: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
@@ -197,15 +196,14 @@ impl cosmic::Application for CosmicBatteryApplet {
         _flags: Self::Flags,
     ) -> (
         Self,
-        cosmic::iced::Command<cosmic::app::Message<Self::Message>>,
+        cosmic::iced::Task<cosmic::app::Message<Self::Message>>,
     ) {
-        let zbus_session_cmd = cosmic::iced::Command::perform(zbus::Connection::session(), |res| {
+        let zbus_session_cmd = cosmic::iced::Task::perform(zbus::Connection::session(), |res| {
             cosmic::app::Message::App(Message::ZbusConnection(res))
         });
-        let init_charging_limit_cmd =
-            cosmic::iced::Command::perform(get_charging_limit(), |limit| {
-                cosmic::app::Message::App(Message::InitChargingLimit(limit))
-            });
+        let init_charging_limit_cmd = cosmic::iced::Task::perform(get_charging_limit(), |limit| {
+            cosmic::app::Message::App(Message::InitChargingLimit(limit))
+        });
         (
             Self {
                 core,
@@ -215,7 +213,7 @@ impl cosmic::Application for CosmicBatteryApplet {
 
                 ..Default::default()
             },
-            Command::batch(vec![zbus_session_cmd, init_charging_limit_cmd]),
+            Task::batch(vec![zbus_session_cmd, init_charging_limit_cmd]),
         )
     }
 
@@ -230,7 +228,7 @@ impl cosmic::Application for CosmicBatteryApplet {
     fn update(
         &mut self,
         message: Self::Message,
-    ) -> cosmic::iced::Command<cosmic::app::Message<Self::Message>> {
+    ) -> cosmic::iced::Task<cosmic::app::Message<Self::Message>> {
         match message {
             Message::Frame(now) => self.timeline.now(now),
             Message::SetKbdBrightness(brightness) => {
@@ -254,7 +252,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                 self.set_charging_limit(enable);
 
                 if enable {
-                    return cosmic::iced::Command::perform(set_charging_limit(), |_| {
+                    return cosmic::iced::Task::perform(set_charging_limit(), |_| {
                         cosmic::app::Message::None
                     });
                 }
@@ -275,9 +273,9 @@ impl cosmic::Application for CosmicBatteryApplet {
                     self.popup.replace(new_id);
 
                     let mut popup_settings = self.core.applet.get_popup_settings(
-                        window::Id::MAIN,
+                        self.core.main_window_id().unwrap(),
                         new_id,
-                        None,
+                        Some((1, 1)),
                         None,
                         None,
                     );
@@ -405,7 +403,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                 }
             },
         }
-        Command::none()
+        Task::none()
     }
 
     fn view(&self) -> Element<Message> {
@@ -417,10 +415,10 @@ impl cosmic::Application for CosmicBatteryApplet {
             .into();
 
         if !self.gpus.is_empty() {
-            let dot = container(vertical_space(Length::Fixed(0.0)))
+            let dot = container(vertical_space().height(Length::Fixed(0.0)))
                 .padding(2.0)
-                .style(<Theme as container::StyleSheet>::Style::Custom(Box::new(
-                    |theme| container::Appearance {
+                .class(cosmic::style::Container::Custom(Box::new(|theme| {
+                    container::Style {
                         text_color: Some(Color::TRANSPARENT),
                         background: Some(Background::Color(theme.cosmic().accent_color().into())),
                         border: Border {
@@ -430,16 +428,16 @@ impl cosmic::Application for CosmicBatteryApplet {
                         },
                         shadow: Shadow::default(),
                         icon_color: Some(Color::TRANSPARENT),
-                    },
-                )))
+                    }
+                })))
                 .into();
 
             match self.core.applet.anchor {
                 PanelAnchor::Left | PanelAnchor::Right => Column::with_children(vec![btn, dot])
-                    .align_items(Alignment::Center)
+                    .align_x(Alignment::Center)
                     .into(),
                 PanelAnchor::Top | PanelAnchor::Bottom => Row::with_children(vec![btn, dot])
-                    .align_items(Alignment::Center)
+                    .align_y(Alignment::Center)
                     .into(),
             }
         } else {
@@ -471,7 +469,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                     column![name, description]
                 ]
                 .spacing(8)
-                .align_items(Alignment::Center),
+                .align_y(Alignment::Center),
             )
             .into(),
             padded_control(divider::horizontal::default())
@@ -491,10 +489,10 @@ impl cosmic::Application for CosmicBatteryApplet {
                                 .symbolic(true),
                         )
                     } else {
-                        container(horizontal_space(1.0))
+                        container(horizontal_space().width(1.0))
                     }
                 ]
-                .align_items(Alignment::Center),
+                .align_y(Alignment::Center),
             )
             .on_press(Message::SelectProfile(Power::Battery))
             .into(),
@@ -512,10 +510,10 @@ impl cosmic::Application for CosmicBatteryApplet {
                                 .symbolic(true),
                         )
                     } else {
-                        container(horizontal_space(1.0))
+                        container(horizontal_space().width(1.0))
                     }
                 ]
-                .align_items(Alignment::Center),
+                .align_y(Alignment::Center),
             )
             .on_press(Message::SelectProfile(Power::Balanced))
             .into(),
@@ -533,10 +531,10 @@ impl cosmic::Application for CosmicBatteryApplet {
                                 .symbolic(true),
                         )
                     } else {
-                        container(horizontal_space(1.0))
+                        container(horizontal_space().width(1.0))
                     }
                 ]
-                .align_items(Alignment::Center),
+                .align_y(Alignment::Center),
             )
             .on_press(Message::SelectProfile(Power::Performance))
             .into(),
@@ -580,7 +578,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                             ))
                             .size(16)
                             .width(Length::Fixed(40.0))
-                            .horizontal_alignment(Horizontal::Right)
+                            .align_x(Horizontal::Right)
                         ]
                         .spacing(12),
                     )
@@ -608,7 +606,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                             ))
                             .size(16)
                             .width(Length::Fixed(40.0))
-                            .horizontal_alignment(Horizontal::Right)
+                            .align_x(Horizontal::Right)
                         ]
                         .spacing(12),
                     )
@@ -630,11 +628,11 @@ impl cosmic::Application for CosmicBatteryApplet {
                         text(fl!("dgpu-running"))
                             .size(16)
                             .width(Length::Fill)
-                            .horizontal_alignment(Horizontal::Left),
-                        container(vertical_space(Length::Fixed(0.0)))
+                            .align_x(Horizontal::Left),
+                        container(vertical_space().width(Length::Fixed(0.0)))
                             .padding(4)
-                            .style(<Theme as container::StyleSheet>::Style::Custom(Box::new(
-                                |theme| container::Appearance {
+                            .class(cosmic::style::Container::Custom(Box::new(|theme| {
+                                container::Style {
                                     text_color: Some(Color::TRANSPARENT),
                                     background: Some(Background::Color(
                                         theme.cosmic().accent_color().into(),
@@ -646,10 +644,10 @@ impl cosmic::Application for CosmicBatteryApplet {
                                     },
                                     shadow: Default::default(),
                                     icon_color: Some(Color::TRANSPARENT),
-                                },
-                            ))),
+                                }
+                            },))),
                     ]
-                    .align_items(Alignment::Center),
+                    .align_y(Alignment::Center),
                 )
                 .into(),
             );
@@ -673,7 +671,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                             gpu_name = format!("\"{}\"", gpu.name.trim())
                         ))
                         .width(Length::Fill)
-                        .vertical_alignment(Vertical::Center),
+                        .align_y(Vertical::Center),
                         container(
                             icon::from_name(if gpu.toggled {
                                 "go-down-symbolic"
@@ -688,16 +686,21 @@ impl cosmic::Application for CosmicBatteryApplet {
                         .width(Length::Fixed(24.0))
                         .height(Length::Fixed(24.0)),
                     ]
-                    .align_items(Alignment::Center),
+                    .align_y(Alignment::Center),
                 )
                 .on_press(Message::ToggleGpuApps(key.clone()))
                 .into(),
             );
 
             if gpu.toggled
-                && !self.core.applet.configure.as_ref().is_some_and(|c| {
+                && !self.core.applet.suggested_bounds.as_ref().is_some_and(|c| {
+                    let suggested_size = self.core.applet.suggested_size(true);
+                    let padding = self.core.applet.suggested_padding(true);
+                    let w = suggested_size.0 + 2 * padding;
+                    let h = suggested_size.1 + 2 * padding;
                     // if we have a configure for width and height, we're in a overflow popup
-                    c.new_size.0.is_some() && c.new_size.1.is_some()
+                    // TODO... we don't exactly have a good way of knowing, unless the size is equal to a suggested size maybe?
+                    c.width as u32 == w as u32 && c.height as u32 == h as u32
                 })
             {
                 let app_list = gpu.app_list.as_ref().unwrap();
@@ -709,13 +712,13 @@ impl cosmic::Application for CosmicBatteryApplet {
                                 if let Some(icon) = &app.icon {
                                     container(icon::from_name(&**icon).size(12).symbolic(true))
                                 } else {
-                                    container(horizontal_space(12.0))
+                                    container(horizontal_space().width(12.0))
                                 },
                                 column![text::body(&app.name), text::caption(&app.secondary)]
                                     .width(Length::Fill),
                             ]
                             .spacing(8)
-                            .align_items(Alignment::Center),
+                            .align_y(Alignment::Center),
                         )
                         .into(),
                     );
@@ -742,6 +745,8 @@ impl cosmic::Application for CosmicBatteryApplet {
         self.core
             .applet
             .popup_container(Column::with_children(content).padding([8, 0]))
+            .max_width(372.)
+            .max_height(600.)
             .into()
     }
 
@@ -773,7 +778,7 @@ impl cosmic::Application for CosmicBatteryApplet {
         Some(Message::CloseRequested(id))
     }
 
-    fn style(&self) -> Option<<Theme as application::StyleSheet>::Style> {
+    fn style(&self) -> Option<cosmic::iced_runtime::Appearance> {
         Some(cosmic::applet::style())
     }
 }

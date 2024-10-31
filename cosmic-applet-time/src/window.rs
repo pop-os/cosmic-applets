@@ -4,6 +4,8 @@
 use std::str::FromStr;
 
 use chrono::{Datelike, Timelike};
+use cosmic::iced_futures::stream;
+use cosmic::widget::Id;
 use cosmic::{
     app,
     applet::{cosmic_panel_config::PanelAnchor, menu_button, padded_control},
@@ -11,21 +13,20 @@ use cosmic::{
     cosmic_theme::Spacing,
     iced::{
         futures::{channel::mpsc, SinkExt, StreamExt, TryFutureExt},
-        subscription,
-        wayland::popup::{destroy_popup, get_popup},
+        platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
         widget::{column, row, vertical_space},
         window, Alignment, Length, Rectangle, Subscription,
     },
     iced_core::alignment::{Horizontal, Vertical},
-    iced_style::application,
     iced_widget::{horizontal_rule, Column},
     theme,
     widget::{
-        button, container, divider, grid, horizontal_space, icon, rectangle_tracker::*, text,
-        Button, Grid, Space,
+        autosize, button, container, divider, grid, horizontal_space, icon, rectangle_tracker::*,
+        text, Button, Grid, Space,
     },
-    Command, Element, Theme,
+    Element, Task,
 };
+use once_cell::sync::Lazy;
 use timedate_zbus::TimeDateProxy;
 use tokio::{sync::watch, time};
 
@@ -45,6 +46,8 @@ use crate::{config::TimeAppletConfig, fl, time::get_calender_first};
 use cosmic::applet::token::subscription::{
     activation_token_subscription, TokenRequest, TokenUpdate,
 };
+
+static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
 
 /// In order to keep the understandable, the chrono types are not globals,
 /// to avoid conflict with icu
@@ -114,7 +117,7 @@ impl cosmic::Application for Window {
     fn init(
         core: app::Core,
         _flags: Self::Flags,
-    ) -> (Self, cosmic::iced::Command<app::Message<Self::Message>>) {
+    ) -> (Self, cosmic::iced::Task<app::Message<Self::Message>>) {
         fn get_local() -> Result<Locale, Box<dyn std::error::Error>> {
             let locale = std::env::var("LC_TIME").or_else(|_| std::env::var("LANG"))?;
             let locale = locale
@@ -157,7 +160,7 @@ impl cosmic::Application for Window {
                 show_seconds_tx,
                 locale,
             },
-            Command::none(),
+            Task::none(),
         )
     }
 
@@ -169,62 +172,65 @@ impl cosmic::Application for Window {
         &mut self.core
     }
 
-    fn style(&self) -> Option<<Theme as application::StyleSheet>::Style> {
+    fn style(&self) -> Option<cosmic::iced_runtime::Appearance> {
         Some(cosmic::applet::style())
     }
 
     fn subscription(&self) -> Subscription<Message> {
         fn time_subscription(mut show_seconds: watch::Receiver<bool>) -> Subscription<Message> {
-            subscription::channel("time-sub", 1, |mut output| async move {
-                // Mark this receiver's state as changed so that it always receives an initial
-                // update during the loop below
-                // This allows us to avoid duplicating code from the loop
-                show_seconds.mark_changed();
-                let mut period = 1;
-                let mut timer = time::interval(time::Duration::from_secs(period));
-                timer.set_missed_tick_behavior(time::MissedTickBehavior::Skip);
+            Subscription::run_with_id(
+                "time-sub",
+                stream::channel(1, |mut output| async move {
+                    // Mark this receiver's state as changed so that it always receives an initial
+                    // update during the loop below
+                    // This allows us to avoid duplicating code from the loop
+                    show_seconds.mark_changed();
+                    let mut period = 1;
+                    let mut timer = time::interval(time::Duration::from_secs(period));
+                    timer.set_missed_tick_behavior(time::MissedTickBehavior::Skip);
 
-                loop {
-                    tokio::select! {
-                        _ = timer.tick() => {
-                            #[cfg(debug_assertions)]
-                            if let Err(err) = output.send(Message::Tick).await {
-                                tracing::error!(?err, "Failed sending tick request to applet");
-                            }
-                            #[cfg(not(debug_assertions))]
-                            let _ = output.send(Message::Tick).await;
+                    loop {
+                        tokio::select! {
+                            _ = timer.tick() => {
+                                #[cfg(debug_assertions)]
+                                if let Err(err) = output.send(Message::Tick).await {
+                                    tracing::error!(?err, "Failed sending tick request to applet");
+                                }
+                                #[cfg(not(debug_assertions))]
+                                let _ = output.send(Message::Tick).await;
 
-                            // Calculate a delta if we're ticking per minute to keep ticks stable
-                            // Based on i3status-rust
-                            let current = chrono::Local::now().second() as u64 % period;
-                            if current != 0 {
-                                timer.reset_after(time::Duration::from_secs(period - current));
-                            }
-                        },
-                        // Update timer if the user toggles show_seconds
-                        Ok(()) = show_seconds.changed() => {
-                            let seconds = *show_seconds.borrow_and_update();
-                            if seconds {
-                                period = 1;
-                                // Subsecond precision isn't needed; skip calculating offset
-                                let period = time::Duration::from_secs(period);
-                                let start = time::Instant::now() + period;
-                                timer = time::interval_at(start, period);
-                            } else {
-                                period = 60;
-                                let delta = time::Duration::from_secs(period - chrono::Utc::now().second() as u64 % period);
-                                let now = time::Instant::now();
-                                // Start ticking from the next minute to update the time properly
-                                let start = now + delta;
-                                let period = time::Duration::from_secs(period);
-                                timer = time::interval_at(start, period);
-                            }
+                                // Calculate a delta if we're ticking per minute to keep ticks stable
+                                // Based on i3status-rust
+                                let current = chrono::Local::now().second() as u64 % period;
+                                if current != 0 {
+                                    timer.reset_after(time::Duration::from_secs(period - current));
+                                }
+                            },
+                            // Update timer if the user toggles show_seconds
+                            Ok(()) = show_seconds.changed() => {
+                                let seconds = *show_seconds.borrow_and_update();
+                                if seconds {
+                                    period = 1;
+                                    // Subsecond precision isn't needed; skip calculating offset
+                                    let period = time::Duration::from_secs(period);
+                                    let start = time::Instant::now() + period;
+                                    timer = time::interval_at(start, period);
+                                } else {
+                                    period = 60;
+                                    let delta = time::Duration::from_secs(period - chrono::Utc::now().second() as u64 % period);
+                                    let now = time::Instant::now();
+                                    // Start ticking from the next minute to update the time properly
+                                    let start = now + delta;
+                                    let period = time::Duration::from_secs(period);
+                                    timer = time::interval_at(start, period);
+                                }
 
-                            timer.set_missed_tick_behavior(time::MissedTickBehavior::Skip);
+                                timer.set_missed_tick_behavior(time::MissedTickBehavior::Skip);
+                            }
                         }
                     }
-                }
-            })
+                }),
+            )
         }
 
         // Update applet's timezone if the system's timezone changes
@@ -249,22 +255,25 @@ impl cosmic::Application for Window {
         }
 
         fn timezone_subscription() -> Subscription<Message> {
-            subscription::channel("timezone-sub", 1, |mut output| async move {
-                'retry: loop {
-                    match timezone_update(&mut output).await {
-                        Ok(()) => break 'retry,
-                        Err(err) => {
-                            tracing::error!(
-                                ?err,
-                                "Automatic timezone updater failed; retrying in one minute"
-                            );
-                            tokio::time::sleep(std::time::Duration::from_secs(60)).await;
+            Subscription::run_with_id(
+                "timezone-sub",
+                stream::channel(1, |mut output| async move {
+                    'retry: loop {
+                        match timezone_update(&mut output).await {
+                            Ok(()) => break 'retry,
+                            Err(err) => {
+                                tracing::error!(
+                                    ?err,
+                                    "Automatic timezone updater failed; retrying in one minute"
+                                );
+                                tokio::time::sleep(std::time::Duration::from_secs(60)).await;
+                            }
                         }
                     }
-                }
 
-                std::future::pending().await
-            })
+                    std::future::pending().await
+                }),
+            )
         }
 
         let show_seconds_rx = self.show_seconds_tx.subscribe();
@@ -285,7 +294,7 @@ impl cosmic::Application for Window {
     fn update(
         &mut self,
         message: Self::Message,
-    ) -> cosmic::iced::Command<app::Message<Self::Message>> {
+    ) -> cosmic::iced::Task<app::Message<Self::Message>> {
         match message {
             Message::TogglePopup => {
                 if let Some(p) = self.popup.take() {
@@ -294,10 +303,10 @@ impl cosmic::Application for Window {
                     self.date_selected = chrono::NaiveDate::from(self.now.naive_local());
 
                     let new_id = window::Id::unique();
-                    self.popup.replace(new_id);
+                    self.popup = Some(new_id);
 
                     let mut popup_settings = self.core.applet.get_popup_settings(
-                        window::Id::MAIN,
+                        self.core.main_window_id().unwrap(),
                         new_id,
                         None,
                         None,
@@ -310,11 +319,14 @@ impl cosmic::Application for Window {
                         height,
                     } = self.rectangle;
                     popup_settings.positioner.anchor_rect = Rectangle::<i32> {
-                        x: x as i32,
-                        y: y as i32,
-                        width: width as i32,
-                        height: height as i32,
+                        x: x.max(1.) as i32,
+                        y: y.max(1.) as i32,
+                        width: width.max(1.) as i32,
+                        height: height.max(1.) as i32,
                     };
+
+                    popup_settings.positioner.size = Some((300, 500));
+
                     get_popup(popup_settings)
                 }
             }
@@ -323,7 +335,7 @@ impl cosmic::Application for Window {
                     .timezone
                     .map(|tz| chrono::Local::now().with_timezone(&tz).fixed_offset())
                     .unwrap_or_else(|| chrono::Local::now().into());
-                Command::none()
+                Task::none()
             }
             Message::Rectangle(u) => {
                 match u {
@@ -334,13 +346,13 @@ impl cosmic::Application for Window {
                         self.rectangle_tracker = Some(tracker);
                     }
                 }
-                Command::none()
+                Task::none()
             }
             Message::CloseRequested(id) => {
                 if Some(id) == self.popup {
                     self.popup = None;
                 }
-                Command::none()
+                Task::none()
             }
             Message::SelectDay(_day) => {
                 if let Some(date) = self.date_selected.with_day(_day) {
@@ -348,7 +360,7 @@ impl cosmic::Application for Window {
                 } else {
                     tracing::error!("invalid naivedate");
                 }
-                Command::none()
+                Task::none()
             }
             Message::PreviousMonth => {
                 if let Some(date) = self
@@ -359,7 +371,7 @@ impl cosmic::Application for Window {
                 } else {
                     tracing::error!("invalid naivedate");
                 }
-                Command::none()
+                Task::none()
             }
             Message::NextMonth => {
                 if let Some(date) = self
@@ -370,7 +382,7 @@ impl cosmic::Application for Window {
                 } else {
                     tracing::error!("invalid naivedate");
                 }
-                Command::none()
+                Task::none()
             }
             Message::OpenDateTimeSettings => {
                 let exec = "cosmic-settings time".to_string();
@@ -382,7 +394,7 @@ impl cosmic::Application for Window {
                 } else {
                     tracing::error!("Wayland tx is None");
                 };
-                Command::none()
+                Task::none()
             }
             Message::Token(u) => {
                 match u {
@@ -402,7 +414,7 @@ impl cosmic::Application for Window {
                         tokio::spawn(cosmic::process::spawn(cmd));
                     }
                 }
-                Command::none()
+                Task::none()
             }
             Message::ConfigChanged(c) => {
                 // Don't interrupt the tick subscription unless necessary
@@ -415,7 +427,7 @@ impl cosmic::Application for Window {
                     }
                 });
                 self.config = c;
-                Command::none()
+                Task::none()
             }
             Message::TimezoneUpdate(timezone) => {
                 if let Ok(timezone) = timezone.parse::<chrono_tz::Tz>() {
@@ -464,13 +476,13 @@ impl cosmic::Application for Window {
             Element::from(
                 row!(
                     self.core.applet.text(self.format(bag, &self.now)),
-                    container(vertical_space(Length::Fixed(
+                    container(vertical_space().height(Length::Fixed(
                         (self.core.applet.suggested_size(true).1
                             + 2 * self.core.applet.suggested_padding(true))
                             as f32
                     )))
                 )
-                .align_items(Alignment::Center),
+                .align_y(Alignment::Center),
             )
         } else {
             // vertical layout
@@ -518,19 +530,19 @@ impl cosmic::Application for Window {
             }
 
             let date_time_col = Column::with_children(elements)
-                .align_items(Alignment::Center)
+                .align_x(Alignment::Center)
                 .spacing(4);
 
             Element::from(
                 column!(
                     date_time_col,
-                    horizontal_space(Length::Fixed(
+                    horizontal_space().width(Length::Fixed(
                         (self.core.applet.suggested_size(true).0
                             + 2 * self.core.applet.suggested_padding(true))
                             as f32
                     ))
                 )
-                .align_items(Alignment::Center),
+                .align_x(Alignment::Center),
             )
         })
         .padding(if horizontal {
@@ -538,14 +550,18 @@ impl cosmic::Application for Window {
         } else {
             [self.core.applet.suggested_padding(true), 0]
         })
-        .on_press_down(Message::TogglePopup)
-        .style(cosmic::theme::Button::AppletIcon);
+        .on_press(Message::TogglePopup)
+        .class(cosmic::theme::Button::AppletIcon);
 
-        if let Some(tracker) = self.rectangle_tracker.as_ref() {
-            tracker.container(0, button).ignore_bounds(true).into()
-        } else {
-            button.into()
-        }
+        autosize::autosize(
+            if let Some(tracker) = self.rectangle_tracker.as_ref() {
+                Element::from(tracker.container(0, button).ignore_bounds(true))
+            } else {
+                button.into()
+            },
+            AUTOSIZE_MAIN_ID.clone(),
+        )
+        .into()
     }
 
     fn view_window(&self, _id: window::Id) -> Element<Message> {
@@ -597,7 +613,7 @@ impl cosmic::Application for Window {
                 text(self.format(weekday_bag, &day_iter.next().unwrap()))
                     .size(12)
                     .width(Length::Fixed(36.0))
-                    .horizontal_alignment(Horizontal::Center),
+                    .align_x(Horizontal::Center),
             );
 
             first_day_of_week = first_day_of_week.succ();
@@ -625,7 +641,7 @@ impl cosmic::Application for Window {
                 Space::with_width(Length::Fill),
                 month_controls,
             ]
-            .align_items(Alignment::Center)
+            .align_y(Alignment::Center)
             .padding([12, 20]),
             calender.padding([0, 12].into()),
             padded_control(divider::horizontal::default()).padding([space_xxs, space_s]),
@@ -637,6 +653,7 @@ impl cosmic::Application for Window {
         self.core
             .applet
             .popup_container(container(content_list))
+            .max_width(300.)
             .into()
     }
 
@@ -647,17 +664,17 @@ impl cosmic::Application for Window {
 
 fn date_button(day: u32, is_month: bool, is_day: bool) -> Button<'static, Message> {
     let style = if is_day {
-        button::Style::Suggested
+        button::ButtonClass::Suggested
     } else {
-        button::Style::Text
+        button::ButtonClass::Text
     };
 
     let button = button::custom(
         text::body(format!("{day}"))
-            .horizontal_alignment(Horizontal::Center)
-            .vertical_alignment(Vertical::Center),
+            .align_x(Horizontal::Center)
+            .align_y(Vertical::Center),
     )
-    .style(style)
+    .class(style)
     .height(Length::Fixed(36.0))
     .width(Length::Fixed(36.0));
 

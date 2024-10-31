@@ -7,7 +7,10 @@ use cctk::{
     toplevel_info::ToplevelInfo,
     wayland_client::protocol::wl_output::WlOutput,
 };
-use cosmic::{iced, iced::subscription};
+use cosmic::{
+    iced::{self, stream, Subscription},
+    iced_core::image::Bytes,
+};
 use cosmic_protocols::{
     toplevel_info::v1::client::zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1,
     workspace::v1::client::zcosmic_workspace_handle_v1::ZcosmicWorkspaceHandleV1,
@@ -19,7 +22,7 @@ use futures::{
     SinkExt, StreamExt,
 };
 use once_cell::sync::Lazy;
-use std::{fmt::Debug, sync::Arc};
+use std::fmt::Debug;
 use tokio::sync::Mutex;
 
 use crate::wayland_handler::wayland_handler;
@@ -28,16 +31,15 @@ pub static WAYLAND_RX: Lazy<Mutex<Option<UnboundedReceiver<WaylandUpdate>>>> =
     Lazy::new(|| Mutex::new(None));
 
 pub fn wayland_subscription() -> iced::Subscription<WaylandUpdate> {
-    subscription::channel(
+    Subscription::run_with_id(
         std::any::TypeId::of::<WaylandUpdate>(),
-        50,
-        move |mut output| async move {
+        stream::channel(50, move |mut output| async move {
             let mut state = State::Waiting;
 
             loop {
                 state = start_listening(state, &mut output).await;
             }
-        },
+        }),
     )
 }
 
@@ -48,12 +50,19 @@ pub enum State {
 
 #[derive(Debug, Clone)]
 pub struct WaylandImage {
-    pub img: Arc<image::RgbaImage>,
+    pub img: Bytes,
+    pub width: u32,
+    pub height: u32,
 }
 
 impl WaylandImage {
     pub fn new(img: image::RgbaImage) -> Self {
-        Self { img: Arc::new(img) }
+        Self {
+            // TODO avoid copy?
+            img: Bytes::copy_from_slice(img.as_bytes()),
+            width: img.width(),
+            height: img.height(),
+        }
     }
 }
 

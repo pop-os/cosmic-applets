@@ -24,32 +24,26 @@ use cosmic::{
     desktop::IconSource,
     iced::{
         self,
+        clipboard::mime::{AllowedMimeTypes, AsMimeTypes},
         event::listen_with,
-        wayland::{
-            actions::data_device::{DataFromMimeType, DndIcon},
-            popup::{destroy_popup, get_popup},
-        },
-        widget::{
-            column, dnd_listener, dnd_source, mouse_area, row, vertical_rule, vertical_space,
-            Column, Row,
-        },
-        window, Color, Limits, Subscription, Vector,
+        platform_specific::shell::commands::popup::{destroy_popup, get_popup},
+        widget::{column, mouse_area, row, vertical_rule, vertical_space, Column, Row},
+        window, Color, Limits, Subscription,
     },
     iced_core::{Border, Padding, Shadow},
-    iced_runtime::core::{alignment::Horizontal, event},
-    iced_sctk::commands::data_device::{
-        accept_mime_type, finish_dnd, request_dnd_data, set_actions, start_drag,
+    iced_runtime::{
+        core::{alignment::Horizontal, event},
+        dnd::peek_dnd,
     },
-    iced_style::{application, svg},
     theme::{self, Button, Container},
     widget::{
-        button, divider, horizontal_space, icon,
-        icon::from_name,
+        button, divider, dnd_source, horizontal_space,
+        icon::{self, from_name},
         image::Handle,
         rectangle_tracker::{rectangle_tracker_subscription, RectangleTracker, RectangleUpdate},
-        text, Image,
+        svg, text, DndDestination, Image,
     },
-    Command, Element, Theme,
+    Element, Task,
 };
 use cosmic_app_list_config::{AppListConfig, APP_ID};
 use cosmic_protocols::{
@@ -62,7 +56,7 @@ use futures::future::pending;
 use iced::{widget::container, Alignment, Background, Length};
 use itertools::Itertools;
 use rand::{thread_rng, Rng};
-use std::{collections::HashMap, path::PathBuf, rc::Rc, str::FromStr, time::Duration};
+use std::{borrow::Cow, collections::HashMap, path::PathBuf, rc::Rc, str::FromStr, time::Duration};
 use switcheroo_control::Gpu;
 use tokio::time::sleep;
 use url::Url;
@@ -70,7 +64,7 @@ use url::Url;
 static MIME_TYPE: &str = "text/uri-list";
 
 pub fn run() -> cosmic::iced::Result {
-    cosmic::applet::run::<CosmicAppList>(true, ())
+    cosmic::applet::run::<CosmicAppList>(())
 }
 
 #[derive(Debug, Clone)]
@@ -144,22 +138,6 @@ struct DockItem {
     original_app_id: String,
 }
 
-impl DataFromMimeType for DockItem {
-    fn from_mime_type(&self, mime_type: &str) -> Option<Vec<u8>> {
-        if mime_type == MIME_TYPE {
-            Some(
-                Url::from_file_path(&self.desktop_info.path)
-                    .ok()?
-                    .to_string()
-                    .as_bytes()
-                    .to_vec(),
-            )
-        } else {
-            None
-        }
-    }
-}
-
 impl DockItem {
     fn as_icon(
         &self,
@@ -188,7 +166,7 @@ impl DockItem {
         let dots = if toplevels.is_empty() {
             (0..1)
                 .map(|_| {
-                    container(vertical_space(Length::Fixed(0.0)))
+                    container(vertical_space().height(Length::Fixed(0.0)))
                         .padding(app_icon.dot_radius)
                         .into()
                 })
@@ -197,20 +175,20 @@ impl DockItem {
             (0..1)
                 .map(|_| {
                     container(if toplevels.len() == 1 {
-                        vertical_space(Length::Fixed(0.0))
+                        vertical_space().height(Length::Fixed(0.0))
                     } else {
                         match applet.anchor {
                             PanelAnchor::Left | PanelAnchor::Right => {
-                                vertical_space(app_icon.bar_size)
+                                vertical_space().height(app_icon.bar_size)
                             }
                             PanelAnchor::Top | PanelAnchor::Bottom => {
-                                horizontal_space(app_icon.bar_size)
+                                horizontal_space().width(app_icon.bar_size)
                             }
                         }
                     })
                     .padding(app_icon.dot_radius)
-                    .style(<Theme as container::StyleSheet>::Style::Custom(Box::new(
-                        move |theme| container::Appearance {
+                    .class(theme::style::Container::Custom(Box::new(move |theme| {
+                        container::Style {
                             text_color: Some(Color::TRANSPARENT),
                             background: if is_focused {
                                 Some(Background::Color(theme.cosmic().accent_color().into()))
@@ -224,8 +202,8 @@ impl DockItem {
                             },
                             shadow: Shadow::default(),
                             icon_color: Some(Color::TRANSPARENT),
-                        },
-                    )))
+                        }
+                    })))
                     .into()
                 })
                 .collect_vec()
@@ -234,38 +212,38 @@ impl DockItem {
         let icon_wrapper: Element<_> = match applet.anchor {
             PanelAnchor::Left => row(vec![
                 column(dots).into(),
-                horizontal_space(Length::Fixed(1.0)).into(),
-                cosmic_icon.into(),
+                horizontal_space().width(Length::Fixed(1.0)).into(),
+                cosmic_icon.clone().into(),
             ])
-            .align_items(iced::Alignment::Center)
+            .align_y(iced::Alignment::Center)
             .into(),
             PanelAnchor::Right => row(vec![
-                cosmic_icon.into(),
-                horizontal_space(Length::Fixed(1.0)).into(),
+                cosmic_icon.clone().into(),
+                horizontal_space().width(Length::Fixed(1.0)).into(),
                 column(dots).into(),
             ])
-            .align_items(iced::Alignment::Center)
+            .align_y(iced::Alignment::Center)
             .into(),
             PanelAnchor::Top => column(vec![
                 row(dots).into(),
-                vertical_space(Length::Fixed(1.0)).into(),
-                cosmic_icon.into(),
+                vertical_space().height(Length::Fixed(1.0)).into(),
+                cosmic_icon.clone().into(),
             ])
-            .align_items(iced::Alignment::Center)
+            .align_x(iced::Alignment::Center)
             .into(),
             PanelAnchor::Bottom => column(vec![
-                cosmic_icon.into(),
-                vertical_space(Length::Fixed(1.0)).into(),
+                cosmic_icon.clone().into(),
+                vertical_space().height(Length::Fixed(1.0)).into(),
                 row(dots).into(),
             ])
-            .align_items(iced::Alignment::Center)
+            .align_x(iced::Alignment::Center)
             .into(),
         };
 
         let icon_button = button::custom(icon_wrapper)
             .padding(app_icon.padding)
             .selected(is_focused)
-            .style(app_list_icon_style(is_focused));
+            .class(app_list_icon_style(is_focused));
 
         let icon_button: Element<_> = if interaction_enabled {
             mouse_area(
@@ -290,12 +268,21 @@ impl DockItem {
             icon_button.into()
         };
 
+        let path = desktop_info.path.to_path_buf();
         let icon_button = if dnd_source_enabled && interaction_enabled {
             dnd_source(icon_button)
+                .window(window_id)
+                .drag_icon(move || {
+                    (
+                        cosmic_icon.clone().into(),
+                        iced::core::widget::tree::State::None,
+                    )
+                })
                 .drag_threshold(16.)
-                .on_drag(|_, _| Message::StartDrag((*id).into()))
-                .on_cancelled(Message::DragFinished)
-                .on_finished(Message::DragFinished)
+                .drag_content(move || DndPathBuf(path.clone()))
+                .on_start(Some(Message::StartDrag(*id)))
+                .on_cancel(Some(Message::DragFinished))
+                .on_finish(Some(Message::DragFinished))
         } else {
             dnd_source(icon_button)
         };
@@ -352,13 +339,13 @@ pub enum PopupType {
     TopLevelList,
 }
 
-// TODO DnD after sctk merges DnD
 #[derive(Debug, Clone)]
 enum Message {
     Wayland(WaylandUpdate),
     PinApp(u32),
     UnpinApp(u32),
     Popup(u32, window::Id),
+    Pressed(window::Id),
     TopLevelListPopup(u32, window::Id),
     GpuRequest(Option<Vec<Gpu>>),
     CloseRequested(window::Id),
@@ -367,17 +354,16 @@ enum Message {
     Toggle(ZcosmicToplevelHandleV1),
     Exec(String, Option<usize>),
     Quit(String),
-    Ignore,
     NewSeat(WlSeat),
-    RemovedSeat(WlSeat),
+    RemovedSeat,
     Rectangle(RectangleUpdate<DockItemId>),
     StartDrag(u32),
     DragFinished,
-    DndEnter(f32, f32),
+    DndEnter(f64, f64),
     DndExit,
-    DndMotion(f32, f32),
-    DndDrop,
-    DndData(PathBuf),
+    DndMotion(f64, f64),
+    DndDropFinished,
+    DndData(Option<DndPathBuf>),
     StartListeningForDnd,
     StopListeningForDnd,
     IncrementSubscriptionCtr,
@@ -396,8 +382,7 @@ fn index_in_list(
     if existing_preview.is_some() {
         list_len += 1;
     }
-    let total_len = list_len as f32 * (item_size + divider_size) - divider_size;
-    let pos_in_list = pos_in_list * total_len;
+
     let index = if (list_len == 0) || (pos_in_list < item_size / 2.0) {
         0
     } else {
@@ -405,7 +390,7 @@ fn index_in_list(
         let mut pos = item_size / 2.0;
         while i < list_len {
             let next_pos = pos + item_size + divider_size;
-            if pos > pos_in_list && pos_in_list < next_pos {
+            if pos < pos_in_list && pos_in_list < next_pos {
                 break;
             }
             pos = next_pos;
@@ -461,20 +446,16 @@ where
             column![
                 container(if let Some(img) = img {
                     Element::from(
-                        Image::new(Handle::from_pixels(
-                            img.img.width(),
-                            img.img.height(),
-                            img.clone(),
-                        ))
-                        .width(Length::Fill)
-                        .height(Length::Fill)
-                        .content_fit(cosmic::iced_core::ContentFit::Contain),
+                        Image::new(Handle::from_rgba(img.width, img.height, img.img.clone()))
+                            .width(Length::Fill)
+                            .height(Length::Fill)
+                            .content_fit(cosmic::iced_core::ContentFit::Contain),
                     )
                 } else {
-                    Image::new(Handle::from_pixels(1, 1, vec![0, 0, 0, 255])).into()
+                    Image::new(Handle::from_rgba(1, 1, vec![0, 0, 0, 255])).into()
                 })
-                .style(Container::Custom(Box::new(move |theme| {
-                    container::Appearance {
+                .class(Container::Custom(Box::new(move |theme| {
+                    container::Style {
                         border: Border {
                             color: theme.cosmic().bg_divider().into(),
                             width: border,
@@ -486,12 +467,10 @@ where
                 .padding(border as u16)
                 .height(Length::Fill)
                 .width(Length::Fill),
-                container(text::body(title).horizontal_alignment(Horizontal::Center),)
-                    .width(Length::Fill)
-                    .center_x(),
+                container(text::body(title).align_x(Horizontal::Center),).center_x(Length::Fill),
             ]
             .spacing(4)
-            .align_items(Alignment::Center),
+            .align_x(Alignment::Center),
         )
         .align_x(cosmic::iced_core::alignment::Horizontal::Center)
         .align_y(cosmic::iced_core::alignment::Vertical::Center)
@@ -499,7 +478,7 @@ where
         .width(Length::Fill),
     )
     .on_press(on_press)
-    .style(window_menu_style(is_focused))
+    .class(window_menu_style(is_focused))
     .width(Length::Fixed(TOPLEVEL_BUTTON_WIDTH))
     .height(Length::Fixed(TOPLEVEL_BUTTON_HEIGHT))
     .selected(is_focused)
@@ -508,9 +487,9 @@ where
 fn window_menu_style(selected: bool) -> cosmic::theme::Button {
     Button::Custom {
         active: Box::new(move |focused, theme| {
-            let a = button::StyleSheet::active(theme, focused, selected, &Button::AppletMenu);
+            let a = button::Catalog::active(theme, focused, selected, &Button::AppletMenu);
             let rad_s = theme.cosmic().corner_radii.radius_s;
-            button::Appearance {
+            button::Style {
                 background: if selected {
                     Some(Background::Color(
                         theme.cosmic().icon_button.selected_state_color().into(),
@@ -527,8 +506,8 @@ fn window_menu_style(selected: bool) -> cosmic::theme::Button {
             let focused = selected || focused;
             let rad_s = theme.cosmic().corner_radii.radius_s;
 
-            let text = button::StyleSheet::hovered(theme, focused, focused, &Button::AppletMenu);
-            button::Appearance {
+            let text = button::Catalog::hovered(theme, focused, focused, &Button::AppletMenu);
+            button::Style {
                 border_radius: rad_s.into(),
                 outline_width: 0.0,
                 ..text
@@ -537,8 +516,8 @@ fn window_menu_style(selected: bool) -> cosmic::theme::Button {
         disabled: Box::new(|theme| {
             let rad_s = theme.cosmic().corner_radii.radius_s;
 
-            let text = button::StyleSheet::disabled(theme, &Button::AppletMenu);
-            button::Appearance {
+            let text = button::Catalog::disabled(theme, &Button::AppletMenu);
+            button::Style {
                 border_radius: rad_s.into(),
                 outline_width: 0.0,
                 ..text
@@ -548,8 +527,8 @@ fn window_menu_style(selected: bool) -> cosmic::theme::Button {
             let focused = selected || focused;
             let rad_s = theme.cosmic().corner_radii.radius_s;
 
-            let text = button::StyleSheet::pressed(theme, focused, focused, &Button::AppletMenu);
-            button::Appearance {
+            let text = button::Catalog::pressed(theme, focused, focused, &Button::AppletMenu);
+            button::Style {
                 border_radius: rad_s.into(),
                 outline_width: 0.0,
                 ..text
@@ -561,8 +540,8 @@ fn window_menu_style(selected: bool) -> cosmic::theme::Button {
 fn app_list_icon_style(selected: bool) -> cosmic::theme::Button {
     Button::Custom {
         active: Box::new(move |focused, theme| {
-            let a = button::StyleSheet::active(theme, focused, selected, &Button::AppletIcon);
-            button::Appearance {
+            let a = button::Catalog::active(theme, focused, selected, &Button::AppletIcon);
+            button::Style {
                 background: if selected {
                     Some(Background::Color(
                         theme.cosmic().icon_button.selected_state_color().into(),
@@ -574,11 +553,11 @@ fn app_list_icon_style(selected: bool) -> cosmic::theme::Button {
             }
         }),
         hovered: Box::new(move |focused, theme| {
-            button::StyleSheet::hovered(theme, focused, selected, &Button::AppletIcon)
+            button::Catalog::hovered(theme, focused, selected, &Button::AppletIcon)
         }),
-        disabled: Box::new(|theme| button::StyleSheet::disabled(theme, &Button::AppletIcon)),
+        disabled: Box::new(|theme| button::Catalog::disabled(theme, &Button::AppletIcon)),
         pressed: Box::new(move |focused, theme| {
-            button::StyleSheet::pressed(theme, focused, selected, &Button::AppletIcon)
+            button::Catalog::pressed(theme, focused, selected, &Button::AppletIcon)
         }),
     }
 }
@@ -616,7 +595,7 @@ impl cosmic::Application for CosmicAppList {
     fn init(
         core: cosmic::app::Core,
         _flags: Self::Flags,
-    ) -> (Self, iced::Command<cosmic::app::Message<Self::Message>>) {
+    ) -> (Self, iced::Task<cosmic::app::Message<Self::Message>>) {
         let config = Config::new(APP_ID, AppListConfig::VERSION)
             .ok()
             .and_then(|c| AppListConfig::get_entry(&c).ok())
@@ -645,7 +624,7 @@ impl cosmic::Application for CosmicAppList {
 
         (
             app_list,
-            Command::perform(try_get_gpus(), |gpus| {
+            Task::perform(try_get_gpus(), |gpus| {
                 cosmic::app::Message::App(Message::GpuRequest(gpus))
             }),
         )
@@ -662,7 +641,7 @@ impl cosmic::Application for CosmicAppList {
     fn update(
         &mut self,
         message: Self::Message,
-    ) -> iced::Command<cosmic::app::Message<Self::Message>> {
+    ) -> iced::Task<cosmic::app::Message<Self::Message>> {
         match message {
             Message::Popup(id, parent_window_id) => {
                 if let Some(Popup {
@@ -676,10 +655,7 @@ impl cosmic::Application for CosmicAppList {
                     } else {
                         self.overflow_active_popup = None;
                         self.overflow_favorites_popup = None;
-                        return Command::batch(vec![
-                            destroy_popup(popup_id),
-                            destroy_popup(parent),
-                        ]);
+                        return Task::batch(vec![destroy_popup(popup_id), destroy_popup(parent)]);
                     }
                 }
                 if let Some(toplevel_group) = self
@@ -692,7 +668,7 @@ impl cosmic::Application for CosmicAppList {
                         Some(r) => r,
                         None => {
                             tracing::error!("No rectangle found for toplevel group");
-                            return Command::none();
+                            return Task::none();
                         }
                     };
 
@@ -724,10 +700,10 @@ impl cosmic::Application for CosmicAppList {
                         height: height as i32,
                     };
 
-                    let gpu_update = Command::perform(try_get_gpus(), |gpus| {
+                    let gpu_update = Task::perform(try_get_gpus(), |gpus| {
                         cosmic::app::Message::App(Message::GpuRequest(gpus))
                     });
-                    return Command::batch([gpu_update, get_popup(popup_settings)]);
+                    return Task::batch([gpu_update, get_popup(popup_settings)]);
                 }
             }
             Message::TopLevelListPopup(id, parent_window_id) => {
@@ -742,10 +718,7 @@ impl cosmic::Application for CosmicAppList {
                     } else {
                         self.overflow_active_popup = None;
                         self.overflow_favorites_popup = None;
-                        return Command::batch(vec![
-                            destroy_popup(popup_id),
-                            destroy_popup(parent),
-                        ]);
+                        return Task::batch(vec![destroy_popup(popup_id), destroy_popup(parent)]);
                     }
                 }
                 if let Some(toplevel_group) = self
@@ -762,7 +735,7 @@ impl cosmic::Application for CosmicAppList {
 
                     let rectangle = match self.rectangles.get(&toplevel_group.id.into()) {
                         Some(r) => r,
-                        None => return Command::none(),
+                        None => return Task::none(),
                     };
 
                     let new_id = window::Id::unique();
@@ -890,7 +863,7 @@ impl cosmic::Application for CosmicAppList {
                 }
             }
             Message::StartDrag(id) => {
-                if let Some((is_pinned, toplevel_group)) = self
+                if let Some((_, toplevel_group)) = self
                     .active_list
                     .iter()
                     .find_map(|t| {
@@ -915,17 +888,6 @@ impl cosmic::Application for CosmicAppList {
                 {
                     let icon_id = window::Id::unique();
                     self.dnd_source = Some((icon_id, toplevel_group.clone(), DndAction::empty()));
-                    return start_drag(
-                        vec![MIME_TYPE.to_string()],
-                        if is_pinned {
-                            DndAction::all()
-                        } else {
-                            DndAction::Copy
-                        },
-                        window::Id::MAIN,
-                        Some((DndIcon::Custom(icon_id), Vector::default())),
-                        Box::new(toplevel_group),
-                    );
                 }
             }
             Message::DragFinished => {
@@ -944,10 +906,11 @@ impl cosmic::Application for CosmicAppList {
                 }
             }
             Message::DndEnter(x, y) => {
-                let item_size = self.core.applet.suggested_size(false).0;
+                let item_size = self.core.applet.suggested_size(false).0
+                    + 2 * self.core.applet.suggested_padding(false);
                 let pos_in_list = match self.core.applet.anchor {
-                    PanelAnchor::Top | PanelAnchor::Bottom => x,
-                    PanelAnchor::Left | PanelAnchor::Right => y,
+                    PanelAnchor::Top | PanelAnchor::Bottom => x as f32,
+                    PanelAnchor::Left | PanelAnchor::Right => y as f32,
                 };
                 let num_pinned = self.pinned_list.len();
                 let index = index_in_list(num_pinned, item_size as f32, 4.0, None, pos_in_list);
@@ -955,49 +918,45 @@ impl cosmic::Application for CosmicAppList {
                     preview_index: index,
                     ..DndOffer::default()
                 });
-                let mut cmds = vec![
-                    accept_mime_type(Some(MIME_TYPE.to_string())),
-                    set_actions(
-                        if self.dnd_source.is_some() {
-                            DndAction::Move
-                        } else {
-                            DndAction::Copy
-                        },
-                        DndAction::all(),
-                    ),
-                ];
+                // TODO dnd
                 if let Some(dnd_source) = self.dnd_source.as_ref() {
                     self.dnd_offer.as_mut().unwrap().dock_item = Some(dnd_source.1.clone());
                 } else {
-                    cmds.push(request_dnd_data(MIME_TYPE.to_string()));
+                    // TODO dnd
+                    return peek_dnd::<DndPathBuf>()
+                        .map(Message::DndData)
+                        .map(cosmic::app::Message::App);
                 }
-                return Command::batch(cmds);
             }
             Message::DndMotion(x, y) => {
-                if let Some(DndOffer { preview_index, .. }) = self.dnd_offer.as_mut() {
-                    let item_size = self.core.applet.suggested_size(false).0;
-                    let pos_in_list = match self.core.applet.anchor {
-                        PanelAnchor::Top | PanelAnchor::Bottom => x,
-                        PanelAnchor::Left | PanelAnchor::Right => y,
-                    };
-                    let num_pinned = self.pinned_list.len();
-                    let index = index_in_list(
-                        num_pinned,
-                        item_size as f32,
-                        4.0,
-                        Some(*preview_index),
-                        pos_in_list,
-                    );
-                    *preview_index = index;
+                let item_size = self.core.applet.suggested_size(false).0
+                    + 2 * self.core.applet.suggested_padding(false);
+                let pos_in_list = match self.core.applet.anchor {
+                    PanelAnchor::Top | PanelAnchor::Bottom => x as f32,
+                    PanelAnchor::Left | PanelAnchor::Right => y as f32,
+                };
+                let num_pinned = self.pinned_list.len();
+                let index = index_in_list(
+                    num_pinned,
+                    item_size as f32,
+                    4.0,
+                    self.dnd_offer.as_ref().map(|o| o.preview_index),
+                    pos_in_list,
+                );
+                if let Some(o) = self.dnd_offer.as_mut() {
+                    o.preview_index = index;
                 }
             }
             Message::DndExit => {
                 self.dnd_offer = None;
-                return accept_mime_type(None);
             }
             Message::DndData(file_path) => {
+                let Some(file_path) = file_path else {
+                    tracing::error!("Couldn't peek at hovered path.");
+                    return Task::none();
+                };
                 if let Some(DndOffer { dock_item, .. }) = self.dnd_offer.as_mut() {
-                    if let Ok(de) = fde::DesktopEntry::from_path(file_path, Some(&self.locales)) {
+                    if let Ok(de) = fde::DesktopEntry::from_path(file_path.0, Some(&self.locales)) {
                         self.item_ctr += 1;
                         *dock_item = Some(DockItem {
                             id: self.item_ctr,
@@ -1008,7 +967,7 @@ impl cosmic::Application for CosmicAppList {
                     }
                 }
             }
-            Message::DndDrop => {
+            Message::DndDropFinished => {
                 // we actually should have the data already, if not, we probably shouldn't do
                 // anything anyway
                 if let Some((mut dock_item, index)) = self
@@ -1051,7 +1010,6 @@ impl cosmic::Application for CosmicAppList {
                         );
                     }
                 }
-                return finish_dnd();
             }
             Message::Wayland(event) => {
                 match event {
@@ -1082,7 +1040,7 @@ impl cosmic::Application for CosmicAppList {
                         let subscription_ctr = self.subscription_ctr;
                         let mut rng = thread_rng();
                         let rand_d = rng.gen_range(0..100);
-                        return iced::Command::perform(
+                        return iced::Task::perform(
                             async move {
                                 if let Some(millis) = 2u64
                                     .checked_pow(subscription_ctr)
@@ -1139,7 +1097,7 @@ impl cosmic::Application for CosmicAppList {
                         ToplevelUpdate::Update(handle, info) => {
                             // TODO probably want to make sure it is removed
                             if info.app_id.is_empty() {
-                                return Command::none();
+                                return Task::none();
                             }
                             'toplevel_loop: for toplevel_list in self
                                 .active_list
@@ -1195,7 +1153,7 @@ impl cosmic::Application for CosmicAppList {
             Message::NewSeat(s) => {
                 self.seat.replace(s);
             }
-            Message::RemovedSeat(_) => {
+            Message::RemovedSeat => {
                 self.seat.take();
             }
             Message::Exec(exec, gpu_idx) => {
@@ -1215,7 +1173,6 @@ impl cosmic::Application for CosmicAppList {
                     self.rectangle_tracker.replace(tracker);
                 }
             },
-            Message::Ignore => {}
             Message::ClosePopup => {
                 if let Some(p) = self.popup.take() {
                     return destroy_popup(p.id);
@@ -1291,7 +1248,7 @@ impl cosmic::Application for CosmicAppList {
                     self.overflow_active_popup = Some(new_id);
                     let rectangle = self.rectangles.get(&DockItemId::ActiveOverflow);
                     let mut popup_settings = self.core.applet.get_popup_settings(
-                        window::Id::MAIN,
+                        self.core.main_window_id().unwrap(),
                         new_id,
                         None,
                         None,
@@ -1335,7 +1292,7 @@ impl cosmic::Application for CosmicAppList {
                         .min_height(1.);
                     cmds.push(get_popup(popup_settings));
                 }
-                return Command::batch(cmds);
+                return Task::batch(cmds);
             }
             Message::OpenFavorites => {
                 let create_new = self.overflow_favorites_popup.is_none();
@@ -1347,7 +1304,7 @@ impl cosmic::Application for CosmicAppList {
                     self.overflow_favorites_popup = Some(new_id);
                     let rectangle = self.rectangles.get(&DockItemId::FavoritesOverflow);
                     let mut popup_settings = self.core.applet.get_popup_settings(
-                        window::Id::MAIN,
+                        self.core.main_window_id().unwrap(),
                         new_id,
                         None,
                         None,
@@ -1391,11 +1348,16 @@ impl cosmic::Application for CosmicAppList {
                         .min_height(1.);
                     cmds.push(get_popup(popup_settings));
                 }
-                return Command::batch(cmds);
+                return Task::batch(cmds);
+            }
+            Message::Pressed(id) => {
+                if self.popup.is_some() && self.core.main_window_id() == Some(id) {
+                    return self.close_popups();
+                }
             }
         }
 
-        Command::none()
+        Task::none()
     }
 
     fn view(&self) -> Element<Message> {
@@ -1450,7 +1412,7 @@ impl cosmic::Application for CosmicAppList {
                         .iter()
                         .any(|y| focused_item.contains(&y.0)),
                     theme.cosmic().radius_xs(),
-                    window::Id::MAIN,
+                    self.core.main_window_id().unwrap(),
                 )
             })
             .collect();
@@ -1493,7 +1455,7 @@ impl cosmic::Application for CosmicAppList {
                     self.gpus.as_deref(),
                     item.toplevels.iter().any(|y| focused_item.contains(&y.0)),
                     dot_radius,
-                    window::Id::MAIN,
+                    self.core.main_window_id().unwrap(),
                 ),
             );
         } else if self.is_listening_for_dnd && self.pinned_list.is_empty() {
@@ -1530,7 +1492,7 @@ impl cosmic::Application for CosmicAppList {
                         .iter()
                         .any(|y| focused_item.contains(&y.0)),
                     dot_radius,
-                    window::Id::MAIN,
+                    self.core.main_window_id().unwrap(),
                 )
             })
             .collect();
@@ -1558,20 +1520,20 @@ impl cosmic::Application for CosmicAppList {
             active.push(btn);
         }
 
-        let window_size = self.core.applet.configure.as_ref();
+        let window_size = self.core.applet.suggested_bounds.as_ref();
         let max_num = if self.core.applet.is_horizontal() {
             let suggested_width = self.core.applet.suggested_size(false).0
                 + self.core.applet.suggested_padding(false) * 2;
             window_size
-                .and_then(|w| w.new_size.0)
-                .map(|b| b.get() / suggested_width as u32)
+                .map(|w| w.width)
+                .map(|b| (b / suggested_width as f32) as u32)
                 .unwrap_or(u32::MAX) as usize
         } else {
             let suggested_height = self.core.applet.suggested_size(false).1
                 + self.core.applet.suggested_padding(false) * 2;
             window_size
-                .and_then(|w| w.new_size.1)
-                .map(|b| b.get() / suggested_height as u32)
+                .map(|w| w.height)
+                .map(|b| (b / suggested_height as f32) as u32)
                 .unwrap_or(u32::MAX) as usize
         }
         .max(4);
@@ -1584,7 +1546,10 @@ impl cosmic::Application for CosmicAppList {
             (
                 Length::Shrink,
                 Length::Shrink,
-                dnd_listener(row(favorites).spacing(app_icon.icon_spacing)),
+                DndDestination::for_data::<DndPathBuf>(
+                    row(favorites).spacing(app_icon.icon_spacing),
+                    |_, _| Message::DndDropFinished,
+                ),
                 row(active).spacing(app_icon.icon_spacing).into(),
                 container(vertical_rule(1))
                     .height(Length::Fill)
@@ -1595,7 +1560,10 @@ impl cosmic::Application for CosmicAppList {
             (
                 Length::Shrink,
                 Length::Shrink,
-                dnd_listener(column(favorites).spacing(app_icon.icon_spacing)),
+                DndDestination::for_data(
+                    column(favorites).spacing(app_icon.icon_spacing),
+                    |_data: Option<DndPathBuf>, _| Message::DndDropFinished,
+                ),
                 column(active).spacing(app_icon.icon_spacing).into(),
                 container(divider::horizontal::default())
                     .width(Length::Fill)
@@ -1605,35 +1573,9 @@ impl cosmic::Application for CosmicAppList {
         };
 
         let favorites = favorites
-            .on_enter(|_actions, mime_types, location| {
-                if self.is_listening_for_dnd || mime_types.iter().any(|m| m == MIME_TYPE) {
-                    Message::DndEnter(location.0, location.1)
-                } else {
-                    Message::Ignore
-                }
-            })
-            .on_motion(if self.dnd_offer.is_some() {
-                Message::DndMotion
-            } else {
-                |_, _| Message::Ignore
-            })
-            .on_exit(Message::DndExit)
-            .on_drop(Message::DndDrop)
-            .on_data(|mime_type, data| {
-                if mime_type == MIME_TYPE {
-                    if let Some(p) = String::from_utf8(data)
-                        .ok()
-                        .and_then(|s| Url::from_str(&s).ok())
-                        .and_then(|u| u.to_file_path().ok())
-                    {
-                        Message::DndData(p)
-                    } else {
-                        Message::Ignore
-                    }
-                } else {
-                    Message::Ignore
-                }
-            });
+            .on_enter(|x, y, _| Message::DndEnter(x, y))
+            .on_motion(Message::DndMotion)
+            .on_leave(|| Message::DndExit);
 
         let show_pinned =
             !self.pinned_list.is_empty() || self.dnd_offer.is_some() || self.is_listening_for_dnd;
@@ -1655,14 +1597,14 @@ impl cosmic::Application for CosmicAppList {
             PanelAnchor::Left | PanelAnchor::Right => container(
                 Column::with_children(content_list)
                     .spacing(4.0)
-                    .align_items(Alignment::Center)
+                    .align_x(Alignment::Center)
                     .height(h)
                     .width(w),
             ),
             PanelAnchor::Top | PanelAnchor::Bottom => container(
                 Row::with_children(content_list)
                     .spacing(4.0)
-                    .align_items(Alignment::Center)
+                    .align_y(Alignment::Center)
                     .height(h)
                     .width(w),
             ),
@@ -1671,14 +1613,23 @@ impl cosmic::Application for CosmicAppList {
             let suggested_size = self.core.applet.suggested_size(false);
             content = content.width(suggested_size.0).height(suggested_size.1);
         }
-        if self.popup.is_some() {
-            mouse_area(content)
-                .on_right_release(Message::ClosePopup)
-                .on_press(Message::ClosePopup)
-                .into()
-        } else {
-            content.into()
+
+        let mut limits = Limits::NONE.min_width(1.).min_height(1.);
+
+        if let Some(b) = self.core.applet.suggested_bounds {
+            if b.width as i32 > 0 {
+                limits = limits.max_width(b.width);
+            }
+            if b.height as i32 > 0 {
+                limits = limits.max_height(b.height);
+            }
         }
+
+        self.core
+            .applet
+            .autosize_window(content)
+            .limits(limits)
+            .into()
     }
 
     fn view_window(&self, id: window::Id) -> Element<Message> {
@@ -1717,12 +1668,12 @@ impl cosmic::Application for CosmicAppList {
                     ) -> cosmic::widget::Button<'a, Message> {
                         button::custom(content)
                             .height(20 + 2 * theme::active().cosmic().space_xxs())
-                            .style(Button::MenuItem)
+                            .class(Button::MenuItem)
                             .padding(menu_control_padding())
                             .width(Length::Fill)
                     }
 
-                    let mut content = column![].align_items(Alignment::Center);
+                    let mut content = column![].align_x(Alignment::Center);
 
                     if let Some(exec) = desktop_info.exec() {
                         if !toplevels.is_empty() {
@@ -1796,15 +1747,15 @@ impl cosmic::Application for CosmicAppList {
 
                     let svg_accent = Rc::new(|theme: &cosmic::Theme| {
                         let color = theme.cosmic().accent_color().into();
-                        svg::Appearance { color: Some(color) }
+                        svg::Style { color: Some(color) }
                     });
                     content = content.push(
                         menu_button(
                             if is_pinned {
                                 row![
-                                    icon(from_name("checkbox-checked-symbolic").into())
+                                    icon::icon(from_name("checkbox-checked-symbolic").into())
                                         .size(16)
-                                        .style(cosmic::theme::Svg::Custom(svg_accent.clone())),
+                                        .class(cosmic::theme::Svg::Custom(svg_accent.clone())),
                                     text::body(fl!("pin"))
                                 ]
                             } else {
@@ -1832,33 +1783,43 @@ impl cosmic::Application for CosmicAppList {
                             ),
                         };
                     }
-                    container(content)
-                        .padding(1)
-                        //TODO: move style to libcosmic
-                        .style(theme::Container::custom(|theme| {
-                            let cosmic = theme.cosmic();
-                            let component = &cosmic.background.component;
-                            container::Appearance {
-                                icon_color: Some(component.on.into()),
-                                text_color: Some(component.on.into()),
-                                background: Some(Background::Color(component.base.into())),
-                                border: Border {
-                                    radius: 8.0.into(),
-                                    width: 1.0,
-                                    color: component.divider.into(),
-                                },
-                                ..Default::default()
-                            }
-                        }))
-                        .width(Length::Fill)
+                    self.core
+                        .applet
+                        .popup_container(
+                            container(content)
+                                .padding(1)
+                                //TODO: move style to libcosmic
+                                .class(theme::Container::custom(|theme| {
+                                    let cosmic = theme.cosmic();
+                                    let component = &cosmic.background.component;
+                                    container::Style {
+                                        icon_color: Some(component.on.into()),
+                                        text_color: Some(component.on.into()),
+                                        background: Some(Background::Color(component.base.into())),
+                                        border: Border {
+                                            radius: 8.0.into(),
+                                            width: 1.0,
+                                            color: component.divider.into(),
+                                        },
+                                        ..Default::default()
+                                    }
+                                }))
+                                .height(Length::Shrink)
+                                .width(Length::Fill),
+                        )
+                        .limits(
+                            Limits::NONE
+                                .min_width(1.)
+                                .min_height(1.)
+                                .max_width(300.)
+                                .max_height(1000.),
+                        )
                         .into()
                 }
                 PopupType::TopLevelList => match self.core.applet.anchor {
                     PanelAnchor::Left | PanelAnchor::Right => {
-                        let mut content = column![]
-                            .padding(8)
-                            .align_items(Alignment::Center)
-                            .spacing(8);
+                        let mut content =
+                            column![].padding(8).align_x(Alignment::Center).spacing(8);
                         for (handle, info, img) in toplevels {
                             let title = if info.title.len() > 18 {
                                 format!("{:.16}...", &info.title)
@@ -1872,11 +1833,14 @@ impl cosmic::Application for CosmicAppList {
                                 self.currently_active_toplevel().contains(handle),
                             ));
                         }
-                        self.core.applet.popup_container(content).into()
+                        self.core
+                            .applet
+                            .popup_container(content)
+                            .limits(Limits::NONE.min_width(1.).min_height(1.).max_height(1000.))
+                            .into()
                     }
                     PanelAnchor::Bottom | PanelAnchor::Top => {
-                        let mut content =
-                            row![].padding(8).align_items(Alignment::Center).spacing(8);
+                        let mut content = row![].padding(8).align_y(Alignment::Center).spacing(8);
                         for (handle, info, img) in toplevels {
                             let title = if info.title.len() > 18 {
                                 format!("{:.16}...", &info.title)
@@ -1890,7 +1854,11 @@ impl cosmic::Application for CosmicAppList {
                                 self.currently_active_toplevel().contains(handle),
                             ));
                         }
-                        self.core.applet.popup_container(content).into()
+                        self.core
+                            .applet
+                            .popup_container(content)
+                            .limits(Limits::NONE.min_width(1.).min_height(1.).max_height(1000.))
+                            .into()
                     }
                 },
             }
@@ -1934,14 +1902,14 @@ impl cosmic::Application for CosmicAppList {
                 PanelAnchor::Left | PanelAnchor::Right => container(
                     Column::with_children(active)
                         .spacing(4.0)
-                        .align_items(Alignment::Center)
+                        .align_x(Alignment::Center)
                         .width(Length::Shrink)
                         .height(Length::Shrink),
                 ),
                 PanelAnchor::Top | PanelAnchor::Bottom => container(
                     Row::with_children(active)
                         .spacing(4.0)
-                        .align_items(Alignment::Center)
+                        .align_y(Alignment::Center)
                         .width(Length::Shrink)
                         .height(Length::Shrink),
                 ),
@@ -1949,13 +1917,23 @@ impl cosmic::Application for CosmicAppList {
             // send clear popup on press content if there is an active popup
             let content: Element<_> = if self.popup.is_some() {
                 mouse_area(content)
+                    .on_release(Message::ClosePopup)
                     .on_right_release(Message::ClosePopup)
-                    .on_press(Message::ClosePopup)
                     .into()
             } else {
                 content.into()
             };
-            self.core.applet.popup_container(content).into()
+            self.core
+                .applet
+                .popup_container(content)
+                .limits(
+                    Limits::NONE
+                        .min_width(1.)
+                        .min_height(1.)
+                        .max_width(1920.)
+                        .max_height(1000.),
+                )
+                .into()
         } else if self
             .overflow_favorites_popup
             .as_ref()
@@ -2011,14 +1989,14 @@ impl cosmic::Application for CosmicAppList {
                 PanelAnchor::Left | PanelAnchor::Right => container(
                     Column::with_children(favorites)
                         .spacing(4.0)
-                        .align_items(Alignment::Center)
+                        .align_x(Alignment::Center)
                         .width(Length::Shrink)
                         .height(Length::Shrink),
                 ),
                 PanelAnchor::Top | PanelAnchor::Bottom => container(
                     Row::with_children(favorites)
                         .spacing(4.0)
-                        .align_items(Alignment::Center)
+                        .align_y(Alignment::Center)
                         .width(Length::Shrink)
                         .height(Length::Shrink),
                 ),
@@ -2031,7 +2009,17 @@ impl cosmic::Application for CosmicAppList {
             } else {
                 content.into()
             };
-            self.core.applet.popup_container(content).into()
+            self.core
+                .applet
+                .popup_container(content)
+                .limits(
+                    Limits::NONE
+                        .min_width(1.)
+                        .min_height(1.)
+                        .max_width(1920.)
+                        .max_height(1000.),
+                )
+                .into()
         } else {
             let suggested = self.core.applet.suggested_size(false);
             iced::widget::row!()
@@ -2044,38 +2032,16 @@ impl cosmic::Application for CosmicAppList {
     fn subscription(&self) -> Subscription<Message> {
         Subscription::batch(vec![
             wayland_subscription().map(Message::Wayland),
-            listen_with(|e, _| match e {
+            listen_with(|e, _, id| match e {
                 cosmic::iced_runtime::core::Event::PlatformSpecific(
                     event::PlatformSpecific::Wayland(event::wayland::Event::Seat(e, seat)),
                 ) => match e {
                     event::wayland::SeatEvent::Enter => Some(Message::NewSeat(seat)),
-                    event::wayland::SeatEvent::Leave => Some(Message::RemovedSeat(seat)),
+                    event::wayland::SeatEvent::Leave => Some(Message::RemovedSeat),
                 },
-                // XXX Must be done to catch a finished drag after the source is removed
-                // (for now, the source is removed when the drag starts)
-                cosmic::iced_runtime::core::Event::PlatformSpecific(
-                    event::PlatformSpecific::Wayland(event::wayland::Event::DataSource(
-                        event::wayland::DataSourceEvent::DndFinished
-                        | event::wayland::DataSourceEvent::Cancelled,
-                    )),
-                ) => Some(Message::DragFinished),
-                cosmic::iced_runtime::core::Event::PlatformSpecific(
-                    event::PlatformSpecific::Wayland(event::wayland::Event::DndOffer(
-                        event::wayland::DndOfferEvent::Enter { mime_types, .. },
-                    )),
-                ) => {
-                    if mime_types.iter().any(|m| m == MIME_TYPE) {
-                        Some(Message::StartListeningForDnd)
-                    } else {
-                        None
-                    }
-                }
-                cosmic::iced_runtime::core::Event::PlatformSpecific(
-                    event::PlatformSpecific::Wayland(event::wayland::Event::DndOffer(
-                        event::wayland::DndOfferEvent::Leave
-                        | event::wayland::DndOfferEvent::DropPerformed,
-                    )),
-                ) => Some(Message::StopListeningForDnd),
+                cosmic::iced_core::Event::Mouse(
+                    cosmic::iced_core::mouse::Event::ButtonPressed(_),
+                ) => Some(Message::Pressed(id)),
                 _ => None,
             }),
             rectangle_tracker_subscription(0).map(|update| Message::Rectangle(update.1)),
@@ -2088,7 +2054,7 @@ impl cosmic::Application for CosmicAppList {
         ])
     }
 
-    fn style(&self) -> Option<<Theme as application::StyleSheet>::Style> {
+    fn style(&self) -> Option<cosmic::iced_runtime::Appearance> {
         Some(cosmic::applet::style())
     }
 
@@ -2099,7 +2065,7 @@ impl cosmic::Application for CosmicAppList {
 
 impl CosmicAppList {
     /// Close any open popups.
-    fn close_popups(&mut self) -> Command<cosmic::app::Message<Message>> {
+    fn close_popups(&mut self) -> Task<cosmic::app::Message<Message>> {
         let mut commands = Vec::new();
         if let Some(popup) = self.popup.take() {
             commands.push(destroy_popup(popup.id));
@@ -2110,23 +2076,22 @@ impl CosmicAppList {
         if let Some(popup) = self.overflow_favorites_popup.take() {
             commands.push(destroy_popup(popup));
         }
-        Command::batch(commands)
+        Task::batch(commands)
     }
     /// Returns the length of the group in the favorite list after which items are displayed in a popup.
     /// Shrink the favorite list until it only has active windows, or until it fits in the length provided.
     fn panel_overflow_lengths(&self) -> (Option<usize>, Option<usize>) {
         let mut favorite_index;
         let mut active_index = None;
-        let Some(max_major_axis_len) = self.core.applet.configure.as_ref().and_then(|c| {
+        let Some(mut max_major_axis_len) = self.core.applet.suggested_bounds.as_ref().map(|c| {
             // if we have a configure for width and height, we're in a overflow popup
             match self.core.applet.anchor {
-                PanelAnchor::Top | PanelAnchor::Bottom => c.new_size.0,
-                PanelAnchor::Left | PanelAnchor::Right => c.new_size.1,
+                PanelAnchor::Top | PanelAnchor::Bottom => c.width as u32,
+                PanelAnchor::Left | PanelAnchor::Right => c.height as u32,
             }
         }) else {
             return (None, active_index);
         };
-        let mut max_major_axis_len = max_major_axis_len.get();
         // tracing::error!("{} {}", max_major_axis_len, self.pinned_list.len());
         // subtract the divider width
         max_major_axis_len -= 1;
@@ -2211,4 +2176,45 @@ fn launch_on_preferred_gpu(desktop_info: &DesktopEntry, gpus: Option<&[Gpu]>) ->
     });
 
     Some(Message::Exec(exec.to_string(), gpu_idx))
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct DndPathBuf(PathBuf);
+
+impl AllowedMimeTypes for DndPathBuf {
+    fn allowed() -> std::borrow::Cow<'static, [String]> {
+        std::borrow::Cow::Owned(vec![MIME_TYPE.to_string()])
+    }
+}
+
+impl TryFrom<(Vec<u8>, String)> for DndPathBuf {
+    type Error = anyhow::Error;
+
+    fn try_from((data, mime_type): (Vec<u8>, String)) -> Result<Self, Self::Error> {
+        if mime_type == MIME_TYPE {
+            if let Some(p) = String::from_utf8(data)
+                .ok()
+                .and_then(|s| Url::from_str(&s).ok())
+                .and_then(|u| u.to_file_path().ok())
+            {
+                Ok(DndPathBuf(p))
+            } else {
+                anyhow::bail!("Failed to parse.")
+            }
+        } else {
+            anyhow::bail!("Invalid mime type.")
+        }
+    }
+}
+
+impl AsMimeTypes for DndPathBuf {
+    fn available(&self) -> std::borrow::Cow<'static, [String]> {
+        std::borrow::Cow::Owned(vec![MIME_TYPE.to_string()])
+    }
+
+    fn as_bytes(&self, _mime_type: &str) -> Option<std::borrow::Cow<'static, [u8]>> {
+        Some(Cow::Owned(
+            self.0.clone().to_str()?.to_string().into_bytes(),
+        ))
+    }
 }

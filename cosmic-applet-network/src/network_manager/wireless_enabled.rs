@@ -1,5 +1,8 @@
 use super::{NetworkManagerEvent, NetworkManagerState};
-use cosmic::iced::{self, subscription};
+use cosmic::{
+    iced::{self, Subscription},
+    iced_futures::stream,
+};
 use cosmic_dbus_networkmanager::nm::NetworkManager;
 use futures::{SinkExt, StreamExt};
 use std::{fmt::Debug, hash::Hash};
@@ -10,15 +13,18 @@ pub fn wireless_enabled_subscription<I: 'static + Hash + Copy + Send + Sync + De
     conn: Connection,
 ) -> iced::Subscription<NetworkManagerEvent> {
     let initial = State::Continue(conn);
-    subscription::channel(id, 50, move |mut output| {
-        let mut state = initial;
+    Subscription::run_with_id(
+        id,
+        stream::channel(50, move |mut output| {
+            let mut state = initial;
 
-        async move {
-            loop {
-                state = start_listening(state, &mut output).await;
+            async move {
+                loop {
+                    state = start_listening(state, &mut output).await;
+                }
             }
-        }
-    })
+        }),
+    )
 }
 
 #[derive(Debug, Clone)]
