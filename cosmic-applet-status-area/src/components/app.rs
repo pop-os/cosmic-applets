@@ -2,19 +2,15 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use cosmic::{
-    app::{self, Command},
+    app,
     applet::cosmic_panel_config::PanelAnchor,
     iced::{
         self,
-        wayland::{
-            popup::{destroy_popup, get_popup},
-            window::resize_window,
-        },
-        window, Subscription,
+        platform_specific::shell::commands::popup::{destroy_popup, get_popup},
+        window, Limits, Subscription,
     },
-    iced_style::application,
     widget::mouse_area,
-    Theme,
+    Element, Task,
 };
 use std::collections::BTreeMap;
 
@@ -50,11 +46,14 @@ impl App {
         window::Id::unique()
     }
 
-    fn resize_window(&self) -> Command<Msg> {
+    fn resize_window(&self) -> app::Task<Msg> {
         let icon_size = self.core.applet.suggested_size(true).0 as u32
             + self.core.applet.suggested_padding(true) as u32 * 2;
         let n = self.menus.len() as u32;
-        resize_window(window::Id::MAIN, 1.max(icon_size * n), icon_size)
+        window::resize(
+            self.core.main_window_id().unwrap(),
+            iced::Size::new(1.max(icon_size * n) as f32, icon_size as f32),
+        )
     }
 }
 
@@ -64,13 +63,13 @@ impl cosmic::Application for App {
     type Flags = ();
     const APP_ID: &'static str = "com.system76.CosmicAppletStatusArea";
 
-    fn init(core: app::Core, _flags: ()) -> (Self, app::Command<Msg>) {
+    fn init(core: app::Core, _flags: ()) -> (Self, app::Task<Msg>) {
         (
             Self {
                 core,
                 ..Self::default()
             },
-            Command::none(),
+            Task::none(),
         )
     }
 
@@ -82,29 +81,29 @@ impl cosmic::Application for App {
         &mut self.core
     }
 
-    fn style(&self) -> Option<<Theme as application::StyleSheet>::Style> {
+    fn style(&self) -> Option<cosmic::iced_runtime::Appearance> {
         Some(cosmic::applet::style())
     }
 
-    fn update(&mut self, message: Msg) -> Command<Msg> {
+    fn update(&mut self, message: Msg) -> app::Task<Msg> {
         match message {
             Msg::Closed(surface) => {
                 if self.popup == Some(surface) {
                     self.popup = None;
                     self.open_menu = None;
                 }
-                Command::none()
+                Task::none()
             }
             Msg::StatusMenu((id, msg)) => match self.menus.get_mut(&id) {
                 Some(state) => state
                     .update(msg)
                     .map(move |msg| app::message::app(Msg::StatusMenu((id, msg)))),
-                None => Command::none(),
+                None => Task::none(),
             },
             Msg::StatusNotifier(event) => match event {
                 status_notifier_watcher::Event::Connected(connection) => {
                     self.connection = Some(connection);
-                    Command::none()
+                    Task::none()
                 }
                 status_notifier_watcher::Event::Registered(name) => {
                     let (state, cmd) = status_menu::State::new(name);
@@ -119,7 +118,7 @@ impl cosmic::Application for App {
                     }
                     let id = self.next_menu_id();
                     self.menus.insert(id, state);
-                    Command::batch([
+                    app::Task::batch([
                         self.resize_window(),
                         cmd.map(move |msg| app::message::app(Msg::StatusMenu((id, msg)))),
                     ])
@@ -140,7 +139,7 @@ impl cosmic::Application for App {
                 }
                 status_notifier_watcher::Event::Error(err) => {
                     eprintln!("Status notifier error: {}", err);
-                    Command::none()
+                    Task::none()
                 }
             },
             Msg::TogglePopup(id) => {
@@ -158,7 +157,7 @@ impl cosmic::Application for App {
                     }
                     let popup_id = self.next_popup_id();
                     let mut popup_settings = self.core.applet.get_popup_settings(
-                        window::Id::MAIN,
+                        self.core.main_window_id().unwrap(),
                         popup_id,
                         None,
                         None,
@@ -179,13 +178,13 @@ impl cosmic::Application for App {
                         popup_settings.positioner.anchor_rect.x = i as i32 * suggested_size as i32;
                     }
                     cmds.push(get_popup(popup_settings));
-                    return Command::batch(cmds);
+                    return app::Task::batch(cmds);
                 } else if let Some(popup_id) = self.popup {
                     self.menus[&id].closed();
 
                     return destroy_popup(popup_id);
                 }
-                Command::none()
+                Task::none()
             }
             Msg::Hovered(id) => {
                 let mut cmds = Vec::new();
@@ -197,14 +196,14 @@ impl cosmic::Application for App {
                         self.open_menu = Some(id);
                     } else {
                         self.open_menu = Some(old_id);
-                        return Command::none();
+                        return Task::none();
                     }
                 } else {
-                    return Command::none();
+                    return Task::none();
                 }
                 let popup_id = self.next_popup_id();
                 let mut popup_settings = self.core.applet.get_popup_settings(
-                    window::Id::MAIN,
+                    self.core.main_window_id().unwrap(),
                     popup_id,
                     None,
                     None,
@@ -225,7 +224,7 @@ impl cosmic::Application for App {
                     popup_settings.positioner.anchor_rect.x = i as i32 * suggested_size as i32;
                 }
                 cmds.push(get_popup(popup_settings));
-                Command::batch(cmds)
+                app::Task::batch(cmds)
             }
         }
     }
@@ -254,17 +253,22 @@ impl cosmic::Application for App {
                 }
                 .on_press_down(Msg::TogglePopup(*id)),
             )
-            .on_mouse_enter(Msg::Hovered(*id))
+            .on_enter(Msg::Hovered(*id))
             .into()
         });
-        if matches!(
-            self.core.applet.anchor,
-            PanelAnchor::Left | PanelAnchor::Right
-        ) {
-            iced::widget::column(children).into()
-        } else {
-            iced::widget::row(children).into()
-        }
+        self.core
+            .applet
+            .autosize_window(
+                if matches!(
+                    self.core.applet.anchor,
+                    PanelAnchor::Left | PanelAnchor::Right
+                ) {
+                    Element::from(iced::widget::column(children))
+                } else {
+                    iced::widget::row(children).into()
+                },
+            )
+            .into()
     }
 
     fn view_window(&self, _surface: window::Id) -> cosmic::Element<'_, Msg> {
@@ -274,6 +278,7 @@ impl cosmic::Application for App {
                     .core
                     .applet
                     .popup_container(menu.popup_view().map(move |msg| Msg::StatusMenu((id, msg))))
+                    .limits(Limits::NONE.min_width(1.).min_height(1.).max_width(300.))
                     .into(),
                 None => unreachable!(),
             },
@@ -287,5 +292,5 @@ impl cosmic::Application for App {
 }
 
 pub fn main() -> iced::Result {
-    cosmic::applet::run::<App>(true, ())
+    cosmic::applet::run::<App>(())
 }

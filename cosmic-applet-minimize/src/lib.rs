@@ -8,7 +8,7 @@ pub(crate) mod window_image;
 
 use crate::localize::localize;
 use cosmic::{
-    app::Command,
+    app,
     applet::cosmic_panel_config::PanelAnchor,
     cctk::{
         cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1,
@@ -17,27 +17,29 @@ use cosmic::{
     desktop::DesktopEntryData,
     iced::{
         self,
-        wayland::popup::{destroy_popup, get_popup},
+        id::Id as WidgetId,
+        platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
         widget::text,
         window::{self},
-        Length, Subscription,
+        Length, Limits, Subscription,
     },
-    widget::mouse_area,
+    widget::{autosize::autosize, mouse_area},
+    Task,
 };
 
-use cosmic::{
-    iced_style::application,
-    iced_widget::{Column, Row},
-};
+use cosmic::iced_widget::{Column, Row};
 
-use cosmic::{widget::tooltip, Element, Theme};
+use cosmic::{widget::tooltip, Element};
+use once_cell::sync::Lazy;
 use wayland_subscription::{
     ToplevelRequest, ToplevelUpdate, WaylandImage, WaylandRequest, WaylandUpdate,
 };
 
+static AUTOSIZE_MAIN_ID: Lazy<WidgetId> = Lazy::new(|| WidgetId::new("autosize-main"));
+
 pub fn run() -> cosmic::iced::Result {
     localize();
-    cosmic::applet::run::<Minimize>(true, ())
+    cosmic::applet::run::<Minimize>(())
 }
 
 #[derive(Default)]
@@ -56,11 +58,11 @@ struct Minimize {
 impl Minimize {
     fn max_icon_count(&self) -> Option<usize> {
         let mut index = None;
-        let Some(max_major_axis_len) = self.core.applet.configure.as_ref().and_then(|c| {
+        let Some(max_major_axis_len) = self.core.applet.suggested_bounds.as_ref().map(|c| {
             // if we have a configure for width and height, we're in a overflow popup
             match self.core.applet.anchor {
-                PanelAnchor::Top | PanelAnchor::Bottom => c.new_size.0,
-                PanelAnchor::Left | PanelAnchor::Right => c.new_size.1,
+                PanelAnchor::Top | PanelAnchor::Bottom => c.width as u32,
+                PanelAnchor::Left | PanelAnchor::Right => c.height as u32,
             }
         }) else {
             return index;
@@ -68,7 +70,7 @@ impl Minimize {
         let button_total_size = self.core.applet.suggested_size(true).0
             + self.core.applet.suggested_padding(true) * 2
             + 4;
-        let btn_count = max_major_axis_len.get() / button_total_size as u32;
+        let btn_count = max_major_axis_len / button_total_size as u32;
         if btn_count >= self.apps.len() as u32 {
             index = None;
         } else {
@@ -93,13 +95,13 @@ impl cosmic::Application for Minimize {
     type Flags = ();
     const APP_ID: &'static str = "com.system76.CosmicAppletMinimize";
 
-    fn init(core: cosmic::app::Core, _flags: ()) -> (Self, Command<Message>) {
+    fn init(core: cosmic::app::Core, _flags: ()) -> (Self, app::Task<Message>) {
         (
             Self {
                 core,
                 ..Default::default()
             },
-            Command::none(),
+            Task::none(),
         )
     }
 
@@ -111,11 +113,11 @@ impl cosmic::Application for Minimize {
         &mut self.core
     }
 
-    fn style(&self) -> Option<<Theme as application::StyleSheet>::Style> {
+    fn style(&self) -> Option<cosmic::iced_runtime::Appearance> {
         Some(cosmic::applet::style())
     }
 
-    fn update(&mut self, message: Message) -> Command<Message> {
+    fn update(&mut self, message: Message) -> app::Task<Message> {
         match message {
             Message::Wayland(update) => match update {
                 WaylandUpdate::Init(tx) => {
@@ -190,7 +192,7 @@ impl cosmic::Application for Minimize {
                         },
                     };
                     let mut popup_settings = self.core.applet.get_popup_settings(
-                        window::Id::MAIN,
+                        self.core.main_window_id().unwrap(),
                         new_id,
                         None,
                         None,
@@ -203,7 +205,7 @@ impl cosmic::Application for Minimize {
             }
             Message::CloseOverflowPopup => todo!(),
         };
-        Command::none()
+        Task::none()
     }
 
     fn subscription(&self) -> Subscription<Message> {
@@ -236,7 +238,7 @@ impl cosmic::Application for Minimize {
                         Message::Activate(handle.clone()),
                         padding,
                     )),
-                    data.name.clone(),
+                    text(data.name.clone()).shaping(text::Shaping::Advanced),
                     // tooltip::Position::FollowCursor,
                     // FIXME tooltip fails to appear when created as indicated in design
                     // maybe it should be a subsurface
@@ -248,7 +250,6 @@ impl cosmic::Application for Minimize {
                     },
                 )
                 .snap_within_viewport(false)
-                .text_shaping(text::Shaping::Advanced)
                 .into()
             });
         let overflow_btn = if max_icon_count < self.apps.len() {
@@ -272,31 +273,48 @@ impl cosmic::Application for Minimize {
         // TODO optional dividers on ends if detects app list neighbor
         // not sure the best way to tell if there is an adjacent app-list
         let icon_buttons = icon_buttons.chain(overflow_btn.into_iter());
-        let content = if matches!(
+        let content: Element<_> = if matches!(
             self.core.applet.anchor,
             PanelAnchor::Top | PanelAnchor::Bottom
         ) {
             Row::with_children(icon_buttons)
-                .align_items(cosmic::iced_core::Alignment::Center)
+                .align_y(cosmic::iced_core::Alignment::Center)
                 .height(Length::Shrink)
                 .width(Length::Shrink)
                 .spacing(space_xxs)
                 .into()
         } else {
             Column::with_children(icon_buttons)
-                .align_items(cosmic::iced_core::Alignment::Center)
+                .align_x(cosmic::iced_core::Alignment::Center)
                 .height(Length::Shrink)
                 .width(Length::Shrink)
                 .spacing(space_xxs)
                 .into()
         };
-        if self.overflow_popup.is_some() {
-            mouse_area(content)
-                .on_press(Message::CloseOverflowPopup)
-                .into()
-        } else {
-            content
+
+        let mut limits = Limits::NONE.min_width(1.).min_height(1.);
+
+        if let Some(b) = self.core.applet.suggested_bounds {
+            if b.width as i32 > 0 {
+                limits = limits.max_width(b.width);
+            }
+            if b.height as i32 > 0 {
+                limits = limits.max_height(b.height);
+            }
         }
+
+        autosize(
+            if self.overflow_popup.is_some() {
+                mouse_area(content)
+                    .on_press(Message::CloseOverflowPopup)
+                    .into()
+            } else {
+                content
+            },
+            AUTOSIZE_MAIN_ID.clone(),
+        )
+        .limits(limits)
+        .into()
     }
 
     fn view_window(&self, _id: window::Id) -> Element<Self::Message> {
@@ -325,7 +343,7 @@ impl cosmic::Application for Minimize {
                         Message::Activate(handle.clone()),
                         padding,
                     )),
-                    data.name.clone(),
+                    text(data.name.clone()).shaping(text::Shaping::Advanced),
                     // tooltip::Position::FollowCursor,
                     // FIXME tooltip fails to appear when created as indicated in design
                     // maybe it should be a subsurface
@@ -337,7 +355,6 @@ impl cosmic::Application for Minimize {
                     },
                 )
                 .snap_within_viewport(false)
-                .text_shaping(text::Shaping::Advanced)
                 .into()
             });
 
@@ -353,14 +370,14 @@ impl cosmic::Application for Minimize {
                 ) {
                     Element::from(
                         Row::with_children(icon_buttons)
-                            .align_items(cosmic::iced_core::Alignment::Center)
+                            .align_y(cosmic::iced_core::Alignment::Center)
                             .height(Length::Shrink)
                             .width(Length::Shrink)
                             .spacing(space_xxs),
                     )
                 } else {
                     Column::with_children(icon_buttons)
-                        .align_items(cosmic::iced_core::Alignment::Center)
+                        .align_x(cosmic::iced_core::Alignment::Center)
                         .height(Length::Shrink)
                         .width(Length::Shrink)
                         .spacing(space_xxs)

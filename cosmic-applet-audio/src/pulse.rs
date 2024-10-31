@@ -6,7 +6,7 @@ use std::{cell::RefCell, mem, rc::Rc, thread};
 extern crate libpulse_binding as pulse;
 
 use cosmic::{
-    iced::{self, subscription},
+    iced::{self, stream, Subscription},
     iced_futures::futures::{self, SinkExt},
 };
 use cosmic_time::once_cell::sync::Lazy;
@@ -31,16 +31,15 @@ pub static FROM_PULSE: Lazy<Mutex<Option<(mpsc::Receiver<Message>, mpsc::Sender<
 pub fn connect() -> iced::Subscription<Event> {
     struct SomeWorker;
 
-    subscription::channel(
+    Subscription::run_with_id(
         std::any::TypeId::of::<SomeWorker>(),
-        50,
-        move |mut output| async move {
+        stream::channel(50, move |mut output| async move {
             let mut state = State::Connecting;
 
             loop {
                 state = start_listening(state, &mut output).await;
             }
-        },
+        }),
     )
 }
 

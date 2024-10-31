@@ -4,7 +4,7 @@
 use std::{borrow::Cow, fmt::Debug, hash::Hash, path::PathBuf};
 
 use cosmic::{
-    iced::{self, subscription},
+    iced::{self, stream, Subscription},
     iced_futures::futures::{self, future::OptionFuture, SinkExt, StreamExt},
 };
 use mpris2_zbus::{
@@ -83,11 +83,14 @@ impl PlayerStatus {
 pub fn mpris_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
     id: I,
 ) -> iced::Subscription<MprisUpdate> {
-    subscription::channel(id, 50, move |mut output| async move {
-        run(&mut output).await;
-        let _ = output.send(MprisUpdate::Finished).await;
-        futures::future::pending().await
-    })
+    Subscription::run_with_id(
+        id,
+        stream::channel(50, move |mut output| async move {
+            run(&mut output).await;
+            let _ = output.send(MprisUpdate::Finished).await;
+            futures::future::pending().await
+        }),
+    )
 }
 
 #[derive(Clone, Debug)]

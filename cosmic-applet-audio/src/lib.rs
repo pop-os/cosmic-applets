@@ -9,7 +9,7 @@ use std::time::Duration;
 use crate::{localize::localize, pulse::DeviceInfo};
 use config::AudioAppletConfig;
 use cosmic::{
-    app::Command,
+    app,
     applet::{
         cosmic_panel_config::PanelAnchor,
         menu_button, menu_control_padding, padded_control,
@@ -24,15 +24,14 @@ use cosmic::{
         window, Alignment, Length, Limits, Subscription,
     },
     iced_runtime::core::alignment::Horizontal,
-    iced_style::application,
     theme,
     widget::{button, divider, horizontal_space, icon, text, Column, Row},
-    Element, Renderer, Theme,
+    Element, Renderer, Task, Theme,
 };
 use cosmic_settings_subscriptions::pulse as sub_pulse;
 use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
 use iced::{
-    wayland::popup::{destroy_popup, get_popup},
+    platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
     widget::container,
 };
 use libpulse_binding::volume::Volume;
@@ -52,7 +51,7 @@ const PLAY: &str = "media-playback-start-symbolic";
 
 pub fn run() -> cosmic::iced::Result {
     localize();
-    cosmic::applet::run::<Audio>(true, ())
+    cosmic::applet::run::<Audio>(())
 }
 
 #[derive(Default)]
@@ -208,10 +207,10 @@ impl Audio {
 
             Some(match self.core.applet.anchor {
                 PanelAnchor::Left | PanelAnchor::Right => Column::with_children(elements)
-                    .align_items(Alignment::Center)
+                    .align_x(Alignment::Center)
                     .into(),
                 PanelAnchor::Top | PanelAnchor::Bottom => Row::with_children(elements)
-                    .align_items(Alignment::Center)
+                    .align_y(Alignment::Center)
                     .into(),
             })
         } else {
@@ -225,7 +224,7 @@ impl Audio {
                 Some(
                     button::icon(icon::from_name(GO_BACK).size(icon_size).symbolic(true))
                         .extra_small()
-                        .style(cosmic::theme::Button::AppletIcon)
+                        .class(cosmic::theme::Button::AppletIcon)
                         .on_press(Message::MprisRequest(MprisRequest::Previous))
                         .into(),
                 )
@@ -241,7 +240,7 @@ impl Audio {
                 Some(
                     button::icon(icon::from_name(GO_NEXT).size(icon_size).symbolic(true))
                         .extra_small()
-                        .style(cosmic::theme::Button::AppletIcon)
+                        .class(cosmic::theme::Button::AppletIcon)
                         .on_press(Message::MprisRequest(MprisRequest::Next))
                         .into(),
                 )
@@ -292,7 +291,7 @@ impl cosmic::Application for Audio {
     type Flags = ();
     const APP_ID: &'static str = "com.system76.CosmicAppletAudio";
 
-    fn init(core: cosmic::app::Core, _flags: ()) -> (Self, Command<Message>) {
+    fn init(core: cosmic::app::Core, _flags: ()) -> (Self, app::Task<Message>) {
         (
             Self {
                 core,
@@ -304,7 +303,7 @@ impl cosmic::Application for Audio {
                 token_tx: None,
                 ..Default::default()
             },
-            Command::none(),
+            Task::none(),
         )
     }
 
@@ -316,11 +315,11 @@ impl cosmic::Application for Audio {
         &mut self.core
     }
 
-    fn style(&self) -> Option<<Theme as application::StyleSheet>::Style> {
+    fn style(&self) -> Option<cosmic::iced_runtime::Appearance> {
         Some(cosmic::applet::style())
     }
 
-    fn update(&mut self, message: Message) -> Command<Message> {
+    fn update(&mut self, message: Message) -> app::Task<Message> {
         match message {
             Message::Frame(now) => self.timeline.now(now),
             Message::Ignore => {}
@@ -336,7 +335,7 @@ impl cosmic::Application for Audio {
                     self.timeline = Timeline::new();
 
                     let mut popup_settings = self.core.applet.get_popup_settings(
-                        window::Id::MAIN,
+                        self.core.main_window_id().unwrap(),
                         new_id,
                         None,
                         None,
@@ -360,14 +359,14 @@ impl cosmic::Application for Audio {
             }
             Message::SetOutputVolume(vol) => {
                 if self.output_volume == vol {
-                    return Command::none();
+                    return Task::none();
                 }
 
                 self.output_volume = vol;
                 self.output_volume_text = format!("{}%", self.output_volume.round());
 
                 if self.output_volume_debounce {
-                    return Command::none();
+                    return Task::none();
                 }
 
                 self.output_volume_debounce = true;
@@ -379,14 +378,14 @@ impl cosmic::Application for Audio {
             }
             Message::SetInputVolume(vol) => {
                 if self.input_volume == vol {
-                    return Command::none();
+                    return Task::none();
                 }
 
                 self.input_volume = vol;
                 self.input_volume_text = format!("{}%", self.input_volume.round());
 
                 if self.input_volume_debounce {
-                    return Command::none();
+                    return Task::none();
                 }
 
                 self.input_volume_debounce = true;
@@ -583,7 +582,7 @@ impl cosmic::Application for Audio {
             Message::MprisRequest(r) => {
                 let Some(player_status) = self.player_status.as_ref() else {
                     tracing::error!("No player found");
-                    return Command::none();
+                    return Task::none();
                 };
                 let player = player_status.player.clone();
 
@@ -673,7 +672,7 @@ impl cosmic::Application for Audio {
             },
         };
 
-        Command::none()
+        Task::none()
     }
 
     fn subscription(&self) -> Subscription<Message> {
@@ -715,28 +714,30 @@ impl cosmic::Application for Audio {
                 .clamp(0.0, 100.0);
             Message::SetOutputVolume(new_volume)
         });
-        let playback_buttons = (!self.core.applet.configure.as_ref().is_some_and(|c| {
+        let playback_buttons = (!self.core.applet.suggested_bounds.as_ref().is_some_and(|c| {
             // if we have a configure for width and height, we're in a overflow popup
-            c.new_size.0.is_some() && c.new_size.1.is_some()
+            c.width > 0. && c.height > 0.
         }))
         .then(|| self.playback_buttons());
 
-        if let Some(Some(playback_buttons)) = playback_buttons {
-            match self.core.applet.anchor {
-                PanelAnchor::Left | PanelAnchor::Right => {
-                    Column::with_children(vec![playback_buttons, btn.into()])
-                        .align_items(Alignment::Center)
-                        .into()
+        self.core
+            .applet
+            .autosize_window(if let Some(Some(playback_buttons)) = playback_buttons {
+                match self.core.applet.anchor {
+                    PanelAnchor::Left | PanelAnchor::Right => Element::from(
+                        Column::with_children(vec![playback_buttons, btn.into()])
+                            .align_x(Alignment::Center),
+                    ),
+                    PanelAnchor::Top | PanelAnchor::Bottom => {
+                        Row::with_children(vec![playback_buttons, btn.into()])
+                            .align_y(Alignment::Center)
+                            .into()
+                    }
                 }
-                PanelAnchor::Top | PanelAnchor::Bottom => {
-                    Row::with_children(vec![playback_buttons, btn.into()])
-                        .align_items(Alignment::Center)
-                        .into()
-                }
-            }
-        } else {
-            btn.into()
-        }
+            } else {
+                btn.into()
+            })
+            .into()
     }
 
     fn view_window(&self, _id: window::Id) -> Element<Message> {
@@ -752,7 +753,7 @@ impl cosmic::Application for Audio {
             column![padded_control(
                 text::title3(fl!("disconnected"))
                     .width(Length::Fill)
-                    .horizontal_alignment(Horizontal::Center)
+                    .align_x(Horizontal::Center)
             )]
         } else {
             column![
@@ -763,7 +764,7 @@ impl cosmic::Application for Audio {
                                 .size(24)
                                 .symbolic(true),
                         )
-                        .style(cosmic::theme::Button::Icon)
+                        .class(cosmic::theme::Button::Icon)
                         .icon_size(24)
                         .line_height(24)
                         .on_press(Message::SetOutputMute(!out_mute)),
@@ -772,10 +773,10 @@ impl cosmic::Application for Audio {
                         text(&self.output_volume_text)
                             .size(16)
                             .width(Length::FillPortion(1))
-                            .horizontal_alignment(Horizontal::Right)
+                            .align_x(Horizontal::Right)
                     ]
                     .spacing(12)
-                    .align_items(Alignment::Center)
+                    .align_y(Alignment::Center)
                 ),
                 padded_control(
                     row![
@@ -784,7 +785,7 @@ impl cosmic::Application for Audio {
                                 .size(24)
                                 .symbolic(true),
                         )
-                        .style(cosmic::theme::Button::Icon)
+                        .class(cosmic::theme::Button::Icon)
                         .icon_size(24)
                         .line_height(24)
                         .on_press(Message::SetInputMute(!in_mute)),
@@ -793,10 +794,10 @@ impl cosmic::Application for Audio {
                         text(&self.input_volume_text)
                             .size(16)
                             .width(Length::FillPortion(1))
-                            .horizontal_alignment(Horizontal::Right)
+                            .align_x(Horizontal::Right)
                     ]
                     .spacing(12)
-                    .align_items(Alignment::Center)
+                    .align_y(Alignment::Center)
                 ),
                 padded_control(divider::horizontal::default()).padding([space_xxs, space_s]),
                 revealer(
@@ -836,7 +837,7 @@ impl cosmic::Application for Audio {
                     Message::InputChanged,
                 )
             ]
-            .align_items(Alignment::Start)
+            .align_x(Alignment::Start)
         };
 
         if let Some(s) = self.player_status.as_ref() {
@@ -881,7 +882,7 @@ impl cosmic::Application for Audio {
             );
 
             let mut control_elements = Vec::with_capacity(4);
-            control_elements.push(horizontal_space(Length::Fill).into());
+            control_elements.push(horizontal_space().width(Length::Fill).into());
             if let Some(go_prev) = self.go_previous(32) {
                 control_elements.push(go_prev);
             }
@@ -893,7 +894,7 @@ impl cosmic::Application for Audio {
                             .symbolic(true),
                     )
                     .extra_small()
-                    .style(cosmic::theme::Button::AppletIcon)
+                    .class(cosmic::theme::Button::AppletIcon)
                     .on_press(if play {
                         Message::MprisRequest(MprisRequest::Play)
                     } else {
@@ -908,7 +909,7 @@ impl cosmic::Application for Audio {
             let control_cnt = control_elements.len() as u16;
             elements.push(
                 Row::with_children(control_elements)
-                    .align_items(Alignment::Center)
+                    .align_y(Alignment::Center)
                     .width(Length::FillPortion(control_cnt.saturating_add(1)))
                     .spacing(8)
                     .into(),
@@ -918,7 +919,7 @@ impl cosmic::Application for Audio {
                 .push(padded_control(divider::horizontal::default()).padding([space_xxs, space_s]));
             audio_content = audio_content.push(
                 Row::with_children(elements)
-                    .align_items(Alignment::Center)
+                    .align_y(Alignment::Center)
                     .spacing(8)
                     .padding(menu_control_padding()),
             );
@@ -941,10 +942,14 @@ impl cosmic::Application for Audio {
             padded_control(divider::horizontal::default()).padding([space_xxs, space_s]),
             menu_button(text::body(fl!("sound-settings"))).on_press(Message::OpenSettings)
         ]
-        .align_items(Alignment::Start)
+        .align_x(Alignment::Start)
         .padding([8, 0]);
 
-        self.core.applet.popup_container(container(content)).into()
+        self.core
+            .applet
+            .popup_container(container(content))
+            .limits(Limits::NONE.max_width(400.))
+            .into()
     }
 
     fn on_close_requested(&self, id: window::Id) -> Option<Message> {

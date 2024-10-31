@@ -33,20 +33,16 @@ where
             image_button: button::custom(
                 container(
                     container(if let Some(img) = img {
-                        let max_dim = img.img.width().max(img.img.height()).max(1);
+                        let max_dim = img.width.max(img.height).max(1);
                         let ratio = max_dim as f32 / (size - border * 2.0).max(1.0);
-                        let adjusted_width = img.img.width() as f32 / ratio;
-                        let adjusted_height = img.img.height() as f32 / ratio;
+                        let adjusted_width = img.width as f32 / ratio;
+                        let adjusted_height = img.height as f32 / ratio;
 
                         Element::from(
-                            Image::new(Handle::from_pixels(
-                                img.img.width(),
-                                img.img.height(),
-                                img.clone(),
-                            ))
-                            .width(Length::Fixed(adjusted_width))
-                            .height(Length::Fixed(adjusted_height))
-                            .content_fit(cosmic::iced_core::ContentFit::Contain),
+                            Image::new(Handle::from_rgba(img.width, img.height, img.img))
+                                .width(Length::Fixed(adjusted_width))
+                                .height(Length::Fixed(adjusted_height))
+                                .content_fit(cosmic::iced_core::ContentFit::Contain),
                         )
                     } else {
                         Element::from(
@@ -55,15 +51,13 @@ where
                                 .height(Length::Fixed((size - border * 2.0).max(0.))),
                         )
                     })
-                    .style(Container::Custom(Box::new(move |theme| {
-                        container::Appearance {
-                            border: Border {
-                                color: theme.cosmic().bg_divider().into(),
-                                width: border,
-                                radius: 0.0.into(),
-                            },
-                            ..Default::default()
-                        }
+                    .class(Container::Custom(Box::new(move |theme| container::Style {
+                        border: Border {
+                            color: theme.cosmic().bg_divider().into(),
+                            width: border,
+                            radius: 0.0.into(),
+                        },
+                        ..Default::default()
                     })))
                     .padding(border as u16)
                     .height(Length::Shrink)
@@ -78,7 +72,7 @@ where
             .on_press(on_press)
             .width(Length::Shrink)
             .height(Length::Shrink)
-            .style(Button::AppletIcon)
+            .class(Button::AppletIcon)
             .padding(0)
             .into(),
             icon: icon
@@ -104,13 +98,16 @@ impl<'a, Msg> Widget<Msg, cosmic::Theme, cosmic::Renderer> for WindowImage<'a, M
         state: &'b mut Tree,
         layout: Layout<'_>,
         renderer: &cosmic::Renderer,
+        translation: Vector,
     ) -> Option<cosmic::iced_core::overlay::Element<'b, Msg, cosmic::Theme, cosmic::Renderer>> {
         let children = [&mut self.image_button, &mut self.icon]
             .into_iter()
             .zip(&mut state.children)
             .zip(layout.children())
             .filter_map(|((child, state), layout)| {
-                child.as_widget_mut().overlay(state, layout, renderer)
+                child
+                    .as_widget_mut()
+                    .overlay(state, layout, renderer, translation)
             })
             .collect::<Vec<_>>();
 
@@ -195,9 +192,7 @@ impl<'a, Msg> Widget<Msg, cosmic::Theme, cosmic::Renderer> for WindowImage<'a, M
         tree: &mut cosmic::iced_core::widget::Tree,
         layout: cosmic::iced_core::Layout<'_>,
         renderer: &cosmic::Renderer,
-        operation: &mut dyn cosmic::widget::Operation<
-            cosmic::iced_core::widget::OperationOutputWrapper<Msg>,
-        >,
+        operation: &mut dyn cosmic::widget::Operation<()>,
     ) {
         let layout = layout.children().collect::<Vec<_>>();
         let children = [&self.image_button, &self.icon];

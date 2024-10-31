@@ -11,5 +11,5 @@ mod window;
 pub fn run() -> cosmic::iced::Result {
     localize::localize();
 
-    cosmic::applet::run::<Window>(false, ())
+    cosmic::applet::run::<Window>(())
 }

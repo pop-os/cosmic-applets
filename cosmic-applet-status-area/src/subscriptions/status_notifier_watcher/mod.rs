@@ -3,8 +3,8 @@
 
 // TODO: Both this and server proxy could emit same events, have way to generate stream from either?
 
-use cosmic::iced;
-use futures::StreamExt;
+use cosmic::iced::{self, Subscription};
+use futures::{stream, StreamExt};
 
 use crate::subscriptions::status_notifier_item::StatusNotifierItem;
 
@@ -26,24 +26,23 @@ enum State {
 }
 
 pub fn subscription() -> iced::Subscription<Event> {
-    iced::subscription::unfold(
+    Subscription::run_with_id(
         "status-notifier-watcher",
-        State::NotConnected,
-        |state| async move {
+        stream::unfold(State::NotConnected, |state| async move {
             match state {
                 State::NotConnected => match connect().await {
                     Ok((connection, stream)) => {
-                        (Event::Connected(connection), State::Connected(stream))
+                        Some((Event::Connected(connection), State::Connected(stream)))
                     }
-                    Err(err) => (Event::Error(err.to_string()), State::Failed),
+                    Err(err) => Some((Event::Error(err.to_string()), State::Failed)),
                 },
                 State::Connected(mut stream) => match stream.next().await {
-                    Some(event) => (event, State::Connected(stream)),
-                    None => iced::futures::future::pending().await,
+                    Some(event) => Some((event, State::Connected(stream))),
+                    None => None,
                 },
-                State::Failed => iced::futures::future::pending().await,
+                State::Failed => None,
             }
-        },
+        }),
     )
 }
 

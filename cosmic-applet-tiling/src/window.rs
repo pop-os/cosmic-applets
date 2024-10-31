@@ -11,11 +11,10 @@ use cosmic::{
     cosmic_config::{Config, ConfigSet, CosmicConfigEntry},
     cosmic_theme::Spacing,
     iced::{
-        wayland::popup::{destroy_popup, get_popup},
+        platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
         window::Id,
-        Command, Length, Limits, Subscription,
+        Length, Limits, Subscription, Task,
     },
-    iced_style::application,
     iced_widget::{column, row},
     theme,
     widget::{
@@ -23,7 +22,7 @@ use cosmic::{
         segmented_button::{self, Entity, SingleSelectModel},
         segmented_control, spin_button, text,
     },
-    Element, Theme,
+    Element,
 };
 use cosmic_comp_config::{CosmicCompConfig, TileBehavior};
 use cosmic_protocols::workspace::v1::client::zcosmic_workspace_handle_v1::TilingState;
@@ -77,10 +76,7 @@ impl cosmic::Application for Window {
         &mut self.core
     }
 
-    fn init(
-        core: Core,
-        _flags: Self::Flags,
-    ) -> (Self, Command<cosmic::app::Message<Self::Message>>) {
+    fn init(core: Core, _flags: Self::Flags) -> (Self, Task<cosmic::app::Message<Self::Message>>) {
         let mut gaps = spin_button::Model::default().max(99).min(0).step(1);
         gaps.value = core.system_theme().cosmic().gaps.1 as i32;
         let mut active_hint = spin_button::Model::default().max(99).min(0).step(1);
@@ -127,7 +123,7 @@ impl cosmic::Application for Window {
             tile_windows: id::Toggler::unique(),
             active_hint: id::Toggler::unique(),
         };
-        (window, Command::none())
+        (window, Task::none())
     }
 
     fn on_close_requested(&self, id: Id) -> Option<Message> {
@@ -148,7 +144,7 @@ impl cosmic::Application for Window {
         ])
     }
 
-    fn update(&mut self, message: Self::Message) -> Command<cosmic::app::Message<Self::Message>> {
+    fn update(&mut self, message: Self::Message) -> Task<cosmic::app::Message<Self::Message>> {
         match message {
             Message::WorkspaceUpdate(msg) => match msg {
                 WorkspacesUpdate::State(state) => {
@@ -178,11 +174,14 @@ impl cosmic::Application for Window {
                     self.tile_windows = id::Toggler::unique();
                     self.active_hint = id::Toggler::unique();
                     let new_id = Id::unique();
-                    self.popup.replace(new_id);
-                    let mut popup_settings =
-                        self.core
-                            .applet
-                            .get_popup_settings(Id::MAIN, new_id, None, None, None);
+                    self.popup = Some(new_id);
+                    let mut popup_settings = self.core.applet.get_popup_settings(
+                        self.core.main_window_id().unwrap(),
+                        new_id,
+                        Some((1, 1)),
+                        None,
+                        None,
+                    );
                     popup_settings.positioner.size_limits = Limits::NONE
                         .max_width(400.0)
                         .min_width(300.0)
@@ -276,7 +275,7 @@ impl cosmic::Application for Window {
                 tokio::spawn(cosmic::process::spawn(cmd));
             }
         }
-        Command::none()
+        Task::none()
     }
 
     fn view(&self) -> Element<Self::Message> {
@@ -355,10 +354,14 @@ impl cosmic::Application for Window {
         ]
         .padding([8, 0]);
 
-        self.core.applet.popup_container(content_list).into()
+        self.core
+            .applet
+            .popup_container(content_list)
+            .max_width(400.)
+            .into()
     }
 
-    fn style(&self) -> Option<<Theme as application::StyleSheet>::Style> {
+    fn style(&self) -> Option<cosmic::iced_runtime::Appearance> {
         Some(cosmic::applet::style())
     }
 }

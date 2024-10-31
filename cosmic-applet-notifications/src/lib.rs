@@ -12,7 +12,7 @@ use cosmic::{
     cosmic_config::{Config, CosmicConfigEntry},
     cosmic_theme::Spacing,
     iced::{
-        wayland::popup::{destroy_popup, get_popup},
+        platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
         widget::{column, row},
         window, Alignment, Length, Limits, Subscription,
     },
@@ -20,10 +20,10 @@ use cosmic::{
     iced_widget::{scrollable, Column},
     theme,
     widget::{button, container, divider, icon, text},
-    Command, Element, Theme,
+    Element, Task,
 };
 
-use cosmic::{iced_futures::futures::executor::block_on, iced_style::application};
+use cosmic::iced_futures::futures::executor::block_on;
 
 use cosmic_notifications_config::NotificationsConfig;
 use cosmic_notifications_util::{Image, Notification};
@@ -35,7 +35,7 @@ use tracing::info;
 
 pub fn run() -> cosmic::iced::Result {
     localize::localize();
-    cosmic::applet::run::<Notifications>(false, ())
+    cosmic::applet::run::<Notifications>(())
 }
 
 static DO_NOT_DISTURB: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
@@ -106,7 +106,7 @@ impl cosmic::Application for Notifications {
         _flags: Self::Flags,
     ) -> (
         Self,
-        cosmic::iced::Command<cosmic::app::Message<Self::Message>>,
+        cosmic::iced::Task<cosmic::app::Message<Self::Message>>,
     ) {
         let helper = Config::new(
             cosmic_notifications_config::ID,
@@ -139,7 +139,7 @@ impl cosmic::Application for Notifications {
                 .expect("Failed to get proxy"),
         };
         _self.update_icon();
-        (_self, Command::none())
+        (_self, Task::none())
     }
 
     fn core(&self) -> &cosmic::app::Core {
@@ -150,7 +150,7 @@ impl cosmic::Application for Notifications {
         &mut self.core
     }
 
-    fn style(&self) -> Option<<Theme as application::StyleSheet>::Style> {
+    fn style(&self) -> Option<cosmic::iced_runtime::Appearance> {
         Some(cosmic::applet::style())
     }
 
@@ -177,7 +177,7 @@ impl cosmic::Application for Notifications {
     fn update(
         &mut self,
         message: Self::Message,
-    ) -> cosmic::iced::Command<cosmic::app::Message<Self::Message>> {
+    ) -> cosmic::iced::Task<cosmic::app::Message<Self::Message>> {
         match message {
             Message::Frame(now) => {
                 self.timeline.now(now);
@@ -191,7 +191,7 @@ impl cosmic::Application for Notifications {
                     self.timeline = Timeline::new();
 
                     let mut popup_settings = self.core.applet.get_popup_settings(
-                        window::Id::MAIN,
+                        self.core.main_window_id().unwrap(),
                         new_id,
                         None,
                         None,
@@ -317,7 +317,7 @@ impl cosmic::Application for Notifications {
                     *n_expanded = expanded;
                     id.clone()
                 } else {
-                    return Command::none();
+                    return Task::none();
                 };
                 self.update_cards(id);
             }
@@ -354,7 +354,7 @@ impl cosmic::Application for Notifications {
             },
         };
         self.update_icon();
-        Command::none()
+        Task::none()
     }
 
     fn view(&self) -> Element<Message> {
@@ -387,7 +387,7 @@ impl cosmic::Application for Notifications {
                     text_icon("cosmic-applet-notification-symbolic", 40),
                     text::body(no_notifications)
                 ]
-                .align_items(Alignment::Center)
+                .align_x(Alignment::Center)
             )
             .width(Length::Fill)
             .align_x(Horizontal::Center)]
@@ -433,7 +433,7 @@ impl cosmic::Application for Notifications {
                                 .symbolic(true),
                         )
                         .on_press(Message::Dismissed(n.id))
-                        .style(cosmic::theme::Button::Text);
+                        .class(cosmic::theme::Button::Text);
                         Element::from(
                             column!(
                                 match n.image() {
@@ -445,7 +445,7 @@ impl cosmic::Application for Notifications {
                                             close_notif
                                         ]
                                         .spacing(8)
-                                        .align_items(Alignment::Center)
+                                        .align_y(Alignment::Center)
                                     }
                                     Some(cosmic_notifications_util::Image::Name(name)) => {
                                         row![
@@ -455,7 +455,7 @@ impl cosmic::Application for Notifications {
                                             close_notif
                                         ]
                                         .spacing(8)
-                                        .align_items(Alignment::Center)
+                                        .align_y(Alignment::Center)
                                     }
                                     Some(cosmic_notifications_util::Image::Data {
                                         width,
@@ -471,11 +471,11 @@ impl cosmic::Application for Notifications {
                                             close_notif
                                         ]
                                         .spacing(8)
-                                        .align_items(Alignment::Center)
+                                        .align_y(Alignment::Center)
                                     }
                                     None => row![app_name, duration_since, close_notif]
                                         .spacing(8)
-                                        .align_items(Alignment::Center),
+                                        .align_y(Alignment::Center),
                                 },
                                 column![
                                     text::body(n.summary.lines().next().unwrap_or_default())
@@ -546,10 +546,14 @@ impl cosmic::Application for Notifications {
         ];
 
         let content = column![do_not_disturb, main_content]
-            .align_items(Alignment::Start)
+            .align_x(Alignment::Start)
             .padding([8, 0]);
 
-        self.core.applet.popup_container(content).into()
+        self.core
+            .applet
+            .popup_container(content)
+            .limits(Limits::NONE.max_width(444.).max_height(900.))
+            .into()
     }
 
     fn on_close_requested(&self, id: window::Id) -> Option<Message> {

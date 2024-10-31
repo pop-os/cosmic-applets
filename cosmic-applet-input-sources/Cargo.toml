@@ -5,14 +5,14 @@ edition = "2021"
 license = "GPL-3.0-only"
 
 [dependencies]
-cosmic-time.workspace = true
+# cosmic-time.workspace = true
 cosmic-comp-config = { git = "https://github.com/pop-os/cosmic-comp.git", rev = "5eb5af4" }
 i18n-embed-fl.workspace = true
 i18n-embed.workspace = true
 libcosmic.workspace = true
 libpulse-binding = "2.28.1"
 rust-embed.workspace = true
-tokio = { version = "1.36.0", features=["full"] }
+tokio = { version = "1.36.0", features = ["full"] }
 tracing-log.workspace = true
 tracing-subscriber.workspace = true
 tracing.workspace = true

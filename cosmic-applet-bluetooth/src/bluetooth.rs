@@ -9,10 +9,13 @@ use bluer::{
     Adapter, Address, Session, Uuid,
 };
 
-use cosmic::iced::{
-    self,
-    futures::{SinkExt, StreamExt},
-    subscription,
+use cosmic::{
+    iced::{
+        self,
+        futures::{SinkExt, StreamExt},
+        Subscription,
+    },
+    iced_futures::stream,
 };
 
 use rand::Rng;
@@ -29,13 +32,16 @@ use tokio::{
 pub fn bluetooth_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
     id: I,
 ) -> iced::Subscription<BluerEvent> {
-    subscription::channel(id, 50, move |mut output| async move {
-        let mut state = State::Ready;
+    Subscription::run_with_id(
+        id,
+        stream::channel(50, move |mut output| async move {
+            let mut state = State::Ready;
 
-        loop {
-            state = start_listening(state, &mut output).await;
-        }
-    })
+            loop {
+                state = start_listening(state, &mut output).await;
+            }
+        }),
+    )
 }
 
 pub enum State {
