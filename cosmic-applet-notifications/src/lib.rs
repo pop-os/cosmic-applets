@@ -16,7 +16,6 @@ use cosmic::{
         widget::{column, row},
         window, Alignment, Length, Limits, Subscription,
     },
-    iced_core::alignment::Horizontal,
     iced_widget::{scrollable, Column},
     theme,
     widget::{button, container, divider, icon, text},
@@ -389,8 +388,7 @@ impl cosmic::Application for Notifications {
                 ]
                 .align_x(Alignment::Center)
             )
-            .width(Length::Fill)
-            .align_x(Horizontal::Center)]
+            .center_x(Length::Fill)]
             .padding([8, 0])
             .spacing(12)
         } else {
@@ -401,7 +399,7 @@ impl cosmic::Application for Notifications {
                         .on_press(Message::ClearAll(None)),
                 )
                 .width(Length::Fill)
-                .align_x(Horizontal::Right)
+                .align_x(Alignment::End)
                 .into(),
             );
             for c in self.cards.iter().rev() {

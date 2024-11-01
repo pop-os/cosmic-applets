@@ -1,8 +1,6 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
-use std::ops::Sub;
-
 use crate::subscriptions::freedesktop_proxy::NotificationsProxy;
 use cosmic::{
     iced::futures::{self, SinkExt},

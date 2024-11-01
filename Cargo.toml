@@ -69,7 +69,6 @@ freedesktop-desktop-entry = "0.7.5"
 [profile.release]
 lto = "fat"
 
-
 [workspace.metadata.cargo-machete]
 ignored = ["libcosmic"]
 # [patch."https://github.com/pop-os/libcosmic"]

@@ -19,7 +19,7 @@ use futures::{
 };
 use image::EncodableLayout;
 use once_cell::sync::Lazy;
-use std::{fmt::Debug, sync::Arc};
+use std::fmt::Debug;
 use tokio::sync::Mutex;
 
 use crate::wayland_handler::wayland_handler;

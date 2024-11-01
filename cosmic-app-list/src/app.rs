@@ -31,10 +31,7 @@ use cosmic::{
         window, Color, Limits, Subscription,
     },
     iced_core::{Border, Padding, Shadow},
-    iced_runtime::{
-        core::{alignment::Horizontal, event},
-        dnd::peek_dnd,
-    },
+    iced_runtime::{core::event, dnd::peek_dnd},
     theme::{self, Button, Container},
     widget::{
         button, divider, dnd_source, horizontal_space,
@@ -215,28 +212,28 @@ impl DockItem {
                 horizontal_space().width(Length::Fixed(1.0)).into(),
                 cosmic_icon.clone().into(),
             ])
-            .align_y(iced::Alignment::Center)
+            .align_y(Alignment::Center)
             .into(),
             PanelAnchor::Right => row(vec![
                 cosmic_icon.clone().into(),
                 horizontal_space().width(Length::Fixed(1.0)).into(),
                 column(dots).into(),
             ])
-            .align_y(iced::Alignment::Center)
+            .align_y(Alignment::Center)
             .into(),
             PanelAnchor::Top => column(vec![
                 row(dots).into(),
                 vertical_space().height(Length::Fixed(1.0)).into(),
                 cosmic_icon.clone().into(),
             ])
-            .align_x(iced::Alignment::Center)
+            .align_x(Alignment::Center)
             .into(),
             PanelAnchor::Bottom => column(vec![
                 cosmic_icon.clone().into(),
                 vertical_space().height(Length::Fixed(1.0)).into(),
                 row(dots).into(),
             ])
-            .align_x(iced::Alignment::Center)
+            .align_x(Alignment::Center)
             .into(),
         };
 
@@ -467,15 +464,12 @@ where
                 .padding(border as u16)
                 .height(Length::Fill)
                 .width(Length::Fill),
-                container(text::body(title).align_x(Horizontal::Center),).center_x(Length::Fill),
+                container(text::body(title).align_x(Alignment::Center)).center_x(Length::Fill),
             ]
             .spacing(4)
             .align_x(Alignment::Center),
         )
-        .align_x(cosmic::iced_core::alignment::Horizontal::Center)
-        .align_y(cosmic::iced_core::alignment::Vertical::Center)
-        .height(Length::Fill)
-        .width(Length::Fill),
+        .center(Length::Fill),
     )
     .on_press(on_press)
     .class(window_menu_style(is_focused))
@@ -1797,7 +1791,7 @@ impl cosmic::Application for CosmicAppList {
                                         text_color: Some(component.on.into()),
                                         background: Some(Background::Color(component.base.into())),
                                         border: Border {
-                                            radius: 8.0.into(),
+                                            radius: cosmic.radius_s().into(),
                                             width: 1.0,
                                             color: component.divider.into(),
                                         },

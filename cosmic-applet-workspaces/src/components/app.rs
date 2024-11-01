@@ -5,10 +5,10 @@ use cctk::sctk::reexports::{calloop::channel::SyncSender, client::backend::Objec
 use cosmic::{
     applet::cosmic_panel_config::PanelAnchor,
     iced::{
-        alignment::{Horizontal, Vertical},
         event,
         mouse::{self, ScrollDelta},
         widget::{button, column, row},
+        Alignment,
         Event::Mouse,
         Length, Limits, Subscription,
     },
@@ -190,15 +190,15 @@ impl cosmic::Application for IcedWorkspacesApplet {
             };
 
             let content = row!(content, vertical_space().height(Length::Fixed(height)))
-                .align_y(cosmic::iced::Alignment::Center);
+                .align_y(Alignment::Center);
 
             let content = column!(content, horizontal_space().width(Length::Fixed(width)))
-                .align_x(cosmic::iced::Alignment::Center);
+                .align_x(Alignment::Center);
 
             let btn = button(
                 container(content)
-                    .align_x(Horizontal::Center)
-                    .align_y(Vertical::Center),
+                    .align_x(Alignment::Center)
+                    .align_y(Alignment::Center),
             )
             .padding(if horizontal {
                 [0, self.core.applet.suggested_padding(true)]
