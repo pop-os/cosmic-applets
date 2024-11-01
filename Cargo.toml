@@ -17,6 +17,7 @@ members = [
     "cosmic-applet-workspaces",
     "cosmic-panel-button",
     "cosmic-applet-input-sources",
+    "cosmic-applet-a11y",
 ]
 
 resolver = "2"

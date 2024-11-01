@@ -1,0 +1,18 @@
+[Desktop Entry]
+Name=Accessibility
+Type=Application
+Exec=cosmic-applet-a11y
+Terminal=false
+Categories=COSMIC;
+Keywords=COSMIC;Iced;
+# Translators: Do NOT translate or transliterate this text (this is an icon file name)!
+Icon=preferences-desktop-accessibility
+StartupNotify=true
+NoDisplay=true
+X-CosmicApplet=true
+# Indicates that the auto-hover click should go to the "end" of the hover popup
+X-CosmicHoverPopup=Center
+X-OverflowPriority=10
+X-CosmicApplet=true
+X-CosmicHoverPopup=Auto
+X-OverflowPriority=10
