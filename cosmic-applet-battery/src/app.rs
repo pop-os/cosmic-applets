@@ -19,12 +19,11 @@ use cosmic::{
     cctk::sctk::reexports::calloop,
     cosmic_theme::Spacing,
     iced::{
-        alignment::Horizontal,
         platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
         widget::{column, container, row, slider},
-        window, Alignment, Length, Subscription,
+        window, Length, Subscription,
     },
-    iced_core::{alignment::Vertical, Background, Border, Color, Shadow},
+    iced_core::{Alignment, Background, Border, Color, Shadow},
     iced_runtime::core::layout::Limits,
     iced_widget::{Column, Row},
     theme,
@@ -578,7 +577,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                             ))
                             .size(16)
                             .width(Length::Fixed(40.0))
-                            .align_x(Horizontal::Right)
+                            .align_x(Alignment::End)
                         ]
                         .spacing(12),
                     )
@@ -606,7 +605,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                             ))
                             .size(16)
                             .width(Length::Fixed(40.0))
-                            .align_x(Horizontal::Right)
+                            .align_x(Alignment::End)
                         ]
                         .spacing(12),
                     )
@@ -628,7 +627,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                         text(fl!("dgpu-running"))
                             .size(16)
                             .width(Length::Fill)
-                            .align_x(Horizontal::Left),
+                            .align_x(Alignment::Start),
                         container(vertical_space().width(Length::Fixed(0.0)))
                             .padding(4)
                             .class(cosmic::style::Container::Custom(Box::new(|theme| {
@@ -671,7 +670,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                             gpu_name = format!("\"{}\"", gpu.name.trim())
                         ))
                         .width(Length::Fill)
-                        .align_y(Vertical::Center),
+                        .align_y(Alignment::Center),
                         container(
                             icon::from_name(if gpu.toggled {
                                 "go-down-symbolic"
@@ -681,10 +680,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                             .size(14)
                             .symbolic(true)
                         )
-                        .align_x(Horizontal::Center)
-                        .align_y(Vertical::Center)
-                        .width(Length::Fixed(24.0))
-                        .height(Length::Fixed(24.0)),
+                        .center(Length::Fixed(24.0)),
                     ]
                     .align_y(Alignment::Center),
                 )

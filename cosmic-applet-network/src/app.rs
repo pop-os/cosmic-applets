@@ -13,11 +13,7 @@ use cosmic::{
         widget::{column, row},
         Alignment, Length, Subscription,
     },
-    iced_runtime::core::{
-        alignment::{Horizontal, Vertical},
-        layout::Limits,
-        window,
-    },
+    iced_runtime::core::{layout::Limits, window},
     iced_widget::Row,
     theme,
     widget::{
@@ -576,7 +572,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                             Column::with_children(ipv4),
                             text::body(fl!("connected"))
                                 .width(Length::Fill)
-                                .align_x(Horizontal::Right),
+                                .align_x(Alignment::End),
                         ]
                         .align_y(Alignment::Center)
                         .spacing(8)
@@ -612,7 +608,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                                 fl!("megabits-per-second")
                             ))
                             .width(Length::Fill)
-                            .align_x(Horizontal::Right),
+                            .align_x(Alignment::End),
                         ]
                         .align_y(Alignment::Center)
                         .spacing(8)
@@ -652,8 +648,8 @@ impl cosmic::Application for CosmicNetworkApplet {
                         }
                         ActiveConnectionState::Activated => btn_content.push(
                             text::body(fl!("connected"))
-                                .align_x(Horizontal::Right)
-                                .align_y(Vertical::Center)
+                                .align_x(Alignment::End)
+                                .align_y(Alignment::Center)
                                 .into(),
                         ),
                         _ => {}
@@ -816,12 +812,9 @@ impl cosmic::Application for CosmicNetworkApplet {
                     text::body(fl!("visible-wireless-networks"))
                         .width(Length::Fill)
                         .height(Length::Fixed(24.0))
-                        .align_y(Vertical::Center),
+                        .align_y(Alignment::Center),
                     container(icon::from_name(dropdown_icon).size(16).symbolic(true))
-                        .align_x(Horizontal::Center)
-                        .align_y(Vertical::Center)
-                        .width(Length::Fixed(24.0))
-                        .height(Length::Fixed(24.0)),
+                        .center(Length::Fixed(24.0))
                 ])
                 .on_press(Message::ToggleVisibleNetworks);
                 content = content.push(available_connections_btn);
@@ -865,7 +858,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                             .spacing(8)
                             .align_x(Alignment::Center),
                         )
-                        .align_x(Horizontal::Center);
+                        .align_x(Alignment::Center);
                         content = content.push(col);
                     }
                     NewConnectionState::Waiting(access_point) => {
@@ -900,7 +893,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                             .align_y(Alignment::Center)
                             .spacing(12),
                         )
-                        .align_x(Horizontal::Center);
+                        .align_x(Alignment::Center);
                         content = content.push(id);
                         let col = padded_control(
                             column![
@@ -918,7 +911,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                             .spacing(16)
                             .align_x(Alignment::Center),
                         )
-                        .align_x(Horizontal::Center);
+                        .align_x(Alignment::Center);
                         content = content.push(col);
                     }
                 }
@@ -938,7 +931,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                             icon::from_name(wifi_icon(ap.strength))
                                 .size(16)
                                 .symbolic(true),
-                            text::body(&ap.ssid).align_y(Vertical::Center)
+                            text::body(&ap.ssid).align_y(Alignment::Center)
                         ]
                         .align_y(Alignment::Center)
                         .spacing(12),

@@ -9,7 +9,6 @@ use cosmic::{
     cosmic_theme::Spacing,
     iced::{
         self,
-        alignment::{Horizontal, Vertical},
         event::{
             listen_with,
             wayland::{self, LayerEvent},
@@ -372,16 +371,10 @@ impl cosmic::Application for Power {
             }
 
             Element::from(
-                mouse_area(
-                    container(dialog)
-                        .align_x(Horizontal::Center)
-                        .align_y(Vertical::Center)
-                        .width(Length::Fill)
-                        .height(Length::Fill),
-                )
-                .on_press(Message::Cancel)
-                .on_right_press(Message::Cancel)
-                .on_middle_press(Message::Cancel),
+                mouse_area(container(dialog).center(Length::Fill))
+                    .on_press(Message::Cancel)
+                    .on_right_press(Message::Cancel)
+                    .on_middle_press(Message::Cancel),
             )
         } else {
             //panic!("no view for window {}", id.0)

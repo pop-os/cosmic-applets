@@ -17,7 +17,6 @@ use cosmic::{
         widget::{column, row, vertical_space},
         window, Alignment, Length, Rectangle, Subscription,
     },
-    iced_core::alignment::{Horizontal, Vertical},
     iced_widget::{horizontal_rule, Column},
     theme,
     widget::{
@@ -613,7 +612,7 @@ impl cosmic::Application for Window {
                 text(self.format(weekday_bag, &day_iter.next().unwrap()))
                     .size(12)
                     .width(Length::Fixed(36.0))
-                    .align_x(Horizontal::Center),
+                    .align_x(Alignment::Center),
             );
 
             first_day_of_week = first_day_of_week.succ();
@@ -669,14 +668,10 @@ fn date_button(day: u32, is_month: bool, is_day: bool) -> Button<'static, Messag
         button::ButtonClass::Text
     };
 
-    let button = button::custom(
-        text::body(format!("{day}"))
-            .align_x(Horizontal::Center)
-            .align_y(Vertical::Center),
-    )
-    .class(style)
-    .height(Length::Fixed(36.0))
-    .width(Length::Fixed(36.0));
+    let button = button::custom(text::body(format!("{day}")).center())
+        .class(style)
+        .height(Length::Fixed(36.0))
+        .width(Length::Fixed(36.0));
 
     if is_month {
         button.on_press(Message::SelectDay(day))

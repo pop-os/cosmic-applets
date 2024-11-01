@@ -23,7 +23,6 @@ use cosmic::{
         widget::{self, column, row, slider},
         window, Alignment, Length, Limits, Subscription,
     },
-    iced_runtime::core::alignment::Horizontal,
     theme,
     widget::{button, divider, horizontal_space, icon, text, Column, Row},
     Element, Renderer, Task, Theme,
@@ -753,7 +752,7 @@ impl cosmic::Application for Audio {
             column![padded_control(
                 text::title3(fl!("disconnected"))
                     .width(Length::Fill)
-                    .align_x(Horizontal::Center)
+                    .align_x(Alignment::Center)
             )]
         } else {
             column![
@@ -773,7 +772,7 @@ impl cosmic::Application for Audio {
                         text(&self.output_volume_text)
                             .size(16)
                             .width(Length::FillPortion(1))
-                            .align_x(Horizontal::Right)
+                            .align_x(Alignment::End)
                     ]
                     .spacing(12)
                     .align_y(Alignment::Center)
@@ -794,7 +793,7 @@ impl cosmic::Application for Audio {
                         text(&self.input_volume_text)
                             .size(16)
                             .width(Length::FillPortion(1))
-                            .align_x(Horizontal::Right)
+                            .align_x(Alignment::End)
                     ]
                     .spacing(12)
                     .align_y(Alignment::Center)
@@ -848,8 +847,8 @@ impl cosmic::Application for Audio {
             }
 
             let title = if let Some(title) = s.title.as_ref() {
-                if title.chars().count() > 15 {
-                    let mut title_trunc = title.chars().take(15).collect::<String>();
+                if title.chars().count() > 22 {
+                    let mut title_trunc = title.chars().take(20).collect::<String>();
                     title_trunc.push_str("...");
                     title_trunc
                 } else {
@@ -861,8 +860,8 @@ impl cosmic::Application for Audio {
 
             let artists = if let Some(artists) = s.artists.as_ref() {
                 let artists = artists.join(", ");
-                if artists.chars().count() > 15 {
-                    let mut artists_trunc = artists.chars().take(15).collect::<String>();
+                if artists.chars().count() > 27 {
+                    let mut artists_trunc = artists.chars().take(25).collect::<String>();
                     artists_trunc.push_str("...");
                     artists_trunc
                 } else {

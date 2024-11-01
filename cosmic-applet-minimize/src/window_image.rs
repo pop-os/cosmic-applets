@@ -63,10 +63,7 @@ where
                     .height(Length::Shrink)
                     .width(Length::Shrink),
                 )
-                .align_x(cosmic::iced_core::alignment::Horizontal::Center)
-                .align_y(cosmic::iced_core::alignment::Vertical::Center)
-                .height(Length::Fixed(size + padding as f32 * 2.0))
-                .width(Length::Fixed(size + padding as f32 * 2.0))
+                .center(Length::Fixed(size + padding as f32 * 2.0))
                 .padding(padding),
             )
             .on_press(on_press)

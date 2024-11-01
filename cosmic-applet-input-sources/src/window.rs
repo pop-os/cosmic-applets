@@ -5,7 +5,7 @@ use crate::config::{Config, CONFIG_VERSION};
 #[allow(unused_imports)]
 use crate::fl;
 #[allow(unused_imports)]
-use cosmic::iced::{alignment, Alignment, Length};
+use cosmic::iced::{Alignment, Length};
 use cosmic::{
     app::Core,
     applet::{self},
