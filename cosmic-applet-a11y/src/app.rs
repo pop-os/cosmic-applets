@@ -7,27 +7,21 @@ use crate::{
 };
 use cosmic::{
     applet::{
-        menu_button, padded_control,
+        padded_control,
         token::subscription::{activation_token_subscription, TokenRequest, TokenUpdate},
     },
     cctk::sctk::reexports::calloop,
     cosmic_theme::Spacing,
     iced::{
-        alignment::Horizontal,
         platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
-        widget::{column, container, row, slider},
-        window, Alignment, Length, Subscription,
+        window, Length, Subscription,
     },
-    iced_core::{alignment::Vertical, Background, Border, Color, Shadow},
     iced_runtime::core::layout::Limits,
-    iced_widget::{Column, Row},
     theme,
-    widget::{divider, horizontal_space, icon, scrollable, text, vertical_space},
+    widget::{container, text},
     Element, Task,
 };
 use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
-
-use std::{collections::HashMap, path::PathBuf, time::Duration};
 use tokio::sync::mpsc::UnboundedSender;
 
 static ENABLED: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
