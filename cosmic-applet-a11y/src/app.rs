@@ -210,7 +210,7 @@ impl cosmic::Application for CosmicA11yApplet {
 
         self.core
             .applet
-            .popup_container(toggle.padding([8, 8]))
+            .popup_container(container(toggle).padding([8, 0]))
             .max_width(372.)
             .max_height(600.)
             .into()
