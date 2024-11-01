@@ -18,6 +18,7 @@ fn main() -> cosmic::iced::Result {
 
     match cmd {
         "cosmic-app-list" => cosmic_app_list::run(),
+        "cosmic-applet-a11y" => cosmic_applet_a11y::run(),
         "cosmic-applet-audio" => cosmic_applet_audio::run(),
         "cosmic-applet-battery" => cosmic_applet_battery::run(),
         "cosmic-applet-bluetooth" => cosmic_applet_bluetooth::run(),
