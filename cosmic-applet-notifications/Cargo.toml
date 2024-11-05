@@ -9,10 +9,11 @@ anyhow.workspace = true
 cosmic-time.workspace = true
 libcosmic.workspace = true
 tokio.workspace = true
-cosmic-notifications-util = { git = "https://github.com/pop-os/cosmic-notifications" }
-cosmic-notifications-config = { git = "https://github.com/pop-os/cosmic-notifications" }
+cosmic-notifications-util = { git = "https://github.com/pop-os/cosmic-notifications", branch = "zbus5" }
+cosmic-notifications-config = { git = "https://github.com/pop-os/cosmic-notifications", branch = "zbus5" }
 # cosmic-notifications-util = { path = "../../cosmic-notifications-daemon/cosmic-notifications-util" }
 # cosmic-notifications-config = { path = "../../cosmic-notifications-daemon/cosmic-notifications-config" }
+futures-util = { version = "0.3", feature = ["sink", "stream"] }
 tracing = "0.1"
 ron = "0.8"
 sendfd = { version = "0.4", features = ["tokio"] }

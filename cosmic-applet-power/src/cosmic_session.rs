@@ -8,6 +8,6 @@ use zbus::proxy;
     default_service = "com.system76.CosmicSession",
     default_path = "/com/system76/CosmicSession"
 )]
-trait CosmicSession {
+pub trait CosmicSession {
     fn exit(&self) -> zbus::Result<()>;
 }
