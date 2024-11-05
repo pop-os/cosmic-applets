@@ -135,7 +135,8 @@ struct State {
     players: Vec<MprisPlayer>,
     active_player: Option<MprisPlayer>,
     active_player_metadata_stream: Option<Box<dyn futures::Stream<Item = ()> + Unpin + Send>>,
-    any_player_state_stream: futures::stream::SelectAll<zbus::PropertyStream<'static, String>>,
+    any_player_state_stream:
+        futures::stream::SelectAll<zbus::proxy::PropertyStream<'static, String>>,
 }
 
 fn filter_firefox_players(players: &mut Vec<MprisPlayer>) {

@@ -8,8 +8,10 @@
 use futures::prelude::*;
 use zbus::{
     fdo::{DBusProxy, RequestNameFlags, RequestNameReply},
+    message::Header,
     names::{BusName, UniqueName, WellKnownName},
-    MessageHeader, Result, SignalContext,
+    object_server::SignalEmitter,
+    Result,
 };
 
 const NAME: WellKnownName =
@@ -26,8 +28,8 @@ impl StatusNotifierWatcher {
     async fn register_status_notifier_item(
         &mut self,
         service: &str,
-        #[zbus(header)] hdr: MessageHeader<'_>,
-        #[zbus(signal_context)] ctxt: SignalContext<'_>,
+        #[zbus(header)] hdr: Header<'_>,
+        #[zbus(signal_emitter)] ctxt: SignalEmitter<'_>,
     ) {
         let sender = hdr.sender().unwrap();
         let service = if service.starts_with('/') {
@@ -62,20 +64,20 @@ impl StatusNotifierWatcher {
     }
 
     #[zbus(signal)]
-    async fn status_notifier_item_registered(ctxt: &SignalContext<'_>, service: &str)
+    async fn status_notifier_item_registered(ctxt: &SignalEmitter<'_>, service: &str)
         -> Result<()>;
 
     #[zbus(signal)]
     async fn status_notifier_item_unregistered(
-        ctxt: &SignalContext<'_>,
+        ctxt: &SignalEmitter<'_>,
         service: &str,
     ) -> Result<()>;
 
     #[zbus(signal)]
-    async fn status_notifier_host_registered(ctxt: &SignalContext<'_>) -> Result<()>;
+    async fn status_notifier_host_registered(ctxt: &SignalEmitter<'_>) -> Result<()>;
 
     #[zbus(signal)]
-    async fn status_notifier_host_unregistered(ctxt: &SignalContext<'_>) -> Result<()>;
+    async fn status_notifier_host_unregistered(ctxt: &SignalEmitter<'_>) -> Result<()>;
 }
 
 pub async fn create_service(connection: &zbus::Connection) -> zbus::Result<()> {
@@ -122,7 +124,7 @@ pub async fn create_service(connection: &zbus::Connection) -> zbus::Result<()> {
                     .iter()
                     .position(|(unique_name, _)| unique_name == name)
                 {
-                    let ctxt = zbus::SignalContext::new(&connection, OBJECT_PATH).unwrap();
+                    let ctxt = SignalEmitter::new(&connection, OBJECT_PATH).unwrap();
                     let service = interface.items.remove(idx).1;
                     StatusNotifierWatcher::status_notifier_item_unregistered(&ctxt, &service)
                         .await

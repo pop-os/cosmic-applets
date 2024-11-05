@@ -9,6 +9,7 @@ use cosmic::{
     iced_futures::Subscription,
 };
 use cosmic_notifications_util::Notification;
+use futures_util::{SinkExt, StreamExt};
 use std::{
     collections::HashMap,
     future::pending,
@@ -17,11 +18,7 @@ use std::{
 };
 use tokio::sync::mpsc;
 use tracing::{error, trace};
-use zbus::{
-    connection::Builder,
-    export::futures_util::{SinkExt, StreamExt},
-    proxy,
-};
+use zbus::{connection::Builder, proxy};
 
 #[derive(Debug)]
 pub enum State {
@@ -130,7 +127,7 @@ pub fn notifications(proxy: NotificationsAppletProxy<'static>) -> Subscription<O
     interface = "com.system76.NotificationsApplet",
     default_path = "/com/system76/NotificationsApplet"
 )]
-trait NotificationsApplet {
+pub trait NotificationsApplet {
     #[zbus(signal)]
     fn notify(
         &self,
