@@ -25,7 +25,7 @@ use zbus::proxy;
     default_path = "/com/system76/PowerDaemon",
     assume_defaults = true
 )]
-trait PowerDaemon {
+pub trait PowerDaemon {
     /// Balanced method
     fn balanced(&self) -> zbus::Result<()>;
 
