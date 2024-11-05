@@ -371,18 +371,13 @@ impl cosmic::Application for Power {
                 );
             }
 
-            Element::from(
-                mouse_area(
-                    container(dialog)
-                        .align_x(Horizontal::Center)
-                        .align_y(Vertical::Center)
-                        .width(Length::Fill)
-                        .height(Length::Fill),
-                )
-                .on_press(Message::Cancel)
-                .on_right_press(Message::Cancel)
-                .on_middle_press(Message::Cancel),
-            )
+            Element::from(mouse_area(
+                container(dialog)
+                    .align_x(Horizontal::Center)
+                    .align_y(Vertical::Center)
+                    .width(Length::Fill)
+                    .height(Length::Fill),
+            ))
         } else {
             //panic!("no view for window {}", id.0)
             widget::text("").into()
