@@ -17,7 +17,7 @@ use zbus::proxy;
     default_path = "/org/freedesktop/UPower/PowerProfiles",
     assume_defaults = true
 )]
-trait PowerProfiles {
+pub trait PowerProfiles {
     /// HoldProfile method
     fn hold_profile(&self, profile: &str, reason: &str, application_id: &str) -> zbus::Result<u32>;
 
