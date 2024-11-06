@@ -11,8 +11,5 @@ StartupNotify=true
 NoDisplay=true
 X-CosmicApplet=true
 # Indicates that the auto-hover click should go to the "end" of the hover popup
-X-CosmicHoverPopup=Center
-X-OverflowPriority=10
-X-CosmicApplet=true
 X-CosmicHoverPopup=Auto
 X-OverflowPriority=10
