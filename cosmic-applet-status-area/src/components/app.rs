@@ -59,7 +59,7 @@ impl App {
 
 impl cosmic::Application for App {
     type Message = Msg;
-    type Executor = iced::executor::Default;
+    type Executor = cosmic::SingleThreadExecutor;
     type Flags = ();
     const APP_ID: &'static str = "com.system76.CosmicAppletStatusArea";
 
