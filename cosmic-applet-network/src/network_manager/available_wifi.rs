@@ -7,7 +7,10 @@ use itertools::Itertools;
 use std::collections::HashMap;
 use zbus::zvariant::ObjectPath;
 
-pub async fn handle_wireless_device(device: WirelessDevice<'_>) -> zbus::Result<Vec<AccessPoint>> {
+pub async fn handle_wireless_device(
+    device: WirelessDevice<'_>,
+    hw_address: Option<String>,
+) -> zbus::Result<Vec<AccessPoint>> {
     device.request_scan(HashMap::new()).await?;
     let mut scan_changed = device.receive_last_scan_changed().await;
     if let Some(t) = scan_changed.next().await {
@@ -42,6 +45,7 @@ pub async fn handle_wireless_device(device: WirelessDevice<'_>) -> zbus::Result<
                 state,
                 working: false,
                 path: ap.inner().path().to_owned(),
+                hw_address: hw_address.as_ref().unwrap_or(&"".to_string()).clone(),
             },
         );
     }
@@ -59,4 +63,5 @@ pub struct AccessPoint {
     pub state: DeviceState,
     pub working: bool,
     pub path: ObjectPath<'static>,
+    pub hw_address: String,
 }
