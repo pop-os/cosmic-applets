@@ -353,7 +353,7 @@ impl NetworkManagerState {
                 if let Ok(Some(SpecificDevice::Wireless(wireless_device))) =
                     device.downcast_to_device().await
                 {
-                    handle_wireless_device(wireless_device)
+                    handle_wireless_device(wireless_device, device.hw_address().await.ok())
                         .await
                         .unwrap_or_default()
                 } else {
