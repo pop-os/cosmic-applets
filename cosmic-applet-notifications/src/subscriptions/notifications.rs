@@ -84,7 +84,7 @@ pub fn notifications(proxy: NotificationsAppletProxy<'static>) -> Subscription<N
     interface = "com.system76.NotificationsApplet",
     default_path = "/com/system76/NotificationsApplet"
 )]
-trait NotificationsApplet {
+pub trait NotificationsApplet {
     #[zbus(signal)]
     fn notify(
         &self,

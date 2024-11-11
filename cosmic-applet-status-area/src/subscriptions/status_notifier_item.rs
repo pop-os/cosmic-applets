@@ -6,6 +6,7 @@ use cosmic::{
     widget::icon,
 };
 use futures::{FutureExt, StreamExt};
+use std::collections::HashMap;
 use zbus::zvariant::{self, OwnedValue};
 
 #[derive(Clone, Debug)]
@@ -110,7 +111,7 @@ async fn get_layout(menu_proxy: DBusMenuProxy<'static>) -> Result<Layout, String
 }
 
 #[zbus::proxy(interface = "org.kde.StatusNotifierItem")]
-trait StatusNotifierItem {
+pub trait StatusNotifierItem {
     #[zbus(property)]
     fn icon_name(&self) -> zbus::Result<String>;
 
@@ -128,15 +129,14 @@ pub struct Layout(i32, LayoutProps, Vec<Layout>);
 impl<'a> serde::Deserialize<'a> for Layout {
     fn deserialize<D: serde::Deserializer<'a>>(deserializer: D) -> Result<Self, D::Error> {
         let (id, props, children) =
-            <(i32, LayoutProps, Vec<(zvariant::Signature<'_>, Self)>)>::deserialize(deserializer)?;
+            <(i32, LayoutProps, Vec<(zvariant::Signature, Self)>)>::deserialize(deserializer)?;
         Ok(Self(id, props, children.into_iter().map(|x| x.1).collect()))
     }
 }
 
 impl zvariant::Type for Layout {
-    fn signature() -> zvariant::Signature<'static> {
-        zvariant::Signature::try_from("(ia{sv}av)").unwrap()
-    }
+    const SIGNATURE: &'static zvariant::Signature =
+        <(i32, HashMap<String, zvariant::Value>, Vec<zvariant::Value>)>::SIGNATURE;
 }
 
 #[derive(Clone, Debug, zvariant::DeserializeDict)]
@@ -166,9 +166,7 @@ pub struct LayoutProps {
 }
 
 impl zvariant::Type for LayoutProps {
-    fn signature() -> zvariant::Signature<'static> {
-        zvariant::Signature::try_from("a{sv}").unwrap()
-    }
+    const SIGNATURE: &'static zvariant::Signature = <HashMap<String, zvariant::Value>>::SIGNATURE;
 }
 
 #[allow(dead_code)]
@@ -227,7 +225,7 @@ impl Layout {
 }
 
 #[zbus::proxy(interface = "com.canonical.dbusmenu")]
-trait DBusMenu {
+pub trait DBusMenu {
     fn get_layout(
         &self,
         parent_id: i32,

@@ -7,7 +7,7 @@ license = "GPL-3.0-or-later"
 [dependencies]
 
 anyhow.workspace = true
-cosmic-dbus-networkmanager = { git = "https://github.com/pop-os/dbus-settings-bindings" }
+cosmic-dbus-networkmanager = { git = "https://github.com/pop-os/dbus-settings-bindings", branch = "zbus5" }
 cosmic-time.workspace = true
 futures.workspace = true
 futures-util.workspace = true

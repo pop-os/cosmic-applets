@@ -22,4 +22,4 @@ icu = { version = "1.4.0", features = [
     "icu_datetime_experimental",
 ] }
 zbus.workspace = true
-timedate-zbus = { git = "https://github.com/pop-os/dbus-settings-bindings" }
+timedate-zbus = { git = "https://github.com/pop-os/dbus-settings-bindings", branch = "zbus5" }

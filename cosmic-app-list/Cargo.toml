@@ -21,7 +21,7 @@ rand = "0.8.5"
 rust-embed.workspace = true
 rustix.workspace = true
 serde = { version = "1.0", features = ["derive"] }
-switcheroo-control = { git = "https://github.com/pop-os/dbus-settings-bindings" }
+switcheroo-control = { git = "https://github.com/pop-os/dbus-settings-bindings", branch = "zbus5" }
 tokio = { version = "1.36.0", features = [
     "sync",
     "rt",
