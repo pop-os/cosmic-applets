@@ -9,6 +9,7 @@ use crate::subscriptions::status_notifier_item::{IconNameOrPixmap, Layout, Statu
 pub enum Msg {
     Icon(Option<IconNameOrPixmap>),
     Layout(Result<Layout, String>),
+    Tooltip(String),
     Click(i32, bool),
 }
 
@@ -16,6 +17,7 @@ pub enum Msg {
 pub struct State {
     item: StatusNotifierItem,
     layout: Option<Layout>,
+    tooltip: String,
     icon: Option<IconNameOrPixmap>,
     expanded: Option<i32>,
 }
@@ -28,6 +30,7 @@ impl State {
                 layout: None,
                 expanded: None,
                 icon: None,
+                tooltip: Default::default(),
             },
             iced::Task::none(),
         )
@@ -37,7 +40,11 @@ impl State {
         match message {
             Msg::Icon(icon) => {
                 self.icon = icon;
-                iced::Command::none()
+                iced::Task::none()
+            }
+            Msg::Tooltip(tooltip) => {
+                self.tooltip = tooltip;
+                iced::Task::none()
             }
             Msg::Layout(layout) => {
                 match layout {
@@ -72,9 +79,14 @@ impl State {
     }
 
     pub fn icon_handle(&self) -> icon::Handle {
-        self.icon.as_ref()
+        self.icon
+            .as_ref()
             .map(|i| i.clone().into())
             .unwrap_or_else(|| icon::from_raster_bytes(&[]))
+    }
+
+    pub fn tooltip(&self) -> &str {
+        &self.tooltip
     }
 
     pub fn popup_view(&self) -> cosmic::Element<Msg> {
@@ -88,6 +100,7 @@ impl State {
     pub fn subscription(&self) -> iced::Subscription<Msg> {
         let subs = vec![
             self.item.icon_subscription().map(Msg::Icon),
+            self.item.tooltip_subscription().map(Msg::Tooltip),
             self.item.layout_subscription().map(Msg::Layout),
         ];
 
