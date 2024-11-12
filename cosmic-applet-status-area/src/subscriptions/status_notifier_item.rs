@@ -13,7 +13,7 @@ pub struct StatusNotifierItem {
     name: String,
     // icon_name: String,
     // icon_pixmap: Option<icon::Handle>,
-    _item_proxy: StatusNotifierItemProxy<'static>,
+    item_proxy: StatusNotifierItemProxy<'static>,
     menu_proxy: DBusMenuProxy<'static>,
 }
 
@@ -55,7 +55,6 @@ impl StatusNotifierItem {
         };
 
         let item_proxy = StatusNotifierItemProxy::builder(connection)
-            .cache_properties(zbus::proxy::CacheProperties::Yes)
             .destination(dest.to_string())?
             .path(path.to_string())?
             .build()
@@ -70,7 +69,7 @@ impl StatusNotifierItem {
 
         Ok(Self {
             name,
-            _item_proxy: item_proxy,
+            item_proxy,
             menu_proxy,
         })
     }
@@ -80,9 +79,9 @@ impl StatusNotifierItem {
     }
 
     pub fn icon_subscription(&self) -> iced::Subscription<Option<IconNameOrPixmap>> {
-        let item_proxy = self._item_proxy.clone();
-        iced::subscription::run_with_id(
-            format!("status-notifier-newicon-{}", &self.name),
+        let item_proxy = self.item_proxy.clone();
+        Subscription::run_with_id(
+            format!("status-notifier-icon-{}", &self.name),
             async move {
                 let initial = futures::stream::once(get_icon(item_proxy.clone()));
                 let updates = item_proxy
@@ -93,6 +92,20 @@ impl StatusNotifierItem {
                 initial.chain(updates)
             }
             .flatten_stream(),
+        )
+    }
+
+    pub fn tooltip_subscription(&self) -> iced::Subscription<String> {
+        let item_proxy = self.item_proxy.clone();
+        Subscription::run_with_id(
+            format!("status-notifier-tooltip-{}", &self.name),
+            async move {
+                let initial = futures::stream::once(get_tooltip(item_proxy.clone()));
+                let update_stream = item_proxy.receive_new_tooltip().await.unwrap();
+                let updates = update_stream.then(move |_| get_tooltip(item_proxy.clone()));
+                initial.chain(updates)
+            }
+            .flatten_stream()
         )
     }
 
@@ -123,18 +136,22 @@ async fn get_layout(menu_proxy: DBusMenuProxy<'static>) -> Result<Layout, String
     }
 }
 
-async fn get_icon(item_proxy: StatusNotifierItemProxy<'static>) -> Option<IconNameOrPixmap> {
-    if let Ok(pixmaps) = item_proxy.icon_pixmap().await {
-        // TODO Handle icon with multiple sizes?
-        return Some(IconNameOrPixmap::Pixmap(
-            pixmaps.into_iter().max_by_key(|i| (i.width, i.height))?,
-        ));
-    }
+async fn get_tooltip(item_proxy: StatusNotifierItemProxy<'static>) -> String {
+    item_proxy.tooltip().await.unwrap_or_default()
+}
 
+async fn get_icon(item_proxy: StatusNotifierItemProxy<'static>) -> Option<IconNameOrPixmap> {
     if let Ok(icon_name) = item_proxy.icon_name().await {
         if icon_name != "" {
             return Some(IconNameOrPixmap::Name(icon_name));
         }
+    }
+
+    if let Ok(pixmaps) = item_proxy.icon_pixmap().await {
+        // TODO Handle icon with multiple sizes
+        return Some(IconNameOrPixmap::Pixmap(
+            pixmaps.into_iter().max_by_key(|i| (i.width, i.height))?,
+        ));
     }
 
     None
@@ -150,10 +167,22 @@ trait StatusNotifierItem {
     fn icon_pixmap(&self) -> zbus::Result<Vec<Icon>>;
 
     #[zbus(property)]
+    fn title(&self) -> zbus::Result<String>;
+
+    #[zbus(property)]
+    fn tooltip(&self) -> zbus::Result<String>;
+
+    #[zbus(property)]
     fn menu(&self) -> zbus::Result<zvariant::OwnedObjectPath>;
 
     #[zbus(signal)]
+    fn new_title(&self) -> zbus::Result<()>;
+
+    #[zbus(signal)]
     fn new_icon(&self) -> zbus::Result<()>;
+
+    #[zbus(signal)]
+    fn new_tooltip(&self) -> zbus::Result<()>;
 }
 
 #[derive(Clone, Debug)]
