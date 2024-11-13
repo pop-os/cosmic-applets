@@ -431,6 +431,7 @@ impl cosmic::Application for Window {
             Message::TimezoneUpdate(timezone) => {
                 if let Ok(timezone) = timezone.parse::<chrono_tz::Tz>() {
                     self.now = chrono::Local::now().with_timezone(&timezone).fixed_offset();
+                    self.date_selected = chrono::NaiveDate::from(self.now.naive_local());
                     self.timezone = Some(timezone);
                 }
 
