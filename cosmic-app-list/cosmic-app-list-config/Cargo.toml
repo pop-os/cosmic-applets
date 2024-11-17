@@ -6,6 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-libcosmic.workspace = true
-libcosmic.features = []
+# libcosmic.workspace = true
+# libcosmic.features = []
+libcosmic = { git = "https://github.com/jpttrssn/libcosmic", branch = "launch-app-in-term", default-features = false, features = [] }
 serde = { version = "1.0", features = ["derive"] }
