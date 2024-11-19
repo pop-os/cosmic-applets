@@ -326,7 +326,8 @@ impl cosmic::Application for Power {
                 HashMap::from_iter(vec![("action", action)])
             );
             let countdown = &countdown.to_string();
-            let mut dialog = cosmic::widget::dialog(title)
+            let mut dialog = cosmic::widget::dialog()
+                .title(title)
                 .body(fl!(
                     "confirm-body",
                     HashMap::from_iter(vec![("action", action), ("countdown", countdown)])
