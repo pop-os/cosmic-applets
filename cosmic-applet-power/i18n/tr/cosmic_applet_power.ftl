@@ -13,7 +13,7 @@ confirm-button = {
     $action -> 
         [restart] { restart }
         [suspend] { suspend }
-        [shutdown] { shutdown }
+        [shutdown] Kapat
         [log-out] { log-out }
         *[other] { confirm}
 }
