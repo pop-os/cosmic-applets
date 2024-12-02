@@ -376,7 +376,7 @@ impl cosmic::Application for Audio {
 
                 self.output_volume_debounce = true;
 
-                return cosmic::command::future(async move {
+                return cosmic::task::future(async move {
                     tokio::time::sleep(Duration::from_millis(64)).await;
                     Message::ApplyOutputVolume
                 });
@@ -395,7 +395,7 @@ impl cosmic::Application for Audio {
 
                 self.input_volume_debounce = true;
 
-                return cosmic::command::future(async move {
+                return cosmic::task::future(async move {
                     tokio::time::sleep(Duration::from_millis(64)).await;
                     Message::ApplyInputVolume
                 });
