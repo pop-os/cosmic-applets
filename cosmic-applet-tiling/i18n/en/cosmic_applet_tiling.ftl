@@ -1,5 +1,5 @@
 tile-windows = Automatically tile windows
-tile-current = Automatically tile current workspace
+tile-current = Tile current workspace
 shortcuts = Shortcuts
 navigate-windows = Navigate windows
 move-window = Move window
