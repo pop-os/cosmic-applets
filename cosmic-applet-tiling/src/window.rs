@@ -77,10 +77,6 @@ impl cosmic::Application for Window {
     }
 
     fn init(core: Core, _flags: Self::Flags) -> (Self, Task<cosmic::app::Message<Self::Message>>) {
-        let mut gaps = spin_button::Model::default().max(99).min(0).step(1);
-        gaps.value = core.system_theme().cosmic().gaps.1 as i32;
-        let mut active_hint = spin_button::Model::default().max(99).min(0).step(1);
-        active_hint.value = core.system_theme().cosmic().active_hint as i32;
         let config_helper =
             Config::new("com.system76.CosmicComp", CosmicCompConfig::VERSION).unwrap();
         let mut config = CosmicCompConfig::get_entry(&config_helper).unwrap_or_else(|(errs, c)| {
