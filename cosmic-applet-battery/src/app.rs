@@ -95,6 +95,8 @@ struct CosmicBatteryApplet {
     timeline: Timeline,
     token_tx: Option<calloop::channel::Sender<TokenRequest>>,
     zbus_connection: Option<zbus::Connection>,
+    dragging_screen_brightness: bool,
+    dragging_kbd_brightness: bool,
 }
 
 impl CosmicBatteryApplet {
@@ -165,7 +167,11 @@ enum Message {
     TogglePopup,
     CloseRequested(window::Id),
     SetKbdBrightness(i32),
+    ReleaseKbdBrightness,
     SetScreenBrightness(i32),
+    SetKbdBrightnessDebounced,
+    SetScreenBrightnessDebounced,
+    ReleaseScreenBrightness,
     InitChargingLimit(bool),
     SetChargingLimit(chain::Toggler, bool),
     KeyboardBacklight(KeyboardBacklightUpdate),
@@ -232,15 +238,65 @@ impl cosmic::Application for CosmicBatteryApplet {
             Message::Frame(now) => self.timeline.now(now),
             Message::SetKbdBrightness(brightness) => {
                 self.kbd_brightness = Some(brightness);
-                if let Some(tx) = &self.kbd_sender {
-                    let _ = tx.send(KeyboardBacklightRequest::Set(brightness));
+
+                if !self.dragging_kbd_brightness {
+                    self.dragging_kbd_brightness = true;
+                    return cosmic::task::message(Message::SetKbdBrightnessDebounced);
                 }
             }
             Message::SetScreenBrightness(brightness) => {
                 self.screen_brightness = Some(brightness);
+                if !self.dragging_screen_brightness {
+                    self.dragging_screen_brightness = true;
+                    self.update_display();
+                    return cosmic::task::message(Message::SetScreenBrightnessDebounced);
+                }
+            }
+            Message::SetKbdBrightnessDebounced => {
+                if !self.dragging_kbd_brightness {
+                    return Task::none();
+                }
+                if let Some(tx) = &self.kbd_sender {
+                    if let Some(b) = self.kbd_brightness {
+                        let _ = tx.send(KeyboardBacklightRequest::Set(b));
+                    }
+                }
+                return cosmic::iced::Task::perform(
+                    tokio::time::sleep(Duration::from_millis(200)),
+                    |_| cosmic::app::Message::App(Message::SetKbdBrightnessDebounced),
+                );
+            }
+            Message::SetScreenBrightnessDebounced => {
+                if !self.dragging_screen_brightness {
+                    return Task::none();
+                }
+
+                if let Some(tx) = &self.settings_daemon_sender {
+                    if let Some(b) = self.screen_brightness {
+                        let _ = tx.send(settings_daemon::Request::SetDisplayBrightness(b));
+                    }
+                }
+                return cosmic::iced::Task::perform(
+                    tokio::time::sleep(Duration::from_millis(200)),
+                    |_| cosmic::app::Message::App(Message::SetScreenBrightnessDebounced),
+                );
+            }
+            Message::ReleaseKbdBrightness => {
+                self.dragging_kbd_brightness = false;
+                if let Some(tx) = &self.kbd_sender {
+                    if let Some(b) = self.kbd_brightness {
+                        let _ = tx.send(KeyboardBacklightRequest::Set(b));
+                    }
+                }
+            }
+            Message::ReleaseScreenBrightness => {
+                self.dragging_screen_brightness = false;
+
                 self.update_display();
                 if let Some(tx) = &self.settings_daemon_sender {
-                    let _ = tx.send(settings_daemon::Request::SetDisplayBrightness(brightness));
+                    if let Some(b) = self.screen_brightness {
+                        let _ = tx.send(settings_daemon::Request::SetDisplayBrightness(b));
+                    }
                 }
             }
             Message::InitChargingLimit(enable) => {
@@ -260,6 +316,9 @@ impl cosmic::Application for CosmicBatteryApplet {
                 tracing::error!("{}", why);
             }
             Message::TogglePopup => {
+                self.dragging_kbd_brightness = false;
+                self.dragging_screen_brightness = false;
+
                 if let Some(p) = self.popup.take() {
                     return destroy_popup(p);
                 } else {
@@ -310,7 +369,9 @@ impl cosmic::Application for CosmicBatteryApplet {
                     self.max_kbd_brightness = Some(max_brightness);
                 }
                 KeyboardBacklightUpdate::Brightness(brightness) => {
-                    self.kbd_brightness = Some(brightness);
+                    if !self.dragging_kbd_brightness {
+                        self.kbd_brightness = Some(brightness);
+                    }
                 }
             },
             Message::InitProfile(tx, profile) => {
@@ -329,6 +390,8 @@ impl cosmic::Application for CosmicBatteryApplet {
                 }
             }
             Message::CloseRequested(id) => {
+                self.dragging_kbd_brightness = false;
+                self.dragging_screen_brightness = false;
                 if Some(id) == self.popup {
                     self.popup = None;
                 }
@@ -398,7 +461,9 @@ impl cosmic::Application for CosmicBatteryApplet {
                     self.max_screen_brightness = Some(max_brightness);
                 }
                 settings_daemon::Event::DisplayBrightness(brightness) => {
-                    self.screen_brightness = Some(brightness);
+                    if !self.dragging_screen_brightness {
+                        self.screen_brightness = Some(brightness);
+                    }
                 }
             },
         }
@@ -570,7 +635,8 @@ impl cosmic::Application for CosmicBatteryApplet {
                                 1..=max_screen_brightness,
                                 screen_brightness,
                                 Message::SetScreenBrightness
-                            ),
+                            )
+                            .on_release(Message::ReleaseScreenBrightness),
                             text(format!(
                                 "{:.0}%",
                                 self.screen_brightness_percent().unwrap_or(0.) * 100.
@@ -598,7 +664,8 @@ impl cosmic::Application for CosmicBatteryApplet {
                                 0..=max_kbd_brightness,
                                 kbd_brightness,
                                 Message::SetKbdBrightness
-                            ),
+                            )
+                            .on_release(Message::ReleaseKbdBrightness),
                             text(format!(
                                 "{:.0}%",
                                 100. * kbd_brightness as f64 / max_kbd_brightness as f64
