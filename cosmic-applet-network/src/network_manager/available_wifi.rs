@@ -7,6 +7,8 @@ use itertools::Itertools;
 use std::collections::HashMap;
 use zbus::zvariant::ObjectPath;
 
+use super::hw_address::HwAddress;
+
 pub async fn handle_wireless_device(
     device: WirelessDevice<'_>,
     hw_address: Option<String>,
@@ -45,7 +47,10 @@ pub async fn handle_wireless_device(
                 state,
                 working: false,
                 path: ap.inner().path().to_owned(),
-                hw_address: hw_address.as_ref().unwrap_or(&"".to_string()).clone(),
+                hw_address: hw_address
+                    .as_ref()
+                    .and_then(|str_addr| HwAddress::from_str(str_addr))
+                    .unwrap_or_default(),
             },
         );
     }
@@ -63,5 +68,5 @@ pub struct AccessPoint {
     pub state: DeviceState,
     pub working: bool,
     pub path: ObjectPath<'static>,
-    pub hw_address: String,
+    pub hw_address: HwAddress,
 }
