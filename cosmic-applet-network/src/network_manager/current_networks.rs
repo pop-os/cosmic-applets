@@ -6,6 +6,8 @@ use cosmic_dbus_networkmanager::{
 };
 use std::net::Ipv4Addr;
 
+use super::hw_address::HwAddress;
+
 pub async fn active_connections(
     active_connections: Vec<ActiveConnection<'_>>,
 ) -> zbus::Result<Vec<ActiveConnectionInfo>> {
@@ -40,7 +42,8 @@ pub async fn active_connections(
                 Some(SpecificDevice::Wired(wired_device)) => {
                     info.push(ActiveConnectionInfo::Wired {
                         name: connection.id().await?,
-                        hw_address: wired_device.hw_address().await?,
+                        hw_address: HwAddress::from_string(&wired_device.hw_address().await?)
+                            .unwrap_or_default(),
                         speed: wired_device.speed().await?,
                         ip_addresses: addresses.clone(),
                     });
@@ -50,7 +53,10 @@ pub async fn active_connections(
                         info.push(ActiveConnectionInfo::WiFi {
                             name: String::from_utf8_lossy(&access_point.ssid().await?).into_owned(),
                             ip_addresses: addresses.clone(),
-                            hw_address: wireless_device.hw_address().await?,
+                            hw_address: HwAddress::from_string(
+                                &wireless_device.hw_address().await?,
+                            )
+                            .unwrap_or_default(),
                             state,
                             strength: access_point.strength().await.unwrap_or_default(),
                         });
@@ -83,14 +89,14 @@ pub async fn active_connections(
 pub enum ActiveConnectionInfo {
     Wired {
         name: String,
-        hw_address: String,
+        hw_address: HwAddress,
         speed: u32,
         ip_addresses: Vec<Ipv4Addr>,
     },
     WiFi {
         name: String,
         ip_addresses: Vec<Ipv4Addr>,
-        hw_address: String,
+        hw_address: HwAddress,
         state: ActiveConnectionState,
         strength: u8,
     },
@@ -106,6 +112,13 @@ impl ActiveConnectionInfo {
             Self::Wired { name, .. } => name.clone(),
             Self::WiFi { name, .. } => name.clone(),
             Self::Vpn { name, .. } => name.clone(),
+        }
+    }
+    pub fn hw_address(&self) -> HwAddress {
+        match &self {
+            Self::Wired { hw_address, .. } => *hw_address,
+            Self::WiFi { hw_address, .. } => *hw_address,
+            Self::Vpn { .. } => HwAddress::default(),
         }
     }
 }
