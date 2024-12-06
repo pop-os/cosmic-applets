@@ -34,14 +34,11 @@ use zbus::Connection;
 use crate::{
     config, fl,
     network_manager::{
-        active_conns::active_conns_subscription,
-        available_wifi::AccessPoint,
-        current_networks::ActiveConnectionInfo,
-        devices::devices_subscription,
-        hw_address::{self, HwAddress},
-        network_manager_subscription,
-        wireless_enabled::wireless_enabled_subscription,
-        NetworkManagerEvent, NetworkManagerRequest, NetworkManagerState,
+        active_conns::active_conns_subscription, available_wifi::AccessPoint,
+        current_networks::ActiveConnectionInfo, devices::devices_subscription,
+        hw_address::HwAddress, network_manager_subscription,
+        wireless_enabled::wireless_enabled_subscription, NetworkManagerEvent,
+        NetworkManagerRequest, NetworkManagerState,
     },
 };
 
@@ -391,7 +388,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                             access_point, ..
                         }) = self.new_connection.clone()
                         {
-                            if success && ssid == &access_point.ssid  && *hw_address == access_point.hw_address{
+                            if success && ssid == &access_point.ssid && *hw_address == access_point.hw_address {
                                 self.new_connection = None;
                                 self.show_visible_networks = false;
                             }
@@ -429,7 +426,7 @@ impl cosmic::Application for CosmicNetworkApplet {
 
                 let _ = tx.unbounded_send(NetworkManagerRequest::SelectAccessPoint(
                     access_point.ssid.clone(),
-                    access_point.hw_address.clone(),
+                    access_point.hw_address,
                 ));
 
                 self.new_connection = Some(NewConnectionState::EnterPassword {
@@ -505,7 +502,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                 } else {
                     return Task::none();
                 };
-                let _ = tx.unbounded_send(NetworkManagerRequest::Disconnect(ssid));
+                let _ = tx.unbounded_send(NetworkManagerRequest::Disconnect(ssid, hw_address));
             }
             Message::CloseRequested(id) => {
                 self.hw_device_to_show = None;
@@ -539,9 +536,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                     tokio::spawn(cosmic::process::spawn(cmd));
                 }
             },
-            Message::OpenHwDevice(hw_address) => {
-                self.hw_device_to_show = hw_address;
-            }
+            Message::OpenHwDevice(hw_address) => self.hw_device_to_show = hw_address,
             Message::ResetFailedKnownSsid(ssid, hw_address) => {
                 let ap = if let Some(pos) = self
                     .nm_state
@@ -569,7 +564,8 @@ impl cosmic::Application for CosmicNetworkApplet {
                     return Task::none();
                 };
                 if let Some(tx) = self.nm_sender.as_ref() {
-                    let _ = tx.unbounded_send(NetworkManagerRequest::Forget(ssid.clone()));
+                    let _ =
+                        tx.unbounded_send(NetworkManagerRequest::Forget(ssid.clone(), hw_address));
                     self.show_visible_networks = true;
                     return self.update(Message::SelectWirelessAccessPoint(ap));
                 }
@@ -731,7 +727,7 @@ impl cosmic::Application for CosmicNetworkApplet {
             };
         }
 
-        let mut content = if let Some(hw_device_to_show) = self.hw_device_to_show.as_ref() {
+        let mut content = if let Some(hw_device_to_show) = self.hw_device_to_show {
             column![
                 vpn_ethernet_col,
                 menu_button(row![
@@ -819,18 +815,31 @@ impl cosmic::Application for CosmicNetworkApplet {
             for hw_device in wireless_hw_devices {
                 let display_name = hw_device.to_string();
 
-                let btn_content = vec![
-                    column![
-                        text::body(display_name),
-                        Column::with_children(vec![text("Adapter").size(10).into()])
-                    ]
-                    .width(Length::Fill)
-                    .into(),
+                let is_connected = self
+                    .nm_state
+                    .active_conns
+                    .iter()
+                    .any(|conn| conn.hw_address() == hw_device);
+                let mut btn_content = vec![column![
+                    text::body(display_name),
+                    Column::with_children(vec![text("Adapter").size(10).into()])
+                ]
+                .width(Length::Fill)
+                .into()];
+                if is_connected {
+                    btn_content.push(
+                        text::body(fl!("connected"))
+                            .width(Length::Fill)
+                            .align_x(Alignment::End)
+                            .into(),
+                    );
+                }
+                btn_content.push(
                     icon::from_name("go-next-symbolic")
                         .size(16)
                         .symbolic(true)
                         .into(),
-                ];
+                );
                 content = content.push(Element::from(
                     column![menu_button(
                         Row::with_children(btn_content)
@@ -846,8 +855,8 @@ impl cosmic::Application for CosmicNetworkApplet {
         }
 
         for known in &self.nm_state.known_access_points {
-            if let Some(filter_hw_address) = self.hw_device_to_show.as_ref() {
-                if filter_hw_address != &known.hw_address {
+            if let Some(filter_hw_address) = self.hw_device_to_show {
+                if filter_hw_address != known.hw_address {
                     continue;
                 }
             }
@@ -909,7 +918,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                 | DeviceState::Disconnected
                 | DeviceState::NeedAuth => btn.on_press(Message::ActivateKnownWifi(
                     known.ssid.clone(),
-                    known.hw_address.clone(),
+                    known.hw_address,
                 )),
                 DeviceState::Activated => {
                     btn.on_press(Message::Disconnect(known.ssid.clone(), known.hw_address))
@@ -941,7 +950,7 @@ impl cosmic::Application for CosmicNetworkApplet {
         .on_press(Message::ToggleVisibleNetworks);
         content = content.push(available_connections_btn);
 
-        if self.show_visible_networks {
+        if !self.show_visible_networks {
             return self.view_window_return(content);
         }
 
@@ -1049,14 +1058,6 @@ impl cosmic::Application for CosmicNetworkApplet {
                     .active_conns
                     .iter()
                     .any(|a| ap.ssid == a.name() && ap.hw_address == a.hw_address())
-                {
-                    continue;
-                }
-                if self
-                    .nm_state
-                    .known_access_points
-                    .iter()
-                    .any(|a| ap.ssid == a.ssid && ap.hw_address == a.hw_address)
                 {
                     continue;
                 }
