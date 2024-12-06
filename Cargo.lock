@@ -1461,7 +1461,7 @@ dependencies = [
 [[package]]
 name = "cosmic-notifications-config"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/cosmic-notifications#d4d5f429337004c1721e0072ad1c25509229586f"
+source = "git+https://github.com/pop-os/cosmic-notifications?branch=notification-activation#37a322ef860224119700425e46d892f8145a4b53"
 dependencies = [
  "cosmic-config",
  "serde",
@@ -1470,7 +1470,7 @@ dependencies = [
 [[package]]
 name = "cosmic-notifications-util"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/cosmic-notifications#d4d5f429337004c1721e0072ad1c25509229586f"
+source = "git+https://github.com/pop-os/cosmic-notifications?branch=notification-activation#37a322ef860224119700425e46d892f8145a4b53"
 dependencies = [
  "bytemuck",
  "fast_image_resize",
@@ -1526,7 +1526,7 @@ dependencies = [
 [[package]]
 name = "cosmic-settings-daemon"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/dbus-settings-bindings#62100129240d164e39fff16bda34faad520936de"
+source = "git+https://github.com/pop-os/dbus-settings-bindings#0eee63a96c8b1f6555ca797b5c12545c372b1a1b"
 dependencies = [
  "zbus 4.4.0",
 ]
@@ -1595,7 +1595,7 @@ dependencies = [
 [[package]]
 name = "cosmic-time"
 version = "0.4.0"
-source = "git+https://github.com/pop-os/cosmic-time#b1816cd260e1517d40f39d5fbdee44cd825ebdde"
+source = "git+https://github.com/pop-os/cosmic-time?branch=cards-update#f49fe6f0ce743196bb2a170d553800c0653280b8"
 dependencies = [
  "float-cmp",
  "libcosmic",
