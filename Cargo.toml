@@ -30,14 +30,9 @@ cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols", default
 ], rev = "c8d3a1c" }
 cosmic-settings-subscriptions = { git = "https://github.com/pop-os/cosmic-settings-subscriptions" }
 # cosmic-settings-subscriptions = { path = "../cosmic-settings-subscriptions" }
-
 cosmic-time = { git = "https://github.com/pop-os/cosmic-time", default-features = false, features = [
     "once_cell",
 ] }
-# cosmic-time = { path = "../cosmic-time", default-features = false, features = [
-#     "once_cell",
-# ] }
-
 futures = "0.3"
 futures-util = "0.3"
 i18n-embed = { version = "0.14.1", features = [
@@ -68,7 +63,7 @@ serde = { version = "1.0.152", features = ["derive"] }
 freedesktop-desktop-entry = "0.7.5"
 
 [profile.release]
-lto = "fat"
+opt-level = 1
 
 [workspace.metadata.cargo-machete]
 ignored = ["libcosmic"]
