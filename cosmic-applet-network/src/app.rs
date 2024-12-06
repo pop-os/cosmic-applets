@@ -840,6 +840,9 @@ impl cosmic::Application for CosmicNetworkApplet {
                         .symbolic(true)
                         .into(),
                 );
+                // todo figure our crash here. It happens if both this thing in content as well as
+                // there is no new connection and we are viewing available networks(see insertion
+                // of `list_col` into `content` on L1083)
                 content = content.push(Element::from(
                     column![menu_button(
                         Row::with_children(btn_content)
@@ -1047,7 +1050,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                     content = content.push(col);
                 }
             }
-        } else if self.nm_state.wifi_enabled {
+        } else {
             let mut list_col = Vec::with_capacity(self.nm_state.wireless_access_points.len());
             for ap in &self.nm_state.wireless_access_points {
                 if ap.hw_address != self.hw_device_to_show.unwrap_or(ap.hw_address) {
@@ -1074,6 +1077,9 @@ impl cosmic::Application for CosmicNetworkApplet {
                 .on_press(Message::SelectWirelessAccessPoint(ap.clone()));
                 list_col.push(button.into());
             }
+            // todo fixup crash that happens if both content gets update here and with such
+            // condition `if wireless_hw_devices.len() > 1 && self.hw_device_to_show.is_none()`
+            // See reference to it on L843
             content = content
                 .push(scrollable(Column::with_children(list_col)).height(Length::Fixed(300.0)));
         }
