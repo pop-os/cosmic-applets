@@ -479,15 +479,12 @@ impl NetworkManagerState {
 
         let devices = nm.devices().await?;
         for device in devices {
-            let device_hw_address = device.hw_address().await;
-            if device_hw_address.is_err() {
-                continue;
-            }
-            let device_hw_address = HwAddress::from_string(&device_hw_address.unwrap());
-            if device_hw_address.is_none() {
-                continue;
-            }
-            let device_hw_address = device_hw_address.unwrap();
+            let device_hw_address = device
+                .hw_address()
+                .await
+                .ok()
+                .and_then(|device_address| HwAddress::from_string(&device_address))
+                .unwrap_or_default();
             if device_hw_address != hw_address {
                 continue;
             }
