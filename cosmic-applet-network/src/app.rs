@@ -749,20 +749,27 @@ impl cosmic::Application for CosmicNetworkApplet {
             ]
         } else {
             column![
-                vpn_ethernet_col,
-                padded_control(
-                    anim!(
-                        //toggler
-                        AIRPLANE_MODE,
-                        &self.timeline,
-                        fl!("airplane-mode"),
-                        self.nm_state.airplane_mode,
-                        |_chain, enable| { Message::ToggleAirplaneMode(enable) },
-                    )
-                    .text_size(14)
-                    .width(Length::Fill)
+                // TODO: remove excesive column!
+                Element::from(
+                    column![
+                        vpn_ethernet_col,
+                        padded_control(
+                            anim!(
+                                //toggler
+                                AIRPLANE_MODE,
+                                &self.timeline,
+                                fl!("airplane-mode"),
+                                self.nm_state.airplane_mode,
+                                |_chain, enable| { Message::ToggleAirplaneMode(enable) },
+                            )
+                            .text_size(14)
+                            .width(Length::Fill)
+                        ),
+                        padded_control(divider::horizontal::default())
+                            .padding([space_xxs, space_s]),
+                    ]
+                    .align_x(Alignment::Center)
                 ),
-                padded_control(divider::horizontal::default()).padding([space_xxs, space_s]),
                 padded_control(
                     anim!(
                         //toggler
@@ -840,17 +847,13 @@ impl cosmic::Application for CosmicNetworkApplet {
                         .symbolic(true)
                         .into(),
                 );
-                // todo figure our crash here. It happens if both this thing in content as well as
-                // there is no new connection and we are viewing available networks(see insertion
-                // of `list_col` into `content` on L1083)
                 content = content.push(Element::from(
-                    column![menu_button(
+                    menu_button(
                         Row::with_children(btn_content)
                             .align_y(Alignment::Center)
                             .spacing(8)
                     )
-                    .on_press(Message::OpenHwDevice(Some(hw_device.clone())))]
-                    .align_x(Alignment::Center),
+                    .on_press(Message::OpenHwDevice(Some(hw_device.clone()))),
                 ));
             }
 
@@ -1077,9 +1080,6 @@ impl cosmic::Application for CosmicNetworkApplet {
                 .on_press(Message::SelectWirelessAccessPoint(ap.clone()));
                 list_col.push(button.into());
             }
-            // todo fixup crash that happens if both content gets update here and with such
-            // condition `if wireless_hw_devices.len() > 1 && self.hw_device_to_show.is_none()`
-            // See reference to it on L843
             content = content
                 .push(scrollable(Column::with_children(list_col)).height(Length::Fixed(300.0)));
         }
