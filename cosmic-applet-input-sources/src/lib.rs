@@ -12,7 +12,7 @@ mod window;
 pub fn run() -> cosmic::iced::Result {
     localize::localize();
 
-    let layouts = match xkb_data::keyboard_layouts() {
+    let layouts = match xkb_data::all_keyboard_layouts() {
         Ok(layouts) => layouts,
         Err(why) => {
             tracing::error!("could not get keyboard layouts data: {:?}", why);
