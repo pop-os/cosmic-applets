@@ -14,6 +14,7 @@ use cosmic::{
             wayland::{self, LayerEvent},
             PlatformSpecific,
         },
+        keyboard::{key::Named, Key},
         platform_specific::{
             runtime::wayland::layer_surface::SctkLayerSurfaceSettings,
             shell::commands::{
@@ -30,7 +31,10 @@ use cosmic::{
     iced_runtime::core::layout::Limits,
     iced_widget::mouse_area,
     theme,
-    widget::{button, divider, horizontal_space, icon, text, vertical_space, Column, Space},
+    widget::{
+        autosize::autosize, button, divider, horizontal_space, icon, text, vertical_space, Column,
+        Space,
+    },
     Element, Task,
 };
 
@@ -57,6 +61,7 @@ pub fn run() -> cosmic::iced::Result {
 
 const COUNTDOWN_LENGTH: u8 = 60;
 static CONFIRM_ID: Lazy<iced::id::Id> = Lazy::new(|| iced::id::Id::new("confirm-id"));
+static AUTOSIZE_DIALOG_ID: Lazy<iced::id::Id> = Lazy::new(|| iced::id::Id::new("autosize-id"));
 
 #[derive(Default)]
 struct Power {
@@ -134,11 +139,20 @@ impl cosmic::Application for Power {
         let mut subscriptions = Vec::with_capacity(2);
         subscriptions.push(listen_with(|e, _status, _| match e {
             cosmic::iced::Event::PlatformSpecific(PlatformSpecific::Wayland(
-                wayland::Event::Layer(LayerEvent::Unfocused, ..),
-            )) => Some(Message::Cancel),
-            cosmic::iced::Event::PlatformSpecific(PlatformSpecific::Wayland(
                 wayland::Event::Layer(LayerEvent::Focused, ..),
             )) => Some(Message::LayerFocus),
+            cosmic::iced::Event::PlatformSpecific(PlatformSpecific::Wayland(
+                wayland::Event::Layer(LayerEvent::Unfocused, ..),
+            )) => Some(Message::Cancel),
+            cosmic::iced::Event::Keyboard(iced::keyboard::Event::KeyPressed {
+                key,
+                text: _,
+                modifiers,
+                ..
+            }) => match key {
+                Key::Named(Named::Escape) => Some(Message::Cancel),
+                _ => None,
+            },
             _ => None,
         }));
         if self.action_to_confirm.is_some() {
@@ -188,10 +202,10 @@ impl cosmic::Application for Power {
                     self.action_to_confirm = Some((id, action, COUNTDOWN_LENGTH));
                     get_layer_surface(SctkLayerSurfaceSettings {
                         id,
-                        keyboard_interactivity: KeyboardInteractivity::None,
-                        anchor: Anchor::all(),
+                        keyboard_interactivity: KeyboardInteractivity::Exclusive,
+                        anchor: Anchor::empty(),
                         namespace: "dialog".into(),
-                        size: Some((None, None)),
+                        size: None,
                         size_limits: Limits::NONE.min_width(1.0).min_height(1.0),
                         ..Default::default()
                     })
@@ -370,12 +384,14 @@ impl cosmic::Application for Power {
                     button::text(fl!("restart")).on_press(Message::Action(PowerAction::Restart)),
                 );
             }
-
             Element::from(
-                mouse_area(container(dialog).center(Length::Fill))
-                    .on_press(Message::Cancel)
-                    .on_right_press(Message::Cancel)
-                    .on_middle_press(Message::Cancel),
+                autosize(Element::from(container(dialog)), AUTOSIZE_DIALOG_ID.clone()).limits(
+                    Limits::NONE
+                        .min_width(1.)
+                        .min_height(1.)
+                        .max_width(900.)
+                        .max_height(900.),
+                ),
             )
         } else {
             //panic!("no view for window {}", id.0)
