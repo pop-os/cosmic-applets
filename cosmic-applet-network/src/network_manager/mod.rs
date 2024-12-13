@@ -2,6 +2,7 @@ pub mod active_conns;
 pub mod available_wifi;
 pub mod current_networks;
 pub mod devices;
+pub mod hw_address;
 pub mod wireless_enabled;
 
 use std::{collections::HashMap, fmt::Debug, time::Duration};
@@ -24,6 +25,7 @@ use futures::{
     channel::mpsc::{unbounded, UnboundedReceiver, UnboundedSender},
     SinkExt, StreamExt,
 };
+use hw_address::HwAddress;
 use tokio::process::Command;
 use zbus::{
     zvariant::{self, Value},
@@ -91,14 +93,26 @@ async fn start_listening(
             };
 
             match rx.next().await {
-                Some(NetworkManagerRequest::Disconnect(ssid)) => {
+                Some(NetworkManagerRequest::Disconnect(ssid, hw_address)) => {
                     let mut success = false;
                     for c in network_manager
                         .active_connections()
                         .await
                         .unwrap_or_default()
                     {
-                        if c.id().await.unwrap_or_default() == ssid
+                        if c.id().await.unwrap_or_default() != ssid {
+                            continue;
+                        }
+                        let mut is_there_device = false;
+                        for device in c.devices().await.unwrap_or_default() {
+                            if HwAddress::from_string(device.hw_address().await.as_ref().unwrap())
+                                == Some(hw_address)
+                            {
+                                is_there_device = true;
+                            }
+                        }
+
+                        if is_there_device
                             && network_manager.deactivate_connection(&c).await.is_ok()
                         {
                             success = true;
@@ -124,7 +138,7 @@ async fn start_listening(
                     }
                     _ = output
                         .send(NetworkManagerEvent::RequestResponse {
-                            req: NetworkManagerRequest::Disconnect(ssid.clone()),
+                            req: NetworkManagerRequest::Disconnect(ssid.clone(), hw_address),
                             success,
                             state: NetworkManagerState::new(&conn).await.unwrap_or_default(),
                         })
@@ -172,15 +186,19 @@ async fn start_listening(
                     };
                     _ = output.send(response).await;
                 }
-                Some(NetworkManagerRequest::Password(ssid, password)) => {
+                Some(NetworkManagerRequest::Password(ssid, password, hw_address)) => {
                     let nm_state = NetworkManagerState::new(&conn).await.unwrap_or_default();
                     let success = nm_state
-                        .connect_wifi(&conn, &ssid, Some(&password))
+                        .connect_wifi(&conn, &ssid, Some(&password), hw_address)
                         .await
                         .is_ok();
 
                     let status = Some(NetworkManagerEvent::RequestResponse {
-                        req: NetworkManagerRequest::Password(ssid.clone(), password.clone()),
+                        req: NetworkManagerRequest::Password(
+                            ssid.clone(),
+                            password.clone(),
+                            hw_address,
+                        ),
                         success,
                         state: NetworkManagerState::new(&conn).await.unwrap_or_default(),
                     });
@@ -190,16 +208,18 @@ async fn start_listening(
                     } else {
                         _ = output
                             .send(NetworkManagerEvent::RequestResponse {
-                                req: NetworkManagerRequest::Password(ssid, password),
+                                req: NetworkManagerRequest::Password(ssid, password, hw_address),
                                 success: false,
                                 state: NetworkManagerState::new(&conn).await.unwrap_or_default(),
                             })
                             .await;
                     }
                 }
-                Some(NetworkManagerRequest::SelectAccessPoint(ssid)) => {
+                Some(NetworkManagerRequest::SelectAccessPoint(ssid, hw_address)) => {
                     let state = NetworkManagerState::new(&conn).await.unwrap_or_default();
-                    let success = if let Err(err) = state.connect_wifi(&conn, &ssid, None).await {
+                    let success = if let Err(err) =
+                        state.connect_wifi(&conn, &ssid, None, hw_address).await
+                    {
                         tracing::error!("Failed to connect to access point: {:?}", err);
                         false
                     } else {
@@ -208,7 +228,7 @@ async fn start_listening(
 
                     _ = output
                         .send(NetworkManagerEvent::RequestResponse {
-                            req: NetworkManagerRequest::SelectAccessPoint(ssid.clone()),
+                            req: NetworkManagerRequest::SelectAccessPoint(ssid.clone(), hw_address),
                             success,
                             state: NetworkManagerState::new(&conn).await.unwrap_or_default(),
                         })
@@ -224,7 +244,7 @@ async fn start_listening(
                         })
                         .await;
                 }
-                Some(NetworkManagerRequest::Forget(ssid)) => {
+                Some(NetworkManagerRequest::Forget(ssid, hw_address)) => {
                     let s = NetworkManagerSettings::new(&conn).await.unwrap();
                     let known_conns = s.list_connections().await.unwrap_or_default();
                     let mut success = false;
@@ -237,6 +257,7 @@ async fn start_listening(
                             .and_then(|ssid| String::from_utf8(ssid).ok())
                             .is_some_and(|s| s == ssid)
                         {
+                            // todo most likely we can here forget ssid from wrong hw_address
                             _ = c.delete().await;
                             success = true;
                             break;
@@ -245,7 +266,7 @@ async fn start_listening(
                     let state = NetworkManagerState::new(&conn).await.unwrap_or_default();
                     _ = output
                         .send(NetworkManagerEvent::RequestResponse {
-                            req: NetworkManagerRequest::Forget(ssid.clone()),
+                            req: NetworkManagerRequest::Forget(ssid.clone(), hw_address),
                             success,
                             state,
                         })
@@ -266,10 +287,10 @@ async fn start_listening(
 pub enum NetworkManagerRequest {
     SetAirplaneMode(bool),
     SetWiFi(bool),
-    SelectAccessPoint(String),
-    Disconnect(String),
-    Password(String, String),
-    Forget(String),
+    SelectAccessPoint(String, HwAddress),
+    Disconnect(String, HwAddress),
+    Password(String, String, HwAddress),
+    Forget(String, HwAddress),
     Reload,
 }
 
@@ -353,7 +374,7 @@ impl NetworkManagerState {
                 if let Ok(Some(SpecificDevice::Wireless(wireless_device))) =
                     device.downcast_to_device().await
                 {
-                    handle_wireless_device(wireless_device)
+                    handle_wireless_device(wireless_device, device.hw_address().await.ok())
                         .await
                         .unwrap_or_default()
                 } else {
@@ -382,7 +403,10 @@ impl NetworkManagerState {
         let known_access_points: Vec<_> = wireless_access_points
             .iter()
             .filter(|a| {
-                known_ssid.contains(&a.ssid) && !active_conns.iter().any(|ac| ac.name() == a.ssid)
+                known_ssid.contains(&a.ssid)
+                    && !active_conns
+                        .iter()
+                        .any(|ac| ac.name() == a.ssid && ac.hw_address() == a.hw_address)
             })
             .cloned()
             .collect();
@@ -407,6 +431,7 @@ impl NetworkManagerState {
         conn: &Connection,
         ssid: &str,
         password: Option<&str>,
+        hw_address: HwAddress,
     ) -> anyhow::Result<()> {
         let nm = NetworkManager::new(conn).await?;
 
@@ -414,7 +439,7 @@ impl NetworkManagerState {
             if self
                 .wireless_access_points
                 .iter()
-                .any(|w| Ok(Some(w.ssid.clone())) == c.cached_id())
+                .any(|w| Ok(Some(w.ssid.clone())) == c.cached_id() && w.hw_address == hw_address)
             {
                 _ = nm.deactivate_connection(&c).await;
             }
@@ -423,7 +448,7 @@ impl NetworkManagerState {
         let Some(ap) = self
             .wireless_access_points
             .iter()
-            .find(|ap| ap.ssid == ssid)
+            .find(|ap| ap.ssid == ssid && ap.hw_address == hw_address)
         else {
             return Err(anyhow::anyhow!("Access point not found"));
         };
@@ -454,6 +479,15 @@ impl NetworkManagerState {
 
         let devices = nm.devices().await?;
         for device in devices {
+            let device_hw_address = device
+                .hw_address()
+                .await
+                .ok()
+                .and_then(|device_address| HwAddress::from_string(&device_address))
+                .unwrap_or_default();
+            if device_hw_address != hw_address {
+                continue;
+            }
             if !matches!(
                 device.device_type().await.unwrap_or(DeviceType::Other),
                 DeviceType::Wifi
@@ -468,6 +502,7 @@ impl NetworkManagerState {
                 let settings = c.get_settings().await.ok().unwrap_or_default();
 
                 let s = Settings::new(settings);
+                // todo try to add hw_address comparing here if it changes anything
                 if let Some(cur_ssid) = s
                     .wifi
                     .clone()
