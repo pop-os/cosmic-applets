@@ -3,7 +3,6 @@ settings = Nastavenia...
 lock-screen = Zamknutá obrazovka
 lock-screen-shortcut = Super + Escape
 log-out = Odhlásiť sa
-log-out-shortcut = Ctrl + Alt + Delete
 suspend = Uspať
 restart = Reštartovať
 shutdown = Vypnúť

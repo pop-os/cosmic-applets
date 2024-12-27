@@ -3,7 +3,6 @@ settings = Configuración...
 lock-screen = Bloquear pantalla
 lock-screen-shortcut = Súper + Escape
 log-out = Cerrar sesión
-log-out-shortcut = Ctrl + Alt + Supr
 suspend = Suspender
 restart = Reiniciar
 shutdown = Apagar

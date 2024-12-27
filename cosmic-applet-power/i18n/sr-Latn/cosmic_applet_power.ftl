@@ -3,7 +3,6 @@ settings = Podešavanja...
 lock-screen = Zaključavanje
 lock-screen-shortcut = Super + Escape
 log-out = Odjavljivanje
-log-out-shortcut = Ctrl + Alt + Delete
 suspend = Stanje spavanja
 restart = Ponovo pokreni
 shutdown = Isključi

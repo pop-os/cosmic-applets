@@ -3,7 +3,6 @@ settings = Параметры...
 lock-screen = Блокировка экрана
 lock-screen-shortcut = Super + Escape
 log-out = Выход из системы
-log-out-shortcut = Ctrl + Alt + Delete
 suspend = Спящий режим
 restart = Перезагрузка
 shutdown = Выключение

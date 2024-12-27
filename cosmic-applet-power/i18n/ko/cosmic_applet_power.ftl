@@ -3,7 +3,6 @@ settings = 설정...
 lock-screen = 화면 잠그기
 lock-screen-shortcut = Super + Escape
 log-out = 로그아웃
-log-out-shortcut = Ctrl + Alt + Delete
 suspend = 절전
 restart = 다시 시작
 shutdown = 시스템 종료

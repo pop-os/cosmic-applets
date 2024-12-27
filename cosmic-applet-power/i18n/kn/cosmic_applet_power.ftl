@@ -3,7 +3,6 @@ settings = ಸೆಟಿಂಗ್‌ಗಳು...
 lock-screen = ಲಾಕ್ ಸ್ಕ್ರೀನ್
 lock-screen-shortcut = ಸೂಪರ್ + ಎಸ್ಕೇಪ್
 log-out = ಲಾಗ್ ಔಟ್
-log-out-shortcut = Ctrl + Alt + Delete
 suspend = ಅಮಾನತುಗೊಳಿಸಿ
 restart = ಪುನಾರಂಭಿಸಿ
 shutdown = ಸ್ಥಗಿತಗೊಳಿಸಿ

@@ -3,7 +3,6 @@ settings = 設定...
 lock-screen = 鎖定螢幕
 lock-screen-shortcut = Super + Escape
 log-out = 登出
-log-out-shortcut = Ctrl + Alt + Delete
 suspend = 暫停
 restart = 重新啟動
 shutdown = 關機
