@@ -3,7 +3,6 @@ settings = 设置...
 lock-screen = 锁定屏幕
 lock-screen-shortcut = Super + Escape
 log-out = 注销
-log-out-shortcut = Ctrl + Alt + Delete
 suspend = 中止
 restart = 重启
 shutdown = 关机

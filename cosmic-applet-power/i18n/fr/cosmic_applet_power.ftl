@@ -3,7 +3,6 @@ settings = Paramètres...
 lock-screen = Verrouiller la session
 lock-screen-shortcut = Super + Échap
 log-out = Se déconnecter
-log-out-shortcut = Ctrl + Alt + Supprimer
 suspend = Veille
 restart = Redémarrer
 shutdown = Éteindre

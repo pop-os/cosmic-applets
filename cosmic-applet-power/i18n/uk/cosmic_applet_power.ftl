@@ -3,7 +3,6 @@ settings = Налаштування...
 lock-screen = Заблокувати екран
 lock-screen-shortcut = Super + Escape
 log-out = Вийти
-log-out-shortcut = Ctrl + Alt + Delete
 suspend = Призупинити
 restart = Перезавантажити
 shutdown = Вимкнути

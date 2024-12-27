@@ -3,7 +3,6 @@ settings = Ustawienia...
 lock-screen = Ekran Blokady
 lock-screen-shortcut = Super + Esc
 log-out = Wyloguj się
-log-out-shortcut = Ctrl + Alt + Del
 suspend = Wstrzymaj
 restart = Uruchom Ponownie
 shutdown = Wyłącz

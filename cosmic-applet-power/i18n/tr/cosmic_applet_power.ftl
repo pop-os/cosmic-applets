@@ -3,7 +3,6 @@ settings = Ayarlar...
 lock-screen = Ekranı kilitle
 lock-screen-shortcut = Super + Escape
 log-out = Oturumu kapat
-log-out-shortcut = Ctrl + Alt + Delete
 suspend = Askıya al
 restart = Yeniden başlat
 shutdown = Kapat

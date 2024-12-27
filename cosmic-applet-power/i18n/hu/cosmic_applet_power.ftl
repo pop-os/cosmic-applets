@@ -3,7 +3,6 @@ settings = Beállítások...
 lock-screen = Zárolt képernyő
 lock-screen-shortcut = Super + Escape
 log-out = Kijelentkezés
-log-out-shortcut = Ctrl + Alt + Delete
 suspend = Felfüggeszt
 restart = Újraindítás
 shutdown = Leállítás

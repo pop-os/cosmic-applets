@@ -3,7 +3,6 @@ settings = Impostazioni...
 lock-screen = Schermata di blocco
 lock-screen-shortcut = Super + ESC
 log-out = Disconnetti
-log-out-shortcut = Ctrl + Alt + CANC
 suspend = Sospendi
 restart = Riavvia
 shutdown = Spegni
