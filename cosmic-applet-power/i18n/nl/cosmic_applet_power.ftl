@@ -10,14 +10,14 @@ shutdown = Afsluiten
 confirm = Bevestigen
 cancel = Annuleren
 
-confirm-button = {
-    $action -> 
+confirm-button =
+    { $action -> 
         [restart] { restart }
         [suspend] { suspend }
         [shutdown] { shutdown }
         [log-out] { log-out }
         *[other] { confirm }
-}
+    }
 
 confirm-title = 
     { $action -> 
