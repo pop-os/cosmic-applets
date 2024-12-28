@@ -851,7 +851,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                     menu_button(
                         Row::with_children(btn_content)
                             .align_y(Alignment::Center)
-                            .spacing(8)
+                            .spacing(8),
                     )
                     .on_press(Message::OpenHwDevice(Some(hw_device.clone()))),
                 ));
