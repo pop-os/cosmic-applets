@@ -1,13 +1,15 @@
 hours-ago = { NUMBER($duration) -> 
-    [1] 1 Uur geleden
-    *[other] {$duration} Uur geleden
+    [1] 1 uur geleden
+    *[other] {$duration} uur geleden
 }
 minutes-ago = { NUMBER($duration) -> 
-    [1] 1 Minuut geleden
-    *[other] {$duration} Minuten geleden
+    [1] 1 minuut geleden
+    *[other] {$duration} minuten geleden
 }
-show-more = Laat {$more} Meer zien
-clear-all = Alle Notificaties Weggooien
+show-less = Laat minder zien
+show-more = Laat {$more} meer zien
+clear-group = Meldinggroep weggooien
+clear-all = Alle meldingen weggooien
 do-not-disturb = Niet storen
-notification-settings = Notificatie Instellingen...
-no-notifications = Geen Notificaties
+notification-settings = Instellingen voor meldingen...
+no-notifications = Geen meldingen
