@@ -1,4 +1,4 @@
-power = Energie
+power = Stroom
 settings = Instellingen...
 lock-screen = Vergrendelscherm
 lock-screen-shortcut = Super + Escape
