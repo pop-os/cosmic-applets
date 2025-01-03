@@ -1,11 +1,11 @@
 bluetooth = Bluetooth
-other-devices = Overige Bluetooth Apparaten
-settings = Bluetooth Instellingen...
+other-devices = Overige Bluetooth-apparaten
+settings = Bluetooth-instellingen...
 connected = Verbonden
-confirm-pin = Graag bevestigen of de volgende PIN overeen komt met degene weergegeven op {$deviceName}
+confirm-pin = Bevestig of de volgende pincode overeenkomt met degene weergegeven op {$deviceName}
 confirm = Bevestig
 cancel = Annuleer
-unsuccessful = Koppelen Mislukt
+unsuccessful = Koppelen mislukt
 check-device = Controleer of {$deviceName} aan staat, binnen bereik is, en klaar staat om te koppelen.
 try-again = Opnieuw proberen
 discoverable = Ontdekbaar
