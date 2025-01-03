@@ -7,7 +7,7 @@ log-out-shortcut = Super + Shift + Escape
 suspend = Slaapstand
 restart = Opnieuw opstarten
 shutdown = Afsluiten
-confirm = Oké
+confirm = Uitvoeren
 cancel = Annuleren
 
 <#-- Confirmation Dialog -->
