@@ -1,1 +1,1 @@
-cosmic-applet-workspaces = Cosmic werkbladen
+cosmic-applet-workspaces = Cosmic Werkbladen
