@@ -34,7 +34,7 @@ confirm-body = {
         [restart] De computer start
         [suspend] De computer gaat
         [shutdown] De computer wordt
-        [lock-screen] Het vergrendelscherm wordt
+        [lock-screen] Het vergrendelingsscherm wordt
         [log-out] De gebruiker wordt
         *[other] De geselecteerde actie wordt
     } in { $countdown } seconden automatisch {
@@ -46,9 +46,3 @@ confirm-body = {
         [log-out] afgemeld.
         *[other] uitgevoerd.
     }
-
-
-
-
-
-
