@@ -1,8 +1,8 @@
-cosmic-app-list = Zasobnik Aplikacji
-pin = Przypnij do zasobnika apek
+cosmic-app-list = Zasobnik aplikacji
+pin = Przypnij do zasobnika aplikacji
 quit = Zamknij
-quit-all = Zamknij Wszystkie
-new-window = Nowe Okno
+quit-all = Zamknij wszystkie
+new-window = Nowe okno
 run = Uruchom
 run-on = Uruchom na {$gpu}
 run-on-default = (Domyślnie)
