@@ -1,5 +1,5 @@
 bluetooth = Bluetooth
-other-devices = Overige Bluetooth-apparaten
+other-devices = Overige bluetooth-apparaten
 settings = Bluetooth-instellingen...
 connected = Verbonden
 confirm-pin = Bevestig of de volgende pincode overeenkomt met degene weergegeven op {$deviceName}
