@@ -1,5 +1,5 @@
-cosmic-app-list = Startmenu
-pin = Vastmaken aan startmenu
+cosmic-app-list = Appmenu
+pin = Vastmaken aan appmenu
 quit = Afsluiten
 quit-all = Alles afsluiten
 new-window = Nieuw venster
