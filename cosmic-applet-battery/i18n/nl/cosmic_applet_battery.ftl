@@ -1,5 +1,5 @@
 battery = Batterij
-battery-desc = Verminderde energieverbruik en prestaties.
+battery-desc = Verminderd energieverbruik en stille prestaties.
 balanced = Gebalanceerd
 balanced-desc = Normale prestaties en batterijverbruik.
 performance = Hoge Prestaties
