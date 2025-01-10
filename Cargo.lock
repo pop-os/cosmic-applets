@@ -1469,7 +1469,7 @@ dependencies = [
 [[package]]
 name = "cosmic-notifications-config"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/cosmic-notifications#76c237b0509ea6f724076db2195a7fab6942f33c"
+source = "git+https://github.com/pop-os/cosmic-notifications#df1d1de03468b0be9f0c971d0edd0b1938203a4e"
 dependencies = [
  "cosmic-config",
  "serde",
@@ -1478,7 +1478,7 @@ dependencies = [
 [[package]]
 name = "cosmic-notifications-util"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/cosmic-notifications#76c237b0509ea6f724076db2195a7fab6942f33c"
+source = "git+https://github.com/pop-os/cosmic-notifications#df1d1de03468b0be9f0c971d0edd0b1938203a4e"
 dependencies = [
  "bytemuck",
  "fast_image_resize",
@@ -1505,7 +1505,7 @@ dependencies = [
 [[package]]
 name = "cosmic-panel-config"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/cosmic-panel#fcaaeaf3b9dbaea7458b69de5742a4ae97909d73"
+source = "git+https://github.com/pop-os/cosmic-panel#4a777bc4f6c77b409d1fd3aa5b09ecfb1c25ded1"
 dependencies = [
  "anyhow",
  "cosmic-config",
@@ -7528,7 +7528,7 @@ dependencies = [
 [[package]]
 name = "xdg-shell-wrapper-config"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/cosmic-panel#fcaaeaf3b9dbaea7458b69de5742a4ae97909d73"
+source = "git+https://github.com/pop-os/cosmic-panel#4a777bc4f6c77b409d1fd3aa5b09ecfb1c25ded1"
 dependencies = [
  "serde",
  "wayland-protocols-wlr",

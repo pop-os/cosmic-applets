@@ -40,7 +40,7 @@ use cosmic::{
         rectangle_tracker::{rectangle_tracker_subscription, RectangleTracker, RectangleUpdate},
         svg, text, DndDestination, Image,
     },
-    Element, Task,
+    Apply, Element, Task,
 };
 use cosmic_app_list_config::{AppListConfig, APP_ID};
 use cosmic_protocols::{
@@ -442,12 +442,11 @@ where
         container(
             column![
                 container(if let Some(img) = img {
-                    Element::from(
-                        Image::new(Handle::from_rgba(img.width, img.height, img.img.clone()))
-                            .width(Length::Fill)
-                            .height(Length::Fill)
-                            .content_fit(cosmic::iced_core::ContentFit::Contain),
-                    )
+                    Element::from(Image::new(Handle::from_rgba(
+                        img.width,
+                        img.height,
+                        img.img.clone(),
+                    )))
                 } else {
                     Image::new(Handle::from_rgba(1, 1, vec![0, 0, 0, 255])).into()
                 })
@@ -462,9 +461,11 @@ where
                     }
                 })))
                 .padding(border as u16)
-                .height(Length::Fill)
-                .width(Length::Fill),
-                container(text::body(title).align_x(Alignment::Center)).center_x(Length::Fill),
+                .height(Length::Shrink)
+                .width(Length::Shrink)
+                .apply(container)
+                .center_y(Length::Fixed(90.0)),
+                text::body(title),
             ]
             .spacing(4)
             .align_x(Alignment::Center),
@@ -479,10 +480,14 @@ where
 }
 
 fn window_menu_style(selected: bool) -> cosmic::theme::Button {
+    let radius = theme::active()
+        .cosmic()
+        .radius_m()
+        .map(|x| if x < 8.0 { x } else { x - 4.0 });
+
     Button::Custom {
         active: Box::new(move |focused, theme| {
             let a = button::Catalog::active(theme, focused, selected, &Button::AppletMenu);
-            let rad_s = theme.cosmic().corner_radii.radius_s;
             button::Style {
                 background: if selected {
                     Some(Background::Color(
@@ -491,39 +496,33 @@ fn window_menu_style(selected: bool) -> cosmic::theme::Button {
                 } else {
                     a.background
                 },
-                border_radius: rad_s.into(),
+                border_radius: radius.into(),
                 outline_width: 0.0,
                 ..a
             }
         }),
         hovered: Box::new(move |focused, theme| {
             let focused = selected || focused;
-            let rad_s = theme.cosmic().corner_radii.radius_s;
-
             let text = button::Catalog::hovered(theme, focused, focused, &Button::AppletMenu);
             button::Style {
-                border_radius: rad_s.into(),
+                border_radius: radius.into(),
                 outline_width: 0.0,
                 ..text
             }
         }),
-        disabled: Box::new(|theme| {
-            let rad_s = theme.cosmic().corner_radii.radius_s;
-
+        disabled: Box::new(move |theme| {
             let text = button::Catalog::disabled(theme, &Button::AppletMenu);
             button::Style {
-                border_radius: rad_s.into(),
+                border_radius: radius.into(),
                 outline_width: 0.0,
                 ..text
             }
         }),
         pressed: Box::new(move |focused, theme| {
             let focused = selected || focused;
-            let rad_s = theme.cosmic().corner_radii.radius_s;
-
             let text = button::Catalog::pressed(theme, focused, focused, &Button::AppletMenu);
             button::Style {
-                border_radius: rad_s.into(),
+                border_radius: radius.into(),
                 outline_width: 0.0,
                 ..text
             }
