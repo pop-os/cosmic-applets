@@ -3,18 +3,19 @@ settings = Ustawienia...
 lock-screen = Ekran Blokady
 lock-screen-shortcut = Super + Esc
 log-out = Wyloguj się
+log-out-shortcut = Super + Shift + Esc
 suspend = Wstrzymaj
-restart = Uruchom Ponownie
+restart = Uruchom ponownie
 shutdown = Wyłącz
 confirm = Potwierdź
 cancel = Anuluj
 confirm-button = {
     $action ->
         [restart] { restart }
-        [suspend] { suspend}
-        [shutdown] { shutdown}
+        [suspend] { suspend }
+        [shutdown] { shutdown }
         [log-out] { log-out }
-        *[other] { confirm}
+        *[other] { confirm }
 }
 confirm-title =
     { $action ->
@@ -33,7 +34,7 @@ confirm-body =
         [log-out] wyloguje się
         *[other] wykona wybraną akcję
     } za { $countdown ->
-        [1] sekundę.
+        [1] sekundę
         [few] {$countdown} sekundy
         *[other] {$countdown} sekund
-    }
+    }.

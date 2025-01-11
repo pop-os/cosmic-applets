@@ -1,17 +1,17 @@
 hours-ago = { NUMBER($duration) ->
-    [1] 1 Godzina temu
-    [few] {$duration} Godziny temu
-    *[other] {$duration} Godzin temu
+    [1] 1 godzinę temu
+    [few] {$duration} godziny temu
+    *[other] {$duration} godzin temu
 }
 minutes-ago = { NUMBER($duration) ->
-    [1] 1 Minuta temu
-    [few] {$duration} Minuty temu
-    *[other] {$duration} Minut temu
+    [1] 1 minutę temu
+    [few] {$duration} minuty temu
+    *[other] {$duration} minut temu
 }
-show-less = Pokaż Mniej
-show-more = Pokaż {$more} Więcej
+show-less = Pokaż mniej
+show-more = Pokaż {$more} więcej
 clear-group = Wyczyść grupę
-clear-all = Wyczyść Wszystkie Powiadomienia
-do-not-disturb = Nie Przeszkadzać
-notification-settings = Centrum Powiadomień...
-no-notifications = Brak Powiadomień
+clear-all = Wyczyść wszystkie powiadomienia
+do-not-disturb = Nie przeszkadzać
+notification-settings = Ustawienia powiadomień…
+no-notifications = Brak powiadomień
