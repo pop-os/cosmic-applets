@@ -9,18 +9,29 @@ restart = Neustart
 shutdown = Ausschalten
 confirm = Bestätigen
 cancel = Abbrechen
-confirm-body = { $action ->
-        [restart] Ihr System wird
-        [suspend] Ihr System wird
-        [shutdown] Ihr System wird
-        [lock-screen] Ihr Bildschirm wird 
-        [log-out] Sie werden
-        *[other] Die gewählte Aktion wird
-    } in { $countdown } Sekunden automatisch { $action ->
-        [restart] neugestartet
+confirm-button = {
+    $action ->
+        [restart] { restart }
+        [suspend] { suspend}
+        [shutdown] Ausschalten
+        [log-out] { log-out }
+        *[other] { confirm}
+}
+confirm-title =
+        Jetzt { $action ->
+        [restart] { restart }
+        [suspend] { suspend }
+        [shutdown] { shutdown }
+        [log-out] alle Anwendungen beenden und abmelden
+        *[other] die ausgewählte Aktion anwenden
+            }?
+confirm-body =
+        Das System wird in { $countdown } Sekunden automatisch { $action ->
+        [restart] neu gestartet
         [suspend] in Bereitschaft versetzt
         [shutdown] ausgeschaltet
         [lock-screen] gesperrt
         [log-out] abgemeldet
-        *[other] ausgeführt
-    }.
+        *[other] die ausgewählte Aktion anwenden
+            }.
+
