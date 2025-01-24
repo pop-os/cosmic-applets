@@ -73,9 +73,8 @@ pub async fn get_power_profile(daemon: Backend<'_>) -> Result<Power> {
             let power = ppd.active_profile().await?;
             match power.as_str() {
                 "power-saver" => Ok(Power::Battery),
-                "balanced" => Ok(Power::Balanced),
                 "performance" => Ok(Power::Performance),
-                _ => panic!("Unknown power profile: {}", power),
+                _ => Ok(Power::Balanced),
             }
         }
     }
