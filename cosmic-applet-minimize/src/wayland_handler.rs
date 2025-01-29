@@ -54,7 +54,7 @@ use cosmic_protocols::{
     toplevel_info::v1::client::zcosmic_toplevel_handle_v1,
     toplevel_management::v1::client::zcosmic_toplevel_manager_v1,
 };
-use futures::channel::mpsc::UnboundedSender;
+use futures::{channel::mpsc, SinkExt};
 use sctk::registry::{ProvidesRegistryState, RegistryState};
 use wayland_client::{globals::registry_queue_init, Connection, QueueHandle};
 
@@ -115,7 +115,7 @@ impl ScreencopyFrameDataExt for FrameData {
 
 struct AppData {
     exit: bool,
-    tx: UnboundedSender<WaylandUpdate>,
+    tx: mpsc::Sender<WaylandUpdate>,
     queue_handle: QueueHandle<Self>,
     conn: Connection,
     screencopy_state: ScreencopyState,
@@ -301,7 +301,7 @@ impl ToplevelManagerHandler for AppData {
 }
 impl AppData {
     fn send_image(&self, handle: ZcosmicToplevelHandleV1) {
-        let tx = self.tx.clone();
+        let mut tx = self.tx.clone();
         let capure_data = CaptureData {
             qh: self.queue_handle.clone(),
             conn: self.conn.clone(),
@@ -325,7 +325,7 @@ impl AppData {
             // XXX is this going to use to much memory?
             let img = capure_data.capture_source_shm_fd(false, handle.clone(), fd, None);
             if let Some(img) = img {
-                let Ok(img) = img.image() else {
+                let Ok(mut img) = img.image() else {
                     tracing::error!("Failed to get RgbaImage");
                     return;
                 };
@@ -334,23 +334,21 @@ impl AppData {
                 let max = img.width().max(img.height());
                 let ratio = max as f32 / 128.0;
 
-                let img = if ratio > 1.0 {
+                if ratio > 1.0 {
                     let new_width = (img.width() as f32 / ratio).round();
                     let new_height = (img.height() as f32 / ratio).round();
 
-                    image::imageops::resize(
+                    img = image::imageops::resize(
                         &img,
                         new_width as u32,
                         new_height as u32,
-                        image::imageops::FilterType::Lanczos3,
-                    )
-                } else {
-                    img
-                };
+                        image::imageops::FilterType::Nearest,
+                    );
+                }
 
-                if let Err(err) =
-                    tx.unbounded_send(WaylandUpdate::Image(handle, WaylandImage::new(img)))
-                {
+                if let Err(err) = futures::executor::block_on(
+                    tx.send(WaylandUpdate::Image(handle, WaylandImage::new(img))),
+                ) {
                     tracing::error!("Failed to send image event to subscription {err:?}");
                 };
             } else {
@@ -378,18 +376,13 @@ impl ToplevelInfoHandler for AppData {
             {
                 // spawn thread for sending the image
                 self.send_image(toplevel.clone());
-                let _ = self
-                    .tx
-                    .unbounded_send(WaylandUpdate::Toplevel(ToplevelUpdate::Add(
-                        toplevel.clone(),
-                        info.clone(),
-                    )));
+                let _ = futures::executor::block_on(self.tx.send(WaylandUpdate::Toplevel(
+                    ToplevelUpdate::Add(toplevel.clone(), info.clone()),
+                )));
             } else {
-                let _ = self
-                    .tx
-                    .unbounded_send(WaylandUpdate::Toplevel(ToplevelUpdate::Remove(
-                        toplevel.clone(),
-                    )));
+                let _ = futures::executor::block_on(self.tx.send(WaylandUpdate::Toplevel(
+                    ToplevelUpdate::Remove(toplevel.clone()),
+                )));
             }
         }
     }
@@ -406,18 +399,13 @@ impl ToplevelInfoHandler for AppData {
                 .contains(&zcosmic_toplevel_handle_v1::State::Minimized)
             {
                 self.send_image(toplevel.clone());
-                let _ = self
-                    .tx
-                    .unbounded_send(WaylandUpdate::Toplevel(ToplevelUpdate::Update(
-                        toplevel.clone(),
-                        info.clone(),
-                    )));
+                let _ = futures::executor::block_on(self.tx.send(WaylandUpdate::Toplevel(
+                    ToplevelUpdate::Update(toplevel.clone(), info.clone()),
+                )));
             } else {
-                let _ = self
-                    .tx
-                    .unbounded_send(WaylandUpdate::Toplevel(ToplevelUpdate::Remove(
-                        toplevel.clone(),
-                    )));
+                let _ = futures::executor::block_on(self.tx.send(WaylandUpdate::Toplevel(
+                    ToplevelUpdate::Remove(toplevel.clone()),
+                )));
             }
         }
     }
@@ -428,16 +416,14 @@ impl ToplevelInfoHandler for AppData {
         _qh: &QueueHandle<Self>,
         toplevel: &zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1,
     ) {
-        let _ = self
-            .tx
-            .unbounded_send(WaylandUpdate::Toplevel(ToplevelUpdate::Remove(
-                toplevel.clone(),
-            )));
+        let _ = futures::executor::block_on(self.tx.send(WaylandUpdate::Toplevel(
+            ToplevelUpdate::Remove(toplevel.clone()),
+        )));
     }
 }
 
 pub(crate) fn wayland_handler(
-    tx: UnboundedSender<WaylandUpdate>,
+    tx: mpsc::Sender<WaylandUpdate>,
     rx: calloop::channel::Channel<WaylandRequest>,
 ) {
     let socket = std::env::var("X_PRIVILEGED_WAYLAND_SOCKET")

@@ -1253,6 +1253,7 @@ dependencies = [
  "once_cell",
  "rust-embed 8.5.0",
  "rustix 0.38.43",
+ "tokio",
  "tracing",
  "tracing-log",
  "tracing-subscriber",

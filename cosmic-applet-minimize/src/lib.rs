@@ -147,7 +147,10 @@ impl cosmic::Application for Minimize {
                             self.apps.push((handle, info, data, None));
                         }
                     }
-                    ToplevelUpdate::Remove(handle) => self.apps.retain(|a| a.0 != handle),
+                    ToplevelUpdate::Remove(handle) => {
+                        self.apps.retain(|a| a.0 != handle);
+                        self.apps.shrink_to_fit();
+                    }
                 },
                 WaylandUpdate::Image(handle, img) => {
                     if let Some(pos) = self.apps.iter().position(|a| a.0 == handle) {
