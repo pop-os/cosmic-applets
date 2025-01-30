@@ -269,10 +269,11 @@ impl DockItem {
         let icon_button = if dnd_source_enabled && interaction_enabled {
             dnd_source(icon_button)
                 .window(window_id)
-                .drag_icon(move || {
+                .drag_icon(move |_| {
                     (
                         cosmic_icon.clone().into(),
                         iced::core::widget::tree::State::None,
+                        iced::Vector::ZERO,
                     )
                 })
                 .drag_threshold(16.)
