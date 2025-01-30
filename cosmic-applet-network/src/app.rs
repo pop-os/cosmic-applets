@@ -977,26 +977,28 @@ impl cosmic::Application for CosmicNetworkApplet {
                         .spacing(12),
                     );
                     content = content.push(id);
-                    let col = padded_control(
-                        column![
-                            text::body(fl!("enter-password")),
-                            text_input("", password)
-                                .on_input(Message::Password)
-                                .on_paste(Message::Password)
-                                .on_submit(Message::SubmitPassword)
-                                .password(),
-                            container(text::body(fl!("router-wps-button"))).padding(8),
-                            row![
-                                button::standard(fl!("cancel"))
-                                    .on_press(Message::CancelNewConnection),
-                                button::suggested(fl!("connect")).on_press(Message::SubmitPassword)
-                            ]
-                            .spacing(24)
+                    let mut enter_password_col = column![
+                        text::body(fl!("enter-password")),
+                        text_input("", password)
+                            .on_input(Message::Password)
+                            .on_paste(Message::Password)
+                            .on_submit(Message::SubmitPassword)
+                            .password(),
+                    ];
+                    if access_point.wps_push {
+                        enter_password_col = enter_password_col
+                            .push(container(text::body(fl!("router-wps-button"))).padding(8));
+                    }
+                    enter_password_col = enter_password_col.push(
+                        row![
+                            button::standard(fl!("cancel")).on_press(Message::CancelNewConnection),
+                            button::suggested(fl!("connect")).on_press(Message::SubmitPassword)
                         ]
-                        .spacing(8)
-                        .align_x(Alignment::Center),
-                    )
-                    .align_x(Alignment::Center);
+                        .spacing(24),
+                    );
+                    let col =
+                        padded_control(enter_password_col.spacing(8).align_x(Alignment::Center))
+                            .align_x(Alignment::Center);
                     content = content.push(col);
                 }
                 NewConnectionState::Waiting(access_point) => {

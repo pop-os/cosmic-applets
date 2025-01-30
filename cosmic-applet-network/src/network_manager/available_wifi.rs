@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use cosmic_dbus_networkmanager::{device::wireless::WirelessDevice, interface::enums::DeviceState};
+use cosmic_dbus_networkmanager::{
+    device::wireless::WirelessDevice,
+    interface::enums::{ApFlags, DeviceState},
+};
 
 use futures_util::StreamExt;
 use itertools::Itertools;
@@ -33,6 +36,7 @@ pub async fn handle_wireless_device(
     let mut aps = HashMap::<String, AccessPoint>::new();
     for ap in access_points {
         let ssid = String::from_utf8_lossy(&ap.ssid().await?.clone()).into_owned();
+        let wps_push = ap.flags().await?.contains(ApFlags::WPS_PBC);
         let strength = ap.strength().await?;
         if let Some(access_point) = aps.get(&ssid) {
             if access_point.strength > strength {
@@ -51,6 +55,7 @@ pub async fn handle_wireless_device(
                     .as_ref()
                     .and_then(|str_addr| HwAddress::from_str(str_addr))
                     .unwrap_or_default(),
+                wps_push,
             },
         );
     }
@@ -69,4 +74,5 @@ pub struct AccessPoint {
     pub working: bool,
     pub path: ObjectPath<'static>,
     pub hw_address: HwAddress,
+    pub wps_push: bool,
 }
