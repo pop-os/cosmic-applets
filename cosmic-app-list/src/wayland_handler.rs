@@ -14,8 +14,9 @@ use std::{
 
 use cctk::{
     screencopy::{
-        capture, Formats, Frame, ScreencopyFrameData, ScreencopyFrameDataExt, ScreencopyHandler,
-        ScreencopySessionData, ScreencopySessionDataExt, ScreencopyState,
+        CaptureSession, CaptureSource, Capturer, Formats, Frame, ScreencopyFrameData,
+        ScreencopyFrameDataExt, ScreencopyHandler, ScreencopySessionData, ScreencopySessionDataExt,
+        ScreencopyState,
     },
     sctk::{
         self,
@@ -41,10 +42,7 @@ use cctk::{
     workspace::{WorkspaceHandler, WorkspaceState},
 };
 use cosmic_protocols::{
-    image_source::v1::client::zcosmic_toplevel_image_source_manager_v1::ZcosmicToplevelImageSourceManagerV1,
-    screencopy::v2::client::{
-        zcosmic_screencopy_frame_v2, zcosmic_screencopy_manager_v2, zcosmic_screencopy_session_v2,
-    },
+    screencopy::v2::client::{zcosmic_screencopy_frame_v2, zcosmic_screencopy_manager_v2},
     toplevel_info::v1::client::zcosmic_toplevel_handle_v1::{self, ZcosmicToplevelHandleV1},
     toplevel_management::v1::client::zcosmic_toplevel_manager_v1,
     workspace::v1::client::zcosmic_workspace_handle_v1::State as WorkspaceUpdateState,
@@ -303,13 +301,11 @@ struct SessionData {
 
 struct FrameData {
     frame_data: ScreencopyFrameData,
-    session: zcosmic_screencopy_session_v2::ZcosmicScreencopySessionV2,
+    session: CaptureSession,
 }
 
 impl Session {
-    pub fn for_session(
-        session: &zcosmic_screencopy_session_v2::ZcosmicScreencopySessionV2,
-    ) -> Option<&Self> {
+    pub fn for_session(session: &CaptureSession) -> Option<&Self> {
         Some(&session.data::<SessionData>()?.session)
     }
 
@@ -365,8 +361,7 @@ struct CaptureData {
     qh: QueueHandle<AppData>,
     conn: Connection,
     wl_shm: WlShm,
-    screencopy_manager: zcosmic_screencopy_manager_v2::ZcosmicScreencopyManagerV2,
-    toplevel_source_manager: ZcosmicToplevelImageSourceManagerV1,
+    capturer: Capturer,
 }
 
 impl CaptureData {
@@ -384,18 +379,19 @@ impl CaptureData {
         let overlay_cursor = if overlay_cursor { 1 } else { 0 };
 
         let session = Arc::new(Session::default());
-        let image_source = self
-            .toplevel_source_manager
-            .create_source(&source, &self.qh, ());
-        let screencopy_session = self.screencopy_manager.create_session(
-            &image_source,
-            zcosmic_screencopy_manager_v2::Options::empty(),
-            &self.qh,
-            SessionData {
-                session: session.clone(),
-                session_data: Default::default(),
-            },
-        );
+        // Unwrap assumes compositor supports this capture type
+        let capture_session = self
+            .capturer
+            .create_session(
+                &CaptureSource::CosmicToplevel(source),
+                zcosmic_screencopy_manager_v2::Options::empty(),
+                &self.qh,
+                SessionData {
+                    session: session.clone(),
+                    session_data: Default::default(),
+                },
+            )
+            .unwrap();
         self.conn.flush().unwrap();
 
         let formats = session
@@ -439,14 +435,13 @@ impl CaptureData {
             (),
         );
 
-        capture(
-            &screencopy_session,
+        capture_session.capture(
             &buffer,
             &[],
             &self.qh,
             FrameData {
                 frame_data: Default::default(),
-                session: screencopy_session.clone(),
+                session: capture_session.clone(),
             },
         );
         self.conn.flush().unwrap();
@@ -491,12 +486,7 @@ impl AppData {
             qh: self.queue_handle.clone(),
             conn: self.conn.clone(),
             wl_shm: self.shm_state.wl_shm().clone(),
-            screencopy_manager: self.screencopy_state.screencopy_manager.clone(),
-            toplevel_source_manager: self
-                .screencopy_state
-                .toplevel_source_manager
-                .clone()
-                .unwrap(),
+            capturer: self.screencopy_state.capturer().clone(),
         };
         std::thread::spawn(move || {
             use std::ffi::CStr;
@@ -559,7 +549,7 @@ impl ScreencopyHandler for AppData {
         &mut self,
         _conn: &Connection,
         _qh: &QueueHandle<Self>,
-        session: &zcosmic_screencopy_session_v2::ZcosmicScreencopySessionV2,
+        session: &CaptureSession,
         formats: &Formats,
     ) {
         Session::for_session(session).unwrap().update(|data| {
@@ -578,7 +568,8 @@ impl ScreencopyHandler for AppData {
         Session::for_session(session).unwrap().update(|data| {
             data.res = Some(Ok(()));
         });
-        session.destroy();
+        // TODO is CaptureSession dropped?
+        // session.destroy();
     }
 
     fn failed(
@@ -593,16 +584,11 @@ impl ScreencopyHandler for AppData {
         Session::for_session(session).unwrap().update(|data| {
             data.res = Some(Err(reason));
         });
-        session.destroy();
+        // TODO
+        // session.destroy();
     }
 
-    fn stopped(
-        &mut self,
-        _conn: &Connection,
-        _qh: &QueueHandle<Self>,
-        _session: &zcosmic_screencopy_session_v2::ZcosmicScreencopySessionV2,
-    ) {
-    }
+    fn stopped(&mut self, _conn: &Connection, _qh: &QueueHandle<Self>, _session: &CaptureSession) {}
 }
 
 pub(crate) fn wayland_handler(

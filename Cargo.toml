@@ -84,5 +84,7 @@ ignored = ["libcosmic"]
 [patch."https://github.com/smithay/client-toolkit.git"]
 sctk = { package = "smithay-client-toolkit", version = "=0.19.2" }
 [patch.'https://github.com/pop-os/cosmic-protocols']
-cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols//", rev = "d218c76" }
-cosmic-client-toolkit = { git = "https://github.com/pop-os/cosmic-protocols//", rev = "d218c76" }
+#cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols//", rev = "d218c76" }
+#cosmic-client-toolkit = { git = "https://github.com/pop-os/cosmic-protocols//", rev = "d218c76" }
+cosmic-client-toolkit = { git = "https://github.com/pop-os/cosmic-protocols//", branch = "screencopy-improve" }
+cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols//", branch = "screencopy-improve" }
