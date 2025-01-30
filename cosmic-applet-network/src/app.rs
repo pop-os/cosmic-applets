@@ -977,19 +977,20 @@ impl cosmic::Application for CosmicNetworkApplet {
                         .spacing(12),
                     );
                     content = content.push(id);
-                    let mut enter_password_col = column![
+                    let enter_password_col = column![
                         text::body(fl!("enter-password")),
                         text_input("", password)
                             .on_input(Message::Password)
                             .on_paste(Message::Password)
                             .on_submit(Message::SubmitPassword)
                             .password(),
-                    ];
-                    if access_point.wps_push {
-                        enter_password_col = enter_password_col
-                            .push(container(text::body(fl!("router-wps-button"))).padding(8));
-                    }
-                    enter_password_col = enter_password_col.push(
+                    ]
+                    .push_maybe(
+                        access_point
+                            .wps_push
+                            .then(|| container(text::body(fl!("router-wps-button"))).padding(8)),
+                    )
+                    .push(
                         row![
                             button::standard(fl!("cancel")).on_press(Message::CancelNewConnection),
                             button::suggested(fl!("connect")).on_press(Message::SubmitPassword)
