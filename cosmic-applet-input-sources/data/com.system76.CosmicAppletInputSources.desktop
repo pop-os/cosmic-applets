@@ -1,5 +1,6 @@
 [Desktop Entry]
 Name=Input Sources
+Name[hu]=Beviteli Források
 Type=Application
 Exec=cosmic-applet-input-sources
 Terminal=false

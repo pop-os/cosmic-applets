@@ -5,6 +5,7 @@ Name[ja]=Cosmicパネルのアップライブラリーボタン
 Name[ko]=코스믹 패널 앱 라이브러리 단추
 Name[pt]=Botão da biblioteca de aplicações do painel Cosmic
 Name[ru]=Кнопка библиотеки приложений на панели Cosmic
+Name[hu]=Alkalmazáskönyvtár gomb
 Type=Application
 Exec=cosmic-panel-button com.system76.CosmicAppLibrary
 Terminal=false

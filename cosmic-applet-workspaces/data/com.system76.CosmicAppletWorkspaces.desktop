@@ -1,5 +1,6 @@
 [Desktop Entry]
 Name=Numbered Workspaces
+Name[hu]=Számozott Munkaterületek
 Type=Application
 Exec=cosmic-applet-workspaces
 Terminal=false
