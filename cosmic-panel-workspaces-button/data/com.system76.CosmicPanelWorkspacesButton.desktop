@@ -1,6 +1,7 @@
 [Desktop Entry]
 Name=Workspaces Button
 Name[pt]=Botão de áreas de trabalho do painel Cosmic
+Name[hu]=Munkaterületek gomb
 Type=Application
 Exec=cosmic-panel-button com.system76.CosmicWorkspaces
 Terminal=false

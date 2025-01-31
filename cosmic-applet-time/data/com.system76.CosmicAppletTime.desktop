@@ -1,5 +1,6 @@
 [Desktop Entry]
 Name=Date, Time & Calendar
+Name[hu]=Dátum, Idő és Naptár
 Type=Application
 Exec=cosmic-applet-time
 Terminal=false
