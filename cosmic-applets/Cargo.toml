@@ -20,6 +20,7 @@ cosmic-applet-time = { path = "../cosmic-applet-time" }
 cosmic-applet-workspaces = { path = "../cosmic-applet-workspaces" }
 cosmic-applet-input-sources = { path = "../cosmic-applet-input-sources" }
 cosmic-panel-button = { path = "../cosmic-panel-button" }
+libc = "0.2"
 libcosmic.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true

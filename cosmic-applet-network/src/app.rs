@@ -51,6 +51,7 @@ enum NewConnectionState {
     EnterPassword {
         access_point: AccessPoint,
         password: String,
+        password_hidden: bool,
     },
     Waiting(AccessPoint),
     Failure(AccessPoint),
@@ -59,10 +60,7 @@ enum NewConnectionState {
 impl NewConnectionState {
     pub fn ssid(&self) -> &str {
         &match self {
-            Self::EnterPassword {
-                access_point,
-                password: _,
-            } => access_point,
+            Self::EnterPassword { access_point, .. } => access_point,
             Self::Waiting(ap) => ap,
             Self::Failure(ap) => ap,
         }
@@ -70,10 +68,7 @@ impl NewConnectionState {
     }
     pub fn hw_address(&self) -> HwAddress {
         match self {
-            Self::EnterPassword {
-                access_point,
-                password: _,
-            } => access_point,
+            Self::EnterPassword { access_point, .. } => access_point,
             Self::Waiting(ap) => ap,
             Self::Failure(ap) => ap,
         }
@@ -84,10 +79,7 @@ impl NewConnectionState {
 impl From<NewConnectionState> for AccessPoint {
     fn from(connection_state: NewConnectionState) -> Self {
         match connection_state {
-            NewConnectionState::EnterPassword {
-                access_point,
-                password: _,
-            } => access_point,
+            NewConnectionState::EnterPassword { access_point, .. } => access_point,
             NewConnectionState::Waiting(access_point) => access_point,
             NewConnectionState::Failure(access_point) => access_point,
         }
@@ -251,6 +243,7 @@ pub(crate) enum Message {
     OpenSettings,
     ResetFailedKnownSsid(String, HwAddress),
     OpenHwDevice(Option<HwAddress>),
+    TogglePasswordVisibility,
     // Errored(String),
 }
 
@@ -432,6 +425,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                 self.new_connection = Some(NewConnectionState::EnterPassword {
                     access_point,
                     password: String::new(),
+                    password_hidden: true,
                 });
             }
             Message::ToggleVisibleNetworks => {
@@ -445,6 +439,14 @@ impl cosmic::Application for CosmicNetworkApplet {
                     *password = entered_pw;
                 }
             }
+            Message::TogglePasswordVisibility => {
+                if let Some(NewConnectionState::EnterPassword {
+                    password_hidden, ..
+                }) = &mut self.new_connection
+                {
+                    *password_hidden = !*password_hidden;
+                }
+            }
             Message::SubmitPassword => {
                 // save password
                 let tx = if let Some(tx) = self.nm_sender.as_ref() {
@@ -456,6 +458,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                 if let Some(NewConnectionState::EnterPassword {
                     password,
                     access_point,
+                    ..
                 }) = self.new_connection.take()
                 {
                     let _ = tx.unbounded_send(NetworkManagerRequest::Password(
@@ -965,6 +968,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                 NewConnectionState::EnterPassword {
                     access_point,
                     password,
+                    password_hidden,
                 } => {
                     let id = padded_control(
                         row![
@@ -979,11 +983,16 @@ impl cosmic::Application for CosmicNetworkApplet {
                     content = content.push(id);
                     let enter_password_col = column![
                         text::body(fl!("enter-password")),
-                        text_input("", password)
-                            .on_input(Message::Password)
-                            .on_paste(Message::Password)
-                            .on_submit(Message::SubmitPassword)
-                            .password(),
+                        text_input::secure_input(
+                            "",
+                            password,
+                            Some(Message::TogglePasswordVisibility),
+                            *password_hidden,
+                        )
+                        .on_input(Message::Password)
+                        .on_paste(Message::Password)
+                        .on_submit(Message::SubmitPassword)
+                        .password(),
                     ]
                     .push_maybe(
                         access_point

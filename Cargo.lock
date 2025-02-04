@@ -1353,6 +1353,7 @@ dependencies = [
  "cosmic-applet-time",
  "cosmic-applet-workspaces",
  "cosmic-panel-button",
+ "libc",
  "libcosmic",
  "tracing",
  "tracing-log",
