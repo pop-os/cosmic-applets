@@ -222,6 +222,8 @@ impl PartialEq for BluerDevice {
     }
 }
 
+const default_device_icon: &str = "bluetooth-symbolic";
+
 impl BluerDevice {
     pub async fn from_device(device: &bluer::Device) -> Self {
         let mut name = device
@@ -251,7 +253,7 @@ impl BluerDevice {
                     None
                 }
             })
-            .unwrap_or_else(|| "bluetooth-symbolic".into());
+            .unwrap_or_else(|| default_device_icon.into());
 
         Self {
             name,
@@ -273,6 +275,16 @@ impl BluerDevice {
             })
             .count()
             == 2
+    }
+
+    #[must_use]
+    pub fn is_known_device_type(&self) -> bool {
+        self.icon != default_device_icon
+    }
+
+    #[must_use]
+    pub fn has_name(&self) -> bool {
+        self.name != self.address.to_string()
     }
 }
 
