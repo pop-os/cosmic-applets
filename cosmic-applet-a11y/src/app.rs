@@ -11,13 +11,11 @@ use cosmic::{
         token::subscription::{activation_token_subscription, TokenRequest, TokenUpdate},
     },
     cctk::sctk::reexports::calloop,
-    cosmic_theme::Spacing,
     iced::{
         platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
         window, Length, Subscription,
     },
     iced_runtime::core::layout::Limits,
-    theme,
     widget::container,
     Element, Task,
 };
@@ -185,10 +183,6 @@ impl cosmic::Application for CosmicA11yApplet {
     }
 
     fn view_window(&self, _id: window::Id) -> Element<Message> {
-        let Spacing {
-            space_xxs, space_s, ..
-        } = theme::active().cosmic().spacing;
-
         let toggle = padded_control(
             anim!(
                 //toggler
