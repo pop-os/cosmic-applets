@@ -18,7 +18,7 @@ use cosmic::{
     },
     iced_runtime::core::layout::Limits,
     theme,
-    widget::{container, text},
+    widget::container,
     Element, Task,
 };
 use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
