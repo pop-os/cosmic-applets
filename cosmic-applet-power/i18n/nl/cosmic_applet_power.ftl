@@ -1,48 +1,36 @@
 power = Energie
 settings = Instellingen...
 lock-screen = Scherm vergrendelen
-lock-screen-shortcut = Super + Escape
+lock-screen-shortcut = Super + Esc
 log-out = Afmelden
-log-out-shortcut = Super + Shift + Escape
+log-out-shortcut = Super + Shift + Esc
 suspend = Slaapstand
 restart = Opnieuw opstarten
 shutdown = Afsluiten
-confirm = Uitvoeren
+confirm = Bevestigen
 cancel = Annuleren
-
-<#-- Confirmation Dialog -->
-confirm-button = { 
+confirm-button = {
     $action -> 
         [restart] { restart }
         [suspend] { suspend }
         [shutdown] { shutdown }
         [log-out] { log-out }
-        *[other] { confirm }
-    }
-
-confirm-title = { Nu 
-    $action -> 
+        *[other] Uitvoeren
+}
+confirm-title = Nu
+    { $action -> 
         [restart] opnieuw opstarten?
-        [suspend] in slaapstand?
+        [suspend] in slaapstand gaan?
         [shutdown] afsluiten?
         [log-out] alle apps sluiten en afmelden?
         *[other] de geselecteerde actie uitvoeren?
-    }
-
-confirm-body = {
-    $action -> 
-        [restart] De computer start
-        [suspend] De computer gaat
-        [shutdown] De computer wordt
-        [lock-screen] Het vergrendelingsscherm wordt
-        [log-out] De gebruiker wordt
-        *[other] De geselecteerde actie wordt
-    } in { $countdown } seconden automatisch {
-    $action ->
-        [restart] opnieuw op.
-        [suspend] in slaapstand.
-        [shutdown] afgesloten.
-        [lock-screen] geactiveerd.
-        [log-out] afgemeld.
-        *[other] uitgevoerd.
+    } 
+confirm-body = 
+    De { $action ->
+        [restart] computer wordt in {$countdown} seconden automatisch opnieuw opgestart.
+        [suspend] computer wordt in {$countdown} seconden automatisch in slaapstand gezet.
+        [shutdown] computer wordt in {$countdown} seconden automatisch afgesloten.
+        [lock-screen] schermvergrendeling wordt in {$countdown} seconden automatisch geactiveerd.
+        [log-out] gebruiker wordt in {$countdown} seconden automatisch afgemeld.
+        *[other] geselecteerde actie wordt in {$countdown} seconden automatisch uitgevoerd.
     }
