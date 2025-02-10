@@ -1,6 +1,7 @@
 [Desktop Entry]
 Name=Notifications Tray
 Name[pt]=Área de estado do applet Cosmic
+Name[hu]=Értesítési terület
 Type=Application
 Exec=cosmic-applet-status-area
 Terminal=false

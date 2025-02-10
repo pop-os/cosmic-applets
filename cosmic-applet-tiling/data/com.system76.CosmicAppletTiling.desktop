@@ -1,5 +1,6 @@
 [Desktop Entry]
 Name=Tiling
+Name[hu]=Csempézés
 Type=Application
 Exec=cosmic-applet-tiling
 Terminal=false
