@@ -11,9 +11,9 @@ use cosmic::{
     iced_futures::stream,
 };
 use cosmic_dbus_a11y::*;
-use std::{fmt::Debug, hash::Hash};
+use std::fmt::Debug;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
-use zbus::{Connection, Result};
+use zbus::Connection;
 
 #[derive(Debug, Clone)]
 pub enum Update {

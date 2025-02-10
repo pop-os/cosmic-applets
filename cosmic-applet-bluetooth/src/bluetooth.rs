@@ -158,8 +158,6 @@ async fn start_listening(
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub enum BluerRequest {
     SetBluetoothEnabled(bool),
-    SetPairable(bool),
-    SetDiscoverable(bool),
     PairDevice(Address),
     ConnectDevice(Address),
     DisconnectDevice(Address),
@@ -189,8 +187,6 @@ pub enum BluerEvent {
 pub struct BluerState {
     pub devices: Vec<BluerDevice>,
     pub bluetooth_enabled: bool,
-    pub discoverable: bool,
-    pub pairable: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -335,7 +331,6 @@ pub struct BluerSessionState {
     _session: Session,
     _agent_handle: AgentHandle,
     pub adapter: Adapter,
-    pub devices: Arc<Mutex<Vec<BluerDevice>>>,
     pub rx: Option<Receiver<BluerSessionEvent>>,
     pub req_tx: Sender<BluerRequest>,
     tx: Sender<BluerSessionEvent>,
@@ -527,7 +522,6 @@ impl BluerSessionState {
             _agent_handle,
             _session: session,
             adapter,
-            devices: Arc::new(Mutex::new(devices)),
             rx: Some(rx),
             req_tx,
             tx,
@@ -554,8 +548,6 @@ impl BluerSessionState {
                     let state = BluerState {
                         devices: build_device_list(&adapter_clone).await,
                         bluetooth_enabled: status,
-                        discoverable: adapter_clone.is_discoverable().await.unwrap_or_default(),
-                        pairable: adapter_clone.is_pairable().await.unwrap_or_default(),
                     };
                     if state.bluetooth_enabled {
                         for d in &state.devices {
@@ -609,11 +601,6 @@ impl BluerSessionState {
                                     .is_powered()
                                     .await
                                     .unwrap_or_default(),
-                                discoverable: adapter_clone
-                                    .is_discoverable()
-                                    .await
-                                    .unwrap_or_default(),
-                                pairable: adapter_clone.is_pairable().await.unwrap_or_default(),
                             }))
                             .await;
                         // reset timeout
@@ -701,25 +688,11 @@ impl BluerSessionState {
                             }
                         }
                         BluerRequest::StateUpdate => {}
-                        BluerRequest::SetPairable(enabled) => {
-                            let res = adapter_clone.set_pairable(*enabled).await;
-                            if let Err(e) = res {
-                                err_msg = Some(e.to_string());
-                            }
-                        }
-                        BluerRequest::SetDiscoverable(enabled) => {
-                            let res = adapter_clone.set_discoverable(*enabled).await;
-                            if let Err(e) = res {
-                                err_msg = Some(e.to_string());
-                            }
-                        }
                     };
 
                     let state = BluerState {
                         devices: build_device_list(&adapter_clone).await,
                         bluetooth_enabled: adapter_clone.is_powered().await.unwrap_or_default(),
-                        discoverable: adapter_clone.is_discoverable().await.unwrap_or_default(),
-                        pairable: adapter_clone.is_pairable().await.unwrap_or_default(),
                     };
 
                     let _ = tx_clone
@@ -746,8 +719,6 @@ impl BluerSessionState {
             devices: build_device_list(&self.adapter).await,
             // TODO is this a proper way of checking if bluetooth is enabled?
             bluetooth_enabled: self.adapter.is_powered().await.unwrap_or_default(),
-            discoverable: self.adapter.is_discoverable().await.unwrap_or_default(),
-            pairable: self.adapter.is_pairable().await.unwrap_or_default(),
         }
     }
 }

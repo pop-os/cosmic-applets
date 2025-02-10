@@ -20,7 +20,7 @@ use cosmic::{
     widget::{
         container, divider,
         segmented_button::{self, Entity, SingleSelectModel},
-        segmented_control, spin_button, text,
+        segmented_control, text,
     },
     Element,
 };
