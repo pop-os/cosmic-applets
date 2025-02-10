@@ -29,6 +29,26 @@ use tokio::{
     time::timeout,
 };
 
+// Copied from https://github.com/bluez/bluez/blob/39467578207889fd015775cbe81a3db9dd26abea/src/dbus-common.c#L53
+fn device_type_to_icon(device_type: &str) -> &'static str {
+    match device_type {
+        "computer" => "laptop-symbolic",
+        "phone" => "smartphone-symbolic",
+        "network-wireless" => "network-wireless-symbolic",
+        "audio-headset" => "audio-headset-symbolic",
+        "audio-headphones" => "audio-headphones-symbolic",
+        "camera-video" => "camera-video-symbolic",
+        "audio-card" => "audio-card-symbolic",
+        "input-gaming" => "input-gaming-symbolic",
+        "input-keyboard" => "input-keyboard-symbolic",
+        "input-tablet" => "input-tablet-symbolic",
+        "input-mouse" => "input-mouse-symbolic",
+        "printer" => "printer-network-symbolic",
+        "camera-photo" => "camera-photo-symbolic",
+        _ => default_device_icon,
+    }
+}
+
 pub fn bluetooth_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
     id: I,
 ) -> iced::Subscription<BluerEvent> {
@@ -222,6 +242,8 @@ impl PartialEq for BluerDevice {
     }
 }
 
+const default_device_icon: &str = "bluetooth-symbolic";
+
 impl BluerDevice {
     pub async fn from_device(device: &bluer::Device) -> Self {
         let mut name = device
@@ -246,12 +268,12 @@ impl BluerDevice {
             .iter()
             .find_map(|p| {
                 if let DeviceProperty::Icon(icon) = p {
-                    Some(icon.clone())
+                    Some(device_type_to_icon(icon.clone().as_str()).to_string())
                 } else {
                     None
                 }
             })
-            .unwrap_or_else(|| "bluetooth-symbolic".into());
+            .unwrap_or_else(|| device_type_to_icon(default_device_icon).to_string());
 
         Self {
             name,
@@ -273,6 +295,16 @@ impl BluerDevice {
             })
             .count()
             == 2
+    }
+
+    #[must_use]
+    pub fn is_known_device_type(&self) -> bool {
+        self.icon != default_device_icon
+    }
+
+    #[must_use]
+    pub fn has_name(&self) -> bool {
+        self.name != self.address.to_string()
     }
 }
 
