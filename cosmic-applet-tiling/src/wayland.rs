@@ -11,13 +11,11 @@ use cctk::{
     },
     toplevel_info::{ToplevelInfoHandler, ToplevelInfoState},
     wayland_client::WEnum,
+    wayland_protocols::ext::foreign_toplevel_list::v1::client::ext_foreign_toplevel_handle_v1::ExtForeignToplevelHandleV1,
     workspace::{WorkspaceHandler, WorkspaceState},
 };
 use cosmic::iced::futures;
-use cosmic_protocols::{
-    toplevel_info::v1::client::zcosmic_toplevel_handle_v1,
-    workspace::v1::client::zcosmic_workspace_handle_v1::{self, TilingState},
-};
+use cosmic_protocols::workspace::v1::client::zcosmic_workspace_handle_v1::{self, TilingState};
 use futures::{channel::mpsc, executor::block_on, SinkExt};
 use std::{
     collections::HashSet,
@@ -274,7 +272,7 @@ impl ToplevelInfoHandler for State {
         &mut self,
         _conn: &Connection,
         _qh: &QueueHandle<Self>,
-        toplevel: &zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1,
+        toplevel: &ExtForeignToplevelHandleV1,
     ) {
         let Some(w) = self
             .toplevel_info_state
@@ -290,7 +288,7 @@ impl ToplevelInfoHandler for State {
         &mut self,
         _conn: &Connection,
         _qh: &QueueHandle<Self>,
-        toplevel: &zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1,
+        toplevel: &ExtForeignToplevelHandleV1,
     ) {
         let Some(w) = self
             .toplevel_info_state
@@ -306,7 +304,7 @@ impl ToplevelInfoHandler for State {
         &mut self,
         _conn: &Connection,
         _qh: &QueueHandle<Self>,
-        _toplevel: &zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1,
+        _toplevel: &ExtForeignToplevelHandleV1,
     ) {
     }
 }

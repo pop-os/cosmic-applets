@@ -6,15 +6,13 @@ use cctk::{
     sctk::{output::OutputInfo, reexports::calloop},
     toplevel_info::ToplevelInfo,
     wayland_client::protocol::wl_output::WlOutput,
+    wayland_protocols::ext::foreign_toplevel_list::v1::client::ext_foreign_toplevel_handle_v1::ExtForeignToplevelHandleV1,
 };
 use cosmic::{
     iced::{self, stream, Subscription},
     iced_core::image::Bytes,
 };
-use cosmic_protocols::{
-    toplevel_info::v1::client::zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1,
-    workspace::v1::client::zcosmic_workspace_handle_v1::ZcosmicWorkspaceHandleV1,
-};
+use cosmic_protocols::workspace::v1::client::zcosmic_workspace_handle_v1::ZcosmicWorkspaceHandleV1;
 use image::EncodableLayout;
 
 use futures::{
@@ -120,14 +118,14 @@ pub enum WaylandUpdate {
         exec: String,
         gpu_idx: Option<usize>,
     },
-    Image(ZcosmicToplevelHandleV1, WaylandImage),
+    Image(ExtForeignToplevelHandleV1, WaylandImage),
 }
 
 #[derive(Clone, Debug)]
 pub enum ToplevelUpdate {
-    Add(ZcosmicToplevelHandleV1, ToplevelInfo),
-    Update(ZcosmicToplevelHandleV1, ToplevelInfo),
-    Remove(ZcosmicToplevelHandleV1),
+    Add(ToplevelInfo),
+    Update(ToplevelInfo),
+    Remove(ExtForeignToplevelHandleV1),
 }
 
 #[derive(Clone, Debug)]
@@ -145,12 +143,12 @@ pub enum WaylandRequest {
         exec: String,
         gpu_idx: Option<usize>,
     },
-    Screencopy(ZcosmicToplevelHandleV1),
+    Screencopy(ExtForeignToplevelHandleV1),
 }
 
 #[derive(Debug, Clone)]
 pub enum ToplevelRequest {
-    Activate(ZcosmicToplevelHandleV1),
-    Minimize(ZcosmicToplevelHandleV1),
-    Quit(ZcosmicToplevelHandleV1),
+    Activate(ExtForeignToplevelHandleV1),
+    Minimize(ExtForeignToplevelHandleV1),
+    Quit(ExtForeignToplevelHandleV1),
 }
