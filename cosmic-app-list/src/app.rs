@@ -129,7 +129,7 @@ struct DockItem {
     id: u32,
     toplevels: Vec<(ZcosmicToplevelHandleV1, ToplevelInfo, Option<WaylandImage>)>,
     // Information found in the .desktop file
-    desktop_info: DesktopEntry<'static>,
+    desktop_info: DesktopEntry,
     // We must use this because the id in `DesktopEntry` is an estimation.
     // Thus, if we unpin an item, we want to be sure to use the real id
     original_app_id: String,
@@ -556,7 +556,7 @@ fn app_list_icon_style(selected: bool) -> cosmic::theme::Button {
     }
 }
 
-fn load_desktop_entries_from_app_ids<I, L>(ids: &[I], locales: &[L]) -> Vec<DesktopEntry<'static>>
+fn load_desktop_entries_from_app_ids<I, L>(ids: &[I], locales: &[L]) -> Vec<DesktopEntry>
 where
     I: AsRef<str>,
     L: AsRef<str>,
@@ -568,7 +568,7 @@ where
     ids.iter()
         .map(|id| {
             fde::matching::find_entry_from_appid(entries.iter(), id.as_ref())
-                .unwrap_or(&fde::DesktopEntry::from_appid(id.as_ref()))
+                .unwrap_or(&fde::DesktopEntry::from_appid(id.as_ref().to_owned()))
                 .to_owned()
         })
         .collect_vec()

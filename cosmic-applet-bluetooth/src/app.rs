@@ -528,7 +528,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
                     .request_confirmation
                     .as_ref()
                     .map_or(false, |(dev, _, _)| d.address == dev.address)
-                && (d.has_name() || d.is_known_device_type())
+                    && (d.has_name() || d.is_known_device_type())
             }) {
                 let row = row![
                     icon::from_name(dev.icon.as_str()).size(16).symbolic(true),

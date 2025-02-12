@@ -4,13 +4,6 @@
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 fn main() -> cosmic::iced::Result {
-    // Prevents glibc from hoarding memory, such as cosmic-applet-minimize
-    // consuming 100s of megabytes on restoring a minimized window.
-    #[cfg(target_env = "gnu")]
-    unsafe {
-        libc::mallopt(libc::M_MMAP_THRESHOLD, 65536);
-    }
-
     tracing_subscriber::fmt().with_env_filter("warn").init();
     let _ = tracing_log::LogTracer::init();
 
