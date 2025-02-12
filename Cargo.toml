@@ -24,10 +24,10 @@ resolver = "2"
 
 [workspace.dependencies]
 anyhow = "1.0.81"
-cctk = { git = "https://github.com/pop-os/cosmic-protocols", package = "cosmic-client-toolkit", rev = "29ab323" }
+cctk = { git = "https://github.com/pop-os/cosmic-protocols", package = "cosmic-client-toolkit", rev = "178eb0b" }
 cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols", default-features = false, features = [
     "client",
-], rev = "29ab323" }
+], rev = "178eb0b" }
 cosmic-settings-subscriptions = { git = "https://github.com/pop-os/cosmic-settings-subscriptions" }
 # cosmic-settings-subscriptions = { path = "../cosmic-settings-subscriptions" }
 

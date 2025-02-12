@@ -11,8 +11,8 @@ use cosmic::{
     app,
     applet::cosmic_panel_config::PanelAnchor,
     cctk::{
-        cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1,
         sctk::reexports::calloop, toplevel_info::ToplevelInfo,
+        wayland_protocols::ext::foreign_toplevel_list::v1::client::ext_foreign_toplevel_handle_v1::ExtForeignToplevelHandleV1,
     },
     desktop::DesktopEntryData,
     iced::{
@@ -45,12 +45,7 @@ pub fn run() -> cosmic::iced::Result {
 #[derive(Default)]
 struct Minimize {
     core: cosmic::app::Core,
-    apps: Vec<(
-        ZcosmicToplevelHandleV1,
-        ToplevelInfo,
-        DesktopEntryData,
-        Option<WaylandImage>,
-    )>,
+    apps: Vec<(ToplevelInfo, DesktopEntryData, Option<WaylandImage>)>,
     tx: Option<calloop::channel::Sender<WaylandRequest>>,
     overflow_popup: Option<window::Id>,
 }
@@ -83,7 +78,7 @@ impl Minimize {
 #[derive(Debug, Clone)]
 enum Message {
     Wayland(WaylandUpdate),
-    Activate(ZcosmicToplevelHandleV1),
+    Activate(ExtForeignToplevelHandleV1),
     Closed(window::Id),
     OpenOverflowPopup,
     CloseOverflowPopup,
@@ -127,7 +122,7 @@ impl cosmic::Application for Minimize {
                     panic!("Wayland Subscription ended...")
                 }
                 WaylandUpdate::Toplevel(t) => match t {
-                    ToplevelUpdate::Add(handle, info) | ToplevelUpdate::Update(handle, info) => {
+                    ToplevelUpdate::Add(info) | ToplevelUpdate::Update(info) => {
                         let data = |id| {
                             cosmic::desktop::load_applications_for_app_ids(
                                 None,
@@ -137,24 +132,32 @@ impl cosmic::Application for Minimize {
                             )
                             .remove(0)
                         };
-                        if let Some(pos) = self.apps.iter_mut().position(|a| a.0 == handle) {
-                            if self.apps[pos].1.app_id != info.app_id {
-                                self.apps[pos].2 = data(&info.app_id)
+                        if let Some(pos) = self
+                            .apps
+                            .iter_mut()
+                            .position(|a| a.0.foreign_toplevel == info.foreign_toplevel)
+                        {
+                            if self.apps[pos].0.app_id != info.app_id {
+                                self.apps[pos].1 = data(&info.app_id)
                             }
-                            self.apps[pos].1 = info;
+                            self.apps[pos].0 = info;
                         } else {
                             let data = data(&info.app_id);
-                            self.apps.push((handle, info, data, None));
+                            self.apps.push((info, data, None));
                         }
                     }
                     ToplevelUpdate::Remove(handle) => {
-                        self.apps.retain(|a| a.0 != handle);
+                        self.apps.retain(|a| a.0.foreign_toplevel != handle);
                         self.apps.shrink_to_fit();
                     }
                 },
                 WaylandUpdate::Image(handle, img) => {
-                    if let Some(pos) = self.apps.iter().position(|a| a.0 == handle) {
-                        self.apps[pos].3 = Some(img);
+                    if let Some(pos) = self
+                        .apps
+                        .iter()
+                        .position(|a| a.0.foreign_toplevel == handle)
+                    {
+                        self.apps[pos].2 = Some(img);
                     }
                 }
             },
@@ -230,31 +233,29 @@ impl cosmic::Application for Minimize {
         let padding = self.core.applet.suggested_padding(false);
         let theme = self.core.system_theme().cosmic();
         let space_xxs = theme.space_xxs();
-        let icon_buttons = self.apps[..max_icon_count]
-            .iter()
-            .map(|(handle, _, data, img)| {
-                tooltip(
-                    Element::from(crate::window_image::WindowImage::new(
-                        img.clone(),
-                        &data.icon,
-                        width as f32,
-                        Message::Activate(handle.clone()),
-                        padding,
-                    )),
-                    text(data.name.clone()).shaping(text::Shaping::Advanced),
-                    // tooltip::Position::FollowCursor,
-                    // FIXME tooltip fails to appear when created as indicated in design
-                    // maybe it should be a subsurface
-                    match self.core.applet.anchor {
-                        PanelAnchor::Left => tooltip::Position::Right,
-                        PanelAnchor::Right => tooltip::Position::Left,
-                        PanelAnchor::Top => tooltip::Position::Bottom,
-                        PanelAnchor::Bottom => tooltip::Position::Top,
-                    },
-                )
-                .snap_within_viewport(false)
-                .into()
-            });
+        let icon_buttons = self.apps[..max_icon_count].iter().map(|(info, data, img)| {
+            tooltip(
+                Element::from(crate::window_image::WindowImage::new(
+                    img.clone(),
+                    &data.icon,
+                    width as f32,
+                    Message::Activate(info.foreign_toplevel.clone()),
+                    padding,
+                )),
+                text(data.name.clone()).shaping(text::Shaping::Advanced),
+                // tooltip::Position::FollowCursor,
+                // FIXME tooltip fails to appear when created as indicated in design
+                // maybe it should be a subsurface
+                match self.core.applet.anchor {
+                    PanelAnchor::Left => tooltip::Position::Right,
+                    PanelAnchor::Right => tooltip::Position::Left,
+                    PanelAnchor::Top => tooltip::Position::Bottom,
+                    PanelAnchor::Bottom => tooltip::Position::Top,
+                },
+            )
+            .snap_within_viewport(false)
+            .into()
+        });
         let overflow_btn = if max_icon_count < self.apps.len() {
             let icon = match self.core.applet.anchor {
                 PanelAnchor::Bottom => "go-up-symbolic",
@@ -335,31 +336,29 @@ impl cosmic::Application for Minimize {
         let padding = self.core.applet.suggested_padding(false);
         let theme = self.core.system_theme().cosmic();
         let space_xxs = theme.space_xxs();
-        let icon_buttons = self.apps[max_icon_count..]
-            .iter()
-            .map(|(handle, _, data, img)| {
-                tooltip(
-                    Element::from(crate::window_image::WindowImage::new(
-                        img.clone(),
-                        &data.icon,
-                        width as f32,
-                        Message::Activate(handle.clone()),
-                        padding,
-                    )),
-                    text(data.name.clone()).shaping(text::Shaping::Advanced),
-                    // tooltip::Position::FollowCursor,
-                    // FIXME tooltip fails to appear when created as indicated in design
-                    // maybe it should be a subsurface
-                    match self.core.applet.anchor {
-                        PanelAnchor::Left => tooltip::Position::Right,
-                        PanelAnchor::Right => tooltip::Position::Left,
-                        PanelAnchor::Top => tooltip::Position::Bottom,
-                        PanelAnchor::Bottom => tooltip::Position::Top,
-                    },
-                )
-                .snap_within_viewport(false)
-                .into()
-            });
+        let icon_buttons = self.apps[max_icon_count..].iter().map(|(info, data, img)| {
+            tooltip(
+                Element::from(crate::window_image::WindowImage::new(
+                    img.clone(),
+                    &data.icon,
+                    width as f32,
+                    Message::Activate(info.foreign_toplevel.clone()),
+                    padding,
+                )),
+                text(data.name.clone()).shaping(text::Shaping::Advanced),
+                // tooltip::Position::FollowCursor,
+                // FIXME tooltip fails to appear when created as indicated in design
+                // maybe it should be a subsurface
+                match self.core.applet.anchor {
+                    PanelAnchor::Left => tooltip::Position::Right,
+                    PanelAnchor::Right => tooltip::Position::Left,
+                    PanelAnchor::Top => tooltip::Position::Bottom,
+                    PanelAnchor::Bottom => tooltip::Position::Top,
+                },
+            )
+            .snap_within_viewport(false)
+            .into()
+        });
 
         // TODO optional dividers on ends if detects app list neighbor
         // not sure the best way to tell if there is an adjacent app-list

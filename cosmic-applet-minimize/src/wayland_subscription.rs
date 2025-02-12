@@ -7,12 +7,14 @@
 //! Source: `Interface '/org/freedesktop/UPower/KbdBacklight' from service 'org.freedesktop.UPower' on system bus`.
 use cctk::{sctk::reexports::calloop, toplevel_info::ToplevelInfo};
 use cosmic::{
-    cctk::{self, cosmic_protocols},
+    cctk::{
+        self,
+        wayland_protocols::ext::foreign_toplevel_list::v1::client::ext_foreign_toplevel_handle_v1::ExtForeignToplevelHandleV1,
+    },
     iced::{self, Subscription},
     iced_core::image::Bytes,
     iced_futures::{futures, stream},
 };
-use cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1;
 use futures::SinkExt;
 use image::EncodableLayout;
 use std::fmt::Debug;
@@ -45,7 +47,7 @@ pub enum WaylandUpdate {
     Init(calloop::channel::Sender<WaylandRequest>),
     Finished,
     Toplevel(ToplevelUpdate),
-    Image(ZcosmicToplevelHandleV1, WaylandImage),
+    Image(ExtForeignToplevelHandleV1, WaylandImage),
 }
 
 #[derive(Debug, Clone)]
@@ -73,9 +75,9 @@ impl AsRef<[u8]> for WaylandImage {
 
 #[derive(Clone, Debug)]
 pub enum ToplevelUpdate {
-    Add(ZcosmicToplevelHandleV1, ToplevelInfo),
-    Update(ZcosmicToplevelHandleV1, ToplevelInfo),
-    Remove(ZcosmicToplevelHandleV1),
+    Add(ToplevelInfo),
+    Update(ToplevelInfo),
+    Remove(ExtForeignToplevelHandleV1),
 }
 
 #[derive(Clone, Debug)]
@@ -85,5 +87,5 @@ pub enum WaylandRequest {
 
 #[derive(Debug, Clone)]
 pub enum ToplevelRequest {
-    Activate(ZcosmicToplevelHandleV1),
+    Activate(ExtForeignToplevelHandleV1),
 }

@@ -39,10 +39,11 @@ use cctk::{
         },
         Connection, Dispatch, QueueHandle, WEnum,
     },
+    wayland_protocols::ext::foreign_toplevel_list::v1::client::ext_foreign_toplevel_handle_v1::ExtForeignToplevelHandleV1,
     workspace::{WorkspaceHandler, WorkspaceState},
 };
 use cosmic_protocols::{
-    toplevel_info::v1::client::zcosmic_toplevel_handle_v1::{self, ZcosmicToplevelHandleV1},
+    toplevel_info::v1::client::zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1,
     toplevel_management::v1::client::zcosmic_toplevel_manager_v1,
     workspace::v1::client::zcosmic_workspace_handle_v1::State as WorkspaceUpdateState,
 };
@@ -235,15 +236,12 @@ impl ToplevelInfoHandler for AppData {
         &mut self,
         _conn: &Connection,
         _qh: &QueueHandle<Self>,
-        toplevel: &zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1,
+        toplevel: &ExtForeignToplevelHandleV1,
     ) {
         if let Some(info) = self.toplevel_info_state.info(toplevel) {
             let _ = self
                 .tx
-                .unbounded_send(WaylandUpdate::Toplevel(ToplevelUpdate::Add(
-                    toplevel.clone(),
-                    info.clone(),
-                )));
+                .unbounded_send(WaylandUpdate::Toplevel(ToplevelUpdate::Add(info.clone())));
         }
     }
 
@@ -251,13 +249,12 @@ impl ToplevelInfoHandler for AppData {
         &mut self,
         _conn: &Connection,
         _qh: &QueueHandle<Self>,
-        toplevel: &zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1,
+        toplevel: &ExtForeignToplevelHandleV1,
     ) {
         if let Some(info) = self.toplevel_info_state.info(toplevel) {
             let _ = self
                 .tx
                 .unbounded_send(WaylandUpdate::Toplevel(ToplevelUpdate::Update(
-                    toplevel.clone(),
                     info.clone(),
                 )));
         }
@@ -267,7 +264,7 @@ impl ToplevelInfoHandler for AppData {
         &mut self,
         _conn: &Connection,
         _qh: &QueueHandle<Self>,
-        toplevel: &zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1,
+        toplevel: &ExtForeignToplevelHandleV1,
     ) {
         let _ = self
             .tx
@@ -479,13 +476,26 @@ impl<T: AsFd> ShmImage<T> {
 }
 
 impl AppData {
-    fn send_image(&self, handle: ZcosmicToplevelHandleV1) {
+    fn cosmic_toplevel(
+        &self,
+        handle: &ExtForeignToplevelHandleV1,
+    ) -> Option<ZcosmicToplevelHandleV1> {
+        self.toplevel_info_state
+            .info(&handle)?
+            .cosmic_toplevel
+            .clone()
+    }
+
+    fn send_image(&self, handle: ExtForeignToplevelHandleV1) {
         let tx = self.tx.clone();
         let capture_data = CaptureData {
             qh: self.queue_handle.clone(),
             conn: self.conn.clone(),
             wl_shm: self.shm_state.wl_shm().clone(),
             capturer: self.screencopy_state.capturer().clone(),
+        };
+        let Some(cosmic_toplevel) = self.cosmic_toplevel(&handle) else {
+            return;
         };
         std::thread::spawn(move || {
             use std::ffi::CStr;
@@ -496,7 +506,7 @@ impl AppData {
             };
 
             // XXX is this going to use to much memory?
-            let img = capture_data.capture_source_shm_fd(false, handle.clone(), fd, None);
+            let img = capture_data.capture_source_shm_fd(false, cosmic_toplevel, fd, None);
             if let Some(img) = img {
                 let Ok(img) = img.image() else {
                     tracing::error!("Failed to get RgbaImage");
@@ -621,18 +631,24 @@ pub(crate) fn wayland_handler(
                 }
                 WaylandRequest::Toplevel(req) => match req {
                     ToplevelRequest::Activate(handle) => {
-                        if let Some(seat) = state.seat_state.seats().next() {
-                            let manager = &state.toplevel_manager_state.manager;
-                            manager.activate(&handle, &seat);
+                        if let Some(cosmic_toplevel) = state.cosmic_toplevel(&handle) {
+                            if let Some(seat) = state.seat_state.seats().next() {
+                                let manager = &state.toplevel_manager_state.manager;
+                                manager.activate(&cosmic_toplevel, &seat);
+                            }
                         }
                     }
                     ToplevelRequest::Minimize(handle) => {
-                        let manager = &state.toplevel_manager_state.manager;
-                        manager.set_minimized(&handle);
+                        if let Some(cosmic_toplevel) = state.cosmic_toplevel(&handle) {
+                            let manager = &state.toplevel_manager_state.manager;
+                            manager.set_minimized(&cosmic_toplevel);
+                        }
                     }
                     ToplevelRequest::Quit(handle) => {
-                        let manager = &state.toplevel_manager_state.manager;
-                        manager.close(&handle);
+                        if let Some(cosmic_toplevel) = state.cosmic_toplevel(&handle) {
+                            let manager = &state.toplevel_manager_state.manager;
+                            manager.close(&cosmic_toplevel);
+                        }
                     }
                 },
                 WaylandRequest::TokenRequest {

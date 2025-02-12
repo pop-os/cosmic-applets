@@ -42,6 +42,7 @@ use cosmic::{
             },
             Dispatch,
         },
+        wayland_protocols::ext::foreign_toplevel_list::v1::client::ext_foreign_toplevel_handle_v1::ExtForeignToplevelHandleV1,
     },
     iced_futures::futures,
 };
@@ -291,13 +292,26 @@ impl ToplevelManagerHandler for AppData {
     }
 }
 impl AppData {
-    fn send_image(&self, handle: ZcosmicToplevelHandleV1) {
+    fn cosmic_toplevel(
+        &self,
+        handle: &ExtForeignToplevelHandleV1,
+    ) -> Option<ZcosmicToplevelHandleV1> {
+        self.toplevel_info_state
+            .info(&handle)?
+            .cosmic_toplevel
+            .clone()
+    }
+
+    fn send_image(&self, handle: ExtForeignToplevelHandleV1) {
         let mut tx = self.tx.clone();
         let capure_data = CaptureData {
             qh: self.queue_handle.clone(),
             conn: self.conn.clone(),
             wl_shm: self.shm_state.wl_shm().clone(),
             capturer: self.screencopy_state.capturer().clone(),
+        };
+        let Some(cosmic_toplevel) = self.cosmic_toplevel(&handle) else {
+            return;
         };
         std::thread::spawn(move || {
             use std::ffi::CStr;
@@ -309,7 +323,7 @@ impl AppData {
             };
 
             // XXX is this going to use to much memory?
-            let img = capure_data.capture_source_shm_fd(false, handle.clone(), fd, None);
+            let img = capure_data.capture_source_shm_fd(false, cosmic_toplevel, fd, None);
             if let Some(img) = img {
                 let Ok(mut img) = img.image() else {
                     tracing::error!("Failed to get RgbaImage");
@@ -353,7 +367,7 @@ impl ToplevelInfoHandler for AppData {
         &mut self,
         _conn: &Connection,
         _qh: &QueueHandle<Self>,
-        toplevel: &zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1,
+        toplevel: &ExtForeignToplevelHandleV1,
     ) {
         if let Some(info) = self.toplevel_info_state.info(toplevel) {
             if info
@@ -362,9 +376,10 @@ impl ToplevelInfoHandler for AppData {
             {
                 // spawn thread for sending the image
                 self.send_image(toplevel.clone());
-                let _ = futures::executor::block_on(self.tx.send(WaylandUpdate::Toplevel(
-                    ToplevelUpdate::Add(toplevel.clone(), info.clone()),
-                )));
+                let _ = futures::executor::block_on(
+                    self.tx
+                        .send(WaylandUpdate::Toplevel(ToplevelUpdate::Add(info.clone()))),
+                );
             } else {
                 let _ = futures::executor::block_on(self.tx.send(WaylandUpdate::Toplevel(
                     ToplevelUpdate::Remove(toplevel.clone()),
@@ -377,7 +392,7 @@ impl ToplevelInfoHandler for AppData {
         &mut self,
         _conn: &Connection,
         _qh: &QueueHandle<Self>,
-        toplevel: &zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1,
+        toplevel: &ExtForeignToplevelHandleV1,
     ) {
         if let Some(info) = self.toplevel_info_state.info(toplevel) {
             if info
@@ -386,7 +401,7 @@ impl ToplevelInfoHandler for AppData {
             {
                 self.send_image(toplevel.clone());
                 let _ = futures::executor::block_on(self.tx.send(WaylandUpdate::Toplevel(
-                    ToplevelUpdate::Update(toplevel.clone(), info.clone()),
+                    ToplevelUpdate::Update(info.clone()),
                 )));
             } else {
                 let _ = futures::executor::block_on(self.tx.send(WaylandUpdate::Toplevel(
@@ -400,7 +415,7 @@ impl ToplevelInfoHandler for AppData {
         &mut self,
         _conn: &Connection,
         _qh: &QueueHandle<Self>,
-        toplevel: &zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1,
+        toplevel: &ExtForeignToplevelHandleV1,
     ) {
         let _ = futures::executor::block_on(self.tx.send(WaylandUpdate::Toplevel(
             ToplevelUpdate::Remove(toplevel.clone()),
@@ -442,7 +457,9 @@ pub(crate) fn wayland_handler(
                     ToplevelRequest::Activate(handle) => {
                         if let Some(seat) = state.seat_state.seats().next() {
                             let manager = &state.toplevel_manager_state.manager;
-                            manager.activate(&handle, &seat);
+                            if let Some(cosmic_toplevel) = state.cosmic_toplevel(&handle) {
+                                manager.activate(&cosmic_toplevel, &seat);
+                            }
                         }
                     }
                 },

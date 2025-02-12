@@ -14,6 +14,7 @@ use cctk::{
     wayland_client::protocol::{
         wl_data_device_manager::DndAction, wl_output::WlOutput, wl_seat::WlSeat,
     },
+    wayland_protocols::ext::foreign_toplevel_list::v1::client::ext_foreign_toplevel_handle_v1::ExtForeignToplevelHandleV1,
 };
 use cosmic::{
     applet::{
@@ -44,7 +45,7 @@ use cosmic::{
 };
 use cosmic_app_list_config::{AppListConfig, APP_ID};
 use cosmic_protocols::{
-    toplevel_info::v1::client::zcosmic_toplevel_handle_v1::{State, ZcosmicToplevelHandleV1},
+    toplevel_info::v1::client::zcosmic_toplevel_handle_v1::State,
     workspace::v1::client::zcosmic_workspace_handle_v1::ZcosmicWorkspaceHandleV1,
 };
 use freedesktop_desktop_entry as fde;
@@ -127,7 +128,7 @@ struct DockItem {
     // ID used internally in the applet. Each dock item
     // have an unique id
     id: u32,
-    toplevels: Vec<(ZcosmicToplevelHandleV1, ToplevelInfo, Option<WaylandImage>)>,
+    toplevels: Vec<(ToplevelInfo, Option<WaylandImage>)>,
     // Information found in the .desktop file
     desktop_info: DesktopEntry,
     // We must use this because the id in `DesktopEntry` is an estimation.
@@ -248,7 +249,9 @@ impl DockItem {
                     .on_press_maybe(if toplevels.is_empty() {
                         launch_on_preferred_gpu(desktop_info, gpus)
                     } else if toplevels.len() == 1 {
-                        toplevels.first().map(|t| Message::Toggle(t.0.clone()))
+                        toplevels
+                            .first()
+                            .map(|t| Message::Toggle(t.0.foreign_toplevel.clone()))
                     } else {
                         Some(Message::TopLevelListPopup((*id).into(), window_id))
                     })
@@ -348,8 +351,8 @@ enum Message {
     GpuRequest(Option<Vec<Gpu>>),
     CloseRequested(window::Id),
     ClosePopup,
-    Activate(ZcosmicToplevelHandleV1),
-    Toggle(ZcosmicToplevelHandleV1),
+    Activate(ExtForeignToplevelHandleV1),
+    Toggle(ExtForeignToplevelHandleV1),
     Exec(String, Option<usize>),
     Quit(String),
     NewSeat(WlSeat),
@@ -721,9 +724,10 @@ impl cosmic::Application for CosmicAppList {
                     .chain(self.pinned_list.iter())
                     .find(|t| t.id == id)
                 {
-                    for (ref handle, _, _) in &toplevel_group.toplevels {
+                    for (info, _) in &toplevel_group.toplevels {
                         if let Some(tx) = self.wayland_sender.as_ref() {
-                            let _ = tx.send(WaylandRequest::Screencopy(handle.clone()));
+                            let _ =
+                                tx.send(WaylandRequest::Screencopy(info.foreign_toplevel.clone()));
                         }
                     }
 
@@ -844,10 +848,10 @@ impl cosmic::Application for CosmicAppList {
                     .chain(self.pinned_list.iter())
                     .find(|t| t.desktop_info.id() == id)
                 {
-                    for (handle, _, _) in &toplevel_group.toplevels {
+                    for (info, _) in &toplevel_group.toplevels {
                         if let Some(tx) = self.wayland_sender.as_ref() {
                             let _ = tx.send(WaylandRequest::Toplevel(ToplevelRequest::Quit(
-                                handle.clone(),
+                                info.foreign_toplevel.clone(),
                             )));
                         }
                     }
@@ -1016,10 +1020,10 @@ impl cosmic::Application for CosmicAppList {
                             .iter_mut()
                             .chain(self.pinned_list.iter_mut())
                         {
-                            if let Some((_, _, ref mut handle_img)) = x
+                            if let Some((_, ref mut handle_img)) = x
                                 .toplevels
                                 .iter_mut()
-                                .find(|(toplevel_handle, _, _)| toplevel_handle.clone() == handle)
+                                .find(|(info, _)| info.foreign_toplevel == handle)
                             {
                                 *handle_img = Some(img);
                                 break 'img_update;
@@ -1050,7 +1054,7 @@ impl cosmic::Application for CosmicAppList {
                         .map(cosmic::app::message::app);
                     }
                     WaylandUpdate::Toplevel(event) => match event {
-                        ToplevelUpdate::Add(handle, mut info) => {
+                        ToplevelUpdate::Add(mut info) => {
                             let new_desktop_info =
                                 load_desktop_entries_from_app_ids(&[&info.app_id], &self.locales)
                                     .remove(0);
@@ -1063,7 +1067,7 @@ impl cosmic::Application for CosmicAppList {
                                     desktop_info.id() == new_desktop_info.id()
                                 })
                             {
-                                t.toplevels.push((handle, info, None));
+                                t.toplevels.push((info, None));
                             } else {
                                 if info.app_id.is_empty() {
                                     info.app_id = format!("Unknown Application {}", self.item_ctr);
@@ -1073,7 +1077,7 @@ impl cosmic::Application for CosmicAppList {
                                 self.active_list.push(DockItem {
                                     id: self.item_ctr,
                                     original_app_id: info.app_id.clone(),
-                                    toplevels: vec![(handle, info, None)],
+                                    toplevels: vec![(info, None)],
                                     desktop_info: new_desktop_info,
                                 });
                             }
@@ -1084,11 +1088,12 @@ impl cosmic::Application for CosmicAppList {
                                 .iter_mut()
                                 .chain(self.pinned_list.iter_mut())
                             {
-                                t.toplevels.retain(|(t_handle, _, _)| t_handle != &handle);
+                                t.toplevels
+                                    .retain(|(info, _)| info.foreign_toplevel != handle);
                             }
                             self.active_list.retain(|t| !t.toplevels.is_empty());
                         }
-                        ToplevelUpdate::Update(handle, info) => {
+                        ToplevelUpdate::Update(info) => {
                             // TODO probably want to make sure it is removed
                             if info.app_id.is_empty() {
                                 return Task::none();
@@ -1098,8 +1103,8 @@ impl cosmic::Application for CosmicAppList {
                                 .iter_mut()
                                 .chain(self.pinned_list.iter_mut())
                             {
-                                for (t_handle, t_info, _) in &mut toplevel_list.toplevels {
-                                    if &handle == t_handle {
+                                for (t_info, _) in &mut toplevel_list.toplevels {
+                                    if info.foreign_toplevel == t_info.foreign_toplevel {
                                         *t_info = info;
                                         break 'toplevel_loop;
                                     }
@@ -1404,7 +1409,7 @@ impl cosmic::Application for CosmicAppList {
                     dock_item
                         .toplevels
                         .iter()
-                        .any(|y| focused_item.contains(&y.0)),
+                        .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
                     theme.cosmic().radius_xs(),
                     self.core.main_window_id().unwrap(),
                 )
@@ -1447,7 +1452,9 @@ impl cosmic::Application for CosmicAppList {
                     false,
                     self.config.enable_drag_source,
                     self.gpus.as_deref(),
-                    item.toplevels.iter().any(|y| focused_item.contains(&y.0)),
+                    item.toplevels
+                        .iter()
+                        .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
                     dot_radius,
                     self.core.main_window_id().unwrap(),
                 ),
@@ -1484,7 +1491,7 @@ impl cosmic::Application for CosmicAppList {
                     dock_item
                         .toplevels
                         .iter()
-                        .any(|y| focused_item.contains(&y.0)),
+                        .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
                     dot_radius,
                     self.core.main_window_id().unwrap(),
                 )
@@ -1724,16 +1731,17 @@ impl cosmic::Application for CosmicAppList {
 
                     if !toplevels.is_empty() {
                         let mut list_col = column![];
-                        for (handle, info, _) in toplevels {
+                        for (info, _) in toplevels {
                             let title = if info.title.len() > 34 {
                                 format!("{:.32}...", &info.title)
                             } else {
                                 info.title.clone()
                             };
-                            list_col = list_col.push(
-                                menu_button(text::body(title))
-                                    .on_press(Message::Activate(handle.clone())),
-                            );
+                            list_col =
+                                list_col
+                                    .push(menu_button(text::body(title)).on_press(
+                                        Message::Activate(info.foreign_toplevel.clone()),
+                                    ));
                         }
                         content = content.push(list_col);
                         content = content.push(divider::horizontal::light());
@@ -1814,7 +1822,7 @@ impl cosmic::Application for CosmicAppList {
                     PanelAnchor::Left | PanelAnchor::Right => {
                         let mut content =
                             column![].padding(8).align_x(Alignment::Center).spacing(8);
-                        for (handle, info, img) in toplevels {
+                        for (info, img) in toplevels {
                             let title = if info.title.len() > 18 {
                                 format!("{:.16}...", &info.title)
                             } else {
@@ -1822,9 +1830,10 @@ impl cosmic::Application for CosmicAppList {
                             };
                             content = content.push(toplevel_button(
                                 img.clone(),
-                                Message::Toggle(handle.clone()),
+                                Message::Toggle(info.foreign_toplevel.clone()),
                                 title,
-                                self.currently_active_toplevel().contains(handle),
+                                self.currently_active_toplevel()
+                                    .contains(&info.foreign_toplevel),
                             ));
                         }
                         self.core
@@ -1835,7 +1844,7 @@ impl cosmic::Application for CosmicAppList {
                     }
                     PanelAnchor::Bottom | PanelAnchor::Top => {
                         let mut content = row![].padding(8).align_y(Alignment::Center).spacing(8);
-                        for (handle, info, img) in toplevels {
+                        for (info, img) in toplevels {
                             let title = if info.title.len() > 18 {
                                 format!("{:.16}...", &info.title)
                             } else {
@@ -1843,9 +1852,10 @@ impl cosmic::Application for CosmicAppList {
                             };
                             content = content.push(toplevel_button(
                                 img.clone(),
-                                Message::Toggle(handle.clone()),
+                                Message::Toggle(info.foreign_toplevel.clone()),
                                 title,
-                                self.currently_active_toplevel().contains(handle),
+                                self.currently_active_toplevel()
+                                    .contains(&info.foreign_toplevel),
                             ));
                         }
                         self.core
@@ -1886,7 +1896,7 @@ impl cosmic::Application for CosmicAppList {
                         dock_item
                             .toplevels
                             .iter()
-                            .any(|y| focused_item.contains(&y.0)),
+                            .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
                         dot_radius,
                         id,
                     )
@@ -1973,7 +1983,7 @@ impl cosmic::Application for CosmicAppList {
                         dock_item
                             .toplevels
                             .iter()
-                            .any(|y| focused_item.contains(&y.0)),
+                            .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
                         dot_radius,
                         id,
                     )
@@ -2129,15 +2139,15 @@ impl CosmicAppList {
         return (Some(favorite_index), active_index);
     }
 
-    fn currently_active_toplevel(&self) -> Vec<ZcosmicToplevelHandleV1> {
+    fn currently_active_toplevel(&self) -> Vec<ExtForeignToplevelHandleV1> {
         if self.active_workspaces.is_empty() {
             return Vec::new();
         }
         let current_output = self.core.applet.output_name.clone();
-        let mut focused_toplevels: Vec<ZcosmicToplevelHandleV1> = Vec::new();
+        let mut focused_toplevels: Vec<ExtForeignToplevelHandleV1> = Vec::new();
         let active_workspaces = self.active_workspaces.clone();
         for toplevel_list in self.active_list.iter().chain(self.pinned_list.iter()) {
-            for (t_handle, t_info, _) in &toplevel_list.toplevels {
+            for (t_info, _) in &toplevel_list.toplevels {
                 if t_info.state.contains(&State::Activated)
                     && active_workspaces
                         .iter()
@@ -2148,7 +2158,7 @@ impl CosmicAppList {
                         })
                     })
                 {
-                    focused_toplevels.push(t_handle.clone());
+                    focused_toplevels.push(t_info.foreign_toplevel.clone());
                 }
             }
         }
