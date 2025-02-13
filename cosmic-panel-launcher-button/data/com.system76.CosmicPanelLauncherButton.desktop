@@ -1,6 +1,7 @@
 [Desktop Entry]
 Name=Launcher Button
 Name[hu]=Indító gomb
+Name[pl]=Przycisk programu uruchamiającego
 Type=Application
 Exec=cosmic-panel-button com.system76.CosmicLauncher
 Terminal=false

@@ -1,6 +1,7 @@
 [Desktop Entry]
 Name=Tiling
 Name[hu]=Csempézés
+Name[pl]=Kafelkowanie
 Type=Application
 Exec=cosmic-applet-tiling
 Terminal=false

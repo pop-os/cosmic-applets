@@ -1,6 +1,7 @@
 [Desktop Entry]
 Name=App Tray
 Name[hu]=Alkalmazástálca
+Name[pl]=Zasobnik aplikacji
 Type=Application
 Exec=cosmic-app-list
 Terminal=false

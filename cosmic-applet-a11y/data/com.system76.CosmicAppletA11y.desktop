@@ -1,6 +1,7 @@
 [Desktop Entry]
 Name=Accessibility
 Name[hu]=Akadálymentesítés
+Name[pl]=Dostępność
 Type=Application
 Exec=cosmic-applet-a11y
 Terminal=false
