@@ -1,6 +1,7 @@
 [Desktop Entry]
 Name=User Session
 Name[hu]=Felhasználói Munkamenet
+Name[pl]=Sesja użytkownika
 Type=Application
 Exec=cosmic-applet-power
 Terminal=false

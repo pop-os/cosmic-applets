@@ -1,6 +1,7 @@
 [Desktop Entry]
 Name=Minimized Windows
 Name[hu]=Kis méretű ablakok
+Name[pl]=Zminimalizowane okna
 Type=Application
 Exec=cosmic-applet-minimize
 Terminal=false

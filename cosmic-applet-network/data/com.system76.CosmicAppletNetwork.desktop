@@ -1,6 +1,7 @@
 [Desktop Entry]
 Name=Network
 Name[hu]=Hálózat
+Name[pl]=Sieć
 Type=Application
 Exec=cosmic-applet-network
 Terminal=false
