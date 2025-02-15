@@ -1,0 +1,14 @@
+battery = Ceallraí
+battery-desc = Ídiú cumhachta agus feidhmíocht laghdaithe.
+balanced = Cothromaithe
+balanced-desc = Feidhmíocht chaighdeánach agus úsáid ceallraí.
+performance = Ard-Fheidhmíocht
+performance-desc = Ard-fheidhmíocht agus ard-úsáid cumhachta.
+max-charge = Méadaigh saolré do cheallraí trí uasmhuirear 80% a shocrú
+seconds = s
+minutes = nóim
+hours = u
+until-empty = go dtí go mbeidh sé folamh
+power-settings = Socruithe Cumhachta & Ceallraí...
+dgpu-running = Tá an GPU ar leith gníomhach agus féadfaidh sé saol ceallraí a laghdú
+dgpu-applications = Aipeanna ag úsáid {$gpu_name} GPU ar leith
