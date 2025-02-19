@@ -5,18 +5,18 @@ edition = "2021"
 license = "GPL-3.0-only"
 
 [dependencies]
-chrono = { version = "0.4.35", features = ["clock"] }
-chrono-tz = "0.9"
+chrono = { version = "0.4.39", features = ["clock"] }
+chrono-tz = "0.10"
 i18n-embed-fl.workspace = true
 i18n-embed.workspace = true
 libcosmic.workspace = true
 once_cell.workspace = true
 rust-embed.workspace = true
-tokio = { version = "1.36.0", features = ["time", "macros"] }
+tokio.workspace = true
 tracing-log.workspace = true
 tracing-subscriber.workspace = true
 tracing.workspace = true
-icu = { version = "1.4.0", features = [
+icu = { version = "1.5.0", features = [
     "experimental",
     "compiled_data",
     "icu_datetime_experimental",

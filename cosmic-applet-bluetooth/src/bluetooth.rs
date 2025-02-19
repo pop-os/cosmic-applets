@@ -45,7 +45,7 @@ fn device_type_to_icon(device_type: &str) -> &'static str {
         "input-mouse" => "input-mouse-symbolic",
         "printer" => "printer-network-symbolic",
         "camera-photo" => "camera-photo-symbolic",
-        _ => default_device_icon,
+        _ => DEFAULT_DEVICE_ICON,
     }
 }
 
@@ -238,7 +238,7 @@ impl PartialEq for BluerDevice {
     }
 }
 
-const default_device_icon: &str = "bluetooth-symbolic";
+const DEFAULT_DEVICE_ICON: &str = "bluetooth-symbolic";
 
 impl BluerDevice {
     pub async fn from_device(device: &bluer::Device) -> Self {
@@ -269,7 +269,7 @@ impl BluerDevice {
                     None
                 }
             })
-            .unwrap_or_else(|| device_type_to_icon(default_device_icon).to_string());
+            .unwrap_or_else(|| device_type_to_icon(DEFAULT_DEVICE_ICON).to_string());
 
         Self {
             name,
@@ -295,7 +295,7 @@ impl BluerDevice {
 
     #[must_use]
     pub fn is_known_device_type(&self) -> bool {
-        self.icon != default_device_icon
+        self.icon != DEFAULT_DEVICE_ICON
     }
 
     #[must_use]
@@ -375,8 +375,8 @@ impl BluerSessionState {
                             ),
                         ))
                         .await;
-                    let mut rng = rand::thread_rng();
-                    let pin_code = rng.gen_range(0..999999);
+                    let mut rng = rand::rng();
+                    let pin_code = rng.random_range(0..999999);
                     Ok(format!("{:06}", pin_code))
                 })
             })),
@@ -415,8 +415,8 @@ impl BluerSessionState {
                             ),
                         ))
                         .await;
-                    let mut rng = rand::thread_rng();
-                    let pin_code = rng.gen_range(0..999999);
+                    let mut rng = rand::rng();
+                    let pin_code = rng.random_range(0..999999);
                     Ok(pin_code)
                 })
             })),

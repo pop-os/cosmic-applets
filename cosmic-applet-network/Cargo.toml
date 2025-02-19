@@ -13,7 +13,7 @@ futures.workspace = true
 futures-util.workspace = true
 i18n-embed-fl.workspace = true
 i18n-embed.workspace = true
-itertools = "0.13.0"
+itertools = "0.14.0"
 libcosmic.workspace = true
 libcosmic.features = [
     "applet",
@@ -24,7 +24,7 @@ libcosmic.features = [
     "dbus-config",
 ]
 rust-embed.workspace = true
-tokio = { version = "1.36.0", features = ["full"] }
+tokio.workspace = true
 tracing-log.workspace = true
 tracing-subscriber.workspace = true
 tracing.workspace = true

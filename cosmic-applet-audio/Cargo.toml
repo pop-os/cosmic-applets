@@ -10,11 +10,11 @@ cosmic-time.workspace = true
 i18n-embed-fl.workspace = true
 i18n-embed.workspace = true
 libcosmic.workspace = true
-libpulse-binding = "2.28.1"
+libpulse-binding = "2.28.2"
 mpris2-zbus = { git = "https://github.com/pop-os/dbus-settings-bindings" }
 rust-embed.workspace = true
-serde = "1.0.197"
-tokio = { version = "1.36.0", features = ["full"] }
+serde = "1.0.217"
+tokio.workspace = true
 tracing-log.workspace = true
 tracing-subscriber.workspace = true
 tracing.workspace = true

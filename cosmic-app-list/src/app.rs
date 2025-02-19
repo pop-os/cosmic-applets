@@ -53,7 +53,7 @@ use freedesktop_desktop_entry::{get_languages_from_env, DesktopEntry};
 use futures::future::pending;
 use iced::{widget::container, Alignment, Background, Length};
 use itertools::Itertools;
-use rand::{thread_rng, Rng};
+use rand::{rng, Rng};
 use std::{borrow::Cow, collections::HashMap, path::PathBuf, rc::Rc, str::FromStr, time::Duration};
 use switcheroo_control::Gpu;
 use tokio::time::sleep;
@@ -1036,8 +1036,8 @@ impl cosmic::Application for CosmicAppList {
                         }
                         self.active_list.clear();
                         let subscription_ctr = self.subscription_ctr;
-                        let mut rng = thread_rng();
-                        let rand_d = rng.gen_range(0..100);
+                        let mut rng = rng();
+                        let rand_d = rng.random_range(0..100);
                         return iced::Task::perform(
                             async move {
                                 if let Some(millis) = 2u64

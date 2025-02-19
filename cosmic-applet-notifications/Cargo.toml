@@ -8,15 +8,7 @@ license = "GPL-3.0-only"
 anyhow.workspace = true
 cosmic-time.workspace = true
 libcosmic.workspace = true
-tokio = { version = "1.36.0", features = [
-    "sync",
-    "rt",
-    "tracing",
-    "macros",
-    "net",
-    "io-util",
-    "io-std",
-] }
+tokio.workspace = true
 cosmic-notifications-util = { git = "https://github.com/pop-os/cosmic-notifications" }
 cosmic-notifications-config = { git = "https://github.com/pop-os/cosmic-notifications" }
 # cosmic-notifications-util = { path = "../../cosmic-notifications-daemon/cosmic-notifications-util" }
@@ -30,11 +22,11 @@ tracing-log.workspace = true
 zbus.workspace = true
 zbus.features = ["tokio", "p2p"]
 # Application i18n
-i18n-embed = { version = "0.13.4", features = [
+i18n-embed = { version = "0.15.3", features = [
     "fluent-system",
     "desktop-requester",
 ] }
-i18n-embed-fl = "0.6.4"
-rust-embed = "6.3.0"
-rust-embed-utils = "7.5.0"
-url = "2.5.0"
+i18n-embed-fl = "0.9.3"
+rust-embed = "8.5.0"
+rust-embed-utils = "8.5.0"
+url = "2.5.4"
