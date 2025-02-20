@@ -5,6 +5,10 @@ edition = "2021"
 
 [dependencies]
 cosmic-dbus-a11y = { git = "https://github.com/pop-os/dbus-settings-bindings" }
+
+anyhow.workspace = true
+cctk.workspace = true
+cosmic-protocols.workspace = true
 cosmic-time.workspace = true
 i18n-embed-fl.workspace = true
 i18n-embed.workspace = true
