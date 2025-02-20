@@ -1,1 +1,3 @@
-accessibility = Zugänglichkeit
+screen-reader = Bildschirmleser
+magnifier = Bildschirmlupe
+settings = Bedienungshilfen Einstellungen...

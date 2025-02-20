@@ -1,1 +1,3 @@
-accessibility = Accessibility
+screen-reader = Screen reader
+magnifier = Magnifier
+settings = Accessibility settings...
