@@ -84,3 +84,7 @@ ignored = ["libcosmic"]
 # winit = { path = "../winit" }
 [patch."https://github.com/smithay/client-toolkit.git"]
 sctk = { package = "smithay-client-toolkit", version = "=0.19.2" }
+
+[patch."https://github.com/pop-os/cosmic-protocols"]
+cctk = { git = "https://github.com/pop-os//cosmic-protocols", package = "cosmic-client-toolkit", rev = "ed2a481" }
+cosmic-protocols = { git = "https://github.com/pop-os//cosmic-protocols", rev = "ed2a481" }
