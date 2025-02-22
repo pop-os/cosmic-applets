@@ -1,5 +1,5 @@
 tile-windows = Fenster automatisch kacheln
-tile-current = Aktuelle Arbeitsfläche automatisch kacheln
+tile-current = Aktuelle Arbeitsfläche kacheln
 shortcuts = Tastenkombinationen
 navigate-windows = Fenster navigieren
 move-window = Fenster verschieben
