@@ -1,1 +1,1 @@
-cosmic-applet-workspaces = Cosmic радни простори
+cosmic-applet-workspaces = COSMIC радни простори
