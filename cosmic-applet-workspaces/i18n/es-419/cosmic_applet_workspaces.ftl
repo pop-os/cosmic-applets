@@ -1,1 +1,1 @@
-cosmic-applet-workspaces = Espacios de trabajo de Cosmic
+cosmic-applet-workspaces = Espacios de trabajo de COSMIC
