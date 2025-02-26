@@ -36,6 +36,7 @@ use cosmic::{
     },
     iced_core::{Border, Padding, Shadow},
     iced_runtime::{core::event, dnd::peek_dnd},
+    surface_message::{MessageWrapper, SurfaceMessage},
     theme::{self, Button, Container},
     widget::{
         button, divider, dnd_source, horizontal_space,
@@ -371,6 +372,22 @@ enum Message {
     ConfigUpdated(AppListConfig),
     OpenFavorites,
     OpenActive,
+    Surface(SurfaceMessage),
+}
+
+impl From<Message> for MessageWrapper<Message> {
+    fn from(value: Message) -> Self {
+        match value {
+            Message::Surface(s) => MessageWrapper::Surface(s),
+            m => MessageWrapper::Message(m),
+        }
+    }
+}
+
+impl From<SurfaceMessage> for Message {
+    fn from(value: SurfaceMessage) -> Self {
+        Message::Surface(value)
+    }
 }
 
 fn index_in_list(
@@ -787,7 +804,6 @@ impl cosmic::Application for CosmicAppList {
                     return get_popup(popup_settings);
                 }
             }
-
             Message::PinApp(id) => {
                 if let Some(i) = self.active_list.iter().position(|t| t.id == id) {
                     let entry = self.active_list.remove(i);
@@ -1354,6 +1370,7 @@ impl cosmic::Application for CosmicAppList {
                     return self.close_popups();
                 }
             }
+            Message::Surface(surface_message) => {}
         }
 
         Task::none()

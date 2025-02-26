@@ -1,21 +1,29 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
+use std::cell::LazyCell;
+
 use cosmic::{
     app,
     applet::{menu_button, padded_control},
+    cctk::wayland_protocols::xdg::shell::client::xdg_positioner::Gravity,
     cosmic_theme::Spacing,
     iced::{
         self,
-        platform_specific::shell::commands::popup::{destroy_popup, get_popup},
+        platform_specific::{
+            runtime::wayland::subsurface,
+            shell::commands::popup::{destroy_popup, get_popup},
+        },
         widget::{self, column, row},
         window, Alignment, Length,
     },
     iced_runtime::core::layout::Limits,
+    surface_message::{MessageWrapper, SurfaceMessage},
     theme,
-    widget::{button, divider, icon, text, Space},
+    widget::{autosize, button, divider, icon, layer_container::layer_container, text, Space},
     Element, Task,
 };
+use once_cell::sync::Lazy;
 
 use logind_zbus::{
     manager::ManagerProxy,
@@ -32,17 +40,20 @@ pub mod session_manager;
 
 use crate::{cosmic_session::CosmicSessionProxy, session_manager::SessionManagerProxy};
 
+static SUBSURFACE_ID: Lazy<cosmic::widget::Id> =
+    Lazy::new(|| cosmic::widget::Id::new("subsurface"));
+
 pub fn run() -> cosmic::iced::Result {
     localize::localize();
 
     cosmic::applet::run::<Power>(())
 }
 
-#[derive(Default)]
 struct Power {
     core: cosmic::app::Core,
     icon_name: String,
     popup: Option<window::Id>,
+    subsurface_id: window::Id,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -66,6 +77,20 @@ impl PowerAction {
         }
     }
 }
+impl From<Message> for MessageWrapper<Message> {
+    fn from(value: Message) -> Self {
+        match value {
+            Message::Surface(s) => MessageWrapper::Surface(s),
+            m => MessageWrapper::Message(m),
+        }
+    }
+}
+
+impl From<SurfaceMessage> for Message {
+    fn from(value: SurfaceMessage) -> Self {
+        Message::Surface(value)
+    }
+}
 
 #[derive(Debug, Clone)]
 enum Message {
@@ -74,6 +99,7 @@ enum Message {
     Settings,
     Zbus(Result<(), zbus::Error>),
     Closed(window::Id),
+    Surface(SurfaceMessage),
 }
 
 impl cosmic::Application for Power {
@@ -95,7 +121,8 @@ impl cosmic::Application for Power {
             Self {
                 core,
                 icon_name: "system-shutdown-symbolic".to_string(),
-                ..Default::default()
+                subsurface_id: window::Id::unique(),
+                popup: Default::default(),
             },
             Task::none(),
         )
@@ -173,14 +200,20 @@ impl cosmic::Application for Power {
                 }
                 Task::none()
             }
+            Message::Surface(surface_message) => unimplemented!(),
         }
     }
 
     fn view(&self) -> Element<Message> {
         self.core
             .applet
-            .icon_button(&self.icon_name)
-            .on_press_down(Message::TogglePopup)
+            .applet_tooltip(
+                self.core
+                    .applet
+                    .icon_button(&self.icon_name)
+                    .on_press_down(Message::TogglePopup),
+                "power",
+            )
             .into()
     }
 

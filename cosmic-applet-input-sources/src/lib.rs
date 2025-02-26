@@ -4,6 +4,7 @@
 mod localize;
 
 use cosmic::iced::{Alignment, Length};
+use cosmic::surface_message::{SurfaceMessage, MessageWrapper};
 use cosmic::{
     app::Core,
     applet::{self},
@@ -85,6 +86,22 @@ pub enum Message {
     CompConfig(Box<CosmicCompConfig>),
     SetActiveLayout(usize),
     KeyboardSettings,
+    Surface(SurfaceMessage),
+}
+
+impl From<Message> for MessageWrapper<Message> {
+    fn from(value: Message) -> Self {
+        match value {
+            Message::Surface(s) => MessageWrapper::Surface(s),
+            m => MessageWrapper::Message(m),
+        }
+    }
+}
+
+impl From<SurfaceMessage> for Message {
+    fn from(value: SurfaceMessage) -> Self {
+        Message::Surface(value)
+    }
 }
 
 #[derive(Debug)]
@@ -148,24 +165,20 @@ impl cosmic::Application for Window {
                     get_popup(popup_settings)
                 };
             }
-
             Message::PopupClosed(id) => {
                 if self.popup.as_ref() == Some(&id) {
                     self.popup = None;
                 }
             }
-
             Message::CompConfig(config) => {
                 self.comp_config = *config;
                 self.active_layouts = self.update_xkb();
             }
-
             Message::KeyboardSettings => {
                 let mut cmd = std::process::Command::new("cosmic-settings");
                 cmd.arg("keyboard");
                 tokio::spawn(cosmic::process::spawn(cmd));
             }
-
             Message::SetActiveLayout(pos) => {
                 if pos == 0 {
                     return Task::none();
@@ -195,6 +208,7 @@ impl cosmic::Application for Window {
                     }
                 }
             }
+            Message::Surface(surface_message) => unreachable!(),
         }
 
         Task::none()
