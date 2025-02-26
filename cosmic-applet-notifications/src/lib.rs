@@ -17,6 +17,7 @@ use cosmic::{
         window, Alignment, Length, Limits, Subscription,
     },
     iced_widget::{scrollable, Column},
+    surface_message::{SurfaceMessage, MessageWrapper},
     theme,
     widget::{button, container, divider, icon, text},
     Element, Task,
@@ -94,6 +95,22 @@ enum Message {
     CardsToggled(String, bool),
     Token(TokenUpdate),
     OpenSettings,
+    Surface(SurfaceMessage),
+}
+
+impl From<Message> for MessageWrapper<Message> {
+    fn from(value: Message) -> Self {
+        match value {
+            Message::Surface(s) => MessageWrapper::Surface(s),
+            m => MessageWrapper::Message(m),
+        }
+    }
+}
+
+impl From<SurfaceMessage> for Message {
+    fn from(value: SurfaceMessage) -> Self {
+        Message::Surface(value)
+    }
 }
 
 impl cosmic::Application for Notifications {
@@ -399,6 +416,7 @@ impl cosmic::Application for Notifications {
                     });
                 }
             }
+            Message::Surface(surface_message) => unreachable!(),
         };
         self.update_icon();
         Task::none()

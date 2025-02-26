@@ -10,6 +10,7 @@ use cosmic::{
     },
     iced::{self, Length},
     iced_widget::row,
+    surface_message::{MessageWrapper, SurfaceMessage},
     widget::{autosize, vertical_space, Id},
     Task,
 };
@@ -39,6 +40,22 @@ struct Button {
 enum Msg {
     Press,
     ConfigUpdated(CosmicPanelButtonConfig),
+    Surface(SurfaceMessage),
+}
+
+impl From<Msg> for MessageWrapper<Msg> {
+    fn from(value: Msg) -> Self {
+        match value {
+            Msg::Surface(s) => MessageWrapper::Surface(s),
+            m => MessageWrapper::Message(m),
+        }
+    }
+}
+
+impl From<SurfaceMessage> for Msg {
+    fn from(value: SurfaceMessage) -> Self {
+        Msg::Surface(value)
+    }
 }
 
 impl cosmic::Application for Button {
@@ -94,6 +111,7 @@ impl cosmic::Application for Button {
                     .cloned()
                     .unwrap_or_default();
             }
+            Msg::Surface(_) => unreachable!(),
         }
         Task::none()
     }
