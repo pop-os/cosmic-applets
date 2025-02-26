@@ -22,6 +22,7 @@ use cosmic::{
     },
     iced_runtime::core::layout::Limits,
     iced_widget::column,
+    surface_message::{MessageWrapper, SurfaceMessage},
     theme,
     widget::{divider, text},
     Element, Task,
@@ -59,6 +60,22 @@ enum Message {
     OpenSettings,
     DBusUpdate(DBusUpdate),
     WaylandUpdate(WaylandUpdate),
+    Surface(SurfaceMessage),
+}
+
+impl From<Message> for MessageWrapper<Message> {
+    fn from(value: Message) -> Self {
+        match value {
+            Message::Surface(s) => MessageWrapper::Surface(s),
+            m => MessageWrapper::Message(m),
+        }
+    }
+}
+
+impl From<SurfaceMessage> for Message {
+    fn from(value: SurfaceMessage) -> Self {
+        Message::Surface(value)
+    }
 }
 
 impl cosmic::Application for CosmicA11yApplet {
@@ -202,6 +219,7 @@ impl cosmic::Application for CosmicA11yApplet {
                     self.wayland_sender = Some(tx);
                 }
             },
+            Message::Surface(surface_message) => {}
         }
         Task::none()
     }

@@ -13,6 +13,7 @@ use cosmic::{
         Length, Limits, Subscription,
     },
     iced_core::{Background, Border},
+    surface_message::{SurfaceMessage, MessageWrapper},
     widget::{autosize, container, horizontal_space, vertical_space, Id},
     Element, Task, Theme,
 };
@@ -81,6 +82,22 @@ enum Message {
     WorkspacePressed(ObjectId),
     WheelScrolled(ScrollDelta),
     WorkspaceOverview,
+    Surface(SurfaceMessage),
+}
+
+impl From<Message> for MessageWrapper<Message> {
+    fn from(value: Message) -> Self {
+        match value {
+            Message::Surface(s) => MessageWrapper::Surface(s),
+            m => MessageWrapper::Message(m),
+        }
+    }
+}
+
+impl From<SurfaceMessage> for Message {
+    fn from(value: SurfaceMessage) -> Self {
+        Message::Surface(value)
+    }
 }
 
 impl cosmic::Application for IcedWorkspacesApplet {
@@ -159,6 +176,7 @@ impl cosmic::Application for IcedWorkspacesApplet {
             Message::WorkspaceOverview => {
                 let _ = ShellCommand::new("cosmic-workspaces").spawn();
             }
+            Message::Surface(surface_message) => unreachable!(),
         }
         Task::none()
     }

@@ -16,6 +16,7 @@ use cosmic::{
         Length, Limits, Subscription, Task,
     },
     iced_widget::{column, row},
+    surface_message::{SurfaceMessage, MessageWrapper},
     theme,
     widget::{
         container, divider,
@@ -60,6 +61,22 @@ pub enum Message {
     WorkspaceUpdate(WorkspacesUpdate),
     NewWorkspace(Entity),
     OpenSettings,
+    Surface(SurfaceMessage),
+}
+
+impl From<Message> for MessageWrapper<Message> {
+    fn from(value: Message) -> Self {
+        match value {
+            Message::Surface(s) => MessageWrapper::Surface(s),
+            m => MessageWrapper::Message(m),
+        }
+    }
+}
+
+impl From<SurfaceMessage> for Message {
+    fn from(value: SurfaceMessage) -> Self {
+        Message::Surface(value)
+    }
 }
 
 impl cosmic::Application for Window {
@@ -270,6 +287,7 @@ impl cosmic::Application for Window {
                 cmd.arg("window-management");
                 tokio::spawn(cosmic::process::spawn(cmd));
             }
+            Message::Surface(surface_message) => unreachable!(),
         }
         Task::none()
     }

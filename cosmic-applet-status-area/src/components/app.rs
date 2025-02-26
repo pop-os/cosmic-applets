@@ -9,6 +9,7 @@ use cosmic::{
         platform_specific::shell::commands::popup::{destroy_popup, get_popup},
         window, Limits, Subscription,
     },
+    surface_message::{MessageWrapper, SurfaceMessage},
     widget::mouse_area,
     Element, Task,
 };
@@ -24,6 +25,22 @@ pub enum Msg {
     StatusNotifier(status_notifier_watcher::Event),
     TogglePopup(usize),
     Hovered(usize),
+    Surface(SurfaceMessage),
+}
+
+impl From<Msg> for MessageWrapper<Msg> {
+    fn from(value: Msg) -> Self {
+        match value {
+            Msg::Surface(s) => MessageWrapper::Surface(s),
+            m => MessageWrapper::Message(m),
+        }
+    }
+}
+
+impl From<SurfaceMessage> for Msg {
+    fn from(value: SurfaceMessage) -> Self {
+        Msg::Surface(value)
+    }
 }
 
 #[derive(Default)]
@@ -226,6 +243,7 @@ impl cosmic::Application for App {
                 cmds.push(get_popup(popup_settings));
                 app::Task::batch(cmds)
             }
+            Msg::Surface(surface_message) => unreachable!(),
         }
     }
 

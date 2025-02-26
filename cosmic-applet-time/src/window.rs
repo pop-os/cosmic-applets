@@ -5,6 +5,7 @@ use std::str::FromStr;
 
 use chrono::{Datelike, Timelike};
 use cosmic::iced_futures::stream;
+use cosmic::surface_message::{SurfaceMessage, MessageWrapper};
 use cosmic::widget::Id;
 use cosmic::{
     app,
@@ -78,6 +79,22 @@ pub enum Message {
     Token(TokenUpdate),
     ConfigChanged(TimeAppletConfig),
     TimezoneUpdate(String),
+    Surface(SurfaceMessage),
+}
+
+impl From<Message> for MessageWrapper<Message> {
+    fn from(value: Message) -> Self {
+        match value {
+            Message::Surface(s) => MessageWrapper::Surface(s),
+            m => MessageWrapper::Message(m),
+        }
+    }
+}
+
+impl From<SurfaceMessage> for Message {
+    fn from(value: SurfaceMessage) -> Self {
+        Message::Surface(value)
+    }
 }
 
 impl Window {
@@ -437,6 +454,7 @@ impl cosmic::Application for Window {
 
                 self.update(Message::Tick)
             }
+            Message::Surface(surface_message) => unreachable!(),
         }
     }
 
