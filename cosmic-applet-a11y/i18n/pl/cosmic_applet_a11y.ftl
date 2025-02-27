@@ -1,0 +1,3 @@
+screen-reader = Czytnik ekranu
+magnifier = Powiększalnik
+settings = Ustawienia ułatwień dostępu…
