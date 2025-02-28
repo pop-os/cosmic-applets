@@ -17,7 +17,7 @@ use cosmic::{
         window, Alignment, Length, Limits, Subscription,
     },
     iced_widget::{scrollable, Column},
-    surface_message::{SurfaceMessage, MessageWrapper},
+    surface_message::{MessageWrapper, SurfaceMessage},
     theme,
     widget::{button, container, divider, icon, text},
     Element, Task,
