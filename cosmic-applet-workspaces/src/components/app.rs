@@ -21,7 +21,7 @@ use cosmic::{
         Length, Limits, Subscription,
     },
     iced_core::{Background, Border},
-    surface_message::{SurfaceMessage, MessageWrapper},
+    surface_message::{MessageWrapper, SurfaceMessage},
     widget::{autosize, container, horizontal_space, vertical_space, Id},
     Element, Task, Theme,
 };

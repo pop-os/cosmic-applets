@@ -16,7 +16,7 @@ use cosmic::{
         Length, Limits, Subscription, Task,
     },
     iced_widget::{column, row},
-    surface_message::{SurfaceMessage, MessageWrapper},
+    surface_message::{MessageWrapper, SurfaceMessage},
     theme,
     widget::{
         container, divider,

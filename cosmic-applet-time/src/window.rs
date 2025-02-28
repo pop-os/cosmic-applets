@@ -5,7 +5,7 @@ use std::str::FromStr;
 
 use chrono::{Datelike, Timelike};
 use cosmic::iced_futures::stream;
-use cosmic::surface_message::{SurfaceMessage, MessageWrapper};
+use cosmic::surface_message::{MessageWrapper, SurfaceMessage};
 use cosmic::widget::Id;
 use cosmic::{
     app,

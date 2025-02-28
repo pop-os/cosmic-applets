@@ -4,7 +4,7 @@
 mod localize;
 
 use cosmic::iced::{Alignment, Length};
-use cosmic::surface_message::{SurfaceMessage, MessageWrapper};
+use cosmic::surface_message::{MessageWrapper, SurfaceMessage};
 use cosmic::{
     app::Core,
     applet::{self},
