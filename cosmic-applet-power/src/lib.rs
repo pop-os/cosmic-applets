@@ -213,6 +213,7 @@ impl cosmic::Application for Power {
                     .icon_button(&self.icon_name)
                     .on_press_down(Message::TogglePopup),
                 "power",
+                self.popup.is_some(),
             )
             .into()
     }
