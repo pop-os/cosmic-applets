@@ -207,14 +207,8 @@ impl cosmic::Application for Power {
     fn view(&self) -> Element<Message> {
         self.core
             .applet
-            .applet_tooltip(
-                self.core
-                    .applet
-                    .icon_button(&self.icon_name)
-                    .on_press_down(Message::TogglePopup),
-                "power",
-                self.popup.is_some(),
-            )
+            .icon_button(&self.icon_name)
+            .on_press_down(Message::TogglePopup)
             .into()
     }
 
