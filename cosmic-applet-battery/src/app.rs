@@ -26,6 +26,7 @@ use cosmic::{
     iced_core::{Alignment, Background, Border, Color, Shadow},
     iced_runtime::core::layout::Limits,
     iced_widget::{Column, Row},
+    surface_message::{MessageWrapper, SurfaceMessage},
     theme,
     widget::{divider, horizontal_space, icon, scrollable, text, vertical_space},
     Element, Task,
@@ -188,6 +189,22 @@ enum Message {
     OpenSettings,
     SettingsDaemon(settings_daemon::Event),
     ZbusConnection(zbus::Result<zbus::Connection>),
+    Surface(SurfaceMessage),
+}
+
+impl From<Message> for MessageWrapper<Message> {
+    fn from(value: Message) -> Self {
+        match value {
+            Message::Surface(s) => MessageWrapper::Surface(s),
+            m => MessageWrapper::Message(m),
+        }
+    }
+}
+
+impl From<SurfaceMessage> for Message {
+    fn from(value: SurfaceMessage) -> Self {
+        Message::Surface(value)
+    }
 }
 
 impl cosmic::Application for CosmicBatteryApplet {
@@ -466,6 +483,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                     }
                 }
             },
+            Message::Surface(surface_message) => unreachable!(),
         }
         Task::none()
     }

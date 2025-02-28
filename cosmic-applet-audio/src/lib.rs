@@ -23,6 +23,7 @@ use cosmic::{
         widget::{self, column, row, slider},
         window, Alignment, Length, Limits, Subscription,
     },
+    surface_message::{MessageWrapper, SurfaceMessage},
     theme,
     widget::{button, divider, horizontal_space, icon, text, Column, Row},
     Element, Renderer, Task, Theme,
@@ -162,6 +163,22 @@ pub enum Message {
     Token(TokenUpdate),
     OpenSettings,
     PulseSub(sub_pulse::Event),
+    Surface(SurfaceMessage),
+}
+
+impl From<Message> for MessageWrapper<Message> {
+    fn from(value: Message) -> Self {
+        match value {
+            Message::Surface(s) => MessageWrapper::Surface(s),
+            m => MessageWrapper::Message(m),
+        }
+    }
+}
+
+impl From<SurfaceMessage> for Message {
+    fn from(value: SurfaceMessage) -> Self {
+        Message::Surface(value)
+    }
 }
 
 impl Audio {
@@ -675,6 +692,7 @@ impl cosmic::Application for Audio {
                 sub_pulse::Event::DefaultSource(_) => {}
                 sub_pulse::Event::CardInfo(_) => {}
             },
+            Message::Surface(surface_message) => {}
         };
 
         Task::none()

@@ -15,6 +15,7 @@ use cosmic::{
     },
     iced_runtime::core::{layout::Limits, window},
     iced_widget::Row,
+    surface_message::{MessageWrapper, SurfaceMessage},
     theme,
     widget::{
         button, container, divider,
@@ -244,7 +245,22 @@ pub(crate) enum Message {
     ResetFailedKnownSsid(String, HwAddress),
     OpenHwDevice(Option<HwAddress>),
     TogglePasswordVisibility,
-    // Errored(String),
+    Surface(SurfaceMessage), // Errored(String),
+}
+
+impl From<Message> for MessageWrapper<Message> {
+    fn from(value: Message) -> Self {
+        match value {
+            Message::Surface(s) => MessageWrapper::Surface(s),
+            m => MessageWrapper::Message(m),
+        }
+    }
+}
+
+impl From<SurfaceMessage> for Message {
+    fn from(value: SurfaceMessage) -> Self {
+        Message::Surface(value)
+    }
 }
 
 impl cosmic::Application for CosmicNetworkApplet {
@@ -305,7 +321,6 @@ impl cosmic::Application for CosmicNetworkApplet {
                     return get_popup(popup_settings);
                 }
             }
-            // Message::Errored(_) => todo!(),
             Message::ToggleAirplaneMode(enabled) => {
                 self.toggle_wifi_ctr += 1;
                 if let Some(tx) = self.nm_sender.as_mut() {
@@ -340,63 +355,63 @@ impl cosmic::Application for CosmicNetworkApplet {
                     req,
                 } => {
                     if let NetworkManagerRequest::SelectAccessPoint(ssid, hw_address) = &req {
-                        let conn_match = self
+                                let conn_match = self
+                                    .new_connection
+                                    .as_ref()
+                                    .map(|c| c.ssid() == ssid && c.hw_address() == *hw_address)
+                                    .unwrap_or_default();
+                                if conn_match && success {
+                                    if let Some(s) =
+                                        state.active_conns.iter_mut().find(|ap| &ap.name() == ssid && ap.hw_address() == *hw_address)
+                                    {
+                                        match s {
+                                            ActiveConnectionInfo::WiFi { state, .. } => {
+                                                *state = ActiveConnectionState::Activated;
+                                            }
+                                            _ => {}
+                                        };
+                                    }
+                                    self.failed_known_ssids.remove(ssid);
+                                    self.new_connection = None;
+                                    self.show_visible_networks = false;
+                                } else if !matches!(
+                                        &self.new_connection,
+                                        Some(NewConnectionState::EnterPassword { .. })
+                                    )
+                                {
+                                    self.failed_known_ssids.insert(ssid.clone());
+                                }
+                            } else if let NetworkManagerRequest::Password(ssid, _, hw_address) = &req {
+                                if let Some(NewConnectionState::Waiting(access_point)) =
+                                    self.new_connection.clone()
+                                {
+                                    if !success && ssid == &access_point.ssid && *hw_address == access_point.hw_address {
+                                        self.new_connection =
+                                            Some(NewConnectionState::Failure(access_point.clone()));
+                                    } else {
+                                        self.new_connection = None;
+                                        self.show_visible_networks = false;
+                                    }
+                                } else if let Some(NewConnectionState::EnterPassword {
+                                    access_point, ..
+                                }) = self.new_connection.clone()
+                                {
+                                    if success && ssid == &access_point.ssid && *hw_address == access_point.hw_address {
+                                        self.new_connection = None;
+                                        self.show_visible_networks = false;
+                                    }
+                                }
+                            } else if self
                             .new_connection
                             .as_ref()
-                            .map(|c| c.ssid() == ssid && c.hw_address() == *hw_address)
-                            .unwrap_or_default();
-                        if conn_match && success {
-                            if let Some(s) =
-                                state.active_conns.iter_mut().find(|ap| &ap.name() == ssid && ap.hw_address() == *hw_address)
-                            {
-                                match s {
-                                    ActiveConnectionInfo::WiFi { state, .. } => {
-                                        *state = ActiveConnectionState::Activated;
-                                    }
-                                    _ => {}
-                                };
-                            }
-                            self.failed_known_ssids.remove(ssid);
-                            self.new_connection = None;
-                            self.show_visible_networks = false;
-                        } else if !matches!(
-                                &self.new_connection,
-                                Some(NewConnectionState::EnterPassword { .. })
-                            )
-                        {
-                            self.failed_known_ssids.insert(ssid.clone());
-                        }
-                    } else if let NetworkManagerRequest::Password(ssid, _, hw_address) = &req {
-                        if let Some(NewConnectionState::Waiting(access_point)) =
-                            self.new_connection.clone()
-                        {
-                            if !success && ssid == &access_point.ssid && *hw_address == access_point.hw_address {
-                                self.new_connection =
-                                    Some(NewConnectionState::Failure(access_point.clone()));
-                            } else {
+                            .map(|c| c.ssid()).is_some_and(|ssid| {
+                                state.active_conns.iter().any(|c|
+                                    matches!(c, ActiveConnectionInfo::WiFi { name, state: ActiveConnectionState::Activated, .. } if ssid == name)
+                                )
+                            }) {
                                 self.new_connection = None;
                                 self.show_visible_networks = false;
                             }
-                        } else if let Some(NewConnectionState::EnterPassword {
-                            access_point, ..
-                        }) = self.new_connection.clone()
-                        {
-                            if success && ssid == &access_point.ssid && *hw_address == access_point.hw_address {
-                                self.new_connection = None;
-                                self.show_visible_networks = false;
-                            }
-                        }
-                    } else if self
-                    .new_connection
-                    .as_ref()
-                    .map(|c| c.ssid()).is_some_and(|ssid| {
-                        state.active_conns.iter().any(|c|
-                            matches!(c, ActiveConnectionInfo::WiFi { name, state: ActiveConnectionState::Activated, .. } if ssid == name)
-                        )
-                    }) {
-                        self.new_connection = None;
-                        self.show_visible_networks = false;
-                    }
 
                     if !matches!(req, NetworkManagerRequest::Reload)
                         && matches!(state.connectivity, NmConnectivityState::Portal)
@@ -573,6 +588,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                     return self.update(Message::SelectWirelessAccessPoint(ap));
                 }
             }
+            Message::Surface(surface_message) => unreachable!(),
         }
         Task::none()
     }
@@ -991,7 +1007,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                         )
                         .on_input(Message::Password)
                         .on_paste(Message::Password)
-                        .on_submit(Message::SubmitPassword)
+                        .on_submit(|_| Message::SubmitPassword)
                         .password(),
                     ]
                     .push_maybe(

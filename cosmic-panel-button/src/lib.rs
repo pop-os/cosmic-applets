@@ -10,6 +10,7 @@ use cosmic::{
     },
     iced::{self, Length},
     iced_widget::row,
+    surface_message::{MessageWrapper, SurfaceMessage},
     widget::{autosize, vertical_space, Id},
     Task,
 };
@@ -39,6 +40,22 @@ struct Button {
 enum Msg {
     Press,
     ConfigUpdated(CosmicPanelButtonConfig),
+    Surface(SurfaceMessage),
+}
+
+impl From<Msg> for MessageWrapper<Msg> {
+    fn from(value: Msg) -> Self {
+        match value {
+            Msg::Surface(s) => MessageWrapper::Surface(s),
+            m => MessageWrapper::Message(m),
+        }
+    }
+}
+
+impl From<SurfaceMessage> for Msg {
+    fn from(value: SurfaceMessage) -> Self {
+        Msg::Surface(value)
+    }
 }
 
 impl cosmic::Application for Button {
@@ -94,6 +111,7 @@ impl cosmic::Application for Button {
                     .cloned()
                     .unwrap_or_default();
             }
+            Msg::Surface(_) => unreachable!(),
         }
         Task::none()
     }
@@ -117,8 +135,18 @@ impl cosmic::Application for Button {
                     )
                 )
             {
-                self.core.applet.icon_button_from_handle(
-                    cosmic::widget::icon::from_name(self.desktop.icon.clone().unwrap()).handle(),
+                cosmic::Element::from(
+                    self.core.applet.applet_tooltip(
+                        self.core
+                            .applet
+                            .icon_button_from_handle(
+                                cosmic::widget::icon::from_name(self.desktop.icon.clone().unwrap())
+                                    .handle(),
+                            )
+                            .on_press_down(Msg::Press),
+                        self.desktop.name.clone(),
+                        false,
+                    ),
                 )
             } else {
                 let content = row!(
@@ -133,8 +161,9 @@ impl cosmic::Application for Button {
                 cosmic::widget::button::custom(content)
                     .padding([0, self.core.applet.suggested_padding(true)])
                     .class(cosmic::theme::Button::AppletIcon)
-            }
-            .on_press_down(Msg::Press),
+                    .on_press_down(Msg::Press)
+                    .into()
+            },
             AUTOSIZE_MAIN_ID.clone(),
         )
         .into()

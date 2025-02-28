@@ -33,6 +33,7 @@ use cosmic::{
     },
     iced_core::{Border, Padding, Shadow},
     iced_runtime::{core::event, dnd::peek_dnd},
+    surface_message::{MessageWrapper, SurfaceMessage},
     theme::{self, Button, Container},
     widget::{
         button, divider, dnd_source, horizontal_space,
@@ -371,6 +372,22 @@ enum Message {
     ConfigUpdated(AppListConfig),
     OpenFavorites,
     OpenActive,
+    Surface(SurfaceMessage),
+}
+
+impl From<Message> for MessageWrapper<Message> {
+    fn from(value: Message) -> Self {
+        match value {
+            Message::Surface(s) => MessageWrapper::Surface(s),
+            m => MessageWrapper::Message(m),
+        }
+    }
+}
+
+impl From<SurfaceMessage> for Message {
+    fn from(value: SurfaceMessage) -> Self {
+        Message::Surface(value)
+    }
 }
 
 fn index_in_list(
@@ -787,7 +804,6 @@ impl cosmic::Application for CosmicAppList {
                     return get_popup(popup_settings);
                 }
             }
-
             Message::PinApp(id) => {
                 if let Some(i) = self.active_list.iter().position(|t| t.id == id) {
                     let entry = self.active_list.remove(i);
@@ -1354,6 +1370,7 @@ impl cosmic::Application for CosmicAppList {
                     return self.close_popups();
                 }
             }
+            Message::Surface(surface_message) => {}
         }
 
         Task::none()
@@ -1400,19 +1417,30 @@ impl cosmic::Application for CosmicAppList {
             .iter()
             .rev()
             .map(|dock_item| {
-                dock_item.as_icon(
-                    &self.core.applet,
-                    self.rectangle_tracker.as_ref(),
-                    self.popup.is_none(),
-                    self.config.enable_drag_source,
-                    self.gpus.as_deref(),
-                    dock_item
-                        .toplevels
-                        .iter()
-                        .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
-                    theme.cosmic().radius_xs(),
-                    self.core.main_window_id().unwrap(),
-                )
+                self.core
+                    .applet
+                    .applet_tooltip(
+                        dock_item.as_icon(
+                            &self.core.applet,
+                            self.rectangle_tracker.as_ref(),
+                            self.popup.is_none(),
+                            self.config.enable_drag_source,
+                            self.gpus.as_deref(),
+                            dock_item
+                                .toplevels
+                                .iter()
+                                .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
+                            theme.cosmic().radius_xs(),
+                            self.core.main_window_id().unwrap(),
+                        ),
+                        dock_item
+                            .desktop_info
+                            .name(&self.locales)
+                            .unwrap_or_default()
+                            .to_string(),
+                        self.popup.is_some(),
+                    )
+                    .into()
             })
             .collect();
 
@@ -1482,19 +1510,30 @@ impl cosmic::Application for CosmicAppList {
             .unwrap_or(self.active_list.len())]
             .iter()
             .map(|dock_item| {
-                dock_item.as_icon(
-                    &self.core.applet,
-                    self.rectangle_tracker.as_ref(),
-                    self.popup.is_none(),
-                    self.config.enable_drag_source,
-                    self.gpus.as_deref(),
-                    dock_item
-                        .toplevels
-                        .iter()
-                        .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
-                    dot_radius,
-                    self.core.main_window_id().unwrap(),
-                )
+                self.core
+                    .applet
+                    .applet_tooltip(
+                        dock_item.as_icon(
+                            &self.core.applet,
+                            self.rectangle_tracker.as_ref(),
+                            self.popup.is_none(),
+                            self.config.enable_drag_source,
+                            self.gpus.as_deref(),
+                            dock_item
+                                .toplevels
+                                .iter()
+                                .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
+                            dot_radius,
+                            self.core.main_window_id().unwrap(),
+                        ),
+                        dock_item
+                            .desktop_info
+                            .name(&self.locales)
+                            .unwrap_or_default()
+                            .to_string(),
+                        self.popup.is_some(),
+                    )
+                    .into()
             })
             .collect();
 
@@ -1887,19 +1926,30 @@ impl cosmic::Application for CosmicAppList {
                 .unwrap_or(self.active_list.len() - 1)..]
                 .iter()
                 .map(|dock_item| {
-                    dock_item.as_icon(
-                        &self.core.applet,
-                        self.rectangle_tracker.as_ref(),
-                        self.popup.is_none(),
-                        self.config.enable_drag_source,
-                        self.gpus.as_deref(),
-                        dock_item
-                            .toplevels
-                            .iter()
-                            .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
-                        dot_radius,
-                        id,
-                    )
+                    self.core
+                        .applet
+                        .applet_tooltip(
+                            dock_item.as_icon(
+                                &self.core.applet,
+                                self.rectangle_tracker.as_ref(),
+                                self.popup.is_none(),
+                                self.config.enable_drag_source,
+                                self.gpus.as_deref(),
+                                dock_item
+                                    .toplevels
+                                    .iter()
+                                    .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
+                                dot_radius,
+                                id,
+                            ),
+                            dock_item
+                                .desktop_info
+                                .name(&self.locales)
+                                .unwrap_or_default()
+                                .to_string(),
+                            self.popup.is_some(),
+                        )
+                        .into()
                 })
                 .collect();
             let content = match &self.core.applet.anchor {
@@ -1974,19 +2024,30 @@ impl cosmic::Application for CosmicAppList {
                 .iter()
                 .rev()
                 .map(|dock_item| {
-                    dock_item.as_icon(
-                        &self.core.applet,
-                        self.rectangle_tracker.as_ref(),
-                        self.popup.is_none(),
-                        self.config.enable_drag_source,
-                        self.gpus.as_deref(),
-                        dock_item
-                            .toplevels
-                            .iter()
-                            .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
-                        dot_radius,
-                        id,
-                    )
+                    self.core
+                        .applet
+                        .applet_tooltip(
+                            dock_item.as_icon(
+                                &self.core.applet,
+                                self.rectangle_tracker.as_ref(),
+                                self.popup.is_none(),
+                                self.config.enable_drag_source,
+                                self.gpus.as_deref(),
+                                dock_item
+                                    .toplevels
+                                    .iter()
+                                    .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
+                                dot_radius,
+                                id,
+                            ),
+                            dock_item
+                                .desktop_info
+                                .name(&self.locales)
+                                .unwrap_or_default()
+                                .to_string(),
+                            self.popup.is_some(),
+                        )
+                        .into()
                 })
                 .collect();
             let content = match &self.core.applet.anchor {
