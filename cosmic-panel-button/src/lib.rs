@@ -135,8 +135,18 @@ impl cosmic::Application for Button {
                     )
                 )
             {
-                self.core.applet.icon_button_from_handle(
-                    cosmic::widget::icon::from_name(self.desktop.icon.clone().unwrap()).handle(),
+                cosmic::Element::from(
+                    self.core.applet.applet_tooltip(
+                        self.core
+                            .applet
+                            .icon_button_from_handle(
+                                cosmic::widget::icon::from_name(self.desktop.icon.clone().unwrap())
+                                    .handle(),
+                            )
+                            .on_press_down(Msg::Press),
+                        self.desktop.name.clone(),
+                        false,
+                    ),
                 )
             } else {
                 let content = row!(
@@ -151,8 +161,9 @@ impl cosmic::Application for Button {
                 cosmic::widget::button::custom(content)
                     .padding([0, self.core.applet.suggested_padding(true)])
                     .class(cosmic::theme::Button::AppletIcon)
-            }
-            .on_press_down(Msg::Press),
+                    .on_press_down(Msg::Press)
+                    .into()
+            },
             AUTOSIZE_MAIN_ID.clone(),
         )
         .into()
