@@ -157,11 +157,7 @@ impl cosmic::Application for Window {
                         None,
                         None,
                     );
-                    popup_settings.positioner.size_limits = Limits::NONE
-                        .max_width(372.0)
-                        .min_width(300.0)
-                        .min_height(1.)
-                        .max_height(1080.0);
+
                     get_popup(popup_settings)
                 };
             }
@@ -274,17 +270,7 @@ impl cosmic::Application for Window {
                 .on_press(Message::KeyboardSettings),
         );
 
-        self.core
-            .applet
-            .popup_container(content_list)
-            .limits(
-                Limits::NONE
-                    .min_height(1.)
-                    .max_height(1080.)
-                    .min_width(1.)
-                    .max_width(372.),
-            )
-            .into()
+        self.core.applet.popup_container(content_list).into()
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {

@@ -363,11 +363,6 @@ impl cosmic::Application for Audio {
                         None,
                         None,
                     );
-                    popup_settings.positioner.size_limits = Limits::NONE
-                        .min_height(1.0)
-                        .min_width(1.0)
-                        .max_width(400.0)
-                        .max_height(1080.0);
 
                     if let Some(conn) = self.pulse_state.connection() {
                         conn.send(pulse::Message::GetDefaultSink);
@@ -970,11 +965,7 @@ impl cosmic::Application for Audio {
         .align_x(Alignment::Start)
         .padding([8, 0]);
 
-        self.core
-            .applet
-            .popup_container(container(content))
-            .limits(Limits::NONE.max_width(400.))
-            .into()
+        self.core.applet.popup_container(container(content)).into()
     }
 
     fn on_close_requested(&self, id: window::Id) -> Option<Message> {

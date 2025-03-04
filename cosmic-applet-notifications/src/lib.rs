@@ -216,11 +216,7 @@ impl cosmic::Application for Notifications {
                         None,
                         None,
                     );
-                    popup_settings.positioner.size_limits = Limits::NONE
-                        .min_width(1.0)
-                        .max_width(444.0)
-                        .min_height(100.0)
-                        .max_height(900.0);
+
                     return get_popup(popup_settings);
                 }
             }
@@ -623,11 +619,7 @@ impl cosmic::Application for Notifications {
             .align_x(Alignment::Start)
             .padding([8, 0]);
 
-        self.core
-            .applet
-            .popup_container(content)
-            .limits(Limits::NONE.max_width(444.).max_height(900.))
-            .into()
+        self.core.applet.popup_container(content).into()
     }
 
     fn on_close_requested(&self, id: window::Id) -> Option<Message> {

@@ -150,11 +150,6 @@ impl cosmic::Application for CosmicA11yApplet {
                         None,
                         None,
                     );
-                    popup_settings.positioner.size_limits = Limits::NONE
-                        .max_width(300.0)
-                        .min_width(200.0)
-                        .min_height(10.0)
-                        .max_height(1080.0);
 
                     return get_popup(popup_settings);
                 }
@@ -267,12 +262,7 @@ impl cosmic::Application for CosmicA11yApplet {
             menu_button(text::body(fl!("settings"))).on_press(Message::OpenSettings)
         ]
         .padding([8, 0]);
-        self.core
-            .applet
-            .popup_container(content_list)
-            .max_width(372.)
-            .max_height(600.)
-            .into()
+        self.core.applet.popup_container(content_list).into()
     }
 
     fn subscription(&self) -> Subscription<Message> {

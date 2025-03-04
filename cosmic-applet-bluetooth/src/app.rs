@@ -140,16 +140,11 @@ impl cosmic::Application for CosmicBluetoothApplet {
                     let mut popup_settings = self.core.applet.get_popup_settings(
                         self.core.main_window_id().unwrap(),
                         new_id,
-                        Some((1, 1)),
+                        None,
                         None,
                         None,
                     );
 
-                    popup_settings.positioner.size_limits = Limits::NONE
-                        .min_height(1.0)
-                        .min_width(1.0)
-                        .max_height(800.0)
-                        .max_width(400.0);
                     let tx = self.bluer_sender.as_ref().cloned();
                     return Task::batch(vec![
                         iced::Task::perform(
