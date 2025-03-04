@@ -144,15 +144,11 @@ impl cosmic::Application for Power {
                     let mut popup_settings = self.core.applet.get_popup_settings(
                         self.core.main_window_id().unwrap(),
                         new_id,
-                        Some((500, 500)),
+                        None,
                         None,
                         None,
                     );
-                    popup_settings.positioner.size_limits = Limits::NONE
-                        .min_width(100.0)
-                        .min_height(100.0)
-                        .max_height(400.0)
-                        .max_width(500.0);
+
                     get_popup(popup_settings)
                 }
             }
@@ -269,12 +265,7 @@ impl cosmic::Application for Power {
             .align_x(Alignment::Start)
             .padding([8, 0]);
 
-            self.core
-                .applet
-                .popup_container(content)
-                .max_height(400.)
-                .max_width(500.)
-                .into()
+            self.core.applet.popup_container(content).into()
         } else {
             //panic!("no view for window {}", id.0)
             widget::text("").into()

@@ -677,7 +677,6 @@ impl cosmic::Application for Window {
         self.core
             .applet
             .popup_container(container(content_list))
-            .max_width(300.)
             .into()
     }
 
