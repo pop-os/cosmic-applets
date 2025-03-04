@@ -303,7 +303,6 @@ impl cosmic::Application for App {
                         container(menu.popup_view().map(move |msg| Msg::StatusMenu((id, msg))))
                             .padding([pad, 0.]),
                     )
-                    .limits(Limits::NONE.min_width(1.).min_height(1.).max_width(300.))
                     .into(),
                 None => unreachable!(),
             },

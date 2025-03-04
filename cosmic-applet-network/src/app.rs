@@ -219,8 +219,6 @@ impl CosmicNetworkApplet {
         self.core
             .applet
             .popup_container(content.padding([8, 0, 8, 0]))
-            .max_width(400.)
-            .max_height(800.)
             .into()
     }
 }
@@ -310,11 +308,6 @@ impl cosmic::Application for CosmicNetworkApplet {
                         None,
                     );
 
-                    popup_settings.positioner.size_limits = Limits::NONE
-                        .min_height(1.0)
-                        .min_width(1.0)
-                        .max_height(800.0)
-                        .max_width(400.0);
                     if let Some(tx) = self.nm_sender.as_mut() {
                         let _ = tx.unbounded_send(NetworkManagerRequest::Reload);
                     }

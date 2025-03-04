@@ -354,11 +354,6 @@ impl cosmic::Application for CosmicBatteryApplet {
                         None,
                         None,
                     );
-                    popup_settings.positioner.size_limits = Limits::NONE
-                        .max_width(372.0)
-                        .min_width(300.0)
-                        .min_height(200.0)
-                        .max_height(1080.0);
                     if let Some(tx) = self.power_profile_sender.as_ref() {
                         let _ = tx.send(PowerProfileRequest::Get);
                     }
@@ -826,8 +821,6 @@ impl cosmic::Application for CosmicBatteryApplet {
         self.core
             .applet
             .popup_container(Column::with_children(content).padding([8, 0]))
-            .max_width(372.)
-            .max_height(600.)
             .into()
     }
 
