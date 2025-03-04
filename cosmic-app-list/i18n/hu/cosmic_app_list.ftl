@@ -4,5 +4,5 @@ quit = Kilépés
 quit-all = Kilépés az összesből
 new-window = Új ablak
 run = Futtatás
-run-on = {$gpu}-on futtatás
+run-on = Futtatás ezen: {$gpu}
 run-on-default = (Alapértelmezett)
