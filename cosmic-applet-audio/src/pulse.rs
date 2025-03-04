@@ -1,7 +1,7 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
-use std::{cell::RefCell, mem, rc::Rc, thread};
+use std::{cell::RefCell, mem, rc::Rc, thread, time::Duration};
 
 extern crate libpulse_binding as pulse;
 
@@ -34,7 +34,7 @@ pub fn connect() -> iced::Subscription<Event> {
     Subscription::run_with_id(
         std::any::TypeId::of::<SomeWorker>(),
         stream::channel(50, move |mut output| async move {
-            let mut state = State::Connecting;
+            let mut state = State::Connecting(0);
 
             loop {
                 state = start_listening(state, &mut output).await;
@@ -49,7 +49,7 @@ async fn start_listening(
 ) -> State {
     match state {
         // Waiting for Connection to succeed
-        State::Connecting => {
+        State::Connecting(mut disconnect_count) => {
             let mut guard = FROM_PULSE.lock().await;
             let (from_pulse, to_pulse) = {
                 if guard.is_none() {
@@ -70,17 +70,25 @@ async fn start_listening(
 
             match from_pulse.recv().await {
                 Some(Message::Connected) => {
+                    disconnect_count = 0;
                     _ = output.send(Event::Connected).await;
                     State::Connected
                 }
                 Some(Message::Disconnected) => {
+                    disconnect_count += 1;
                     _ = output.send(Event::Disconnected).await;
-
-                    State::Connecting
+                    tokio::time::sleep(Duration::from_millis(
+                        2_usize
+                            .saturating_pow(disconnect_count.try_into().unwrap_or(u32::MAX))
+                            .try_into()
+                            .unwrap_or(u64::MAX),
+                    ))
+                    .await;
+                    State::Connecting(1)
                 }
                 Some(m) => {
                     tracing::error!("Unexpected message: {:?}", m);
-                    State::Connecting
+                    State::Connecting(1)
                 }
                 None => {
                     panic!("Pulse Sender dropped, something has gone wrong!");
@@ -90,7 +98,7 @@ async fn start_listening(
         State::Connected => {
             let mut guard = FROM_PULSE.lock().await;
             let Some((from_pulse, _)) = guard.as_mut() else {
-                return State::Connecting;
+                return State::Connecting(1);
             };
             // This is where we match messages from the pulse server to pass to the gui
             match from_pulse.recv().await {
@@ -121,11 +129,11 @@ async fn start_listening(
                 }
                 Some(Message::Disconnected) => {
                     _ = output.send(Event::Disconnected).await;
-                    State::Connecting
+                    State::Connecting(1)
                 }
                 None => {
                     _ = output.send(Event::Disconnected).await;
-                    State::Connecting
+                    State::Connecting(1)
                 }
                 _ => State::Connected,
             }
@@ -135,7 +143,7 @@ async fn start_listening(
 
 // #[derive(Debug)]
 enum State {
-    Connecting,
+    Connecting(usize),
     Connected,
 }
 
