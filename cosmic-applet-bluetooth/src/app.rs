@@ -5,6 +5,7 @@ use crate::bluetooth::{BluerDeviceStatus, BluerRequest, BluerState, DeviceProper
 use cosmic::{
     applet::token::subscription::{activation_token_subscription, TokenRequest, TokenUpdate},
     cctk::sctk::reexports::calloop,
+    surface_message::{MessageWrapper, SurfaceMessage},
 };
 
 use cosmic::{
@@ -75,6 +76,22 @@ enum Message {
     OpenSettings,
     Frame(Instant),
     ToggleBluetooth(chain::Toggler, bool),
+    Surface(SurfaceMessage),
+}
+
+impl From<Message> for MessageWrapper<Message> {
+    fn from(value: Message) -> Self {
+        match value {
+            Message::Surface(s) => MessageWrapper::Surface(s),
+            m => MessageWrapper::Message(m),
+        }
+    }
+}
+
+impl From<SurfaceMessage> for Message {
+    fn from(value: SurfaceMessage) -> Self {
+        Message::Surface(value)
+    }
 }
 
 impl cosmic::Application for CosmicBluetoothApplet {
@@ -123,16 +140,11 @@ impl cosmic::Application for CosmicBluetoothApplet {
                     let mut popup_settings = self.core.applet.get_popup_settings(
                         self.core.main_window_id().unwrap(),
                         new_id,
-                        Some((1, 1)),
+                        None,
                         None,
                         None,
                     );
 
-                    popup_settings.positioner.size_limits = Limits::NONE
-                        .min_height(1.0)
-                        .min_width(1.0)
-                        .max_height(800.0)
-                        .max_width(400.0);
                     let tx = self.bluer_sender.as_ref().cloned();
                     return Task::batch(vec![
                         iced::Task::perform(
@@ -332,6 +344,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
                     });
                 }
             }
+            Message::Surface(surface_message) => unreachable!(),
         }
         self.update_icon();
         Task::none()

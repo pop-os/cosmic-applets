@@ -1,7 +1,11 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
-use cosmic::{applet::menu_button, iced, widget::icon};
+use cosmic::{
+    applet::menu_button,
+    iced::{self, Padding},
+    widget::icon,
+};
 
 use crate::subscriptions::status_notifier_item::{Layout, StatusNotifierItem};
 

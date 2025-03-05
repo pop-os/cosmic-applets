@@ -17,6 +17,7 @@ use cosmic::{
         window, Alignment, Length, Limits, Subscription,
     },
     iced_widget::{scrollable, Column},
+    surface_message::{MessageWrapper, SurfaceMessage},
     theme,
     widget::{button, container, divider, icon, text},
     Element, Task,
@@ -94,6 +95,22 @@ enum Message {
     CardsToggled(String, bool),
     Token(TokenUpdate),
     OpenSettings,
+    Surface(SurfaceMessage),
+}
+
+impl From<Message> for MessageWrapper<Message> {
+    fn from(value: Message) -> Self {
+        match value {
+            Message::Surface(s) => MessageWrapper::Surface(s),
+            m => MessageWrapper::Message(m),
+        }
+    }
+}
+
+impl From<SurfaceMessage> for Message {
+    fn from(value: SurfaceMessage) -> Self {
+        Message::Surface(value)
+    }
 }
 
 impl cosmic::Application for Notifications {
@@ -199,11 +216,7 @@ impl cosmic::Application for Notifications {
                         None,
                         None,
                     );
-                    popup_settings.positioner.size_limits = Limits::NONE
-                        .min_width(1.0)
-                        .max_width(444.0)
-                        .min_height(100.0)
-                        .max_height(900.0);
+
                     return get_popup(popup_settings);
                 }
             }
@@ -399,6 +412,7 @@ impl cosmic::Application for Notifications {
                     });
                 }
             }
+            Message::Surface(surface_message) => unreachable!(),
         };
         self.update_icon();
         Task::none()
@@ -605,11 +619,7 @@ impl cosmic::Application for Notifications {
             .align_x(Alignment::Start)
             .padding([8, 0]);
 
-        self.core
-            .applet
-            .popup_container(content)
-            .limits(Limits::NONE.max_width(444.).max_height(900.))
-            .into()
+        self.core.applet.popup_container(content).into()
     }
 
     fn on_close_requested(&self, id: window::Id) -> Option<Message> {

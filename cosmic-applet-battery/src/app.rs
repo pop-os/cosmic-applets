@@ -26,6 +26,7 @@ use cosmic::{
     iced_core::{Alignment, Background, Border, Color, Shadow},
     iced_runtime::core::layout::Limits,
     iced_widget::{Column, Row},
+    surface_message::{MessageWrapper, SurfaceMessage},
     theme,
     widget::{divider, horizontal_space, icon, scrollable, text, vertical_space},
     Element, Task,
@@ -188,6 +189,22 @@ enum Message {
     OpenSettings,
     SettingsDaemon(settings_daemon::Event),
     ZbusConnection(zbus::Result<zbus::Connection>),
+    Surface(SurfaceMessage),
+}
+
+impl From<Message> for MessageWrapper<Message> {
+    fn from(value: Message) -> Self {
+        match value {
+            Message::Surface(s) => MessageWrapper::Surface(s),
+            m => MessageWrapper::Message(m),
+        }
+    }
+}
+
+impl From<SurfaceMessage> for Message {
+    fn from(value: SurfaceMessage) -> Self {
+        Message::Surface(value)
+    }
 }
 
 impl cosmic::Application for CosmicBatteryApplet {
@@ -337,11 +354,6 @@ impl cosmic::Application for CosmicBatteryApplet {
                         None,
                         None,
                     );
-                    popup_settings.positioner.size_limits = Limits::NONE
-                        .max_width(372.0)
-                        .min_width(300.0)
-                        .min_height(200.0)
-                        .max_height(1080.0);
                     if let Some(tx) = self.power_profile_sender.as_ref() {
                         let _ = tx.send(PowerProfileRequest::Get);
                     }
@@ -466,6 +478,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                     }
                 }
             },
+            Message::Surface(surface_message) => unreachable!(),
         }
         Task::none()
     }
@@ -808,8 +821,6 @@ impl cosmic::Application for CosmicBatteryApplet {
         self.core
             .applet
             .popup_container(Column::with_children(content).padding([8, 0]))
-            .max_width(372.)
-            .max_height(600.)
             .into()
     }
 

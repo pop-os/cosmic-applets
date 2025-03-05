@@ -16,6 +16,7 @@ use cosmic::{
         Length, Limits, Subscription, Task,
     },
     iced_widget::{column, row},
+    surface_message::{MessageWrapper, SurfaceMessage},
     theme,
     widget::{
         container, divider,
@@ -60,6 +61,22 @@ pub enum Message {
     WorkspaceUpdate(WorkspacesUpdate),
     NewWorkspace(Entity),
     OpenSettings,
+    Surface(SurfaceMessage),
+}
+
+impl From<Message> for MessageWrapper<Message> {
+    fn from(value: Message) -> Self {
+        match value {
+            Message::Surface(s) => MessageWrapper::Surface(s),
+            m => MessageWrapper::Message(m),
+        }
+    }
+}
+
+impl From<SurfaceMessage> for Message {
+    fn from(value: SurfaceMessage) -> Self {
+        Message::Surface(value)
+    }
 }
 
 impl cosmic::Application for Window {
@@ -178,11 +195,7 @@ impl cosmic::Application for Window {
                         None,
                         None,
                     );
-                    popup_settings.positioner.size_limits = Limits::NONE
-                        .max_width(400.0)
-                        .min_width(300.0)
-                        .min_height(200.0)
-                        .max_height(1080.0);
+
                     get_popup(popup_settings)
                 }
             }
@@ -270,6 +283,7 @@ impl cosmic::Application for Window {
                 cmd.arg("window-management");
                 tokio::spawn(cosmic::process::spawn(cmd));
             }
+            Message::Surface(surface_message) => unreachable!(),
         }
         Task::none()
     }
@@ -350,11 +364,7 @@ impl cosmic::Application for Window {
         ]
         .padding([8, 0]);
 
-        self.core
-            .applet
-            .popup_container(content_list)
-            .max_width(400.)
-            .into()
+        self.core.applet.popup_container(content_list).into()
     }
 
     fn style(&self) -> Option<cosmic::iced_runtime::Appearance> {

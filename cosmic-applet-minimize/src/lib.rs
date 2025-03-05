@@ -23,6 +23,7 @@ use cosmic::{
         window::{self},
         Length, Limits, Subscription,
     },
+    surface_message::{MessageWrapper, SurfaceMessage},
     widget::{autosize::autosize, mouse_area},
     Task,
 };
@@ -82,6 +83,22 @@ enum Message {
     Closed(window::Id),
     OpenOverflowPopup,
     CloseOverflowPopup,
+    Surface(SurfaceMessage),
+}
+
+impl From<Message> for MessageWrapper<Message> {
+    fn from(value: Message) -> Self {
+        match value {
+            Message::Surface(s) => MessageWrapper::Surface(s),
+            m => MessageWrapper::Message(m),
+        }
+    }
+}
+
+impl From<SurfaceMessage> for Message {
+    fn from(value: SurfaceMessage) -> Self {
+        Message::Surface(value)
+    }
 }
 
 impl cosmic::Application for Minimize {
@@ -210,6 +227,7 @@ impl cosmic::Application for Minimize {
                 }
             }
             Message::CloseOverflowPopup => todo!(),
+            Message::Surface(surface_message) => unreachable!(),
         };
         Task::none()
     }
@@ -234,27 +252,20 @@ impl cosmic::Application for Minimize {
         let theme = self.core.system_theme().cosmic();
         let space_xxs = theme.space_xxs();
         let icon_buttons = self.apps[..max_icon_count].iter().map(|(info, data, img)| {
-            tooltip(
-                Element::from(crate::window_image::WindowImage::new(
-                    img.clone(),
-                    &data.icon,
-                    width as f32,
-                    Message::Activate(info.foreign_toplevel.clone()),
-                    padding,
-                )),
-                text(data.name.clone()).shaping(text::Shaping::Advanced),
-                // tooltip::Position::FollowCursor,
-                // FIXME tooltip fails to appear when created as indicated in design
-                // maybe it should be a subsurface
-                match self.core.applet.anchor {
-                    PanelAnchor::Left => tooltip::Position::Right,
-                    PanelAnchor::Right => tooltip::Position::Left,
-                    PanelAnchor::Top => tooltip::Position::Bottom,
-                    PanelAnchor::Bottom => tooltip::Position::Top,
-                },
-            )
-            .snap_within_viewport(false)
-            .into()
+            self.core
+                .applet
+                .applet_tooltip(
+                    Element::from(crate::window_image::WindowImage::new(
+                        img.clone(),
+                        &data.icon,
+                        width as f32,
+                        Message::Activate(info.foreign_toplevel.clone()),
+                        padding,
+                    )),
+                    data.name.clone(),
+                    self.overflow_popup.is_some(),
+                )
+                .into()
         });
         let overflow_btn = if max_icon_count < self.apps.len() {
             let icon = match self.core.applet.anchor {

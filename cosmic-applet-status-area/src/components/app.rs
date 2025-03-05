@@ -7,9 +7,10 @@ use cosmic::{
     iced::{
         self,
         platform_specific::shell::commands::popup::{destroy_popup, get_popup},
-        window, Limits, Subscription,
+        window, Limits, Padding, Subscription,
     },
-    widget::mouse_area,
+    surface_message::{MessageWrapper, SurfaceMessage},
+    widget::{container, mouse_area},
     Element, Task,
 };
 use std::collections::BTreeMap;
@@ -24,6 +25,22 @@ pub enum Msg {
     StatusNotifier(status_notifier_watcher::Event),
     TogglePopup(usize),
     Hovered(usize),
+    Surface(SurfaceMessage),
+}
+
+impl From<Msg> for MessageWrapper<Msg> {
+    fn from(value: Msg) -> Self {
+        match value {
+            Msg::Surface(s) => MessageWrapper::Surface(s),
+            m => MessageWrapper::Message(m),
+        }
+    }
+}
+
+impl From<SurfaceMessage> for Msg {
+    fn from(value: SurfaceMessage) -> Self {
+        Msg::Surface(value)
+    }
 }
 
 #[derive(Default)]
@@ -226,6 +243,7 @@ impl cosmic::Application for App {
                 cmds.push(get_popup(popup_settings));
                 app::Task::batch(cmds)
             }
+            Msg::Surface(surface_message) => unreachable!(),
         }
     }
 
@@ -272,13 +290,19 @@ impl cosmic::Application for App {
     }
 
     fn view_window(&self, _surface: window::Id) -> cosmic::Element<'_, Msg> {
+        let theme = self.core.system_theme();
+        let cosmic = theme.cosmic();
+        let corners = cosmic.corner_radii.clone();
+        let pad = corners.radius_m[0];
         match self.open_menu {
             Some(id) => match self.menus.get(&id) {
                 Some(menu) => self
                     .core
                     .applet
-                    .popup_container(menu.popup_view().map(move |msg| Msg::StatusMenu((id, msg))))
-                    .limits(Limits::NONE.min_width(1.).min_height(1.).max_width(300.))
+                    .popup_container(
+                        container(menu.popup_view().map(move |msg| Msg::StatusMenu((id, msg))))
+                            .padding([pad, 0.]),
+                    )
                     .into(),
                 None => unreachable!(),
             },
