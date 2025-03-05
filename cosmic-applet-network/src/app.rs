@@ -13,9 +13,8 @@ use cosmic::{
         widget::{column, row},
         Alignment, Length, Subscription,
     },
-    iced_runtime::core::{layout::Limits, window},
+    iced_runtime::core::window,
     iced_widget::Row,
-    surface_message::{MessageWrapper, SurfaceMessage},
     theme,
     widget::{
         button, container, divider,
@@ -243,22 +242,7 @@ pub(crate) enum Message {
     ResetFailedKnownSsid(String, HwAddress),
     OpenHwDevice(Option<HwAddress>),
     TogglePasswordVisibility,
-    Surface(SurfaceMessage), // Errored(String),
-}
-
-impl From<Message> for MessageWrapper<Message> {
-    fn from(value: Message) -> Self {
-        match value {
-            Message::Surface(s) => MessageWrapper::Surface(s),
-            m => MessageWrapper::Message(m),
-        }
-    }
-}
-
-impl From<SurfaceMessage> for Message {
-    fn from(value: SurfaceMessage) -> Self {
-        Message::Surface(value)
-    }
+    Surface(cosmic::surface::Action), // Errored(String),
 }
 
 impl cosmic::Application for CosmicNetworkApplet {

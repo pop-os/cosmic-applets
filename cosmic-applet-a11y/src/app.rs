@@ -20,9 +20,7 @@ use cosmic::{
         platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
         window, Length, Subscription,
     },
-    iced_runtime::core::layout::Limits,
     iced_widget::column,
-    surface_message::{MessageWrapper, SurfaceMessage},
     theme,
     widget::{divider, text},
     Element, Task,
@@ -60,22 +58,7 @@ enum Message {
     OpenSettings,
     DBusUpdate(DBusUpdate),
     WaylandUpdate(WaylandUpdate),
-    Surface(SurfaceMessage),
-}
-
-impl From<Message> for MessageWrapper<Message> {
-    fn from(value: Message) -> Self {
-        match value {
-            Message::Surface(s) => MessageWrapper::Surface(s),
-            m => MessageWrapper::Message(m),
-        }
-    }
-}
-
-impl From<SurfaceMessage> for Message {
-    fn from(value: SurfaceMessage) -> Self {
-        Message::Surface(value)
-    }
+    Surface(cosmic::surface::Action),
 }
 
 impl cosmic::Application for CosmicA11yApplet {
@@ -87,10 +70,7 @@ impl cosmic::Application for CosmicA11yApplet {
     fn init(
         core: cosmic::app::Core,
         _flags: Self::Flags,
-    ) -> (
-        Self,
-        cosmic::iced::Task<cosmic::app::Message<Self::Message>>,
-    ) {
+    ) -> (Self, cosmic::iced::Task<cosmic::Action<Self::Message>>) {
         (
             Self {
                 core,
@@ -113,7 +93,7 @@ impl cosmic::Application for CosmicA11yApplet {
     fn update(
         &mut self,
         message: Self::Message,
-    ) -> cosmic::iced::Task<cosmic::app::Message<Self::Message>> {
+    ) -> cosmic::iced::Task<cosmic::Action<Self::Message>> {
         match message {
             Message::Frame(now) => self.timeline.now(now),
             Message::ScreenReaderEnabled(chain, enabled) => {

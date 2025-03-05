@@ -5,7 +5,6 @@ use crate::bluetooth::{BluerDeviceStatus, BluerRequest, BluerState, DeviceProper
 use cosmic::{
     applet::token::subscription::{activation_token_subscription, TokenRequest, TokenUpdate},
     cctk::sctk::reexports::calloop,
-    surface_message::{MessageWrapper, SurfaceMessage},
 };
 
 use cosmic::{
@@ -76,22 +75,7 @@ enum Message {
     OpenSettings,
     Frame(Instant),
     ToggleBluetooth(chain::Toggler, bool),
-    Surface(SurfaceMessage),
-}
-
-impl From<Message> for MessageWrapper<Message> {
-    fn from(value: Message) -> Self {
-        match value {
-            Message::Surface(s) => MessageWrapper::Surface(s),
-            m => MessageWrapper::Message(m),
-        }
-    }
-}
-
-impl From<SurfaceMessage> for Message {
-    fn from(value: SurfaceMessage) -> Self {
-        Message::Surface(value)
-    }
+    Surface(cosmic::surface::Action),
 }
 
 impl cosmic::Application for CosmicBluetoothApplet {
@@ -103,7 +87,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
     fn init(
         core: cosmic::app::Core,
         _flags: Self::Flags,
-    ) -> (Self, iced::Task<cosmic::app::Message<Self::Message>>) {
+    ) -> (Self, iced::Task<cosmic::Action<Self::Message>>) {
         (
             Self {
                 core,
@@ -123,10 +107,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
         &mut self.core
     }
 
-    fn update(
-        &mut self,
-        message: Self::Message,
-    ) -> iced::Task<cosmic::app::Message<Self::Message>> {
+    fn update(&mut self, message: Self::Message) -> iced::Task<cosmic::Action<Self::Message>> {
         match message {
             Message::TogglePopup => {
                 if let Some(p) = self.popup.take() {
@@ -153,7 +134,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
                                     let _ = tx.send(BluerRequest::StateUpdate).await;
                                 }
                             },
-                            |_| cosmic::app::message::app(Message::Ignore),
+                            |_| cosmic::Action::App(Message::Ignore),
                         ),
                         get_popup(popup_settings),
                     ]);

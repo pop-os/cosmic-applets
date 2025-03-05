@@ -9,7 +9,6 @@ use cosmic::{
         platform_specific::shell::commands::popup::{destroy_popup, get_popup},
         window, Limits, Padding, Subscription,
     },
-    surface_message::{MessageWrapper, SurfaceMessage},
     widget::{container, mouse_area},
     Element, Task,
 };
@@ -25,22 +24,7 @@ pub enum Msg {
     StatusNotifier(status_notifier_watcher::Event),
     TogglePopup(usize),
     Hovered(usize),
-    Surface(SurfaceMessage),
-}
-
-impl From<Msg> for MessageWrapper<Msg> {
-    fn from(value: Msg) -> Self {
-        match value {
-            Msg::Surface(s) => MessageWrapper::Surface(s),
-            m => MessageWrapper::Message(m),
-        }
-    }
-}
-
-impl From<SurfaceMessage> for Msg {
-    fn from(value: SurfaceMessage) -> Self {
-        Msg::Surface(value)
-    }
+    Surface(cosmic::surface::Action),
 }
 
 #[derive(Default)]
@@ -114,7 +98,7 @@ impl cosmic::Application for App {
             Msg::StatusMenu((id, msg)) => match self.menus.get_mut(&id) {
                 Some(state) => state
                     .update(msg)
-                    .map(move |msg| app::message::app(Msg::StatusMenu((id, msg)))),
+                    .map(move |msg| cosmic::action::app(Msg::StatusMenu((id, msg)))),
                 None => Task::none(),
             },
             Msg::StatusNotifier(event) => match event {
@@ -131,13 +115,13 @@ impl cosmic::Application for App {
                     {
                         *m = state;
                         let id = *id;
-                        return cmd.map(move |msg| app::message::app(Msg::StatusMenu((id, msg))));
+                        return cmd.map(move |msg| cosmic::action::app(Msg::StatusMenu((id, msg))));
                     }
                     let id = self.next_menu_id();
                     self.menus.insert(id, state);
                     app::Task::batch([
                         self.resize_window(),
-                        cmd.map(move |msg| app::message::app(Msg::StatusMenu((id, msg)))),
+                        cmd.map(move |msg| cosmic::action::app(Msg::StatusMenu((id, msg)))),
                     ])
                 }
                 status_notifier_watcher::Event::Unregistered(name) => {

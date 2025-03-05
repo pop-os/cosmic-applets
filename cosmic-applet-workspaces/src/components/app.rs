@@ -13,7 +13,6 @@ use cosmic::{
         Length, Limits, Subscription,
     },
     iced_core::{Background, Border},
-    surface_message::{MessageWrapper, SurfaceMessage},
     widget::{autosize, container, horizontal_space, vertical_space, Id},
     Element, Task, Theme,
 };
@@ -82,22 +81,7 @@ enum Message {
     WorkspacePressed(ObjectId),
     WheelScrolled(ScrollDelta),
     WorkspaceOverview,
-    Surface(SurfaceMessage),
-}
-
-impl From<Message> for MessageWrapper<Message> {
-    fn from(value: Message) -> Self {
-        match value {
-            Message::Surface(s) => MessageWrapper::Surface(s),
-            m => MessageWrapper::Message(m),
-        }
-    }
-}
-
-impl From<SurfaceMessage> for Message {
-    fn from(value: SurfaceMessage) -> Self {
-        Message::Surface(value)
-    }
+    Surface(cosmic::surface::Action),
 }
 
 impl cosmic::Application for IcedWorkspacesApplet {
@@ -109,10 +93,7 @@ impl cosmic::Application for IcedWorkspacesApplet {
     fn init(
         core: cosmic::app::Core,
         _flags: Self::Flags,
-    ) -> (
-        Self,
-        cosmic::iced::Task<cosmic::app::Message<Self::Message>>,
-    ) {
+    ) -> (Self, cosmic::iced::Task<cosmic::Action<Self::Message>>) {
         (
             Self {
                 layout: match &core.applet.anchor {
@@ -138,7 +119,7 @@ impl cosmic::Application for IcedWorkspacesApplet {
     fn update(
         &mut self,
         message: Self::Message,
-    ) -> cosmic::iced::Task<cosmic::app::Message<Self::Message>> {
+    ) -> cosmic::iced::Task<cosmic::Action<Self::Message>> {
         match message {
             Message::WorkspaceUpdate(msg) => match msg {
                 WorkspacesUpdate::Workspaces(mut list) => {

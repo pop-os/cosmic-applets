@@ -23,7 +23,6 @@ use cosmic::{
         window::{self},
         Length, Limits, Subscription,
     },
-    surface_message::{MessageWrapper, SurfaceMessage},
     widget::{autosize::autosize, mouse_area},
     Task,
 };
@@ -83,22 +82,7 @@ enum Message {
     Closed(window::Id),
     OpenOverflowPopup,
     CloseOverflowPopup,
-    Surface(SurfaceMessage),
-}
-
-impl From<Message> for MessageWrapper<Message> {
-    fn from(value: Message) -> Self {
-        match value {
-            Message::Surface(s) => MessageWrapper::Surface(s),
-            m => MessageWrapper::Message(m),
-        }
-    }
-}
-
-impl From<SurfaceMessage> for Message {
-    fn from(value: SurfaceMessage) -> Self {
-        Message::Surface(value)
-    }
+    Surface(cosmic::surface::Action),
 }
 
 impl cosmic::Application for Minimize {
@@ -264,6 +248,7 @@ impl cosmic::Application for Minimize {
                     )),
                     data.name.clone(),
                     self.overflow_popup.is_some(),
+                    Message::Surface,
                 )
                 .into()
         });

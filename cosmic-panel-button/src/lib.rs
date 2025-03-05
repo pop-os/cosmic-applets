@@ -10,7 +10,6 @@ use cosmic::{
     },
     iced::{self, Length},
     iced_widget::row,
-    surface_message::{MessageWrapper, SurfaceMessage},
     widget::{autosize, vertical_space, Id},
     Task,
 };
@@ -37,34 +36,19 @@ struct Button {
 }
 
 #[derive(Debug, Clone)]
-enum Msg {
+enum Message {
     Press,
     ConfigUpdated(CosmicPanelButtonConfig),
-    Surface(SurfaceMessage),
-}
-
-impl From<Msg> for MessageWrapper<Msg> {
-    fn from(value: Msg) -> Self {
-        match value {
-            Msg::Surface(s) => MessageWrapper::Surface(s),
-            m => MessageWrapper::Message(m),
-        }
-    }
-}
-
-impl From<SurfaceMessage> for Msg {
-    fn from(value: SurfaceMessage) -> Self {
-        Msg::Surface(value)
-    }
+    Surface(cosmic::surface::Action),
 }
 
 impl cosmic::Application for Button {
-    type Message = Msg;
+    type Message = Message;
     type Executor = cosmic::SingleThreadExecutor;
     type Flags = Desktop;
     const APP_ID: &'static str = "com.system76.CosmicPanelButton";
 
-    fn init(core: cosmic::app::Core, desktop: Desktop) -> (Self, app::Task<Msg>) {
+    fn init(core: cosmic::app::Core, desktop: Desktop) -> (Self, app::Task<Message>) {
         let config = Config::new(Self::APP_ID, CosmicPanelButtonConfig::VERSION)
             .ok()
             .and_then(|c| CosmicPanelButtonConfig::get_entry(&c).ok())
@@ -95,28 +79,28 @@ impl cosmic::Application for Button {
         Some(cosmic::applet::style())
     }
 
-    fn update(&mut self, message: Msg) -> app::Task<Msg> {
+    fn update(&mut self, message: Message) -> app::Task<Message> {
         match message {
-            Msg::Press => {
+            Message::Press => {
                 let _ = Command::new("sh")
                     .arg("-c")
                     .arg(&self.desktop.exec)
                     .spawn()
                     .unwrap();
             }
-            Msg::ConfigUpdated(conf) => {
+            Message::ConfigUpdated(conf) => {
                 self.config = conf
                     .configs
                     .get(&self.core.applet.panel_type.to_string())
                     .cloned()
                     .unwrap_or_default();
             }
-            Msg::Surface(_) => unreachable!(),
+            Message::Surface(_) => unreachable!(),
         }
         Task::none()
     }
 
-    fn view(&self) -> cosmic::Element<Msg> {
+    fn view(&self) -> cosmic::Element<Message> {
         // currently, panel being anchored to the left or right is a hard
         // override for icon, later if text is updated to wrap, we may
         // use Override::Text to override this behavior
@@ -143,9 +127,10 @@ impl cosmic::Application for Button {
                                 cosmic::widget::icon::from_name(self.desktop.icon.clone().unwrap())
                                     .handle(),
                             )
-                            .on_press_down(Msg::Press),
+                            .on_press_down(Message::Press),
                         self.desktop.name.clone(),
                         false,
+                        Message::Surface,
                     ),
                 )
             } else {
@@ -161,7 +146,7 @@ impl cosmic::Application for Button {
                 cosmic::widget::button::custom(content)
                     .padding([0, self.core.applet.suggested_padding(true)])
                     .class(cosmic::theme::Button::AppletIcon)
-                    .on_press_down(Msg::Press)
+                    .on_press_down(Message::Press)
                     .into()
             },
             AUTOSIZE_MAIN_ID.clone(),
@@ -174,7 +159,7 @@ impl cosmic::Application for Button {
             for why in u.errors {
                 tracing::error!(why = why.to_string(), "Error watching config");
             }
-            Msg::ConfigUpdated(u.config)
+            Message::ConfigUpdated(u.config)
         })
     }
 }

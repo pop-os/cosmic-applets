@@ -33,7 +33,6 @@ use cosmic::{
     },
     iced_core::{Border, Padding, Shadow},
     iced_runtime::{core::event, dnd::peek_dnd},
-    surface_message::{MessageWrapper, SurfaceMessage},
     theme::{self, Button, Container},
     widget::{
         button, divider, dnd_source, horizontal_space,
@@ -372,22 +371,7 @@ enum Message {
     ConfigUpdated(AppListConfig),
     OpenFavorites,
     OpenActive,
-    Surface(SurfaceMessage),
-}
-
-impl From<Message> for MessageWrapper<Message> {
-    fn from(value: Message) -> Self {
-        match value {
-            Message::Surface(s) => MessageWrapper::Surface(s),
-            m => MessageWrapper::Message(m),
-        }
-    }
-}
-
-impl From<SurfaceMessage> for Message {
-    fn from(value: SurfaceMessage) -> Self {
-        Message::Surface(value)
-    }
+    Surface(cosmic::surface::Action),
 }
 
 fn index_in_list(
@@ -609,7 +593,7 @@ impl cosmic::Application for CosmicAppList {
     fn init(
         core: cosmic::app::Core,
         _flags: Self::Flags,
-    ) -> (Self, iced::Task<cosmic::app::Message<Self::Message>>) {
+    ) -> (Self, iced::Task<cosmic::Action<Self::Message>>) {
         let config = Config::new(APP_ID, AppListConfig::VERSION)
             .ok()
             .and_then(|c| AppListConfig::get_entry(&c).ok())
@@ -639,7 +623,7 @@ impl cosmic::Application for CosmicAppList {
         (
             app_list,
             Task::perform(try_get_gpus(), |gpus| {
-                cosmic::app::Message::App(Message::GpuRequest(gpus))
+                cosmic::Action::App(Message::GpuRequest(gpus))
             }),
         )
     }
@@ -652,10 +636,7 @@ impl cosmic::Application for CosmicAppList {
         &mut self.core
     }
 
-    fn update(
-        &mut self,
-        message: Self::Message,
-    ) -> iced::Task<cosmic::app::Message<Self::Message>> {
+    fn update(&mut self, message: Self::Message) -> iced::Task<cosmic::Action<Self::Message>> {
         match message {
             Message::Popup(id, parent_window_id) => {
                 if let Some(Popup {
@@ -715,7 +696,7 @@ impl cosmic::Application for CosmicAppList {
                     };
 
                     let gpu_update = Task::perform(try_get_gpus(), |gpus| {
-                        cosmic::app::Message::App(Message::GpuRequest(gpus))
+                        cosmic::Action::App(Message::GpuRequest(gpus))
                     });
                     return Task::batch([gpu_update, get_popup(popup_settings)]);
                 }
@@ -939,7 +920,7 @@ impl cosmic::Application for CosmicAppList {
                     // TODO dnd
                     return peek_dnd::<DndPathBuf>()
                         .map(Message::DndData)
-                        .map(cosmic::app::Message::App);
+                        .map(cosmic::Action::App);
                 }
             }
             Message::DndMotion(x, y) => {
@@ -1067,7 +1048,7 @@ impl cosmic::Application for CosmicAppList {
                             },
                             |_| Message::IncrementSubscriptionCtr,
                         )
-                        .map(cosmic::app::message::app);
+                        .map(cosmic::Action::App);
                     }
                     WaylandUpdate::Toplevel(event) => match event {
                         ToplevelUpdate::Add(mut info) => {
@@ -1439,6 +1420,7 @@ impl cosmic::Application for CosmicAppList {
                             .unwrap_or_default()
                             .to_string(),
                         self.popup.is_some(),
+                        Message::Surface,
                     )
                     .into()
             })
@@ -1532,6 +1514,7 @@ impl cosmic::Application for CosmicAppList {
                             .unwrap_or_default()
                             .to_string(),
                         self.popup.is_some(),
+                        Message::Surface,
                     )
                     .into()
             })
@@ -1948,6 +1931,7 @@ impl cosmic::Application for CosmicAppList {
                                 .unwrap_or_default()
                                 .to_string(),
                             self.popup.is_some(),
+                            Message::Surface,
                         )
                         .into()
                 })
@@ -2046,6 +2030,7 @@ impl cosmic::Application for CosmicAppList {
                                 .unwrap_or_default()
                                 .to_string(),
                             self.popup.is_some(),
+                            Message::Surface,
                         )
                         .into()
                 })
@@ -2130,7 +2115,7 @@ impl cosmic::Application for CosmicAppList {
 
 impl CosmicAppList {
     /// Close any open popups.
-    fn close_popups(&mut self) -> Task<cosmic::app::Message<Message>> {
+    fn close_popups(&mut self) -> Task<cosmic::Action<Message>> {
         let mut commands = Vec::new();
         if let Some(popup) = self.popup.take() {
             commands.push(destroy_popup(popup.id));
