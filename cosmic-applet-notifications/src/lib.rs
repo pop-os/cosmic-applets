@@ -17,7 +17,6 @@ use cosmic::{
         window, Alignment, Length, Limits, Subscription,
     },
     iced_widget::{scrollable, Column},
-    surface_message::{MessageWrapper, SurfaceMessage},
     theme,
     widget::{button, container, divider, icon, text},
     Element, Task,
@@ -95,22 +94,7 @@ enum Message {
     CardsToggled(String, bool),
     Token(TokenUpdate),
     OpenSettings,
-    Surface(SurfaceMessage),
-}
-
-impl From<Message> for MessageWrapper<Message> {
-    fn from(value: Message) -> Self {
-        match value {
-            Message::Surface(s) => MessageWrapper::Surface(s),
-            m => MessageWrapper::Message(m),
-        }
-    }
-}
-
-impl From<SurfaceMessage> for Message {
-    fn from(value: SurfaceMessage) -> Self {
-        Message::Surface(value)
-    }
+    Surface(cosmic::surface::Action),
 }
 
 impl cosmic::Application for Notifications {
@@ -122,10 +106,7 @@ impl cosmic::Application for Notifications {
     fn init(
         core: cosmic::app::Core,
         _flags: Self::Flags,
-    ) -> (
-        Self,
-        cosmic::iced::Task<cosmic::app::Message<Self::Message>>,
-    ) {
+    ) -> (Self, cosmic::iced::Task<cosmic::Action<Self::Message>>) {
         let helper = Config::new(
             cosmic_notifications_config::ID,
             NotificationsConfig::VERSION,
@@ -196,7 +177,7 @@ impl cosmic::Application for Notifications {
     fn update(
         &mut self,
         message: Self::Message,
-    ) -> cosmic::iced::Task<cosmic::app::Message<Self::Message>> {
+    ) -> cosmic::iced::Task<cosmic::Action<Self::Message>> {
         match message {
             Message::Frame(now) => {
                 self.timeline.now(now);

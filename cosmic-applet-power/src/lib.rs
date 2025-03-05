@@ -18,7 +18,6 @@ use cosmic::{
         window, Alignment, Length,
     },
     iced_runtime::core::layout::Limits,
-    surface_message::{MessageWrapper, SurfaceMessage},
     theme,
     widget::{autosize, button, divider, icon, layer_container::layer_container, text, Space},
     Element, Task,
@@ -66,8 +65,8 @@ enum PowerAction {
 }
 
 impl PowerAction {
-    fn perform(self) -> iced::Task<cosmic::app::Message<Message>> {
-        let msg = |m| cosmic::app::message::app(Message::Zbus(m));
+    fn perform(self) -> iced::Task<cosmic::Action<Message>> {
+        let msg = |m| cosmic::Action::App(Message::Zbus(m));
         match self {
             PowerAction::Lock => iced::Task::perform(lock(), msg),
             PowerAction::LogOut => iced::Task::perform(log_out(), msg),
@@ -75,20 +74,6 @@ impl PowerAction {
             PowerAction::Restart => iced::Task::perform(restart(), msg),
             PowerAction::Shutdown => iced::Task::perform(shutdown(), msg),
         }
-    }
-}
-impl From<Message> for MessageWrapper<Message> {
-    fn from(value: Message) -> Self {
-        match value {
-            Message::Surface(s) => MessageWrapper::Surface(s),
-            m => MessageWrapper::Message(m),
-        }
-    }
-}
-
-impl From<SurfaceMessage> for Message {
-    fn from(value: SurfaceMessage) -> Self {
-        Message::Surface(value)
     }
 }
 
@@ -99,7 +84,7 @@ enum Message {
     Settings,
     Zbus(Result<(), zbus::Error>),
     Closed(window::Id),
-    Surface(SurfaceMessage),
+    Surface(cosmic::surface::Action),
 }
 
 impl cosmic::Application for Power {

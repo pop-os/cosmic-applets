@@ -5,7 +5,6 @@ use std::str::FromStr;
 
 use chrono::{Datelike, Timelike};
 use cosmic::iced_futures::stream;
-use cosmic::surface_message::{MessageWrapper, SurfaceMessage};
 use cosmic::widget::Id;
 use cosmic::{
     app,
@@ -79,22 +78,7 @@ pub enum Message {
     Token(TokenUpdate),
     ConfigChanged(TimeAppletConfig),
     TimezoneUpdate(String),
-    Surface(SurfaceMessage),
-}
-
-impl From<Message> for MessageWrapper<Message> {
-    fn from(value: Message) -> Self {
-        match value {
-            Message::Surface(s) => MessageWrapper::Surface(s),
-            m => MessageWrapper::Message(m),
-        }
-    }
-}
-
-impl From<SurfaceMessage> for Message {
-    fn from(value: SurfaceMessage) -> Self {
-        Message::Surface(value)
-    }
+    Surface(cosmic::surface::Action),
 }
 
 impl Window {
@@ -133,7 +117,7 @@ impl cosmic::Application for Window {
     fn init(
         core: app::Core,
         _flags: Self::Flags,
-    ) -> (Self, cosmic::iced::Task<app::Message<Self::Message>>) {
+    ) -> (Self, cosmic::iced::Task<cosmic::Action<Self::Message>>) {
         fn get_local() -> Result<Locale, Box<dyn std::error::Error>> {
             let locale = std::env::var("LC_TIME").or_else(|_| std::env::var("LANG"))?;
             let locale = locale
@@ -310,7 +294,7 @@ impl cosmic::Application for Window {
     fn update(
         &mut self,
         message: Self::Message,
-    ) -> cosmic::iced::Task<app::Message<Self::Message>> {
+    ) -> cosmic::iced::Task<cosmic::Action<Self::Message>> {
         match message {
             Message::TogglePopup => {
                 if let Some(p) = self.popup.take() {
