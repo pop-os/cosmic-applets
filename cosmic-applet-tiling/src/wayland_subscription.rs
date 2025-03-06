@@ -8,7 +8,7 @@ use cosmic::iced::{
     futures::{self, channel::mpsc, SinkExt, StreamExt},
     stream, Subscription,
 };
-use cosmic_protocols::workspace::v1::client::zcosmic_workspace_handle_v1::TilingState;
+use cosmic_protocols::workspace::v2::client::zcosmic_workspace_handle_v2::TilingState;
 use once_cell::sync::Lazy;
 use tokio::sync::Mutex;
 

@@ -14,7 +14,10 @@ use cctk::{
     wayland_client::protocol::{
         wl_data_device_manager::DndAction, wl_output::WlOutput, wl_seat::WlSeat,
     },
-    wayland_protocols::ext::foreign_toplevel_list::v1::client::ext_foreign_toplevel_handle_v1::ExtForeignToplevelHandleV1,
+    wayland_protocols::ext::{
+        foreign_toplevel_list::v1::client::ext_foreign_toplevel_handle_v1::ExtForeignToplevelHandleV1,
+        workspace::v1::client::ext_workspace_handle_v1::ExtWorkspaceHandleV1,
+    },
 };
 use cosmic::{
     applet::{
@@ -44,10 +47,7 @@ use cosmic::{
     Apply, Element, Task,
 };
 use cosmic_app_list_config::{AppListConfig, APP_ID};
-use cosmic_protocols::{
-    toplevel_info::v1::client::zcosmic_toplevel_handle_v1::State,
-    workspace::v1::client::zcosmic_workspace_handle_v1::ZcosmicWorkspaceHandleV1,
-};
+use cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::State;
 use freedesktop_desktop_entry as fde;
 use freedesktop_desktop_entry::{get_languages_from_env, DesktopEntry};
 use futures::future::pending;
@@ -327,7 +327,7 @@ struct CosmicAppList {
     dnd_offer: Option<DndOffer>,
     is_listening_for_dnd: bool,
     gpus: Option<Vec<Gpu>>,
-    active_workspaces: Vec<ZcosmicWorkspaceHandleV1>,
+    active_workspaces: Vec<ExtWorkspaceHandleV1>,
     output_list: HashMap<WlOutput, OutputInfo>,
     locales: Vec<String>,
     overflow_favorites_popup: Option<window::Id>,

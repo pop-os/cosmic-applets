@@ -1,8 +1,8 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
-use crate::wayland::{self, WorkspaceEvent, WorkspaceList};
-use cctk::sctk::reexports::calloop::channel::SyncSender;
+use crate::wayland::{self, WorkspaceEvent};
+use cctk::{sctk::reexports::calloop::channel::SyncSender, workspace::Workspace};
 use cosmic::iced::{
     self,
     futures::{channel::mpsc, SinkExt, StreamExt},
@@ -11,12 +11,12 @@ use cosmic::iced::{
 use once_cell::sync::Lazy;
 use tokio::sync::Mutex;
 
-pub static WAYLAND_RX: Lazy<Mutex<Option<mpsc::Receiver<WorkspaceList>>>> =
+pub static WAYLAND_RX: Lazy<Mutex<Option<mpsc::Receiver<Vec<Workspace>>>>> =
     Lazy::new(|| Mutex::new(None));
 
 #[derive(Debug, Clone)]
 pub enum WorkspacesUpdate {
-    Workspaces(WorkspaceList),
+    Workspaces(Vec<Workspace>),
     Started(SyncSender<WorkspaceEvent>),
     Errored,
 }
@@ -71,7 +71,7 @@ pub enum State {
 }
 
 pub struct WorkspacesWatcher {
-    rx: mpsc::Receiver<WorkspaceList>,
+    rx: mpsc::Receiver<Vec<Workspace>>,
     tx: SyncSender<WorkspaceEvent>,
 }
 

@@ -6,7 +6,10 @@ use cctk::{
     sctk::{
         self,
         output::{OutputHandler, OutputState},
-        reexports::{calloop, calloop_wayland_source::WaylandSource, client as wayland_client},
+        reexports::{
+            calloop, calloop_wayland_source::WaylandSource, client as wayland_client,
+            protocols::ext::workspace::v1::client::ext_workspace_handle_v1,
+        },
         registry::{ProvidesRegistryState, RegistryState},
     },
     toplevel_info::{ToplevelInfoHandler, ToplevelInfoState},
@@ -15,7 +18,7 @@ use cctk::{
     workspace::{WorkspaceHandler, WorkspaceState},
 };
 use cosmic::iced::futures;
-use cosmic_protocols::workspace::v1::client::zcosmic_workspace_handle_v1::{self, TilingState};
+use cosmic_protocols::workspace::v2::client::zcosmic_workspace_handle_v2::TilingState;
 use futures::{channel::mpsc, executor::block_on, SinkExt};
 use std::{
     collections::HashSet,
@@ -87,44 +90,41 @@ pub fn spawn_workspaces(tx: mpsc::Sender<TilingState>) -> SyncSender<AppRequest>
             loop_handle
                 .insert_source(workspaces_rx, |e, _, state| match e {
                     Event::Msg(AppRequest::TilingState(autotile)) => {
-                        if let Some(w) =
-                            state
-                                .workspace_state
-                                .workspace_groups()
+                        if let Some(w) = state.workspace_state.workspace_groups().find_map(|g| {
+                            if let Some(o) = state.expected_output.as_ref() {
+                                if !g.outputs.contains(o) {
+                                    return None;
+                                }
+                            }
+                            g.workspaces
                                 .iter()
-                                .find_map(|g| {
-                                    if let Some(o) = state.expected_output.as_ref() {
-                                        if !g.outputs.contains(o) {
-                                            return None;
-                                        }
-                                    }
-                                    g.workspaces.iter().find(|w| {
-                                        w.state.contains(&WEnum::Value(
-                                            zcosmic_workspace_handle_v1::State::Active,
-                                        ))
-                                    })
-                                })
-                        {
-                            w.handle.set_tiling_state(autotile);
-                            state
-                                .workspace_state
-                                .workspace_manager()
-                                .get()
-                                .unwrap()
-                                .commit();
+                                .filter_map(|handle| state.workspace_state.workspace_info(handle))
+                                .find(|w| w.state.contains(ext_workspace_handle_v1::State::Active))
+                        }) {
+                            if let Some(cosmic_handle) = &w.cosmic_handle {
+                                cosmic_handle.set_tiling_state(autotile);
+                                state
+                                    .workspace_state
+                                    .workspace_manager()
+                                    .get()
+                                    .unwrap()
+                                    .commit();
+                            }
                         }
                     }
                     Event::Msg(AppRequest::DefaultBehavior(tiling)) => {
                         for w in state
                             .workspace_state
                             .workspace_groups()
-                            .iter()
                             .flat_map(|g| g.workspaces.iter())
+                            .filter_map(|handle| state.workspace_state.workspace_info(handle))
                             .filter(|w| {
                                 !state.workspaces_with_previous_toplevel.contains(&w.handle)
                             })
                         {
-                            w.handle.set_tiling_state(tiling);
+                            if let Some(cosmic_handle) = &w.cosmic_handle {
+                                cosmic_handle.set_tiling_state(tiling);
+                            }
                         }
                         state
                             .workspace_state
@@ -167,25 +167,22 @@ pub struct State {
     registry_state: RegistryState,
     workspace_state: WorkspaceState,
     toplevel_info_state: ToplevelInfoState,
-    workspaces_with_previous_toplevel:
-        HashSet<zcosmic_workspace_handle_v1::ZcosmicWorkspaceHandleV1>,
+    workspaces_with_previous_toplevel: HashSet<ext_workspace_handle_v1::ExtWorkspaceHandleV1>,
     have_workspaces: bool,
 }
 
 impl State {
     pub fn tiling_state(&self) -> Option<TilingState> {
-        self.workspace_state
-            .workspace_groups()
-            .iter()
-            .find_map(|g| {
-                if g.outputs
+        self.workspace_state.workspace_groups().find_map(|g| {
+            if g.outputs
+                .iter()
+                .any(|o| Some(o) == self.expected_output.as_ref())
+            {
+                g.workspaces
                     .iter()
-                    .any(|o| Some(o) == self.expected_output.as_ref())
-                {
-                    g.workspaces.iter().find_map(|w| {
-                        if w.state
-                            .contains(&WEnum::Value(zcosmic_workspace_handle_v1::State::Active))
-                        {
+                    .filter_map(|handle| self.workspace_state.workspace_info(handle))
+                    .find_map(|w| {
+                        if w.state.contains(ext_workspace_handle_v1::State::Active) {
                             w.tiling.and_then(|e| match e {
                                 WEnum::Value(v) => Some(v),
                                 _ => {
@@ -197,10 +194,10 @@ impl State {
                             None
                         }
                     })
-                } else {
-                    None
-                }
-            })
+            } else {
+                None
+            }
+        })
     }
 }
 
