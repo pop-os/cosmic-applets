@@ -131,7 +131,7 @@ impl CaptureData {
     pub fn capture_source_shm_fd<Fd: AsFd>(
         &self,
         overlay_cursor: bool,
-        source: ZcosmicToplevelHandleV1,
+        source: ExtForeignToplevelHandleV1,
         fd: Fd,
         len: Option<u32>,
     ) -> Option<ShmImage<Fd>> {
@@ -145,7 +145,7 @@ impl CaptureData {
         let capture_session = self
             .capturer
             .create_session(
-                &CaptureSource::CosmicToplevel(source),
+                &CaptureSource::Toplevel(source),
                 CaptureOptions::empty(),
                 &self.qh,
                 SessionData {
@@ -310,9 +310,6 @@ impl AppData {
             wl_shm: self.shm_state.wl_shm().clone(),
             capturer: self.screencopy_state.capturer().clone(),
         };
-        let Some(cosmic_toplevel) = self.cosmic_toplevel(&handle) else {
-            return;
-        };
         std::thread::spawn(move || {
             use std::ffi::CStr;
             let name =
@@ -323,7 +320,7 @@ impl AppData {
             };
 
             // XXX is this going to use to much memory?
-            let img = capure_data.capture_source_shm_fd(false, cosmic_toplevel, fd, None);
+            let img = capure_data.capture_source_shm_fd(false, handle.clone(), fd, None);
             if let Some(img) = img {
                 let Ok(mut img) = img.image() else {
                     tracing::error!("Failed to get RgbaImage");

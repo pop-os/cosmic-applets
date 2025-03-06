@@ -39,13 +39,15 @@ use cctk::{
         },
         Connection, Dispatch, QueueHandle, WEnum,
     },
-    wayland_protocols::ext::foreign_toplevel_list::v1::client::ext_foreign_toplevel_handle_v1::ExtForeignToplevelHandleV1,
+    wayland_protocols::ext::{
+        foreign_toplevel_list::v1::client::ext_foreign_toplevel_handle_v1::ExtForeignToplevelHandleV1,
+        workspace::v1::client::ext_workspace_handle_v1::State as WorkspaceUpdateState,
+    },
     workspace::{WorkspaceHandler, WorkspaceState},
 };
 use cosmic_protocols::{
     toplevel_info::v1::client::zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1,
     toplevel_management::v1::client::zcosmic_toplevel_manager_v1,
-    workspace::v1::client::zcosmic_workspace_handle_v1::State as WorkspaceUpdateState,
 };
 use futures::channel::mpsc::UnboundedSender;
 use sctk::{
@@ -129,12 +131,11 @@ impl WorkspaceHandler for AppData {
         let active_workspaces = self
             .workspace_state
             .workspace_groups()
-            .iter()
             .filter_map(|x| {
-                x.workspaces.iter().find(|w| {
-                    w.state
-                        .contains(&WEnum::Value(WorkspaceUpdateState::Active))
-                })
+                x.workspaces
+                    .iter()
+                    .filter_map(|handle| self.workspace_state.workspace_info(handle))
+                    .find(|w| w.state.contains(WorkspaceUpdateState::Active))
             })
             .map(|workspace| workspace.handle.clone())
             .collect::<Vec<_>>();
@@ -364,7 +365,7 @@ impl CaptureData {
     pub fn capture_source_shm_fd<Fd: AsFd>(
         &self,
         overlay_cursor: bool,
-        source: ZcosmicToplevelHandleV1,
+        source: &ExtForeignToplevelHandleV1,
         fd: Fd,
         len: Option<u32>,
     ) -> Option<ShmImage<Fd>> {
@@ -379,7 +380,7 @@ impl CaptureData {
         let capture_session = self
             .capturer
             .create_session(
-                &CaptureSource::CosmicToplevel(source),
+                &CaptureSource::Toplevel(source.clone()),
                 CaptureOptions::empty(),
                 &self.qh,
                 SessionData {
@@ -494,9 +495,6 @@ impl AppData {
             wl_shm: self.shm_state.wl_shm().clone(),
             capturer: self.screencopy_state.capturer().clone(),
         };
-        let Some(cosmic_toplevel) = self.cosmic_toplevel(&handle) else {
-            return;
-        };
         std::thread::spawn(move || {
             use std::ffi::CStr;
             let name = unsafe { CStr::from_bytes_with_nul_unchecked(b"app-list-screencopy\0") };
@@ -506,7 +504,7 @@ impl AppData {
             };
 
             // XXX is this going to use to much memory?
-            let img = capture_data.capture_source_shm_fd(false, cosmic_toplevel, fd, None);
+            let img = capture_data.capture_source_shm_fd(false, &handle, fd, None);
             if let Some(img) = img {
                 let Ok(img) = img.image() else {
                     tracing::error!("Failed to get RgbaImage");

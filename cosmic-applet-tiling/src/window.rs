@@ -25,7 +25,7 @@ use cosmic::{
     Element,
 };
 use cosmic_comp_config::{CosmicCompConfig, TileBehavior};
-use cosmic_protocols::workspace::v1::client::zcosmic_workspace_handle_v1::TilingState;
+use cosmic_protocols::workspace::v2::client::zcosmic_workspace_handle_v2::TilingState;
 use cosmic_time::{anim, chain, id, Timeline};
 use std::{thread, time::Instant};
 use tracing::error;

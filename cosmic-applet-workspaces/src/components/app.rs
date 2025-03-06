@@ -1,7 +1,15 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
-use cctk::sctk::reexports::{calloop::channel::SyncSender, client::backend::ObjectId};
+use cctk::{
+    sctk::reexports::{
+        calloop::channel::SyncSender,
+        protocols::ext::workspace::v1::client::ext_workspace_handle_v1::{
+            self, ExtWorkspaceHandleV1,
+        },
+    },
+    workspace::Workspace,
+};
 use cosmic::{
     applet::cosmic_panel_config::PanelAnchor,
     iced::{
@@ -17,17 +25,18 @@ use cosmic::{
     Element, Task, Theme,
 };
 
-use cosmic_protocols::workspace::v1::client::zcosmic_workspace_handle_v1;
 use once_cell::sync::Lazy;
-use std::cmp::Ordering;
 
 use crate::{
     config,
-    wayland::{WorkspaceEvent, WorkspaceList},
+    wayland::WorkspaceEvent,
     wayland_subscription::{workspaces, WorkspacesUpdate},
 };
 
-use std::process::Command as ShellCommand;
+use std::{
+    process::Command as ShellCommand,
+    time::{Duration, Instant},
+};
 
 static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
 
@@ -43,9 +52,12 @@ pub enum Layout {
 
 struct IcedWorkspacesApplet {
     core: cosmic::app::Core,
-    workspaces: WorkspaceList,
+    workspaces: Vec<Workspace>,
     workspace_tx: Option<SyncSender<WorkspaceEvent>>,
     layout: Layout,
+    scroll: f64,
+    next_scroll: Option<Instant>,
+    last_scroll: Instant,
 }
 
 impl IcedWorkspacesApplet {
@@ -78,7 +90,7 @@ impl IcedWorkspacesApplet {
 #[derive(Debug, Clone)]
 enum Message {
     WorkspaceUpdate(WorkspacesUpdate),
-    WorkspacePressed(ObjectId),
+    WorkspacePressed(ExtWorkspaceHandleV1),
     WheelScrolled(ScrollDelta),
     WorkspaceOverview,
 }
@@ -105,6 +117,9 @@ impl cosmic::Application for IcedWorkspacesApplet {
                 core,
                 workspaces: Vec::new(),
                 workspace_tx: Default::default(),
+                scroll: 0.0,
+                next_scroll: None,
+                last_scroll: Instant::now(),
             },
             Task::none(),
         )
@@ -125,14 +140,8 @@ impl cosmic::Application for IcedWorkspacesApplet {
         match message {
             Message::WorkspaceUpdate(msg) => match msg {
                 WorkspacesUpdate::Workspaces(mut list) => {
-                    list.retain(|w| {
-                        !matches!(w.1, Some(zcosmic_workspace_handle_v1::State::Hidden))
-                    });
-                    list.sort_by(|a, b| match a.0.len().cmp(&b.0.len()) {
-                        Ordering::Equal => a.0.cmp(&b.0),
-                        Ordering::Less => Ordering::Less,
-                        Ordering::Greater => Ordering::Greater,
-                    });
+                    list.retain(|w| !w.state.contains(ext_workspace_handle_v1::State::Hidden));
+                    list.sort_by(|w1, w2| w1.coordinates.cmp(&w2.coordinates));
                     self.workspaces = list;
                 }
                 WorkspacesUpdate::Started(tx) => {
@@ -152,8 +161,55 @@ impl cosmic::Application for IcedWorkspacesApplet {
                     ScrollDelta::Lines { x, y } => ((x + y) as f64, false),
                     ScrollDelta::Pixels { x, y } => ((x + y) as f64, true),
                 };
-                if let Some(tx) = self.workspace_tx.as_mut() {
-                    let _ = tx.try_send(WorkspaceEvent::Scroll(delta, debounce));
+
+                let dur = if debounce {
+                    Duration::from_millis(350)
+                } else {
+                    Duration::from_millis(200)
+                };
+                if self.last_scroll.elapsed() > Duration::from_millis(100)
+                    || self.scroll * delta < 0.0
+                {
+                    self.next_scroll = None;
+                    self.scroll = 0.0;
+                }
+                self.last_scroll = Instant::now();
+
+                self.scroll += delta;
+                if let Some(next) = self.next_scroll {
+                    if next > Instant::now() {
+                        return cosmic::iced::Task::none();
+                    }
+                    self.next_scroll = None;
+                }
+
+                if self.scroll.abs() < 1.0 {
+                    return cosmic::iced::Task::none();
+                }
+                self.next_scroll = Some(Instant::now() + dur);
+                if let Some(w_i) = self
+                    .workspaces
+                    .iter()
+                    .position(|w| w.state.contains(ext_workspace_handle_v1::State::Active))
+                {
+                    let max_w = self.workspaces.len().wrapping_sub(1);
+                    let d_i = if self.scroll > 0.0 {
+                        if w_i == 0 {
+                            max_w
+                        } else {
+                            w_i.wrapping_sub(1)
+                        }
+                    } else if w_i == max_w {
+                        0
+                    } else {
+                        w_i.wrapping_add(1)
+                    };
+                    self.scroll = 0.0;
+                    if let Some(w) = self.workspaces.get(d_i) {
+                        if let Some(tx) = self.workspace_tx.as_mut() {
+                            let _ = tx.try_send(WorkspaceEvent::Activate(w.handle.clone()));
+                        }
+                    }
                 }
             }
             Message::WorkspaceOverview => {
@@ -177,11 +233,7 @@ impl cosmic::Application for IcedWorkspacesApplet {
         let popup_index = self.popup_index().unwrap_or(self.workspaces.len());
 
         let buttons = self.workspaces[..popup_index].iter().filter_map(|w| {
-            let content = self
-                .core
-                .applet
-                .text(w.0.clone())
-                .font(cosmic::font::bold());
+            let content = self.core.applet.text(&w.name).font(cosmic::font::bold());
 
             let (width, height) = if self.core.applet.is_horizontal() {
                 (suggested_total as f32, suggested_window_size.1.get() as f32)
@@ -205,18 +257,20 @@ impl cosmic::Application for IcedWorkspacesApplet {
             } else {
                 [self.core.applet.suggested_padding(true), 0]
             })
-            .on_press(match w.1 {
-                Some(zcosmic_workspace_handle_v1::State::Active) => Message::WorkspaceOverview,
-                _ => Message::WorkspacePressed(w.2.clone()),
-            })
+            .on_press(
+                if w.state.contains(ext_workspace_handle_v1::State::Active) {
+                    Message::WorkspaceOverview
+                } else {
+                    Message::WorkspacePressed(w.handle.clone())
+                },
+            )
             .padding(0);
 
             Some(
-                btn.class(match w.1 {
-                    Some(zcosmic_workspace_handle_v1::State::Active) => {
+                btn.class(
+                    if w.state.contains(ext_workspace_handle_v1::State::Active) {
                         cosmic::theme::iced::Button::Primary
-                    }
-                    Some(zcosmic_workspace_handle_v1::State::Urgent) => {
+                    } else if w.state.contains(ext_workspace_handle_v1::State::Urgent) {
                         let appearance = |theme: &Theme| {
                             let cosmic = theme.cosmic();
                             button::Style {
@@ -249,8 +303,7 @@ impl cosmic::Application for IcedWorkspacesApplet {
                                 button::Status::Disabled => appearance(theme),
                             }
                         }))
-                    }
-                    None => {
+                    } else {
                         let appearance = |theme: &Theme| {
                             let cosmic = theme.cosmic();
                             button::Style {
@@ -282,9 +335,8 @@ impl cosmic::Application for IcedWorkspacesApplet {
                                 }
                             }
                         }))
-                    }
-                    _ => return None,
-                })
+                    },
+                )
                 .into(),
             )
         });
