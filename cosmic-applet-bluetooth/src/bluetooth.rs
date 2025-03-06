@@ -18,6 +18,7 @@ use cosmic::{
     iced_futures::stream,
 };
 
+use futures::executor::block_on;
 use rand::Rng;
 use tokio::{
     spawn,
@@ -664,12 +665,42 @@ impl BluerSessionState {
                     let mut err_msg = None;
                     match &req_clone {
                         BluerRequest::SetBluetoothEnabled(enabled) => {
-                            let res = adapter_clone.set_powered(*enabled).await;
+                            if let Err(e) = adapter_clone.set_powered(*enabled).await {
+                                tracing::error!("Failed to power off bluetooth adapter. {e:?}")
+                            }
+
+                            // rfkill will be persisted after reboot
+                            let name = adapter_clone.name();
+                            if let Some(id) = tokio::process::Command::new("rfkill")
+                                .arg("list")
+                                .arg("-n")
+                                .arg("--output")
+                                .arg("ID,DEVICE")
+                                .output()
+                                .await
+                                .ok()
+                                .and_then(|o| {
+                                    let lines = String::from_utf8(o.stdout).ok()?;
+                                    lines.split("\n").into_iter().find_map(|row| {
+                                        let (id, cname) = row.trim().split_once(" ")?;
+                                        (name == cname).then_some(id.to_string())
+                                    })
+                                })
+                            {
+                                if let Err(err) = tokio::process::Command::new("rfkill")
+                                    .arg(if *enabled { "unblock" } else { "block" })
+                                    .arg(id)
+                                    .output()
+                                    .await
+                                {
+                                    tracing::error!(
+                                        "Failed to set bluetooth state using rfkill. {err:?}"
+                                    );
+                                }
+                            }
+
                             if *enabled {
                                 _ = wake_up_tx.send(()).await;
-                            }
-                            if let Err(e) = res {
-                                err_msg = Some(e.to_string());
                             }
                         }
                         BluerRequest::PairDevice(address) => {
