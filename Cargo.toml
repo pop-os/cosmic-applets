@@ -73,10 +73,11 @@ lto = "fat"
 
 [workspace.metadata.cargo-machete]
 ignored = ["libcosmic"]
-# [patch."https://github.com/pop-os/libcosmic"]
-# cosmic-config = { git = "https://github.com/pop-os/libcosmic//" }
-# libcosmic = { git = "https://github.com/pop-os/libcosmic//" }
-# cosmic-config = { path = "../libcosmic/cosmic-config" }
+[patch."https://github.com/pop-os/libcosmic"]
+libcosmic = { git = "https://github.com/pop-os/libcosmic//", branch = "fix-dbus-subscription-id" }
+cosmic-config = { git = "https://github.com/pop-os/libcosmic//", branch = "fix-dbus-subscription-id" }
+cosmic-theme = { git = "https://github.com/pop-os/libcosmic//", branch = "fix-dbus-subscription-id" }
+iced_futures = { git = "https://github.com/pop-os/libcosmic//", branch = "fix-dbus-subscription-id" }
 # libcosmic = { path = "../libcosmic" }
 
 # [patch."https://github.com/pop-os/winit.git"]
