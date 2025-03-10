@@ -34,11 +34,14 @@ use zbus::Connection;
 use crate::{
     config, fl,
     network_manager::{
-        active_conns::active_conns_subscription, available_wifi::AccessPoint,
-        current_networks::ActiveConnectionInfo, devices::devices_subscription,
-        hw_address::HwAddress, network_manager_subscription,
-        wireless_enabled::wireless_enabled_subscription, NetworkManagerEvent,
-        NetworkManagerRequest, NetworkManagerState,
+        active_conns::active_conns_subscription,
+        available_wifi::{AccessPoint, NetworkType},
+        current_networks::ActiveConnectionInfo,
+        devices::devices_subscription,
+        hw_address::HwAddress,
+        network_manager_subscription,
+        wireless_enabled::wireless_enabled_subscription,
+        NetworkManagerEvent, NetworkManagerRequest, NetworkManagerState,
     },
 };
 
@@ -50,6 +53,7 @@ pub fn run() -> cosmic::iced::Result {
 enum NewConnectionState {
     EnterPassword {
         access_point: AccessPoint,
+        identity: String,
         password: String,
         password_hidden: bool,
     },
@@ -237,6 +241,7 @@ pub(crate) enum Message {
     SelectWirelessAccessPoint(AccessPoint),
     CancelNewConnection,
     Password(String),
+    Identity(String),
     SubmitPassword,
     Frame(Instant),
     Token(TokenUpdate),
@@ -305,7 +310,6 @@ impl cosmic::Application for CosmicNetworkApplet {
                     return get_popup(popup_settings);
                 }
             }
-            // Message::Errored(_) => todo!(),
             Message::ToggleAirplaneMode(enabled) => {
                 self.toggle_wifi_ctr += 1;
                 if let Some(tx) = self.nm_sender.as_mut() {
@@ -339,7 +343,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                     success,
                     req,
                 } => {
-                    if let NetworkManagerRequest::SelectAccessPoint(ssid, hw_address) = &req {
+                    if let NetworkManagerRequest::SelectAccessPoint(ssid, hw_address, network_type) = &req {
                         let conn_match = self
                             .new_connection
                             .as_ref()
@@ -366,7 +370,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                         {
                             self.failed_known_ssids.insert(ssid.clone());
                         }
-                    } else if let NetworkManagerRequest::Password(ssid, _, hw_address) = &req {
+                    } else if let NetworkManagerRequest::Authenticate{ssid, identity: _,  password: _, hw_address } = &req {
                         if let Some(NewConnectionState::Waiting(access_point)) =
                             self.new_connection.clone()
                         {
@@ -420,13 +424,19 @@ impl cosmic::Application for CosmicNetworkApplet {
                 let _ = tx.unbounded_send(NetworkManagerRequest::SelectAccessPoint(
                     access_point.ssid.clone(),
                     access_point.hw_address,
+                    access_point.network_type,
                 ));
 
-                self.new_connection = Some(NewConnectionState::EnterPassword {
-                    access_point,
-                    password: String::new(),
-                    password_hidden: true,
-                });
+                if matches!(access_point.network_type, NetworkType::Open) {
+                    self.new_connection = Some(NewConnectionState::Waiting(access_point));
+                } else {
+                    self.new_connection = Some(NewConnectionState::EnterPassword {
+                        access_point,
+                        identity: String::new(),
+                        password: String::new(),
+                        password_hidden: true,
+                    });
+                }
             }
             Message::ToggleVisibleNetworks => {
                 self.new_connection = None;
@@ -458,19 +468,24 @@ impl cosmic::Application for CosmicNetworkApplet {
                 if let Some(NewConnectionState::EnterPassword {
                     password,
                     access_point,
+                    identity,
                     ..
                 }) = self.new_connection.take()
                 {
-                    let _ = tx.unbounded_send(NetworkManagerRequest::Password(
-                        access_point.ssid.clone(),
-                        password,
-                        access_point.hw_address,
-                    ));
+                    let is_enterprise: bool = matches!(access_point.network_type, NetworkType::EAP);
+
+                    let _ = tx.unbounded_send(NetworkManagerRequest::Authenticate {
+                        ssid: access_point.ssid.clone(),
+                        identity: is_enterprise.then(|| identity.clone()),
+                        password: password,
+                        hw_address: access_point.hw_address,
+                    });
                     self.new_connection
                         .replace(NewConnectionState::Waiting(access_point));
                 };
             }
             Message::ActivateKnownWifi(ssid, hw_address) => {
+                let mut network_type = NetworkType::Open;
                 let tx = if let Some(tx) = self.nm_sender.as_ref() {
                     if let Some(ap) = self
                         .nm_state
@@ -478,14 +493,18 @@ impl cosmic::Application for CosmicNetworkApplet {
                         .iter_mut()
                         .find(|c| c.ssid == ssid && c.hw_address == hw_address)
                     {
+                        network_type = ap.network_type;
                         ap.working = true;
                     }
                     tx
                 } else {
                     return Task::none();
                 };
-                let _ =
-                    tx.unbounded_send(NetworkManagerRequest::SelectAccessPoint(ssid, hw_address));
+                let _ = tx.unbounded_send(NetworkManagerRequest::SelectAccessPoint(
+                    ssid,
+                    hw_address,
+                    network_type,
+                ));
             }
             Message::CancelNewConnection => {
                 self.new_connection = None;
@@ -571,6 +590,13 @@ impl cosmic::Application for CosmicNetworkApplet {
                         tx.unbounded_send(NetworkManagerRequest::Forget(ssid.clone(), hw_address));
                     self.show_visible_networks = true;
                     return self.update(Message::SelectWirelessAccessPoint(ap));
+                }
+            }
+            Message::Identity(new_identity) => {
+                if let Some(NewConnectionState::EnterPassword { identity, .. }) =
+                    &mut self.new_connection
+                {
+                    *identity = new_identity;
                 }
             }
         }
@@ -967,6 +993,7 @@ impl cosmic::Application for CosmicNetworkApplet {
             match new_conn_state {
                 NewConnectionState::EnterPassword {
                     access_point,
+                    identity,
                     password,
                     password_hidden,
                 } => {
@@ -981,31 +1008,39 @@ impl cosmic::Application for CosmicNetworkApplet {
                         .spacing(12),
                     );
                     content = content.push(id);
-                    let enter_password_col = column![
-                        text::body(fl!("enter-password")),
-                        text_input::secure_input(
-                            "",
-                            password,
-                            Some(Message::TogglePasswordVisibility),
-                            *password_hidden,
+
+                    let is_enterprise = matches!(access_point.network_type, NetworkType::EAP);
+                    let enter_password_col = column![]
+                        .push_maybe(is_enterprise.then(|| text::body(fl!("identity"))))
+                        .push_maybe(is_enterprise.then(|| {
+                            text_input::text_input("", identity).on_input(Message::Identity)
+                        }))
+                        .push(text::body(fl!("enter-password")))
+                        .push(
+                            text_input::secure_input(
+                                "",
+                                password,
+                                Some(Message::TogglePasswordVisibility),
+                                *password_hidden,
+                            )
+                            .on_input(Message::Password)
+                            .on_paste(Message::Password)
+                            .on_submit(Message::SubmitPassword)
+                            .password(),
                         )
-                        .on_input(Message::Password)
-                        .on_paste(Message::Password)
-                        .on_submit(Message::SubmitPassword)
-                        .password(),
-                    ]
-                    .push_maybe(
-                        access_point
-                            .wps_push
-                            .then(|| container(text::body(fl!("router-wps-button"))).padding(8)),
-                    )
-                    .push(
-                        row![
-                            button::standard(fl!("cancel")).on_press(Message::CancelNewConnection),
-                            button::suggested(fl!("connect")).on_press(Message::SubmitPassword)
-                        ]
-                        .spacing(24),
-                    );
+                        .push_maybe(
+                            access_point.wps_push.then(|| {
+                                container(text::body(fl!("router-wps-button"))).padding(8)
+                            }),
+                        )
+                        .push(
+                            row![
+                                button::standard(fl!("cancel"))
+                                    .on_press(Message::CancelNewConnection),
+                                button::suggested(fl!("connect")).on_press(Message::SubmitPassword)
+                            ]
+                            .spacing(24),
+                        );
                     let col =
                         padded_control(enter_password_col.spacing(8).align_x(Alignment::Center))
                             .align_x(Alignment::Center);
