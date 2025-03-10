@@ -878,6 +878,9 @@ impl cosmic::Application for CosmicAppList {
                                 &t.original_app_id,
                                 &Config::new(APP_ID, AppListConfig::VERSION).unwrap(),
                             );
+                            if !t.toplevels.is_empty() {
+                                self.active_list.push(t.clone());
+                            }
                             Some((true, t))
                         } else {
                             None
