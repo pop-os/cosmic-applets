@@ -992,7 +992,6 @@ impl cosmic::Application for CosmicNetworkApplet {
                         .on_input(Message::Password)
                         .on_paste(Message::Password)
                         .on_submit(Message::SubmitPassword)
-                        .password(),
                     ]
                     .push_maybe(
                         access_point
