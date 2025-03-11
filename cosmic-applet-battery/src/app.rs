@@ -643,7 +643,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                             ))
                             .size(16)
                             .width(Length::Fixed(40.0))
-                            .align_x(Alignment::End)
+                            .align_x(Alignment::Center)
                         ]
                         .spacing(12),
                     )
