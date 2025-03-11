@@ -1,0 +1,3 @@
+screen-reader = スクリーンリーダー
+magnifier = 拡大鏡
+settings = アクセシビリティ設定…
