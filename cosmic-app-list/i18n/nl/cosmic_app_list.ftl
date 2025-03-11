@@ -1,8 +1,8 @@
-cosmic-app-list = Appmenu
-pin = Vastmaken aan Appmenu
+cosmic-app-list = Werkbalk
+pin = Vastmaken aan welkbalk
 quit = Afsluiten
 quit-all = Alles afsluiten
 new-window = Nieuw venster
 run = Uitvoeren
-run-on = Uitvoeren op {$gpu}
+run-on = Op {$gpu} uitvoeren
 run-on-default = (standaard)
