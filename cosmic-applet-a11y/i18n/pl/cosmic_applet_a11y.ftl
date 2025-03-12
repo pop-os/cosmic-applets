@@ -1,3 +1,3 @@
 screen-reader = Czytnik ekranu
-magnifier = Powiększalnik
+magnifier = Lupa
 settings = Ustawienia ułatwień dostępu…
