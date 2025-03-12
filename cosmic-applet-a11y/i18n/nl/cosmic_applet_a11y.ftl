@@ -1,0 +1,3 @@
+screen-reader = Schermverteller
+magnifier = Vergrootglas
+settings = Toegankelijkheidsinstellingen...
