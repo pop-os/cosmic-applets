@@ -56,6 +56,7 @@ pub struct Window {
     popup: Option<window::Id>,
     now: chrono::DateTime<chrono::FixedOffset>,
     timezone: Option<chrono_tz::Tz>,
+    date_today: chrono::NaiveDate,
     date_selected: chrono::NaiveDate,
     rectangle_tracker: Option<RectangleTracker<u32>>,
     rectangle: Rectangle,
@@ -142,6 +143,9 @@ impl cosmic::Application for Window {
         // timezone is ever externally changed
         let now = chrono::Local::now().fixed_offset();
 
+        // get today's date forhighlighting purposes
+        let today = chrono::NaiveDate::from(now.naive_local());
+
         // Synch `show_seconds` from the config within the time subscription
         let (show_seconds_tx, _) = watch::channel(true);
 
@@ -151,7 +155,8 @@ impl cosmic::Application for Window {
                 popup: None,
                 now,
                 timezone: None,
-                date_selected: chrono::NaiveDate::from(now.naive_local()),
+                date_today: today,
+                date_selected: today,
                 rectangle_tracker: None,
                 rectangle: Rectangle::default(),
                 token_tx: None,
@@ -630,8 +635,9 @@ impl cosmic::Application for Window {
             let is_month = date.month() == self.date_selected.month()
                 && date.year_ce() == self.date_selected.year_ce();
             let is_day = date.day() == self.date_selected.day() && is_month;
+            let is_today = date == self.date_today;
 
-            calender = calender.push(date_button(date.day(), is_month, is_day));
+            calender = calender.push(date_button(date.day(), is_month, is_day, is_today));
         }
 
         // content
@@ -662,9 +668,11 @@ impl cosmic::Application for Window {
     }
 }
 
-fn date_button(day: u32, is_month: bool, is_day: bool) -> Button<'static, Message> {
+fn date_button(day: u32, is_month: bool, is_day: bool, is_today: bool) -> Button<'static, Message> {
     let style = if is_day {
         button::ButtonClass::Suggested
+    } else if is_today {
+        button::ButtonClass::Standard
     } else {
         button::ButtonClass::Text
     };
