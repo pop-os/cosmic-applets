@@ -6,6 +6,7 @@ use crate::{
 };
 use cctk::sctk::reexports::calloop::channel::SyncSender;
 use cosmic::{
+    app,
     app::Core,
     applet::{menu_button, padded_control},
     cosmic_config::{Config, ConfigSet, CosmicConfigEntry},
@@ -13,17 +14,16 @@ use cosmic::{
     iced::{
         platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
         window::Id,
-        Length, Limits, Subscription, Task,
+        Length, Limits, Subscription,
     },
     iced_widget::{column, row},
-    surface_message::{MessageWrapper, SurfaceMessage},
-    theme,
+    surface, theme,
     widget::{
         container, divider,
         segmented_button::{self, Entity, SingleSelectModel},
         segmented_control, text,
     },
-    Element,
+    Element, Task,
 };
 use cosmic_comp_config::{CosmicCompConfig, TileBehavior};
 use cosmic_protocols::workspace::v2::client::zcosmic_workspace_handle_v2::TilingState;
@@ -61,22 +61,7 @@ pub enum Message {
     WorkspaceUpdate(WorkspacesUpdate),
     NewWorkspace(Entity),
     OpenSettings,
-    Surface(SurfaceMessage),
-}
-
-impl From<Message> for MessageWrapper<Message> {
-    fn from(value: Message) -> Self {
-        match value {
-            Message::Surface(s) => MessageWrapper::Surface(s),
-            m => MessageWrapper::Message(m),
-        }
-    }
-}
-
-impl From<SurfaceMessage> for Message {
-    fn from(value: SurfaceMessage) -> Self {
-        Message::Surface(value)
-    }
+    Surface(surface::Action),
 }
 
 impl cosmic::Application for Window {
@@ -93,7 +78,7 @@ impl cosmic::Application for Window {
         &mut self.core
     }
 
-    fn init(core: Core, _flags: Self::Flags) -> (Self, Task<cosmic::app::Message<Self::Message>>) {
+    fn init(core: Core, _flags: Self::Flags) -> (Self, app::Task<Self::Message>) {
         let config_helper =
             Config::new("com.system76.CosmicComp", CosmicCompConfig::VERSION).unwrap();
         let mut config = CosmicCompConfig::get_entry(&config_helper).unwrap_or_else(|(errs, c)| {
@@ -157,7 +142,7 @@ impl cosmic::Application for Window {
         ])
     }
 
-    fn update(&mut self, message: Self::Message) -> Task<cosmic::app::Message<Self::Message>> {
+    fn update(&mut self, message: Self::Message) -> app::Task<Self::Message> {
         match message {
             Message::WorkspaceUpdate(msg) => match msg {
                 WorkspacesUpdate::State(state) => {

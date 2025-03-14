@@ -11,6 +11,7 @@ use crate::{
     fl,
 };
 use cosmic::{
+    app,
     applet::{
         cosmic_panel_config::PanelAnchor,
         menu_button, padded_control,
@@ -26,8 +27,7 @@ use cosmic::{
     iced_core::{Alignment, Background, Border, Color, Shadow},
     iced_runtime::core::layout::Limits,
     iced_widget::{Column, Row},
-    surface_message::{MessageWrapper, SurfaceMessage},
-    theme,
+    surface, theme,
     widget::{divider, horizontal_space, icon, scrollable, text, vertical_space},
     Element, Task,
 };
@@ -189,22 +189,7 @@ enum Message {
     OpenSettings,
     SettingsDaemon(settings_daemon::Event),
     ZbusConnection(zbus::Result<zbus::Connection>),
-    Surface(SurfaceMessage),
-}
-
-impl From<Message> for MessageWrapper<Message> {
-    fn from(value: Message) -> Self {
-        match value {
-            Message::Surface(s) => MessageWrapper::Surface(s),
-            m => MessageWrapper::Message(m),
-        }
-    }
-}
-
-impl From<SurfaceMessage> for Message {
-    fn from(value: SurfaceMessage) -> Self {
-        Message::Surface(value)
-    }
+    Surface(surface::Action),
 }
 
 impl cosmic::Application for CosmicBatteryApplet {
@@ -213,18 +198,12 @@ impl cosmic::Application for CosmicBatteryApplet {
     type Flags = ();
     const APP_ID: &'static str = config::APP_ID;
 
-    fn init(
-        core: cosmic::app::Core,
-        _flags: Self::Flags,
-    ) -> (
-        Self,
-        cosmic::iced::Task<cosmic::app::Message<Self::Message>>,
-    ) {
-        let zbus_session_cmd = cosmic::iced::Task::perform(zbus::Connection::session(), |res| {
-            cosmic::app::Message::App(Message::ZbusConnection(res))
+    fn init(core: cosmic::app::Core, _flags: Self::Flags) -> (Self, app::Task<Self::Message>) {
+        let zbus_session_cmd = Task::perform(zbus::Connection::session(), |res| {
+            cosmic::Action::App(Message::ZbusConnection(res))
         });
-        let init_charging_limit_cmd = cosmic::iced::Task::perform(get_charging_limit(), |limit| {
-            cosmic::app::Message::App(Message::InitChargingLimit(limit))
+        let init_charging_limit_cmd = Task::perform(get_charging_limit(), |limit| {
+            cosmic::Action::App(Message::InitChargingLimit(limit))
         });
         (
             Self {
@@ -247,10 +226,7 @@ impl cosmic::Application for CosmicBatteryApplet {
         &mut self.core
     }
 
-    fn update(
-        &mut self,
-        message: Self::Message,
-    ) -> cosmic::iced::Task<cosmic::app::Message<Self::Message>> {
+    fn update(&mut self, message: Self::Message) -> app::Task<Self::Message> {
         match message {
             Message::Frame(now) => self.timeline.now(now),
             Message::SetKbdBrightness(brightness) => {
@@ -280,7 +256,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                 }
                 return cosmic::iced::Task::perform(
                     tokio::time::sleep(Duration::from_millis(200)),
-                    |_| cosmic::app::Message::App(Message::SetKbdBrightnessDebounced),
+                    |_| cosmic::Action::App(Message::SetKbdBrightnessDebounced),
                 );
             }
             Message::SetScreenBrightnessDebounced => {
@@ -295,7 +271,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                 }
                 return cosmic::iced::Task::perform(
                     tokio::time::sleep(Duration::from_millis(200)),
-                    |_| cosmic::app::Message::App(Message::SetScreenBrightnessDebounced),
+                    |_| cosmic::Action::App(Message::SetScreenBrightnessDebounced),
                 );
             }
             Message::ReleaseKbdBrightness => {
@@ -325,7 +301,7 @@ impl cosmic::Application for CosmicBatteryApplet {
 
                 if enable {
                     return cosmic::iced::Task::perform(set_charging_limit(), |_| {
-                        cosmic::app::Message::None
+                        cosmic::Action::None
                     });
                 }
             }

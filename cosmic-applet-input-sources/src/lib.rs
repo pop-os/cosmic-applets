@@ -4,8 +4,8 @@
 mod localize;
 
 use cosmic::iced::{Alignment, Length};
-use cosmic::surface_message::{MessageWrapper, SurfaceMessage};
 use cosmic::{
+    app,
     app::Core,
     applet::{self},
     cosmic_config::{self, ConfigSet, CosmicConfigEntry},
@@ -19,7 +19,7 @@ use cosmic::{
     iced_futures::Subscription,
     iced_runtime::{core::window, Appearance},
     prelude::*,
-    theme,
+    surface, theme,
     widget::{self, horizontal_space, vertical_space},
 };
 use cosmic_comp_config::CosmicCompConfig;
@@ -86,22 +86,7 @@ pub enum Message {
     CompConfig(Box<CosmicCompConfig>),
     SetActiveLayout(usize),
     KeyboardSettings,
-    Surface(SurfaceMessage),
-}
-
-impl From<Message> for MessageWrapper<Message> {
-    fn from(value: Message) -> Self {
-        match value {
-            Message::Surface(s) => MessageWrapper::Surface(s),
-            m => MessageWrapper::Message(m),
-        }
-    }
-}
-
-impl From<SurfaceMessage> for Message {
-    fn from(value: SurfaceMessage) -> Self {
-        Message::Surface(value)
-    }
+    Surface(surface::Action),
 }
 
 #[derive(Debug)]
@@ -126,7 +111,7 @@ impl cosmic::Application for Window {
         &mut self.core
     }
 
-    fn init(core: Core, flags: Self::Flags) -> (Self, Task<cosmic::app::Message<Self::Message>>) {
+    fn init(core: Core, flags: Self::Flags) -> (Self, app::Task<Self::Message>) {
         let window = Window {
             comp_config_handler: flags.comp_config_handler,
             layouts: flags.layouts,
@@ -142,7 +127,7 @@ impl cosmic::Application for Window {
         Some(Message::PopupClosed(id))
     }
 
-    fn update(&mut self, message: Self::Message) -> Task<cosmic::app::Message<Self::Message>> {
+    fn update(&mut self, message: Self::Message) -> app::Task<Self::Message> {
         match message {
             Message::TogglePopup => {
                 return if let Some(p) = self.popup.take() {

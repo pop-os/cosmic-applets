@@ -10,7 +10,7 @@ use cosmic::{
     },
     iced::{self, Length},
     iced_widget::row,
-    surface_message::{MessageWrapper, SurfaceMessage},
+    surface,
     widget::{autosize, vertical_space, Id},
     Task,
 };
@@ -40,22 +40,7 @@ struct Button {
 enum Msg {
     Press,
     ConfigUpdated(CosmicPanelButtonConfig),
-    Surface(SurfaceMessage),
-}
-
-impl From<Msg> for MessageWrapper<Msg> {
-    fn from(value: Msg) -> Self {
-        match value {
-            Msg::Surface(s) => MessageWrapper::Surface(s),
-            m => MessageWrapper::Message(m),
-        }
-    }
-}
-
-impl From<SurfaceMessage> for Msg {
-    fn from(value: SurfaceMessage) -> Self {
-        Msg::Surface(value)
-    }
+    Surface(surface::Action),
 }
 
 impl cosmic::Application for Button {
@@ -111,7 +96,11 @@ impl cosmic::Application for Button {
                     .cloned()
                     .unwrap_or_default();
             }
-            Msg::Surface(_) => unreachable!(),
+            Msg::Surface(a) => {
+                return cosmic::task::message(cosmic::Action::Cosmic(
+                    cosmic::app::Action::Surface(a),
+                ));
+            }
         }
         Task::none()
     }
@@ -136,7 +125,7 @@ impl cosmic::Application for Button {
                 )
             {
                 cosmic::Element::from(
-                    self.core.applet.applet_tooltip(
+                    self.core.applet.applet_tooltip::<Msg>(
                         self.core
                             .applet
                             .icon_button_from_handle(
@@ -146,6 +135,7 @@ impl cosmic::Application for Button {
                             .on_press_down(Msg::Press),
                         self.desktop.name.clone(),
                         false,
+                        Msg::Surface,
                     ),
                 )
             } else {
