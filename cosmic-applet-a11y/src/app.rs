@@ -10,6 +10,7 @@ use crate::{
     fl,
 };
 use cosmic::{
+    app,
     applet::{
         menu_button, padded_control,
         token::subscription::{activation_token_subscription, TokenRequest, TokenUpdate},
@@ -22,8 +23,7 @@ use cosmic::{
     },
     iced_runtime::core::layout::Limits,
     iced_widget::column,
-    surface_message::{MessageWrapper, SurfaceMessage},
-    theme,
+    surface, theme,
     widget::{divider, text},
     Element, Task,
 };
@@ -60,22 +60,7 @@ enum Message {
     OpenSettings,
     DBusUpdate(DBusUpdate),
     WaylandUpdate(WaylandUpdate),
-    Surface(SurfaceMessage),
-}
-
-impl From<Message> for MessageWrapper<Message> {
-    fn from(value: Message) -> Self {
-        match value {
-            Message::Surface(s) => MessageWrapper::Surface(s),
-            m => MessageWrapper::Message(m),
-        }
-    }
-}
-
-impl From<SurfaceMessage> for Message {
-    fn from(value: SurfaceMessage) -> Self {
-        Message::Surface(value)
-    }
+    Surface(surface::Action),
 }
 
 impl cosmic::Application for CosmicA11yApplet {
@@ -84,13 +69,7 @@ impl cosmic::Application for CosmicA11yApplet {
     type Flags = ();
     const APP_ID: &'static str = "com.system76.CosmicAppletA11y";
 
-    fn init(
-        core: cosmic::app::Core,
-        _flags: Self::Flags,
-    ) -> (
-        Self,
-        cosmic::iced::Task<cosmic::app::Message<Self::Message>>,
-    ) {
+    fn init(core: cosmic::app::Core, _flags: Self::Flags) -> (Self, app::Task<Self::Message>) {
         (
             Self {
                 core,
@@ -110,10 +89,7 @@ impl cosmic::Application for CosmicA11yApplet {
         &mut self.core
     }
 
-    fn update(
-        &mut self,
-        message: Self::Message,
-    ) -> cosmic::iced::Task<cosmic::app::Message<Self::Message>> {
+    fn update(&mut self, message: Self::Message) -> app::Task<Self::Message> {
         match message {
             Message::Frame(now) => self.timeline.now(now),
             Message::ScreenReaderEnabled(chain, enabled) => {
@@ -214,7 +190,11 @@ impl cosmic::Application for CosmicA11yApplet {
                     self.wayland_sender = Some(tx);
                 }
             },
-            Message::Surface(surface_message) => {}
+            Message::Surface(a) => {
+                return cosmic::task::message(cosmic::Action::Cosmic(
+                    cosmic::app::Action::Surface(a),
+                ));
+            }
         }
         Task::none()
     }
