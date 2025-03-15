@@ -684,23 +684,27 @@ impl cosmic::Application for CosmicBatteryApplet {
                             .size(16)
                             .width(Length::Fill)
                             .align_x(Alignment::Start),
-                        container(vertical_space().width(Length::Fixed(0.0)))
-                            .padding(4)
-                            .class(cosmic::style::Container::Custom(Box::new(|theme| {
-                                container::Style {
-                                    text_color: Some(Color::TRANSPARENT),
-                                    background: Some(Background::Color(
-                                        theme.cosmic().accent_color().into(),
-                                    )),
-                                    border: Border {
-                                        radius: 4.0.into(),
-                                        width: 0.0,
-                                        color: Color::TRANSPARENT,
-                                    },
-                                    shadow: Default::default(),
-                                    icon_color: Some(Color::TRANSPARENT),
-                                }
-                            },))),
+                        container(
+                            vertical_space()
+                                .width(Length::Fixed(0.0))
+                                .height(Length::Fixed(0.0))
+                        )
+                        .padding(4)
+                        .class(cosmic::style::Container::Custom(Box::new(|theme| {
+                            container::Style {
+                                text_color: Some(Color::TRANSPARENT),
+                                background: Some(Background::Color(
+                                    theme.cosmic().accent_color().into(),
+                                )),
+                                border: Border {
+                                    radius: 4.0.into(),
+                                    width: 0.0,
+                                    color: Color::TRANSPARENT,
+                                },
+                                shadow: Default::default(),
+                                icon_color: Some(Color::TRANSPARENT),
+                            }
+                        },))),
                     ]
                     .align_y(Alignment::Center),
                 )
