@@ -504,16 +504,18 @@ impl cosmic::Application for CosmicBatteryApplet {
         } = theme::active().cosmic().spacing;
 
         let name = text::body(fl!("battery"));
-        let description = text::caption(if !self.on_battery {
-            format!("{:.0}%", self.battery_percent)
-        } else {
-            format!(
-                "{} {} ({:.0}%)",
-                format_duration(self.time_remaining),
-                fl!("until-empty"),
-                self.battery_percent
-            )
-        });
+        let description = text::caption(
+            if !self.on_battery || self.time_remaining == Duration::from_secs(0u64) {
+                format!("{:.0}%", self.battery_percent)
+            } else {
+                format!(
+                    "{} {} ({:.0}%)",
+                    format_duration(self.time_remaining),
+                    fl!("until-empty"),
+                    self.battery_percent
+                )
+            },
+        );
 
         let mut content = vec![
             padded_control(
