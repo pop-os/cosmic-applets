@@ -8,6 +8,7 @@ use cosmic::iced::{
     futures::{self, channel::mpsc, SinkExt, StreamExt},
     stream, Subscription,
 };
+use cosmic_protocols::a11y::v1::client::cosmic_a11y_manager_v1::Filter;
 use once_cell::sync::Lazy;
 use tokio::sync::Mutex;
 
@@ -25,12 +26,15 @@ pub enum WaylandUpdate {
 
 #[derive(Debug, Clone, Copy)]
 pub enum AccessibilityEvent {
+    Bound(u32),
     Magnifier(bool),
+    ScreenFilter { inverted: bool, filter: Filter },
 }
 
 #[derive(Debug, Clone, Copy)]
 pub enum AccessibilityRequest {
     Magnifier(bool),
+    ScreenFilter { inverted: bool, filter: Filter },
 }
 
 pub fn a11y_subscription() -> iced::Subscription<WaylandUpdate> {

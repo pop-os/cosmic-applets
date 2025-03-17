@@ -14,14 +14,14 @@ use cctk::{
     wayland_client::{self, globals::GlobalListContents, protocol::wl_registry, Dispatch, Proxy},
 };
 use cosmic::iced::futures::{self, SinkExt};
-use cosmic_protocols::a11y::v1::client::cosmic_a11y_manager_v1;
+use cosmic_protocols::a11y::v1::client::cosmic_a11y_manager_v1::{self, Filter};
 use futures::{channel::mpsc, executor::block_on};
 use wayland_client::{globals::registry_queue_init, Connection};
 
 use super::{AccessibilityEvent, AccessibilityRequest};
 
 pub fn spawn_a11y(
-    tx: mpsc::Sender<AccessibilityEvent>,
+    mut tx: mpsc::Sender<AccessibilityEvent>,
 ) -> anyhow::Result<SyncSender<AccessibilityRequest>> {
     let (a11y_tx, a11y_rx) = calloop::channel::sync_channel(100);
     let conn = Connection::connect_to_env()?;
@@ -33,6 +33,8 @@ pub fn spawn_a11y(
             global: cosmic_a11y_manager_v1::CosmicA11yManagerV1,
 
             magnifier: bool,
+            screen_inverted: bool,
+            screen_filter: Filter,
         }
 
         impl Dispatch<cosmic_a11y_manager_v1::CosmicA11yManagerV1, ()> for State {
@@ -58,6 +60,28 @@ pub fn spawn_a11y(
                                 state.loop_signal.wakeup();
                             };
                             state.magnifier = magnifier;
+                        }
+                    }
+                    cosmic_a11y_manager_v1::Event::ScreenFilter { inverted, filter } => {
+                        let inverted = inverted
+                            .into_result()
+                            .unwrap_or(cosmic_a11y_manager_v1::ActiveState::Disabled)
+                            == cosmic_a11y_manager_v1::ActiveState::Enabled;
+                        let filter = filter.into_result().unwrap_or(Filter::Unknown);
+
+                        if inverted != state.screen_inverted || filter != state.screen_filter {
+                            if block_on(
+                                state
+                                    .tx
+                                    .send(AccessibilityEvent::ScreenFilter { inverted, filter }),
+                            )
+                            .is_err()
+                            {
+                                state.loop_signal.stop();
+                                state.loop_signal.wakeup();
+                            };
+                            state.screen_inverted = inverted;
+                            state.screen_filter = filter;
                         }
                     }
                     _ => unreachable!(),
@@ -89,8 +113,10 @@ pub fn spawn_a11y(
 
         let registry_state = RegistryState::new(&globals);
         let global = registry_state
-            .bind_one::<cosmic_a11y_manager_v1::CosmicA11yManagerV1, _, _>(&qhandle, 1..=1, ())
+            .bind_one::<cosmic_a11y_manager_v1::CosmicA11yManagerV1, _, _>(&qhandle, 1..=2, ())
             .unwrap();
+
+        let _ = block_on(tx.send(AccessibilityEvent::Bound(global.version())));
 
         loop_handle
             .insert_source(a11y_rx, |request, _, state| match request {
@@ -100,6 +126,16 @@ pub fn spawn_a11y(
                     } else {
                         cosmic_a11y_manager_v1::ActiveState::Disabled
                     });
+                }
+                channel::Event::Msg(AccessibilityRequest::ScreenFilter { inverted, filter }) => {
+                    state.global.set_screen_filter(
+                        if inverted {
+                            cosmic_a11y_manager_v1::ActiveState::Enabled
+                        } else {
+                            cosmic_a11y_manager_v1::ActiveState::Disabled
+                        },
+                        filter,
+                    );
                 }
                 channel::Event::Closed => {
                     state.loop_signal.stop();
@@ -114,6 +150,8 @@ pub fn spawn_a11y(
             global,
 
             magnifier: false,
+            screen_inverted: false,
+            screen_filter: Filter::Unknown,
         };
 
         event_loop.run(None, &mut state, |_| {}).unwrap();
