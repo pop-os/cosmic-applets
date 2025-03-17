@@ -7,17 +7,22 @@ use cosmic::{
     widget::icon,
 };
 
-use crate::subscriptions::status_notifier_item::{Layout, StatusNotifierItem};
+use crate::subscriptions::status_notifier_item::{IconNameOrPixmap, Layout, StatusNotifierItem};
 
 #[derive(Clone, Debug)]
 pub enum Msg {
+    Icon(Option<IconNameOrPixmap>),
     Layout(Result<Layout, String>),
+    Tooltip(String),
     Click(i32, bool),
 }
 
+#[derive(Debug)]
 pub struct State {
     item: StatusNotifierItem,
     layout: Option<Layout>,
+    tooltip: String,
+    icon: Option<IconNameOrPixmap>,
     expanded: Option<i32>,
 }
 
@@ -28,6 +33,8 @@ impl State {
                 item,
                 layout: None,
                 expanded: None,
+                icon: None,
+                tooltip: Default::default(),
             },
             iced::Task::none(),
         )
@@ -35,6 +42,14 @@ impl State {
 
     pub fn update(&mut self, message: Msg) -> iced::Task<Msg> {
         match message {
+            Msg::Icon(icon) => {
+                self.icon = icon;
+                iced::Task::none()
+            }
+            Msg::Tooltip(tooltip) => {
+                self.tooltip = tooltip;
+                iced::Task::none()
+            }
             Msg::Layout(layout) => {
                 match layout {
                     Ok(layout) => {
@@ -67,12 +82,15 @@ impl State {
         self.item.name()
     }
 
-    pub fn icon_name(&self) -> &str {
-        self.item.icon_name()
+    pub fn icon_handle(&self) -> icon::Handle {
+        self.icon
+            .as_ref()
+            .map(|i| i.clone().into())
+            .unwrap_or_else(|| icon::from_raster_bytes(&[]))
     }
 
-    pub fn icon_pixmap(&self) -> Option<&icon::Handle> {
-        self.item.icon_pixmap()
+    pub fn tooltip(&self) -> &str {
+        &self.tooltip
     }
 
     pub fn popup_view(&self) -> cosmic::Element<Msg> {
@@ -84,7 +102,13 @@ impl State {
     }
 
     pub fn subscription(&self) -> iced::Subscription<Msg> {
-        self.item.layout_subscription().map(Msg::Layout)
+        let subs = vec![
+            self.item.icon_subscription().map(Msg::Icon),
+            self.item.tooltip_subscription().map(Msg::Tooltip),
+            self.item.layout_subscription().map(Msg::Layout),
+        ];
+
+        iced::Subscription::batch(subs)
     }
 
     pub fn opened(&self) {
