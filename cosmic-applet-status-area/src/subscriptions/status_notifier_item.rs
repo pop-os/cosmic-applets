@@ -11,18 +11,21 @@ use zbus::zvariant::{self, OwnedValue};
 #[derive(Clone, Debug)]
 pub struct StatusNotifierItem {
     name: String,
-    icon_name: String,
-    // TODO Handle icon with multiple sizes?
-    icon_pixmap: Option<icon::Handle>,
-    _item_proxy: StatusNotifierItemProxy<'static>,
+    item_proxy: StatusNotifierItemProxy<'static>,
     menu_proxy: DBusMenuProxy<'static>,
 }
 
 #[derive(Clone, Debug, zvariant::Value)]
 pub struct Icon {
-    width: i32,
-    height: i32,
-    bytes: Vec<u8>,
+    pub width: i32,
+    pub height: i32,
+    pub bytes: Vec<u8>,
+}
+
+#[derive(Clone, Debug)]
+pub enum IconUpdate {
+    Name(String),
+    Pixmap(Vec<Icon>),
 }
 
 impl StatusNotifierItem {
@@ -34,25 +37,12 @@ impl StatusNotifierItem {
         };
 
         let item_proxy = StatusNotifierItemProxy::builder(connection)
+            // Status icons don't seem to report property changes the normal way...
+            .cache_properties(zbus::proxy::CacheProperties::No)
             .destination(dest.to_string())?
             .path(path.to_string())?
             .build()
             .await?;
-
-        let icon_name = item_proxy.icon_name().await.unwrap_or_default();
-        let icon_pixmap = item_proxy
-            .icon_pixmap()
-            .await
-            .unwrap_or_default()
-            .into_iter()
-            .max_by_key(|i| (i.width, i.height))
-            .map(|mut i| {
-                // Convert ARGB to RGBA
-                for pixel in i.bytes.chunks_exact_mut(4) {
-                    pixel.rotate_left(1);
-                }
-                icon::from_raster_pixels(i.width as u32, i.height as u32, i.bytes)
-            });
 
         let menu_path = item_proxy.menu().await?;
         let menu_proxy = DBusMenuProxy::builder(connection)
@@ -63,9 +53,7 @@ impl StatusNotifierItem {
 
         Ok(Self {
             name,
-            icon_name,
-            icon_pixmap,
-            _item_proxy: item_proxy,
+            item_proxy,
             menu_proxy,
         })
     }
@@ -74,24 +62,48 @@ impl StatusNotifierItem {
         &self.name
     }
 
-    pub fn icon_name(&self) -> &str {
-        &self.icon_name
-    }
-
-    pub fn icon_pixmap(&self) -> Option<&icon::Handle> {
-        self.icon_pixmap.as_ref()
-    }
-
     // TODO: Only fetch changed part of layout, if that's any faster
     pub fn layout_subscription(&self) -> iced::Subscription<Result<Layout, String>> {
         let menu_proxy = self.menu_proxy.clone();
         Subscription::run_with_id(
-            format!("status-notifier-item-{}", &self.name),
+            format!("status-notifier-item-layout-{}", &self.name),
             async move {
                 let initial = futures::stream::once(get_layout(menu_proxy.clone()));
                 let layout_updated_stream = menu_proxy.receive_layout_updated().await.unwrap();
                 let updates = layout_updated_stream.then(move |_| get_layout(menu_proxy.clone()));
                 initial.chain(updates)
+            }
+            .flatten_stream(),
+        )
+    }
+
+    pub fn icon_subscription(&self) -> iced::Subscription<IconUpdate> {
+        fn icon_events<'a>(
+            item_proxy: StatusNotifierItemProxy<'static>,
+        ) -> impl futures::Stream<Item = IconUpdate> + 'static {
+            async move {
+                let icon_name = item_proxy.icon_name().await;
+                let icon_pixmap = item_proxy.icon_pixmap().await;
+                futures::stream::iter(
+                    [
+                        icon_name.map(IconUpdate::Name),
+                        icon_pixmap.map(IconUpdate::Pixmap),
+                    ]
+                    .into_iter()
+                    .filter_map(Result::ok),
+                )
+            }
+            .flatten_stream()
+        }
+
+        let item_proxy = self.item_proxy.clone();
+        Subscription::run_with_id(
+            format!("status-notifier-item-icon-{}", &self.name),
+            async move {
+                let new_icon_stream = item_proxy.receive_new_icon().await.unwrap();
+                futures::stream::once(async { () })
+                    .chain(new_icon_stream.map(|_| ()))
+                    .flat_map(move |()| icon_events(item_proxy.clone()))
             }
             .flatten_stream(),
         )
@@ -120,6 +132,9 @@ trait StatusNotifierItem {
 
     #[zbus(property)]
     fn menu(&self) -> zbus::Result<zvariant::OwnedObjectPath>;
+
+    #[zbus(signal)]
+    fn new_icon(&self) -> zbus::Result<()>;
 }
 
 #[derive(Clone, Debug)]

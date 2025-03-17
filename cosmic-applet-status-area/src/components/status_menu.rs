@@ -7,11 +7,12 @@ use cosmic::{
     widget::icon,
 };
 
-use crate::subscriptions::status_notifier_item::{Layout, StatusNotifierItem};
+use crate::subscriptions::status_notifier_item::{IconUpdate, Layout, StatusNotifierItem};
 
 #[derive(Clone, Debug)]
 pub enum Msg {
     Layout(Result<Layout, String>),
+    Icon(IconUpdate),
     Click(i32, bool),
 }
 
@@ -19,6 +20,9 @@ pub struct State {
     item: StatusNotifierItem,
     layout: Option<Layout>,
     expanded: Option<i32>,
+    icon_name: String,
+    // TODO handle icon with multiple sizes?
+    icon_pixmap: Option<icon::Handle>,
 }
 
 impl State {
@@ -28,6 +32,8 @@ impl State {
                 item,
                 layout: None,
                 expanded: None,
+                icon_name: String::new(),
+                icon_pixmap: None,
             },
             iced::Task::none(),
         )
@@ -42,6 +48,27 @@ impl State {
                     }
                     Err(err) => eprintln!("Error getting layout from icon: {}", err),
                 }
+                iced::Task::none()
+            }
+            Msg::Icon(update) => {
+                match update {
+                    IconUpdate::Name(name) => {
+                        self.icon_name = name;
+                    }
+                    IconUpdate::Pixmap(icons) => {
+                        self.icon_pixmap = icons
+                            .into_iter()
+                            .max_by_key(|i| (i.width, i.height))
+                            .map(|mut i| {
+                                // Convert ARGB to RGBA
+                                for pixel in i.bytes.chunks_exact_mut(4) {
+                                    pixel.rotate_left(1);
+                                }
+                                icon::from_raster_pixels(i.width as u32, i.height as u32, i.bytes)
+                            });
+                    }
+                }
+
                 iced::Task::none()
             }
             Msg::Click(id, is_submenu) => {
@@ -68,11 +95,11 @@ impl State {
     }
 
     pub fn icon_name(&self) -> &str {
-        self.item.icon_name()
+        &self.icon_name
     }
 
     pub fn icon_pixmap(&self) -> Option<&icon::Handle> {
-        self.item.icon_pixmap()
+        self.icon_pixmap.as_ref()
     }
 
     pub fn popup_view(&self) -> cosmic::Element<Msg> {
@@ -84,7 +111,10 @@ impl State {
     }
 
     pub fn subscription(&self) -> iced::Subscription<Msg> {
-        self.item.layout_subscription().map(Msg::Layout)
+        iced::Subscription::batch([
+            self.item.layout_subscription().map(Msg::Layout),
+            self.item.icon_subscription().map(Msg::Icon),
+        ])
     }
 
     pub fn opened(&self) {
