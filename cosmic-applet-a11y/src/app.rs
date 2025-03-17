@@ -10,6 +10,7 @@ use crate::{
     fl,
 };
 use cosmic::{
+    app,
     applet::{
         menu_button, padded_control,
         token::subscription::{activation_token_subscription, TokenRequest, TokenUpdate},
@@ -22,7 +23,7 @@ use cosmic::{
     },
     iced_runtime::core::layout::Limits,
     iced_widget::column,
-    theme,
+    surface, theme,
     widget::{divider, text},
     Element, Task,
 };
@@ -59,6 +60,7 @@ enum Message {
     OpenSettings,
     DBusUpdate(DBusUpdate),
     WaylandUpdate(WaylandUpdate),
+    Surface(surface::Action),
 }
 
 impl cosmic::Application for CosmicA11yApplet {
@@ -67,13 +69,7 @@ impl cosmic::Application for CosmicA11yApplet {
     type Flags = ();
     const APP_ID: &'static str = "com.system76.CosmicAppletA11y";
 
-    fn init(
-        core: cosmic::app::Core,
-        _flags: Self::Flags,
-    ) -> (
-        Self,
-        cosmic::iced::Task<cosmic::app::Message<Self::Message>>,
-    ) {
+    fn init(core: cosmic::app::Core, _flags: Self::Flags) -> (Self, app::Task<Self::Message>) {
         (
             Self {
                 core,
@@ -93,10 +89,7 @@ impl cosmic::Application for CosmicA11yApplet {
         &mut self.core
     }
 
-    fn update(
-        &mut self,
-        message: Self::Message,
-    ) -> cosmic::iced::Task<cosmic::app::Message<Self::Message>> {
+    fn update(&mut self, message: Self::Message) -> app::Task<Self::Message> {
         match message {
             Message::Frame(now) => self.timeline.now(now),
             Message::ScreenReaderEnabled(chain, enabled) => {
@@ -133,11 +126,6 @@ impl cosmic::Application for CosmicA11yApplet {
                         None,
                         None,
                     );
-                    popup_settings.positioner.size_limits = Limits::NONE
-                        .max_width(300.0)
-                        .min_width(200.0)
-                        .min_height(10.0)
-                        .max_height(1080.0);
 
                     return get_popup(popup_settings);
                 }
@@ -202,6 +190,11 @@ impl cosmic::Application for CosmicA11yApplet {
                     self.wayland_sender = Some(tx);
                 }
             },
+            Message::Surface(a) => {
+                return cosmic::task::message(cosmic::Action::Cosmic(
+                    cosmic::app::Action::Surface(a),
+                ));
+            }
         }
         Task::none()
     }
@@ -249,12 +242,7 @@ impl cosmic::Application for CosmicA11yApplet {
             menu_button(text::body(fl!("settings"))).on_press(Message::OpenSettings)
         ]
         .padding([8, 0]);
-        self.core
-            .applet
-            .popup_container(content_list)
-            .max_width(372.)
-            .max_height(600.)
-            .into()
+        self.core.applet.popup_container(content_list).into()
     }
 
     fn subscription(&self) -> Subscription<Message> {

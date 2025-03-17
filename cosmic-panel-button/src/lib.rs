@@ -10,6 +10,7 @@ use cosmic::{
     },
     iced::{self, Length},
     iced_widget::row,
+    surface,
     widget::{autosize, vertical_space, Id},
     Task,
 };
@@ -39,6 +40,7 @@ struct Button {
 enum Msg {
     Press,
     ConfigUpdated(CosmicPanelButtonConfig),
+    Surface(surface::Action),
 }
 
 impl cosmic::Application for Button {
@@ -94,6 +96,11 @@ impl cosmic::Application for Button {
                     .cloned()
                     .unwrap_or_default();
             }
+            Msg::Surface(a) => {
+                return cosmic::task::message(cosmic::Action::Cosmic(
+                    cosmic::app::Action::Surface(a),
+                ));
+            }
         }
         Task::none()
     }
@@ -117,8 +124,19 @@ impl cosmic::Application for Button {
                     )
                 )
             {
-                self.core.applet.icon_button_from_handle(
-                    cosmic::widget::icon::from_name(self.desktop.icon.clone().unwrap()).handle(),
+                cosmic::Element::from(
+                    self.core.applet.applet_tooltip::<Msg>(
+                        self.core
+                            .applet
+                            .icon_button_from_handle(
+                                cosmic::widget::icon::from_name(self.desktop.icon.clone().unwrap())
+                                    .handle(),
+                            )
+                            .on_press_down(Msg::Press),
+                        self.desktop.name.clone(),
+                        false,
+                        Msg::Surface,
+                    ),
                 )
             } else {
                 let content = row!(
@@ -133,8 +151,9 @@ impl cosmic::Application for Button {
                 cosmic::widget::button::custom(content)
                     .padding([0, self.core.applet.suggested_padding(true)])
                     .class(cosmic::theme::Button::AppletIcon)
-            }
-            .on_press_down(Msg::Press),
+                    .on_press_down(Msg::Press)
+                    .into()
+            },
             AUTOSIZE_MAIN_ID.clone(),
         )
         .into()

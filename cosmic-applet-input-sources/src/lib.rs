@@ -5,6 +5,7 @@ mod localize;
 
 use cosmic::iced::{Alignment, Length};
 use cosmic::{
+    app,
     app::Core,
     applet::{self},
     cosmic_config::{self, ConfigSet, CosmicConfigEntry},
@@ -18,7 +19,7 @@ use cosmic::{
     iced_futures::Subscription,
     iced_runtime::{core::window, Appearance},
     prelude::*,
-    theme,
+    surface, theme,
     widget::{self, horizontal_space, vertical_space},
 };
 use cosmic_comp_config::CosmicCompConfig;
@@ -85,6 +86,7 @@ pub enum Message {
     CompConfig(Box<CosmicCompConfig>),
     SetActiveLayout(usize),
     KeyboardSettings,
+    Surface(surface::Action),
 }
 
 #[derive(Debug)]
@@ -109,7 +111,7 @@ impl cosmic::Application for Window {
         &mut self.core
     }
 
-    fn init(core: Core, flags: Self::Flags) -> (Self, Task<cosmic::app::Message<Self::Message>>) {
+    fn init(core: Core, flags: Self::Flags) -> (Self, app::Task<Self::Message>) {
         let window = Window {
             comp_config_handler: flags.comp_config_handler,
             layouts: flags.layouts,
@@ -125,7 +127,7 @@ impl cosmic::Application for Window {
         Some(Message::PopupClosed(id))
     }
 
-    fn update(&mut self, message: Self::Message) -> Task<cosmic::app::Message<Self::Message>> {
+    fn update(&mut self, message: Self::Message) -> app::Task<Self::Message> {
         match message {
             Message::TogglePopup => {
                 return if let Some(p) = self.popup.take() {
@@ -140,32 +142,24 @@ impl cosmic::Application for Window {
                         None,
                         None,
                     );
-                    popup_settings.positioner.size_limits = Limits::NONE
-                        .max_width(372.0)
-                        .min_width(300.0)
-                        .min_height(1.)
-                        .max_height(1080.0);
+
                     get_popup(popup_settings)
                 };
             }
-
             Message::PopupClosed(id) => {
                 if self.popup.as_ref() == Some(&id) {
                     self.popup = None;
                 }
             }
-
             Message::CompConfig(config) => {
                 self.comp_config = *config;
                 self.active_layouts = self.update_xkb();
             }
-
             Message::KeyboardSettings => {
                 let mut cmd = std::process::Command::new("cosmic-settings");
                 cmd.arg("keyboard");
                 tokio::spawn(cosmic::process::spawn(cmd));
             }
-
             Message::SetActiveLayout(pos) => {
                 if pos == 0 {
                     return Task::none();
@@ -195,6 +189,7 @@ impl cosmic::Application for Window {
                     }
                 }
             }
+            Message::Surface(surface_message) => unreachable!(),
         }
 
         Task::none()
@@ -260,17 +255,7 @@ impl cosmic::Application for Window {
                 .on_press(Message::KeyboardSettings),
         );
 
-        self.core
-            .applet
-            .popup_container(content_list)
-            .limits(
-                Limits::NONE
-                    .min_height(1.)
-                    .max_height(1080.)
-                    .min_width(1.)
-                    .max_width(372.),
-            )
-            .into()
+        self.core.applet.popup_container(content_list).into()
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {

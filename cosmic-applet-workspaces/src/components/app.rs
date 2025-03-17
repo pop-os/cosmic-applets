@@ -11,6 +11,7 @@ use cctk::{
     workspace::Workspace,
 };
 use cosmic::{
+    app,
     applet::cosmic_panel_config::PanelAnchor,
     iced::{
         event,
@@ -21,6 +22,7 @@ use cosmic::{
         Length, Limits, Subscription,
     },
     iced_core::{Background, Border},
+    surface,
     widget::{autosize, container, horizontal_space, vertical_space, Id},
     Element, Task, Theme,
 };
@@ -93,6 +95,7 @@ enum Message {
     WorkspacePressed(ExtWorkspaceHandleV1),
     WheelScrolled(ScrollDelta),
     WorkspaceOverview,
+    Surface(surface::Action),
 }
 
 impl cosmic::Application for IcedWorkspacesApplet {
@@ -101,13 +104,7 @@ impl cosmic::Application for IcedWorkspacesApplet {
     type Flags = ();
     const APP_ID: &'static str = config::APP_ID;
 
-    fn init(
-        core: cosmic::app::Core,
-        _flags: Self::Flags,
-    ) -> (
-        Self,
-        cosmic::iced::Task<cosmic::app::Message<Self::Message>>,
-    ) {
+    fn init(core: cosmic::app::Core, _flags: Self::Flags) -> (Self, app::Task<Self::Message>) {
         (
             Self {
                 layout: match &core.applet.anchor {
@@ -133,10 +130,7 @@ impl cosmic::Application for IcedWorkspacesApplet {
         &mut self.core
     }
 
-    fn update(
-        &mut self,
-        message: Self::Message,
-    ) -> cosmic::iced::Task<cosmic::app::Message<Self::Message>> {
+    fn update(&mut self, message: Self::Message) -> app::Task<Self::Message> {
         match message {
             Message::WorkspaceUpdate(msg) => match msg {
                 WorkspacesUpdate::Workspaces(mut list) => {
@@ -215,6 +209,7 @@ impl cosmic::Application for IcedWorkspacesApplet {
             Message::WorkspaceOverview => {
                 let _ = ShellCommand::new("cosmic-workspaces").spawn();
             }
+            Message::Surface(surface_message) => unreachable!(),
         }
         Task::none()
     }

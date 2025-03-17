@@ -20,6 +20,7 @@ use cctk::{
     },
 };
 use cosmic::{
+    app,
     applet::{
         cosmic_panel_config::{PanelAnchor, PanelSize},
         Context, Size,
@@ -36,6 +37,7 @@ use cosmic::{
     },
     iced_core::{Border, Padding, Shadow},
     iced_runtime::{core::event, dnd::peek_dnd},
+    surface,
     theme::{self, Button, Container},
     widget::{
         button, divider, dnd_source, horizontal_space,
@@ -371,6 +373,7 @@ enum Message {
     ConfigUpdated(AppListConfig),
     OpenFavorites,
     OpenActive,
+    Surface(surface::Action),
 }
 
 fn index_in_list(
@@ -589,10 +592,7 @@ impl cosmic::Application for CosmicAppList {
     type Flags = ();
     const APP_ID: &'static str = APP_ID;
 
-    fn init(
-        core: cosmic::app::Core,
-        _flags: Self::Flags,
-    ) -> (Self, iced::Task<cosmic::app::Message<Self::Message>>) {
+    fn init(core: cosmic::app::Core, _flags: Self::Flags) -> (Self, app::Task<Self::Message>) {
         let config = Config::new(APP_ID, AppListConfig::VERSION)
             .ok()
             .and_then(|c| AppListConfig::get_entry(&c).ok())
@@ -622,7 +622,7 @@ impl cosmic::Application for CosmicAppList {
         (
             app_list,
             Task::perform(try_get_gpus(), |gpus| {
-                cosmic::app::Message::App(Message::GpuRequest(gpus))
+                cosmic::Action::App(Message::GpuRequest(gpus))
             }),
         )
     }
@@ -635,10 +635,7 @@ impl cosmic::Application for CosmicAppList {
         &mut self.core
     }
 
-    fn update(
-        &mut self,
-        message: Self::Message,
-    ) -> iced::Task<cosmic::app::Message<Self::Message>> {
+    fn update(&mut self, message: Self::Message) -> app::Task<Self::Message> {
         match message {
             Message::Popup(id, parent_window_id) => {
                 if let Some(Popup {
@@ -698,7 +695,7 @@ impl cosmic::Application for CosmicAppList {
                     };
 
                     let gpu_update = Task::perform(try_get_gpus(), |gpus| {
-                        cosmic::app::Message::App(Message::GpuRequest(gpus))
+                        cosmic::Action::App(Message::GpuRequest(gpus))
                     });
                     return Task::batch([gpu_update, get_popup(popup_settings)]);
                 }
@@ -787,7 +784,6 @@ impl cosmic::Application for CosmicAppList {
                     return get_popup(popup_settings);
                 }
             }
-
             Message::PinApp(id) => {
                 if let Some(i) = self.active_list.iter().position(|t| t.id == id) {
                     let entry = self.active_list.remove(i);
@@ -923,7 +919,7 @@ impl cosmic::Application for CosmicAppList {
                     // TODO dnd
                     return peek_dnd::<DndPathBuf>()
                         .map(Message::DndData)
-                        .map(cosmic::app::Message::App);
+                        .map(cosmic::Action::App);
                 }
             }
             Message::DndMotion(x, y) => {
@@ -1051,7 +1047,7 @@ impl cosmic::Application for CosmicAppList {
                             },
                             |_| Message::IncrementSubscriptionCtr,
                         )
-                        .map(cosmic::app::message::app);
+                        .map(cosmic::action::app);
                     }
                     WaylandUpdate::Toplevel(event) => match event {
                         ToplevelUpdate::Add(mut info) => {
@@ -1354,6 +1350,11 @@ impl cosmic::Application for CosmicAppList {
                     return self.close_popups();
                 }
             }
+            Message::Surface(a) => {
+                return cosmic::task::message(cosmic::Action::Cosmic(
+                    cosmic::app::Action::Surface(a),
+                ));
+            }
         }
 
         Task::none()
@@ -1400,19 +1401,31 @@ impl cosmic::Application for CosmicAppList {
             .iter()
             .rev()
             .map(|dock_item| {
-                dock_item.as_icon(
-                    &self.core.applet,
-                    self.rectangle_tracker.as_ref(),
-                    self.popup.is_none(),
-                    self.config.enable_drag_source,
-                    self.gpus.as_deref(),
-                    dock_item
-                        .toplevels
-                        .iter()
-                        .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
-                    theme.cosmic().radius_xs(),
-                    self.core.main_window_id().unwrap(),
-                )
+                self.core
+                    .applet
+                    .applet_tooltip::<Message>(
+                        dock_item.as_icon(
+                            &self.core.applet,
+                            self.rectangle_tracker.as_ref(),
+                            self.popup.is_none(),
+                            self.config.enable_drag_source,
+                            self.gpus.as_deref(),
+                            dock_item
+                                .toplevels
+                                .iter()
+                                .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
+                            theme.cosmic().radius_xs(),
+                            self.core.main_window_id().unwrap(),
+                        ),
+                        dock_item
+                            .desktop_info
+                            .name(&self.locales)
+                            .unwrap_or_default()
+                            .to_string(),
+                        self.popup.is_some(),
+                        Message::Surface,
+                    )
+                    .into()
             })
             .collect();
 
@@ -1482,19 +1495,31 @@ impl cosmic::Application for CosmicAppList {
             .unwrap_or(self.active_list.len())]
             .iter()
             .map(|dock_item| {
-                dock_item.as_icon(
-                    &self.core.applet,
-                    self.rectangle_tracker.as_ref(),
-                    self.popup.is_none(),
-                    self.config.enable_drag_source,
-                    self.gpus.as_deref(),
-                    dock_item
-                        .toplevels
-                        .iter()
-                        .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
-                    dot_radius,
-                    self.core.main_window_id().unwrap(),
-                )
+                self.core
+                    .applet
+                    .applet_tooltip(
+                        dock_item.as_icon(
+                            &self.core.applet,
+                            self.rectangle_tracker.as_ref(),
+                            self.popup.is_none(),
+                            self.config.enable_drag_source,
+                            self.gpus.as_deref(),
+                            dock_item
+                                .toplevels
+                                .iter()
+                                .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
+                            dot_radius,
+                            self.core.main_window_id().unwrap(),
+                        ),
+                        dock_item
+                            .desktop_info
+                            .name(&self.locales)
+                            .unwrap_or_default()
+                            .to_string(),
+                        self.popup.is_some(),
+                        Message::Surface,
+                    )
+                    .into()
             })
             .collect();
 
@@ -1887,19 +1912,31 @@ impl cosmic::Application for CosmicAppList {
                 .unwrap_or(self.active_list.len() - 1)..]
                 .iter()
                 .map(|dock_item| {
-                    dock_item.as_icon(
-                        &self.core.applet,
-                        self.rectangle_tracker.as_ref(),
-                        self.popup.is_none(),
-                        self.config.enable_drag_source,
-                        self.gpus.as_deref(),
-                        dock_item
-                            .toplevels
-                            .iter()
-                            .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
-                        dot_radius,
-                        id,
-                    )
+                    self.core
+                        .applet
+                        .applet_tooltip(
+                            dock_item.as_icon(
+                                &self.core.applet,
+                                self.rectangle_tracker.as_ref(),
+                                self.popup.is_none(),
+                                self.config.enable_drag_source,
+                                self.gpus.as_deref(),
+                                dock_item
+                                    .toplevels
+                                    .iter()
+                                    .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
+                                dot_radius,
+                                id,
+                            ),
+                            dock_item
+                                .desktop_info
+                                .name(&self.locales)
+                                .unwrap_or_default()
+                                .to_string(),
+                            self.popup.is_some(),
+                            Message::Surface,
+                        )
+                        .into()
                 })
                 .collect();
             let content = match &self.core.applet.anchor {
@@ -1974,19 +2011,31 @@ impl cosmic::Application for CosmicAppList {
                 .iter()
                 .rev()
                 .map(|dock_item| {
-                    dock_item.as_icon(
-                        &self.core.applet,
-                        self.rectangle_tracker.as_ref(),
-                        self.popup.is_none(),
-                        self.config.enable_drag_source,
-                        self.gpus.as_deref(),
-                        dock_item
-                            .toplevels
-                            .iter()
-                            .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
-                        dot_radius,
-                        id,
-                    )
+                    self.core
+                        .applet
+                        .applet_tooltip(
+                            dock_item.as_icon(
+                                &self.core.applet,
+                                self.rectangle_tracker.as_ref(),
+                                self.popup.is_none(),
+                                self.config.enable_drag_source,
+                                self.gpus.as_deref(),
+                                dock_item
+                                    .toplevels
+                                    .iter()
+                                    .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
+                                dot_radius,
+                                id,
+                            ),
+                            dock_item
+                                .desktop_info
+                                .name(&self.locales)
+                                .unwrap_or_default()
+                                .to_string(),
+                            self.popup.is_some(),
+                            Message::Surface,
+                        )
+                        .into()
                 })
                 .collect();
             let content = match &self.core.applet.anchor {
@@ -2069,7 +2118,7 @@ impl cosmic::Application for CosmicAppList {
 
 impl CosmicAppList {
     /// Close any open popups.
-    fn close_popups(&mut self) -> Task<cosmic::app::Message<Message>> {
+    fn close_popups(&mut self) -> Task<cosmic::Action<Message>> {
         let mut commands = Vec::new();
         if let Some(popup) = self.popup.take() {
             commands.push(destroy_popup(popup.id));

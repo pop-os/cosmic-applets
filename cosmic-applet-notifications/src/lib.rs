@@ -4,6 +4,7 @@
 mod localize;
 mod subscriptions;
 use cosmic::{
+    app,
     applet::{
         menu_control_padding, padded_control,
         token::subscription::{activation_token_subscription, TokenRequest, TokenUpdate},
@@ -17,7 +18,7 @@ use cosmic::{
         window, Alignment, Length, Limits, Subscription,
     },
     iced_widget::{scrollable, Column},
-    theme,
+    surface, theme,
     widget::{button, container, divider, icon, text},
     Element, Task,
 };
@@ -94,6 +95,7 @@ enum Message {
     CardsToggled(String, bool),
     Token(TokenUpdate),
     OpenSettings,
+    Surface(surface::Action),
 }
 
 impl cosmic::Application for Notifications {
@@ -102,13 +104,7 @@ impl cosmic::Application for Notifications {
     type Flags = ();
     const APP_ID: &'static str = "com.system76.CosmicAppletNotifications";
 
-    fn init(
-        core: cosmic::app::Core,
-        _flags: Self::Flags,
-    ) -> (
-        Self,
-        cosmic::iced::Task<cosmic::app::Message<Self::Message>>,
-    ) {
+    fn init(core: cosmic::app::Core, _flags: Self::Flags) -> (Self, app::Task<Self::Message>) {
         let helper = Config::new(
             cosmic_notifications_config::ID,
             NotificationsConfig::VERSION,
@@ -176,10 +172,7 @@ impl cosmic::Application for Notifications {
         ])
     }
 
-    fn update(
-        &mut self,
-        message: Self::Message,
-    ) -> cosmic::iced::Task<cosmic::app::Message<Self::Message>> {
+    fn update(&mut self, message: Self::Message) -> app::Task<Self::Message> {
         match message {
             Message::Frame(now) => {
                 self.timeline.now(now);
@@ -199,11 +192,7 @@ impl cosmic::Application for Notifications {
                         None,
                         None,
                     );
-                    popup_settings.positioner.size_limits = Limits::NONE
-                        .min_width(1.0)
-                        .max_width(444.0)
-                        .min_height(100.0)
-                        .max_height(900.0);
+
                     return get_popup(popup_settings);
                 }
             }
@@ -399,6 +388,7 @@ impl cosmic::Application for Notifications {
                     });
                 }
             }
+            Message::Surface(surface_message) => unreachable!(),
         };
         self.update_icon();
         Task::none()
@@ -605,11 +595,7 @@ impl cosmic::Application for Notifications {
             .align_x(Alignment::Start)
             .padding([8, 0]);
 
-        self.core
-            .applet
-            .popup_container(content)
-            .limits(Limits::NONE.max_width(444.).max_height(900.))
-            .into()
+        self.core.applet.popup_container(content).into()
     }
 
     fn on_close_requested(&self, id: window::Id) -> Option<Message> {

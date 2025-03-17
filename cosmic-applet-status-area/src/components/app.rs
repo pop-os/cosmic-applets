@@ -7,9 +7,10 @@ use cosmic::{
     iced::{
         self,
         platform_specific::shell::commands::popup::{destroy_popup, get_popup},
-        window, Limits, Subscription,
+        window, Limits, Padding, Subscription,
     },
-    widget::mouse_area,
+    surface,
+    widget::{container, mouse_area},
     Element, Task,
 };
 use std::collections::BTreeMap;
@@ -24,6 +25,7 @@ pub enum Msg {
     StatusNotifier(status_notifier_watcher::Event),
     TogglePopup(usize),
     Hovered(usize),
+    Surface(surface::Action),
 }
 
 #[derive(Default)]
@@ -97,7 +99,7 @@ impl cosmic::Application for App {
             Msg::StatusMenu((id, msg)) => match self.menus.get_mut(&id) {
                 Some(state) => state
                     .update(msg)
-                    .map(move |msg| app::message::app(Msg::StatusMenu((id, msg)))),
+                    .map(move |msg| cosmic::action::app(Msg::StatusMenu((id, msg)))),
                 None => Task::none(),
             },
             Msg::StatusNotifier(event) => match event {
@@ -114,13 +116,13 @@ impl cosmic::Application for App {
                     {
                         *m = state;
                         let id = *id;
-                        return cmd.map(move |msg| app::message::app(Msg::StatusMenu((id, msg))));
+                        return cmd.map(move |msg| cosmic::action::app(Msg::StatusMenu((id, msg))));
                     }
                     let id = self.next_menu_id();
                     self.menus.insert(id, state);
                     app::Task::batch([
                         self.resize_window(),
-                        cmd.map(move |msg| app::message::app(Msg::StatusMenu((id, msg)))),
+                        cmd.map(move |msg| cosmic::action::app(Msg::StatusMenu((id, msg)))),
                     ])
                 }
                 status_notifier_watcher::Event::Unregistered(name) => {
@@ -224,7 +226,12 @@ impl cosmic::Application for App {
                     popup_settings.positioner.anchor_rect.x = i as i32 * suggested_size as i32;
                 }
                 cmds.push(get_popup(popup_settings));
-                app::Task::batch(cmds)
+                Task::batch(cmds)
+            }
+            Msg::Surface(a) => {
+                return cosmic::task::message(cosmic::Action::Cosmic(
+                    cosmic::app::Action::Surface(a),
+                ));
             }
         }
     }
@@ -272,13 +279,19 @@ impl cosmic::Application for App {
     }
 
     fn view_window(&self, _surface: window::Id) -> cosmic::Element<'_, Msg> {
+        let theme = self.core.system_theme();
+        let cosmic = theme.cosmic();
+        let corners = cosmic.corner_radii.clone();
+        let pad = corners.radius_m[0];
         match self.open_menu {
             Some(id) => match self.menus.get(&id) {
                 Some(menu) => self
                     .core
                     .applet
-                    .popup_container(menu.popup_view().map(move |msg| Msg::StatusMenu((id, msg))))
-                    .limits(Limits::NONE.min_width(1.).min_height(1.).max_width(300.))
+                    .popup_container(
+                        container(menu.popup_view().map(move |msg| Msg::StatusMenu((id, msg))))
+                            .padding([pad, 0.]),
+                    )
                     .into(),
                 None => unreachable!(),
             },

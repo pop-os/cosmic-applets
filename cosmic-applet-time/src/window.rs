@@ -18,7 +18,7 @@ use cosmic::{
         window, Alignment, Length, Rectangle, Subscription,
     },
     iced_widget::{horizontal_rule, Column},
-    theme,
+    surface, theme,
     widget::{
         autosize, button, container, divider, grid, horizontal_space, icon, rectangle_tracker::*,
         text, Button, Grid, Space,
@@ -56,6 +56,7 @@ pub struct Window {
     popup: Option<window::Id>,
     now: chrono::DateTime<chrono::FixedOffset>,
     timezone: Option<chrono_tz::Tz>,
+    date_today: chrono::NaiveDate,
     date_selected: chrono::NaiveDate,
     rectangle_tracker: Option<RectangleTracker<u32>>,
     rectangle: Rectangle,
@@ -78,6 +79,7 @@ pub enum Message {
     Token(TokenUpdate),
     ConfigChanged(TimeAppletConfig),
     TimezoneUpdate(String),
+    Surface(surface::Action),
 }
 
 impl Window {
@@ -113,10 +115,7 @@ impl cosmic::Application for Window {
     type Flags = ();
     const APP_ID: &'static str = "com.system76.CosmicAppletTime";
 
-    fn init(
-        core: app::Core,
-        _flags: Self::Flags,
-    ) -> (Self, cosmic::iced::Task<app::Message<Self::Message>>) {
+    fn init(core: app::Core, _flags: Self::Flags) -> (Self, app::Task<Self::Message>) {
         fn get_local() -> Result<Locale, Box<dyn std::error::Error>> {
             let locale = std::env::var("LC_TIME").or_else(|_| std::env::var("LANG"))?;
             let locale = locale
@@ -142,6 +141,9 @@ impl cosmic::Application for Window {
         // timezone is ever externally changed
         let now = chrono::Local::now().fixed_offset();
 
+        // get today's date forhighlighting purposes
+        let today = chrono::NaiveDate::from(now.naive_local());
+
         // Synch `show_seconds` from the config within the time subscription
         let (show_seconds_tx, _) = watch::channel(true);
 
@@ -151,7 +153,8 @@ impl cosmic::Application for Window {
                 popup: None,
                 now,
                 timezone: None,
-                date_selected: chrono::NaiveDate::from(now.naive_local()),
+                date_today: today,
+                date_selected: today,
                 rectangle_tracker: None,
                 rectangle: Rectangle::default(),
                 token_tx: None,
@@ -290,10 +293,7 @@ impl cosmic::Application for Window {
         ])
     }
 
-    fn update(
-        &mut self,
-        message: Self::Message,
-    ) -> cosmic::iced::Task<app::Message<Self::Message>> {
+    fn update(&mut self, message: Self::Message) -> app::Task<Self::Message> {
         match message {
             Message::TogglePopup => {
                 if let Some(p) = self.popup.take() {
@@ -437,6 +437,7 @@ impl cosmic::Application for Window {
 
                 self.update(Message::Tick)
             }
+            Message::Surface(surface_message) => unreachable!(),
         }
     }
 
@@ -630,8 +631,9 @@ impl cosmic::Application for Window {
             let is_month = date.month() == self.date_selected.month()
                 && date.year_ce() == self.date_selected.year_ce();
             let is_day = date.day() == self.date_selected.day() && is_month;
+            let is_today = date == self.date_today;
 
-            calender = calender.push(date_button(date.day(), is_month, is_day));
+            calender = calender.push(date_button(date.day(), is_month, is_day, is_today));
         }
 
         // content
@@ -653,7 +655,6 @@ impl cosmic::Application for Window {
         self.core
             .applet
             .popup_container(container(content_list))
-            .max_width(300.)
             .into()
     }
 
@@ -662,9 +663,11 @@ impl cosmic::Application for Window {
     }
 }
 
-fn date_button(day: u32, is_month: bool, is_day: bool) -> Button<'static, Message> {
+fn date_button(day: u32, is_month: bool, is_day: bool, is_today: bool) -> Button<'static, Message> {
     let style = if is_day {
         button::ButtonClass::Suggested
+    } else if is_today {
+        button::ButtonClass::Standard
     } else {
         button::ButtonClass::Text
     };

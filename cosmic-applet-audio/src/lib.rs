@@ -23,7 +23,7 @@ use cosmic::{
         widget::{self, column, row, slider},
         window, Alignment, Length, Limits, Subscription,
     },
-    theme,
+    surface, theme,
     widget::{button, divider, horizontal_space, icon, text, Column, Row},
     Element, Renderer, Task, Theme,
 };
@@ -162,6 +162,7 @@ pub enum Message {
     Token(TokenUpdate),
     OpenSettings,
     PulseSub(sub_pulse::Event),
+    Surface(surface::Action),
 }
 
 impl Audio {
@@ -346,11 +347,6 @@ impl cosmic::Application for Audio {
                         None,
                         None,
                     );
-                    popup_settings.positioner.size_limits = Limits::NONE
-                        .min_height(1.0)
-                        .min_width(1.0)
-                        .max_width(400.0)
-                        .max_height(1080.0);
 
                     if let Some(conn) = self.pulse_state.connection() {
                         conn.send(pulse::Message::GetDefaultSink);
@@ -675,6 +671,11 @@ impl cosmic::Application for Audio {
                 sub_pulse::Event::DefaultSource(_) => {}
                 sub_pulse::Event::CardInfo(_) => {}
             },
+            Message::Surface(a) => {
+                return cosmic::task::message(cosmic::Action::Cosmic(
+                    cosmic::app::Action::Surface(a),
+                ));
+            }
         };
 
         Task::none()
@@ -952,11 +953,7 @@ impl cosmic::Application for Audio {
         .align_x(Alignment::Start)
         .padding([8, 0]);
 
-        self.core
-            .applet
-            .popup_container(container(content))
-            .limits(Limits::NONE.max_width(400.))
-            .into()
+        self.core.applet.popup_container(container(content)).into()
     }
 
     fn on_close_requested(&self, id: window::Id) -> Option<Message> {

@@ -6,6 +6,7 @@ use crate::{
 };
 use cctk::sctk::reexports::calloop::channel::SyncSender;
 use cosmic::{
+    app,
     app::Core,
     applet::{menu_button, padded_control},
     cosmic_config::{Config, ConfigSet, CosmicConfigEntry},
@@ -13,16 +14,16 @@ use cosmic::{
     iced::{
         platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
         window::Id,
-        Length, Limits, Subscription, Task,
+        Length, Limits, Subscription,
     },
     iced_widget::{column, row},
-    theme,
+    surface, theme,
     widget::{
         container, divider,
         segmented_button::{self, Entity, SingleSelectModel},
         segmented_control, text,
     },
-    Element,
+    Element, Task,
 };
 use cosmic_comp_config::{CosmicCompConfig, TileBehavior};
 use cosmic_protocols::workspace::v2::client::zcosmic_workspace_handle_v2::TilingState;
@@ -60,6 +61,7 @@ pub enum Message {
     WorkspaceUpdate(WorkspacesUpdate),
     NewWorkspace(Entity),
     OpenSettings,
+    Surface(surface::Action),
 }
 
 impl cosmic::Application for Window {
@@ -76,7 +78,7 @@ impl cosmic::Application for Window {
         &mut self.core
     }
 
-    fn init(core: Core, _flags: Self::Flags) -> (Self, Task<cosmic::app::Message<Self::Message>>) {
+    fn init(core: Core, _flags: Self::Flags) -> (Self, app::Task<Self::Message>) {
         let config_helper =
             Config::new("com.system76.CosmicComp", CosmicCompConfig::VERSION).unwrap();
         let mut config = CosmicCompConfig::get_entry(&config_helper).unwrap_or_else(|(errs, c)| {
@@ -140,7 +142,7 @@ impl cosmic::Application for Window {
         ])
     }
 
-    fn update(&mut self, message: Self::Message) -> Task<cosmic::app::Message<Self::Message>> {
+    fn update(&mut self, message: Self::Message) -> app::Task<Self::Message> {
         match message {
             Message::WorkspaceUpdate(msg) => match msg {
                 WorkspacesUpdate::State(state) => {
@@ -178,11 +180,7 @@ impl cosmic::Application for Window {
                         None,
                         None,
                     );
-                    popup_settings.positioner.size_limits = Limits::NONE
-                        .max_width(400.0)
-                        .min_width(300.0)
-                        .min_height(200.0)
-                        .max_height(1080.0);
+
                     get_popup(popup_settings)
                 }
             }
@@ -270,6 +268,7 @@ impl cosmic::Application for Window {
                 cmd.arg("window-management");
                 tokio::spawn(cosmic::process::spawn(cmd));
             }
+            Message::Surface(surface_message) => unreachable!(),
         }
         Task::none()
     }
@@ -350,11 +349,7 @@ impl cosmic::Application for Window {
         ]
         .padding([8, 0]);
 
-        self.core
-            .applet
-            .popup_container(content_list)
-            .max_width(400.)
-            .into()
+        self.core.applet.popup_container(content_list).into()
     }
 
     fn style(&self) -> Option<cosmic::iced_runtime::Appearance> {
