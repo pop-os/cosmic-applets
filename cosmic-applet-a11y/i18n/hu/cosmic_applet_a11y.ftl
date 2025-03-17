@@ -1,0 +1,3 @@
+screen-reader = Képernyőolvasó
+magnifier = Nagyító
+settings = Akadálymentességi beállítások...
