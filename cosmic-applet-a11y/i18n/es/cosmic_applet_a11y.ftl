@@ -1,0 +1,3 @@
+screen-reader = Lector de pantalla
+magnifier = Lupa
+settings = Ajustes de accesibilidad...
