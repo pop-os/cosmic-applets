@@ -21,17 +21,17 @@ use cosmic::{
         platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
         window, Length, Subscription,
     },
-    iced_runtime::core::layout::Limits,
-    iced_widget::column,
     surface, theme,
-    widget::{divider, text},
+    widget::{divider, text, Column},
     Element, Task,
 };
+use cosmic_protocols::a11y::v1::client::cosmic_a11y_manager_v1::Filter;
 use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
 use tokio::sync::mpsc::UnboundedSender;
 
 static READER_TOGGLE: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
 static MAGNIFIER_TOGGLE: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
+static INVERT_COLORS_TOGGLE: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
 
 pub fn run() -> cosmic::iced::Result {
     cosmic::applet::run::<CosmicA11yApplet>(())
@@ -42,9 +42,11 @@ struct CosmicA11yApplet {
     core: cosmic::app::Core,
     reader_enabled: bool,
     magnifier_enabled: bool,
+    inverted_colors_enabled: bool,
     popup: Option<window::Id>,
     dbus_sender: Option<UnboundedSender<DBusRequest>>,
     wayland_sender: Option<channel::SyncSender<AccessibilityRequest>>,
+    wayland_protocol_version: Option<u32>,
     timeline: Timeline,
     token_tx: Option<channel::Sender<TokenRequest>>,
 }
@@ -55,6 +57,7 @@ enum Message {
     CloseRequested(window::Id),
     ScreenReaderEnabled(chain::Toggler, bool),
     MagnifierEnabled(chain::Toggler, bool),
+    InvertedColorsEnabled(chain::Toggler, bool),
     Frame(Instant),
     Token(TokenUpdate),
     OpenSettings,
@@ -110,6 +113,18 @@ impl cosmic::Application for CosmicA11yApplet {
                     self.magnifier_enabled = false;
                 }
             }
+            Message::InvertedColorsEnabled(chain, enabled) => {
+                if let Some(tx) = &self.wayland_sender {
+                    self.timeline.set_chain(chain).start();
+                    self.inverted_colors_enabled = enabled;
+                    let _ = tx.send(AccessibilityRequest::ScreenFilter {
+                        inverted: enabled,
+                        filter: Filter::Unknown,
+                    });
+                } else {
+                    self.inverted_colors_enabled = false;
+                }
+            }
             Message::TogglePopup => {
                 if let Some(p) = self.popup.take() {
                     return destroy_popup(p);
@@ -119,7 +134,7 @@ impl cosmic::Application for CosmicA11yApplet {
                     let new_id = window::Id::unique();
                     self.popup.replace(new_id);
 
-                    let mut popup_settings = self.core.applet.get_popup_settings(
+                    let popup_settings = self.core.applet.get_popup_settings(
                         self.core.main_window_id().unwrap(),
                         new_id,
                         Some((1, 1)),
@@ -181,10 +196,18 @@ impl cosmic::Application for CosmicA11yApplet {
                 WaylandUpdate::Errored => {
                     tracing::error!("Wayland error");
                     let _ = self.wayland_sender.take();
+                    self.wayland_protocol_version = None;
                     self.magnifier_enabled = false;
+                    self.inverted_colors_enabled = false;
+                }
+                WaylandUpdate::State(AccessibilityEvent::Bound(ver)) => {
+                    self.wayland_protocol_version = Some(ver);
                 }
                 WaylandUpdate::State(AccessibilityEvent::Magnifier(enabled)) => {
                     self.magnifier_enabled = enabled;
+                }
+                WaylandUpdate::State(AccessibilityEvent::ScreenFilter { inverted, .. }) => {
+                    self.inverted_colors_enabled = inverted;
                 }
                 WaylandUpdate::Started(tx) => {
                     self.wayland_sender = Some(tx);
@@ -234,14 +257,34 @@ impl cosmic::Application for CosmicA11yApplet {
             .text_size(14)
             .width(Length::Fill),
         );
+        let invert_colors_toggle = padded_control(
+            anim!(
+                INVERT_COLORS_TOGGLE,
+                &self.timeline,
+                fl!("invert-colors"),
+                self.inverted_colors_enabled,
+                Message::InvertedColorsEnabled,
+            )
+            .text_size(14)
+            .width(Length::Fill),
+        );
 
-        let content_list = column![
-            reader_toggle,
-            magnifier_toggle,
-            padded_control(divider::horizontal::default()).padding([space_xxs, space_s]),
-            menu_button(text::body(fl!("settings"))).on_press(Message::OpenSettings)
-        ]
-        .padding([8, 0]);
+        let content_list = Column::with_capacity(5)
+            .push(reader_toggle)
+            .push_maybe(
+                self.wayland_protocol_version
+                    .is_some()
+                    .then_some(magnifier_toggle),
+            )
+            .push_maybe(
+                self.wayland_protocol_version
+                    .is_some_and(|ver| ver >= 2)
+                    .then_some(invert_colors_toggle),
+            )
+            .push(padded_control(divider::horizontal::default()).padding([space_xxs, space_s]))
+            .push(menu_button(text::body(fl!("settings"))).on_press(Message::OpenSettings))
+            .padding([8, 0]);
+
         self.core.applet.popup_container(content_list).into()
     }
 
