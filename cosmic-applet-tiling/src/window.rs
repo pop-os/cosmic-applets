@@ -268,7 +268,11 @@ impl cosmic::Application for Window {
                 cmd.arg("window-management");
                 tokio::spawn(cosmic::process::spawn(cmd));
             }
-            Message::Surface(surface_message) => unreachable!(),
+            Message::Surface(a) => {
+                return cosmic::task::message(cosmic::Action::Cosmic(
+                    cosmic::app::Action::Surface(a),
+                ));
+            }
         }
         Task::none()
     }

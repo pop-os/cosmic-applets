@@ -324,7 +324,11 @@ impl cosmic::Application for CosmicBluetoothApplet {
                     });
                 }
             }
-            Message::Surface(surface_message) => unreachable!(),
+            Message::Surface(a) => {
+                return cosmic::task::message(cosmic::Action::Cosmic(
+                    cosmic::app::Action::Surface(a),
+                ));
+            }
         }
         self.update_icon();
         Task::none()
