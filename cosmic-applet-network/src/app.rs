@@ -565,7 +565,11 @@ impl cosmic::Application for CosmicNetworkApplet {
                     return self.update(Message::SelectWirelessAccessPoint(ap));
                 }
             }
-            Message::Surface(surface_message) => unreachable!(),
+            Message::Surface(a) => {
+                return cosmic::task::message(cosmic::Action::Cosmic(
+                    cosmic::app::Action::Surface(a),
+                ));
+            }
         }
         Task::none()
     }

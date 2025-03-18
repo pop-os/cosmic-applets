@@ -209,7 +209,11 @@ impl cosmic::Application for IcedWorkspacesApplet {
             Message::WorkspaceOverview => {
                 let _ = ShellCommand::new("cosmic-workspaces").spawn();
             }
-            Message::Surface(surface_message) => unreachable!(),
+            Message::Surface(a) => {
+                return cosmic::task::message(cosmic::Action::Cosmic(
+                    cosmic::app::Action::Surface(a),
+                ));
+            }
         }
         Task::none()
     }

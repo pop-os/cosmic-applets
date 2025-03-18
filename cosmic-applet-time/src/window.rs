@@ -437,7 +437,11 @@ impl cosmic::Application for Window {
 
                 self.update(Message::Tick)
             }
-            Message::Surface(surface_message) => unreachable!(),
+            Message::Surface(a) => {
+                return cosmic::task::message(cosmic::Action::Cosmic(
+                    cosmic::app::Action::Surface(a),
+                ));
+            }
         }
     }
 
