@@ -82,7 +82,9 @@ async fn start_listening(
                 Err(_) => {
                     _ = tokio::time::sleep(Duration::from_millis(
                         2_u64.saturating_pow(retry_count),
-                    ));
+                    ))
+                    .await;
+
                     return State::Ready(retry_count.saturating_add(1));
                 }
             };
@@ -92,7 +94,8 @@ async fn start_listening(
                 Err(_) => {
                     _ = tokio::time::sleep(Duration::from_millis(
                         2_u64.saturating_pow(retry_count),
-                    ));
+                    ))
+                    .await;
                     return State::Ready(retry_count.saturating_add(1));
                 }
             };
@@ -551,7 +554,7 @@ impl BluerSessionState {
         let _handle: JoinHandle<anyhow::Result<()>> = spawn(async move {
             let mut status = adapter_clone.is_powered().await.unwrap_or_default();
             loop {
-                tokio::time::sleep(Duration::from_secs(5)).await;
+                _ = tokio::time::sleep(Duration::from_secs(5)).await;
                 let new_status = adapter_clone.is_powered().await.unwrap_or_default();
                 if new_status != status {
                     status = new_status;
