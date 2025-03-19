@@ -617,7 +617,7 @@ impl cosmic::Application for Window {
             calender = calender.push(
                 text(self.format(weekday_bag, &day_iter.next().unwrap()))
                     .size(12)
-                    .width(Length::Fixed(36.0))
+                    .width(Length::Fixed(44.0))
                     .align_x(Alignment::Center),
             );
 
@@ -678,8 +678,8 @@ fn date_button(day: u32, is_month: bool, is_day: bool, is_today: bool) -> Button
 
     let button = button::custom(text::body(format!("{day}")).center())
         .class(style)
-        .height(Length::Fixed(36.0))
-        .width(Length::Fixed(36.0));
+        .height(Length::Fixed(44.0))
+        .width(Length::Fixed(44.0));
 
     if is_month {
         button.on_press(Message::SelectDay(day))
