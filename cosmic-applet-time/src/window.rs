@@ -299,7 +299,8 @@ impl cosmic::Application for Window {
                 if let Some(p) = self.popup.take() {
                     destroy_popup(p)
                 } else {
-                    self.date_selected = chrono::NaiveDate::from(self.now.naive_local());
+                    self.date_today = chrono::NaiveDate::from(self.now.naive_local());
+                    self.date_selected = self.date_today;
 
                     let new_id = window::Id::unique();
                     self.popup = Some(new_id);
@@ -431,7 +432,8 @@ impl cosmic::Application for Window {
             Message::TimezoneUpdate(timezone) => {
                 if let Ok(timezone) = timezone.parse::<chrono_tz::Tz>() {
                     self.now = chrono::Local::now().with_timezone(&timezone).fixed_offset();
-                    self.date_selected = chrono::NaiveDate::from(self.now.naive_local());
+                    self.date_today = chrono::NaiveDate::from(self.now.naive_local());
+                    self.date_selected = self.date_today;
                     self.timezone = Some(timezone);
                 }
 
