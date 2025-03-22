@@ -780,7 +780,7 @@ impl cosmic::Application for Audio {
                         text(&self.output_volume_text)
                             .size(16)
                             .width(Length::FillPortion(1))
-                            .align_x(Alignment::End)
+                            .align_x(Alignment::Center)
                     ]
                     .spacing(12)
                     .align_y(Alignment::Center)
@@ -802,7 +802,7 @@ impl cosmic::Application for Audio {
                         text(&self.input_volume_text)
                             .size(16)
                             .width(Length::FillPortion(1))
-                            .align_x(Alignment::End)
+                            .align_x(Alignment::Center)
                     ]
                     .spacing(12)
                     .align_y(Alignment::Center)
