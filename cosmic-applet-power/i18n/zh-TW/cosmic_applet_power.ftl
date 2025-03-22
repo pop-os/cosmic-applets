@@ -18,9 +18,9 @@ confirm-button = {
 }
 confirm-title = 
     { $action -> 
-        [restart] 重新啟動
-        [suspend] 暫停
-        [shutdown] 關機
+        [restart] { 重新啟動 }
+        [suspend] { 暫停 }
+        [shutdown] { 關機 }
         [log-out] 關閉所有應用程式並登出
         *[other] 立即執行選定的操作
     } 嗎？
