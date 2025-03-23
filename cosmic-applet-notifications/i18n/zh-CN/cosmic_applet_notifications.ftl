@@ -6,9 +6,10 @@ minutes-ago = { NUMBER($duration) ->
     [1] 1 分钟前
     *[other] {$duration} 分钟前
 }
-show-less = 展示更少
-show-more = 展示更多 {$more} 条信息
+show-less = 收起
+show-more = 显示更多 {$more} 项
+clear-group = 清除组
 clear-all = 清除所有通知
-do-not-disturb = 免打扰
+do-not-disturb = 勿扰模式
 notification-settings = 通知设置...
 no-notifications = 无通知
