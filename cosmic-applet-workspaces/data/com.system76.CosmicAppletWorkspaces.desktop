@@ -2,6 +2,7 @@
 Name=Numbered Workspaces
 Name[hu]=Számozott Munkaterületek
 Name[pl]=Obszary robocze według numeru
+Name[pt_BR]=Áreas de Trabalho Numeradas
 Type=Application
 Exec=cosmic-applet-workspaces
 Terminal=false

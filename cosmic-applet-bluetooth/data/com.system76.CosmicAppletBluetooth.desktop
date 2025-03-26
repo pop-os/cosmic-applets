@@ -2,6 +2,7 @@
 Name=Bluetooth
 Name[hu]=Bluetooth
 Name[pl]=Bluetooth
+Name[pt_BR]=Bluetooth
 Type=Application
 Exec=cosmic-applet-bluetooth
 Terminal=false

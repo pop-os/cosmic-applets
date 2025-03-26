@@ -2,6 +2,7 @@
 Name=Date, Time & Calendar
 Name[hu]=Dátum, Idő és Naptár
 Name[pl]=Data, godzina i kalendarz
+Name[pt_BR]=Data, Hora e Calendário
 Type=Application
 Exec=cosmic-applet-time
 Terminal=false

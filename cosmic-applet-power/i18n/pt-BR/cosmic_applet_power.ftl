@@ -1,8 +1,9 @@
 power = Energia
 settings = Configurações...
 lock-screen = Bloquear Tela
-lock-screen-shortcut = Super + Escape
+lock-screen-shortcut = Super + Esc
 log-out = Sair
+log-out-shortcut = Super + Shift + Esc
 suspend = Suspender
 restart = Reiniciar
 shutdown = Desligar
@@ -21,7 +22,7 @@ confirm-title =
         [restart] { restart }
         [suspend] { suspend }
         [shutdown] { shutdown }
-        [log-out] Fechar todos os aplicativos e Sair
+        [log-out] Fechar todos os aplicativos e sair
         *[other] Aplicar a ação selecionada
     } agora?
 confirm-body = 
