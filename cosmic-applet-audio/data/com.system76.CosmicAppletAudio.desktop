@@ -3,6 +3,7 @@ Name=Sound
 Name[ko]=코스믹 오디오 애플릿
 Name[hu]=Hang
 Name[pl]=Dźwięk
+Name[pt_BR]=Som
 Type=Application
 Exec=cosmic-applet-audio
 Terminal=false

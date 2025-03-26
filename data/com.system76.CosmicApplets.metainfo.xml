@@ -10,11 +10,14 @@
   <url type="bugtracker">https://github.com/pop-os/cosmic-applets</url>
   <name>COSMIC Applets</name>
   <name xml:lang="pl">Aplety COSMIC</name>
+  <name xml:lang="pt_BR">Miniaplicativos</name>
   <summary>Applets for the COSMIC panel</summary>
   <summary xml:lang="pl">Aplety dla panelu COSMIC</summary>
+  <summary xml:lang="pt_BR">Miniaplicativos para o painel do COSMIC</summary>
   <description>
     <p>Applets for the COSMIC panel</p>
     <p xml:lang="pl">Aplety dla panelu COSMIC</p>
+    <p xml:lang="pt_BR">Miniaplicativos para o painel do COSMIC</p>
   </description>
   <launchable type="desktop-id">com.system76.CosmicAppletAppList.desktop</launchable>
   <launchable type="desktop-id">com.system76.CosmicAppletAudio.desktop</launchable>
@@ -33,7 +36,8 @@
   <launchable type="desktop-id">com.system76.CosmicAppletWorkspacesButton.desktop</launchable>
   <launchable type="desktop-id">com.system76.CosmicAppletLauncherButton.desktop</launchable>
   <launchable type="desktop-id">com.system76.CosmicApplet.desktop</launchable>
-  <icon type="remote" width="256" height="256">https://raw.githubusercontent.com/pop-os/cosmic-applets/master/cosmic-app-list/data/icons/scalable/apps/com.system76.CosmicAppList.svg</icon>
+  <icon type="remote" width="256" height="256">
+    https://raw.githubusercontent.com/pop-os/cosmic-applets/master/cosmic-app-list/data/icons/scalable/apps/com.system76.CosmicAppList.svg</icon>
   <screenshots>
   </screenshots>
   <provides>
