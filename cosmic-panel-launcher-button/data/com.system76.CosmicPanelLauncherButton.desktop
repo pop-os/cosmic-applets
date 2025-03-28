@@ -2,6 +2,7 @@
 Name=Launcher Button
 Name[hu]=Indító gomb
 Name[pl]=Przycisk programu uruchamiającego
+Name[pt_BR]=Botão de inicialização
 Type=Application
 Exec=cosmic-panel-button com.system76.CosmicLauncher
 Terminal=false

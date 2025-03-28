@@ -2,6 +2,7 @@
 Name=Accessibility
 Name[hu]=Akadálymentesség
 Name[pl]=Dostępność
+Name[pt_BR]=Acessibilidade
 Type=Application
 Exec=cosmic-applet-a11y
 Terminal=false

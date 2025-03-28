@@ -1,14 +1,15 @@
 hours-ago = { NUMBER($duration) ->
-    [1] 1 Hora atrás
-    *[other] {$duration} Horas atrás
+    [1] 1 hora atrás
+    *[other] {$duration} horas atrás
 }
 minutes-ago = { NUMBER($duration) ->
-    [1] 1 Minuto atrás
-    *[other] {$duration} Minutos atrás
+    [1] 1 minuto atrás
+    *[other] {$duration} minutos atrás
 }
-show-less = Mostrar Menos
-show-more = Mostrar {$more} Mais
-clear-all = Limpar Todas as Notificações
+show-less = Mostrar menos
+show-more = Mostrar {$more} mais
+clear-group = Limpar grupo
+clear-all = Limpar todas as notificações
 do-not-disturb = Não Perturbe
-notification-settings = Configurações de Notificação...
-no-notifications = Sem Notificações
+notification-settings = Configurações de notificações...
+no-notifications = Sem notificações
