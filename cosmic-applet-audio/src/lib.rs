@@ -79,6 +79,7 @@ pub struct Audio {
     config: AudioAppletConfig,
     player_status: Option<mpris_subscription::PlayerStatus>,
     token_tx: Option<calloop::channel::Sender<TokenRequest>>,
+    channels: Option<sub_pulse::PulseChannels>,
 }
 
 impl Audio {
@@ -399,20 +400,8 @@ impl cosmic::Application for Audio {
             Message::ApplyOutputVolume => {
                 self.output_volume_debounce = false;
 
-                self.current_output.as_mut().map(|o| {
-                    o.volume
-                        .set(o.volume.len(), percent_to_volume(self.output_volume))
-                });
-
-                if let PulseState::Connected(connection) = &mut self.pulse_state {
-                    if let Some(device) = &self.current_output {
-                        if let Some(name) = &device.name {
-                            connection.send(pulse::Message::SetSinkVolumeByName(
-                                name.clone(),
-                                device.volume,
-                            ))
-                        }
-                    }
+                if let Some(channel) = self.channels.as_mut() {
+                    channel.set_volume(self.output_volume as f32 / 100.);
                 }
             }
             Message::ApplyInputVolume => {
@@ -667,9 +656,13 @@ impl cosmic::Application for Audio {
                         input.mute = value;
                     }
                 }
+                sub_pulse::Event::Channels(c) => {
+                    self.channels = Some(c);
+                }
                 sub_pulse::Event::DefaultSink(_) => {}
                 sub_pulse::Event::DefaultSource(_) => {}
                 sub_pulse::Event::CardInfo(_) => {}
+                sub_pulse::Event::Balance(_) => {}
             },
             Message::Surface(a) => {
                 return cosmic::task::message(cosmic::Action::Cosmic(
