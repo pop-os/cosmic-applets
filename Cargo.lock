@@ -1557,7 +1557,7 @@ dependencies = [
 [[package]]
 name = "cosmic-settings-subscriptions"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/cosmic-settings-subscriptions?branch=sound#ddeff795e8957fd3199aa0d17c9ea87315cb58a1"
+source = "git+https://github.com/pop-os/cosmic-settings-subscriptions#613e56f858db9e10d913b6d57e761e58d146ebc7"
 dependencies = [
  "bluez-zbus",
  "cosmic-dbus-networkmanager",
@@ -1566,7 +1566,6 @@ dependencies = [
  "itertools",
  "libpulse-binding",
  "log",
- "os_pipe",
  "rustix 1.0.3",
  "secure-string",
  "thiserror 2.0.11",
@@ -4715,16 +4714,6 @@ checksum = "9aa2b01e1d916879f73a53d01d1d6cee68adbb31d6d9177a8cfce093cced1d50"
 dependencies = [
  "futures-core",
  "pin-project-lite",
-]
-
-[[package]]
-name = "os_pipe"
-version = "1.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5ffd2b0a5634335b135d5728d84c5e0fd726954b87111f7506a61c502280d982"
-dependencies = [
- "libc",
- "windows-sys 0.59.0",
 ]
 
 [[package]]
