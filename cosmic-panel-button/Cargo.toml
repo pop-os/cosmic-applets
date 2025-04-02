@@ -5,7 +5,6 @@ edition = "2021"
 license = "GPL-3.0-only"
 
 [dependencies]
-freedesktop-desktop-entry.workspace = true
 libcosmic.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true

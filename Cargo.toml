@@ -65,19 +65,20 @@ tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 tracing-log = "0.2.0"
 tokio = { version = "1.43.0", features = ["full"] }
 cosmic-config = { git = "https://github.com/pop-os/libcosmic" }
-serde = { version = "1.0.217", features = ["derive"] }
-freedesktop-desktop-entry = "0.7.8"
+serde = { version = "1.0.219", features = ["derive"] }
 
 [profile.release]
+opt-level = "s"
+panic = "abort"
 lto = "fat"
 
 [workspace.metadata.cargo-machete]
 ignored = ["libcosmic"]
-# [patch."https://github.com/pop-os/libcosmic"]
-# cosmic-config = { git = "https://github.com/pop-os/libcosmic//", branch = "drop-menu-tree-changes" }
-# libcosmic = { git = "https://github.com/pop-os/libcosmic//", branch = "drop-menu-tree-changes" }
-# iced_futures = { git = "https://github.com/pop-os/libcosmic//", branch = "drop-menu-tree-changes" }
 
+# [patch."https://github.com/pop-os/libcosmic"]
+# cosmic-config = { git = "https://github.com/pop-os/libcosmic//", branch = "desktop-entries-and-icons" }
+# libcosmic = { git = "https://github.com/pop-os/libcosmic//", branch = "desktop-entries-and-icons" }
+# iced_futures = { git = "https://github.com/pop-os/libcosmic//", branch = "desktop-entries-and-icons" }
 # cosmic-config = { path = "../libcosmic/cosmic-config" }
 # libcosmic = { path = "../libcosmic" }
 # iced_futures = { path = "../libcosmic/iced/futures" }

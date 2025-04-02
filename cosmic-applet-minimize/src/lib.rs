@@ -6,6 +6,8 @@ pub(crate) mod wayland_handler;
 pub(crate) mod wayland_subscription;
 pub(crate) mod window_image;
 
+use std::borrow::Cow;
+
 use crate::localize::localize;
 use cosmic::{
     app,
@@ -14,7 +16,7 @@ use cosmic::{
         sctk::reexports::calloop, toplevel_info::ToplevelInfo,
         wayland_protocols::ext::foreign_toplevel_list::v1::client::ext_foreign_toplevel_handle_v1::ExtForeignToplevelHandleV1,
     },
-    desktop::DesktopEntryData,
+    desktop::fde,
     iced::{
         self,
         id::Id as WidgetId,
@@ -43,10 +45,20 @@ pub fn run() -> cosmic::iced::Result {
     cosmic::applet::run::<Minimize>(())
 }
 
+pub struct App {
+    desktop_entry: fde::DesktopEntry,
+    name: String,
+    icon_source: fde::IconSource,
+    toplevel_info: ToplevelInfo,
+    wayland_image: Option<WaylandImage>,
+}
+
 #[derive(Default)]
 struct Minimize {
     core: cosmic::app::Core,
-    apps: Vec<(ToplevelInfo, DesktopEntryData, Option<WaylandImage>)>,
+    locales: Vec<String>,
+    desktop_entries: Vec<fde::DesktopEntry>,
+    apps: Vec<App>,
     tx: Option<calloop::channel::Sender<WaylandRequest>>,
     overflow_popup: Option<window::Id>,
 }
@@ -74,6 +86,34 @@ impl Minimize {
         }
         index
     }
+
+    fn find_new_desktop_entry(&mut self, appid: &str) -> Option<fde::DesktopEntry> {
+        let unicase_appid = fde::unicase::Ascii::new(appid);
+
+        let de = match fde::find_app_by_id(&self.desktop_entries, unicase_appid) {
+            Some(de) => de,
+            None => {
+                // Update desktop entries in case it was not found.
+                self.update_desktop_entries();
+                match fde::find_app_by_id(&self.desktop_entries, unicase_appid) {
+                    Some(appid) => appid,
+                    None => {
+                        tracing::error!(appid, "could not find desktop entry for app");
+                        return None;
+                    }
+                }
+            }
+        };
+
+        Some(de.clone())
+    }
+
+    // Cache all desktop entries to use when new apps are added to the dock.
+    fn update_desktop_entries(&mut self) {
+        self.desktop_entries = fde::Iter::new(fde::default_paths())
+            .filter_map(|p| fde::DesktopEntry::from_path(p, Some(&self.locales)).ok())
+            .collect::<Vec<_>>();
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -93,13 +133,15 @@ impl cosmic::Application for Minimize {
     const APP_ID: &'static str = "com.system76.CosmicAppletMinimize";
 
     fn init(core: cosmic::app::Core, _flags: ()) -> (Self, app::Task<Message>) {
-        (
-            Self {
-                core,
-                ..Default::default()
-            },
-            Task::none(),
-        )
+        let mut app = Self {
+            core,
+            locales: fde::get_languages_from_env(),
+            ..Default::default()
+        };
+
+        app.update_desktop_entries();
+
+        (app, Task::none())
     }
 
     fn core(&self) -> &cosmic::app::Core {
@@ -124,32 +166,53 @@ impl cosmic::Application for Minimize {
                     panic!("Wayland Subscription ended...")
                 }
                 WaylandUpdate::Toplevel(t) => match t {
-                    ToplevelUpdate::Add(info) | ToplevelUpdate::Update(info) => {
-                        let data = |id| {
-                            cosmic::desktop::load_applications_for_app_ids(
-                                None,
-                                std::iter::once(id),
-                                true,
-                                false,
-                            )
-                            .remove(0)
-                        };
-                        if let Some(pos) = self
-                            .apps
-                            .iter_mut()
-                            .position(|a| a.0.foreign_toplevel == info.foreign_toplevel)
-                        {
-                            if self.apps[pos].0.app_id != info.app_id {
-                                self.apps[pos].1 = data(&info.app_id)
+                    ToplevelUpdate::Add(toplevel_info) | ToplevelUpdate::Update(toplevel_info) => {
+                        // Temporarily take ownership to appease the borrow checker.
+                        let mut apps = std::mem::take(&mut self.apps);
+
+                        if let Some(pos) = apps.iter_mut().position(|a| {
+                            a.toplevel_info.foreign_toplevel == toplevel_info.foreign_toplevel
+                        }) {
+                            if apps[pos].toplevel_info.app_id != toplevel_info.app_id {
+                                apps[pos].desktop_entry =
+                                    match self.find_new_desktop_entry(&toplevel_info.app_id) {
+                                        Some(de) => de,
+                                        None => {
+                                            self.apps = apps;
+                                            return app::Task::none();
+                                        }
+                                    };
                             }
-                            self.apps[pos].0 = info;
+                            apps[pos].toplevel_info = toplevel_info;
                         } else {
-                            let data = data(&info.app_id);
-                            self.apps.push((info, data, None));
+                            let desktop_entry =
+                                match self.find_new_desktop_entry(&toplevel_info.app_id) {
+                                    Some(de) => de,
+                                    None => {
+                                        self.apps = apps;
+                                        return app::Task::none();
+                                    }
+                                };
+
+                            apps.push(App {
+                                name: desktop_entry
+                                    .full_name(&self.locales)
+                                    .unwrap_or(Cow::Borrowed(&desktop_entry.appid))
+                                    .to_string(),
+                                icon_source: fde::IconSource::from_unknown(
+                                    desktop_entry.icon().unwrap_or(&desktop_entry.appid),
+                                ),
+                                desktop_entry,
+                                toplevel_info,
+                                wayland_image: None,
+                            });
                         }
+
+                        self.apps = apps;
                     }
                     ToplevelUpdate::Remove(handle) => {
-                        self.apps.retain(|a| a.0.foreign_toplevel != handle);
+                        self.apps
+                            .retain(|a| a.toplevel_info.foreign_toplevel != handle);
                         self.apps.shrink_to_fit();
                     }
                 },
@@ -157,9 +220,9 @@ impl cosmic::Application for Minimize {
                     if let Some(pos) = self
                         .apps
                         .iter()
-                        .position(|a| a.0.foreign_toplevel == handle)
+                        .position(|a| a.toplevel_info.foreign_toplevel == handle)
                     {
-                        self.apps[pos].2 = Some(img);
+                        self.apps[pos].wayland_image = Some(img);
                     }
                 }
             },
@@ -225,7 +288,7 @@ impl cosmic::Application for Minimize {
         wayland_subscription::wayland_subscription().map(Message::Wayland)
     }
 
-    fn view(&self) -> Element<Message> {
+    fn view(&self) -> Element<Self::Message> {
         let max_icon_count = self
             .max_icon_count()
             .map(|n| {
@@ -235,23 +298,24 @@ impl cosmic::Application for Minimize {
                     self.apps.len()
                 }
             })
-            .unwrap_or(self.apps.len());
+            .unwrap_or(self.apps.len())
+            .max(1);
         let (width, _) = self.core.applet.suggested_size(false);
         let padding = self.core.applet.suggested_padding(false);
         let theme = self.core.system_theme().cosmic();
         let space_xxs = theme.space_xxs();
-        let icon_buttons = self.apps[..max_icon_count].iter().map(|(info, data, img)| {
+        let icon_buttons = self.apps.iter().take(max_icon_count - 1).map(|app| {
             self.core
                 .applet
                 .applet_tooltip(
                     Element::from(crate::window_image::WindowImage::new(
-                        img.clone(),
-                        &data.icon,
+                        app.wayland_image.clone(),
+                        &app.icon_source,
                         width as f32,
-                        Message::Activate(info.foreign_toplevel.clone()),
+                        Message::Activate(app.toplevel_info.foreign_toplevel.clone()),
                         padding,
                     )),
-                    data.name.clone(),
+                    app.name.clone(),
                     self.overflow_popup.is_some(),
                     Message::Surface,
                 )
@@ -337,16 +401,16 @@ impl cosmic::Application for Minimize {
         let padding = self.core.applet.suggested_padding(false);
         let theme = self.core.system_theme().cosmic();
         let space_xxs = theme.space_xxs();
-        let icon_buttons = self.apps[max_icon_count..].iter().map(|(info, data, img)| {
+        let icon_buttons = self.apps.iter().skip(max_icon_count).map(|app| {
             tooltip(
                 Element::from(crate::window_image::WindowImage::new(
-                    img.clone(),
-                    &data.icon,
+                    app.wayland_image.clone(),
+                    &app.icon_source,
                     width as f32,
-                    Message::Activate(info.foreign_toplevel.clone()),
+                    Message::Activate(app.toplevel_info.foreign_toplevel.clone()),
                     padding,
                 )),
-                text(data.name.clone()).shaping(text::Shaping::Advanced),
+                text(&app.name).shaping(text::Shaping::Advanced),
                 // tooltip::Position::FollowCursor,
                 // FIXME tooltip fails to appear when created as indicated in design
                 // maybe it should be a subsurface

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use config::{CosmicPanelButtonConfig, IndividualConfig, Override};
+use cosmic::desktop::fde::{self, get_languages_from_env, DesktopEntry};
 use cosmic::{
     app,
     applet::{
@@ -15,7 +16,6 @@ use cosmic::{
     Task,
 };
 use cosmic_config::{Config, CosmicConfigEntry};
-use freedesktop_desktop_entry::{get_languages_from_env, DesktopEntry};
 use once_cell::sync::Lazy;
 use std::{env, fs, process::Command};
 
@@ -177,7 +177,7 @@ pub fn run() -> iced::Result {
     let mut desktop = None;
     let locales = get_languages_from_env();
 
-    for mut path in freedesktop_desktop_entry::default_paths() {
+    for mut path in fde::default_paths() {
         path.push(&filename);
         if let Ok(bytes) = fs::read_to_string(&path) {
             if let Ok(entry) = DesktopEntry::from_str(&path, &bytes, Some(&locales)) {

@@ -19,6 +19,8 @@ use cctk::{
         workspace::v1::client::ext_workspace_handle_v1::ExtWorkspaceHandleV1,
     },
 };
+use cosmic::desktop::fde;
+use cosmic::desktop::fde::{get_languages_from_env, DesktopEntry};
 use cosmic::{
     app,
     applet::{
@@ -26,7 +28,7 @@ use cosmic::{
         Context, Size,
     },
     cosmic_config::{Config, CosmicConfigEntry},
-    desktop::IconSource,
+    desktop::IconSourceExt,
     iced::{
         self,
         clipboard::mime::{AllowedMimeTypes, AsMimeTypes},
@@ -50,8 +52,6 @@ use cosmic::{
 };
 use cosmic_app_list_config::{AppListConfig, APP_ID};
 use cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::State;
-use freedesktop_desktop_entry as fde;
-use freedesktop_desktop_entry::{get_languages_from_env, DesktopEntry};
 use futures::future::pending;
 use iced::{widget::container, Alignment, Background, Length};
 use itertools::Itertools;
@@ -159,7 +159,7 @@ impl DockItem {
 
         let app_icon = AppletIconData::new(applet);
 
-        let cosmic_icon = IconSource::from_unknown(desktop_info.icon().unwrap_or_default())
+        let cosmic_icon = fde::IconSource::from_unknown(desktop_info.icon().unwrap_or_default())
             .as_cosmic_icon()
             .size(app_icon.icon_size);
 
@@ -318,6 +318,7 @@ struct CosmicAppList {
     popup: Option<Popup>,
     subscription_ctr: u32,
     item_ctr: u32,
+    desktop_entries: Vec<DesktopEntry>,
     active_list: Vec<DockItem>,
     pinned_list: Vec<DockItem>,
     dnd_source: Option<(window::Id, DockItem, DndAction)>,
@@ -562,28 +563,48 @@ fn app_list_icon_style(selected: bool) -> cosmic::theme::Button {
     }
 }
 
-fn load_desktop_entries_from_app_ids<I, L>(ids: &[I], locales: &[L]) -> Vec<DesktopEntry>
-where
-    I: AsRef<str>,
-    L: AsRef<str>,
-{
-    let entries = fde::Iter::new(fde::default_paths())
-        .entries(Some(locales))
-        .collect::<Vec<_>>();
-
-    ids.iter()
-        .map(|id| {
-            fde::matching::find_entry_from_appid(entries.iter(), id.as_ref())
-                .unwrap_or(&fde::DesktopEntry::from_appid(id.as_ref().to_owned()))
-                .to_owned()
-        })
-        .collect_vec()
+#[inline]
+pub fn menu_control_padding() -> Padding {
+    let spacing = cosmic::theme::spacing();
+    [spacing.space_xxs, spacing.space_s].into()
 }
 
-pub fn menu_control_padding() -> Padding {
-    let theme = cosmic::theme::active();
-    let cosmic = theme.cosmic();
-    [cosmic.space_xxs(), cosmic.space_s()].into()
+fn find_desktop_entries<'a>(
+    desktop_entries: &'a [fde::DesktopEntry],
+    app_ids: &'a [String],
+) -> impl Iterator<Item = fde::DesktopEntry> + 'a {
+    app_ids.iter().map(|fav| {
+        let unicase_fav = fde::unicase::Ascii::new(fav.as_str());
+        fde::find_app_by_id(desktop_entries, unicase_fav)
+            .unwrap_or_else(|| {
+                panic!("could not find {fav}");
+                &fde::DesktopEntry::from_appid(fav.clone()).to_owned()
+            })
+            .to_owned()
+    })
+}
+
+impl CosmicAppList {
+    // Cache all desktop entries to use when new apps are added to the dock.
+    fn update_desktop_entries(&mut self) {
+        self.desktop_entries = fde::Iter::new(fde::default_paths())
+            .filter_map(|p| fde::DesktopEntry::from_path(p, Some(&self.locales)).ok())
+            .collect::<Vec<_>>();
+    }
+
+    // Update pinned items using the cached desktop entries as a source.
+    fn update_pinned_list(&mut self) {
+        self.pinned_list = find_desktop_entries(&self.desktop_entries, &self.config.favorites)
+            .zip(&self.config.favorites)
+            .enumerate()
+            .map(|(pinned_ctr, (e, original_id))| DockItem {
+                id: pinned_ctr as u32,
+                toplevels: Default::default(),
+                desktop_info: e.clone(),
+                original_app_id: original_id.clone(),
+            })
+            .collect();
+    }
 }
 
 impl cosmic::Application for CosmicAppList {
@@ -598,25 +619,16 @@ impl cosmic::Application for CosmicAppList {
             .and_then(|c| AppListConfig::get_entry(&c).ok())
             .unwrap_or_default();
 
-        let locales = get_languages_from_env();
-
         let mut app_list = Self {
             core,
-            pinned_list: load_desktop_entries_from_app_ids(&config.favorites, &locales)
-                .into_iter()
-                .zip(&config.favorites)
-                .enumerate()
-                .map(|(pinned_ctr, (e, original_id))| DockItem {
-                    id: pinned_ctr as u32,
-                    toplevels: Default::default(),
-                    desktop_info: e,
-                    original_app_id: original_id.clone(),
-                })
-                .collect(),
             config,
-            locales,
+            locales: get_languages_from_env(),
             ..Default::default()
         };
+
+        app_list.update_desktop_entries();
+        app_list.update_pinned_list();
+
         app_list.item_ctr = app_list.pinned_list.len() as u32;
 
         (
@@ -1051,9 +1063,29 @@ impl cosmic::Application for CosmicAppList {
                     }
                     WaylandUpdate::Toplevel(event) => match event {
                         ToplevelUpdate::Add(mut info) => {
+                            let unicase_appid = fde::unicase::Ascii::new(&*info.app_id);
                             let new_desktop_info =
-                                load_desktop_entries_from_app_ids(&[&info.app_id], &self.locales)
-                                    .remove(0);
+                                match fde::find_app_by_id(&self.desktop_entries, unicase_appid) {
+                                    Some(appid) => appid,
+                                    None => {
+                                        // Update desktop entries in case it was not found.
+                                        self.update_desktop_entries();
+                                        match fde::find_app_by_id(
+                                            &self.desktop_entries,
+                                            unicase_appid,
+                                        ) {
+                                            Some(appid) => appid,
+                                            None => {
+                                                tracing::error!(
+                                                    id = info.app_id,
+                                                    "could not find desktop entry for app"
+                                                );
+                                                return Task::none();
+                                            }
+                                        }
+                                    }
+                                }
+                                .clone();
 
                             if let Some(t) = self
                                 .active_list
@@ -1193,8 +1225,7 @@ impl cosmic::Application for CosmicAppList {
 
                 // pull back configured items into the favorites list
                 self.pinned_list =
-                    load_desktop_entries_from_app_ids(&self.config.favorites, &self.locales)
-                        .into_iter()
+                    find_desktop_entries(&self.desktop_entries, &self.config.favorites)
                         .zip(&self.config.favorites)
                         .map(|(de, original_id)| {
                             if let Some(p) = self
@@ -1212,7 +1243,7 @@ impl cosmic::Application for CosmicAppList {
                                 DockItem {
                                     id: self.item_ctr,
                                     toplevels: Default::default(),
-                                    desktop_info: de,
+                                    desktop_info: de.clone(),
                                     original_app_id: original_id.clone(),
                                 }
                             }
@@ -1419,7 +1450,7 @@ impl cosmic::Application for CosmicAppList {
                         ),
                         dock_item
                             .desktop_info
-                            .name(&self.locales)
+                            .full_name(&self.locales)
                             .unwrap_or_default()
                             .to_string(),
                         self.popup.is_some(),
@@ -1513,7 +1544,7 @@ impl cosmic::Application for CosmicAppList {
                         ),
                         dock_item
                             .desktop_info
-                            .name(&self.locales)
+                            .full_name(&self.locales)
                             .unwrap_or_default()
                             .to_string(),
                         self.popup.is_some(),
@@ -1662,7 +1693,7 @@ impl cosmic::Application for CosmicAppList {
         let theme = self.core.system_theme();
 
         if let Some((_, item, _)) = self.dnd_source.as_ref().filter(|s| s.0 == id) {
-            IconSource::from_unknown(item.desktop_info.icon().unwrap_or_default())
+            fde::IconSource::from_unknown(item.desktop_info.icon().unwrap_or_default())
                 .as_cosmic_icon()
                 .size(self.core.applet.suggested_size(false).0)
                 .into()
@@ -1930,7 +1961,7 @@ impl cosmic::Application for CosmicAppList {
                             ),
                             dock_item
                                 .desktop_info
-                                .name(&self.locales)
+                                .full_name(&self.locales)
                                 .unwrap_or_default()
                                 .to_string(),
                             self.popup.is_some(),
@@ -2029,7 +2060,7 @@ impl cosmic::Application for CosmicAppList {
                             ),
                             dock_item
                                 .desktop_info
-                                .name(&self.locales)
+                                .full_name(&self.locales)
                                 .unwrap_or_default()
                                 .to_string(),
                             self.popup.is_some(),

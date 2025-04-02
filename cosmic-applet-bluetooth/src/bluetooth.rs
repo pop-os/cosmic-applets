@@ -598,7 +598,7 @@ impl BluerSessionState {
                             )
                             .await;
                             res = adapter_clone.discover_devices_with_changes().await;
-                            milli_timeout = (milli_timeout.saturating_mul(2));
+                            milli_timeout = milli_timeout.saturating_mul(2);
                         }
                         milli_timeout = 10;
                         res.unwrap()
@@ -612,7 +612,7 @@ impl BluerSessionState {
                                         break 'outer;
                                     }
                                 } else {
-                                    milli_timeout = (milli_timeout.saturating_mul(2));
+                                    milli_timeout = milli_timeout.saturating_mul(2);
                                     continue;
                                 }
                             }

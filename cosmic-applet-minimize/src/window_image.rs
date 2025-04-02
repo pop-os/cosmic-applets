@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use cosmic::{
-    desktop::IconSource,
+    desktop::{fde, IconSourceExt},
     iced::Limits,
     iced_core::{layout, overlay, widget::Tree, Border, Layout, Length, Size, Vector},
     theme::{Button, Container},
@@ -23,7 +23,7 @@ where
 {
     pub fn new(
         img: Option<WaylandImage>,
-        icon: &IconSource,
+        icon: &fde::IconSource,
         size: f32,
         on_press: Msg,
         padding: u16,

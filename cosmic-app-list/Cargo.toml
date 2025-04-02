@@ -28,4 +28,3 @@ tracing-subscriber.workspace = true
 tracing.workspace = true
 url = "2.5.4"
 zbus.workspace = true
-freedesktop-desktop-entry.workspace = true
