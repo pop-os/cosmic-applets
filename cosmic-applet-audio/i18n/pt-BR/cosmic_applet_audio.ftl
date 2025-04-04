@@ -1,7 +1,7 @@
 output = Saída
 input = Entrada
-show-media-controls = Mostrar Controles de Mídia no Painel Superior
+show-media-controls = Mostrar controles de mídia no painel superior
 sound-settings = Configurações de Som...
-disconnected = PulseAudio Desconectado
+disconnected = PulseAudio desconectado
 no-device = Nenhum dispositivo selecionado
 unknown-artist = Desconhecido

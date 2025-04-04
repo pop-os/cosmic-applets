@@ -17,3 +17,4 @@ enter-password = Digite a senha ou chave de criptografia
 router-wps-button = Você também pode se conectar pressionando o botão "WPS" no roteador
 unable-to-connect = Não é possível conectar-se à rede
 check-wifi-connection = Verifique se o Wi-Fi está conectado à internet e se a senha está correta
+reset = Redefinir

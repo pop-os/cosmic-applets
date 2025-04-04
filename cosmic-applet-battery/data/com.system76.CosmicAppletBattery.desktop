@@ -3,6 +3,7 @@ Name=Power & Battery
 Name[ko]=코스믹 배터리 애플릿
 Name[hu]=Energia és Akkumulátor
 Name[pl]=Zasilanie i bateria
+Name[pt_BR]=Energia e Bateria
 Type=Application
 Exec=cosmic-applet-battery
 Terminal=false
