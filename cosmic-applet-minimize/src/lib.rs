@@ -87,7 +87,7 @@ impl Minimize {
         index
     }
 
-    fn find_new_desktop_entry(&mut self, appid: &str) -> Option<fde::DesktopEntry> {
+    fn find_new_desktop_entry(&mut self, appid: &str) -> fde::DesktopEntry {
         let unicase_appid = fde::unicase::Ascii::new(appid);
 
         let de = match fde::find_app_by_id(&self.desktop_entries, unicase_appid) {
@@ -98,14 +98,21 @@ impl Minimize {
                 match fde::find_app_by_id(&self.desktop_entries, unicase_appid) {
                     Some(appid) => appid,
                     None => {
-                        tracing::error!(appid, "could not find desktop entry for app");
-                        return None;
+                        tracing::warn!(appid, "could not find desktop entry for app");
+                        let mut entry = fde::DesktopEntry {
+                            appid: appid.to_owned(),
+                            groups: Default::default(),
+                            path: Default::default(),
+                            ubuntu_gettext_domain: None,
+                        };
+                        entry.add_desktop_entry("Name".to_string(), appid.to_owned());
+                        return entry;
                     }
                 }
             }
         };
 
-        Some(de.clone())
+        de.clone()
     }
 
     // Cache all desktop entries to use when new apps are added to the dock.
@@ -175,24 +182,17 @@ impl cosmic::Application for Minimize {
                         }) {
                             if apps[pos].toplevel_info.app_id != toplevel_info.app_id {
                                 apps[pos].desktop_entry =
-                                    match self.find_new_desktop_entry(&toplevel_info.app_id) {
-                                        Some(de) => de,
-                                        None => {
-                                            self.apps = apps;
-                                            return app::Task::none();
-                                        }
-                                    };
+                                    self.find_new_desktop_entry(&toplevel_info.app_id);
+                                apps[pos].icon_source = fde::IconSource::from_unknown(
+                                    apps[pos]
+                                        .desktop_entry
+                                        .icon()
+                                        .unwrap_or(&apps[pos].desktop_entry.appid),
+                                )
                             }
                             apps[pos].toplevel_info = toplevel_info;
                         } else {
-                            let desktop_entry =
-                                match self.find_new_desktop_entry(&toplevel_info.app_id) {
-                                    Some(de) => de,
-                                    None => {
-                                        self.apps = apps;
-                                        return app::Task::none();
-                                    }
-                                };
+                            let desktop_entry = self.find_new_desktop_entry(&toplevel_info.app_id);
 
                             apps.push(App {
                                 name: desktop_entry
@@ -298,13 +298,12 @@ impl cosmic::Application for Minimize {
                     self.apps.len()
                 }
             })
-            .unwrap_or(self.apps.len())
-            .max(1);
+            .unwrap_or(self.apps.len());
         let (width, _) = self.core.applet.suggested_size(false);
         let padding = self.core.applet.suggested_padding(false);
         let theme = self.core.system_theme().cosmic();
         let space_xxs = theme.space_xxs();
-        let icon_buttons = self.apps.iter().take(max_icon_count - 1).map(|app| {
+        let icon_buttons = self.apps[..max_icon_count].iter().map(|app| {
             self.core
                 .applet
                 .applet_tooltip(
@@ -401,7 +400,7 @@ impl cosmic::Application for Minimize {
         let padding = self.core.applet.suggested_padding(false);
         let theme = self.core.system_theme().cosmic();
         let space_xxs = theme.space_xxs();
-        let icon_buttons = self.apps.iter().skip(max_icon_count).map(|app| {
+        let icon_buttons = self.apps[max_icon_count..].iter().map(|app| {
             tooltip(
                 Element::from(crate::window_image::WindowImage::new(
                     app.wayland_image.clone(),
