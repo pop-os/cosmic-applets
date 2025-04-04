@@ -3,6 +3,7 @@ settings = Impostazioni...
 lock-screen = Schermata di blocco
 lock-screen-shortcut = Super + ESC
 log-out = Disconnetti
+log-out-shortcut = Super + Shift + ESC
 suspend = Sospendi
 restart = Riavvia
 shutdown = Spegni
@@ -33,3 +34,4 @@ confirm-body =
         [log-out] Disconnessione in corso
         *[other] L'azione selezionata
     } verrà eseguita tra { $countdown } secondi.
+
