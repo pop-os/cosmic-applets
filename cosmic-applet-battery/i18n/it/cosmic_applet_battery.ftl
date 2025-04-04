@@ -1,9 +1,9 @@
-battery = Batteria
-battery-desc = Consumi e performance ridotte.
+battery = Risparmio energetico
+battery-desc = Consumi minimi, performance ridotta.
 balanced = Bilanciato
-balanced-desc = Consumi e performance standard.
+balanced-desc = Consumi bilanciati, performance dinamica.
 performance = Performance
-performance-desc = Consumi e performance alte.
+performance-desc = Consumi alti, performance massima.
 max-charge = Migliora la durata di vita della batteria caricandola fino all'80%
 seconds = s
 minutes = m
