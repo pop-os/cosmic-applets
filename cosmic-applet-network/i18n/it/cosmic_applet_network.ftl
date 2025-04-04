@@ -1,4 +1,4 @@
-network = Network
+network = Rete
 airplane-mode = Modalità aereo
 airplane-mode-on = La modalità aereo è attiva
 turn-off-airplane-mode = Disabilita per attivare il Wi-Fi, il Bluetooth e la rete dati.
