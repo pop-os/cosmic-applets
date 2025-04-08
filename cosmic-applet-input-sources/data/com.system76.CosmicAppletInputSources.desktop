@@ -2,7 +2,7 @@
 Name=Input Sources
 Name[hu]=Beviteli Források
 Name[pl]=Źródła wprowadzdania danych
-Name[pt_BR]=Métodos de Entrada de Teclado
+Name[pt]=Métodos de Entrada de Teclado
 Type=Application
 Exec=cosmic-applet-input-sources
 Terminal=false

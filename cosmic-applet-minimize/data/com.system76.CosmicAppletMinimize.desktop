@@ -2,7 +2,7 @@
 Name=Minimized Windows
 Name[hu]=Kis méretű ablakok
 Name[pl]=Zminimalizowane okna
-Name[pt_BR]=Janelas Minimizadas
+Name[pt]=Janelas Minimizadas
 Type=Application
 Exec=cosmic-applet-minimize
 Terminal=false

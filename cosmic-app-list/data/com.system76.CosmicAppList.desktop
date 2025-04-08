@@ -2,7 +2,7 @@
 Name=App Tray
 Name[hu]=Alkalmazástálca
 Name[pl]=Zasobnik aplikacji
-Name[pt_BR]=Bandeja de Aplicativos
+Name[pt]=Bandeja de Aplicativos
 Type=Application
 Exec=cosmic-app-list
 Terminal=false

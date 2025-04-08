@@ -3,6 +3,7 @@ Name=Tiling
 Name[hu]=Csempézés
 Name[pl]=Kafelkowanie
 Name[pt_BR]=Janelas em Mosaico
+Name[pt]=Janelas em Mosaico
 Type=Application
 Exec=cosmic-applet-tiling
 Terminal=false
