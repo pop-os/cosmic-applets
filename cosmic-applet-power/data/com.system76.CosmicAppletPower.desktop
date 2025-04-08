@@ -2,7 +2,7 @@
 Name=User Session
 Name[hu]=Felhasználói Munkamenet
 Name[pl]=Sesja użytkownika
-Name[pt_BR]=Sessão de Usuário
+Name[pt]=Sessão de Usuário
 Type=Application
 Exec=cosmic-applet-power
 Terminal=false

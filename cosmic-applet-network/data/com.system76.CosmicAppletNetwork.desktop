@@ -2,7 +2,7 @@
 Name=Network
 Name[hu]=Hálózat
 Name[pl]=Sieć
-Name[pt_BR]=Rede
+Name[pt]=Rede
 Type=Application
 Exec=cosmic-applet-network
 Terminal=false

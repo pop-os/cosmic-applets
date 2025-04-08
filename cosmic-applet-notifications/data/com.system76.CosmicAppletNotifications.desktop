@@ -2,7 +2,7 @@
 Name=Notifications Center
 Name[hu]=Értesítési központ
 Name[pl]=Centrum powiadomień
-Name[pt_BR]=Central de Notificações
+Name[pt]=Central de Notificações
 Type=Application
 Exec=cosmic-applet-notifications
 Terminal=false
