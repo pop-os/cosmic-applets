@@ -181,7 +181,11 @@ impl cosmic::Application for Power {
                 }
                 Task::none()
             }
-            Message::Surface(surface_message) => unimplemented!(),
+            Message::Surface(a) => {
+                return cosmic::task::message(cosmic::Action::Cosmic(
+                    cosmic::app::Action::Surface(a),
+                ));
+            }
         }
     }
 
@@ -230,12 +234,18 @@ impl cosmic::Application for Power {
             ];
 
             let power = row![
-                power_buttons("system-suspend-symbolic", fl!("suspend"))
-                    .on_press(Message::Action(PowerAction::Suspend)),
-                power_buttons("system-reboot-symbolic", fl!("restart"))
-                    .on_press(Message::Action(PowerAction::Restart)),
-                power_buttons("system-shutdown-symbolic", fl!("shutdown"))
-                    .on_press(Message::Action(PowerAction::Shutdown)),
+                power_buttons(
+                    "system-suspend-symbolic",
+                    Message::Action(PowerAction::Suspend)
+                ),
+                power_buttons(
+                    "system-reboot-symbolic",
+                    Message::Action(PowerAction::Restart)
+                ),
+                power_buttons(
+                    "system-shutdown-symbolic",
+                    Message::Action(PowerAction::Shutdown)
+                )
             ]
             .spacing(space_m)
             .padding([0, space_m]);
@@ -262,13 +272,13 @@ impl cosmic::Application for Power {
     }
 }
 
-fn power_buttons(name: &str, msg: String) -> cosmic::widget::Button<Message> {
+fn power_buttons(name: &str, on_press: Message) -> button::Button<Message> {
     button::custom(
-        column![text_icon(name, 40), text::body(msg)]
-            .spacing(4)
-            .align_x(Alignment::Center)
-            .width(Length::Fill),
+        widget::container(text_icon(name, 40))
+            .width(Length::Fill)
+            .center(Length::Fill),
     )
+    .on_press(on_press)
     .width(Length::Fill)
     .height(Length::Fixed(76.0))
     .class(theme::Button::Text)
