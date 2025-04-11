@@ -3,7 +3,6 @@ Name=Notifications Tray
 Name[hu]=Értesítési terület
 Name[nl]=Meldingsbeheerder
 Name[pl]=Zasobnik powiadomień
-Name[pt]=Área de estado do applet Cosmic
 Name[pt]=Área de Notificações
 Type=Application
 Exec=cosmic-applet-status-area
