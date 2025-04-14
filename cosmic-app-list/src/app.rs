@@ -1453,6 +1453,7 @@ impl cosmic::Application for CosmicAppList {
                             .to_string(),
                         self.popup.is_some(),
                         Message::Surface,
+                        None,
                     )
                     .into()
             })
@@ -1547,6 +1548,7 @@ impl cosmic::Application for CosmicAppList {
                             .to_string(),
                         self.popup.is_some(),
                         Message::Surface,
+                        None,
                     )
                     .into()
             })
@@ -1964,6 +1966,7 @@ impl cosmic::Application for CosmicAppList {
                                 .to_string(),
                             self.popup.is_some(),
                             Message::Surface,
+                            Some(id),
                         )
                         .into()
                 })
@@ -2063,6 +2066,7 @@ impl cosmic::Application for CosmicAppList {
                                 .to_string(),
                             self.popup.is_some(),
                             Message::Surface,
+                            Some(id),
                         )
                         .into()
                 })

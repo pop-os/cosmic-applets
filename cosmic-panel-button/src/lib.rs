@@ -136,6 +136,7 @@ impl cosmic::Application for Button {
                         self.desktop.name.clone(),
                         false,
                         Msg::Surface,
+                        None,
                     ),
                 )
             } else {
