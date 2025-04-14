@@ -576,11 +576,8 @@ fn find_desktop_entries<'a>(
     app_ids.iter().map(|fav| {
         let unicase_fav = fde::unicase::Ascii::new(fav.as_str());
         fde::find_app_by_id(desktop_entries, unicase_fav)
-            .unwrap_or_else(|| {
-                panic!("could not find {fav}");
-                &fde::DesktopEntry::from_appid(fav.clone()).to_owned()
-            })
-            .to_owned()
+            .map(ToOwned::to_owned)
+            .unwrap_or_else(|| fde::DesktopEntry::from_appid(fav.clone()).to_owned())
     })
 }
 
@@ -1066,26 +1063,27 @@ impl cosmic::Application for CosmicAppList {
                             let unicase_appid = fde::unicase::Ascii::new(&*info.app_id);
                             let new_desktop_info =
                                 match fde::find_app_by_id(&self.desktop_entries, unicase_appid) {
-                                    Some(appid) => appid,
+                                    Some(appid) => appid.clone(),
                                     None => {
                                         // Update desktop entries in case it was not found.
+
                                         self.update_desktop_entries();
                                         match fde::find_app_by_id(
                                             &self.desktop_entries,
                                             unicase_appid,
                                         ) {
-                                            Some(appid) => appid,
+                                            Some(appid) => appid.clone(),
                                             None => {
                                                 tracing::error!(
                                                     id = info.app_id,
                                                     "could not find desktop entry for app"
                                                 );
-                                                return Task::none();
+
+                                                fde::DesktopEntry::from_appid(info.app_id.clone())
                                             }
                                         }
                                     }
-                                }
-                                .clone();
+                                };
 
                             if let Some(t) = self
                                 .active_list
