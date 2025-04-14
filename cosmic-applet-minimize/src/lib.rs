@@ -317,6 +317,7 @@ impl cosmic::Application for Minimize {
                     app.name.clone(),
                     self.overflow_popup.is_some(),
                     Message::Surface,
+                    None,
                 )
                 .into()
         });
