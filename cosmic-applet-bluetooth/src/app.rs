@@ -34,6 +34,7 @@ use crate::{
 
 static BLUETOOTH_ENABLED: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
 
+#[inline]
 pub fn run() -> cosmic::iced::Result {
     cosmic::applet::run::<CosmicBluetoothApplet>(())
 }
@@ -53,6 +54,7 @@ struct CosmicBluetoothApplet {
 }
 
 impl CosmicBluetoothApplet {
+    #[inline]
     fn update_icon(&mut self) {
         self.icon_name = if self.bluer_state.bluetooth_enabled {
             "cosmic-applet-bluetooth-active-symbolic"
@@ -117,7 +119,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
                     self.popup.replace(new_id);
                     self.timeline = Timeline::new();
 
-                    let mut popup_settings = self.core.applet.get_popup_settings(
+                    let popup_settings = self.core.applet.get_popup_settings(
                         self.core.main_window_id().unwrap(),
                         new_id,
                         None,
@@ -348,6 +350,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
         } = theme::active().cosmic().spacing;
 
         let mut known_bluetooth = vec![];
+        // PERF: This should be pre-filtered in an update.
         for dev in self.bluer_state.devices.iter().filter(|d| {
             !self
                 .request_confirmation
@@ -355,7 +358,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
                 .map_or(false, |(dev, _, _)| d.address == dev.address)
         }) {
             let mut row = row![
-                icon::from_name(dev.icon.as_str()).size(16).symbolic(true),
+                icon::from_name(dev.icon).size(16).symbolic(true),
                 text::body(dev.name.clone())
                     .align_x(Alignment::Start)
                     .align_y(Alignment::Center)
@@ -364,12 +367,8 @@ impl cosmic::Application for CosmicBluetoothApplet {
             .align_y(Alignment::Center)
             .spacing(12);
 
-            if let Some(DeviceProperty::BatteryPercentage(battery)) = dev
-                .properties
-                .iter()
-                .find(|p| matches!(p, DeviceProperty::BatteryPercentage(_)))
-            {
-                let icon = match *battery {
+            if let Some(battery) = dev.battery_percent {
+                let icon = match battery {
                     b if b >= 20 && b < 40 => "battery-low",
                     b if b < 20 => "battery-caution",
                     _ => "battery",
@@ -474,9 +473,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
         if let Some((device, pin, _)) = self.request_confirmation.as_ref() {
             let row = column![
                 padded_control(row![
-                    icon::from_name(device.icon.as_str())
-                        .size(16)
-                        .symbolic(true),
+                    icon::from_name(device.icon).size(16).symbolic(true),
                     text::body(&device.name)
                         .align_x(Alignment::Start)
                         .align_y(Alignment::Center)
@@ -528,7 +525,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
                     && (d.has_name() || d.is_known_device_type())
             }) {
                 let row = row![
-                    icon::from_name(dev.icon.as_str()).size(16).symbolic(true),
+                    icon::from_name(dev.icon).size(16).symbolic(true),
                     text::body(dev.name.clone()).align_x(Alignment::Start),
                 ]
                 .align_y(Alignment::Center)
