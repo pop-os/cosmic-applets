@@ -18,6 +18,7 @@ use cosmic::{
     iced_futures::stream,
 };
 
+use futures::{stream::FuturesUnordered, FutureExt};
 use rand::Rng;
 use tokio::{
     spawn,
@@ -28,8 +29,8 @@ use tokio::{
     task::JoinHandle,
     time::timeout,
 };
-
 // Copied from https://github.com/bluez/bluez/blob/39467578207889fd015775cbe81a3db9dd26abea/src/dbus-common.c#L53
+#[inline]
 fn device_type_to_icon(device_type: &str) -> &'static str {
     match device_type {
         "computer" => "laptop-symbolic",
@@ -49,6 +50,7 @@ fn device_type_to_icon(device_type: &str) -> &'static str {
     }
 }
 
+#[inline]
 pub fn bluetooth_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
     id: I,
 ) -> iced::Subscription<BluerEvent> {
@@ -70,7 +72,7 @@ pub fn bluetooth_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
                     .await;
             };
 
-            let state = session_state.bluer_state().await;
+            let state = bluer_state(&session_state.adapter).await;
 
             // reconnect to paired and trusted devices
             if state.bluetooth_enabled {
@@ -90,29 +92,28 @@ pub fn bluetooth_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
                 })
                 .await;
 
-            let mut event_handler = async |event| match event {
-                BluerSessionEvent::ChangesProcessed(state) => {
-                    _ = output.send(BluerEvent::DevicesChanged { state }).await;
-                }
+            let mut event_handler = async |event| {
+                let message = match event {
+                    BluerSessionEvent::ChangesProcessed(state) => {
+                        BluerEvent::DevicesChanged { state }
+                    }
 
-                BluerSessionEvent::RequestResponse {
-                    req,
-                    state,
-                    err_msg,
-                } => {
-                    _ = output
-                        .send(BluerEvent::RequestResponse {
-                            req,
-                            state,
-                            err_msg,
-                        })
-                        .await;
-                }
-                BluerSessionEvent::AgentEvent(e) => {
-                    _ = output.send(BluerEvent::AgentEvent(e)).await;
-                }
+                    BluerSessionEvent::RequestResponse {
+                        req,
+                        state,
+                        err_msg,
+                    } => BluerEvent::RequestResponse {
+                        req,
+                        state,
+                        err_msg,
+                    },
 
-                _ => {}
+                    BluerSessionEvent::AgentEvent(e) => BluerEvent::AgentEvent(e),
+
+                    _ => return,
+                };
+
+                _ = output.send(message).await;
             };
 
             let mut interval = tokio::time::interval(Duration::from_secs(1));
@@ -124,6 +125,7 @@ pub fn bluetooth_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
 
                 if let Some(event) = session_rx.recv().await {
                     event_handler(event).await;
+                    // Consume any additional available events.
                     while let Some(event) = session_rx.try_recv().ok() {
                         event_handler(event).await;
                     }
@@ -190,15 +192,18 @@ pub enum BluerDeviceStatus {
 #[derive(Debug, Clone)]
 pub struct BluerDevice {
     pub name: String,
+    pub icon: &'static str,
     pub address: Address,
     pub status: BluerDeviceStatus,
-    pub properties: Vec<DeviceProperty>,
-    pub icon: String,
+    pub battery_percent: Option<u8>,
+    pub is_paired: bool,
+    pub is_trusted: bool,
 }
 
 impl Eq for BluerDevice {}
 
 impl Ord for BluerDevice {
+    #[inline]
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         match self.status.cmp(&other.status) {
             std::cmp::Ordering::Equal => self.name.to_lowercase().cmp(&other.name.to_lowercase()),
@@ -208,6 +213,7 @@ impl Ord for BluerDevice {
 }
 
 impl PartialOrd for BluerDevice {
+    #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         match self.status.cmp(&other.status) {
             std::cmp::Ordering::Equal => {
@@ -219,6 +225,7 @@ impl PartialOrd for BluerDevice {
 }
 
 impl PartialEq for BluerDevice {
+    #[inline]
     fn eq(&self, other: &Self) -> bool {
         self.name == other.name && self.address == other.address
     }
@@ -227,18 +234,26 @@ impl PartialEq for BluerDevice {
 const DEFAULT_DEVICE_ICON: &str = "bluetooth-symbolic";
 
 impl BluerDevice {
+    #[inline(never)]
     pub async fn from_device(device: &bluer::Device) -> Self {
-        let mut name = device
-            .name()
-            .await
-            .unwrap_or_default()
-            .unwrap_or_else(|| device.address().to_string());
+        let (mut name, is_paired, is_trusted, is_connected, battery_percent, icon) = futures::join!(
+            device.name().map(|res| res
+                .ok()
+                .flatten()
+                .unwrap_or_else(|| device.address().to_string())),
+            device.is_paired().map(Result::unwrap_or_default),
+            device.is_trusted().map(Result::unwrap_or_default),
+            device.is_connected().map(Result::unwrap_or_default),
+            device.battery_percentage().map(|res| res.ok().flatten()),
+            device
+                .icon()
+                .map(|res| device_type_to_icon(&res.ok().flatten().unwrap_or_default()))
+        );
+
         if name.is_empty() {
             name = device.address().to_string();
         };
-        let is_paired = device.is_paired().await.unwrap_or_default();
-        let is_connected = device.is_connected().await.unwrap_or_default();
-        let properties = device.all_properties().await.unwrap_or_default();
+
         let status = if is_connected {
             BluerDeviceStatus::Connected
         } else if is_paired {
@@ -246,44 +261,30 @@ impl BluerDevice {
         } else {
             BluerDeviceStatus::Disconnected
         };
-        let icon = properties
-            .iter()
-            .find_map(|p| {
-                if let DeviceProperty::Icon(icon) = p {
-                    Some(device_type_to_icon(icon.clone().as_str()).to_string())
-                } else {
-                    None
-                }
-            })
-            .unwrap_or_else(|| device_type_to_icon(DEFAULT_DEVICE_ICON).to_string());
 
         Self {
             name,
+            icon,
             address: device.address(),
             status,
-            properties,
-            icon,
+            battery_percent,
+            is_paired,
+            is_trusted,
         }
     }
 
+    #[inline]
     fn paired_and_trusted(&self) -> bool {
-        self.properties
-            .iter()
-            .filter(|p| {
-                matches!(
-                    p,
-                    DeviceProperty::Trusted(true) | DeviceProperty::Paired(true)
-                )
-            })
-            .count()
-            == 2
+        self.is_paired && self.is_trusted
     }
 
+    #[inline]
     #[must_use]
     pub fn is_known_device_type(&self) -> bool {
         self.icon != DEFAULT_DEVICE_ICON
     }
 
+    #[inline]
     #[must_use]
     pub fn has_name(&self) -> bool {
         self.name != self.address.to_string()
@@ -326,9 +327,8 @@ pub struct BluerSessionState {
 }
 
 impl BluerSessionState {
-    pub(crate) async fn new(session: Session) -> anyhow::Result<Self> {
+    async fn new(session: Session) -> anyhow::Result<Self> {
         let adapter = session.default_adapter().await?;
-        let devices = build_device_list(&adapter).await;
         let (tx, rx) = tokio::sync::mpsc::channel(100);
         let (req_tx, req_rx) = channel(100);
         let tx_clone_1 = tx.clone();
@@ -524,6 +524,7 @@ impl BluerSessionState {
         Ok(self_)
     }
 
+    #[inline]
     fn listen_bluetooth_power_changes(&self) {
         let tx = self.tx.clone();
         let req_tx = self.req_tx.clone();
@@ -532,13 +533,15 @@ impl BluerSessionState {
         let _handle: JoinHandle<anyhow::Result<()>> = spawn(async move {
             let mut status = adapter_clone.is_powered().await.unwrap_or_default();
             let mut interval = tokio::time::interval(Duration::from_secs(3));
+            let mut devices = Vec::new();
             loop {
                 interval.tick().await;
                 let new_status = adapter_clone.is_powered().await.unwrap_or_default();
+                devices = build_device_list(devices, &adapter_clone).await;
                 if new_status != status {
                     status = new_status;
                     let state = BluerState {
-                        devices: build_device_list(&adapter_clone).await,
+                        devices: devices.clone(),
                         bluetooth_enabled: status,
                     };
                     if state.bluetooth_enabled {
@@ -555,7 +558,8 @@ impl BluerSessionState {
         });
     }
 
-    pub(crate) fn process_changes(&mut self) {
+    #[inline]
+    fn process_changes(&mut self) {
         let tx = self.tx.clone();
         let req_tx = self.req_tx.clone();
         let Some(mut wake_up) = self.wake_up_discover_rx.take() else {
@@ -565,8 +569,8 @@ impl BluerSessionState {
         let adapter_clone = self.adapter.clone();
         let _monitor_devices: tokio::task::JoinHandle<Result<(), anyhow::Error>> = spawn(
             async move {
-                let mut milli_timeout = 10;
                 let mut change_stream = {
+                    let mut milli_timeout = 10;
                     let mut res = adapter_clone.discover_devices_with_changes().await;
                     while res.is_err() {
                         _ = tokio::time::timeout(
@@ -577,14 +581,15 @@ impl BluerSessionState {
                         res = adapter_clone.discover_devices_with_changes().await;
                         milli_timeout = milli_timeout.saturating_mul(5);
                     }
-                    milli_timeout = 10;
                     res.unwrap()
                 };
 
                 let mut interval = tokio::time::interval(Duration::from_secs(1));
 
                 loop {
+                    let mut milli_timeout = 10;
                     let mut devices: Vec<BluerDevice> = Vec::new();
+                    let mut new_devices = Vec::new();
                     'outer: loop {
                         tokio::select! {
                             change = timeout(Duration::from_millis(milli_timeout), change_stream.next()) => {
@@ -601,35 +606,34 @@ impl BluerSessionState {
                             }
                         };
 
-                        let mut new_devices = build_device_list(&adapter_clone).await;
+                        new_devices = build_device_list(new_devices, &adapter_clone).await;
                         for d in new_devices
                             .iter()
                             .filter(|d| !devices.contains(d) && d.paired_and_trusted())
                         {
                             _ = req_tx.send(BluerRequest::ConnectDevice(d.address)).await;
                         }
-                        devices = mem::take(&mut new_devices);
 
+                        mem::swap(&mut new_devices, &mut devices);
                         let _ = tx
                             .send(BluerSessionEvent::ChangesProcessed(BluerState {
-                                devices: build_device_list(&adapter_clone).await,
+                                devices: devices.clone(),
                                 bluetooth_enabled: adapter_clone
                                     .is_powered()
                                     .await
                                     .unwrap_or_default(),
                             }))
                             .await;
-                        // reset timeout
-                        milli_timeout = 10;
+                        interval.tick().await;
                     }
                     let _ = tx.send(BluerSessionEvent::ChangeStreamEnded).await;
-                    interval.tick().await;
                 }
             },
         );
     }
 
-    pub(crate) fn process_requests(&self, request_rx: Receiver<BluerRequest>) {
+    #[inline]
+    fn process_requests(&self, request_rx: Receiver<BluerRequest>) {
         let active_requests = self.active_requests.clone();
         let adapter = self.adapter.clone();
         let tx = self.tx.clone();
@@ -740,15 +744,10 @@ impl BluerSessionState {
                         BluerRequest::StateUpdate => {}
                     };
 
-                    let state = BluerState {
-                        devices: build_device_list(&adapter_clone).await,
-                        bluetooth_enabled: adapter_clone.is_powered().await.unwrap_or_default(),
-                    };
-
                     let _ = tx_clone
                         .send(BluerSessionEvent::RequestResponse {
                             req: req_clone,
-                            state,
+                            state: bluer_state(&adapter_clone).await,
                             err_msg,
                         })
                         .await;
@@ -763,28 +762,42 @@ impl BluerSessionState {
             Ok(())
         });
     }
+}
 
-    pub(crate) async fn bluer_state(&self) -> BluerState {
-        BluerState {
-            devices: build_device_list(&self.adapter).await,
-            // TODO is this a proper way of checking if bluetooth is enabled?
-            bluetooth_enabled: self.adapter.is_powered().await.unwrap_or_default(),
-        }
+#[inline]
+async fn bluer_state(adapter: &Adapter) -> BluerState {
+    let (devices, bluetooth_enabled) = futures::join!(
+        build_device_list(Vec::new(), adapter),
+        // TODO is this a proper way of checking if bluetooth is enabled?
+        adapter.is_powered().map(Result::unwrap_or_default),
+    );
+
+    BluerState {
+        devices,
+        bluetooth_enabled,
     }
 }
 
-async fn build_device_list(adapter: &Adapter) -> Vec<BluerDevice> {
+#[inline(never)]
+async fn build_device_list(mut devices: Vec<BluerDevice>, adapter: &Adapter) -> Vec<BluerDevice> {
     let addrs = adapter.device_addresses().await.unwrap_or_default();
-    let mut devices = Vec::with_capacity(addrs.len());
 
-    for address in addrs {
-        let device = match adapter.device(address) {
-            Ok(device) => device,
-            Err(_) => continue,
-        };
-
-        devices.push(BluerDevice::from_device(&device).await);
+    devices.clear();
+    if addrs.len() > devices.capacity() {
+        devices.reserve(addrs.len() - devices.capacity());
     }
+
+    // Concurrently collect bluer devices from each address.
+    let mut device_stream = addrs
+        .into_iter()
+        .filter_map(|address| adapter.device(address).ok())
+        .map(async move |device| BluerDevice::from_device(&device).await)
+        .collect::<FuturesUnordered<_>>();
+
+    while let Some(device) = device_stream.next().await {
+        devices.push(device)
+    }
+
     devices.sort();
     devices
 }

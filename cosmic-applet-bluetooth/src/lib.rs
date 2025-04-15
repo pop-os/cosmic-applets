@@ -8,6 +8,7 @@ mod localize;
 
 use crate::localize::localize;
 
+#[inline]
 pub fn run() -> cosmic::iced::Result {
     localize();
     app::run()
