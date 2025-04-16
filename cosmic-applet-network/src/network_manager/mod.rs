@@ -389,7 +389,10 @@ impl NetworkManagerState {
         }
         let mut known_ssid = Vec::with_capacity(known_conns.len());
         for c in known_conns {
-            let s = c.get_settings().await.unwrap();
+            let Ok(s) = c.get_settings().await else {
+                tracing::info!("Failed to get settings for known connection");
+                continue;
+            };
             let s = Settings::new(s);
             if let Some(cur_ssid) = s
                 .wifi
