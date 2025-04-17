@@ -27,8 +27,8 @@ use tokio::{
         Mutex,
     },
     task::JoinHandle,
-    time::timeout,
 };
+
 // Copied from https://github.com/bluez/bluez/blob/39467578207889fd015775cbe81a3db9dd26abea/src/dbus-common.c#L53
 #[inline]
 fn device_type_to_icon(device_type: &str) -> &'static str {
@@ -299,7 +299,6 @@ pub enum BluerSessionEvent {
         err_msg: Option<String>,
     },
     ChangesProcessed(BluerState),
-    ChangeStreamEnded, // TODO can we just restart the stream in a new task?
     AgentEvent(BluerAgentEvent),
 }
 
@@ -567,69 +566,57 @@ impl BluerSessionState {
             return;
         };
         let adapter_clone = self.adapter.clone();
-        let _monitor_devices: tokio::task::JoinHandle<Result<(), anyhow::Error>> = spawn(
-            async move {
-                let mut change_stream = {
-                    let mut milli_timeout = 10;
-                    let mut res = adapter_clone.discover_devices_with_changes().await;
-                    while res.is_err() {
-                        _ = tokio::time::timeout(
-                            Duration::from_millis(milli_timeout),
-                            wake_up.recv(),
-                        )
-                        .await;
-                        res = adapter_clone.discover_devices_with_changes().await;
-                        milli_timeout = milli_timeout.saturating_mul(5);
-                    }
-                    res.unwrap()
-                };
-
-                let mut interval = tokio::time::interval(Duration::from_secs(1));
+        let _monitor_devices: tokio::task::JoinHandle<Result<(), anyhow::Error>> =
+            spawn(async move {
+                let mut devices: Vec<BluerDevice> = Vec::new();
 
                 loop {
-                    let mut milli_timeout = 10;
-                    let mut devices: Vec<BluerDevice> = Vec::new();
-                    let mut new_devices = Vec::new();
-                    'outer: loop {
-                        tokio::select! {
-                            change = timeout(Duration::from_millis(milli_timeout), change_stream.next()) => {
-                                if let Ok(e) = change {
-                                    if e.is_none() {
-                                        break 'outer;
-                                    }
-                                } else {
-                                    milli_timeout = milli_timeout.saturating_mul(2);
-                                    continue;
+                    let wakeup_fut = wake_up.recv();
+
+                    // Listens for process changes and builds edvice lists.
+                    let listener_fut = async {
+                        let mut new_devices = Vec::new();
+                        let mut interval = tokio::time::interval(Duration::from_secs(1));
+                        let mut change_stream =
+                            match adapter_clone.discover_devices_with_changes().await {
+                                Ok(stream) => stream,
+                                Err(_) => {
+                                    interval.tick().await;
+                                    return;
                                 }
-                            }
-                            _wake = wake_up.recv() => {
-                            }
-                        };
+                            };
 
-                        new_devices = build_device_list(new_devices, &adapter_clone).await;
-                        for d in new_devices
-                            .iter()
-                            .filter(|d| !devices.contains(d) && d.paired_and_trusted())
-                        {
-                            _ = req_tx.send(BluerRequest::ConnectDevice(d.address)).await;
+                        while let Some(_) = change_stream.next().await {
+                            new_devices = build_device_list(new_devices, &adapter_clone).await;
+                            for d in new_devices
+                                .iter()
+                                .filter(|d| !devices.contains(d) && d.paired_and_trusted())
+                            {
+                                _ = req_tx.send(BluerRequest::ConnectDevice(d.address)).await;
+                            }
+
+                            let _ = tx
+                                .send(BluerSessionEvent::ChangesProcessed(BluerState {
+                                    devices: new_devices.clone(),
+                                    bluetooth_enabled: adapter_clone
+                                        .is_powered()
+                                        .await
+                                        .unwrap_or_default(),
+                                }))
+                                .await;
+
+                            devices.clear();
+                            mem::swap(&mut new_devices, &mut devices);
+                            interval.tick().await;
                         }
+                    };
 
-                        mem::swap(&mut new_devices, &mut devices);
-                        let _ = tx
-                            .send(BluerSessionEvent::ChangesProcessed(BluerState {
-                                devices: devices.clone(),
-                                bluetooth_enabled: adapter_clone
-                                    .is_powered()
-                                    .await
-                                    .unwrap_or_default(),
-                            }))
-                            .await;
-                        interval.tick().await;
-                    }
-                    let _ = tx.send(BluerSessionEvent::ChangeStreamEnded).await;
+                    futures::pin_mut!(listener_fut);
+                    futures::pin_mut!(wakeup_fut);
+
+                    futures::future::select(listener_fut, wakeup_fut).await;
                 }
-            },
-        );
+            });
     }
 
     #[inline]
