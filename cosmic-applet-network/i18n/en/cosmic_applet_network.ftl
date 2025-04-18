@@ -3,6 +3,7 @@ airplane-mode = Airplane mode
 airplane-mode-on = Airplane mode is on
 turn-off-airplane-mode = Turn off to enable Wi-Fi, Bluetooth and mobile broadband.
 wifi = Wi-Fi
+identity = Identity
 ipv4 = IPv4 address
 ipv6 = IPv6 address
 mac = MAC
