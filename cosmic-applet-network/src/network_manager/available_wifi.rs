@@ -2,7 +2,10 @@
 
 use cosmic_dbus_networkmanager::{
     device::wireless::WirelessDevice,
-    interface::enums::{ApFlags, DeviceState},
+    interface::{
+        access_point::AccessPointProxy,
+        enums::{ApFlags, ApSecurityFlags, DeviceState},
+    },
 };
 
 use futures_util::StreamExt;
@@ -42,7 +45,22 @@ pub async fn handle_wireless_device(
             if access_point.strength > strength {
                 continue;
             }
-        }
+        };
+        let proxy: &AccessPointProxy = &ap;
+        let Ok(flags) = ap.rsn_flags().await else {
+            continue;
+        };
+
+        let network_type = if flags.intersects(ApSecurityFlags::KEY_MGMT_802_1X) {
+            NetworkType::EAP
+        } else if flags.intersects(ApSecurityFlags::KEY_MGMTPSK) {
+            NetworkType::PSK
+        } else if flags.is_empty() {
+            NetworkType::Open
+        } else {
+            continue;
+        };
+
         aps.insert(
             ssid.clone(),
             AccessPoint {
@@ -56,6 +74,7 @@ pub async fn handle_wireless_device(
                     .and_then(|str_addr| HwAddress::from_str(str_addr))
                     .unwrap_or_default(),
                 wps_push,
+                network_type,
             },
         );
     }
@@ -75,4 +94,15 @@ pub struct AccessPoint {
     pub path: ObjectPath<'static>,
     pub hw_address: HwAddress,
     pub wps_push: bool,
+    pub network_type: NetworkType,
+}
+
+// TODO do we want to support eap methods other than peap in the applet?
+// Then we'd need a dropdown for the eap method,
+// and tls requires a cert instead of a password
+#[derive(Debug, Clone, Copy)]
+pub enum NetworkType {
+    Open,
+    PSK,
+    EAP,
 }
