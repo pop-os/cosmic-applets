@@ -325,7 +325,7 @@ impl cosmic::Application for Window {
                         height: height.max(1.) as i32,
                     };
 
-                    popup_settings.positioner.size = Some((300, 500));
+                    popup_settings.positioner.size = None;
 
                     get_popup(popup_settings)
                 }
