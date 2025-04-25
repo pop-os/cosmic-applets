@@ -1096,7 +1096,12 @@ impl cosmic::Application for CosmicAppList {
                                                             .map(|x| x.to_string())
                                                             .unwrap_or_default();
 
-                                                        if localised_name == info.title {
+                                                        if localised_name == info.title
+                                                            && entry
+                                                                .categories()
+                                                                .unwrap_or_default()
+                                                                .contains(&"Game")
+                                                        {
                                                             fallback_entry = entry.clone();
                                                             break;
                                                         }
