@@ -1081,7 +1081,7 @@ impl cosmic::Application for CosmicAppList {
 
                                                 let mut fallback_entry =
                                                     fde::DesktopEntry::from_appid(
-                                                        info.app_id.clone()
+                                                        info.app_id.clone(),
                                                     );
 
                                                 // proton opens games as steam_app_X, where X is either
