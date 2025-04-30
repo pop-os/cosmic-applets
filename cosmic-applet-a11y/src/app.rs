@@ -4,7 +4,6 @@
 use crate::{
     backend::{
         self,
-        dbus::{DBusRequest, DBusUpdate},
         wayland::{AccessibilityEvent, AccessibilityRequest, WaylandUpdate},
     },
     fl,
@@ -26,6 +25,7 @@ use cosmic::{
     Element, Task,
 };
 use cosmic_protocols::a11y::v1::client::cosmic_a11y_manager_v1::Filter;
+use cosmic_settings_subscriptions::accessibility::{self, DBusRequest, DBusUpdate};
 use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -290,7 +290,7 @@ impl cosmic::Application for CosmicA11yApplet {
 
     fn subscription(&self) -> Subscription<Message> {
         Subscription::batch(vec![
-            backend::dbus::subscription().map(Message::DBusUpdate),
+            accessibility::subscription().map(Message::DBusUpdate),
             backend::wayland::a11y_subscription().map(Message::WaylandUpdate),
             self.timeline
                 .as_subscription()
