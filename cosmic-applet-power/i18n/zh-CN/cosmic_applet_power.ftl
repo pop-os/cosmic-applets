@@ -3,6 +3,7 @@ settings = 设置...
 lock-screen = 锁定屏幕
 lock-screen-shortcut = Super + Escape
 log-out = 登出
+log-out-shortcut = Super + Shift + Escape
 suspend = 挂起
 restart = 重启
 shutdown = 关机
@@ -32,5 +33,5 @@ confirm-body =
         [lock-screen] 锁定屏幕
         [log-out] 登出
         *[other] 应用所选操作
-    }
+    } 。
 

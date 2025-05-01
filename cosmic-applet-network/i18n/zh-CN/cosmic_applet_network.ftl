@@ -3,6 +3,7 @@ airplane-mode = 飞行模式
 airplane-mode-on = 飞行模式已开启
 turn-off-airplane-mode = 关闭飞行模式以启用 Wi-Fi、蓝牙和移动宽带
 wifi = Wi-Fi
+identity = 标识
 ipv4 = IPv4 地址
 ipv6 = IPv6 地址
 mac = MAC
