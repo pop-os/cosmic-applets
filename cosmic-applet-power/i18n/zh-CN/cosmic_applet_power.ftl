@@ -26,7 +26,7 @@ confirm-title =
         *[other] 应用所选操作
     } 吗？
 confirm-body = 
-    系统将在 { $countdown } 秒内自动 { $action ->
+    系统将在 { $countdown } 秒后自动 { $action ->
         [restart] { restart }
         [suspend] { suspend }
         [shutdown] { shutdown }
