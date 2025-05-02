@@ -1079,7 +1079,46 @@ impl cosmic::Application for CosmicAppList {
                                                     "could not find desktop entry for app"
                                                 );
 
-                                                fde::DesktopEntry::from_appid(info.app_id.clone())
+                                                let mut fallback_entry =
+                                                    fde::DesktopEntry::from_appid(
+                                                        info.app_id.clone(),
+                                                    );
+
+                                                // proton opens games as steam_app_X, where X is either
+                                                // the steam appid or "default". games with a steam appid
+                                                // can have a desktop entry generated elsewhere; this
+                                                // specifically handles non-steam games opened
+                                                // under proton
+                                                // in addition, try to match WINE entries who have its
+                                                // appid = the full name of the executable (incl. .exe)
+                                                let is_proton_game =
+                                                    info.app_id == "steam_app_default";
+                                                if is_proton_game || info.app_id.ends_with(".exe") {
+                                                    for entry in &self.desktop_entries {
+                                                        let localised_name = entry
+                                                            .name(&self.locales)
+                                                            .map(|x| x.to_string())
+                                                            .unwrap_or_default();
+
+                                                        if localised_name == info.title {
+                                                            // if this is a proton game, we only want
+                                                            // to look for game entries
+                                                            if is_proton_game
+                                                                && !entry
+                                                                    .categories()
+                                                                    .unwrap_or_default()
+                                                                    .contains(&"Game")
+                                                            {
+                                                                continue;
+                                                            }
+
+                                                            fallback_entry = entry.clone();
+                                                            break;
+                                                        }
+                                                    }
+                                                }
+
+                                                fallback_entry
                                             }
                                         }
                                     }
