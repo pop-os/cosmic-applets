@@ -1091,21 +1091,27 @@ impl cosmic::Application for CosmicAppList {
                                                 // under proton
                                                 // in addition, try to match WINE entries who have its
                                                 // appid = the full name of the executable (incl. .exe)
-                                                if info.app_id == "steam_app_default"
-                                                    || info.app_id.ends_with(".exe")
-                                                {
+                                                let is_proton_game =
+                                                    info.app_id == "steam_app_default";
+                                                if is_proton_game || info.app_id.ends_with(".exe") {
                                                     for entry in &self.desktop_entries {
                                                         let localised_name = entry
                                                             .name(&self.locales)
                                                             .map(|x| x.to_string())
                                                             .unwrap_or_default();
 
-                                                        if localised_name == info.title
-                                                            && entry
-                                                                .categories()
-                                                                .unwrap_or_default()
-                                                                .contains(&"Game")
-                                                        {
+                                                        if localised_name == info.title {
+                                                            // if this is a proton game, we only want
+                                                            // to look for game entries
+                                                            if is_proton_game
+                                                                && !entry
+                                                                    .categories()
+                                                                    .unwrap_or_default()
+                                                                    .contains(&"Game")
+                                                            {
+                                                                continue;
+                                                            }
+
                                                             fallback_entry = entry.clone();
                                                             break;
                                                         }
