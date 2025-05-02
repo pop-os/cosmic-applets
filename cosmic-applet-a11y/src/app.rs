@@ -2,12 +2,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use crate::{
-    backend::{
-        self,
-        wayland::{AccessibilityEvent, AccessibilityRequest, WaylandUpdate},
-    },
+    backend::{self, wayland::WaylandUpdate},
     fl,
 };
+use cctk::sctk::reexports::calloop;
 use cosmic::{
     app,
     applet::{
@@ -15,21 +13,27 @@ use cosmic::{
         token::subscription::{activation_token_subscription, TokenRequest, TokenUpdate},
     },
     cctk::sctk::reexports::calloop::channel,
-    cosmic_theme::Spacing,
+    cosmic_config::{self, CosmicConfigEntry},
+    cosmic_theme::{CosmicPalette, Spacing, ThemeBuilder},
     iced::{
         platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
         window, Length, Subscription,
     },
-    surface, theme,
+    surface,
+    theme::{self, CosmicTheme},
     widget::{divider, text, Column},
     Element, Task,
 };
-use cosmic_protocols::a11y::v1::client::cosmic_a11y_manager_v1::Filter;
-use cosmic_settings_subscriptions::accessibility::{self, DBusRequest, DBusUpdate};
+use cosmic_settings_subscriptions::{
+    accessibility::{self, DBusRequest, DBusUpdate},
+    cosmic_a11y_manager::{AccessibilityEvent, AccessibilityRequest, ColorFilter},
+};
 use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
 use tokio::sync::mpsc::UnboundedSender;
 
 static READER_TOGGLE: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
+static FILTER_TOGGLE: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
+static HC_TOGGLE: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
 static MAGNIFIER_TOGGLE: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
 static INVERT_COLORS_TOGGLE: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
 
@@ -40,24 +44,28 @@ pub fn run() -> cosmic::iced::Result {
 #[derive(Clone, Default)]
 struct CosmicA11yApplet {
     core: cosmic::app::Core,
+    high_contrast: Option<bool>,
     reader_enabled: bool,
     magnifier_enabled: bool,
     inverted_colors_enabled: bool,
     popup: Option<window::Id>,
     dbus_sender: Option<UnboundedSender<DBusRequest>>,
-    wayland_sender: Option<channel::SyncSender<AccessibilityRequest>>,
+    wayland_sender: Option<calloop::channel::Sender<AccessibilityRequest>>,
     wayland_protocol_version: Option<u32>,
     timeline: Timeline,
     token_tx: Option<channel::Sender<TokenRequest>>,
+    screen_filter_active: bool,
 }
 
 #[derive(Debug, Clone)]
 enum Message {
     TogglePopup,
     CloseRequested(window::Id),
+    HighContrastEnabled(chain::Toggler, bool),
     ScreenReaderEnabled(chain::Toggler, bool),
     MagnifierEnabled(chain::Toggler, bool),
     InvertedColorsEnabled(chain::Toggler, bool),
+    FilterColorsEnabled(chain::Toggler, bool),
     Frame(Instant),
     Token(TokenUpdate),
     OpenSettings,
@@ -119,10 +127,20 @@ impl cosmic::Application for CosmicA11yApplet {
                     self.inverted_colors_enabled = enabled;
                     let _ = tx.send(AccessibilityRequest::ScreenFilter {
                         inverted: enabled,
-                        filter: Filter::Unknown,
+                        filter: None,
                     });
                 } else {
                     self.inverted_colors_enabled = false;
+                }
+            }
+            Message::FilterColorsEnabled(chain, enabled) => {
+                if let Some(sender) = self.wayland_sender.as_ref() {
+                    self.timeline.set_chain(chain).start();
+                    self.screen_filter_active = enabled;
+                    let _ = sender.send(AccessibilityRequest::ScreenFilter {
+                        inverted: self.inverted_colors_enabled,
+                        filter: enabled.then_some(ColorFilter::Unknown),
+                    });
                 }
             }
             Message::TogglePopup => {
@@ -149,6 +167,63 @@ impl cosmic::Application for CosmicA11yApplet {
                 if Some(id) == self.popup {
                     self.popup = None;
                 }
+            }
+            Message::HighContrastEnabled(chain, enabled) => {
+                if self.core.system_theme().cosmic().is_high_contrast == enabled
+                    || self.high_contrast.is_some_and(|hc| hc == enabled)
+                {
+                    return Task::none();
+                }
+                self.timeline.set_chain(chain).start();
+                self.high_contrast = Some(enabled);
+
+                _ = std::thread::spawn(move || {
+                    let set_hc = |is_dark: bool| {
+                        let builder_config = if is_dark {
+                            ThemeBuilder::dark_config()?
+                        } else {
+                            ThemeBuilder::light_config()?
+                        };
+                        let mut builder = match ThemeBuilder::get_entry(&builder_config) {
+                            Ok(b) => b,
+                            Err((errs, b)) => {
+                                tracing::warn!("{errs:?}");
+                                b
+                            }
+                        };
+
+                        builder.palette = if is_dark {
+                            if enabled {
+                                CosmicPalette::HighContrastDark(builder.palette.inner())
+                            } else {
+                                CosmicPalette::Dark(builder.palette.inner())
+                            }
+                        } else if enabled {
+                            CosmicPalette::HighContrastLight(builder.palette.inner())
+                        } else {
+                            CosmicPalette::Light(builder.palette.inner())
+                        };
+                        builder.write_entry(&builder_config)?;
+
+                        let new_theme = builder.build();
+
+                        let theme_config = if is_dark {
+                            CosmicTheme::dark_config()?
+                        } else {
+                            CosmicTheme::light_config()?
+                        };
+
+                        new_theme.write_entry(&theme_config)?;
+
+                        Result::<(), cosmic_config::Error>::Ok(())
+                    };
+                    if let Err(err) = set_hc(true) {
+                        tracing::warn!("{err:?}");
+                    }
+                    if let Err(err) = set_hc(false) {
+                        tracing::warn!("{err:?}");
+                    }
+                });
             }
             Message::OpenSettings => {
                 let exec = "cosmic-settings accessibility".to_string();
@@ -208,6 +283,11 @@ impl cosmic::Application for CosmicA11yApplet {
                 }
                 WaylandUpdate::State(AccessibilityEvent::ScreenFilter { inverted, .. }) => {
                     self.inverted_colors_enabled = inverted;
+                }
+                WaylandUpdate::State(AccessibilityEvent::Closed) => {
+                    self.screen_filter_active = false;
+                    self.wayland_sender = None;
+                    self.wayland_protocol_version = None;
                 }
                 WaylandUpdate::Started(tx) => {
                     self.wayland_sender = Some(tx);
@@ -269,6 +349,31 @@ impl cosmic::Application for CosmicA11yApplet {
             .width(Length::Fill),
         );
 
+        let hc_colors_toggle = padded_control(
+            anim!(
+                HC_TOGGLE,
+                &self.timeline,
+                fl!("high-contrast"),
+                self.high_contrast
+                    .unwrap_or(self.core.system_theme().cosmic().is_high_contrast),
+                Message::HighContrastEnabled,
+            )
+            .text_size(14)
+            .width(Length::Fill),
+        );
+
+        let filter_colors_toggle = padded_control(
+            anim!(
+                FILTER_TOGGLE,
+                &self.timeline,
+                fl!("filter-colors"),
+                self.screen_filter_active,
+                Message::FilterColorsEnabled,
+            )
+            .text_size(14)
+            .width(Length::Fill),
+        );
+
         let content_list = Column::with_capacity(5)
             .push(reader_toggle)
             .push_maybe(
@@ -281,6 +386,12 @@ impl cosmic::Application for CosmicA11yApplet {
                     .is_some_and(|ver| ver >= 2)
                     .then_some(invert_colors_toggle),
             )
+            .push_maybe(
+                self.wayland_protocol_version
+                    .is_some_and(|ver| ver >= 3)
+                    .then_some(filter_colors_toggle),
+            )
+            .push(hc_colors_toggle)
             .push(padded_control(divider::horizontal::default()).padding([space_xxs, space_s]))
             .push(menu_button(text::body(fl!("settings"))).on_press(Message::OpenSettings))
             .padding([8, 0]);
