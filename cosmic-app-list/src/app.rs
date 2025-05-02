@@ -584,10 +584,6 @@ fn find_desktop_entries<'a>(
 impl CosmicAppList {
     // Cache all desktop entries to use when new apps are added to the dock.
     fn update_desktop_entries(&mut self) {
-        let paths = fde::default_paths();
-        for path in paths {
-            println!("{:?}", path);
-        }
         self.desktop_entries = fde::Iter::new(fde::default_paths())
             .filter_map(|p| fde::DesktopEntry::from_path(p, Some(&self.locales)).ok())
             .collect::<Vec<_>>();
