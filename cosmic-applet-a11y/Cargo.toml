@@ -8,6 +8,7 @@ edition = "2021"
 cosmic-settings-subscriptions.workspace = true
 cosmic-settings-subscriptions.default_features = false
 cosmic-settings-subscriptions.accessibility = true
+cosmic-settings-subscriptions.cosmic_a11y_manager = true
 anyhow.workspace = true
 cctk.workspace = true
 cosmic-protocols.workspace = true
