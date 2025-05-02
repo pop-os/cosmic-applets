@@ -584,6 +584,10 @@ fn find_desktop_entries<'a>(
 impl CosmicAppList {
     // Cache all desktop entries to use when new apps are added to the dock.
     fn update_desktop_entries(&mut self) {
+        let paths = fde::default_paths();
+        for path in paths {
+            println!("{:?}", path);
+        }
         self.desktop_entries = fde::Iter::new(fde::default_paths())
             .filter_map(|p| fde::DesktopEntry::from_path(p, Some(&self.locales)).ok())
             .collect::<Vec<_>>();
@@ -1089,7 +1093,11 @@ impl cosmic::Application for CosmicAppList {
                                                 // can have a desktop entry generated elsewhere; this
                                                 // specifically handles non-steam games opened
                                                 // under proton
-                                                if info.app_id == "steam_app_default" {
+                                                // in addition, try to match WINE entries who have its
+                                                // appid = the full name of the executable (incl. .exe)
+                                                if info.app_id == "steam_app_default"
+                                                    || info.app_id.ends_with(".exe")
+                                                {
                                                     for entry in &self.desktop_entries {
                                                         let localised_name = entry
                                                             .name(&self.locales)
