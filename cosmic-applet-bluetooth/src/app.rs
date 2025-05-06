@@ -1,7 +1,7 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
-use crate::bluetooth::{BluerDeviceStatus, BluerRequest, BluerState, DeviceProperty};
+use crate::bluetooth::{set_tick, BluerDeviceStatus, BluerRequest, BluerState, DeviceProperty};
 use cosmic::{
     app,
     applet::token::subscription::{activation_token_subscription, TokenRequest, TokenUpdate},
@@ -24,6 +24,7 @@ use cosmic::{
     Element, Task,
 };
 use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
+use futures::FutureExt;
 use std::{collections::HashMap, time::Duration};
 use tokio::sync::mpsc::Sender;
 
@@ -112,7 +113,13 @@ impl cosmic::Application for CosmicBluetoothApplet {
         match message {
             Message::TogglePopup => {
                 if let Some(p) = self.popup.take() {
-                    return destroy_popup(p);
+                    return Task::batch(vec![
+                        destroy_popup(p),
+                        cosmic::task::future(
+                            set_tick(Duration::from_secs(10))
+                                .map(|_| cosmic::Action::App(Message::Ignore)),
+                        ),
+                    ]);
                 } else {
                     // TODO request update of state maybe
                     let new_id = window::Id::unique();
@@ -138,6 +145,8 @@ impl cosmic::Application for CosmicBluetoothApplet {
                             |_| cosmic::action::app(Message::Ignore),
                         ),
                         get_popup(popup_settings),
+                        cosmic::task::future(set_tick(Duration::from_secs(3)))
+                            .map(|_: ()| cosmic::Action::App(Message::Ignore)),
                     ]);
                 }
             }
@@ -286,6 +295,9 @@ impl cosmic::Application for CosmicBluetoothApplet {
                 if Some(id) == self.popup {
                     self.popup = None;
                 }
+                return cosmic::task::future(
+                    set_tick(Duration::from_secs(10)).map(|_| cosmic::Action::App(Message::Ignore)),
+                );
             }
             Message::OpenSettings => {
                 let exec = "cosmic-settings bluetooth".to_string();
