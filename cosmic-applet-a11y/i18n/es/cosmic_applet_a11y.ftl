@@ -1,3 +1,6 @@
 screen-reader = Lector de pantalla
 magnifier = Lupa
-settings = Ajustes de accesibilidad...
+invert-colors = Invertir colores
+settings = Configuraciones de accesibilidad...
+filter-colors = Filtros de colores
+high-contrast = Modo de contraste alto

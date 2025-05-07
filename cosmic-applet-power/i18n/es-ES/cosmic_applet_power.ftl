@@ -1,8 +1,9 @@
 power = Alimentación
-settings = Ajustes...
+settings = Configuración...
 lock-screen = Bloquear pantalla
 lock-screen-shortcut = Super + Escape
 log-out = Cerrar sesión
+log-out-shortcut = Super + Shift + Escape
 suspend = Suspender
 restart = Reiniciar
 shutdown = Apagar
@@ -21,9 +22,9 @@ confirm-title =
         [restart] { restart }
         [suspend] { suspend }
         [shutdown] { shutdown }
-        [log-out] Salir de todas las aplicaciones y la sesión
-        *[other] Realizar la acción seleccionada
-    } ahora?
+        [log-out] ¿Cerrar todas las aplicaciones y cerrar la sesión
+        *[other] ¿Realizar la acción seleccionada
+    }?
 confirm-body = 
     { $action ->
         [restart] El ordenador se reiniciará
