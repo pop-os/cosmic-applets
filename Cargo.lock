@@ -1307,12 +1307,14 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "chrono-tz",
+ "cosmic-config",
  "i18n-embed",
  "i18n-embed-fl",
  "icu",
  "libcosmic",
  "once_cell",
  "rust-embed",
+ "serde",
  "timedate-zbus",
  "tokio",
  "tracing",
@@ -1363,6 +1365,14 @@ dependencies = [
  "tracing",
  "tracing-log",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "cosmic-applets-config"
+version = "0.1.0"
+dependencies = [
+ "cosmic-config",
+ "serde",
 ]
 
 [[package]]
