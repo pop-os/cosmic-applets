@@ -5,6 +5,7 @@ edition = "2021"
 license = "GPL-3.0-only"
 
 [dependencies]
+cosmic-applets-config.workspace = true
 cosmic-config.workspace = true
 chrono = { version = "0.4.39", features = ["clock"] }
 chrono-tz = "0.10"

@@ -26,6 +26,7 @@ resolver = "2"
 [workspace.dependencies]
 anyhow = "1.0.95"
 cctk = { git = "https://github.com/pop-os/cosmic-protocols", package = "cosmic-client-toolkit", rev = "178eb0b" }
+cosmic-applets-config = { path = "cosmic-applets-config" }
 cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols", default-features = false, features = [
     "client",
 ], rev = "1425bd4" }
