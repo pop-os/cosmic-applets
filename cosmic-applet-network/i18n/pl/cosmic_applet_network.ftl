@@ -3,6 +3,7 @@ airplane-mode = Tryb samolotowy
 airplane-mode-on = Tryb samolotowy jest włączony
 turn-off-airplane-mode = Wyłącz by uruchomić Wi-Fi, Bluetooth i łączność komórkową
 wifi = Wi-Fi
+identity = Tożsamość
 ipv4 = Adres IPv4
 ipv6 = Adres IPv6
 mac = MAC
