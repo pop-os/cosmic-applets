@@ -1,0 +1,12 @@
+bluetooth = Bluetooth
+other-devices = Други Bluetooth устройства
+settings = Bluetooth настройки...
+connected = Свързано
+confirm-pin = Потвърдете, че следният ПИН код съвпада с този, който се показва на { $device }
+confirm = Потвърждаване
+cancel = Отказване
+unsuccessful = Сдвояването е неуспешно
+check-device = Уверете се, че {$deviceName} е включено, има обхват и е готово за сдвояване.
+try-again = Опитайте отново
+discoverable = Откриваемо
+pairable = Сдвояемо
