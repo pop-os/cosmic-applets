@@ -770,8 +770,7 @@ impl cosmic::Application for Audio {
                         slider(0.0..=150.0, self.output_volume, Message::SetOutputVolume)
                             .width(Length::FillPortion(5))
                             .breakpoints(&[100.]),
-                        text(&self.output_volume_text)
-                            .size(16)
+                        container(text(&self.output_volume_text).size(16))
                             .width(Length::FillPortion(1))
                             .align_x(Alignment::End)
                     ]
@@ -792,8 +791,7 @@ impl cosmic::Application for Audio {
                         slider(0.0..=150.0, self.input_volume, Message::SetInputVolume)
                             .width(Length::FillPortion(5))
                             .breakpoints(&[100.]),
-                        text(&self.input_volume_text)
-                            .size(16)
+                        container(text(&self.input_volume_text).size(16))
                             .width(Length::FillPortion(1))
                             .align_x(Alignment::End)
                     ]
