@@ -71,8 +71,11 @@ impl State {
 
                 iced::Task::none()
             }
-            Msg::Click(id, is_submenu) => {
-                let menu_proxy = self.item.menu_proxy().clone();
+            Msg::Click(id, is_submenu) => 'block: {
+                let Some(menu_proxy) = self.item.menu_proxy().cloned() else {
+                    tracing::error!("Msg::click on item without menu_proxy");
+                    break 'block iced::Task::none();
+                };
                 tokio::spawn(async move {
                     let _ = menu_proxy.event(id, "clicked", &0.into(), 0).await;
                 });
@@ -118,15 +121,48 @@ impl State {
     }
 
     pub fn opened(&self) {
-        let menu_proxy = self.item.menu_proxy().clone();
+        let Some(menu_proxy) = self.item.menu_proxy().cloned() else {
+            let item_proxy = self.item.item_proxy().clone();
+            tokio::spawn(async move {
+                if let Err(e) = item_proxy.activate(0, 0).await {
+                    tracing::error!("Error on Activate: {e}");
+                }
+            });
+            return;
+        };
+        let item_proxy = self.item.item_proxy().clone();
         tokio::spawn(async move {
-            let _ = menu_proxy.event(0, "opened", &0i32.into(), 0).await;
-            let _ = menu_proxy.about_to_show(0).await;
+            let is_menu = match item_proxy.item_is_menu().await {
+                Ok(is_menu) => is_menu,
+                Err(e) => {
+                    tracing::error!("Error on ItemIsMenu: {e}");
+                    false
+                }
+            };
+            if is_menu {
+                let _ = menu_proxy.event(0, "opened", &0i32.into(), 0).await;
+                let _ = menu_proxy.about_to_show(0).await;
+            } else {
+                if let Err(e) = item_proxy.activate(0, 0).await {
+                    tracing::error!("Error on Activate: {e}");
+                }
+            }
+        });
+    }
+
+    pub fn ctx_menu_activate(&self) {
+        let item_proxy = self.item.item_proxy().clone();
+        tokio::spawn(async move {
+            if let Err(e) = item_proxy.context_menu(1920, 0).await {
+                tracing::error!("Error on ContextMenu: {e}");
+            }
         });
     }
 
     pub fn closed(&self) {
-        let menu_proxy = self.item.menu_proxy().clone();
+        let Some(menu_proxy) = self.item.menu_proxy().cloned() else {
+            return;
+        };
         tokio::spawn(async move {
             let _ = menu_proxy.event(0, "closed", &0i32.into(), 0).await;
         });

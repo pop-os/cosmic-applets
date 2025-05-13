@@ -26,6 +26,7 @@ pub enum Msg {
     TogglePopup(usize),
     Hovered(usize),
     Surface(surface::Action),
+    RightPressed(usize),
 }
 
 #[derive(Default)]
@@ -188,6 +189,10 @@ impl cosmic::Application for App {
                 }
                 Task::none()
             }
+            Msg::RightPressed(id) => {
+                self.menus[&id].ctx_menu_activate();
+                Task::none()
+            }
             Msg::Hovered(id) => {
                 let mut cmds = Vec::new();
                 if let Some(old_id) = self.open_menu.take() {
@@ -261,6 +266,7 @@ impl cosmic::Application for App {
                 .on_press_down(Msg::TogglePopup(*id)),
             )
             .on_enter(Msg::Hovered(*id))
+            .on_right_press(Msg::RightPressed(*id))
             .into()
         });
         self.core

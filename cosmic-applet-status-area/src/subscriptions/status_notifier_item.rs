@@ -12,7 +12,7 @@ use zbus::zvariant::{self, OwnedValue};
 pub struct StatusNotifierItem {
     name: String,
     item_proxy: StatusNotifierItemProxy<'static>,
-    menu_proxy: DBusMenuProxy<'static>,
+    menu_proxy: Option<DBusMenuProxy<'static>>,
 }
 
 #[derive(Clone, Debug, zvariant::Value)]
@@ -44,12 +44,19 @@ impl StatusNotifierItem {
             .build()
             .await?;
 
-        let menu_path = item_proxy.menu().await?;
-        let menu_proxy = DBusMenuProxy::builder(connection)
-            .destination(dest.to_string())?
-            .path(menu_path)?
-            .build()
-            .await?;
+        let menu_proxy = match item_proxy.menu().await {
+            Ok(menu_path) => Some(
+                DBusMenuProxy::builder(connection)
+                    .destination(dest.to_string())?
+                    .path(menu_path)?
+                    .build()
+                    .await?,
+            ),
+            Err(e) => {
+                eprintln!("Error: {e}");
+                None
+            }
+        };
 
         Ok(Self {
             name,
@@ -64,7 +71,9 @@ impl StatusNotifierItem {
 
     // TODO: Only fetch changed part of layout, if that's any faster
     pub fn layout_subscription(&self) -> iced::Subscription<Result<Layout, String>> {
-        let menu_proxy = self.menu_proxy.clone();
+        let Some(menu_proxy) = self.menu_proxy.clone() else {
+            return iced::Subscription::none();
+        };
         Subscription::run_with_id(
             format!("status-notifier-item-layout-{}", &self.name),
             async move {
@@ -109,8 +118,12 @@ impl StatusNotifierItem {
         )
     }
 
-    pub fn menu_proxy(&self) -> &DBusMenuProxy<'static> {
-        &self.menu_proxy
+    pub fn menu_proxy(&self) -> Option<&DBusMenuProxy<'static>> {
+        self.menu_proxy.as_ref()
+    }
+
+    pub fn item_proxy(&self) -> &StatusNotifierItemProxy<'static> {
+        &self.item_proxy
     }
 }
 
@@ -135,6 +148,10 @@ trait StatusNotifierItem {
 
     #[zbus(signal)]
     fn new_icon(&self) -> zbus::Result<()>;
+
+    fn activate(&self, x: i32, y: i32) -> zbus::Result<()>;
+    fn context_menu(&self, x: i32, y: i32) -> zbus::Result<()>;
+    fn item_is_menu(&self) -> zbus::Result<bool>;
 }
 
 #[derive(Clone, Debug)]
