@@ -7,7 +7,7 @@ use cosmic::{
     iced::{
         self,
         platform_specific::shell::commands::popup::{destroy_popup, get_popup},
-        window, Limits, Padding, Subscription,
+        window, Subscription,
     },
     surface,
     widget::{container, mouse_area},

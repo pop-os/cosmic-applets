@@ -3,7 +3,7 @@
 
 use cosmic::{
     applet::menu_button,
-    iced::{self, Padding},
+    iced::{self},
     widget::icon,
 };
 
