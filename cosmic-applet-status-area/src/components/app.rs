@@ -7,7 +7,7 @@ use cosmic::{
     iced::{
         self,
         platform_specific::shell::commands::popup::{destroy_popup, get_popup},
-        window, Limits, Padding, Subscription,
+        window, Subscription,
     },
     surface,
     widget::{container, mouse_area},
@@ -26,6 +26,15 @@ pub enum Msg {
     TogglePopup(usize),
     Hovered(usize),
     Surface(surface::Action),
+    /// Open the item's context menu.
+    ///
+    /// Currently, this always calls `StatusNotifierItem.ContextMenu`.
+    ///
+    /// TODO: Decide if behavior should be different in cases like `ContextMenu` method missing,
+    /// but a menu being available.
+    OpenContextMenu {
+        id: usize,
+    },
 }
 
 #[derive(Default)]
@@ -188,6 +197,10 @@ impl cosmic::Application for App {
                 }
                 Task::none()
             }
+            Msg::OpenContextMenu { id } => {
+                self.menus[&id].ctx_menu_activate();
+                Task::none()
+            }
             Msg::Hovered(id) => {
                 let mut cmds = Vec::new();
                 if let Some(old_id) = self.open_menu.take() {
@@ -261,6 +274,7 @@ impl cosmic::Application for App {
                 .on_press_down(Msg::TogglePopup(*id)),
             )
             .on_enter(Msg::Hovered(*id))
+            .on_right_press(Msg::OpenContextMenu { id: *id })
             .into()
         });
         self.core

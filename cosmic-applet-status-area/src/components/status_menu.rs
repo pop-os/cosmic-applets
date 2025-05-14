@@ -3,7 +3,7 @@
 
 use cosmic::{
     applet::menu_button,
-    iced::{self, Padding},
+    iced::{self},
     widget::icon,
 };
 
@@ -71,8 +71,11 @@ impl State {
 
                 iced::Task::none()
             }
-            Msg::Click(id, is_submenu) => {
-                let menu_proxy = self.item.menu_proxy().clone();
+            Msg::Click(id, is_submenu) => 'block: {
+                let Some(menu_proxy) = self.item.menu_proxy().cloned() else {
+                    tracing::error!("Msg::click on item without menu_proxy");
+                    break 'block iced::Task::none();
+                };
                 tokio::spawn(async move {
                     let _ = menu_proxy.event(id, "clicked", &0.into(), 0).await;
                 });
@@ -112,25 +115,70 @@ impl State {
 
     pub fn subscription(&self) -> iced::Subscription<Msg> {
         iced::Subscription::batch([
-            self.item.layout_subscription().map(Msg::Layout),
+            self.item.menu_layout_subscription().map(Msg::Layout),
             self.item.icon_subscription().map(Msg::Icon),
         ])
     }
 
     pub fn opened(&self) {
-        let menu_proxy = self.item.menu_proxy().clone();
+        let Some(menu_proxy) = self.item.menu_proxy().cloned() else {
+            let item_proxy = self.item.item_proxy().clone();
+            tokio::spawn(async move {
+                let [x, y] = item_screen_pos_stub();
+                if let Err(e) = item_proxy.activate(x, y).await {
+                    tracing::error!("Error on Activate: {e}");
+                }
+            });
+            return;
+        };
+        let item_proxy = self.item.item_proxy().clone();
         tokio::spawn(async move {
-            let _ = menu_proxy.event(0, "opened", &0i32.into(), 0).await;
-            let _ = menu_proxy.about_to_show(0).await;
+            let is_menu = match item_proxy.item_is_menu().await {
+                Ok(is_menu) => is_menu,
+                Err(e) => {
+                    tracing::error!("Error on ItemIsMenu: {e}");
+                    false
+                }
+            };
+            if is_menu {
+                let _ = menu_proxy.event(0, "opened", &0i32.into(), 0).await;
+                let _ = menu_proxy.about_to_show(0).await;
+            } else {
+                let [x, y] = item_screen_pos_stub();
+                if let Err(e) = item_proxy.activate(x, y).await {
+                    tracing::error!("Error on Activate: {e}");
+                }
+            }
+        });
+    }
+
+    pub fn ctx_menu_activate(&self) {
+        let item_proxy = self.item.item_proxy().clone();
+        tokio::spawn(async move {
+            let [x, y] = item_screen_pos_stub();
+            if let Err(e) = item_proxy.context_menu(x, y).await {
+                tracing::error!("Error on ContextMenu: {e}");
+            }
         });
     }
 
     pub fn closed(&self) {
-        let menu_proxy = self.item.menu_proxy().clone();
+        let Some(menu_proxy) = self.item.menu_proxy().cloned() else {
+            return;
+        };
         tokio::spawn(async move {
             let _ = menu_proxy.event(0, "closed", &0i32.into(), 0).await;
         });
     }
+}
+
+/// Stub: Get the screen coordinates of an item
+///
+/// Used for passing coordinates for SNI `Activate` and `ContextMenu` methods.
+///
+/// TODO: Figure out how to implement
+fn item_screen_pos_stub() -> [i32; 2] {
+    [0, 0]
 }
 
 fn layout_view(layout: &Layout, expanded: Option<i32>) -> cosmic::Element<Msg> {
