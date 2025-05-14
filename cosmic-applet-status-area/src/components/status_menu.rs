@@ -115,7 +115,7 @@ impl State {
 
     pub fn subscription(&self) -> iced::Subscription<Msg> {
         iced::Subscription::batch([
-            self.item.layout_subscription().map(Msg::Layout),
+            self.item.menu_layout_subscription().map(Msg::Layout),
             self.item.icon_subscription().map(Msg::Icon),
         ])
     }

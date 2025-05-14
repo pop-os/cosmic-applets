@@ -70,7 +70,7 @@ impl StatusNotifierItem {
     }
 
     // TODO: Only fetch changed part of layout, if that's any faster
-    pub fn layout_subscription(&self) -> iced::Subscription<Result<Layout, String>> {
+    pub fn menu_layout_subscription(&self) -> iced::Subscription<Result<Layout, String>> {
         let Some(menu_proxy) = self.menu_proxy.clone() else {
             return iced::Subscription::none();
         };
