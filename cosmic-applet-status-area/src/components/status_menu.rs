@@ -124,7 +124,8 @@ impl State {
         let Some(menu_proxy) = self.item.menu_proxy().cloned() else {
             let item_proxy = self.item.item_proxy().clone();
             tokio::spawn(async move {
-                if let Err(e) = item_proxy.activate(0, 0).await {
+                let [x, y] = item_screen_pos_stub();
+                if let Err(e) = item_proxy.activate(x, y).await {
                     tracing::error!("Error on Activate: {e}");
                 }
             });
@@ -143,7 +144,8 @@ impl State {
                 let _ = menu_proxy.event(0, "opened", &0i32.into(), 0).await;
                 let _ = menu_proxy.about_to_show(0).await;
             } else {
-                if let Err(e) = item_proxy.activate(0, 0).await {
+                let [x, y] = item_screen_pos_stub();
+                if let Err(e) = item_proxy.activate(x, y).await {
                     tracing::error!("Error on Activate: {e}");
                 }
             }
@@ -153,7 +155,8 @@ impl State {
     pub fn ctx_menu_activate(&self) {
         let item_proxy = self.item.item_proxy().clone();
         tokio::spawn(async move {
-            if let Err(e) = item_proxy.context_menu(1920, 0).await {
+            let [x, y] = item_screen_pos_stub();
+            if let Err(e) = item_proxy.context_menu(x, y).await {
                 tracing::error!("Error on ContextMenu: {e}");
             }
         });
@@ -167,6 +170,15 @@ impl State {
             let _ = menu_proxy.event(0, "closed", &0i32.into(), 0).await;
         });
     }
+}
+
+/// Stub: Get the screen coordinates of an item
+///
+/// Used for passing coordinates for SNI `Activate` and `ContextMenu` methods.
+///
+/// TODO: Figure out how to implement
+fn item_screen_pos_stub() -> [i32; 2] {
+    [0, 0]
 }
 
 fn layout_view(layout: &Layout, expanded: Option<i32>) -> cosmic::Element<Msg> {
