@@ -26,7 +26,15 @@ pub enum Msg {
     TogglePopup(usize),
     Hovered(usize),
     Surface(surface::Action),
-    RightPressed(usize),
+    /// Open the item's context menu.
+    ///
+    /// Currently, this always calls `StatusNotifierItem.ContextMenu`.
+    ///
+    /// TODO: Decide if behavior should be different in cases like `ContextMenu` method missing,
+    /// but a menu being available.
+    OpenContextMenu {
+        id: usize,
+    },
 }
 
 #[derive(Default)]
@@ -189,7 +197,7 @@ impl cosmic::Application for App {
                 }
                 Task::none()
             }
-            Msg::RightPressed(id) => {
+            Msg::OpenContextMenu { id } => {
                 self.menus[&id].ctx_menu_activate();
                 Task::none()
             }
@@ -266,7 +274,7 @@ impl cosmic::Application for App {
                 .on_press_down(Msg::TogglePopup(*id)),
             )
             .on_enter(Msg::Hovered(*id))
-            .on_right_press(Msg::RightPressed(*id))
+            .on_right_press(Msg::OpenContextMenu { id: *id })
             .into()
         });
         self.core
