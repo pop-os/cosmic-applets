@@ -53,7 +53,10 @@ impl StatusNotifierItem {
                     .await?,
             ),
             Err(e) => {
-                eprintln!("Error: {e}");
+                let destination = item_proxy.inner().destination();
+                tracing::error!(
+                    "Error getting Menu property for {destination}: {e}. Treating as menuless item.",
+                );
                 None
             }
         };
