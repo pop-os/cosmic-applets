@@ -42,8 +42,8 @@ use cosmic_settings_subscriptions::{
 };
 use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
 
-use std::{collections::HashMap, path::PathBuf, time::Duration};
 use cosmic::widget::text_input;
+use std::{collections::HashMap, path::PathBuf, time::Duration};
 use tokio::sync::mpsc::UnboundedSender;
 
 // XXX improve
