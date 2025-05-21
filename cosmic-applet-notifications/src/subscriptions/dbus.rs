@@ -6,9 +6,10 @@ use cosmic::{
     iced::futures::{self, SinkExt},
     iced_futures::{stream, Subscription},
 };
+use futures_util::StreamExt;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tracing::{error, warn};
-use zbus::{export::futures_util::StreamExt, Connection};
+use zbus::Connection;
 
 #[derive(Debug)]
 pub enum State {
