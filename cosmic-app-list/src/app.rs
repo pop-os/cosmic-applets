@@ -19,7 +19,6 @@ use cctk::{
         workspace::v1::client::ext_workspace_handle_v1::ExtWorkspaceHandleV1,
     },
 };
-use cosmic::desktop::fde;
 use cosmic::desktop::fde::{get_languages_from_env, DesktopEntry};
 use cosmic::{
     app,
@@ -50,6 +49,7 @@ use cosmic::{
     },
     Apply, Element, Task,
 };
+use cosmic::{desktop::fde, widget};
 use cosmic_app_list_config::{AppListConfig, APP_ID};
 use cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::State;
 use futures::future::pending;
@@ -75,6 +75,8 @@ struct AppletIconData {
     bar_size: f32,
     padding: Padding,
 }
+
+static DND_FAVORITES: u64 = u64::MAX;
 
 impl AppletIconData {
     fn new(applet: &Context) -> Self {
@@ -364,7 +366,7 @@ enum Message {
     StartDrag(u32),
     DragFinished,
     DndEnter(f64, f64),
-    DndExit,
+    DndLeave,
     DndMotion(f64, f64),
     DndDropFinished,
     DndData(Option<DndPathBuf>),
@@ -962,8 +964,7 @@ impl cosmic::Application for CosmicAppList {
                     o.preview_index = index;
                 }
             }
-            Message::DndExit => {
-                // remove the preview and restore to original list
+            Message::DndLeave => {
                 let mut cnt = 0;
                 if let Some((_, ref toplevel_group, _, pinned_pos)) = self.dnd_source.as_ref() {
                     let mut pos = 0;
@@ -1676,7 +1677,8 @@ impl cosmic::Application for CosmicAppList {
                 DndDestination::for_data::<DndPathBuf>(
                     row(favorites).spacing(app_icon.icon_spacing),
                     |_, _| Message::DndDropFinished,
-                ),
+                )
+                .drag_id(DND_FAVORITES.clone()),
                 row(active).spacing(app_icon.icon_spacing).into(),
                 container(vertical_rule(1))
                     .height(Length::Fill)
@@ -1690,7 +1692,8 @@ impl cosmic::Application for CosmicAppList {
                 DndDestination::for_data(
                     column(favorites).spacing(app_icon.icon_spacing),
                     |_data: Option<DndPathBuf>, _| Message::DndDropFinished,
-                ),
+                )
+                .drag_id(DND_FAVORITES.clone()),
                 column(active).spacing(app_icon.icon_spacing).into(),
                 container(divider::horizontal::default())
                     .width(Length::Fill)
@@ -1702,7 +1705,7 @@ impl cosmic::Application for CosmicAppList {
         let favorites = favorites
             .on_enter(|x, y, _| Message::DndEnter(x, y))
             .on_motion(Message::DndMotion)
-            .on_leave(|| Message::DndExit);
+            .on_leave(|| Message::DndLeave);
 
         let show_pinned =
             !self.pinned_list.is_empty() || self.dnd_offer.is_some() || self.is_listening_for_dnd;
