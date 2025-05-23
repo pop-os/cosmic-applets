@@ -6,8 +6,8 @@ minutes-ago = { NUMBER($duration) ->
     [1] 1 perccel ezelőtt
     *[other] {$duration} perccel ezelőtt
 }
-show-less = Kevesebb mutatása
-show-more = Több {$more} mutatása
+show-less = Kevesebb megjelenítése
+show-more = {$more} további megjelenítése
 clear-group = Csoport törlése
 clear-all = Minden értesítés törlése
 do-not-disturb = Ne zavarjanak
