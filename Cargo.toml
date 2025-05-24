@@ -46,7 +46,7 @@ i18n-embed = { version = "0.15.3", features = [
     "desktop-requester",
 ] }
 i18n-embed-fl = "0.9"
-libcosmic = { git = "https://github.com/pop-os/libcosmic", default-features = false, features = [
+libcosmic = { git = "https://github.com/ryanabx/libcosmic", branch = "custom-panel-size", default-features = false, features = [
     "applet",
     "applet-token",
     "multi-window",
@@ -65,7 +65,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 tracing-log = "0.2.0"
 tokio = { version = "1.43.0", features = ["full"] }
-cosmic-config = { git = "https://github.com/pop-os/libcosmic" }
+cosmic-config = { git = "https://github.com/ryanabx/libcosmic", branch = "custom-panel-size" }
 serde = { version = "1.0.219", features = ["derive"] }
 
 [profile.release]
@@ -76,10 +76,16 @@ lto = "off"
 [workspace.metadata.cargo-machete]
 ignored = ["libcosmic"]
 
-# [patch."https://github.com/pop-os/libcosmic"]
-# cosmic-config = { git = "https://github.com/pop-os/libcosmic//", branch = "desktop-entries-and-icons" }
-# libcosmic = { git = "https://github.com/pop-os/libcosmic//", branch = "desktop-entries-and-icons" }
-# iced_futures = { git = "https://github.com/pop-os/libcosmic//", branch = "desktop-entries-and-icons" }
+[patch."https://github.com/ryanabx/libcosmic"]
+cosmic-config = { git = "https://github.com/ryanabx/libcosmic//", branch = "custom-panel-size" }
+libcosmic = { git = "https://github.com/ryanabx/libcosmic//", branch = "custom-panel-size" }
+iced_futures = { git = "https://github.com/ryanabx/libcosmic//", branch = "custom-panel-size" }
+
+[patch."https://github.com/pop-os/libcosmic"]
+cosmic-config = { git = "https://github.com/ryanabx/libcosmic//", branch = "custom-panel-size" }
+libcosmic = { git = "https://github.com/ryanabx/libcosmic//", branch = "custom-panel-size" }
+iced_futures = { git = "https://github.com/ryanabx/libcosmic//", branch = "custom-panel-size" }
+
 # cosmic-config = { path = "../libcosmic/cosmic-config" }
 # libcosmic = { path = "../libcosmic" }
 # iced_futures = { path = "../libcosmic/iced/futures" }
