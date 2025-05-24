@@ -88,6 +88,15 @@ impl AppletIconData {
             Size::PanelSize(PanelSize::XL) | Size::PanelSize(PanelSize::L) => (2.0, 12.0),
             Size::PanelSize(PanelSize::M) | Size::Hardcoded(_) => (2.0, 8.0),
             Size::PanelSize(PanelSize::S) | Size::PanelSize(PanelSize::XS) => (1.0, 8.0),
+            Size::PanelSize(PanelSize::Custom(s)) => {
+                if s <= 40 {
+                    (1.0, 8.0)
+                } else if s <= 56 {
+                    (2.0, 8.0)
+                } else {
+                    (2.0, 12.0)
+                }
+            }
         };
 
         let padding = padding as f32;
@@ -1475,6 +1484,13 @@ impl cosmic::Application for CosmicAppList {
             | Size::PanelSize(PanelSize::M) => 8,
             Size::PanelSize(PanelSize::S) | Size::PanelSize(PanelSize::XS) | Size::Hardcoded(_) => {
                 4
+            }
+            Size::PanelSize(PanelSize::Custom(s)) => {
+                if s < 40 {
+                    4
+                } else {
+                    8
+                }
             }
         };
         let (favorite_popup_cutoff, active_popup_cutoff) = self.panel_overflow_lengths();
