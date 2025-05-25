@@ -1,0 +1,12 @@
+bluetooth = Bluetooth
+other-devices = Andre Bluetooth-enheter
+settings = Bluetooth-innstillinger...
+connected = Tilkoblet
+confirm-pin = Vennligst bekreft at følgende PIN-kode samsvarer med den som vises på {$deviceName}
+confirm = Bekreft
+cancel = Avbryt
+unsuccessful = Sammenkobling Mislykket
+check-device = Sørg for at {$deviceName} er slått på, innenfor rekkevidde og er klar for sammenkobling.
+try-again = Prøv igjen
+discoverable = Tilgjengelige
+pairable = Kan Tilkobles
