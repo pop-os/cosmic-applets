@@ -638,6 +638,9 @@ impl cosmic::Application for Audio {
                             .volume
                             .set(output.volume.len(), percent_to_volume(value as f64))
                     });
+
+                    self.output_volume = value as f64;
+                    self.output_volume_text = format!("{}%", self.output_volume.round());
                 }
                 sub_pulse::Event::SinkMute(value) => {
                     if let Some(output) = self.current_output.as_mut() {
@@ -650,6 +653,9 @@ impl cosmic::Application for Audio {
                             .volume
                             .set(input.volume.len(), percent_to_volume(value as f64))
                     });
+
+                    self.input_volume = value as f64;
+                    self.input_volume_text = format!("{}%", self.input_volume.round());
                 }
                 sub_pulse::Event::SourceMute(value) => {
                     if let Some(input) = self.current_input.as_mut() {
