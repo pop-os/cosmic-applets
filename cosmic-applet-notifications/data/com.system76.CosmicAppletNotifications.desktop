@@ -4,6 +4,7 @@ Name[zh_CN]=通知中心
 Name[hu]=Értesítési központ
 Name[pl]=Centrum powiadomień
 Name[pt]=Central de Notificações
+Name[nl]=Meldingscentrum
 Type=Application
 Exec=cosmic-applet-notifications
 Terminal=false
