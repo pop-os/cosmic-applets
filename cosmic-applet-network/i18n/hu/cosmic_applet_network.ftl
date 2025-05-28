@@ -3,6 +3,7 @@ airplane-mode = Repülőgép üzemmód
 airplane-mode-on = A repülőgép üzemmód be van kapcsolva
 turn-off-airplane-mode = Kapcsolja ki a Wi-Fi, Bluetooth és mobil szélessáv engedélyezéséhez.
 wifi = Wi-Fi
+identity = Azonosító
 ipv4 = IPv4 cím
 ipv6 = IPv6 cím
 mac = MAC

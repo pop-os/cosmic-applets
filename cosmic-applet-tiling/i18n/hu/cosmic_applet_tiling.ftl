@@ -17,4 +17,4 @@ arrow-keys = nyilak
 tiled = Csempézett
 floating = Lebegő
 autotile-behavior = Az ablakok csempézése a munkaterületeken
-new-workspace = Új munkaterületi viselkedés
+new-workspace = Új munkaterület viselkedése
