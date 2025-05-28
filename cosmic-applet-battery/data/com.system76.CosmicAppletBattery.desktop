@@ -5,6 +5,7 @@ Name[ko]=코스믹 배터리 애플릿
 Name[hu]=Energia és Akkumulátor
 Name[pl]=Zasilanie i bateria
 Name[pt]=Energia e Bateria
+Name[nl]=Energie en batterij
 Type=Application
 Exec=cosmic-applet-battery
 Terminal=false
