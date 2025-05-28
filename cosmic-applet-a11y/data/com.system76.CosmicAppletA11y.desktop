@@ -4,6 +4,7 @@ Name[zh_CN]=辅助功能
 Name[hu]=Akadálymentesség
 Name[pl]=Dostępność
 Name[pt]=Acessibilidade
+Name[nl]=Toegankelijkheid
 Type=Application
 Exec=cosmic-applet-a11y
 Terminal=false
