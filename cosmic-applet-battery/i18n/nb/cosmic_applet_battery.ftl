@@ -1,0 +1,14 @@
+battery = Batteri
+battery-desc = Redusert strømforbruk og ytelse.
+balanced = Balansert
+balanced-desc = Standard strømforbruk og ytelse.
+performance = Høy Ytelse
+performance-desc = Høy strømforbruk og ytelse.
+max-charge =  Øk levetiden til batteriet ved å angi en maksimal ladeverdi på 80%
+seconds = s
+minutes = m
+hours = h
+until-empty = til tomt
+power-settings = Strøm og Batteriinnstillinger...
+dgpu-running = Det dedikerte grafikkkortet er aktivt og kan redusere batterilevetiden
+dgpu-applications = Applikasjoner som bruker det dedikerte grafikkkortet {$gpu_name}
