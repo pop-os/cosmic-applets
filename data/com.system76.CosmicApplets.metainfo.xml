@@ -18,12 +18,14 @@
   <summary xml:lang="pt_BR">Miniaplicativos para o painel do COSMIC</summary>
   <summary xml:lang="pt">Miniaplicativos para o painel do COSMIC</summary>
   <summary xml:lang="hu">Kisalkalmazások a COSMIC panelhez</summary>
+  <summary xml:lang="nl">Applets voor het paneel van COSMIC</summary>
   <description>
     <p>Applets for the COSMIC panel</p>
     <p xml:lang="pl">Aplety dla panelu COSMIC</p>
     <p xml:lang="pt_BR">Miniaplicativos para o painel do COSMIC</p>
     <p xml:lang="pt">Miniaplicativos para o painel do COSMIC</p>
     <p xml:lang="hu">Kisalkalmazások a COSMIC panelhez</p>
+    <p xml:lang="nl">Applets voor het paneel van COSMIC</p>
   </description>
   <launchable type="desktop-id">com.system76.CosmicAppletAppList.desktop</launchable>
   <launchable type="desktop-id">com.system76.CosmicAppletAudio.desktop</launchable>
