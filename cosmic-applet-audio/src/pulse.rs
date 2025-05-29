@@ -791,7 +791,10 @@ impl<'a> From<&SinkInfo<'a>> for DeviceInfo {
     fn from(info: &SinkInfo<'a>) -> Self {
         Self {
             name: info.name.clone().map(|x| x.into_owned()),
-            description: info.description.clone().map(|x| x.into_owned()),
+            description: info
+                .proplist
+                .get_str("alsa.name")
+                .or(info.description.clone().map(|x| x.into_owned())),
             volume: info.volume,
             mute: info.mute,
             index: info.index,
@@ -803,7 +806,10 @@ impl<'a> From<&SourceInfo<'a>> for DeviceInfo {
     fn from(info: &SourceInfo<'a>) -> Self {
         Self {
             name: info.name.clone().map(|x| x.into_owned()),
-            description: info.description.clone().map(|x| x.into_owned()),
+            description: info
+                .proplist
+                .get_str("alsa.name")
+                .or(info.description.clone().map(|x| x.into_owned())),
             volume: info.volume,
             mute: info.mute,
             index: info.index,
