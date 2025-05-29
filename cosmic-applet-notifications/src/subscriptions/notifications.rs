@@ -63,7 +63,8 @@ pub fn notifications(proxy: NotificationsAppletProxy<'static>) -> Subscription<O
                         fail_count = fail_count.saturating_add(1);
                         if fail_count > 5 {
                             error!("Failed to receive notification events");
-                            _ = pending::<()>();
+                            // exit because the applet needs the notifications daemon in order to work properly
+                            std::process::exit(0);
                         } else {
                             tokio::time::sleep(std::time::Duration::from_secs(1)).await;
                         };
