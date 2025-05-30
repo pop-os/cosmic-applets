@@ -114,12 +114,6 @@ pub enum WaylandUpdate {
     Toplevel(ToplevelUpdate),
     Workspace(Vec<ExtWorkspaceHandleV1>),
     Output(OutputUpdate),
-    ActivationToken {
-        token: Option<String>,
-        app_id: Option<String>,
-        exec: String,
-        gpu_idx: Option<usize>,
-    },
     Image(ExtForeignToplevelHandleV1, WaylandImage),
 }
 
@@ -140,11 +134,6 @@ pub enum OutputUpdate {
 #[derive(Clone, Debug)]
 pub enum WaylandRequest {
     Toplevel(ToplevelRequest),
-    TokenRequest {
-        app_id: String,
-        exec: String,
-        gpu_idx: Option<usize>,
-    },
     Screencopy(ExtForeignToplevelHandleV1),
 }
 
