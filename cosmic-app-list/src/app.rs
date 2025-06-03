@@ -85,9 +85,20 @@ impl AppletIconData {
         let icon_spacing = 4.0;
 
         let (dot_radius, bar_size) = match applet.size {
-            Size::PanelSize(PanelSize::XL) | Size::PanelSize(PanelSize::L) => (2.0, 12.0),
-            Size::PanelSize(PanelSize::M) | Size::Hardcoded(_) => (2.0, 8.0),
-            Size::PanelSize(PanelSize::S) | Size::PanelSize(PanelSize::XS) => (1.0, 8.0),
+            Size::Hardcoded(_) => (2.0, 8.0),
+            Size::PanelSize(ref s) => {
+                let size = s.get_applet_icon_size_with_padding(false);
+                // Define size thresholds, to handle custom sizes
+                let small_size_threshold = PanelSize::S.get_applet_icon_size_with_padding(false);
+                let medium_size_threshold = PanelSize::M.get_applet_icon_size_with_padding(false);
+                if size <= small_size_threshold {
+                    (1.0, 8.0)
+                } else if size <= medium_size_threshold {
+                    (2.0, 8.0)
+                } else {
+                    (2.0, 12.0)
+                }
+            }
         };
 
         let padding = padding as f32;
@@ -1470,11 +1481,17 @@ impl cosmic::Application for CosmicAppList {
             PanelAnchor::Left | PanelAnchor::Right => false,
         };
         let divider_padding = match self.core.applet.size {
-            Size::PanelSize(PanelSize::XL)
-            | Size::PanelSize(PanelSize::L)
-            | Size::PanelSize(PanelSize::M) => 8,
-            Size::PanelSize(PanelSize::S) | Size::PanelSize(PanelSize::XS) | Size::Hardcoded(_) => {
-                4
+            Size::Hardcoded(_) => 4,
+            Size::PanelSize(ref s) => {
+                let size = s.get_applet_icon_size_with_padding(false);
+
+                let small_size_threshold = PanelSize::S.get_applet_icon_size_with_padding(false);
+
+                if size <= small_size_threshold {
+                    4
+                } else {
+                    8
+                }
             }
         };
         let (favorite_popup_cutoff, active_popup_cutoff) = self.panel_overflow_lengths();
@@ -1793,7 +1810,7 @@ impl cosmic::Application for CosmicAppList {
 
             match popup_type {
                 PopupType::RightClickMenu => {
-                    fn menu_button<'a, Message>(
+                    fn menu_button<'a, Message: Clone + 'a>(
                         content: impl Into<Element<'a, Message>>,
                     ) -> cosmic::widget::Button<'a, Message> {
                         button::custom(content)
