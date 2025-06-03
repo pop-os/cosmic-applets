@@ -9,6 +9,7 @@ Name[ru]=Кнопка библиотеки приложений на панел�
 Name[hu]=Alkalmazáskönyvtár gomb
 Name[pt_BR]=Biblioteca de aplicativos
 Name[pt]=Botão da biblioteca de aplicativos
+Name[nl]=Knop appbibliotheek
 Type=Application
 Exec=cosmic-panel-button com.system76.CosmicAppLibrary
 Terminal=false
