@@ -157,6 +157,7 @@ struct ExecRequestData {
     data: RequestData,
     exec: String,
     gpu_idx: Option<usize>,
+    terminal: bool,
 }
 
 impl RequestDataExt for ExecRequestData {
@@ -181,6 +182,7 @@ impl ActivationHandler for AppData {
             app_id: data.app_id().map(|x| x.to_owned()),
             exec: data.exec.clone(),
             gpu_idx: data.gpu_idx,
+            terminal: data.terminal,
         });
     }
 }
@@ -653,6 +655,7 @@ pub(crate) fn wayland_handler(
                     app_id,
                     exec,
                     gpu_idx,
+                    terminal,
                 } => {
                     if let Some(activation_state) = state.activation_state.as_ref() {
                         activation_state.request_token_with_data(
@@ -669,6 +672,7 @@ pub(crate) fn wayland_handler(
                                 },
                                 exec,
                                 gpu_idx,
+                                terminal,
                             },
                         );
                     } else {
@@ -677,6 +681,7 @@ pub(crate) fn wayland_handler(
                             app_id: Some(app_id),
                             exec,
                             gpu_idx,
+                            terminal,
                         });
                     }
                 }

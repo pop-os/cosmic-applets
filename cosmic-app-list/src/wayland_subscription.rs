@@ -119,6 +119,7 @@ pub enum WaylandUpdate {
         app_id: Option<String>,
         exec: String,
         gpu_idx: Option<usize>,
+        terminal: bool,
     },
     Image(ExtForeignToplevelHandleV1, WaylandImage),
 }
@@ -144,6 +145,7 @@ pub enum WaylandRequest {
         app_id: String,
         exec: String,
         gpu_idx: Option<usize>,
+        terminal: bool,
     },
     Screencopy(ExtForeignToplevelHandleV1),
 }
