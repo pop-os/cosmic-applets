@@ -25,6 +25,7 @@ use cosmic::{
     },
     Element, Task,
 };
+use logind_zbus::manager::ManagerProxy;
 use once_cell::sync::Lazy;
 use timedate_zbus::TimeDateProxy;
 use tokio::{sync::watch, time};
@@ -278,12 +279,40 @@ impl cosmic::Application for Window {
             )
         }
 
+        // Update the time when waking from sleep, so it doesn't need to wait until the next
+        // scheduled tick to update.
+        async fn wake_from_sleep(output: &mut mpsc::Sender<Message>) -> zbus::Result<()> {
+            let connection = zbus::Connection::system().await?;
+            let proxy = ManagerProxy::new(&connection).await?;
+
+            while let Some(property) = proxy.receive_prepare_for_sleep().await?.next().await {
+                let waking = !property.args()?.start();
+                if waking {
+                    let _ = output.send(Message::Tick).await;
+                }
+            }
+
+            Ok(())
+        }
+
+        fn wake_from_sleep_subscription() -> Subscription<Message> {
+            Subscription::run_with_id(
+                "wake-from-suspend-sub",
+                stream::channel(1, |mut output| async move {
+                    if let Err(err) = wake_from_sleep(&mut output).await {
+                        tracing::error!(?err, "Failed to subscribe to wake-from-sleep signal");
+                    }
+                }),
+            )
+        }
+
         let show_seconds_rx = self.show_seconds_tx.subscribe();
         Subscription::batch(vec![
             rectangle_tracker_subscription(0).map(|e| Message::Rectangle(e.1)),
             time_subscription(show_seconds_rx),
             activation_token_subscription(0).map(Message::Token),
             timezone_subscription(),
+            wake_from_sleep_subscription(),
             self.core.watch_config(Self::APP_ID).map(|u| {
                 for err in u.errors {
                     tracing::error!(?err, "Error watching config");
