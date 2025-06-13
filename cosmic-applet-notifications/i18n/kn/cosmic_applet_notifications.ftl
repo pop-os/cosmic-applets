@@ -1,10 +1,10 @@
-hours-ago = { NUMBER($duration) -> 
-    [1] 1 ಗಂಟೆ ಹಿಂದೆ
-    *[other] {$duration} ಗಂಟೆಗಳು ಹಿಂದೆ
+hours-ago = { $duration } { $duration ->
+    [one] ಗಂಟೆ ಹಿಂದೆ
+    *[other] ಗಂಟೆಗಳು ಹಿಂದೆ
 }
-minutes-ago = { NUMBER($duration) -> 
-    [1] 1 ನಿಮಿಷ ಹಿಂದೆ
-    *[other] {$duration} ನಿಮಿಷಗಳು ಹಿಂದೆ
+minutes-ago = { $duration } { $duration ->
+    [one] ನಿಮಿಷ ಹಿಂದೆ
+    *[other] ನಿಮಿಷಗಳು ಹಿಂದೆ
 }
 show-less = ಕಡಿಮೆ ತೋರಿಸಿ
 show-more = ಇನ್ನಷ್ಟು {$more} ತೋರಿಸಿ

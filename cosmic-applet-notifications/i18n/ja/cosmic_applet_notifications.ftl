@@ -1,5 +1,5 @@
-hours-ago = 時間前
-minutes-ago = 分前
+hours-ago = { $duration }時間前
+minutes-ago = { $duration }分前
 show-less = 非表示
 show-more = {$more}つを表示
 clear-all = 通用を全部消す
