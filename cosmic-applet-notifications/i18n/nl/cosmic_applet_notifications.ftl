@@ -1,10 +1,8 @@
-hours-ago = {$duration} uur geleden
-
-minutes-ago = { NUMBER($duration) -> 
-    [1] 1 minuut geleden
-    *[other] {$duration} minuten geleden
-}
-
+hours-ago = { $duration } uur geleden
+minutes-ago = { $duration } { $duration ->
+    [one] minuut
+    *[other] minuten
+} geleden
 show-less = Minder weergeven
 show-more = {$more} meer weergeven
 clear-group = Groep opschonen

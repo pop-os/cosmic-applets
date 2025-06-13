@@ -1,11 +1,11 @@
-hours-ago = { NUMBER($duration) -> 
-    [1] Tunti sitten
-    *[other] {$duration} Tuntia Sitten
-}
-minutes-ago = { NUMBER($duration) -> 
-    [1] Minuutti Sitten
-    *[other] {$duration} Minuuttia Sitten
-}
+hours-ago = { $duration } { $duration ->
+    [one] tunti
+    *[other] tuntia
+} sitten
+minutes-ago = { $duration } { $duration ->
+    [one] minuutti
+    *[other] minuuttia
+} sitten
 show-more = Näytä {$more} Lisää
 clear-all = Tyhjennä Kaikki Ilmoitukset
 do-not-disturb = Älä Häiritse
