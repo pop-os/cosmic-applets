@@ -369,7 +369,7 @@ enum Message {
     ClosePopup,
     Activate(ExtForeignToplevelHandleV1),
     Toggle(ExtForeignToplevelHandleV1),
-    Exec(String, Option<usize>),
+    Exec(String, Option<usize>, bool),
     Quit(String),
     NewSeat(WlSeat),
     RemovedSeat,
@@ -1237,6 +1237,7 @@ impl cosmic::Application for CosmicAppList {
                         app_id,
                         exec,
                         gpu_idx,
+                        terminal,
                     } => {
                         let mut envs = Vec::new();
                         if let Some(token) = token {
@@ -1252,7 +1253,13 @@ impl cosmic::Application for CosmicAppList {
                             );
                         }
                         tokio::spawn(async move {
-                            cosmic::desktop::spawn_desktop_exec(exec, envs, app_id.as_deref()).await
+                            cosmic::desktop::spawn_desktop_exec(
+                                exec,
+                                envs,
+                                app_id.as_deref(),
+                                terminal,
+                            )
+                            .await
                         });
                     }
                 }
@@ -1263,12 +1270,13 @@ impl cosmic::Application for CosmicAppList {
             Message::RemovedSeat => {
                 self.seat.take();
             }
-            Message::Exec(exec, gpu_idx) => {
+            Message::Exec(exec, gpu_idx, terminal) => {
                 if let Some(tx) = self.wayland_sender.as_ref() {
                     let _ = tx.send(WaylandRequest::TokenRequest {
                         app_id: Self::APP_ID.to_string(),
                         exec,
                         gpu_idx,
+                        terminal,
                     });
                 }
             }
@@ -1824,10 +1832,10 @@ impl cosmic::Application for CosmicAppList {
 
                     if let Some(exec) = desktop_info.exec() {
                         if !toplevels.is_empty() {
-                            content = content.push(
-                                menu_button(text::body(fl!("new-window")))
-                                    .on_press(Message::Exec(exec.to_string(), None)),
-                            );
+                            content =
+                                content.push(menu_button(text::body(fl!("new-window"))).on_press(
+                                    Message::Exec(exec.to_string(), None, desktop_info.terminal()),
+                                ));
                         } else if let Some(gpus) = self.gpus.as_ref() {
                             let default_idx = if desktop_info.prefers_non_default_gpu() {
                                 gpus.iter().position(|gpu| !gpu.default).unwrap_or(0)
@@ -1845,14 +1853,17 @@ impl cosmic::Application for CosmicAppList {
                                             String::new()
                                         }
                                     )))
-                                    .on_press(Message::Exec(exec.to_string(), Some(i))),
+                                    .on_press(Message::Exec(
+                                        exec.to_string(),
+                                        Some(i),
+                                        desktop_info.terminal(),
+                                    )),
                                 );
                             }
                         } else {
-                            content = content.push(
-                                menu_button(text::body(fl!("run")))
-                                    .on_press(Message::Exec(exec.to_string(), None)),
-                            );
+                            content = content.push(menu_button(text::body(fl!("run"))).on_press(
+                                Message::Exec(exec.to_string(), None, desktop_info.terminal()),
+                            ));
                         }
                         for action in desktop_info.actions().into_iter().flatten() {
                             if action == "new-window" {
@@ -1867,10 +1878,9 @@ impl cosmic::Application for CosmicAppList {
                             else {
                                 continue;
                             };
-                            content = content.push(
-                                menu_button(text::body(name))
-                                    .on_press(Message::Exec(exec.into(), None)),
-                            );
+                            content = content.push(menu_button(text::body(name)).on_press(
+                                Message::Exec(exec.into(), None, desktop_info.terminal()),
+                            ));
                         }
                         content = content.push(divider::horizontal::light());
                     }
@@ -2351,7 +2361,11 @@ fn launch_on_preferred_gpu(desktop_info: &DesktopEntry, gpus: Option<&[Gpu]>) ->
         }
     });
 
-    Some(Message::Exec(exec.to_string(), gpu_idx))
+    Some(Message::Exec(
+        exec.to_string(),
+        gpu_idx,
+        desktop_info.terminal(),
+    ))
 }
 
 #[derive(Debug, Default, Clone)]
