@@ -4,6 +4,7 @@ Name[zh_CN]=用户会话
 Name[hu]=Felhasználói Munkamenet
 Name[pl]=Sesja użytkownika
 Name[pt]=Sessão de Usuário
+Name[nl]=Gebruikerssessie
 Type=Application
 Exec=cosmic-applet-power
 Terminal=false

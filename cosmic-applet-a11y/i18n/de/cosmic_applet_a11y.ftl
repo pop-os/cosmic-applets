@@ -1,3 +1,6 @@
 screen-reader = Bildschirmleser
-magnifier = Bildschirmlupe
-settings = Bedienungshilfen Einstellungen...
+magnifier = Vergrößerungsglas
+invert-colors = Farben umdrehen
+settings = Zugänglichkeitseinstellungen…
+filter-colors = Farben filtern
+high-contrast = Hoher Kontrast
