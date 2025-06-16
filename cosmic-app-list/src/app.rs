@@ -57,6 +57,7 @@ use iced::{widget::container, Alignment, Background, Length};
 use itertools::Itertools;
 use rand::{rng, Rng};
 use std::{borrow::Cow, collections::HashMap, path::PathBuf, rc::Rc, str::FromStr, time::Duration};
+use cosmic::desktop::fde::unicase::Ascii;
 use switcheroo_control::Gpu;
 use tokio::time::sleep;
 use url::Url;
@@ -1104,68 +1105,7 @@ impl cosmic::Application for CosmicAppList {
                     WaylandUpdate::Toplevel(event) => match event {
                         ToplevelUpdate::Add(mut info) => {
                             let unicase_appid = fde::unicase::Ascii::new(&*info.app_id);
-                            let new_desktop_info =
-                                match fde::find_app_by_id(&self.desktop_entries, unicase_appid) {
-                                    Some(appid) => appid.clone(),
-                                    None => {
-                                        // Update desktop entries in case it was not found.
-
-                                        self.update_desktop_entries();
-                                        match fde::find_app_by_id(
-                                            &self.desktop_entries,
-                                            unicase_appid,
-                                        ) {
-                                            Some(appid) => appid.clone(),
-                                            None => {
-                                                tracing::error!(
-                                                    id = info.app_id,
-                                                    "could not find desktop entry for app"
-                                                );
-
-                                                let mut fallback_entry =
-                                                    fde::DesktopEntry::from_appid(
-                                                        info.app_id.clone(),
-                                                    );
-
-                                                // proton opens games as steam_app_X, where X is either
-                                                // the steam appid or "default". games with a steam appid
-                                                // can have a desktop entry generated elsewhere; this
-                                                // specifically handles non-steam games opened
-                                                // under proton
-                                                // in addition, try to match WINE entries who have its
-                                                // appid = the full name of the executable (incl. .exe)
-                                                let is_proton_game =
-                                                    info.app_id == "steam_app_default";
-                                                if is_proton_game || info.app_id.ends_with(".exe") {
-                                                    for entry in &self.desktop_entries {
-                                                        let localised_name = entry
-                                                            .name(&self.locales)
-                                                            .map(|x| x.to_string())
-                                                            .unwrap_or_default();
-
-                                                        if localised_name == info.title {
-                                                            // if this is a proton game, we only want
-                                                            // to look for game entries
-                                                            if is_proton_game
-                                                                && !entry
-                                                                    .categories()
-                                                                    .unwrap_or_default()
-                                                                    .contains(&"Game")
-                                                            {
-                                                                continue;
-                                                            }
-
-                                                            fallback_entry = entry.clone();
-                                                            break;
-                                                        }
-                                                    }
-                                                }
-
-                                                fallback_entry
-                                            }
-                                        }
-                                    }
-                                };
+                            let new_desktop_info = self.find_desktop_entry_for_toplevel(&info, unicase_appid);
 
                             if let Some(t) = self
                                 .active_list
@@ -1206,6 +1146,8 @@ impl cosmic::Application for CosmicAppList {
                             if info.app_id.is_empty() {
                                 return Task::none();
                             }
+                            let mut updated_appid = false;
+
                             'toplevel_loop: for toplevel_list in self
                                 .active_list
                                 .iter_mut()
@@ -1213,9 +1155,49 @@ impl cosmic::Application for CosmicAppList {
                             {
                                 for (t_info, _) in &mut toplevel_list.toplevels {
                                     if info.foreign_toplevel == t_info.foreign_toplevel {
-                                        *t_info = info;
+                                        if info.app_id != t_info.app_id {
+                                            updated_appid = true;
+                                        }
+
+                                        *t_info = info.clone();
                                         break 'toplevel_loop;
                                     }
+                                }
+                            }
+
+                            if updated_appid {
+                                // remove the current toplevel from its dock item
+                                for t in self
+                                    .active_list
+                                    .iter_mut()
+                                    .chain(self.pinned_list.iter_mut())
+                                {
+                                    t.toplevels
+                                        .retain(|(t_info, _)| t_info.app_id != info.app_id);
+                                }
+                                self.active_list.retain(|t| !t.toplevels.is_empty());
+
+                                // find a new one for it
+                                let new_desktop_entry = self.find_desktop_entry_for_toplevel(&info, Ascii::new(&info.app_id));
+
+                                if let Some(t) = self
+                                    .active_list
+                                    .iter_mut()
+                                    .chain(self.pinned_list.iter_mut())
+                                    .find(|DockItem { desktop_info, .. }| {
+                                        desktop_info.id() == new_desktop_entry.id()
+                                    })
+                                {
+                                    t.toplevels.push((info, None));
+                                } else {
+                                    self.item_ctr += 1;
+
+                                    self.active_list.push(DockItem {
+                                        id: self.item_ctr,
+                                        original_app_id: info.app_id.clone(),
+                                        toplevels: vec![(info, None)],
+                                        desktop_info: new_desktop_entry,
+                                    });
                                 }
                             }
                         }
@@ -2345,6 +2327,70 @@ impl CosmicAppList {
             }
         }
         focused_toplevels
+    }
+
+    fn find_desktop_entry_for_toplevel(&mut self, info: &ToplevelInfo, unicase_appid: Ascii<&str>) -> DesktopEntry {
+        match fde::find_app_by_id(&self.desktop_entries, unicase_appid) {
+            Some(appid) => appid.clone(),
+            None => {
+                // Update desktop entries in case it was not found.
+
+                self.update_desktop_entries();
+                match fde::find_app_by_id(
+                    &self.desktop_entries,
+                    unicase_appid,
+                ) {
+                    Some(appid) => appid.clone(),
+                    None => {
+                        tracing::error!(
+                            id = info.app_id,
+                            "could not find desktop entry for app"
+                        );
+
+                        let mut fallback_entry =
+                            fde::DesktopEntry::from_appid(
+                                info.app_id.clone(),
+                            );
+
+                        // proton opens games as steam_app_X, where X is either
+                        // the steam appid or "default". games with a steam appid
+                        // can have a desktop entry generated elsewhere; this
+                        // specifically handles non-steam games opened
+                        // under proton
+                        // in addition, try to match WINE entries who have its
+                        // appid = the full name of the executable (incl. .exe)
+                        let is_proton_game =
+                            info.app_id == "steam_app_default";
+                        if is_proton_game || info.app_id.ends_with(".exe") {
+                            for entry in &self.desktop_entries {
+                                let localised_name = entry
+                                    .name(&self.locales)
+                                    .map(|x| x.to_string())
+                                    .unwrap_or_default();
+
+                                if localised_name == info.title {
+                                    // if this is a proton game, we only want
+                                    // to look for game entries
+                                    if is_proton_game
+                                        && !entry
+                                        .categories()
+                                        .unwrap_or_default()
+                                        .contains(&"Game")
+                                    {
+                                        continue;
+                                    }
+
+                                    fallback_entry = entry.clone();
+                                    break;
+                                }
+                            }
+                        }
+
+                        fallback_entry
+                    }
+                }
+            }
+        }
     }
 }
 
