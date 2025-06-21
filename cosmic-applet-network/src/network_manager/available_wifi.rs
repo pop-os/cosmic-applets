@@ -47,18 +47,9 @@ pub async fn handle_wireless_device(
             }
         };
         let proxy: &AccessPointProxy = &ap;
-        let Ok(flags) = ap.rsn_flags().await else {
-            continue;
-        };
-
-        let network_type = if flags.intersects(ApSecurityFlags::KEY_MGMT_802_1X) {
-            NetworkType::EAP
-        } else if flags.intersects(ApSecurityFlags::KEY_MGMTPSK) {
-            NetworkType::PSK
-        } else if flags.is_empty() {
-            NetworkType::Open
-        } else {
-            continue;
+        let network_type = match get_network_type(&ap).await {
+            Some(value) => value,
+            None => continue,
         };
 
         aps.insert(
@@ -83,6 +74,24 @@ pub async fn handle_wireless_device(
         .sorted_by(|a, b| b.strength.cmp(&a.strength))
         .collect();
     Ok(aps)
+}
+
+pub async fn get_network_type(
+    access_point: &cosmic_dbus_networkmanager::access_point::AccessPoint<'_>,
+) -> Option<NetworkType> {
+    let Ok(flags) = access_point.rsn_flags().await else {
+        return None;
+    };
+    let network_type = if flags.intersects(ApSecurityFlags::KEY_MGMT_802_1X) {
+        NetworkType::EAP
+    } else if flags.intersects(ApSecurityFlags::KEY_MGMTPSK) {
+        NetworkType::PSK
+    } else if flags.is_empty() {
+        NetworkType::Open
+    } else {
+        return None;
+    };
+    Some(network_type)
 }
 
 #[derive(Debug, Clone)]

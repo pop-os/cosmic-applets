@@ -190,7 +190,7 @@ impl CosmicNetworkApplet {
                     (
                         "network-wired-disconnected-symbolic",
                         ActiveConnectionInfo::WiFi { strength, .. },
-                    ) => wifi_icon(*strength, NetworkType::Open),
+                    ) => wifi_icon(*strength, NetworkType::Open), // Use Open icon for clarity
                     (_, ActiveConnectionInfo::Wired { .. })
                         if icon_name != "network-vpn-symbolic" =>
                     {
@@ -729,6 +729,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                     state,
                     strength,
                     hw_address,
+                    network_type,
                 } => {
                     if self.hw_device_to_show.is_some()
                         && hw_address != self.hw_device_to_show.as_ref().unwrap()
@@ -740,10 +741,13 @@ impl cosmic::Application for CosmicNetworkApplet {
                         ipv4.push(text(format!("{}: {}", fl!("ipv4"), addr)).size(12).into());
                     }
                     let mut btn_content = vec![
-                        icon::from_name(wifi_icon(*strength, NetworkType::Open))
-                            .size(24)
-                            .symbolic(true)
-                            .into(),
+                        icon::from_name(wifi_icon(
+                            *strength,
+                            network_type.unwrap_or(NetworkType::Open),
+                        ))
+                        .size(24)
+                        .symbolic(true)
+                        .into(),
                         column![text::body(name), Column::with_children(ipv4)]
                             .width(Length::Fill)
                             .into(),
