@@ -54,7 +54,6 @@ libcosmic = { git = "https://github.com/pop-os/libcosmic", default-features = fa
     "wayland",
     "desktop-systemd-scope",
     "winit",
-    "dbus-config",
 ] }
 once_cell = "1"
 rust-embed = "8.5"

@@ -21,7 +21,6 @@ libcosmic.features = [
     "tokio",
     "wayland",
     "desktop",
-    "dbus-config",
 ]
 rust-embed.workspace = true
 tokio.workspace = true
