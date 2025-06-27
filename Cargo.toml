@@ -49,6 +49,7 @@ i18n-embed-fl = "0.9"
 libcosmic = { git = "https://github.com/pop-os/libcosmic", default-features = false, features = [
     "applet",
     "applet-token",
+    "dbus-config",
     "multi-window",
     "tokio",
     "wayland",

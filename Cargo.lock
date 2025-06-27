@@ -1390,7 +1390,9 @@ source = "git+https://github.com/pop-os/libcosmic#a85b3693994ef2b8275eca6a9eccc8
 dependencies = [
  "atomicwrites",
  "cosmic-config-derive",
+ "cosmic-settings-daemon",
  "dirs 6.0.0",
+ "futures-util",
  "iced_futures",
  "known-folders",
  "notify",
@@ -1400,6 +1402,7 @@ dependencies = [
  "tokio",
  "tracing",
  "xdg",
+ "zbus 5.7.1",
 ]
 
 [[package]]
@@ -1521,6 +1524,14 @@ dependencies = [
  "thiserror 2.0.12",
  "tracing",
  "xkbcommon",
+]
+
+[[package]]
+name = "cosmic-settings-daemon"
+version = "0.1.0"
+source = "git+https://github.com/pop-os/dbus-settings-bindings#3b86984332be2c930a3536ab714b843c851fa8ca"
+dependencies = [
+ "zbus 5.7.1",
 ]
 
 [[package]]
@@ -3932,6 +3943,7 @@ dependencies = [
  "cosmic-freedesktop-icons",
  "cosmic-panel-config",
  "cosmic-settings-config",
+ "cosmic-settings-daemon",
  "cosmic-theme",
  "css-color",
  "derive_setters",
