@@ -1,10 +1,12 @@
-hours-ago = { NUMBER($duration) ->
-    [1] Hace 1 hora
-    *[other] Hace {$duration} horas
+hours-ago = Hace { $duration } { $duration ->
+    [one] hora
+    [many] de horas
+    *[other] horas
 }
-minutes-ago = { NUMBER($duration) ->
-    [1] Hace 1 minuto
-    *[other] Hace {$duration} minutos
+minutes-ago = Hace { $duration } { $duration ->
+    [one] minuto
+    [many] de minutos
+    *[other] minutos
 }
 show-less = Mostrar menos
 show-more = Mostrar {$more} más

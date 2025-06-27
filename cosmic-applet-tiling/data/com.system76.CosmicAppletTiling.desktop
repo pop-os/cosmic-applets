@@ -5,6 +5,7 @@ Name[hu]=Csempézés
 Name[pl]=Kafelkowanie
 Name[pt_BR]=Janelas lado a lado
 Name[pt]=Janelas lado a lado
+Name[nl]=Vensters tegelen
 Type=Application
 Exec=cosmic-applet-tiling
 Terminal=false
