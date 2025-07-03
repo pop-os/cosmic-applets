@@ -119,7 +119,7 @@ impl cosmic::Application for Button {
                 || matches!(
                     (&self.core.applet.size, &self.config.force_presentation),
                     (
-                        Size::PanelSize(PanelSize::M | PanelSize::L | PanelSize::XL),
+                        Size::PanelSize(PanelSize::S | PanelSize::M | PanelSize::L | PanelSize::XL),
                         None
                     )
                 )
