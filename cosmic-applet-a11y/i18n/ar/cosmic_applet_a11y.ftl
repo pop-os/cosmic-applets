@@ -1,6 +1,6 @@
-screen-reader = Screen reader
-magnifier = Magnifier
-invert-colors = Invert colors
-settings = Accessibility settings...
-filter-colors = Filter colors
-high-contrast = High contrast
+screen-reader = قارئ الشاشة
+magnifier = المكبر
+invert-colors = عكس الألوان
+settings = إعدادات إمكانية الوصول...
+filter-colors = تصفية الألوان
+high-contrast = تباين عالٍ
