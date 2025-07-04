@@ -1,0 +1,14 @@
+battery = البطارية
+battery-desc = تقليل استهلاك الطاقة والأداء.
+balanced = متوازن
+balanced-desc = أداء واستهلاك بطارية معتدلان.
+performance = أداء عالٍ
+performance-desc = أداء واستهلاك طاقة مرتفعان.
+max-charge = زِد من عمر بطاريتك بتحديد الحد الأقصى للشحن إلى 80٪
+seconds = ث
+minutes = د
+hours = س
+until-empty = حتى النفاد
+power-settings = إعدادات الطاقة والبطارية...
+dgpu-running = وحدة معالجة الرسومات المنفصلة نشطة وقد تقلل من عمر البطارية
+dgpu-applications = التطبيقات التي تستخدم وحدة {\$gpu\_name} المنفصلة

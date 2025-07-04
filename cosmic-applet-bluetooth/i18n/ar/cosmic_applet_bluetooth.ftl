@@ -1,0 +1,12 @@
+bluetooth = بلوتوث
+other-devices = أجهزة بلوتوث أخرى
+settings = إعدادات البلوتوث...
+connected = متصل
+confirm-pin = يرجى تأكيد أن رمز PIN التالي يطابق المعروض على {\$deviceName}
+confirm = تأكيد
+cancel = إلغاء
+unsuccessful = فشل الاقتران
+check-device = تأكد من أن {\$deviceName} قيد التشغيل، وفي النطاق، وجاهز للاقتران.
+try-again = حاول مرة أخرى
+discoverable = قابل للاكتشاف
+pairable = قابل للاقتران
