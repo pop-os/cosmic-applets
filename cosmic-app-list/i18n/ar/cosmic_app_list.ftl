@@ -1,8 +1,8 @@
-cosmic-app-list = App Tray
-pin = Pin to app tray
-quit = Quit
-quit-all = Quit All
-new-window = New Window
-run = Run
-run-on = Run on {$gpu}
-run-on-default = (Default)
+cosmic-app-list = درج التطبيقات
+pin = ثبت في درج التطبيقات
+quit = إنهاء
+quit-all = إنهاء الكل
+new-window = نافذة جديدة
+run = تشغيل
+run-on = تشغيل على {$gpu}
+run-on-default = (الافتراضي)
