@@ -4,6 +4,7 @@ Name[zh_CN]=工作区编号
 Name[hu]=Számozott Munkaterületek
 Name[pl]=Obszary robocze według numeru
 Name[pt]=Áreas de Trabalho Numeradas
+Name[nl]=Genummerde werkbladen
 Type=Application
 Exec=cosmic-applet-workspaces
 Terminal=false

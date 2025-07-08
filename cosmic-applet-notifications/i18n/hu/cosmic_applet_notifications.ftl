@@ -1,11 +1,8 @@
-hours-ago = { NUMBER($duration) -> 
-    [1] 1 órával ezelőtt
-    *[other] {$duration} órával ezelőtt
-}
-minutes-ago = { NUMBER($duration) -> 
-    [1] 1 perccel ezelőtt
-    *[other] {$duration} perccel ezelőtt
-}
+hours-ago = { $duration } órával ezelőtt
+minutes-ago = { $duration } { $duration ->
+    [one] perce
+    *[other] perccel
+} ezelőtt
 show-less = Kevesebb megjelenítése
 show-more = {$more} további megjelenítése
 clear-group = Csoport törlése

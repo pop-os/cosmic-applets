@@ -1,33 +1,33 @@
 hours-ago = { NUMBER($duration) -> 
-    [1] En time siden
-    [2] To timer siden
-    [3] Tre timer siden
-    [4] Fire timer siden
-    [5] Fem timer siden
-    [6] Seks timer siden
-    [7] Sju timer siden
-    [8] Åtte timer siden
-    [9] Ni timer siden
-    [10] Ti timer siden
-    [11] Elleve timer siden
-    [12] Tolv timer siden
-    *[other] {$duration} timer siden
-}
+    [1] En time
+    [2] To timer
+    [3] Tre timer
+    [4] Fire timer
+    [5] Fem timer
+    [6] Seks timer
+    [7] Sju timer
+    [8] Åtte timer
+    [9] Ni timer
+    [10] Ti timer
+    [11] Elleve timer
+    [12] Tolv timer
+    *[other] {$duration} timer
+} siden
 minutes-ago = { NUMBER($duration) -> 
-    [1] Ett minutt siden
-    [2] To minutter siden
-    [3] Tre minutter siden
-    [4] Fire minutter siden
-    [5] Fem minutter siden
-    [6] Seks minutter siden
-    [7] Sju minutter siden
-    [8] Åtte minutter siden
-    [9] Ni minutter siden
-    [10] Ti minutter siden
-    [11] Elleve minutter siden
-    [12] Tolv minutter siden
-    *[other] {$duration} minutter siden
-}
+    [1] Ett minutt
+    [2] To minutter
+    [3] Tre minutter
+    [4] Fire minutter
+    [5] Fem minutter
+    [6] Seks minutter
+    [7] Sju minutter
+    [8] Åtte minutter
+    [9] Ni minutter
+    [10] Ti minutter
+    [11] Elleve minutter
+    [12] Tolv minutter
+    *[other] {$duration} minutter
+} siden
 show-less = Vis mindre
 show-more = Vis {$more} mer
 clear-group = Fjern gruppe

@@ -1,11 +1,9 @@
-hours-ago = { NUMBER($duration) ->  
-    [1] 1 uair ó shin  
-    *[other] {$duration} uair ó shin  
-}  
-minutes-ago = { NUMBER($duration) ->  
-    [1] 1 nóiméad ó shin  
-    *[other] {$duration} nóiméad ó shin  
-}  
+hours-ago = { $duration } { $duration ->
+    [few] huaire
+    [many] n-uaire
+    *[other] uair
+} ó shin
+minutes-ago = { $duration } nóiméad ó shin
 show-less = Taispeáin níos lú  
 show-more = Taispeáin {$more} eile  
 clear-group = Glan grúpa  

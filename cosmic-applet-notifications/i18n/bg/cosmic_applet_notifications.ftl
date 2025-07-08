@@ -1,10 +1,10 @@
-hours-ago = { NUMBER($duration) -> 
-    [1] преди 1 час
-    *[other] преди {$duration} часа
+hours-ago = Преди { $duration } { $duration ->
+    [one] час
+    *[other] часа
 }
-minutes-ago = { NUMBER($duration) -> 
-    [1] преди 1 минута
-    *[other] преди {$duration} минути
+minutes-ago = Преди { $duration } { $duration ->
+    [one] минута
+    *[other] минути
 }
 show-less = По-малко информация
 show-more = Повече {$more} информация
