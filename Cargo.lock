@@ -1297,6 +1297,7 @@ dependencies = [
  "i18n-embed-fl",
  "icu",
  "libcosmic",
+ "logind-zbus",
  "once_cell",
  "rust-embed",
  "serde",
