@@ -1,8 +1,11 @@
 [Desktop Entry]
 Name=App Tray
+Name[zh_CN]=应用托盘
 Name[hu]=Alkalmazástálca
 Name[pl]=Zasobnik aplikacji
 Name[pt]=Bandeja de Aplicativos
+Name[de]=App-Tray
+Name[nl]=App-Tray
 Type=Application
 Exec=cosmic-app-list
 Terminal=false

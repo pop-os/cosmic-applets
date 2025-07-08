@@ -1,8 +1,10 @@
 [Desktop Entry]
 Name=Launcher Button
+Name[zh_CN]=启动器按钮
 Name[hu]=Indító gomb
 Name[pl]=Przycisk programu uruchamiającego
 Name[pt]=Botão de inicialização
+Name[nl]=Knop snelstarter
 Type=Application
 Exec=cosmic-panel-button com.system76.CosmicLauncher
 Terminal=false

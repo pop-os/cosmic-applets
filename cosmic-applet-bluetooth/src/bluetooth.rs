@@ -1,7 +1,14 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
-use std::{collections::HashMap, fmt::Debug, hash::Hash, mem, sync::Arc, time::Duration};
+use std::{
+    collections::HashMap,
+    fmt::Debug,
+    hash::Hash,
+    mem,
+    sync::{Arc, LazyLock},
+    time::Duration,
+};
 
 pub use bluer::DeviceProperty;
 use bluer::{
@@ -24,11 +31,26 @@ use tokio::{
     spawn,
     sync::{
         mpsc::{channel, Receiver, Sender},
-        Mutex,
+        Mutex, RwLock,
     },
     task::JoinHandle,
 };
 
+static TICK: LazyLock<RwLock<Duration>> = LazyLock::new(|| RwLock::new(Duration::from_secs(10)));
+
+pub async fn set_tick(duration: Duration) {
+    let mut guard = TICK.write().await;
+    *guard = duration;
+}
+
+pub async fn tick(interval: &mut tokio::time::Interval) {
+    let guard = TICK.read().await;
+    if *guard != interval.period() {
+        *interval = tokio::time::interval(*guard);
+        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+    }
+    interval.tick().await;
+}
 // Copied from https://github.com/bluez/bluez/blob/39467578207889fd015775cbe81a3db9dd26abea/src/dbus-common.c#L53
 #[inline]
 fn device_type_to_icon(device_type: &str) -> &'static str {
@@ -68,8 +90,10 @@ pub fn bluetooth_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
                 }
 
                 retry_count = retry_count.saturating_add(1);
-                _ = tokio::time::sleep(Duration::from_millis(2_u64.saturating_pow(retry_count)))
-                    .await;
+                _ = tokio::time::sleep(Duration::from_millis(
+                    2_u64.saturating_pow(retry_count).max(68719476734),
+                ))
+                .await;
             };
 
             let state = bluer_state(&session_state.adapter).await;
@@ -116,8 +140,8 @@ pub fn bluetooth_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
                 _ = output.send(message).await;
             };
 
-            let mut interval = tokio::time::interval(Duration::from_secs(1));
-
+            let mut interval = tokio::time::interval(Duration::from_secs(10));
+            interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
             loop {
                 let Some(mut session_rx) = session_state.rx.take() else {
                     break;
@@ -126,8 +150,13 @@ pub fn bluetooth_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
                 if let Some(event) = session_rx.recv().await {
                     event_handler(event).await;
                     // Consume any additional available events.
+                    let mut count = 0;
                     while let Some(event) = session_rx.try_recv().ok() {
                         event_handler(event).await;
+                        count += 1;
+                        if count == 100 {
+                            break;
+                        }
                     }
                 } else {
                     break;
@@ -531,10 +560,11 @@ impl BluerSessionState {
         let wake_up_discover_tx = self.wake_up_discover_tx.clone();
         let _handle: JoinHandle<anyhow::Result<()>> = spawn(async move {
             let mut status = adapter_clone.is_powered().await.unwrap_or_default();
-            let mut interval = tokio::time::interval(Duration::from_secs(3));
+            let mut interval = tokio::time::interval(Duration::from_secs(10));
+            interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
             let mut devices = Vec::new();
             loop {
-                interval.tick().await;
+                tick(&mut interval).await;
                 let new_status = adapter_clone.is_powered().await.unwrap_or_default();
                 devices = build_device_list(devices, &adapter_clone).await;
                 if new_status != status {
@@ -569,19 +599,23 @@ impl BluerSessionState {
         let _monitor_devices: tokio::task::JoinHandle<Result<(), anyhow::Error>> =
             spawn(async move {
                 let mut devices: Vec<BluerDevice> = Vec::new();
+                let mut interval = tokio::time::interval(Duration::from_secs(1));
+                interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
 
                 loop {
+                    interval.tick().await;
                     let wakeup_fut = wake_up.recv();
 
                     // Listens for process changes and builds edvice lists.
                     let listener_fut = async {
                         let mut new_devices = Vec::new();
-                        let mut interval = tokio::time::interval(Duration::from_secs(1));
+                        let mut interval = tokio::time::interval(Duration::from_secs(10));
+                        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
                         let mut change_stream =
                             match adapter_clone.discover_devices_with_changes().await {
                                 Ok(stream) => stream,
                                 Err(_) => {
-                                    interval.tick().await;
+                                    tick(&mut interval).await;
                                     return;
                                 }
                             };
@@ -768,7 +802,6 @@ async fn bluer_state(adapter: &Adapter) -> BluerState {
 #[inline(never)]
 async fn build_device_list(mut devices: Vec<BluerDevice>, adapter: &Adapter) -> Vec<BluerDevice> {
     let addrs = adapter.device_addresses().await.unwrap_or_default();
-
     devices.clear();
     if addrs.len() > devices.capacity() {
         devices.reserve(addrs.len() - devices.capacity());

@@ -6,6 +6,7 @@ use cosmic::{
     applet::cosmic_panel_config::PanelAnchor,
     iced::{
         self,
+        overlay::menu,
         platform_specific::shell::commands::popup::{destroy_popup, get_popup},
         window, Limits, Padding, Subscription,
     },
@@ -26,6 +27,8 @@ pub enum Msg {
     TogglePopup(usize),
     Hovered(usize),
     Surface(surface::Action),
+    ToggleOverflow,
+    HoveredOverflow,
 }
 
 #[derive(Default)]
@@ -36,6 +39,7 @@ struct App {
     open_menu: Option<usize>,
     max_menu_id: usize,
     popup: Option<window::Id>,
+    overflow_popup: Option<window::Id>,
 }
 
 impl App {
@@ -56,6 +60,71 @@ impl App {
             self.core.main_window_id().unwrap(),
             iced::Size::new(1.max(icon_size * n) as f32, icon_size as f32),
         )
+    }
+
+    fn overflow_index(&self) -> Option<usize> {
+        let Some(max_major_axis_len) = self.core.applet.suggested_bounds.as_ref().map(|c| {
+            // if we have a configure for width and height, we're in a overflow popup
+            match self.core.applet.anchor {
+                PanelAnchor::Top | PanelAnchor::Bottom => c.width as u32,
+                PanelAnchor::Left | PanelAnchor::Right => c.height as u32,
+            }
+        }) else {
+            return None;
+        };
+
+        let button_total_size =
+            self.core.applet.suggested_size(true).0 + self.core.applet.suggested_padding(true) * 2;
+
+        let menu_count = self.menus.len();
+
+        let btn_count = max_major_axis_len / button_total_size as u32;
+        if btn_count >= menu_count as u32 {
+            None
+        } else {
+            Some(
+                (btn_count.saturating_sub(1) as usize)
+                    .min(menu_count)
+                    .max(1),
+            )
+        }
+    }
+
+    fn view_overflow_popup(&self) -> cosmic::Element<'_, Msg> {
+        // Render the overflow popup with the menus that are not shown in the main view
+        let overflow_index = self.overflow_index().unwrap_or(0);
+        let children = self.menus.iter().skip(overflow_index).map(|(id, menu)| {
+            mouse_area(
+                match menu.icon_pixmap() {
+                    Some(icon) if menu.icon_name() == "" => self
+                        .core
+                        .applet
+                        .icon_button_from_handle(icon.clone().symbolic(true)),
+                    _ => self.core.applet.icon_button(menu.icon_name()),
+                }
+                .on_press_down(Msg::TogglePopup(*id)),
+            )
+            .on_enter(Msg::Hovered(*id))
+            .into()
+        });
+        let theme = self.core.system_theme();
+        let cosmic = theme.cosmic();
+        let corners = cosmic.corner_radii.clone();
+        let pad = corners.radius_m[0];
+
+        self.core
+            .applet
+            .popup_container(container(
+                if matches!(
+                    self.core.applet.anchor,
+                    PanelAnchor::Left | PanelAnchor::Right
+                ) {
+                    Element::from(iced::widget::column(children))
+                } else {
+                    Element::from(iced::widget::row(children))
+                },
+            ))
+            .into()
     }
 }
 
@@ -158,15 +227,25 @@ impl cosmic::Application for App {
                         cmds.push(destroy_popup(popup_id));
                     }
                     let popup_id = self.next_popup_id();
-                    let mut popup_settings = self.core.applet.get_popup_settings(
-                        self.core.main_window_id().unwrap(),
-                        popup_id,
-                        None,
-                        None,
-                        None,
-                    );
-                    self.popup = Some(popup_id);
                     let i = self.menus.keys().position(|&i| i == id).unwrap();
+                    let (i, parent) = self
+                        .overflow_index()
+                        .clone()
+                        .and_then(|overflow_i| {
+                            if overflow_i <= i {
+                                Some(i - overflow_i).zip(self.overflow_popup.clone())
+                            } else {
+                                Some((i, self.core.main_window_id().unwrap()))
+                            }
+                        })
+                        .unwrap_or_else(|| (0, self.core.main_window_id().unwrap()));
+
+                    let mut popup_settings = self
+                        .core
+                        .applet
+                        .get_popup_settings(parent, popup_id, None, None, None);
+                    self.popup = Some(popup_id);
+
                     if matches!(
                         self.core.applet.anchor,
                         PanelAnchor::Left | PanelAnchor::Right
@@ -204,15 +283,26 @@ impl cosmic::Application for App {
                     return Task::none();
                 }
                 let popup_id = self.next_popup_id();
-                let mut popup_settings = self.core.applet.get_popup_settings(
-                    self.core.main_window_id().unwrap(),
-                    popup_id,
-                    None,
-                    None,
-                    None,
-                );
-                self.popup = Some(popup_id);
                 let i = self.menus.keys().position(|&i| i == id).unwrap();
+
+                let (i, parent) = self
+                    .overflow_index()
+                    .clone()
+                    .and_then(|overflow_i| {
+                        if overflow_i <= i {
+                            Some(i - overflow_i).zip(self.overflow_popup.clone())
+                        } else {
+                            Some((i, self.core.main_window_id().unwrap()))
+                        }
+                    })
+                    .unwrap_or_else(|| (0, self.core.main_window_id().unwrap()));
+
+                let mut popup_settings = self
+                    .core
+                    .applet
+                    .get_popup_settings(parent, popup_id, None, None, None);
+                self.popup = Some(popup_id);
+
                 if matches!(
                     self.core.applet.anchor,
                     PanelAnchor::Left | PanelAnchor::Right
@@ -233,6 +323,89 @@ impl cosmic::Application for App {
                     cosmic::app::Action::Surface(a),
                 ));
             }
+            Msg::ToggleOverflow => {
+                if let Some(popup_id) = self.overflow_popup.take() {
+                    self.popup = None;
+                    self.open_menu = None;
+                    return destroy_popup(popup_id);
+                } else if let Some(overflow_index) = self.overflow_index() {
+                    // If we don't have an overflow, create it
+                    let popup_id = self.next_popup_id();
+                    let mut popup_settings = self.core.applet.get_popup_settings(
+                        self.core.main_window_id().unwrap(),
+                        popup_id,
+                        None,
+                        None,
+                        None,
+                    );
+                    popup_settings.close_with_children = false;
+
+                    if matches!(
+                        self.core.applet.anchor,
+                        PanelAnchor::Left | PanelAnchor::Right
+                    ) {
+                        let suggested_size = self.core.applet.suggested_size(false).1
+                            + 2 * self.core.applet.suggested_padding(false);
+                        popup_settings.positioner.anchor_rect.y =
+                            overflow_index as i32 * suggested_size as i32;
+                    } else {
+                        let suggested_size = self.core.applet.suggested_size(false).0
+                            + 2 * self.core.applet.suggested_padding(false);
+                        popup_settings.positioner.anchor_rect.x =
+                            overflow_index as i32 * suggested_size as i32;
+                    }
+
+                    self.overflow_popup = Some(popup_id);
+                    let mut cmds = Vec::new();
+                    cmds.push(get_popup(popup_settings));
+                    return Task::batch(cmds);
+                } else {
+                    return Task::none();
+                }
+            }
+            Msg::HoveredOverflow => {
+                let mut cmds = Vec::new();
+                if self.overflow_popup.is_some() {
+                    // If we already have an overflow popup, do nothing
+                    return Task::none();
+                } else if self.open_menu.is_some() {
+                    // If we have an open menu, close it
+                    if let Some(popup_id) = self.popup.take() {
+                        cmds.push(destroy_popup(popup_id));
+                    }
+                } else {
+                    return Task::none();
+                }
+
+                let popup_id = self.next_popup_id();
+                let mut popup_settings = self.core.applet.get_popup_settings(
+                    self.core.main_window_id().unwrap(),
+                    popup_id,
+                    None,
+                    None,
+                    None,
+                );
+                self.popup = Some(popup_id);
+
+                let Some(i) = self.overflow_index() else {
+                    return Task::batch(cmds);
+                };
+
+                if matches!(
+                    self.core.applet.anchor,
+                    PanelAnchor::Left | PanelAnchor::Right
+                ) {
+                    let suggested_size = self.core.applet.suggested_size(false).1
+                        + 2 * self.core.applet.suggested_padding(false);
+                    popup_settings.positioner.anchor_rect.y = i as i32 * suggested_size as i32;
+                } else {
+                    let suggested_size = self.core.applet.suggested_size(false).0
+                        + 2 * self.core.applet.suggested_padding(false);
+                    popup_settings.positioner.anchor_rect.x = i as i32 * suggested_size as i32;
+                }
+                cmds.push(get_popup(popup_settings));
+                Task::batch(cmds)
+            }
         }
     }
 
@@ -249,20 +422,27 @@ impl cosmic::Application for App {
     }
 
     fn view(&self) -> cosmic::Element<'_, Msg> {
-        let children = self.menus.iter().map(|(id, menu)| {
-            mouse_area(
-                match menu.icon_pixmap() {
-                    Some(icon) if menu.icon_name() == "" => self
-                        .core
-                        .applet
-                        .icon_button_from_handle(icon.clone().symbolic(true)),
-                    _ => self.core.applet.icon_button(menu.icon_name()),
-                }
-                .on_press_down(Msg::TogglePopup(*id)),
-            )
-            .on_enter(Msg::Hovered(*id))
-            .into()
-        });
+        let overflow_index = self.overflow_index();
+
+        let children = self
+            .menus
+            .iter()
+            .take(overflow_index.unwrap_or(self.menus.len()))
+            .map(|(id, menu)| {
+                mouse_area(
+                    match menu.icon_pixmap() {
+                        Some(icon) if menu.icon_name() == "" => self
+                            .core
+                            .applet
+                            .icon_button_from_handle(icon.clone().symbolic(true)),
+                        _ => self.core.applet.icon_button(menu.icon_name()),
+                    }
+                    .on_press_down(Msg::TogglePopup(*id)),
+                )
+                .on_enter(Msg::Hovered(*id))
+                .into()
+            });
+
         self.core
             .applet
             .autosize_window(
@@ -272,13 +452,36 @@ impl cosmic::Application for App {
                 ) {
                     Element::from(iced::widget::column(children))
                 } else {
-                    iced::widget::row(children).into()
+                    iced::widget::row(children)
+                        .push_maybe(overflow_index.map(|_| {
+                            mouse_area(
+                                self.core
+                                    .applet
+                                    .icon_button(match self.core.applet.anchor {
+                                        PanelAnchor::Bottom => "go-up-symbolic",
+                                        PanelAnchor::Left => "go-next-symbolic",
+                                        PanelAnchor::Right => "go-previous-symbolic",
+                                        PanelAnchor::Top => "go-down-symbolic",
+                                    })
+                                    .on_press_down(Msg::ToggleOverflow),
+                            )
+                            .on_enter(Msg::HoveredOverflow)
+                        }))
+                        .into()
                 },
             )
             .into()
     }
 
-    fn view_window(&self, _surface: window::Id) -> cosmic::Element<'_, Msg> {
+    fn view_window(&self, surface: window::Id) -> cosmic::Element<'_, Msg> {
+        if self
+            .overflow_popup
+            .as_ref()
+            .is_some_and(|id| *id == surface)
+        {
+            return self.view_overflow_popup();
+        }
+
         let theme = self.core.system_theme();
         let cosmic = theme.cosmic();
         let corners = cosmic.corner_radii.clone();

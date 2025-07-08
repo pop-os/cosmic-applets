@@ -9,6 +9,7 @@ use cosmic::{
     iced_futures::Subscription,
 };
 use cosmic_notifications_util::Notification;
+use futures_util::{SinkExt, StreamExt};
 use std::{
     collections::HashMap,
     future::pending,
@@ -17,11 +18,7 @@ use std::{
 };
 use tokio::sync::mpsc;
 use tracing::{error, trace};
-use zbus::{
-    connection::Builder,
-    export::futures_util::{SinkExt, StreamExt},
-    proxy,
-};
+use zbus::{connection::Builder, proxy};
 
 #[derive(Debug)]
 pub enum State {
@@ -66,7 +63,8 @@ pub fn notifications(proxy: NotificationsAppletProxy<'static>) -> Subscription<O
                         fail_count = fail_count.saturating_add(1);
                         if fail_count > 5 {
                             error!("Failed to receive notification events");
-                            _ = pending::<()>();
+                            // exit because the applet needs the notifications daemon in order to work properly
+                            std::process::exit(0);
                         } else {
                             tokio::time::sleep(std::time::Duration::from_secs(1)).await;
                         };
@@ -130,7 +128,7 @@ pub fn notifications(proxy: NotificationsAppletProxy<'static>) -> Subscription<O
     interface = "com.system76.NotificationsApplet",
     default_path = "/com/system76/NotificationsApplet"
 )]
-trait NotificationsApplet {
+pub trait NotificationsApplet {
     #[zbus(signal)]
     fn notify(
         &self,

@@ -2,39 +2,27 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use anyhow;
-use cctk::sctk::reexports::calloop::channel::SyncSender;
+use cctk::sctk::reexports::calloop::{self, channel::SyncSender};
 use cosmic::iced::{
     self,
     futures::{self, channel::mpsc, SinkExt, StreamExt},
     stream, Subscription,
 };
 use cosmic_protocols::a11y::v1::client::cosmic_a11y_manager_v1::Filter;
+use cosmic_settings_subscriptions::cosmic_a11y_manager::{
+    self as thread, AccessibilityEvent, AccessibilityRequest,
+};
 use once_cell::sync::Lazy;
 use tokio::sync::Mutex;
 
-mod thread;
-
-pub static WAYLAND_RX: Lazy<Mutex<Option<mpsc::Receiver<AccessibilityEvent>>>> =
+pub static WAYLAND_RX: Lazy<Mutex<Option<tokio::sync::mpsc::Receiver<AccessibilityEvent>>>> =
     Lazy::new(|| Mutex::new(None));
 
 #[derive(Debug, Clone)]
 pub enum WaylandUpdate {
     State(AccessibilityEvent),
-    Started(SyncSender<AccessibilityRequest>),
+    Started(calloop::channel::Sender<AccessibilityRequest>),
     Errored,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum AccessibilityEvent {
-    Bound(u32),
-    Magnifier(bool),
-    ScreenFilter { inverted: bool, filter: Filter },
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum AccessibilityRequest {
-    Magnifier(bool),
-    ScreenFilter { inverted: bool, filter: Filter },
 }
 
 pub fn a11y_subscription() -> iced::Subscription<WaylandUpdate> {
@@ -69,7 +57,7 @@ async fn start_listening(
                 }
                 guard.as_mut().unwrap()
             };
-            if let Some(w) = rx.next().await {
+            if let Some(w) = rx.recv().await {
                 _ = output.send(WaylandUpdate::State(w)).await;
                 State::Waiting
             } else {
@@ -87,14 +75,13 @@ pub enum State {
 }
 
 pub struct WaylandWatcher {
-    rx: mpsc::Receiver<AccessibilityEvent>,
-    tx: SyncSender<AccessibilityRequest>,
+    rx: tokio::sync::mpsc::Receiver<AccessibilityEvent>,
+    tx: calloop::channel::Sender<AccessibilityRequest>,
 }
 
 impl WaylandWatcher {
     pub fn new() -> anyhow::Result<Self> {
-        let (tx, rx) = mpsc::channel(20);
-        let tx = thread::spawn_a11y(tx)?;
+        let (tx, rx) = thread::spawn_wayland_connection(1)?;
         Ok(Self { tx, rx })
     }
 }

@@ -11,27 +11,26 @@ confirm = Megerősítés
 cancel = Mégse
 confirm-button = {
     $action -> 
-        [restart] Újraindítás
-        [suspend] Felfüggesztés
+        [restart] { restart }
+        [suspend] { suspend}
         [shutdown] Leállítás
-        [log-out] Kijelentkezés
-        *[other] Megerősítés
+        [log-out] { log-out }
+        *[other] { confirm}
 }
 confirm-title = 
     { $action -> 
-        [restart] Újraindítás
-        [suspend] Felfüggesztés
-        [shutdown] Leállítás
-        [log-out] Összes alkalmazásból kilépés és kijelentkezés
-        *[other] Alkalmazza a kiválasztott műveletet
+        [restart] { restart }
+        [suspend] { suspend }
+        [shutdown] { shutdown }
+        [log-out] Minden alkalmazás bezárása és kijelentkezés
+        *[other] Alkalmazzuk a kiválasztott műveletet
     } most?
 confirm-body = 
-    A rendszer { $action ->
+    A rendszer automatikusan { $action ->
         [restart] újra fog indulni
         [suspend] felfüggesztésre kerül
-        [shutdown] le fog állni
-        [lock-screen] le fogja zárni a képernyőt
-        [log-out] ki fog jelentkezni
+        [shutdown] leáll
+        [lock-screen] zárolni fogja a képernyőt
+        [log-out] kijelentkezik
         *[other] alkalmazni fogja a kiválasztott műveletet
-    } automatikusan { $countdown } másodpercen belül.
-
+    } { $countdown } másodperc múlva.

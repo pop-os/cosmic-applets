@@ -42,6 +42,7 @@ use cosmic_settings_subscriptions::{
 };
 use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
 
+use cosmic::widget::text_input;
 use std::{collections::HashMap, path::PathBuf, time::Duration};
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -632,11 +633,13 @@ impl cosmic::Application for CosmicBatteryApplet {
                                 Message::SetScreenBrightness
                             )
                             .on_release(Message::ReleaseScreenBrightness),
-                            text(format!(
-                                "{:.0}%",
-                                self.screen_brightness_percent().unwrap_or(0.) * 100.
-                            ))
-                            .size(16)
+                            container(
+                                text(format!(
+                                    "{:.0}%",
+                                    self.screen_brightness_percent().unwrap_or(0.) * 100.
+                                ))
+                                .size(16)
+                            )
                             .width(Length::Fixed(40.0))
                             .align_x(Alignment::End)
                         ]
@@ -661,11 +664,13 @@ impl cosmic::Application for CosmicBatteryApplet {
                                 Message::SetKbdBrightness
                             )
                             .on_release(Message::ReleaseKbdBrightness),
-                            text(format!(
-                                "{:.0}%",
-                                100. * kbd_brightness as f64 / max_kbd_brightness as f64
-                            ))
-                            .size(16)
+                            container(
+                                text(format!(
+                                    "{:.0}%",
+                                    100. * kbd_brightness as f64 / max_kbd_brightness as f64
+                                ))
+                                .size(16)
+                            )
                             .width(Length::Fixed(40.0))
                             .align_x(Alignment::End)
                         ]

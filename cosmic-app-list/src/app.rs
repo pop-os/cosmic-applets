@@ -19,7 +19,7 @@ use cctk::{
         workspace::v1::client::ext_workspace_handle_v1::ExtWorkspaceHandleV1,
     },
 };
-use cosmic::desktop::fde;
+use cosmic::desktop::fde::unicase::Ascii;
 use cosmic::desktop::fde::{get_languages_from_env, DesktopEntry};
 use cosmic::{
     app,
@@ -50,6 +50,7 @@ use cosmic::{
     },
     Apply, Element, Task,
 };
+use cosmic::{desktop::fde, widget};
 use cosmic_app_list_config::{AppListConfig, APP_ID};
 use cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::State;
 use futures::future::pending;
@@ -76,6 +77,8 @@ struct AppletIconData {
     padding: Padding,
 }
 
+static DND_FAVORITES: u64 = u64::MAX;
+
 impl AppletIconData {
     fn new(applet: &Context) -> Self {
         let icon_size = applet.suggested_size(false).0;
@@ -83,9 +86,20 @@ impl AppletIconData {
         let icon_spacing = 4.0;
 
         let (dot_radius, bar_size) = match applet.size {
-            Size::PanelSize(PanelSize::XL) | Size::PanelSize(PanelSize::L) => (2.0, 12.0),
-            Size::PanelSize(PanelSize::M) | Size::Hardcoded(_) => (2.0, 8.0),
-            Size::PanelSize(PanelSize::S) | Size::PanelSize(PanelSize::XS) => (1.0, 8.0),
+            Size::Hardcoded(_) => (2.0, 8.0),
+            Size::PanelSize(ref s) => {
+                let size = s.get_applet_icon_size_with_padding(false);
+                // Define size thresholds, to handle custom sizes
+                let small_size_threshold = PanelSize::S.get_applet_icon_size_with_padding(false);
+                let medium_size_threshold = PanelSize::M.get_applet_icon_size_with_padding(false);
+                if size <= small_size_threshold {
+                    (1.0, 8.0)
+                } else if size <= medium_size_threshold {
+                    (2.0, 8.0)
+                } else {
+                    (2.0, 12.0)
+                }
+            }
         };
 
         let padding = padding as f32;
@@ -321,7 +335,7 @@ struct CosmicAppList {
     desktop_entries: Vec<DesktopEntry>,
     active_list: Vec<DockItem>,
     pinned_list: Vec<DockItem>,
-    dnd_source: Option<(window::Id, DockItem, DndAction)>,
+    dnd_source: Option<(window::Id, DockItem, DndAction, Option<usize>)>,
     config: AppListConfig,
     wayland_sender: Option<Sender<WaylandRequest>>,
     seat: Option<WlSeat>,
@@ -356,7 +370,7 @@ enum Message {
     ClosePopup,
     Activate(ExtForeignToplevelHandleV1),
     Toggle(ExtForeignToplevelHandleV1),
-    Exec(String, Option<usize>),
+    Exec(String, Option<usize>, bool),
     Quit(String),
     NewSeat(WlSeat),
     RemovedSeat,
@@ -364,7 +378,7 @@ enum Message {
     StartDrag(u32),
     DragFinished,
     DndEnter(f64, f64),
-    DndExit,
+    DndLeave,
     DndMotion(f64, f64),
     DndDropFinished,
     DndData(Option<DndPathBuf>),
@@ -866,35 +880,48 @@ impl cosmic::Application for CosmicAppList {
                 }
             }
             Message::StartDrag(id) => {
-                if let Some((_, toplevel_group)) = self
+                if let Some((_, toplevel_group, pos)) = self
                     .active_list
                     .iter()
                     .find_map(|t| {
                         if t.id == id {
-                            Some((false, t.clone()))
+                            Some((false, t.clone(), None))
                         } else {
                             None
                         }
                     })
                     .or_else(|| {
-                        if let Some(pos) = self.pinned_list.iter().position(|t| t.id == id) {
-                            let t = self.pinned_list.remove(pos);
-                            self.config.remove_pinned(
-                                &t.original_app_id,
-                                &Config::new(APP_ID, AppListConfig::VERSION).unwrap(),
-                            );
-                            Some((true, t))
-                        } else {
-                            None
-                        }
+                        self.pinned_list
+                            .iter()
+                            .position(|t| t.id == id)
+                            .map(|pos| (true, self.pinned_list[pos].clone(), Some(pos)))
                     })
                 {
                     let icon_id = window::Id::unique();
-                    self.dnd_source = Some((icon_id, toplevel_group.clone(), DndAction::empty()));
+                    self.dnd_source =
+                        Some((icon_id, toplevel_group.clone(), DndAction::empty(), pos));
                 }
             }
             Message::DragFinished => {
-                if let Some((_, mut toplevel_group, _)) = self.dnd_source.take() {
+                if let Some((_, mut toplevel_group, _, pinned_pos)) = self.dnd_source.take() {
+                    if self.dnd_offer.take().is_some() {
+                        if let Some((_, ref toplevel_group, _, pinned_pos)) =
+                            self.dnd_source.as_ref()
+                        {
+                            let mut pos = 0;
+                            self.pinned_list.retain_mut(|pinned| {
+                                let matched_id =
+                                    pinned.desktop_info.id() == toplevel_group.desktop_info.id();
+                                let pinned_match =
+                                    pinned_pos.is_some_and(|pinned_pos| pinned_pos == pos);
+                                let ret = !matched_id || pinned_match;
+
+                                pos += 1;
+                                ret
+                            });
+                        }
+                    }
+
                     if !self
                         .pinned_list
                         .iter()
@@ -921,7 +948,6 @@ impl cosmic::Application for CosmicAppList {
                     preview_index: index,
                     ..DndOffer::default()
                 });
-                // TODO dnd
                 if let Some(dnd_source) = self.dnd_source.as_ref() {
                     self.dnd_offer.as_mut().unwrap().dock_item = Some(dnd_source.1.clone());
                 } else {
@@ -950,7 +976,20 @@ impl cosmic::Application for CosmicAppList {
                     o.preview_index = index;
                 }
             }
-            Message::DndExit => {
+            Message::DndLeave => {
+                let mut cnt = 0;
+                if let Some((_, ref toplevel_group, _, pinned_pos)) = self.dnd_source.as_ref() {
+                    let mut pos = 0;
+                    self.pinned_list.retain_mut(|pinned| {
+                        let matched_id =
+                            pinned.desktop_info.id() == toplevel_group.desktop_info.id();
+                        let pinned_match = pinned_pos.is_some_and(|pinned_pos| pinned_pos == pos);
+                        let ret = !matched_id || pinned_match;
+
+                        pos += 1;
+                        ret
+                    });
+                }
                 self.dnd_offer = None;
             }
             Message::DndData(file_path) => {
@@ -993,7 +1032,12 @@ impl cosmic::Application for CosmicAppList {
                         })
                     {
                         let t = if is_pinned {
-                            self.pinned_list.remove(pos)
+                            let t = self.pinned_list.remove(pos);
+                            self.config.remove_pinned(
+                                &t.original_app_id,
+                                &Config::new(APP_ID, AppListConfig::VERSION).unwrap(),
+                            );
+                            t
                         } else {
                             self.active_list.remove(pos)
                         };
@@ -1062,28 +1106,7 @@ impl cosmic::Application for CosmicAppList {
                         ToplevelUpdate::Add(mut info) => {
                             let unicase_appid = fde::unicase::Ascii::new(&*info.app_id);
                             let new_desktop_info =
-                                match fde::find_app_by_id(&self.desktop_entries, unicase_appid) {
-                                    Some(appid) => appid.clone(),
-                                    None => {
-                                        // Update desktop entries in case it was not found.
-
-                                        self.update_desktop_entries();
-                                        match fde::find_app_by_id(
-                                            &self.desktop_entries,
-                                            unicase_appid,
-                                        ) {
-                                            Some(appid) => appid.clone(),
-                                            None => {
-                                                tracing::error!(
-                                                    id = info.app_id,
-                                                    "could not find desktop entry for app"
-                                                );
-
-                                                fde::DesktopEntry::from_appid(info.app_id.clone())
-                                            }
-                                        }
-                                    }
-                                };
+                                self.find_desktop_entry_for_toplevel(&info, unicase_appid);
 
                             if let Some(t) = self
                                 .active_list
@@ -1124,6 +1147,8 @@ impl cosmic::Application for CosmicAppList {
                             if info.app_id.is_empty() {
                                 return Task::none();
                             }
+                            let mut updated_appid = false;
+
                             'toplevel_loop: for toplevel_list in self
                                 .active_list
                                 .iter_mut()
@@ -1131,9 +1156,52 @@ impl cosmic::Application for CosmicAppList {
                             {
                                 for (t_info, _) in &mut toplevel_list.toplevels {
                                     if info.foreign_toplevel == t_info.foreign_toplevel {
-                                        *t_info = info;
+                                        if info.app_id != t_info.app_id {
+                                            updated_appid = true;
+                                        }
+
+                                        *t_info = info.clone();
                                         break 'toplevel_loop;
                                     }
+                                }
+                            }
+
+                            if updated_appid {
+                                // remove the current toplevel from its dock item
+                                for t in self
+                                    .active_list
+                                    .iter_mut()
+                                    .chain(self.pinned_list.iter_mut())
+                                {
+                                    t.toplevels
+                                        .retain(|(t_info, _)| t_info.app_id != info.app_id);
+                                }
+                                self.active_list.retain(|t| !t.toplevels.is_empty());
+
+                                // find a new one for it
+                                let new_desktop_entry = self.find_desktop_entry_for_toplevel(
+                                    &info,
+                                    Ascii::new(&info.app_id),
+                                );
+
+                                if let Some(t) = self
+                                    .active_list
+                                    .iter_mut()
+                                    .chain(self.pinned_list.iter_mut())
+                                    .find(|DockItem { desktop_info, .. }| {
+                                        desktop_info.id() == new_desktop_entry.id()
+                                    })
+                                {
+                                    t.toplevels.push((info, None));
+                                } else {
+                                    self.item_ctr += 1;
+
+                                    self.active_list.push(DockItem {
+                                        id: self.item_ctr,
+                                        original_app_id: info.app_id.clone(),
+                                        toplevels: vec![(info, None)],
+                                        desktop_info: new_desktop_entry,
+                                    });
                                 }
                             }
                         }
@@ -1155,6 +1223,7 @@ impl cosmic::Application for CosmicAppList {
                         app_id,
                         exec,
                         gpu_idx,
+                        terminal,
                     } => {
                         let mut envs = Vec::new();
                         if let Some(token) = token {
@@ -1170,7 +1239,13 @@ impl cosmic::Application for CosmicAppList {
                             );
                         }
                         tokio::spawn(async move {
-                            cosmic::desktop::spawn_desktop_exec(exec, envs, app_id.as_deref()).await
+                            cosmic::desktop::spawn_desktop_exec(
+                                exec,
+                                envs,
+                                app_id.as_deref(),
+                                terminal,
+                            )
+                            .await
                         });
                     }
                 }
@@ -1181,12 +1256,13 @@ impl cosmic::Application for CosmicAppList {
             Message::RemovedSeat => {
                 self.seat.take();
             }
-            Message::Exec(exec, gpu_idx) => {
+            Message::Exec(exec, gpu_idx, terminal) => {
                 if let Some(tx) = self.wayland_sender.as_ref() {
                     let _ = tx.send(WaylandRequest::TokenRequest {
                         app_id: Self::APP_ID.to_string(),
                         exec,
                         gpu_idx,
+                        terminal,
                     });
                 }
             }
@@ -1399,11 +1475,17 @@ impl cosmic::Application for CosmicAppList {
             PanelAnchor::Left | PanelAnchor::Right => false,
         };
         let divider_padding = match self.core.applet.size {
-            Size::PanelSize(PanelSize::XL)
-            | Size::PanelSize(PanelSize::L)
-            | Size::PanelSize(PanelSize::M) => 8,
-            Size::PanelSize(PanelSize::S) | Size::PanelSize(PanelSize::XS) | Size::Hardcoded(_) => {
-                4
+            Size::Hardcoded(_) => 4,
+            Size::PanelSize(ref s) => {
+                let size = s.get_applet_icon_size_with_padding(false);
+
+                let small_size_threshold = PanelSize::S.get_applet_icon_size_with_padding(false);
+
+                if size <= small_size_threshold {
+                    4
+                } else {
+                    8
+                }
             }
         };
         let (favorite_popup_cutoff, active_popup_cutoff) = self.panel_overflow_lengths();
@@ -1606,7 +1688,8 @@ impl cosmic::Application for CosmicAppList {
                 DndDestination::for_data::<DndPathBuf>(
                     row(favorites).spacing(app_icon.icon_spacing),
                     |_, _| Message::DndDropFinished,
-                ),
+                )
+                .drag_id(DND_FAVORITES.clone()),
                 row(active).spacing(app_icon.icon_spacing).into(),
                 container(vertical_rule(1))
                     .height(Length::Fill)
@@ -1620,7 +1703,8 @@ impl cosmic::Application for CosmicAppList {
                 DndDestination::for_data(
                     column(favorites).spacing(app_icon.icon_spacing),
                     |_data: Option<DndPathBuf>, _| Message::DndDropFinished,
-                ),
+                )
+                .drag_id(DND_FAVORITES.clone()),
                 column(active).spacing(app_icon.icon_spacing).into(),
                 container(divider::horizontal::default())
                     .width(Length::Fill)
@@ -1632,7 +1716,7 @@ impl cosmic::Application for CosmicAppList {
         let favorites = favorites
             .on_enter(|x, y, _| Message::DndEnter(x, y))
             .on_motion(Message::DndMotion)
-            .on_leave(|| Message::DndExit);
+            .on_leave(|| Message::DndLeave);
 
         let show_pinned =
             !self.pinned_list.is_empty() || self.dnd_offer.is_some() || self.is_listening_for_dnd;
@@ -1692,7 +1776,7 @@ impl cosmic::Application for CosmicAppList {
     fn view_window(&self, id: window::Id) -> Element<Message> {
         let theme = self.core.system_theme();
 
-        if let Some((_, item, _)) = self.dnd_source.as_ref().filter(|s| s.0 == id) {
+        if let Some((_, item, _, _)) = self.dnd_source.as_ref().filter(|s| s.0 == id) {
             fde::IconSource::from_unknown(item.desktop_info.icon().unwrap_or_default())
                 .as_cosmic_icon()
                 .size(self.core.applet.suggested_size(false).0)
@@ -1720,7 +1804,7 @@ impl cosmic::Application for CosmicAppList {
 
             match popup_type {
                 PopupType::RightClickMenu => {
-                    fn menu_button<'a, Message>(
+                    fn menu_button<'a, Message: Clone + 'a>(
                         content: impl Into<Element<'a, Message>>,
                     ) -> cosmic::widget::Button<'a, Message> {
                         button::custom(content)
@@ -1734,10 +1818,10 @@ impl cosmic::Application for CosmicAppList {
 
                     if let Some(exec) = desktop_info.exec() {
                         if !toplevels.is_empty() {
-                            content = content.push(
-                                menu_button(text::body(fl!("new-window")))
-                                    .on_press(Message::Exec(exec.to_string(), None)),
-                            );
+                            content =
+                                content.push(menu_button(text::body(fl!("new-window"))).on_press(
+                                    Message::Exec(exec.to_string(), None, desktop_info.terminal()),
+                                ));
                         } else if let Some(gpus) = self.gpus.as_ref() {
                             let default_idx = if desktop_info.prefers_non_default_gpu() {
                                 gpus.iter().position(|gpu| !gpu.default).unwrap_or(0)
@@ -1755,14 +1839,17 @@ impl cosmic::Application for CosmicAppList {
                                             String::new()
                                         }
                                     )))
-                                    .on_press(Message::Exec(exec.to_string(), Some(i))),
+                                    .on_press(Message::Exec(
+                                        exec.to_string(),
+                                        Some(i),
+                                        desktop_info.terminal(),
+                                    )),
                                 );
                             }
                         } else {
-                            content = content.push(
-                                menu_button(text::body(fl!("run")))
-                                    .on_press(Message::Exec(exec.to_string(), None)),
-                            );
+                            content = content.push(menu_button(text::body(fl!("run"))).on_press(
+                                Message::Exec(exec.to_string(), None, desktop_info.terminal()),
+                            ));
                         }
                         for action in desktop_info.actions().into_iter().flatten() {
                             if action == "new-window" {
@@ -1777,10 +1864,9 @@ impl cosmic::Application for CosmicAppList {
                             else {
                                 continue;
                             };
-                            content = content.push(
-                                menu_button(text::body(name))
-                                    .on_press(Message::Exec(exec.into(), None)),
-                            );
+                            content = content.push(menu_button(text::body(name)).on_press(
+                                Message::Exec(exec.into(), None, desktop_info.terminal()),
+                            ));
                         }
                         content = content.push(divider::horizontal::light());
                     }
@@ -2246,6 +2332,61 @@ impl CosmicAppList {
         }
         focused_toplevels
     }
+
+    fn find_desktop_entry_for_toplevel(
+        &mut self,
+        info: &ToplevelInfo,
+        unicase_appid: Ascii<&str>,
+    ) -> DesktopEntry {
+        match fde::find_app_by_id(&self.desktop_entries, unicase_appid) {
+            Some(appid) => appid.clone(),
+            None => {
+                // Update desktop entries in case it was not found.
+
+                self.update_desktop_entries();
+                match fde::find_app_by_id(&self.desktop_entries, unicase_appid) {
+                    Some(appid) => appid.clone(),
+                    None => {
+                        tracing::error!(id = info.app_id, "could not find desktop entry for app");
+
+                        let mut fallback_entry = fde::DesktopEntry::from_appid(info.app_id.clone());
+
+                        // proton opens games as steam_app_X, where X is either
+                        // the steam appid or "default". games with a steam appid
+                        // can have a desktop entry generated elsewhere; this
+                        // specifically handles non-steam games opened
+                        // under proton
+                        // in addition, try to match WINE entries who have its
+                        // appid = the full name of the executable (incl. .exe)
+                        let is_proton_game = info.app_id == "steam_app_default";
+                        if is_proton_game || info.app_id.ends_with(".exe") {
+                            for entry in &self.desktop_entries {
+                                let localised_name = entry
+                                    .name(&self.locales)
+                                    .map(|x| x.to_string())
+                                    .unwrap_or_default();
+
+                                if localised_name == info.title {
+                                    // if this is a proton game, we only want
+                                    // to look for game entries
+                                    if is_proton_game
+                                        && !entry.categories().unwrap_or_default().contains(&"Game")
+                                    {
+                                        continue;
+                                    }
+
+                                    fallback_entry = entry.clone();
+                                    break;
+                                }
+                            }
+                        }
+
+                        fallback_entry
+                    }
+                }
+            }
+        }
+    }
 }
 
 fn launch_on_preferred_gpu(desktop_info: &DesktopEntry, gpus: Option<&[Gpu]>) -> Option<Message> {
@@ -2261,7 +2402,11 @@ fn launch_on_preferred_gpu(desktop_info: &DesktopEntry, gpus: Option<&[Gpu]>) ->
         }
     });
 
-    Some(Message::Exec(exec.to_string(), gpu_idx))
+    Some(Message::Exec(
+        exec.to_string(),
+        gpu_idx,
+        desktop_info.terminal(),
+    ))
 }
 
 #[derive(Debug, Default, Clone)]

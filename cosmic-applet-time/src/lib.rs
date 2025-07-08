@@ -1,7 +1,8 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
-mod config;
+pub use cosmic_applets_config::time as config;
+
 mod localize;
 mod time;
 mod window;

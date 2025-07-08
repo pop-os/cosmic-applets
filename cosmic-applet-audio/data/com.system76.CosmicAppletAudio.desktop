@@ -1,9 +1,12 @@
 [Desktop Entry]
 Name=Sound
+Name[zh_CN]=音频
 Name[ko]=코스믹 오디오 애플릿
 Name[hu]=Hang
 Name[pl]=Dźwięk
 Name[pt]=Som
+Name[nl]=Geluid
+Name[de]=Klang
 Type=Application
 Exec=cosmic-applet-audio
 Terminal=false

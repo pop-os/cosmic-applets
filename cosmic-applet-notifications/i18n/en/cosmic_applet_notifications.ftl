@@ -1,11 +1,11 @@
-hours-ago = { NUMBER($duration) -> 
-    [1] 1 hour ago
-    *[other] {$duration} hours ago
-}
-minutes-ago = { NUMBER($duration) -> 
-    [1] 1 minute ago
-    *[other] {$duration} minutes ago
-}
+hours-ago = { $duration } { $duration ->
+    [one] hour
+    *[other] hours
+} ago
+minutes-ago = { $duration } { $duration ->
+    [one] minute
+    *[other] minutes
+} ago
 show-less = Show less
 show-more = Show {$more} more
 clear-group = Clear group

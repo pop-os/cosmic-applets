@@ -1,8 +1,11 @@
 [Desktop Entry]
 Name=Input Sources
+Name[zh_CN]=输入源
 Name[hu]=Beviteli Források
 Name[pl]=Źródła wprowadzdania danych
 Name[pt]=Métodos de Entrada de Teclado
+Name[nl]=Invoerbronnen
+Name[de]=Eigangsquellen
 Type=Application
 Exec=cosmic-applet-input-sources
 Terminal=false

@@ -26,7 +26,7 @@ use zbus::proxy;
     default_service = "org.freedesktop.Notifications",
     default_path = "/org/freedesktop/Notifications"
 )]
-trait Notifications {
+pub trait Notifications {
     /// CloseNotification method
     fn close_notification(&self, id: u32) -> zbus::Result<()>;
 

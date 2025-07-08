@@ -1,7 +1,8 @@
 [Desktop Entry]
 Name=Notifications Tray
+Name[zh_CN]=通知托盘
 Name[hu]=Értesítési terület
-Name[nl]=Meldingsbeheerder
+Name[nl]=Meldingsvlak
 Name[pl]=Zasobnik powiadomień
 Name[pt]=Área de Notificações
 Type=Application
@@ -15,4 +16,5 @@ StartupNotify=true
 NoDisplay=true
 X-CosmicApplet=true
 X-CosmicHoverPopup=Auto
-X-OverflowPriority=10
+X-OverflowPriority=99
+X-OverflowMinSize=2
