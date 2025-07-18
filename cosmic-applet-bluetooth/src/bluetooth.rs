@@ -91,7 +91,7 @@ pub fn bluetooth_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
 
                 retry_count = retry_count.saturating_add(1);
                 _ = tokio::time::sleep(Duration::from_millis(
-                    2_u64.saturating_pow(retry_count).max(68719476734),
+                    2_u64.saturating_pow(retry_count).min(68719476734),
                 ))
                 .await;
             };
