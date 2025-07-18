@@ -1111,6 +1111,7 @@ dependencies = [
 name = "cosmic-applet-battery"
 version = "0.1.0"
 dependencies = [
+ "cosmic-config",
  "cosmic-settings-subscriptions",
  "cosmic-time",
  "drm 0.14.1",
@@ -1120,6 +1121,7 @@ dependencies = [
  "libcosmic",
  "once_cell",
  "rust-embed",
+ "serde",
  "tokio",
  "tracing",
  "tracing-log",
