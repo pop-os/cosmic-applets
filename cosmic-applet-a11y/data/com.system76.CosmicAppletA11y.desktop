@@ -6,6 +6,7 @@ Name[pl]=Dostępność
 Name[pt]=Acessibilidade
 Name[nl]=Toegankelijkheid
 Name[de]= Zugänglichkeit
+Name[ru]=Специальные возможности
 Type=Application
 Exec=cosmic-applet-a11y
 Terminal=false

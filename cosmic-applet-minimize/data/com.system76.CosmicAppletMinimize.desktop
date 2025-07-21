@@ -6,6 +6,7 @@ Name[pl]=Zminimalizowane okna
 Name[pt]=Janelas Minimizadas
 Name[nl]=Geminimaliseerde vensters
 Name[de]=Minimierte Fenster
+Name[ru]=Свёрнутые окна
 Type=Application
 Exec=cosmic-applet-minimize
 Terminal=false
