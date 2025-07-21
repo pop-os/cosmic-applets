@@ -1,0 +1,9 @@
+hours-ago = { $duration } ساعت پیش
+minutes-ago = { $duration } دقیقه پیش
+show-less = نمایش کمتر
+show-more = نمایش {$more} مورد دیگر
+clear-group = پاک کردن گروه
+clear-all = پاک کردن همه اعلان‌ها
+do-not-disturb = مزاحم نشوید
+notification-settings = تنطیمات اعلان‌ها...
+no-notifications = بدون اعلان
