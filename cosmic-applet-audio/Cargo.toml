@@ -6,6 +6,7 @@ license = "GPL-3.0-only"
 
 [dependencies]
 cosmic-settings-subscriptions.workspace = true
+cosmic-settings-subscriptions.features = ["pulse"]
 cosmic-time.workspace = true
 i18n-embed-fl.workspace = true
 i18n-embed.workspace = true
