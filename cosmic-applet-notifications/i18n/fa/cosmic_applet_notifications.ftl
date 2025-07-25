@@ -5,5 +5,5 @@ show-more = نمایش {$more} مورد دیگر
 clear-group = پاک کردن گروه
 clear-all = پاک کردن همه اعلان‌ها
 do-not-disturb = مزاحم نشوید
-notification-settings = تنطیمات اعلان‌ها...
+notification-settings = تنظیمات اعلان‌ها...
 no-notifications = بدون اعلان

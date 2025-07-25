@@ -1,6 +1,6 @@
 bluetooth = بلوتوث
 other-devices = سایر دستگاه‌های بلوتوث
-settings = تنطیمات بلوتوث...
+settings = تنظیمات بلوتوث...
 connected = متصل
 confirm-pin = لطفاً تأیید کنید که پین زیر با پین نمایش داده شده در {$deviceName} یکسان است.
 confirm = تأیید

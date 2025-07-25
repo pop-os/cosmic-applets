@@ -4,7 +4,7 @@ lock-screen = قفل صفحه
 lock-screen-shortcut = Super + Escape
 log-out = خروج از حساب
 log-out-shortcut = Super + Shift + Escape
-suspend = تعلیق
+suspend = تعلیق کردن
 restart = راه‌اندازی مجدد
 shutdown = خاموش کردن
 confirm = تأیید
@@ -20,7 +20,7 @@ confirm-button = {
 confirm-title = 
     هم‌اکنون { $action -> 
         [restart] { restart }
-        [suspend] { suspend }
+        [suspend] تعلیق
         [shutdown] خاموش
         [log-out] برنامه‌ها بسته و از حساب خارج
         *[other] عمل انتخاب شده اعمال
