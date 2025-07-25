@@ -6,6 +6,7 @@ license = "GPL-3.0-only"
 
 [dependencies]
 cosmic-settings-subscriptions.workspace = true
+cosmic-settings-subscriptions.features = ["settings_daemon", "upower"]
 cosmic-time.workspace = true
 drm = "0.14.1"
 futures.workspace = true
