@@ -6,6 +6,7 @@ Name[pl]=Centrum powiadomień
 Name[pt]=Central de Notificações
 Name[nl]=Meldingscentrum
 Name[de]=Notifizierungszentrum
+Name[ru]=Центр уведомлений
 Type=Application
 Exec=cosmic-applet-notifications
 Terminal=false

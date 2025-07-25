@@ -13,6 +13,7 @@
   <name xml:lang="pt_BR">Miniaplicativos</name>
   <name xml:lang="pt">Miniaplicativos</name>
   <name xml:lang="hu">COSMIC Kisalkalmazások</name>
+  <name xml:lang="ru">Мини-приложения COSMIC</name>
   <summary>Applets for the COSMIC panel</summary>
   <summary xml:lang="pl">Aplety dla panelu COSMIC</summary>
   <summary xml:lang="pt_BR">Miniaplicativos para o painel do COSMIC</summary>
@@ -20,6 +21,7 @@
   <summary xml:lang="hu">Kisalkalmazások a COSMIC panelhez</summary>
   <summary xml:lang="nl">Applets voor het paneel van COSMIC</summary>
   <summary xml:lang="de">Applets für das COSMIC-Panel</summary>
+  <summary xml:lang="ru">Мини-приложения для панели COSMIC</summary>
   <description>
     <p>Applets for the COSMIC panel</p>
     <p xml:lang="pl">Aplety dla panelu COSMIC</p>
@@ -28,6 +30,7 @@
     <p xml:lang="hu">Kisalkalmazások a COSMIC panelhez</p>
     <p xml:lang="nl">Applets voor het paneel van COSMIC</p>
     <p xml:lang="de">Applets für das COSMIC-Panel</p>
+    <p xml:lang="ru">Мини-приложения для панели COSMIC</summary>
   </description>
   <launchable type="desktop-id">com.system76.CosmicAppletAppList.desktop</launchable>
   <launchable type="desktop-id">com.system76.CosmicAppletAudio.desktop</launchable>

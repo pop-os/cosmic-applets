@@ -7,6 +7,7 @@ Name[pl]=Zasilanie i bateria
 Name[pt]=Energia e Bateria
 Name[nl]=Energie en batterij
 Name[de]=Energie und Akku
+Name[ru]=Питание и аккумулятор
 Type=Application
 Exec=cosmic-applet-battery
 Terminal=false
