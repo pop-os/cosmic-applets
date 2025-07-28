@@ -1087,6 +1087,7 @@ dependencies = [
 name = "cosmic-applet-battery"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "cosmic-settings-subscriptions",
  "cosmic-time",
  "drm 0.14.1",

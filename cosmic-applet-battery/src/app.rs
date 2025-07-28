@@ -25,7 +25,6 @@ use cosmic::{
         window, Length, Subscription,
     },
     iced_core::{Alignment, Background, Border, Color, Shadow},
-    iced_runtime::core::layout::Limits,
     iced_widget::{Column, Row},
     surface, theme,
     widget::{divider, horizontal_space, icon, scrollable, text, vertical_space},
@@ -80,7 +79,7 @@ struct CosmicBatteryApplet {
     core: cosmic::app::Core,
     icon_name: String,
     display_icon_name: String,
-    charging_limit: bool,
+    charging_limit: Option<bool>,
     battery_percent: f64,
     on_battery: bool,
     gpus: HashMap<PathBuf, GPUData>,
@@ -106,26 +105,31 @@ impl CosmicBatteryApplet {
         percent = percent.clamp(0.0, 100.0);
         self.on_battery = on_battery;
         self.battery_percent = percent;
-        let battery_percent = if self.battery_percent > 95.0 && !self.charging_limit {
-            100
-        } else if self.battery_percent > 80.0 && !self.charging_limit {
-            90
-        } else if self.battery_percent > 65.0 {
-            80
-        } else if self.battery_percent > 35.0 {
-            50
-        } else if self.battery_percent > 20.0 {
-            35
-        } else if self.battery_percent > 14.0 {
-            20
-        } else if self.battery_percent > 9.0 {
-            10
-        } else if self.battery_percent > 5.0 {
-            5
+        let battery_percent =
+            if self.battery_percent > 95.0 && !self.charging_limit.unwrap_or_default() {
+                100
+            } else if self.battery_percent > 80.0 && !self.charging_limit.unwrap_or_default() {
+                90
+            } else if self.battery_percent > 65.0 {
+                80
+            } else if self.battery_percent > 35.0 {
+                50
+            } else if self.battery_percent > 20.0 {
+                35
+            } else if self.battery_percent > 14.0 {
+                20
+            } else if self.battery_percent > 9.0 {
+                10
+            } else if self.battery_percent > 5.0 {
+                5
+            } else {
+                0
+            };
+        let limited = if self.charging_limit.unwrap_or_default() {
+            "limited-"
         } else {
-            0
+            ""
         };
-        let limited = if self.charging_limit { "limited-" } else { "" };
         let charging = if on_battery { "" } else { "charging-" };
         self.icon_name =
             format!("cosmic-applet-battery-level-{battery_percent}-{limited}{charging}symbolic",);
@@ -159,7 +163,7 @@ impl CosmicBatteryApplet {
     }
 
     fn set_charging_limit(&mut self, limit: bool) {
-        self.charging_limit = limit;
+        self.charging_limit = Some(limit);
         self.update_battery(self.battery_percent, self.on_battery);
     }
 }
@@ -174,7 +178,7 @@ enum Message {
     SetKbdBrightnessDebounced,
     SetScreenBrightnessDebounced,
     ReleaseScreenBrightness,
-    InitChargingLimit(bool),
+    InitChargingLimit(Option<bool>),
     SetChargingLimit(chain::Toggler, bool),
     KeyboardBacklight(KeyboardBacklightUpdate),
     UpowerDevice(DeviceDbusEvent),
@@ -204,7 +208,7 @@ impl cosmic::Application for CosmicBatteryApplet {
             cosmic::Action::App(Message::ZbusConnection(res))
         });
         let init_charging_limit_cmd = Task::perform(get_charging_limit(), |limit| {
-            cosmic::Action::App(Message::InitChargingLimit(limit))
+            cosmic::Action::App(Message::InitChargingLimit(limit.ok()))
         });
         (
             Self {
@@ -294,7 +298,9 @@ impl cosmic::Application for CosmicBatteryApplet {
                 }
             }
             Message::InitChargingLimit(enable) => {
-                self.set_charging_limit(enable);
+                if let Some(enable) = enable {
+                    self.set_charging_limit(enable);
+                }
             }
             Message::SetChargingLimit(chain, enable) => {
                 self.timeline.set_chain(chain).start();
@@ -324,7 +330,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                     let new_id = window::Id::unique();
                     self.popup.replace(new_id);
 
-                    let mut popup_settings = self.core.applet.get_popup_settings(
+                    let popup_settings = self.core.applet.get_popup_settings(
                         self.core.main_window_id().unwrap(),
                         new_id,
                         Some((1, 1)),
@@ -334,7 +340,14 @@ impl cosmic::Application for CosmicBatteryApplet {
                     if let Some(tx) = self.power_profile_sender.as_ref() {
                         let _ = tx.send(PowerProfileRequest::Get);
                     }
-                    return get_popup(popup_settings);
+                    let mut tasks = vec![get_popup(popup_settings)];
+                    // Try again every time a popup is opened
+                    if self.charging_limit.is_none() {
+                        tasks.push(Task::perform(get_charging_limit(), |limit| {
+                            cosmic::Action::App(Message::InitChargingLimit(limit.ok()))
+                        }));
+                    }
+                    return Task::batch(tasks);
                 }
             }
             Message::UpowerDevice(event) => match event {
@@ -601,23 +614,30 @@ impl cosmic::Application for CosmicBatteryApplet {
             padded_control(divider::horizontal::default())
                 .padding([space_xxs, space_s])
                 .into(),
-            padded_control(
-                anim!(
-                    //toggler
-                    MAX_CHARGE,
-                    &self.timeline,
-                    fl!("max-charge"),
-                    self.charging_limit,
-                    Message::SetChargingLimit,
-                )
-                .text_size(14)
-                .width(Length::Fill),
-            )
-            .into(),
-            padded_control(divider::horizontal::default())
-                .padding([space_xxs, space_s])
-                .into(),
         ];
+
+        if let Some(charging_limit) = self.charging_limit {
+            content.push(
+                padded_control(
+                    anim!(
+                        //toggler
+                        MAX_CHARGE,
+                        &self.timeline,
+                        fl!("max-charge"),
+                        charging_limit,
+                        Message::SetChargingLimit,
+                    )
+                    .text_size(14)
+                    .width(Length::Fill),
+                )
+                .into(),
+            );
+            content.push(
+                padded_control(divider::horizontal::default())
+                    .padding([space_xxs, space_s])
+                    .into(),
+            );
+        }
 
         if let Some(max_screen_brightness) = self.max_screen_brightness {
             if let Some(screen_brightness) = self.screen_brightness {
