@@ -5,6 +5,7 @@ edition = "2021"
 license = "GPL-3.0-only"
 
 [dependencies]
+anyhow = "1"
 cosmic-settings-subscriptions.workspace = true
 cosmic-settings-subscriptions.features = ["settings_daemon", "upower"]
 cosmic-time.workspace = true
