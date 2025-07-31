@@ -72,6 +72,14 @@ fn device_type_to_icon(device_type: &str) -> &'static str {
     }
 }
 
+// In some distros, rfkill is only in sbin, which isn't normally in PATH
+// TODO: Directly access `/dev/rfkill`
+fn rfkill_path_var() -> std::ffi::OsString {
+    let mut path = std::env::var_os("PATH").unwrap_or_default();
+    path.push(":/usr/sbin");
+    path
+}
+
 #[inline]
 pub fn bluetooth_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
     id: I,
@@ -682,6 +690,7 @@ impl BluerSessionState {
                             // rfkill will be persisted after reboot
                             let name = adapter_clone.name();
                             if let Some(id) = tokio::process::Command::new("rfkill")
+                                .env("PATH", rfkill_path_var())
                                 .arg("list")
                                 .arg("-n")
                                 .arg("--output")
@@ -698,6 +707,7 @@ impl BluerSessionState {
                                 })
                             {
                                 if let Err(err) = tokio::process::Command::new("rfkill")
+                                    .env("PATH", rfkill_path_var())
                                     .arg(if *enabled { "unblock" } else { "block" })
                                     .arg(id)
                                     .output()
