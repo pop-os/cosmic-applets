@@ -113,6 +113,10 @@ impl StatusNotifierItem {
     pub fn menu_proxy(&self) -> &DBusMenuProxy<'static> {
         &self.menu_proxy
     }
+
+    pub fn item_proxy(&self) -> &StatusNotifierItemProxy<'static> {
+        &self.item_proxy
+    }
 }
 
 async fn get_layout(menu_proxy: DBusMenuProxy<'static>) -> Result<Layout, String> {
@@ -136,6 +140,8 @@ pub trait StatusNotifierItem {
 
     #[zbus(signal)]
     fn new_icon(&self) -> zbus::Result<()>;
+
+    fn provide_xdg_activation_token(&self, token: String) -> zbus::Result<()>;
 }
 
 #[derive(Clone, Debug)]

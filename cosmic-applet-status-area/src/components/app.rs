@@ -4,6 +4,8 @@
 use cosmic::{
     app,
     applet::cosmic_panel_config::PanelAnchor,
+    applet::token::subscription::{activation_token_subscription, TokenRequest, TokenUpdate},
+    cctk::sctk::reexports::calloop,
     iced::{
         self,
         overlay::menu,
@@ -15,6 +17,7 @@ use cosmic::{
     Element, Task,
 };
 use std::collections::BTreeMap;
+use zbus::connection::socket::channel;
 
 use crate::{components::status_menu, subscriptions::status_notifier_watcher};
 
@@ -29,10 +32,11 @@ pub enum Msg {
     Surface(surface::Action),
     ToggleOverflow,
     HoveredOverflow,
+    Token(TokenUpdate),
 }
 
 #[derive(Default)]
-struct App {
+pub(crate) struct App {
     core: app::Core,
     connection: Option<zbus::Connection>,
     menus: BTreeMap<usize, status_menu::State>,
@@ -40,6 +44,7 @@ struct App {
     max_menu_id: usize,
     popup: Option<window::Id>,
     overflow_popup: Option<window::Id>,
+    token_tx: Option<calloop::channel::Sender<TokenRequest>>,
 }
 
 impl App {
@@ -167,7 +172,7 @@ impl cosmic::Application for App {
             }
             Msg::StatusMenu((id, msg)) => match self.menus.get_mut(&id) {
                 Some(state) => state
-                    .update(msg)
+                    .update(msg, id, self.token_tx.as_ref())
                     .map(move |msg| cosmic::action::app(Msg::StatusMenu((id, msg)))),
                 None => Task::none(),
             },
@@ -267,6 +272,32 @@ impl cosmic::Application for App {
                 }
                 Task::none()
             }
+            Msg::Token(u) => match u {
+                TokenUpdate::Init(tx) => {
+                    self.token_tx = Some(tx);
+                    return Task::none();
+                }
+                TokenUpdate::Finished => {
+                    self.token_tx = None;
+                    return Task::none();
+                }
+                TokenUpdate::ActivationToken { token, exec: id } => {
+                    if let Some(((state, id), token)) = str::parse(&id)
+                        .ok()
+                        .and_then(|id: usize| self.menus.get_mut(&id).map(|m| (m, id)))
+                        .zip(token)
+                    {
+                        return state
+                            .update(
+                                status_menu::Msg::ClickToken(token),
+                                id,
+                                self.token_tx.as_ref(),
+                            )
+                            .map(move |msg| cosmic::action::app(Msg::StatusMenu((id, msg))));
+                    }
+                    return Task::none();
+                }
+            },
             Msg::Hovered(id) => {
                 let mut cmds = Vec::new();
                 if let Some(old_id) = self.open_menu.take() {
@@ -417,6 +448,7 @@ impl cosmic::Application for App {
         for (id, menu) in self.menus.iter() {
             subscriptions.push(menu.subscription().with(*id).map(Msg::StatusMenu));
         }
+        subscriptions.push(activation_token_subscription(0).map(Msg::Token));
 
         iced::Subscription::batch(subscriptions)
     }
