@@ -2,9 +2,14 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use cosmic::{
-    applet::menu_button,
-    iced::{self, Padding},
+    applet::{
+        menu_button,
+        token::{self, subscription::TokenRequest},
+    },
+    cctk::sctk::reexports::calloop,
+    iced,
     widget::icon,
+    Application,
 };
 
 use crate::subscriptions::status_notifier_item::{IconUpdate, Layout, StatusNotifierItem};
@@ -14,6 +19,7 @@ pub enum Msg {
     Layout(Result<Layout, String>),
     Icon(IconUpdate),
     Click(i32, bool),
+    ClickToken(String),
 }
 
 pub struct State {
@@ -23,6 +29,7 @@ pub struct State {
     icon_name: String,
     // TODO handle icon with multiple sizes?
     icon_pixmap: Option<icon::Handle>,
+    click_event: Option<(i32, bool)>,
 }
 
 impl State {
@@ -34,12 +41,18 @@ impl State {
                 expanded: None,
                 icon_name: String::new(),
                 icon_pixmap: None,
+                click_event: None,
             },
             iced::Task::none(),
         )
     }
 
-    pub fn update(&mut self, message: Msg) -> iced::Task<Msg> {
+    pub fn update(
+        &mut self,
+        message: Msg,
+        menu_id: usize,
+        token_tx: Option<&calloop::channel::Sender<TokenRequest>>,
+    ) -> iced::Task<Msg> {
         match message {
             Msg::Layout(layout) => {
                 match layout {
@@ -78,8 +91,24 @@ impl State {
                 iced::Task::none()
             }
             Msg::Click(id, is_submenu) => {
+                if let Some(token_tx) = token_tx {
+                    _ = token_tx.send(TokenRequest {
+                        app_id: super::app::App::APP_ID.to_string(),
+                        exec: menu_id.to_string(),
+                    });
+                }
+                self.click_event = Some((id, is_submenu));
+                iced::Task::none()
+            }
+            Msg::ClickToken(token) => {
+                let Some((id, is_submenu)) = self.click_event else {
+                    return iced::Task::none();
+                };
+
                 let menu_proxy = self.item.menu_proxy().clone();
+                let item_proxy = self.item.item_proxy().clone();
                 tokio::spawn(async move {
+                    let _ = item_proxy.provide_xdg_activation_token(token).await;
                     let _ = menu_proxy.event(id, "clicked", &0.into(), 0).await;
                 });
                 if is_submenu {
