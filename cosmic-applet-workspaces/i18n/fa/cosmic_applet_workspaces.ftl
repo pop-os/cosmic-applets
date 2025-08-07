@@ -1,1 +1,1 @@
-cosmic-applet-workspaces = فضاهای کاری COSMIC
+cosmic-applet-workspaces = محیط‌های کاری COSMIC
