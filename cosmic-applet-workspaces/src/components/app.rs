@@ -11,26 +11,24 @@ use cctk::{
     workspace::Workspace,
 };
 use cosmic::{
-    app,
+    Element, Task, Theme, app,
     applet::cosmic_panel_config::PanelAnchor,
     iced::{
-        event,
-        mouse::{self, ScrollDelta},
-        widget::{button, column, row},
         Alignment,
         Event::Mouse,
-        Length, Limits, Subscription,
+        Length, Limits, Subscription, event,
+        mouse::{self, ScrollDelta},
+        widget::{button, column, row},
     },
     iced_core::{Background, Border},
     surface,
-    widget::{autosize, container, horizontal_space, vertical_space, Id},
-    Element, Task, Theme,
+    widget::{Id, autosize, container, horizontal_space, vertical_space},
 };
 
 use crate::{
     config,
     wayland::WorkspaceEvent,
-    wayland_subscription::{workspaces, WorkspacesUpdate},
+    wayland_subscription::{WorkspacesUpdate, workspaces},
 };
 
 use std::{
@@ -187,11 +185,7 @@ impl cosmic::Application for IcedWorkspacesApplet {
                 {
                     let max_w = self.workspaces.len().wrapping_sub(1);
                     let d_i = if self.scroll > 0.0 {
-                        if w_i == 0 {
-                            max_w
-                        } else {
-                            w_i.wrapping_sub(1)
-                        }
+                        if w_i == 0 { max_w } else { w_i.wrapping_sub(1) }
                     } else if w_i == max_w {
                         0
                     } else {

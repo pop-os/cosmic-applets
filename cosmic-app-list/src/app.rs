@@ -4,8 +4,8 @@
 use crate::{
     fl,
     wayland_subscription::{
-        wayland_subscription, OutputUpdate, ToplevelRequest, ToplevelUpdate, WaylandImage,
-        WaylandRequest, WaylandUpdate,
+        OutputUpdate, ToplevelRequest, ToplevelUpdate, WaylandImage, WaylandRequest, WaylandUpdate,
+        wayland_subscription,
     },
 };
 use cctk::{
@@ -20,43 +20,41 @@ use cctk::{
     },
 };
 use cosmic::desktop::fde::unicase::Ascii;
-use cosmic::desktop::fde::{get_languages_from_env, DesktopEntry};
+use cosmic::desktop::fde::{self, DesktopEntry, get_languages_from_env};
 use cosmic::{
-    app,
+    Apply, Element, Task, app,
     applet::{
-        cosmic_panel_config::{PanelAnchor, PanelSize},
         Context, Size,
+        cosmic_panel_config::{PanelAnchor, PanelSize},
     },
     cosmic_config::{Config, CosmicConfigEntry},
     desktop::IconSourceExt,
     iced::{
-        self,
+        self, Color, Limits, Subscription,
         clipboard::mime::{AllowedMimeTypes, AsMimeTypes},
         event::listen_with,
         platform_specific::shell::commands::popup::{destroy_popup, get_popup},
-        widget::{column, mouse_area, row, vertical_rule, vertical_space, Column, Row},
-        window, Color, Limits, Subscription,
+        widget::{Column, Row, column, mouse_area, row, vertical_rule, vertical_space},
+        window,
     },
     iced_core::{Border, Padding, Shadow},
     iced_runtime::{core::event, dnd::peek_dnd},
     surface,
     theme::{self, Button, Container},
     widget::{
-        button, divider, dnd_source, horizontal_space,
+        DndDestination, Image, button, container, divider, dnd_source, horizontal_space,
         icon::{self, from_name},
         image::Handle,
-        rectangle_tracker::{rectangle_tracker_subscription, RectangleTracker, RectangleUpdate},
-        svg, text, DndDestination, Image,
+        rectangle_tracker::{RectangleTracker, RectangleUpdate, rectangle_tracker_subscription},
+        svg, text,
     },
-    Apply, Element, Task,
 };
-use cosmic::{desktop::fde, widget};
-use cosmic_app_list_config::{AppListConfig, APP_ID};
+use cosmic_app_list_config::{APP_ID, AppListConfig};
 use cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::State;
 use futures::future::pending;
-use iced::{widget::container, Alignment, Background, Length};
+use iced::{Alignment, Background, Length};
 use itertools::Itertools;
-use rand::{rng, Rng};
+use rand::{Rng, rng};
 use std::{borrow::Cow, collections::HashMap, path::PathBuf, rc::Rc, str::FromStr, time::Duration};
 use switcheroo_control::Gpu;
 use tokio::time::sleep;
@@ -905,9 +903,7 @@ impl cosmic::Application for CosmicAppList {
             Message::DragFinished => {
                 if let Some((_, mut toplevel_group, _, pinned_pos)) = self.dnd_source.take() {
                     if self.dnd_offer.take().is_some() {
-                        if let Some((_, ref toplevel_group, _, pinned_pos)) =
-                            self.dnd_source.as_ref()
-                        {
+                        if let Some((_, toplevel_group, _, pinned_pos)) = self.dnd_source.as_ref() {
                             let mut pos = 0;
                             self.pinned_list.retain_mut(|pinned| {
                                 let matched_id =
@@ -978,7 +974,7 @@ impl cosmic::Application for CosmicAppList {
             }
             Message::DndLeave => {
                 let mut cnt = 0;
-                if let Some((_, ref toplevel_group, _, pinned_pos)) = self.dnd_source.as_ref() {
+                if let Some((_, toplevel_group, _, pinned_pos)) = self.dnd_source.as_ref() {
                     let mut pos = 0;
                     self.pinned_list.retain_mut(|pinned| {
                         let matched_id =
@@ -1069,7 +1065,7 @@ impl cosmic::Application for CosmicAppList {
                             .iter_mut()
                             .chain(self.pinned_list.iter_mut())
                         {
-                            if let Some((_, ref mut handle_img)) = x
+                            if let Some((_, handle_img)) = x
                                 .toplevels
                                 .iter_mut()
                                 .find(|(info, _)| info.foreign_toplevel == handle)
@@ -1481,11 +1477,7 @@ impl cosmic::Application for CosmicAppList {
 
                 let small_size_threshold = PanelSize::S.get_applet_icon_size_with_padding(false);
 
-                if size <= small_size_threshold {
-                    4
-                } else {
-                    8
-                }
+                if size <= small_size_threshold { 4 } else { 8 }
             }
         };
         let (favorite_popup_cutoff, active_popup_cutoff) = self.panel_overflow_lengths();
@@ -1588,7 +1580,7 @@ impl cosmic::Application for CosmicAppList {
             // show star indicating pinned_list is drag target
             favorites.push(
                 container(
-                    cosmic::widget::icon::from_name("starred-symbolic.symbolic")
+                    icon::from_name("starred-symbolic.symbolic")
                         .size(self.core.applet.suggested_size(false).0),
                 )
                 .padding(self.core.applet.suggested_padding(false))
@@ -1728,7 +1720,7 @@ impl cosmic::Application for CosmicAppList {
             vec![active]
         } else {
             vec![
-                cosmic::widget::icon::from_name("com.system76.CosmicAppList")
+                icon::from_name("com.system76.CosmicAppList")
                     .size(self.core.applet.suggested_size(false).0)
                     .into(),
             ]

@@ -12,14 +12,14 @@ use cctk::{
     },
 };
 use cosmic::{
-    iced::{self, stream, Subscription},
+    iced::{self, Subscription, stream},
     iced_core::image::Bytes,
 };
 use image::EncodableLayout;
 
 use futures::{
-    channel::mpsc::{unbounded, UnboundedReceiver},
     SinkExt, StreamExt,
+    channel::mpsc::{UnboundedReceiver, unbounded},
 };
 use std::fmt::Debug;
 use std::sync::LazyLock;

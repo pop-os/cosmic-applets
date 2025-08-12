@@ -4,8 +4,8 @@
 use std::{borrow::Cow, fmt::Debug, hash::Hash, path::PathBuf};
 
 use cosmic::{
-    iced::{self, stream, Subscription},
-    iced_futures::futures::{self, future::OptionFuture, SinkExt, StreamExt},
+    iced::{self, Subscription, stream},
+    iced_futures::futures::{self, SinkExt, StreamExt, future::OptionFuture},
 };
 use mpris2_zbus::{
     enumerator,
@@ -15,8 +15,8 @@ use mpris2_zbus::{
 use tokio::join;
 use urlencoding::decode;
 use zbus::{
-    names::{BusName, OwnedBusName},
     Connection,
+    names::{BusName, OwnedBusName},
 };
 
 #[derive(Clone, Debug)]

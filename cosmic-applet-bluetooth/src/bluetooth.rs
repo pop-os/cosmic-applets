@@ -10,28 +10,26 @@ use std::{
     time::Duration,
 };
 
-pub use bluer::DeviceProperty;
 use bluer::{
-    agent::{Agent, AgentHandle},
     Adapter, Address, Session, Uuid,
+    agent::{Agent, AgentHandle},
 };
 
 use cosmic::{
     iced::{
-        self,
+        self, Subscription,
         futures::{SinkExt, StreamExt},
-        Subscription,
     },
     iced_futures::stream,
 };
 
-use futures::{stream::FuturesUnordered, FutureExt};
+use futures::{FutureExt, stream::FuturesUnordered};
 use rand::Rng;
 use tokio::{
     spawn,
     sync::{
-        mpsc::{channel, Receiver, Sender},
         Mutex, RwLock,
+        mpsc::{Receiver, Sender, channel},
     },
     task::JoinHandle,
 };

@@ -2,18 +2,17 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use config::{CosmicPanelButtonConfig, IndividualConfig, Override};
-use cosmic::desktop::fde::{self, get_languages_from_env, DesktopEntry};
+use cosmic::desktop::fde::{self, DesktopEntry, get_languages_from_env};
 use cosmic::{
-    app,
+    Task, app,
     applet::{
-        cosmic_panel_config::{PanelAnchor, PanelSize},
         Size,
+        cosmic_panel_config::{PanelAnchor, PanelSize},
     },
     iced::{self, Length},
     iced_widget::row,
     surface,
-    widget::{autosize, vertical_space, Id},
-    Task,
+    widget::{Id, autosize, vertical_space},
 };
 use cosmic_config::{Config, CosmicConfigEntry};
 use std::{env, fs, process::Command, sync::LazyLock};

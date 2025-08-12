@@ -4,10 +4,10 @@
 use crate::subscriptions::freedesktop_proxy::NotificationsProxy;
 use cosmic::{
     iced::futures::{self, SinkExt},
-    iced_futures::{stream, Subscription},
+    iced_futures::{Subscription, stream},
 };
 use futures_util::StreamExt;
-use tokio::sync::mpsc::{channel, Receiver, Sender};
+use tokio::sync::mpsc::{Receiver, Sender, channel};
 use tracing::{error, warn};
 use zbus::Connection;
 

@@ -12,7 +12,6 @@ use cosmic_notifications_util::Notification;
 use futures_util::{SinkExt, StreamExt};
 use std::{
     collections::HashMap,
-    future::pending,
     os::unix::io::{FromRawFd, RawFd},
     pin::pin,
 };
