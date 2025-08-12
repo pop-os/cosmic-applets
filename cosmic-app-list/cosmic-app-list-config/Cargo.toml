@@ -7,5 +7,4 @@ edition = "2024"
 
 [dependencies]
 libcosmic.workspace = true
-libcosmic.features = []
-serde = { version = "1.0", features = ["derive"] }
+serde = { workspace = true, features = ["derive"] }

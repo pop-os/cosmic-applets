@@ -5,7 +5,6 @@ edition = "2024"
 license = "GPL-3.0-or-later"
 
 [dependencies]
-
 anyhow.workspace = true
 cosmic-dbus-networkmanager = { git = "https://github.com/pop-os/dbus-settings-bindings" }
 cosmic-time.workspace = true
@@ -14,14 +13,13 @@ futures-util.workspace = true
 i18n-embed-fl.workspace = true
 i18n-embed.workspace = true
 itertools = "0.14.0"
-libcosmic.workspace = true
-libcosmic.features = [
+libcosmic = { workspace = true, features = [
     "applet",
     "applet-token",
     "tokio",
     "wayland",
     "desktop",
-]
+] }
 rust-embed.workspace = true
 tokio.workspace = true
 tracing-log.workspace = true
