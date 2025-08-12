@@ -2,14 +2,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use cosmic::{
-    applet::{
-        menu_button,
-        token::{self, subscription::TokenRequest},
-    },
+    Application,
+    applet::{menu_button, token::subscription::TokenRequest},
     cctk::sctk::reexports::calloop,
     iced,
     widget::icon,
-    Application,
 };
 
 use crate::subscriptions::status_notifier_item::{IconUpdate, Layout, StatusNotifierItem};
@@ -75,7 +72,7 @@ impl State {
                             .map(|mut i| {
                                 if i.width <= 0 || i.height <= 0 || i.bytes.is_empty() {
                                     // App sent invalid icon data during initialization - show placeholder until NewIcon signal
-                                    eprintln!("Skipping invalid icon: {}x{} with {} bytes, app may still be initializing", 
+                                    eprintln!("Skipping invalid icon: {}x{} with {} bytes, app may still be initializing",
                                             i.width, i.height, i.bytes.len());
                                     return icon::from_name("dialog-question").symbolic(true).handle();
                                 }

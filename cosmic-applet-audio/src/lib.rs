@@ -10,33 +10,29 @@ use std::time::Duration;
 use crate::{localize::localize, pulse::DeviceInfo};
 use config::AudioAppletConfig;
 use cosmic::{
-    app,
+    Element, Renderer, Task, Theme, app,
     applet::{
         cosmic_panel_config::PanelAnchor,
         menu_button, menu_control_padding, padded_control,
-        token::subscription::{activation_token_subscription, TokenRequest, TokenUpdate},
+        token::subscription::{TokenRequest, TokenUpdate, activation_token_subscription},
     },
     cctk::sctk::reexports::calloop,
     cosmic_config::CosmicConfigEntry,
     cosmic_theme::Spacing,
     iced::{
-        self,
+        self, Alignment, Length, Subscription,
         widget::{self, column, row, slider},
-        window, Alignment, Length, Limits, Subscription,
+        window,
     },
     surface, theme,
-    widget::{button, divider, horizontal_space, icon, text, Column, Row},
-    Element, Renderer, Task, Theme,
+    widget::{Column, Row, button, container, divider, horizontal_space, icon, text},
 };
 use cosmic_settings_subscriptions::pulse as sub_pulse;
-use cosmic_time::{anim, chain, id, Instant, Timeline};
-use iced::{
-    platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
-    widget::container,
-};
+use cosmic_time::{Instant, Timeline, anim, chain, id};
+use iced::platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup};
 use libpulse_binding::volume::Volume;
-use mpris2_zbus::player::PlaybackStatus;
 use mpris_subscription::{MprisRequest, MprisUpdate};
+use mpris2_zbus::player::PlaybackStatus;
 
 mod config;
 mod mpris_subscription;
@@ -342,7 +338,7 @@ impl cosmic::Application for Audio {
                     self.popup.replace(new_id);
                     self.timeline = Timeline::new();
 
-                    let mut popup_settings = self.core.applet.get_popup_settings(
+                    let popup_settings = self.core.applet.get_popup_settings(
                         self.core.main_window_id().unwrap(),
                         new_id,
                         None,

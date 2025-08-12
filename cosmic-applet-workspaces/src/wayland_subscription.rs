@@ -4,9 +4,9 @@
 use crate::wayland::{self, WorkspaceEvent};
 use cctk::{sctk::reexports::calloop::channel::SyncSender, workspace::Workspace};
 use cosmic::iced::{
-    self,
-    futures::{channel::mpsc, SinkExt, StreamExt},
-    stream, Subscription,
+    self, Subscription,
+    futures::{SinkExt, StreamExt, channel::mpsc},
+    stream,
 };
 use std::sync::LazyLock;
 use tokio::sync::Mutex;

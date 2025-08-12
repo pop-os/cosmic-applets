@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use cosmic::{
-    iced::{self, futures::SinkExt, Subscription},
+    iced::{self, Subscription, futures::SinkExt},
     iced_futures::stream,
 };
 use std::{fmt::Debug, hash::Hash};

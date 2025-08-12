@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use i18n_embed::{
-    fluent::{fluent_language_loader, FluentLanguageLoader},
     DefaultLocalizer, LanguageLoader, Localizer,
+    fluent::{FluentLanguageLoader, fluent_language_loader},
 };
 use rust_embed::RustEmbed;
 use std::sync::LazyLock;
