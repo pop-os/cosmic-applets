@@ -7,7 +7,7 @@ license = "GPL-3.0-only"
 [dependencies]
 cosmic-applets-config.workspace = true
 cosmic-config.workspace = true
-chrono = { version = "0.4.39", features = ["clock"] }
+chrono = { version = "0.4.41", features = ["clock"] }
 chrono-tz = "0.10"
 i18n-embed-fl.workspace = true
 i18n-embed.workspace = true

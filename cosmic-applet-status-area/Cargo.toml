@@ -7,7 +7,7 @@ license = "GPL-3.0-only"
 [dependencies]
 futures.workspace = true
 libcosmic.workspace = true
-serde = "1"
+serde.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 tracing-log.workspace = true
