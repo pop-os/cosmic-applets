@@ -9,11 +9,11 @@ use cosmic::iced::{
     stream, Subscription,
 };
 use cosmic_protocols::workspace::v2::client::zcosmic_workspace_handle_v2::TilingState;
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 use tokio::sync::Mutex;
 
-pub static WAYLAND_RX: Lazy<Mutex<Option<mpsc::Receiver<TilingState>>>> =
-    Lazy::new(|| Mutex::new(None));
+pub static WAYLAND_RX: LazyLock<Mutex<Option<mpsc::Receiver<TilingState>>>> =
+    LazyLock::new(|| Mutex::new(None));
 
 #[derive(Debug, Clone)]
 pub enum WorkspacesUpdate {

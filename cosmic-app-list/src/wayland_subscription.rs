@@ -21,14 +21,14 @@ use futures::{
     channel::mpsc::{unbounded, UnboundedReceiver},
     SinkExt, StreamExt,
 };
-use once_cell::sync::Lazy;
 use std::fmt::Debug;
+use std::sync::LazyLock;
 use tokio::sync::Mutex;
 
 use crate::wayland_handler::wayland_handler;
 
-pub static WAYLAND_RX: Lazy<Mutex<Option<UnboundedReceiver<WaylandUpdate>>>> =
-    Lazy::new(|| Mutex::new(None));
+pub static WAYLAND_RX: LazyLock<Mutex<Option<UnboundedReceiver<WaylandUpdate>>>> =
+    LazyLock::new(|| Mutex::new(None));
 
 pub fn wayland_subscription() -> iced::Subscription<WaylandUpdate> {
     Subscription::run_with_id(

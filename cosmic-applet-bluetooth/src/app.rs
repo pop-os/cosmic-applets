@@ -23,9 +23,9 @@ use cosmic::{
     widget::{button, divider, icon, text},
     Element, Task,
 };
-use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
+use cosmic_time::{anim, chain, id, Instant, Timeline};
 use futures::FutureExt;
-use std::{collections::HashMap, time::Duration};
+use std::{collections::HashMap, sync::LazyLock, time::Duration};
 use tokio::sync::mpsc::Sender;
 
 use crate::{
@@ -33,7 +33,7 @@ use crate::{
     config, fl,
 };
 
-static BLUETOOTH_ENABLED: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
+static BLUETOOTH_ENABLED: LazyLock<id::Toggler> = LazyLock::new(id::Toggler::unique);
 
 #[inline]
 pub fn run() -> cosmic::iced::Result {

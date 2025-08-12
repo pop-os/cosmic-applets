@@ -27,8 +27,8 @@ use cosmic::iced_futures::futures::executor::block_on;
 
 use cosmic_notifications_config::NotificationsConfig;
 use cosmic_notifications_util::{ActionId, Image, Notification};
-use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
-use std::{borrow::Cow, collections::HashMap, path::PathBuf};
+use cosmic_time::{anim, chain, id, Instant, Timeline};
+use std::{borrow::Cow, collections::HashMap, path::PathBuf, sync::LazyLock};
 use subscriptions::notifications::{self, NotificationsAppletProxy};
 use tokio::sync::mpsc::Sender;
 use tracing::info;
@@ -38,7 +38,7 @@ pub fn run() -> cosmic::iced::Result {
     cosmic::applet::run::<Notifications>(())
 }
 
-static DO_NOT_DISTURB: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
+static DO_NOT_DISTURB: LazyLock<id::Toggler> = LazyLock::new(id::Toggler::unique);
 
 struct Notifications {
     core: cosmic::app::Core,

@@ -39,10 +39,9 @@ use cosmic_settings_subscriptions::{
         },
     },
 };
-use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
+use cosmic_time::{anim, chain, id, Instant, Timeline};
 
-use cosmic::widget::text_input;
-use std::{collections::HashMap, path::PathBuf, time::Duration};
+use std::{collections::HashMap, path::PathBuf, sync::LazyLock, time::Duration};
 use tokio::sync::mpsc::UnboundedSender;
 
 // XXX improve
@@ -65,7 +64,7 @@ pub fn run() -> cosmic::iced::Result {
     cosmic::applet::run::<CosmicBatteryApplet>(())
 }
 
-static MAX_CHARGE: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
+static MAX_CHARGE: LazyLock<id::Toggler> = LazyLock::new(id::Toggler::unique);
 
 #[derive(Clone, Default)]
 struct GPUData {

@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::sync::LazyLock;
 
 use cosmic::{
     app,
@@ -26,7 +27,7 @@ use cosmic::{
 use cosmic_dbus_networkmanager::interface::enums::{
     ActiveConnectionState, DeviceState, NmConnectivityState,
 };
-use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
+use cosmic_time::{anim, chain, id, Instant, Timeline};
 
 use futures::channel::mpsc::UnboundedSender;
 use zbus::Connection;
@@ -90,8 +91,8 @@ impl From<NewConnectionState> for AccessPoint {
     }
 }
 
-static WIFI: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
-static AIRPLANE_MODE: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
+static WIFI: LazyLock<id::Toggler> = LazyLock::new(id::Toggler::unique);
+static AIRPLANE_MODE: LazyLock<id::Toggler> = LazyLock::new(id::Toggler::unique);
 
 #[derive(Default)]
 struct CosmicNetworkApplet {

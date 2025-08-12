@@ -22,7 +22,7 @@ use cosmic::{
     widget::{autosize, button, divider, icon, layer_container::layer_container, text, Space},
     Element, Task,
 };
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 
 use logind_zbus::{
     manager::ManagerProxy,
@@ -39,8 +39,8 @@ pub mod session_manager;
 
 use crate::{cosmic_session::CosmicSessionProxy, session_manager::SessionManagerProxy};
 
-static SUBSURFACE_ID: Lazy<cosmic::widget::Id> =
-    Lazy::new(|| cosmic::widget::Id::new("subsurface"));
+static SUBSURFACE_ID: LazyLock<cosmic::widget::Id> =
+    LazyLock::new(|| cosmic::widget::Id::new("subsurface"));
 
 pub fn run() -> cosmic::iced::Result {
     localize::localize();

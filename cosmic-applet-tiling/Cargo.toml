@@ -13,7 +13,6 @@ cosmic-protocols.workspace = true
 cosmic-time.workspace = true
 i18n-embed-fl.workspace = true
 i18n-embed.workspace = true
-once_cell = "1"
 rust-embed.workspace = true
 tokio.workspace = true
 tracing-log.workspace = true

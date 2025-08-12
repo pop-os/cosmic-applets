@@ -33,12 +33,12 @@ use cosmic::{
 use cosmic::iced_widget::{Column, Row};
 
 use cosmic::{widget::tooltip, Element};
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 use wayland_subscription::{
     ToplevelRequest, ToplevelUpdate, WaylandImage, WaylandRequest, WaylandUpdate,
 };
 
-static AUTOSIZE_MAIN_ID: Lazy<WidgetId> = Lazy::new(|| WidgetId::new("autosize-main"));
+static AUTOSIZE_MAIN_ID: LazyLock<WidgetId> = LazyLock::new(|| WidgetId::new("autosize-main"));
 
 pub fn run() -> cosmic::iced::Result {
     localize();

@@ -12,7 +12,6 @@ chrono-tz = "0.10"
 i18n-embed-fl.workspace = true
 i18n-embed.workspace = true
 libcosmic.workspace = true
-once_cell.workspace = true
 rust-embed.workspace = true
 tokio.workspace = true
 tracing-log.workspace = true
