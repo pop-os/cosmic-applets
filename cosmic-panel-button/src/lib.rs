@@ -16,12 +16,11 @@ use cosmic::{
     Task,
 };
 use cosmic_config::{Config, CosmicConfigEntry};
-use once_cell::sync::Lazy;
-use std::{env, fs, process::Command};
+use std::{env, fs, process::Command, sync::LazyLock};
 
 mod config;
 
-static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
+static AUTOSIZE_MAIN_ID: LazyLock<Id> = LazyLock::new(|| Id::new("autosize-main"));
 
 #[derive(Debug, Clone, Default)]
 struct Desktop {
