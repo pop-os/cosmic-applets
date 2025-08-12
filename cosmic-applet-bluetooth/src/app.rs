@@ -1,35 +1,34 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
-use crate::bluetooth::{set_tick, BluerDeviceStatus, BluerRequest, BluerState, DeviceProperty};
+use crate::bluetooth::{BluerDeviceStatus, BluerRequest, BluerState, set_tick};
 use cosmic::{
     app,
-    applet::token::subscription::{activation_token_subscription, TokenRequest, TokenUpdate},
+    applet::token::subscription::{TokenRequest, TokenUpdate, activation_token_subscription},
     cctk::sctk::reexports::calloop,
     surface,
 };
 
 use cosmic::{
+    Element, Task,
     applet::{menu_button, padded_control},
     cosmic_theme::Spacing,
     iced::{
-        self,
+        self, Alignment, Length, Subscription,
         platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
-        widget::{column, container, row, scrollable, Column},
-        Alignment, Length, Subscription,
+        widget::{Column, column, container, row},
     },
-    iced_runtime::core::{layout::Limits, window},
+    iced_runtime::core::window,
     theme,
-    widget::{button, divider, icon, text},
-    Element, Task,
+    widget::{button, divider, icon, scrollable, text},
 };
-use cosmic_time::{anim, chain, id, Instant, Timeline};
+use cosmic_time::{Instant, Timeline, anim, chain, id};
 use futures::FutureExt;
 use std::{collections::HashMap, sync::LazyLock, time::Duration};
 use tokio::sync::mpsc::Sender;
 
 use crate::{
-    bluetooth::{bluetooth_subscription, BluerDevice, BluerEvent},
+    bluetooth::{BluerDevice, BluerEvent, bluetooth_subscription},
     config, fl,
 };
 
