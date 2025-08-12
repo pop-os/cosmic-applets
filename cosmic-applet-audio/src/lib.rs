@@ -4,6 +4,7 @@
 mod localize;
 mod mouse_area;
 
+use std::sync::LazyLock;
 use std::time::Duration;
 
 use crate::{localize::localize, pulse::DeviceInfo};
@@ -28,7 +29,7 @@ use cosmic::{
     Element, Renderer, Task, Theme,
 };
 use cosmic_settings_subscriptions::pulse as sub_pulse;
-use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
+use cosmic_time::{anim, chain, id, Instant, Timeline};
 use iced::{
     platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
     widget::container,
@@ -47,7 +48,7 @@ static FULL_VOLUME: f64 = Volume::NORMAL.0 as f64;
 // Max volume is 150% volume.
 static MAX_VOLUME: f64 = FULL_VOLUME + (FULL_VOLUME * 0.5);
 
-static SHOW_MEDIA_CONTROLS: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
+static SHOW_MEDIA_CONTROLS: LazyLock<id::Toggler> = LazyLock::new(id::Toggler::unique);
 
 const GO_BACK: &str = "media-skip-backward-symbolic";
 const GO_NEXT: &str = "media-skip-forward-symbolic";

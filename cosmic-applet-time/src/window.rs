@@ -26,7 +26,7 @@ use cosmic::{
     Element, Task,
 };
 use logind_zbus::manager::ManagerProxy;
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 use timedate_zbus::TimeDateProxy;
 use tokio::{sync::watch, time};
 
@@ -47,7 +47,7 @@ use cosmic::applet::token::subscription::{
     activation_token_subscription, TokenRequest, TokenUpdate,
 };
 
-static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
+static AUTOSIZE_MAIN_ID: LazyLock<Id> = LazyLock::new(|| Id::new("autosize-main"));
 
 /// In order to keep the understandable, the chrono types are not globals,
 /// to avoid conflict with icu

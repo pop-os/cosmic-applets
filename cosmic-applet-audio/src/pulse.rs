@@ -1,7 +1,7 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
-use std::{cell::RefCell, mem, rc::Rc, thread, time::Duration};
+use std::{cell::RefCell, mem, rc::Rc, sync::LazyLock, thread, time::Duration};
 
 extern crate libpulse_binding as pulse;
 
@@ -9,7 +9,6 @@ use cosmic::{
     iced::{self, stream, Subscription},
     iced_futures::futures::{self, SinkExt},
 };
-use cosmic_time::once_cell::sync::Lazy;
 
 use libpulse_binding::{
     callbacks::ListResult,
@@ -25,8 +24,8 @@ use libpulse_binding::{
 
 use tokio::sync::{mpsc, Mutex};
 
-pub static FROM_PULSE: Lazy<Mutex<Option<(mpsc::Receiver<Message>, mpsc::Sender<Message>)>>> =
-    Lazy::new(|| Mutex::new(None));
+pub static FROM_PULSE: LazyLock<Mutex<Option<(mpsc::Receiver<Message>, mpsc::Sender<Message>)>>> =
+    LazyLock::new(|| Mutex::new(None));
 
 pub fn connect() -> iced::Subscription<Event> {
     struct SomeWorker;

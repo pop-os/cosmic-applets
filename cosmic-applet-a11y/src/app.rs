@@ -28,14 +28,15 @@ use cosmic_settings_subscriptions::{
     accessibility::{self, DBusRequest, DBusUpdate},
     cosmic_a11y_manager::{AccessibilityEvent, AccessibilityRequest, ColorFilter},
 };
-use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
+use cosmic_time::{anim, chain, id, Instant, Timeline};
+use std::sync::LazyLock;
 use tokio::sync::mpsc::UnboundedSender;
 
-static READER_TOGGLE: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
-static FILTER_TOGGLE: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
-static HC_TOGGLE: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
-static MAGNIFIER_TOGGLE: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
-static INVERT_COLORS_TOGGLE: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
+static READER_TOGGLE: LazyLock<id::Toggler> = LazyLock::new(id::Toggler::unique);
+static FILTER_TOGGLE: LazyLock<id::Toggler> = LazyLock::new(id::Toggler::unique);
+static HC_TOGGLE: LazyLock<id::Toggler> = LazyLock::new(id::Toggler::unique);
+static MAGNIFIER_TOGGLE: LazyLock<id::Toggler> = LazyLock::new(id::Toggler::unique);
+static INVERT_COLORS_TOGGLE: LazyLock<id::Toggler> = LazyLock::new(id::Toggler::unique);
 
 pub fn run() -> cosmic::iced::Result {
     cosmic::applet::run::<CosmicA11yApplet>(())

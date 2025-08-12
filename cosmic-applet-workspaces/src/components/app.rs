@@ -27,8 +27,6 @@ use cosmic::{
     Element, Task, Theme,
 };
 
-use once_cell::sync::Lazy;
-
 use crate::{
     config,
     wayland::WorkspaceEvent,
@@ -37,10 +35,11 @@ use crate::{
 
 use std::{
     process::Command as ShellCommand,
+    sync::LazyLock,
     time::{Duration, Instant},
 };
 
-static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
+static AUTOSIZE_MAIN_ID: LazyLock<Id> = LazyLock::new(|| Id::new("autosize-main"));
 
 pub fn run() -> cosmic::iced::Result {
     cosmic::applet::run::<IcedWorkspacesApplet>(())
