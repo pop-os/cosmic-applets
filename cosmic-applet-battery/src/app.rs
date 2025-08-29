@@ -483,7 +483,7 @@ impl cosmic::Application for CosmicBatteryApplet {
             .on_press_down(Message::TogglePopup)
             .into();
 
-        if !self.gpus.is_empty() {
+        let content = if !self.gpus.is_empty() {
             let dot = container(vertical_space().height(Length::Fixed(0.0)))
                 .padding(2.0)
                 .class(cosmic::style::Container::Custom(Box::new(|theme| {
@@ -511,7 +511,9 @@ impl cosmic::Application for CosmicBatteryApplet {
             }
         } else {
             btn
-        }
+        };
+
+        self.core.applet.autosize_window(content).into()
     }
 
     fn view_window(&self, _id: window::Id) -> Element<Message> {
