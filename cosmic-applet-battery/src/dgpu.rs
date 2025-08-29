@@ -19,6 +19,7 @@ use drm::control::Device as ControlDevice;
 use futures::{FutureExt, SinkExt};
 use tokio::{
     io::unix::AsyncFd,
+    sync::mpsc::{self, UnboundedReceiver, UnboundedSender},
     task::spawn_blocking,
     time::{self, Interval},
 };
@@ -396,12 +397,13 @@ pub fn dgpu_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
 #[derive(Debug)]
 pub enum State {
     Ready,
-    Waiting(GpuMonitor),
+    Waiting(GpuMonitor, UnboundedReceiver<()>),
     Finished,
 }
 
 #[derive(Debug)]
 pub enum GpuUpdate {
+    Init(UnboundedSender<()>),
     Off(PathBuf),
     On(PathBuf, String, Option<Vec<Entry>>),
 }
@@ -412,10 +414,17 @@ async fn start_listening(
 ) -> State {
     match state {
         State::Ready => match GpuMonitor::new().await {
-            Some(monitor) => State::Waiting(monitor),
+            Some(monitor) => {
+                let (tx, rx) = mpsc::unbounded_channel();
+                if output.send(GpuUpdate::Init(tx)).await.is_err() {
+                    State::Finished
+                } else {
+                    State::Waiting(monitor, rx)
+                }
+            }
             None => State::Finished,
         },
-        State::Waiting(mut monitor) => {
+        State::Waiting(mut monitor, mut trigger) => {
             let select_all = futures::future::select_all(
                 monitor
                     .gpus
@@ -503,7 +512,7 @@ async fn start_listening(
                 i = select_all => {
                     let gpu = &mut monitor.gpus[i];
                     if gpu.path == monitor.primary_gpu {
-                        return State::Waiting(monitor);
+                        return State::Waiting(monitor, trigger);
                     }
 
                     trace!("Polling gpu {}", gpu.path.display());
@@ -529,9 +538,14 @@ async fn start_listening(
                         return State::Finished;
                     }
                 }
+                _ = trigger.recv() => {
+                    for gpu in &mut monitor.gpus {
+                        gpu.interval.reset_immediately();
+                    }
+                }
             };
 
-            State::Waiting(monitor)
+            State::Waiting(monitor, trigger)
         }
         State::Finished => iced::futures::future::pending().await,
     }
