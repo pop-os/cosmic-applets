@@ -1,0 +1,12 @@
+bluetooth = بلوتوث
+other-devices = سایر دستگاه‌های بلوتوث
+settings = تنظیمات بلوتوث...
+connected = متصل
+confirm-pin = لطفاً تأیید کنید که پین زیر با پین نمایش داده شده در {$deviceName} یکسان است.
+confirm = تأیید
+cancel = لغو
+unsuccessful = جفت‌سازی ناموفق بود
+check-device = مطمئن شوید که {$deviceName} روشن، در محدوده و آماده جفت‌سازی است.
+try-again = تلاش دوباره
+discoverable = قابل شناسایی
+pairable = قابل جفت‌سازی
