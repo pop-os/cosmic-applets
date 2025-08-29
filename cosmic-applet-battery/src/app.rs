@@ -81,6 +81,7 @@ struct CosmicBatteryApplet {
     battery_percent: f64,
     on_battery: bool,
     gpus: HashMap<PathBuf, GPUData>,
+    update_trigger: Option<UnboundedSender<()>>,
     time_remaining: Duration,
     max_kbd_brightness: Option<i32>,
     kbd_brightness: Option<i32>,
@@ -180,6 +181,7 @@ enum Message {
     SetChargingLimit(chain::Toggler, bool),
     KeyboardBacklight(KeyboardBacklightUpdate),
     UpowerDevice(DeviceDbusEvent),
+    GpuInit(UnboundedSender<()>),
     GpuOn(PathBuf, String, Option<Vec<Entry>>),
     GpuOff(PathBuf),
     ToggleGpuApps(PathBuf),
@@ -338,6 +340,9 @@ impl cosmic::Application for CosmicBatteryApplet {
                     if let Some(tx) = self.power_profile_sender.as_ref() {
                         let _ = tx.send(PowerProfileRequest::Get);
                     }
+                    if let Some(tx) = self.update_trigger.as_ref() {
+                        let _ = tx.send(());
+                    }
                     let mut tasks = vec![get_popup(popup_settings)];
                     // Try again every time a popup is opened
                     if self.charging_limit.is_none() {
@@ -424,6 +429,9 @@ impl cosmic::Application for CosmicBatteryApplet {
                     tokio::spawn(cosmic::process::spawn(cmd));
                 }
             },
+            Message::GpuInit(tx) => {
+                self.update_trigger = Some(tx);
+            }
             Message::GpuOn(path, name, app_list) => {
                 let toggled = self
                     .gpus
@@ -845,6 +853,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                 PowerProfileUpdate::Error(e) => Message::Errored(e), // TODO: handle error
             }),
             dgpu_subscription(0).map(|event| match event {
+                GpuUpdate::Init(tx) => Message::GpuInit(tx),
                 GpuUpdate::On(path, name, list) => Message::GpuOn(path, name, list),
                 GpuUpdate::Off(path) => Message::GpuOff(path),
             }),
