@@ -7,23 +7,23 @@ use chrono::{Datelike, Timelike};
 use cosmic::iced_futures::stream;
 use cosmic::widget::Id;
 use cosmic::{
-    Element, Task, app,
+    app,
     applet::{cosmic_panel_config::PanelAnchor, menu_button, padded_control},
     cctk::sctk::reexports::calloop,
     cosmic_theme::Spacing,
     iced::{
-        Alignment, Length, Rectangle, Subscription,
-        futures::{SinkExt, StreamExt, TryFutureExt, channel::mpsc},
+        futures::{channel::mpsc, SinkExt, StreamExt, TryFutureExt},
         platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
         widget::{column, row, vertical_space},
-        window,
+        window, Alignment, Length, Rectangle, Subscription,
     },
-    iced_widget::{Column, horizontal_rule},
+    iced_widget::{horizontal_rule, Column},
     surface, theme,
     widget::{
-        Button, Grid, Space, autosize, button, container, divider, grid, horizontal_space, icon,
-        rectangle_tracker::*, text,
+        autosize, button, container, divider, grid, horizontal_space, icon, rectangle_tracker::*,
+        text, Button, Grid, Space,
     },
+    Element, Task,
 };
 use logind_zbus::manager::ManagerProxy;
 use std::sync::LazyLock;
@@ -33,18 +33,18 @@ use tokio::{sync::watch, time};
 use icu::{
     calendar::DateTime,
     datetime::{
-        DateTimeFormatter, DateTimeFormatterOptions,
         options::{
             components::{self, Bag},
             preferences,
         },
+        DateTimeFormatter, DateTimeFormatterOptions,
     },
     locid::Locale,
 };
 
 use crate::{config::TimeAppletConfig, fl, time::get_calender_first};
 use cosmic::applet::token::subscription::{
-    TokenRequest, TokenUpdate, activation_token_subscription,
+    activation_token_subscription, TokenRequest, TokenUpdate,
 };
 
 static AUTOSIZE_MAIN_ID: LazyLock<Id> = LazyLock::new(|| Id::new("autosize-main"));

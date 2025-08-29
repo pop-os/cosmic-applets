@@ -1,7 +1,10 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
-use cosmic::iced::{self, Subscription};
+use cosmic::{
+    iced::{self, Subscription},
+    widget::icon,
+};
 use futures::{FutureExt, StreamExt};
 use std::collections::HashMap;
 use zbus::zvariant::{self, OwnedValue};
@@ -252,7 +255,7 @@ pub trait DBusMenu {
     ) -> zbus::Result<(u32, Layout)>;
 
     fn event(&self, id: i32, event_id: &str, data: &OwnedValue, timestamp: u32)
-    -> zbus::Result<()>;
+        -> zbus::Result<()>;
 
     fn about_to_show(&self, id: i32) -> zbus::Result<bool>;
 

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use cosmic_config::{CosmicConfigEntry, cosmic_config_derive::CosmicConfigEntry};
+use cosmic_config::{cosmic_config_derive::CosmicConfigEntry, CosmicConfigEntry};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone, CosmicConfigEntry)]

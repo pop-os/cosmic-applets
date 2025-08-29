@@ -20,7 +20,7 @@ use cctk::{
     },
     toplevel_info::{ToplevelInfoHandler, ToplevelInfoState},
     toplevel_management::{ToplevelManagerHandler, ToplevelManagerState},
-    wayland_client::{self, WEnum, protocol::wl_seat::WlSeat},
+    wayland_client::{self, protocol::wl_seat::WlSeat, WEnum},
 };
 use cosmic::{
     cctk::{
@@ -35,12 +35,12 @@ use cosmic::{
         },
         sctk::shm::{Shm, ShmHandler},
         wayland_client::{
-            Dispatch,
             protocol::{
                 wl_buffer,
                 wl_shm::{self, WlShm},
                 wl_shm_pool,
             },
+            Dispatch,
         },
         wayland_protocols::ext::foreign_toplevel_list::v1::client::ext_foreign_toplevel_handle_v1::ExtForeignToplevelHandleV1,
     },
@@ -50,9 +50,9 @@ use cosmic_protocols::{
     toplevel_info::v1::client::zcosmic_toplevel_handle_v1,
     toplevel_management::v1::client::zcosmic_toplevel_manager_v1,
 };
-use futures::{SinkExt, channel::mpsc};
+use futures::{channel::mpsc, SinkExt};
 use sctk::registry::{ProvidesRegistryState, RegistryState};
-use wayland_client::{Connection, QueueHandle, globals::registry_queue_init};
+use wayland_client::{globals::registry_queue_init, Connection, QueueHandle};
 
 #[derive(Default)]
 struct SessionInner {

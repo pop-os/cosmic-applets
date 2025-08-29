@@ -2,19 +2,22 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use cosmic::{
-    Element, Task, app,
+    app,
     applet::cosmic_panel_config::PanelAnchor,
-    applet::token::subscription::{TokenRequest, TokenUpdate, activation_token_subscription},
+    applet::token::subscription::{activation_token_subscription, TokenRequest, TokenUpdate},
     cctk::sctk::reexports::calloop,
     iced::{
-        self, Subscription,
+        self,
+        overlay::menu,
         platform_specific::shell::commands::popup::{destroy_popup, get_popup},
-        window,
+        window, Limits, Padding, Subscription,
     },
     surface,
     widget::{container, mouse_area},
+    Element, Task,
 };
 use std::collections::BTreeMap;
+use zbus::connection::socket::channel;
 
 use crate::{components::status_menu, subscriptions::status_notifier_watcher};
 

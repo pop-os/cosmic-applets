@@ -1,14 +1,14 @@
 [package]
 name = "cosmic-applet-a11y"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 
 [dependencies]
 # cosmic-dbus-a11y = { git = "https://github.com/pop-os/dbus-settings-bindings" }
-cosmic-settings-subscriptions = { workspace = true, features = [
-    "accessibility",
-    "cosmic_a11y_manager",
-] }
+cosmic-settings-subscriptions.workspace = true
+cosmic-settings-subscriptions.default_features = false
+cosmic-settings-subscriptions.accessibility = true
+cosmic-settings-subscriptions.cosmic_a11y_manager = true
 anyhow.workspace = true
 cctk.workspace = true
 cosmic-protocols.workspace = true

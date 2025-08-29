@@ -1,13 +1,13 @@
 [package]
 name = "cosmic-applet-status-area"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 license = "GPL-3.0-only"
 
 [dependencies]
 futures.workspace = true
 libcosmic.workspace = true
-serde.workspace = true
+serde = "1"
 tokio.workspace = true
 tracing.workspace = true
 tracing-log.workspace = true

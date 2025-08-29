@@ -19,7 +19,7 @@ use cctk::{
 };
 use cosmic::iced::futures;
 use cosmic_protocols::workspace::v2::client::zcosmic_workspace_handle_v2::TilingState;
-use futures::{SinkExt, channel::mpsc, executor::block_on};
+use futures::{channel::mpsc, executor::block_on, SinkExt};
 use std::{
     collections::HashSet,
     os::{
@@ -29,9 +29,9 @@ use std::{
 };
 use tracing::error;
 use wayland_client::{
-    Connection, QueueHandle,
     globals::registry_queue_init,
     protocol::wl_output::{self, WlOutput},
+    Connection, QueueHandle,
 };
 
 #[derive(Debug, Clone)]

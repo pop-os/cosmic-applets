@@ -4,10 +4,10 @@ use cosmic::iced::Vector;
 use cosmic::iced_renderer::core::Point;
 
 use cosmic::iced_core::{
-    Clipboard, Element, Layout, Length, Rectangle, Shell, Size, Widget,
     event::{self, Event},
     layout, mouse, overlay, renderer, touch,
-    widget::{Operation, Tree, tree},
+    widget::{tree, Operation, Tree},
+    Clipboard, Element, Layout, Length, Rectangle, Shell, Size, Widget,
 };
 
 /// Emit messages on mouse events.

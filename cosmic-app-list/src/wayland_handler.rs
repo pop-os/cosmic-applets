@@ -29,7 +29,6 @@ use cctk::{
     toplevel_info::{ToplevelInfoHandler, ToplevelInfoState},
     toplevel_management::{ToplevelManagerHandler, ToplevelManagerState},
     wayland_client::{
-        Connection, Dispatch, QueueHandle, WEnum,
         globals::registry_queue_init,
         protocol::{
             wl_buffer, wl_output,
@@ -38,6 +37,7 @@ use cctk::{
             wl_shm_pool,
             wl_surface::WlSurface,
         },
+        Connection, Dispatch, QueueHandle, WEnum,
     },
     wayland_protocols::ext::{
         foreign_toplevel_list::v1::client::ext_foreign_toplevel_handle_v1::ExtForeignToplevelHandleV1,

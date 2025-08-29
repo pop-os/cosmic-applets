@@ -7,11 +7,11 @@
 
 use futures::prelude::*;
 use zbus::{
-    Result,
     fdo::{DBusProxy, RequestNameFlags, RequestNameReply},
     message::Header,
     names::{BusName, UniqueName, WellKnownName},
     object_server::SignalEmitter,
+    Result,
 };
 
 const NAME: WellKnownName =
@@ -65,7 +65,7 @@ impl StatusNotifierWatcher {
 
     #[zbus(signal)]
     async fn status_notifier_item_registered(ctxt: &SignalEmitter<'_>, service: &str)
-    -> Result<()>;
+        -> Result<()>;
 
     #[zbus(signal)]
     async fn status_notifier_item_unregistered(
