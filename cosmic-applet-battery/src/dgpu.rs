@@ -15,7 +15,10 @@ use cosmic::{
     iced::{self, Subscription},
     iced_futures::stream,
 };
-use drm::control::Device as ControlDevice;
+use drm::control::{
+    Device as ControlDevice,
+    connector::{Info as ConnectorInfo, Interface},
+};
 use futures::{FutureExt, SinkExt};
 use tokio::{
     io::unix::AsyncFd,
@@ -57,6 +60,7 @@ impl Debug for GpuMonitor {
 struct Gpu {
     path: PathBuf,
     name: String,
+    boot_vga: bool,
     primary: bool,
     enabled: bool,
     driver: Option<OsString>,
@@ -147,26 +151,32 @@ pub struct RunningApp {
     executable_name: String,
 }
 
+fn connectors(path: &impl AsRef<Path>) -> Option<impl Iterator<Item = ConnectorInfo>> {
+    struct Device(std::fs::File);
+    impl AsFd for Device {
+        fn as_fd(&self) -> std::os::unix::prelude::BorrowedFd<'_> {
+            self.0.as_fd()
+        }
+    }
+    impl drm::Device for Device {}
+    impl ControlDevice for Device {}
+
+    let device = Device(std::fs::File::open(path).ok()?);
+    let resources = device.resource_handles().ok()?;
+
+    Some(
+        resources
+            .connectors
+            .into_iter()
+            .filter_map(move |conn| device.get_connector(conn, false).ok()),
+    )
+}
+
 impl Gpu {
     async fn connected_outputs(&self) -> Option<Vec<Entry>> {
         let path = self.path.clone();
         spawn_blocking(move || {
-            struct Device(std::fs::File);
-            impl AsFd for Device {
-                fn as_fd(&self) -> std::os::unix::prelude::BorrowedFd<'_> {
-                    self.0.as_fd()
-                }
-            }
-            impl drm::Device for Device {}
-            impl ControlDevice for Device {}
-
-            let device = Device(std::fs::File::open(path).ok()?);
-            let resources = device.resource_handles().ok()?;
-
-            let outputs = resources
-                .connectors
-                .into_iter()
-                .filter_map(|conn| device.get_connector(conn, false).ok())
+            let outputs = connectors(&path)?
                 .filter(|info| info.state() == drm::control::connector::State::Connected)
                 .map(|info| Entry {
                     name: format!(
@@ -178,6 +188,7 @@ impl Gpu {
                     secondary: String::new(),
                 })
                 .collect();
+
             // TODO read and parse edid with libdisplay-info and display output manufacture/model
 
             Some(outputs)
@@ -309,7 +320,7 @@ fn all_gpus<S: AsRef<str>>(seat: S) -> io::Result<Vec<Gpu>> {
     let mut enumerator = udev::Enumerator::new()?;
     enumerator.match_subsystem("drm")?;
     enumerator.match_sysname("card[0-9]*")?;
-    Ok(enumerator
+    let mut gpus = enumerator
         .scan_devices()?
         .filter(|device| {
             device
@@ -370,13 +381,34 @@ fn all_gpus<S: AsRef<str>>(seat: S) -> io::Result<Vec<Gpu>> {
             Some(Gpu {
                 path,
                 name,
-                primary: boot_vga,
+                boot_vga,
+                primary: false,
                 enabled: false,
                 driver,
                 interval,
             })
         })
-        .collect())
+        .collect::<Vec<_>>();
+
+    if let Some(primary_idx) = gpus
+        .iter()
+        .position(|gpu| {
+            connectors(&gpu.path).is_some_and(|mut conns| {
+                conns.any(|info| {
+                    let i = info.interface();
+                    i == Interface::EmbeddedDisplayPort
+                        || i == Interface::LVDS
+                        || i == Interface::DSI
+                })
+            })
+        })
+        .or_else(|| gpus.iter().position(|gpu| gpu.boot_vga))
+        .or_else(|| (gpus.len() == 1).then_some(0))
+    {
+        gpus[primary_idx].primary = true;
+    }
+
+    Ok(gpus)
 }
 
 pub fn dgpu_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
@@ -481,6 +513,7 @@ async fn start_listening(
                                         monitor.gpus.push(Gpu {
                                             path: path.to_path_buf(),
                                             name,
+                                            boot_vga: false,
                                             primary: false,
                                             enabled: false,
                                             driver,
