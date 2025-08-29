@@ -7,28 +7,28 @@ use crate::{
 };
 use cctk::sctk::reexports::calloop;
 use cosmic::{
-    Element, Task, app,
+    app,
     applet::{
         menu_button, padded_control,
-        token::subscription::{TokenRequest, TokenUpdate, activation_token_subscription},
+        token::subscription::{activation_token_subscription, TokenRequest, TokenUpdate},
     },
     cctk::sctk::reexports::calloop::channel,
     cosmic_config::{self, CosmicConfigEntry},
     cosmic_theme::{CosmicPalette, Spacing, ThemeBuilder},
     iced::{
-        Length, Subscription,
         platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
-        window,
+        window, Length, Subscription,
     },
     surface,
     theme::{self, CosmicTheme},
-    widget::{Column, divider, text},
+    widget::{divider, text, Column},
+    Element, Task,
 };
 use cosmic_settings_subscriptions::{
     accessibility::{self, DBusRequest, DBusUpdate},
     cosmic_a11y_manager::{AccessibilityEvent, AccessibilityRequest, ColorFilter},
 };
-use cosmic_time::{Instant, Timeline, anim, chain, id};
+use cosmic_time::{anim, chain, id, Instant, Timeline};
 use std::sync::LazyLock;
 use tokio::sync::mpsc::UnboundedSender;
 

@@ -1,15 +1,12 @@
 [package]
 name = "cosmic-applet-battery"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 license = "GPL-3.0-only"
 
 [dependencies]
-anyhow.workspace = true
-cosmic-settings-subscriptions = { workspace = true, features = [
-    "upower",
-    "settings_daemon",
-] }
+anyhow = "1"
+cosmic-settings-subscriptions.workspace = true
 cosmic-time.workspace = true
 drm = "0.14.1"
 futures.workspace = true

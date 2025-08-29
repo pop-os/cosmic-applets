@@ -4,7 +4,7 @@
 // TODO: Both this and server proxy could emit same events, have way to generate stream from either?
 
 use cosmic::iced::{self, Subscription};
-use futures::{StreamExt, stream};
+use futures::{stream, StreamExt};
 
 use crate::subscriptions::status_notifier_item::StatusNotifierItem;
 

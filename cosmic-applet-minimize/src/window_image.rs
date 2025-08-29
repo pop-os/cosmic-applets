@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use cosmic::{
-    Element,
-    desktop::{IconSourceExt, fde},
+    desktop::{fde, IconSourceExt},
     iced::Limits,
-    iced_core::{Border, Layout, Length, Size, Vector, layout, overlay, widget::Tree},
+    iced_core::{layout, overlay, widget::Tree, Border, Layout, Length, Size, Vector},
     theme::{Button, Container},
-    widget::{Image, Widget, button, container, image::Handle},
+    widget::{button, container, image::Handle, Image, Widget},
+    Element,
 };
 
 use crate::wayland_subscription::WaylandImage;

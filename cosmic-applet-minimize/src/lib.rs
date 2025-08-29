@@ -10,7 +10,7 @@ use std::borrow::Cow;
 
 use crate::localize::localize;
 use cosmic::{
-    Task, app,
+    app,
     applet::cosmic_panel_config::PanelAnchor,
     cctk::{
         sctk::reexports::calloop, toplevel_info::ToplevelInfo,
@@ -18,19 +18,21 @@ use cosmic::{
     },
     desktop::fde,
     iced::{
-        self, Length, Limits, Subscription,
+        self,
         id::Id as WidgetId,
         platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
         widget::text,
         window::{self},
+        Length, Limits, Subscription,
     },
     surface,
     widget::{autosize::autosize, mouse_area},
+    Task,
 };
 
 use cosmic::iced_widget::{Column, Row};
 
-use cosmic::{Element, widget::tooltip};
+use cosmic::{widget::tooltip, Element};
 use std::sync::LazyLock;
 use wayland_subscription::{
     ToplevelRequest, ToplevelUpdate, WaylandImage, WaylandRequest, WaylandUpdate,

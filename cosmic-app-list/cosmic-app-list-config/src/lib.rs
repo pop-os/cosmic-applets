@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use cosmic::cosmic_config::{
-    self, Config, CosmicConfigEntry, cosmic_config_derive::CosmicConfigEntry,
+    self, cosmic_config_derive::CosmicConfigEntry, Config, CosmicConfigEntry,
 };
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;

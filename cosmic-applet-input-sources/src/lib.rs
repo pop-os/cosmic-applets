@@ -11,13 +11,13 @@ use cosmic::{
     cosmic_config::{self, ConfigSet, CosmicConfigEntry},
     cosmic_theme::Spacing,
     iced::{
-        Task,
         platform_specific::shell::commands::popup::{destroy_popup, get_popup},
         widget::{column, row},
         window::Id,
+        Limits, Task,
     },
     iced_futures::Subscription,
-    iced_runtime::{Appearance, core::window},
+    iced_runtime::{core::window, Appearance},
     prelude::*,
     surface, theme,
     widget::{self, horizontal_space, vertical_space},
@@ -135,7 +135,7 @@ impl cosmic::Application for Window {
                 } else {
                     let new_id = Id::unique();
                     self.popup.replace(new_id);
-                    let popup_settings = self.core.applet.get_popup_settings(
+                    let mut popup_settings = self.core.applet.get_popup_settings(
                         self.core.main_window_id().unwrap(),
                         new_id,
                         None,

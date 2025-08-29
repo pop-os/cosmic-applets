@@ -1,5 +1,5 @@
 use super::{NetworkManagerEvent, NetworkManagerState};
-use cosmic::iced::{self, Subscription, stream};
+use cosmic::iced::{self, stream, Subscription};
 use cosmic_dbus_networkmanager::nm::NetworkManager;
 use futures::{SinkExt, StreamExt};
 use std::{fmt::Debug, hash::Hash};

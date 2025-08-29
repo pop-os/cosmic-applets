@@ -1,7 +1,7 @@
 [package]
 name = "cosmic-applet-audio"
 version = "0.1.1"
-edition = "2024"
+edition = "2021"
 license = "GPL-3.0-only"
 
 [dependencies]
@@ -10,10 +10,10 @@ cosmic-time.workspace = true
 i18n-embed-fl.workspace = true
 i18n-embed.workspace = true
 libcosmic.workspace = true
-libpulse-binding = "2.30.1"
+libpulse-binding = "2.28.2"
 mpris2-zbus = { git = "https://github.com/pop-os/dbus-settings-bindings" }
 rust-embed.workspace = true
-serde.workspace = true
+serde = "1.0.217"
 tokio.workspace = true
 tracing-log.workspace = true
 tracing-subscriber.workspace = true

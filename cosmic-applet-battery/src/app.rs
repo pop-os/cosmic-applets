@@ -3,42 +3,43 @@
 
 use crate::{
     backend::{
-        Power, PowerProfileRequest, PowerProfileUpdate, get_charging_limit,
-        power_profile_subscription, set_charging_limit,
+        get_charging_limit, power_profile_subscription, set_charging_limit, Power,
+        PowerProfileRequest, PowerProfileUpdate,
     },
     config,
-    dgpu::{Entry, GpuUpdate, dgpu_subscription},
+    dgpu::{dgpu_subscription, Entry, GpuUpdate},
     fl,
 };
 use cosmic::{
-    Element, Task, app,
+    app,
     applet::{
         cosmic_panel_config::PanelAnchor,
         menu_button, padded_control,
-        token::subscription::{TokenRequest, TokenUpdate, activation_token_subscription},
+        token::subscription::{activation_token_subscription, TokenRequest, TokenUpdate},
     },
     cctk::sctk::reexports::calloop,
     cosmic_theme::Spacing,
     iced::{
-        Length, Subscription,
         platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
-        widget::{Column, Row, column, container, row},
-        window,
+        widget::{column, container, row, slider},
+        window, Length, Subscription,
     },
     iced_core::{Alignment, Background, Border, Color, Shadow},
+    iced_widget::{Column, Row},
     surface, theme,
-    widget::{divider, horizontal_space, icon, scrollable, slider, text, vertical_space},
+    widget::{divider, horizontal_space, icon, scrollable, text, vertical_space},
+    Element, Task,
 };
 use cosmic_settings_subscriptions::{
     settings_daemon,
     upower::{
-        device::{DeviceDbusEvent, device_subscription},
+        device::{device_subscription, DeviceDbusEvent},
         kbdbacklight::{
-            KeyboardBacklightRequest, KeyboardBacklightUpdate, kbd_backlight_subscription,
+            kbd_backlight_subscription, KeyboardBacklightRequest, KeyboardBacklightUpdate,
         },
     },
 };
-use cosmic_time::{Instant, Timeline, anim, chain, id};
+use cosmic_time::{anim, chain, id, Instant, Timeline};
 
 use std::{collections::HashMap, path::PathBuf, sync::LazyLock, time::Duration};
 use tokio::sync::mpsc::UnboundedSender;

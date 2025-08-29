@@ -4,9 +4,9 @@
 use anyhow;
 use cctk::sctk::reexports::calloop::{self, channel::SyncSender};
 use cosmic::iced::{
-    self, Subscription,
-    futures::{self, SinkExt, StreamExt, channel::mpsc},
-    stream,
+    self,
+    futures::{self, channel::mpsc, SinkExt, StreamExt},
+    stream, Subscription,
 };
 use cosmic_protocols::a11y::v1::client::cosmic_a11y_manager_v1::Filter;
 use cosmic_settings_subscriptions::cosmic_a11y_manager::{

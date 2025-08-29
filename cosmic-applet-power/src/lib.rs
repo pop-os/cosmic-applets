@@ -1,18 +1,26 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
+use std::cell::LazyCell;
+
 use cosmic::{
-    Element, Task, app,
+    app,
     applet::{menu_button, padded_control},
+    cctk::wayland_protocols::xdg::shell::client::xdg_positioner::Gravity,
     cosmic_theme::Spacing,
     iced::{
-        self, Alignment, Length,
-        platform_specific::shell::commands::popup::{destroy_popup, get_popup},
+        self,
+        platform_specific::{
+            runtime::wayland::subsurface,
+            shell::commands::popup::{destroy_popup, get_popup},
+        },
         widget::{self, column, row},
-        window,
+        window, Alignment, Length,
     },
+    iced_runtime::core::layout::Limits,
     surface, theme,
-    widget::{Space, button, divider, icon, text},
+    widget::{autosize, button, divider, icon, layer_container::layer_container, text, Space},
+    Element, Task,
 };
 use std::sync::LazyLock;
 
@@ -118,7 +126,7 @@ impl cosmic::Application for Power {
                     let new_id = window::Id::unique();
                     self.popup.replace(new_id);
 
-                    let popup_settings = self.core.applet.get_popup_settings(
+                    let mut popup_settings = self.core.applet.get_popup_settings(
                         self.core.main_window_id().unwrap(),
                         new_id,
                         None,

@@ -20,22 +20,22 @@ use cosmic_dbus_networkmanager::{
         enums::{self, ActiveConnectionState, DeviceType, NmConnectivityState},
     },
     nm::NetworkManager,
-    settings::{NetworkManagerSettings, connection::Settings},
+    settings::{connection::Settings, NetworkManagerSettings},
 };
 use futures::{
+    channel::mpsc::{unbounded, UnboundedReceiver, UnboundedSender},
     SinkExt, StreamExt,
-    channel::mpsc::{UnboundedReceiver, UnboundedSender, unbounded},
 };
 use hw_address::HwAddress;
 use tokio::process::Command;
 use zbus::{
-    Connection,
     zvariant::{self, Value},
+    Connection,
 };
 
 use self::{
-    available_wifi::{AccessPoint, handle_wireless_device},
-    current_networks::{ActiveConnectionInfo, active_connections},
+    available_wifi::{handle_wireless_device, AccessPoint},
+    current_networks::{active_connections, ActiveConnectionInfo},
 };
 
 // In some distros, rfkill is only in sbin, which isn't normally in PATH

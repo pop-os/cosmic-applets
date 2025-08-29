@@ -4,9 +4,9 @@
 use crate::wayland::{self, AppRequest};
 use cctk::sctk::reexports::calloop::channel::SyncSender;
 use cosmic::iced::{
-    self, Subscription,
-    futures::{self, SinkExt, StreamExt, channel::mpsc},
-    stream,
+    self,
+    futures::{self, channel::mpsc, SinkExt, StreamExt},
+    stream, Subscription,
 };
 use cosmic_protocols::workspace::v2::client::zcosmic_workspace_handle_v2::TilingState;
 use std::sync::LazyLock;
