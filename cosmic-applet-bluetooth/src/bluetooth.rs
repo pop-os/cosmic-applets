@@ -10,28 +10,26 @@ use std::{
     time::Duration,
 };
 
-pub use bluer::DeviceProperty;
 use bluer::{
-    agent::{Agent, AgentHandle},
     Adapter, Address, Session, Uuid,
+    agent::{Agent, AgentHandle},
 };
 
 use cosmic::{
     iced::{
-        self,
+        self, Subscription,
         futures::{SinkExt, StreamExt},
-        Subscription,
     },
     iced_futures::stream,
 };
 
-use futures::{stream::FuturesUnordered, FutureExt};
+use futures::{FutureExt, stream::FuturesUnordered};
 use rand::Rng;
 use tokio::{
     spawn,
     sync::{
-        mpsc::{channel, Receiver, Sender},
         Mutex, RwLock,
+        mpsc::{Receiver, Sender, channel},
     },
     task::JoinHandle,
 };
@@ -72,6 +70,14 @@ fn device_type_to_icon(device_type: &str) -> &'static str {
     }
 }
 
+// In some distros, rfkill is only in sbin, which isn't normally in PATH
+// TODO: Directly access `/dev/rfkill`
+fn rfkill_path_var() -> std::ffi::OsString {
+    let mut path = std::env::var_os("PATH").unwrap_or_default();
+    path.push(":/usr/sbin");
+    path
+}
+
 #[inline]
 pub fn bluetooth_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
     id: I,
@@ -91,7 +97,7 @@ pub fn bluetooth_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
 
                 retry_count = retry_count.saturating_add(1);
                 _ = tokio::time::sleep(Duration::from_millis(
-                    2_u64.saturating_pow(retry_count).max(68719476734),
+                    2_u64.saturating_pow(retry_count).min(68719476734),
                 ))
                 .await;
             };
@@ -682,6 +688,7 @@ impl BluerSessionState {
                             // rfkill will be persisted after reboot
                             let name = adapter_clone.name();
                             if let Some(id) = tokio::process::Command::new("rfkill")
+                                .env("PATH", rfkill_path_var())
                                 .arg("list")
                                 .arg("-n")
                                 .arg("--output")
@@ -698,6 +705,7 @@ impl BluerSessionState {
                                 })
                             {
                                 if let Err(err) = tokio::process::Command::new("rfkill")
+                                    .env("PATH", rfkill_path_var())
                                     .arg(if *enabled { "unblock" } else { "block" })
                                     .arg(id)
                                     .output()

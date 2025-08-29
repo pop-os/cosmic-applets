@@ -1,28 +1,20 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
-use std::cell::LazyCell;
-
 use cosmic::{
-    app,
+    Element, Task, app,
     applet::{menu_button, padded_control},
-    cctk::wayland_protocols::xdg::shell::client::xdg_positioner::Gravity,
     cosmic_theme::Spacing,
     iced::{
-        self,
-        platform_specific::{
-            runtime::wayland::subsurface,
-            shell::commands::popup::{destroy_popup, get_popup},
-        },
+        self, Alignment, Length,
+        platform_specific::shell::commands::popup::{destroy_popup, get_popup},
         widget::{self, column, row},
-        window, Alignment, Length,
+        window,
     },
-    iced_runtime::core::layout::Limits,
     surface, theme,
-    widget::{autosize, button, divider, icon, layer_container::layer_container, text, Space},
-    Element, Task,
+    widget::{Space, button, divider, icon, text},
 };
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 
 use logind_zbus::{
     manager::ManagerProxy,
@@ -39,8 +31,8 @@ pub mod session_manager;
 
 use crate::{cosmic_session::CosmicSessionProxy, session_manager::SessionManagerProxy};
 
-static SUBSURFACE_ID: Lazy<cosmic::widget::Id> =
-    Lazy::new(|| cosmic::widget::Id::new("subsurface"));
+static SUBSURFACE_ID: LazyLock<cosmic::widget::Id> =
+    LazyLock::new(|| cosmic::widget::Id::new("subsurface"));
 
 pub fn run() -> cosmic::iced::Result {
     localize::localize();
@@ -126,7 +118,7 @@ impl cosmic::Application for Power {
                     let new_id = window::Id::unique();
                     self.popup.replace(new_id);
 
-                    let mut popup_settings = self.core.applet.get_popup_settings(
+                    let popup_settings = self.core.applet.get_popup_settings(
                         self.core.main_window_id().unwrap(),
                         new_id,
                         None,

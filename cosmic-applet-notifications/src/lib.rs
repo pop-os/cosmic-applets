@@ -4,31 +4,30 @@
 mod localize;
 mod subscriptions;
 use cosmic::{
-    app,
+    Element, Task, app,
     applet::{
         menu_control_padding, padded_control,
-        token::subscription::{activation_token_subscription, TokenRequest, TokenUpdate},
+        token::subscription::{TokenRequest, TokenUpdate, activation_token_subscription},
     },
     cctk::sctk::reexports::calloop,
     cosmic_config::{Config, CosmicConfigEntry},
     cosmic_theme::Spacing,
     iced::{
+        Alignment, Length, Subscription,
         platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
         widget::{column, row},
-        window, Alignment, Length, Limits, Subscription,
+        window,
     },
-    iced_widget::{scrollable, Column},
     surface, theme,
-    widget::{button, container, divider, icon, text},
-    Element, Task,
+    widget::{Column, button, container, divider, icon, scrollable, text},
 };
 
 use cosmic::iced_futures::futures::executor::block_on;
 
 use cosmic_notifications_config::NotificationsConfig;
 use cosmic_notifications_util::{ActionId, Image, Notification};
-use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
-use std::{borrow::Cow, collections::HashMap, path::PathBuf};
+use cosmic_time::{Instant, Timeline, anim, chain, id};
+use std::{borrow::Cow, collections::HashMap, path::PathBuf, sync::LazyLock};
 use subscriptions::notifications::{self, NotificationsAppletProxy};
 use tokio::sync::mpsc::Sender;
 use tracing::info;
@@ -38,7 +37,7 @@ pub fn run() -> cosmic::iced::Result {
     cosmic::applet::run::<Notifications>(())
 }
 
-static DO_NOT_DISTURB: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
+static DO_NOT_DISTURB: LazyLock<id::Toggler> = LazyLock::new(id::Toggler::unique);
 
 struct Notifications {
     core: cosmic::app::Core,
@@ -185,7 +184,7 @@ impl cosmic::Application for Notifications {
                     self.popup.replace(new_id);
                     self.timeline = Timeline::new();
 
-                    let mut popup_settings = self.core.applet.get_popup_settings(
+                    let popup_settings = self.core.applet.get_popup_settings(
                         self.core.main_window_id().unwrap(),
                         new_id,
                         None,
@@ -411,26 +410,30 @@ impl cosmic::Application for Notifications {
             space_xxs, space_s, ..
         } = theme::active().cosmic().spacing;
 
-        let do_not_disturb = padded_control(row![anim!(
-            DO_NOT_DISTURB,
-            &self.timeline,
-            fl!("do-not-disturb"),
-            self.config.do_not_disturb,
-            Message::DoNotDisturb
-        )
-        .text_size(14)
-        .width(Length::Fill)]);
+        let do_not_disturb = padded_control(row![
+            anim!(
+                DO_NOT_DISTURB,
+                &self.timeline,
+                fl!("do-not-disturb"),
+                self.config.do_not_disturb,
+                Message::DoNotDisturb
+            )
+            .text_size(14)
+            .width(Length::Fill)
+        ]);
 
         let notifications = if self.cards.is_empty() {
             let no_notifications = String::from(fl!("no-notifications"));
-            row![container(
-                column![
-                    text_icon("cosmic-applet-notification-symbolic", 40),
-                    text::body(no_notifications)
-                ]
-                .align_x(Alignment::Center)
-            )
-            .center_x(Length::Fill)]
+            row![
+                container(
+                    column![
+                        text_icon("cosmic-applet-notification-symbolic", 40),
+                        text::body(no_notifications)
+                    ]
+                    .align_x(Alignment::Center)
+                )
+                .center_x(Length::Fill)
+            ]
             .padding([8, 0])
             .spacing(12)
         } else {
@@ -581,12 +584,14 @@ impl cosmic::Application for Notifications {
                 notifs.push(card_list.into());
             }
 
-            row!(scrollable(
-                Column::with_children(notifs)
-                    .spacing(8)
-                    .height(Length::Shrink),
+            row!(
+                scrollable(
+                    Column::with_children(notifs)
+                        .spacing(8)
+                        .height(Length::Shrink),
+                )
+                .height(Length::Shrink)
             )
-            .height(Length::Shrink))
             .padding(menu_control_padding())
         };
 

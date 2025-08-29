@@ -4,15 +4,15 @@
 use crate::wayland::{self, WorkspaceEvent};
 use cctk::{sctk::reexports::calloop::channel::SyncSender, workspace::Workspace};
 use cosmic::iced::{
-    self,
-    futures::{channel::mpsc, SinkExt, StreamExt},
-    stream, Subscription,
+    self, Subscription,
+    futures::{SinkExt, StreamExt, channel::mpsc},
+    stream,
 };
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 use tokio::sync::Mutex;
 
-pub static WAYLAND_RX: Lazy<Mutex<Option<mpsc::Receiver<Vec<Workspace>>>>> =
-    Lazy::new(|| Mutex::new(None));
+pub static WAYLAND_RX: LazyLock<Mutex<Option<mpsc::Receiver<Vec<Workspace>>>>> =
+    LazyLock::new(|| Mutex::new(None));
 
 #[derive(Debug, Clone)]
 pub enum WorkspacesUpdate {

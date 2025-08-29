@@ -10,6 +10,7 @@ Build-Depends:
   libdbus-1-dev,
   libegl-dev,
   libpulse-dev,
+  libpipewire-0.3-dev,
   libudev-dev,
   libxkbcommon-dev,
   libwayland-dev,

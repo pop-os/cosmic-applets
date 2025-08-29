@@ -6,15 +6,15 @@ use crate::{
 };
 use cctk::sctk::reexports::calloop::channel::SyncSender;
 use cosmic::{
-    app,
+    Element, Task, app,
     app::Core,
     applet::{menu_button, padded_control},
     cosmic_config::{Config, ConfigSet, CosmicConfigEntry},
     cosmic_theme::Spacing,
     iced::{
+        Length, Subscription,
         platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
         window::Id,
-        Length, Limits, Subscription,
     },
     iced_widget::{column, row},
     surface, theme,
@@ -23,11 +23,10 @@ use cosmic::{
         segmented_button::{self, Entity, SingleSelectModel},
         segmented_control, text,
     },
-    Element, Task,
 };
 use cosmic_comp_config::{CosmicCompConfig, TileBehavior};
 use cosmic_protocols::workspace::v2::client::zcosmic_workspace_handle_v2::TilingState;
-use cosmic_time::{anim, chain, id, Timeline};
+use cosmic_time::{Timeline, anim, chain, id};
 use std::{thread, time::Instant};
 use tracing::error;
 
@@ -173,7 +172,7 @@ impl cosmic::Application for Window {
                     self.active_hint = id::Toggler::unique();
                     let new_id = Id::unique();
                     self.popup = Some(new_id);
-                    let mut popup_settings = self.core.applet.get_popup_settings(
+                    let popup_settings = self.core.applet.get_popup_settings(
                         self.core.main_window_id().unwrap(),
                         new_id,
                         Some((1, 1)),
@@ -182,7 +181,7 @@ impl cosmic::Application for Window {
                     );
 
                     get_popup(popup_settings)
-                }
+                };
             }
             Message::PopupClosed(id) => {
                 if self.popup.as_ref() == Some(&id) {
