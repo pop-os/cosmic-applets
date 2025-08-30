@@ -28,4 +28,4 @@ i18n-embed-fl.workspace = true
 rust-embed.workspace = true
 rust-embed-utils.workspace = true
 zbus = { workspace = true, features = ["tokio", "p2p"] }
-url = "2.5.4"
+url = "2.5.7"
