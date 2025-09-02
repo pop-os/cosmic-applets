@@ -244,7 +244,8 @@ impl cosmic::Application for Window {
             // The stream always returns the current timezone as its first item even if it wasn't
             // updated. If the proxy is recreated in a loop somehow, the resulting stream will
             // always yield an update immediately which could lead to spammed false updates.
-            while let Some(property) = proxy.receive_timezone_changed().await.next().await {
+            let mut stream_tz = proxy.receive_timezone_changed().await;
+            while let Some(property) = stream_tz.next().await {
                 let tz = property.get().await?;
                 output
                     .send(Message::TimezoneUpdate(tz))
