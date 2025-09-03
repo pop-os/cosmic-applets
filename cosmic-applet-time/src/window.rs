@@ -1,8 +1,6 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
-use std::str::FromStr;
-
 use chrono::{Datelike, Timelike};
 use cosmic::iced_futures::stream;
 use cosmic::widget::Id;
@@ -13,7 +11,7 @@ use cosmic::{
     cosmic_theme::Spacing,
     iced::{
         Alignment, Length, Rectangle, Subscription,
-        futures::{SinkExt, StreamExt, TryFutureExt, channel::mpsc},
+        futures::{SinkExt, StreamExt, channel::mpsc},
         platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
         widget::{column, row, vertical_space},
         window,
@@ -30,27 +28,45 @@ use std::sync::LazyLock;
 use timedate_zbus::TimeDateProxy;
 use tokio::{sync::watch, time};
 
-use icu::{
-    calendar::DateTime,
-    datetime::{
-        DateTimeFormatter, DateTimeFormatterOptions,
-        options::{
-            components::{self, Bag},
-            preferences,
-        },
-    },
-    locid::Locale,
-};
-
-use crate::{config::TimeAppletConfig, fl, time::get_calender_first};
+use crate::{config::TimeAppletConfig, fl, time::get_calendar_first};
 use cosmic::applet::token::subscription::{
     TokenRequest, TokenUpdate, activation_token_subscription,
+};
+use icu::{
+    datetime::{
+        DateTimeFormatter, DateTimeFormatterPreferences, fieldsets,
+        input::{Date, DateTime, Time},
+        options::TimePrecision,
+    },
+    locale::{Locale, preferences::extensions::unicode::keywords::HourCycle},
 };
 
 static AUTOSIZE_MAIN_ID: LazyLock<Id> = LazyLock::new(|| Id::new("autosize-main"));
 
-/// In order to keep the understandable, the chrono types are not globals,
-/// to avoid conflict with icu
+fn get_system_locale() -> Locale {
+    for var in ["LC_TIME", "LC_ALL", "LANG"] {
+        if let Ok(locale_str) = std::env::var(var) {
+            let cleaned_locale = locale_str
+                .split('.')
+                .next()
+                .unwrap_or(&locale_str)
+                .replace('_', "-");
+
+            if let Ok(locale) = Locale::try_from_str(&cleaned_locale) {
+                return locale;
+            }
+
+            // Try language-only fallback (e.g., "en" from "en-US")
+            if let Some(lang) = cleaned_locale.split('-').next() {
+                if let Ok(locale) = Locale::try_from_str(lang) {
+                    return locale;
+                }
+            }
+        }
+    }
+    tracing::warn!("No valid locale found in environment, using fallback");
+    Locale::try_from_str("en-US").expect("Failed to parse fallback locale 'en-US'")
+}
 
 pub struct Window {
     core: cosmic::app::Core,
@@ -84,29 +100,173 @@ pub enum Message {
 }
 
 impl Window {
-    fn format<D: Datelike>(&self, bag: Bag, date: &D) -> String {
-        let options = DateTimeFormatterOptions::Components(bag);
+    fn create_datetime<D: Datelike>(&self, date: &D) -> DateTime<icu::calendar::Gregorian> {
+        DateTime {
+            date: Date::try_new_gregorian(date.year(), date.month() as u8, date.day() as u8)
+                .unwrap(),
+            time: Time::try_new(
+                self.now.hour() as u8,
+                self.now.minute() as u8,
+                self.now.second() as u8,
+                0,
+            )
+            .unwrap(),
+        }
+    }
 
-        let dtf =
-            DateTimeFormatter::try_new_experimental(&self.locale.clone().into(), options).unwrap();
+    fn calendar_grid(&self) -> Grid<'_, Message> {
+        let mut calendar: Grid<'_, Message> = grid().width(Length::Fill);
+        let mut first_day_of_week = chrono::Weekday::try_from(self.config.first_day_of_week)
+            .unwrap_or(chrono::Weekday::Sun);
 
-        let datetime = DateTime::try_new_gregorian_datetime(
-            date.year(),
-            date.month() as u8,
-            date.day() as u8,
-            // hack cause we know that we will only use "now"
-            // when we need hours (NaiveDate don't support this functions)
-            self.now.hour() as u8,
-            self.now.minute() as u8,
-            self.now.second() as u8,
+        let first_day = get_calendar_first(
+            self.date_selected.year(),
+            self.date_selected.month(),
+            first_day_of_week,
+        );
+
+        let mut day_iter = first_day.iter_days();
+        let prefs = DateTimeFormatterPreferences::from(self.locale.clone());
+        let weekday = DateTimeFormatter::try_new(prefs, fieldsets::E::short()).unwrap();
+
+        for _ in 0..7 {
+            let date = day_iter.next().unwrap();
+            let datetime = self.create_datetime(&date);
+            calendar = calendar.push(
+                text(weekday.format(&datetime).to_string())
+                    .size(12)
+                    .width(Length::Fixed(44.0))
+                    .align_x(Alignment::Center),
+            );
+            first_day_of_week = first_day_of_week.succ();
+        }
+        calendar = calendar.insert_row();
+
+        let mut day_iter = first_day.iter_days();
+        for i in 0..42 {
+            if i > 0 && i % 7 == 0 {
+                calendar = calendar.insert_row();
+            }
+
+            let date = day_iter.next().unwrap();
+            let is_month = date.month() == self.date_selected.month()
+                && date.year_ce() == self.date_selected.year_ce();
+            let is_day = date.day() == self.date_selected.day() && is_month;
+            let is_today = date == self.date_today;
+
+            calendar = calendar.push(date_button(date.day(), is_month, is_day, is_today));
+        }
+
+        calendar
+    }
+
+    fn vertical_layout(&self) -> Element<Message> {
+        let mut elements = Vec::new();
+        let date = self.now.naive_local();
+        let datetime = self.create_datetime(&date);
+        let mut prefs = DateTimeFormatterPreferences::from(self.locale.clone());
+        prefs.hour_cycle = Some(if self.config.military_time {
+            HourCycle::H23
+        } else {
+            HourCycle::H12
+        });
+
+        if self.config.show_date_in_top_panel {
+            let formatted_date = DateTimeFormatter::try_new(prefs, fieldsets::MD::medium())
+                .unwrap()
+                .format(&datetime)
+                .to_string();
+
+            for p in formatted_date.split_whitespace() {
+                elements.push(self.core.applet.text(p.to_owned()).into());
+            }
+            elements.push(
+                horizontal_rule(2)
+                    .width(self.core.applet.suggested_size(true).0)
+                    .into(),
+            );
+        }
+        let mut fs = fieldsets::T::medium();
+        if !self.config.show_seconds {
+            fs = fs.with_time_precision(TimePrecision::Minute);
+        }
+        let formatted_time = DateTimeFormatter::try_new(prefs, fs)
+            .unwrap()
+            .format(&datetime)
+            .to_string();
+
+        // todo: split using formatToParts when it is implemented
+        // https://github.com/unicode-org/icu4x/issues/4936#issuecomment-2128812667
+        for p in formatted_time.split_whitespace().flat_map(|s| s.split(':')) {
+            elements.push(self.core.applet.text(p.to_owned()).into());
+        }
+
+        let date_time_col = Column::with_children(elements)
+            .align_x(Alignment::Center)
+            .spacing(4);
+
+        Element::from(
+            column!(
+                date_time_col,
+                horizontal_space().width(Length::Fixed(
+                    (self.core.applet.suggested_size(true).0
+                        + 2 * self.core.applet.suggested_padding(true)) as f32
+                ))
+            )
+            .align_x(Alignment::Center),
         )
-        .unwrap()
-        .to_iso()
-        .to_any();
+    }
 
-        dtf.format(&datetime)
-            .expect("can't format value")
-            .to_string()
+    fn horizontal_layout(&self) -> Element<Message> {
+        let datetime = self.create_datetime(&self.now);
+        let mut prefs = DateTimeFormatterPreferences::from(self.locale.clone());
+        prefs.hour_cycle = Some(if self.config.military_time {
+            HourCycle::H23
+        } else {
+            HourCycle::H12
+        });
+
+        let formatted_date = if self.config.show_date_in_top_panel {
+            if self.config.show_weekday {
+                let mut fs = fieldsets::MDET::long();
+                if !self.config.show_seconds {
+                    fs = fs.with_time_precision(TimePrecision::Minute);
+                }
+                DateTimeFormatter::try_new(prefs, fs)
+                    .unwrap()
+                    .format(&datetime)
+                    .to_string()
+            } else {
+                let mut fs = fieldsets::MDT::long();
+                if !self.config.show_seconds {
+                    fs = fs.with_time_precision(TimePrecision::Minute);
+                }
+                DateTimeFormatter::try_new(prefs, fs)
+                    .unwrap()
+                    .format(&datetime)
+                    .to_string()
+            }
+        } else {
+            let mut fs = fieldsets::T::medium();
+            if !self.config.show_seconds {
+                fs = fs.with_time_precision(TimePrecision::Minute);
+            }
+            DateTimeFormatter::try_new(prefs, fs)
+                .unwrap()
+                .format(&datetime)
+                .to_string()
+        };
+
+        Element::from(
+            row!(
+                self.core.applet.text(formatted_date),
+                container(vertical_space().height(Length::Fixed(
+                    (self.core.applet.suggested_size(true).1
+                        + 2 * self.core.applet.suggested_padding(true)) as f32
+                )))
+            )
+            .align_y(Alignment::Center),
+        )
     }
 }
 
@@ -117,24 +277,7 @@ impl cosmic::Application for Window {
     const APP_ID: &'static str = "com.system76.CosmicAppletTime";
 
     fn init(core: app::Core, _flags: Self::Flags) -> (Self, app::Task<Self::Message>) {
-        fn get_local() -> Result<Locale, Box<dyn std::error::Error>> {
-            let locale = std::env::var("LC_TIME").or_else(|_| std::env::var("LANG"))?;
-            let locale = locale
-                .split('.')
-                .next()
-                .ok_or(format!("Can't split the locale {locale}"))?;
-
-            let locale = Locale::from_str(locale).map_err(|e| format!("{e:?}"))?;
-            Ok(locale)
-        }
-
-        let locale = match get_local() {
-            Ok(locale) => locale,
-            Err(e) => {
-                tracing::error!("can't get locale {e}");
-                Locale::default()
-            }
-        };
+        let locale = get_system_locale();
 
         // Chrono evaluates the local timezone once whereby it's stored in a thread local
         // variable but never updated
@@ -142,7 +285,7 @@ impl cosmic::Application for Window {
         // timezone is ever externally changed
         let now = chrono::Local::now().fixed_offset();
 
-        // get today's date forhighlighting purposes
+        // get today's date for highlighting purposes
         let today = chrono::NaiveDate::from(now.naive_local());
 
         // Synch `show_seconds` from the config within the time subscription
@@ -249,12 +392,11 @@ impl cosmic::Application for Window {
                 let tz = property.get().await?;
                 output
                     .send(Message::TimezoneUpdate(tz))
+                    .await
                     .map_err(|e| {
                         zbus::Error::InputOutput(std::sync::Arc::new(std::io::Error::other(e)))
-                    })
-                    .await?;
+                    })?;
             }
-
             Ok(())
         }
 
@@ -280,8 +422,7 @@ impl cosmic::Application for Window {
             )
         }
 
-        // Update the time when waking from sleep, so it doesn't need to wait until the next
-        // scheduled tick to update.
+        // Update the time when waking from sleep
         async fn wake_from_sleep(output: &mut mpsc::Sender<Message>) -> zbus::Result<()> {
             let connection = zbus::Connection::system().await?;
             let proxy = ManagerProxy::new(&connection).await?;
@@ -292,7 +433,6 @@ impl cosmic::Application for Window {
                     let _ = output.send(Message::Tick).await;
                 }
             }
-
             Ok(())
         }
 
@@ -484,103 +624,9 @@ impl cosmic::Application for Window {
         );
 
         let button = button::custom(if horizontal {
-            let mut bag = Bag::empty();
-
-            if self.config.show_date_in_top_panel {
-                if self.config.show_weekday {
-                    bag.weekday = Some(components::Text::Short);
-                }
-
-                bag.day = Some(components::Day::NumericDayOfMonth);
-                bag.month = Some(components::Month::Long);
-            }
-
-            bag.hour = Some(components::Numeric::Numeric);
-            bag.minute = Some(components::Numeric::Numeric);
-            bag.second = self
-                .config
-                .show_seconds
-                .then_some(components::Numeric::Numeric);
-
-            let hour_cycle = if self.config.military_time {
-                preferences::HourCycle::H23
-            } else {
-                preferences::HourCycle::H12
-            };
-
-            bag.preferences = Some(preferences::Bag::from_hour_cycle(hour_cycle));
-
-            Element::from(
-                row!(
-                    self.core.applet.text(self.format(bag, &self.now)),
-                    container(vertical_space().height(Length::Fixed(
-                        (self.core.applet.suggested_size(true).1
-                            + 2 * self.core.applet.suggested_padding(true))
-                            as f32
-                    )))
-                )
-                .align_y(Alignment::Center),
-            )
+            self.horizontal_layout()
         } else {
-            // vertical layout
-
-            let mut elements = Vec::new();
-
-            if self.config.show_date_in_top_panel {
-                let mut date_bag = Bag::empty();
-
-                date_bag.day = Some(components::Day::NumericDayOfMonth);
-                date_bag.month = Some(components::Month::Short);
-
-                let formated = self.format(date_bag, &self.now);
-
-                for p in formated.split_whitespace() {
-                    elements.push(self.core.applet.text(p.to_owned()).into());
-                }
-
-                elements.push(
-                    horizontal_rule(2)
-                        .width(self.core.applet.suggested_size(true).0)
-                        .into(),
-                )
-            }
-
-            let mut time_bag: Bag = Bag::empty();
-
-            time_bag.hour = Some(components::Numeric::Numeric);
-            time_bag.minute = Some(components::Numeric::Numeric);
-
-            let hour_cycle = if self.config.military_time {
-                preferences::HourCycle::H23
-            } else {
-                preferences::HourCycle::H12
-            };
-
-            time_bag.preferences = Some(preferences::Bag::from_hour_cycle(hour_cycle));
-
-            let formated = self.format(time_bag, &self.now);
-
-            // todo: split using formatToParts when it is implemented
-            // https://github.com/unicode-org/icu4x/issues/4936#issuecomment-2128812667
-            for p in formated.split_whitespace().flat_map(|s| s.split(':')) {
-                elements.push(self.core.applet.text(p.to_owned()).into());
-            }
-
-            let date_time_col = Column::with_children(elements)
-                .align_x(Alignment::Center)
-                .spacing(4);
-
-            Element::from(
-                column!(
-                    date_time_col,
-                    horizontal_space().width(Length::Fixed(
-                        (self.core.applet.suggested_size(true).0
-                            + 2 * self.core.applet.suggested_padding(true))
-                            as f32
-                    ))
-                )
-                .align_x(Alignment::Center),
-            )
+            self.vertical_layout()
         })
         .padding(if horizontal {
             [0, self.core.applet.suggested_padding(true)]
@@ -606,17 +652,22 @@ impl cosmic::Application for Window {
             space_xxs, space_s, ..
         } = theme::active().cosmic().spacing;
 
-        let mut date_bag = Bag::empty();
-        date_bag.month = Some(components::Month::Long);
-        date_bag.day = Some(components::Day::NumericDayOfMonth);
-        date_bag.year = Some(components::Year::Numeric);
+        let datetime = self.create_datetime(&self.date_selected);
+        let prefs = DateTimeFormatterPreferences::from(self.locale.clone());
 
-        let date = text(self.format(date_bag, &self.date_selected)).size(18);
-
-        let mut day_of_week_bag = Bag::empty();
-        day_of_week_bag.weekday = Some(components::Text::Long);
-
-        let day_of_week = text::body(self.format(day_of_week_bag, &self.date_selected));
+        let date = text(
+            DateTimeFormatter::try_new(prefs, fieldsets::YMD::long())
+                .unwrap()
+                .format(&datetime)
+                .to_string(),
+        )
+        .size(18);
+        let day_of_week = text::body(
+            DateTimeFormatter::try_new(prefs, fieldsets::E::long())
+                .unwrap()
+                .format(&datetime)
+                .to_string(),
+        );
 
         let month_controls = row![
             button::icon(icon::from_name("go-previous-symbolic"))
@@ -628,51 +679,8 @@ impl cosmic::Application for Window {
         ]
         .spacing(8);
 
-        // Calender
+        let calendar = self.calendar_grid();
 
-        let mut calender: Grid<'_, Message> = grid().width(Length::Fill);
-        let mut first_day_of_week = chrono::Weekday::try_from(self.config.first_day_of_week)
-            .unwrap_or(chrono::Weekday::Sun);
-
-        let first_day = get_calender_first(
-            self.date_selected.year(),
-            self.date_selected.month(),
-            first_day_of_week,
-        );
-
-        let mut weekday_bag = Bag::empty();
-        weekday_bag.weekday = Some(components::Text::Short);
-
-        let mut day_iter = first_day.iter_days();
-
-        for _ in 0..7 {
-            calender = calender.push(
-                text(self.format(weekday_bag, &day_iter.next().unwrap()))
-                    .size(12)
-                    .width(Length::Fixed(44.0))
-                    .align_x(Alignment::Center),
-            );
-
-            first_day_of_week = first_day_of_week.succ();
-        }
-        calender = calender.insert_row();
-
-        let mut day_iter = first_day.iter_days();
-        for i in 0..42 {
-            if i > 0 && i % 7 == 0 {
-                calender = calender.insert_row();
-            }
-
-            let date = day_iter.next().unwrap();
-            let is_month = date.month() == self.date_selected.month()
-                && date.year_ce() == self.date_selected.year_ce();
-            let is_day = date.day() == self.date_selected.day() && is_month;
-            let is_today = date == self.date_today;
-
-            calender = calender.push(date_button(date.day(), is_month, is_day, is_today));
-        }
-
-        // content
         let content_list = column![
             row![
                 column![date, day_of_week],
@@ -681,7 +689,7 @@ impl cosmic::Application for Window {
             ]
             .align_y(Alignment::Center)
             .padding([12, 20]),
-            calender.padding([0, 12].into()),
+            calendar.padding([0, 12].into()),
             padded_control(divider::horizontal::default()).padding([space_xxs, space_s]),
             menu_button(text::body(fl!("datetime-settings")))
                 .on_press(Message::OpenDateTimeSettings),
