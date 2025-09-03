@@ -1444,7 +1444,7 @@ dependencies = [
  "bitflags 2.9.4",
  "cosmic-protocols",
  "libc",
- "smithay-client-toolkit 0.20.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "smithay-client-toolkit 0.20.0",
  "wayland-client",
  "wayland-protocols",
 ]
@@ -1561,12 +1561,12 @@ dependencies = [
 [[package]]
 name = "cosmic-panel-config"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/cosmic-panel#9adf94ebefc7dba5e58dd051e6efa87d058d11aa"
+source = "git+https://github.com/pop-os/cosmic-panel#f0e2d217c6cbfb656ffbcfc03be28191ccf42468"
 dependencies = [
  "anyhow",
  "cosmic-config",
  "serde",
- "smithay-client-toolkit 0.20.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "smithay-client-toolkit 0.20.0",
  "tracing",
  "wayland-protocols-wlr",
  "xdg-shell-wrapper-config",
@@ -1589,7 +1589,7 @@ dependencies = [
 [[package]]
 name = "cosmic-settings-config"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/cosmic-settings-daemon#b725543b2834e5aa82dded3c73f3be65e18bd83e"
+source = "git+https://github.com/pop-os/cosmic-settings-daemon#6d45dbeaade7689ad2241f818fb1c6336ebe2bc2"
 dependencies = [
  "cosmic-config",
  "ron",
@@ -1626,7 +1626,7 @@ dependencies = [
  "num-traits",
  "pipewire",
  "rustix 1.0.8",
- "smithay-client-toolkit 0.20.0 (git+https://github.com/smithay/client-toolkit/)",
+ "smithay-client-toolkit 0.20.0",
  "thiserror 2.0.16",
  "tokio",
  "tokio-stream",
@@ -6137,35 +6137,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "smithay-client-toolkit"
-version = "0.20.0"
-source = "git+https://github.com/smithay/client-toolkit/#8a0b33616145b38c7f989f8e468d57e69a2a6748"
-dependencies = [
- "bitflags 2.9.4",
- "bytemuck",
- "calloop 0.14.3",
- "calloop-wayland-source 0.4.0",
- "cursor-icon",
- "libc",
- "log",
- "memmap2 0.9.8",
- "pkg-config",
- "rustix 1.0.8",
- "thiserror 2.0.16",
- "wayland-backend",
- "wayland-client",
- "wayland-csd-frame",
- "wayland-cursor",
- "wayland-protocols",
- "wayland-protocols-experimental",
- "wayland-protocols-misc",
- "wayland-protocols-wlr",
- "wayland-scanner",
- "xkbcommon 0.8.0",
- "xkeysym",
-]
-
-[[package]]
 name = "smithay-clipboard"
 version = "0.8.0"
 source = "git+https://github.com/pop-os/smithay-clipboard?tag=pop-dnd-5#5a3007def49eb678d1144850c9ee04b80707c56a"
@@ -7996,7 +7967,7 @@ dependencies = [
 [[package]]
 name = "xdg-shell-wrapper-config"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/cosmic-panel#9adf94ebefc7dba5e58dd051e6efa87d058d11aa"
+source = "git+https://github.com/pop-os/cosmic-panel#f0e2d217c6cbfb656ffbcfc03be28191ccf42468"
 dependencies = [
  "serde",
  "wayland-protocols-wlr",
