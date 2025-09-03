@@ -1444,7 +1444,7 @@ dependencies = [
  "bitflags 2.9.4",
  "cosmic-protocols",
  "libc",
- "smithay-client-toolkit 0.20.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "smithay-client-toolkit 0.20.0",
  "wayland-client",
  "wayland-protocols",
 ]
@@ -1566,7 +1566,7 @@ dependencies = [
  "anyhow",
  "cosmic-config",
  "serde",
- "smithay-client-toolkit 0.20.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "smithay-client-toolkit 0.20.0",
  "tracing",
  "wayland-protocols-wlr",
  "xdg-shell-wrapper-config",
@@ -1626,7 +1626,7 @@ dependencies = [
  "num-traits",
  "pipewire",
  "rustix 1.0.8",
- "smithay-client-toolkit 0.20.0 (git+https://github.com/smithay/client-toolkit/)",
+ "smithay-client-toolkit 0.20.0",
  "thiserror 2.0.16",
  "tokio",
  "tokio-stream",
@@ -6111,35 +6111,6 @@ name = "smithay-client-toolkit"
 version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0512da38f5e2b31201a93524adb8d3136276fa4fe4aafab4e1f727a82b534cc0"
-dependencies = [
- "bitflags 2.9.4",
- "bytemuck",
- "calloop 0.14.3",
- "calloop-wayland-source 0.4.0",
- "cursor-icon",
- "libc",
- "log",
- "memmap2 0.9.8",
- "pkg-config",
- "rustix 1.0.8",
- "thiserror 2.0.16",
- "wayland-backend",
- "wayland-client",
- "wayland-csd-frame",
- "wayland-cursor",
- "wayland-protocols",
- "wayland-protocols-experimental",
- "wayland-protocols-misc",
- "wayland-protocols-wlr",
- "wayland-scanner",
- "xkbcommon 0.8.0",
- "xkeysym",
-]
-
-[[package]]
-name = "smithay-client-toolkit"
-version = "0.20.0"
-source = "git+https://github.com/smithay/client-toolkit/#8a0b33616145b38c7f989f8e468d57e69a2a6748"
 dependencies = [
  "bitflags 2.9.4",
  "bytemuck",
