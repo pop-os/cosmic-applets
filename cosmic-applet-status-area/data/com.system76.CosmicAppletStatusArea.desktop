@@ -5,6 +5,7 @@ Name[hu]=Értesítési terület
 Name[nl]=Meldingsvlak
 Name[pl]=Zasobnik powiadomień
 Name[pt]=Área de Notificações
+Name[ru]=Панель уведомлений
 Type=Application
 Exec=cosmic-applet-status-area
 Terminal=false

@@ -3,6 +3,7 @@ airplane-mode = Авиарежим
 airplane-mode-on = Авиарежим включён
 turn-off-airplane-mode = Выключите, чтобы включить Wi-Fi, Bluetooth и мобильную связь.
 wifi = Wi-Fi
+identity = Идентификация
 ipv4 = Адрес IPv4
 ipv6 = Адрес IPv6
 mac = MAC
