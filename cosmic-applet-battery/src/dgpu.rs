@@ -393,13 +393,15 @@ fn all_gpus<S: AsRef<str>>(seat: S) -> io::Result<Vec<Gpu>> {
     if let Some(primary_idx) = gpus
         .iter()
         .position(|gpu| {
-            connectors(&gpu.path).is_some_and(|mut conns| {
-                conns.any(|info| {
-                    let i = info.interface();
-                    i == Interface::EmbeddedDisplayPort
-                        || i == Interface::LVDS
-                        || i == Interface::DSI
-                })
+            connectors(&gpu.path).is_some_and(|conns| {
+                conns
+                    .filter(|info| info.state() == drm::control::connector::State::Connected)
+                    .any(|info| {
+                        let i = info.interface();
+                        i == Interface::EmbeddedDisplayPort
+                            || i == Interface::LVDS
+                            || i == Interface::DSI
+                    })
             })
         })
         .or_else(|| gpus.iter().position(|gpu| gpu.boot_vga))
