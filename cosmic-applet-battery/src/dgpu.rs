@@ -15,9 +15,12 @@ use cosmic::{
     iced::{self, Subscription},
     iced_futures::stream,
 };
-use drm::control::{
-    Device as ControlDevice,
-    connector::{Info as ConnectorInfo, Interface},
+use drm::{
+    control::{
+        Device as ControlDevice,
+        connector::{Info as ConnectorInfo, Interface},
+    },
+    node::DrmNode,
 };
 use futures::{FutureExt, SinkExt};
 use tokio::{
@@ -331,6 +334,11 @@ fn all_gpus<S: AsRef<str>>(seat: S) -> io::Result<Vec<Gpu>> {
         })
         .flat_map(|device| {
             let path = device.devnode().map(PathBuf::from)?;
+            let node = DrmNode::from_path(&path).ok()?;
+            if !node.has_render() {
+                return None;
+            }
+
             let boot_vga = if let Ok(Some(pci)) = device.parent_with_subsystem(Path::new("pci")) {
                 if let Some(value) = pci.attribute_value("boot_vga") {
                     value == "1"
