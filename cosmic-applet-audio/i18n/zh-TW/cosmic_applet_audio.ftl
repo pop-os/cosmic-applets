@@ -1,7 +1,7 @@
-output = 音效輸出
-input = 音效輸入
-show-media-controls = 在面板顯示媒體控制
-sound-settings = 音效設定...
-disconnected = PulseAudio 已中斷連線
-no-device = 未選擇設備
-unknown-artist = 未知藝術家
+output = 輸出
+input = 輸入
+show-media-controls = 在面板上顯示媒體控制項
+sound-settings = 聲音設定…
+disconnected = PulseAudio 已斷線
+no-device = 未選取裝置
+unknown-artist = 未知演出者
