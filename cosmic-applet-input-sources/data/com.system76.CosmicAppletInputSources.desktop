@@ -6,6 +6,7 @@ Name[pl]=Źródła wprowadzdania danych
 Name[pt]=Métodos de Entrada de Teclado
 Name[nl]=Invoerbronnen
 Name[de]=Eigangsquellen
+Name[sk]=Vstupné zdroje
 Type=Application
 Exec=cosmic-applet-input-sources
 Terminal=false

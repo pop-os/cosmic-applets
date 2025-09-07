@@ -5,6 +5,7 @@ Name[pl]=Przycisk przestrzeni roboczych
 Name[hu]=Munkaterületek gomb
 Name[pt]=Botão de Áreas de Trabalho
 Name[nl]=Knop werkbladenoverzicht
+Name[sk]=Tlačidlo pracovných plôch
 Type=Application
 Exec=cosmic-panel-button com.system76.CosmicWorkspaces
 Terminal=false

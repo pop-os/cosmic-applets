@@ -6,6 +6,7 @@ Name[pl]=Sieć
 Name[pt]=Rede
 Name[nl]=Netwerk
 Name[de]=Netzwerk
+Name[sk]=Sieť
 Type=Application
 Exec=cosmic-applet-network
 Terminal=false

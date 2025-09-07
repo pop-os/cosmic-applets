@@ -7,6 +7,7 @@ Name[pl]=Dźwięk
 Name[pt]=Som
 Name[nl]=Geluid
 Name[de]=Klang
+Name[sk]=Zvuk
 Type=Application
 Exec=cosmic-applet-audio
 Terminal=false

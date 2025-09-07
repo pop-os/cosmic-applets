@@ -5,6 +5,7 @@ Name[hu]=Felhasználói Munkamenet
 Name[pl]=Sesja użytkownika
 Name[pt]=Sessão de Usuário
 Name[nl]=Gebruikerssessie
+Name[sk]=Používateľská relácia
 Type=Application
 Exec=cosmic-applet-power
 Terminal=false
