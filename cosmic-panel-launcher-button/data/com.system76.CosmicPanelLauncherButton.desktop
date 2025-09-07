@@ -5,6 +5,7 @@ Name[hu]=Indító gomb
 Name[pl]=Przycisk programu uruchamiającego
 Name[pt]=Botão Lançador de Aplicativos
 Name[nl]=Knop snelstarter
+Name[sk]=Tlačidlo spúšťača
 Type=Application
 Exec=cosmic-panel-button com.system76.CosmicLauncher
 Terminal=false
