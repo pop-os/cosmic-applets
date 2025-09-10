@@ -5,7 +5,7 @@ use chrono::{Datelike, Timelike};
 use cosmic::iced_futures::stream;
 use cosmic::widget::Id;
 use cosmic::{
-    Element, Task, app,
+    Apply, Element, Task, app,
     applet::{cosmic_panel_config::PanelAnchor, menu_button, padded_control},
     cctk::sctk::reexports::calloop,
     cosmic_theme::Spacing,
@@ -133,10 +133,9 @@ impl Window {
             let date = day_iter.next().unwrap();
             let datetime = self.create_datetime(&date);
             calendar = calendar.push(
-                text(weekday.format(&datetime).to_string())
-                    .size(12)
-                    .width(Length::Fixed(44.0))
-                    .align_x(Alignment::Center),
+                text::caption(weekday.format(&datetime).to_string())
+                    .apply(container)
+                    .center_x(Length::Fixed(44.0)),
             );
             first_day_of_week = first_day_of_week.succ();
         }
@@ -716,10 +715,14 @@ fn date_button(day: u32, is_month: bool, is_day: bool, is_today: bool) -> Button
         button::ButtonClass::Text
     };
 
-    let button = button::custom(text::body(format!("{day}")).center())
-        .class(style)
-        .height(Length::Fixed(44.0))
-        .width(Length::Fixed(44.0));
+    let button = button::custom(
+        text::body(format!("{day}"))
+            .apply(container)
+            .center(Length::Fill),
+    )
+    .class(style)
+    .height(Length::Fixed(44.0))
+    .width(Length::Fixed(44.0));
 
     if is_month {
         button.on_press(Message::SelectDay(day))
