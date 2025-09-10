@@ -173,7 +173,10 @@ impl DockItem {
 
         let cosmic_icon = fde::IconSource::from_unknown(desktop_info.icon().unwrap_or_default())
             .as_cosmic_icon()
-            .size(app_icon.icon_size);
+            // sets the preferred icon size variant
+            .size(128)
+            .width(app_icon.icon_size.into())
+            .height(app_icon.icon_size.into());
 
         let dots = if toplevels.is_empty() {
             (0..1)
