@@ -701,21 +701,21 @@ impl cosmic::Application for Audio {
             .applet
             .icon_button(self.output_icon_name())
             .on_press_down(Message::TogglePopup);
+
+        const WHEEL_STEP: f64 = 5.0; // 5% per wheel event
         let btn = crate::mouse_area::MouseArea::new(btn).on_mouse_wheel(|delta| {
-            let change = match delta {
-                iced::mouse::ScrollDelta::Lines { x, y } => (x + y) * 5.,
-                iced::mouse::ScrollDelta::Pixels { y, .. } => y / 40.3125,
+            // normalize: ignore magnitude, keep only direction
+            let dir = match delta {
+                iced::mouse::ScrollDelta::Lines { y, .. } => y.signum(), // -1/0/1
+                iced::mouse::ScrollDelta::Pixels { y, .. } => y.signum(), // -1/0/1
             };
-            if change.abs() < f32::EPSILON {
+            if dir == 0.0 {
                 return Message::Ignore;
             }
-            let new_volume = self
-                .current_output
-                .as_ref()
-                .map_or(0f64, |v| volume_to_percent(v.volume.avg()) + change as f64)
-                .clamp(0.0, 150.0);
+            let new_volume = (self.output_volume + (dir as f64) * WHEEL_STEP).clamp(0.0, 150.0);
             Message::SetOutputVolume(new_volume)
         });
+
         let playback_buttons = (!self.core.applet.suggested_bounds.as_ref().is_some_and(|c| {
             // if we have a configure for width and height, we're in a overflow popup
             c.width > 0. && c.height > 0.
