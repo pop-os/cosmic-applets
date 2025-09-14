@@ -7,6 +7,7 @@ Name[pt_BR]=Janelas Lado a Lado
 Name[pt]=Janelas Lado a Lado
 Name[nl]=Vensters tegelen
 Name[sk]=Dláždenie okien
+Name[es]=Ventanas mosaico
 Type=Application
 Exec=cosmic-applet-tiling
 Terminal=false

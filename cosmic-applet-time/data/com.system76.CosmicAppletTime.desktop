@@ -6,6 +6,7 @@ Name[pl]=Data, godzina i kalendarz
 Name[pt]=Data, Hora e Calendário
 Name[nl]=Datum, tijd en agenda
 Name[sk]=Dátum, čas a kalendár
+Name[es]=Fecha, hora y calendario
 Type=Application
 Exec=cosmic-applet-time
 Terminal=false

@@ -8,6 +8,7 @@ Name[pt]=Som
 Name[nl]=Geluid
 Name[de]=Klang
 Name[sk]=Zvuk
+Name[es]=Sonido
 Type=Application
 Exec=cosmic-applet-audio
 Terminal=false

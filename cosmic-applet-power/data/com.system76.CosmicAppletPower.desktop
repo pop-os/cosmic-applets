@@ -6,6 +6,7 @@ Name[pl]=Sesja użytkownika
 Name[pt]=Sessão de Usuário
 Name[nl]=Gebruikerssessie
 Name[sk]=Používateľská relácia
+Name[es]=Sesión de usuario
 Type=Application
 Exec=cosmic-applet-power
 Terminal=false
