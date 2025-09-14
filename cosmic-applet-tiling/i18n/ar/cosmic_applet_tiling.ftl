@@ -1,5 +1,5 @@
-tile-windows = تجزئة النوافذ تلقائيًا
-tile-current = تجزئة مساحة العمل الحالية
+tile-windows = تبليط النوافذ تلقائيًا
+tile-current = تبليط مساحة العمل الحالية
 shortcuts = اختصارات
 navigate-windows = التنقل بين النوافذ
 move-window = نقل النافذة
@@ -14,7 +14,7 @@ per-workspace = حسب مساحة العمل
 super = Super
 shift = Shift
 arrow-keys = مفاتيح الأسهم
-tiled = مجزأة
+tiled = مبلّطة
 floating = عائمة
 autotile-behavior = تجزئة النوافذ في مساحات العمل
 new-workspace = سلوك مساحة العمل الجديدة
