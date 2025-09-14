@@ -8,6 +8,7 @@ Name[pt]=Rede
 Name[nl]=Netwerk
 Name[de]=Netzwerk
 Name[sk]=Sieť
+Name[es]=Red
 Type=Application
 Exec=cosmic-applet-network
 Terminal=false

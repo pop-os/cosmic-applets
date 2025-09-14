@@ -8,6 +8,7 @@ Name[pt]=Janelas Minimizadas
 Name[nl]=Geminimaliseerde vensters
 Name[de]=Minimierte Fenster
 Name[sk]=Minimalizované okná
+Name[es]=Ventanas minimizadas
 Type=Application
 Exec=cosmic-applet-minimize
 Terminal=false

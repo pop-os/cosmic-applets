@@ -7,6 +7,7 @@ Name[pt]=Bandeja de Aplicativos
 Name[de]=App-Tray
 Name[nl]=App-Tray
 Name[sk]=Panel aplikácií
+Name[es]=Bandeja de aplicaciones
 Type=Application
 Exec=cosmic-app-list
 Terminal=false
