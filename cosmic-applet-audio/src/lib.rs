@@ -717,7 +717,14 @@ impl cosmic::Application for Audio {
                 return Message::Ignore;
             }
 
-            let new_volume = (self.output_volume + (scroll_vector as f64)).clamp(0.0, 150.0);
+            let new_volume = (self.output_volume + (scroll_vector as f64)).clamp(
+                0.0,
+                if self.output_amplification {
+                    150.0
+                } else {
+                    100.0
+                },
+            );
             Message::SetOutputVolume(new_volume)
         });
 
