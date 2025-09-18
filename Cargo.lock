@@ -2480,16 +2480,16 @@ dependencies = [
 
 [[package]]
 name = "freedesktop-desktop-entry"
-version = "0.7.14"
+version = "0.7.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "de88bb3b555a4b38372082c5ede431e1e0e14f32be1d02998c6366eb4d2682ed"
+checksum = "445176e2719a68ae5115d7338b3c382fc3447aac7c2d9777c42fa969cb4384da"
 dependencies = [
  "gettext-rs",
  "log",
  "memchr",
  "thiserror 2.0.16",
  "unicase",
- "xdg 2.5.2",
+ "xdg 3.0.0",
 ]
 
 [[package]]
