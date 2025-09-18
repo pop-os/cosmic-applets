@@ -707,17 +707,17 @@ impl cosmic::Application for Audio {
             .icon_button(self.output_icon_name())
             .on_press_down(Message::TogglePopup);
 
-        const WHEEL_STEP: f64 = 5.0; // 5% per wheel event
+        const WHEEL_STEP: f32 = 5.0; // 5% per wheel event
         let btn = crate::mouse_area::MouseArea::new(btn).on_mouse_wheel(|delta| {
-            // normalize: ignore magnitude, keep only direction
-            let dir = match delta {
-                iced::mouse::ScrollDelta::Lines { y, .. } => y.signum(), // -1/0/1
-                iced::mouse::ScrollDelta::Pixels { y, .. } => y.signum(), // -1/0/1
+            let scroll_vector = match delta {
+                iced::mouse::ScrollDelta::Lines { y, .. } => y.signum() * WHEEL_STEP, // -1/0/1
+                iced::mouse::ScrollDelta::Pixels { y, .. } => y.signum(),             // -1/0/1
             };
-            if dir == 0.0 {
+            if scroll_vector == 0.0 {
                 return Message::Ignore;
             }
-            let new_volume = (self.output_volume + (dir as f64) * WHEEL_STEP).clamp(0.0, 150.0);
+
+            let new_volume = (self.output_volume + (scroll_vector as f64)).clamp(0.0, 150.0);
             Message::SetOutputVolume(new_volume)
         });
 
