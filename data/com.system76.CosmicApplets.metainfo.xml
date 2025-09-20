@@ -14,6 +14,7 @@
   <name xml:lang="pt_BR">Miniaplicativos</name>
   <name xml:lang="pt">Miniaplicativos</name>
   <name xml:lang="hu">COSMIC Kisalkalmazások</name>
+  <name xml:lang="ru">Мини-приложения COSMIC</name>
   <name xml:lang="sk">Aplety COSMIC</name>
   <name xml:lang="es">Applets COSMIC</name>
   <summary>Applets for the COSMIC panel</summary>
@@ -24,6 +25,7 @@
   <summary xml:lang="hu">Kisalkalmazások a COSMIC panelhez</summary>
   <summary xml:lang="nl">Applets voor het paneel van COSMIC</summary>
   <summary xml:lang="de">Applets für das COSMIC-Panel</summary>
+  <summary xml:lang="ru">Мини-приложения для панели COSMIC</summary>
   <summary xml:lang="sk">Aplety pre panel COSMIC</summary>
   <summary xml:lang="es">Applets para el panel de COSMIC</summary>
   <description>
@@ -35,6 +37,7 @@
     <p xml:lang="hu">Kisalkalmazások a COSMIC panelhez</p>
     <p xml:lang="nl">Applets voor het paneel van COSMIC</p>
     <p xml:lang="de">Applets für das COSMIC-Panel</p>
+    <p xml:lang="ru">Мини-приложения для панели COSMIC</summary>
     <p xml:lang="sk">Aplety pre panel COSMIC</p>
     <p xml:lang="es">Applets para el panel de COSMIC</p>
   </description>
