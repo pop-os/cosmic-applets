@@ -1,32 +1,31 @@
 use std::collections::HashSet;
+use std::sync::LazyLock;
 
 use cosmic::{
-    app,
+    Element, Task, app,
     applet::{
         menu_button, menu_control_padding, padded_control,
-        token::subscription::{activation_token_subscription, TokenRequest, TokenUpdate},
+        token::subscription::{TokenRequest, TokenUpdate, activation_token_subscription},
     },
     cctk::sctk::reexports::calloop,
     cosmic_theme::Spacing,
     iced::{
+        Alignment, Length, Subscription,
         platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
         widget::{column, row},
-        Alignment, Length, Subscription,
     },
-    iced_runtime::core::{layout::Limits, window},
-    iced_widget::Row,
+    iced_runtime::core::window,
     surface, theme,
     widget::{
-        button, container, divider,
+        Column, Row, button, container, divider,
         icon::{self, from_name},
-        scrollable, text, text_input, Column,
+        scrollable, text, text_input,
     },
-    Element, Task,
 };
 use cosmic_dbus_networkmanager::interface::enums::{
     ActiveConnectionState, DeviceState, NmConnectivityState,
 };
-use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
+use cosmic_time::{Instant, Timeline, anim, chain, id};
 
 use futures::channel::mpsc::UnboundedSender;
 use zbus::Connection;
@@ -34,6 +33,7 @@ use zbus::Connection;
 use crate::{
     config, fl,
     network_manager::{
+        NetworkManagerEvent, NetworkManagerRequest, NetworkManagerState,
         active_conns::active_conns_subscription,
         available_wifi::{AccessPoint, NetworkType},
         current_networks::ActiveConnectionInfo,
@@ -41,7 +41,6 @@ use crate::{
         hw_address::HwAddress,
         network_manager_subscription,
         wireless_enabled::wireless_enabled_subscription,
-        NetworkManagerEvent, NetworkManagerRequest, NetworkManagerState,
     },
 };
 
@@ -90,8 +89,8 @@ impl From<NewConnectionState> for AccessPoint {
     }
 }
 
-static WIFI: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
-static AIRPLANE_MODE: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
+static WIFI: LazyLock<id::Toggler> = LazyLock::new(id::Toggler::unique);
+static AIRPLANE_MODE: LazyLock<id::Toggler> = LazyLock::new(id::Toggler::unique);
 
 #[derive(Default)]
 struct CosmicNetworkApplet {
@@ -289,7 +288,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                     self.popup.replace(new_id);
                     self.timeline = Timeline::new();
 
-                    let mut popup_settings = self.core.applet.get_popup_settings(
+                    let popup_settings = self.core.applet.get_popup_settings(
                         self.core.main_window_id().unwrap(),
                         new_id,
                         None,
@@ -758,12 +757,14 @@ impl cosmic::Application for CosmicNetworkApplet {
                     }
 
                     known_wifi.push(Element::from(
-                        column![menu_button(
-                            Row::with_children(btn_content)
-                                .align_y(Alignment::Center)
-                                .spacing(8)
-                        )
-                        .on_press(Message::Disconnect(name.clone(), *hw_address))]
+                        column![
+                            menu_button(
+                                Row::with_children(btn_content)
+                                    .align_y(Alignment::Center)
+                                    .spacing(8)
+                            )
+                            .on_press(Message::Disconnect(name.clone(), *hw_address))
+                        ]
                         .align_x(Alignment::Center),
                     ));
                 }
@@ -870,12 +871,14 @@ impl cosmic::Application for CosmicNetworkApplet {
                     .active_conns
                     .iter()
                     .any(|conn| conn.hw_address() == hw_device);
-                let mut btn_content = vec![column![
-                    text::body(display_name),
-                    Column::with_children(vec![text("Adapter").size(10).into()])
-                ]
-                .width(Length::Fill)
-                .into()];
+                let mut btn_content = vec![
+                    column![
+                        text::body(display_name),
+                        Column::with_children(vec![text("Adapter").size(10).into()])
+                    ]
+                    .width(Length::Fill)
+                    .into(),
+                ];
                 if is_connected {
                     btn_content.push(
                         text::body(fl!("connected"))

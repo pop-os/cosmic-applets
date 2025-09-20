@@ -1,8 +1,8 @@
-battery = Modo Ahorro de Energía
+battery = Modo ahorro de energía
 battery-desc = Menor rendimiento pero inferior consumo de energía.
-balanced = Modo Balanceado
+balanced = Modo balanceado
 balanced-desc = Rendimiento y consumo de energía equilibrados.
-performance = Modo de Rendimiento
+performance = Modo de rendimiento
 performance-desc = Máximo rendimiento pero mayor consumo de energía.
 max-charge = Aumentar la vida útil de la batería al poner un límite de carga del 80%
 seconds = s

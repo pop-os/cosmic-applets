@@ -1,15 +1,17 @@
 [Desktop Entry]
 Name=App Library Button
+Name[ar]=زر مكتبة التطبيقات
 Name[zh_CN]=应用程序库按钮
-Name[es]=Botón de biblioteca de aplicaciones del panel Cosmic
+Name[es]=Botón de biblioteca de aplicaciones
 Name[ja]=Cosmicパネルのアップライブラリーボタン
 Name[ko]=코스믹 패널 앱 라이브러리 단추
 Name[pl]=Przycisk biblioteki aplikacji
 Name[ru]=Кнопка библиотеки приложений
 Name[hu]=Alkalmazáskönyvtár gomb
-Name[pt_BR]=Biblioteca de aplicativos
-Name[pt]=Botão da biblioteca de aplicativos
+Name[pt_BR]=Botão da Biblioteca de Aplicativos
+Name[pt]=Botão da Biblioteca de Aplicativos
 Name[nl]=Knop appbibliotheek
+Name[sk]=Tlačidlo knižnice aplikácií
 Type=Application
 Exec=cosmic-panel-button com.system76.CosmicAppLibrary
 Terminal=false

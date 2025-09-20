@@ -1,10 +1,7 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
-use cosmic::{
-    iced::{self, Subscription},
-    widget::icon,
-};
+use cosmic::iced::{self, Subscription};
 use futures::{FutureExt, StreamExt};
 use std::collections::HashMap;
 use zbus::zvariant::{self, OwnedValue};
@@ -113,6 +110,10 @@ impl StatusNotifierItem {
     pub fn menu_proxy(&self) -> &DBusMenuProxy<'static> {
         &self.menu_proxy
     }
+
+    pub fn item_proxy(&self) -> &StatusNotifierItemProxy<'static> {
+        &self.item_proxy
+    }
 }
 
 async fn get_layout(menu_proxy: DBusMenuProxy<'static>) -> Result<Layout, String> {
@@ -136,6 +137,8 @@ pub trait StatusNotifierItem {
 
     #[zbus(signal)]
     fn new_icon(&self) -> zbus::Result<()>;
+
+    fn provide_xdg_activation_token(&self, token: String) -> zbus::Result<()>;
 }
 
 #[derive(Clone, Debug)]
@@ -249,7 +252,7 @@ pub trait DBusMenu {
     ) -> zbus::Result<(u32, Layout)>;
 
     fn event(&self, id: i32, event_id: &str, data: &OwnedValue, timestamp: u32)
-        -> zbus::Result<()>;
+    -> zbus::Result<()>;
 
     fn about_to_show(&self, id: i32) -> zbus::Result<bool>;
 

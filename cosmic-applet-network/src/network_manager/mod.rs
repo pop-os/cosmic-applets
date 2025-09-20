@@ -20,23 +20,31 @@ use cosmic_dbus_networkmanager::{
         enums::{self, ActiveConnectionState, DeviceType, NmConnectivityState},
     },
     nm::NetworkManager,
-    settings::{connection::Settings, NetworkManagerSettings},
+    settings::{NetworkManagerSettings, connection::Settings},
 };
 use futures::{
-    channel::mpsc::{unbounded, UnboundedReceiver, UnboundedSender},
     SinkExt, StreamExt,
+    channel::mpsc::{UnboundedReceiver, UnboundedSender, unbounded},
 };
 use hw_address::HwAddress;
 use tokio::process::Command;
 use zbus::{
-    zvariant::{self, Value},
     Connection,
+    zvariant::{self, Value},
 };
 
 use self::{
-    available_wifi::{handle_wireless_device, AccessPoint},
-    current_networks::{active_connections, ActiveConnectionInfo},
+    available_wifi::{AccessPoint, handle_wireless_device},
+    current_networks::{ActiveConnectionInfo, active_connections},
 };
+
+// In some distros, rfkill is only in sbin, which isn't normally in PATH
+// TODO: Directly access `/dev/rfkill`
+fn rfkill_path_var() -> std::ffi::OsString {
+    let mut path = std::env::var_os("PATH").unwrap_or_default();
+    path.push(":/usr/sbin");
+    path
+}
 
 #[derive(Debug)]
 pub enum State {
@@ -154,6 +162,7 @@ async fn start_listening(
                     // bluetooth
                     success = success
                         && Command::new("rfkill")
+                            .env("PATH", rfkill_path_var())
                             .arg(if airplane_mode { "block" } else { "unblock" })
                             .arg("bluetooth")
                             .output()
@@ -402,6 +411,7 @@ impl NetworkManagerState {
         let mut self_ = Self::default();
         // airplane mode
         let airplaine_mode = Command::new("rfkill")
+            .env("PATH", rfkill_path_var())
             .arg("list")
             .arg("bluetooth")
             .output()

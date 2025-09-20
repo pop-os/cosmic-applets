@@ -1,29 +1,22 @@
 [package]
 name = "cosmic-applet-time"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 license = "GPL-3.0-only"
 
 [dependencies]
 cosmic-applets-config.workspace = true
-cosmic-config.workspace = true
-chrono = { version = "0.4.39", features = ["clock"] }
+chrono = { version = "0.4.42", features = ["clock"] }
 chrono-tz = "0.10"
 i18n-embed-fl.workspace = true
 i18n-embed.workspace = true
 libcosmic.workspace = true
-once_cell.workspace = true
 rust-embed.workspace = true
 tokio.workspace = true
 tracing-log.workspace = true
 tracing-subscriber.workspace = true
 tracing.workspace = true
-icu = { version = "1.5.0", features = [
-    "experimental",
-    "compiled_data",
-    "icu_datetime_experimental",
-] }
-serde.workspace = true
+icu = { version = "2.0.0", features = ["compiled_data"] }
 zbus.workspace = true
 timedate-zbus = { git = "https://github.com/pop-os/dbus-settings-bindings" }
 logind-zbus = "5.3.2"

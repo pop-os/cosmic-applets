@@ -1,12 +1,15 @@
 [Desktop Entry]
 Name=Tiling
+Name[ar]=تبليط
 Name[zh_CN]=平铺
 Name[hu]=Csempézés
 Name[pl]=Kafelkowanie
-Name[pt_BR]=Janelas lado a lado
-Name[pt]=Janelas lado a lado
-Name[nl]=Vensters tegel
 Name[ru]=Размещение окон
+Name[pt_BR]=Janelas Lado a Lado
+Name[pt]=Janelas Lado a Lado
+Name[nl]=Vensters tegelen
+Name[sk]=Dláždenie okien
+Name[es]=Ventanas mosaico
 Type=Application
 Exec=cosmic-applet-tiling
 Terminal=false

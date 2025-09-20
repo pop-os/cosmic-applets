@@ -9,12 +9,16 @@
   <url type="homepage">https://github.com/pop-os/cosmic-applets</url>
   <url type="bugtracker">https://github.com/pop-os/cosmic-applets</url>
   <name>COSMIC Applets</name>
+  <name xml:lang="ar">بريمجات COSMIC</name>
   <name xml:lang="pl">Aplety COSMIC</name>
   <name xml:lang="pt_BR">Miniaplicativos</name>
   <name xml:lang="pt">Miniaplicativos</name>
   <name xml:lang="hu">COSMIC Kisalkalmazások</name>
   <name xml:lang="ru">Мини-приложения COSMIC</name>
+  <name xml:lang="sk">Aplety COSMIC</name>
+  <name xml:lang="es">Applets COSMIC</name>
   <summary>Applets for the COSMIC panel</summary>
+  <summary xml:lang="ar">بريمجات للوحة COSMIC</summary>
   <summary xml:lang="pl">Aplety dla panelu COSMIC</summary>
   <summary xml:lang="pt_BR">Miniaplicativos para o painel do COSMIC</summary>
   <summary xml:lang="pt">Miniaplicativos para o painel do COSMIC</summary>
@@ -22,8 +26,11 @@
   <summary xml:lang="nl">Applets voor het paneel van COSMIC</summary>
   <summary xml:lang="de">Applets für das COSMIC-Panel</summary>
   <summary xml:lang="ru">Мини-приложения для панели COSMIC</summary>
+  <summary xml:lang="sk">Aplety pre panel COSMIC</summary>
+  <summary xml:lang="es">Applets para el panel de COSMIC</summary>
   <description>
     <p>Applets for the COSMIC panel</p>
+    <p xml:lang="ar">بريمجات للوحة COSMIC</p>
     <p xml:lang="pl">Aplety dla panelu COSMIC</p>
     <p xml:lang="pt_BR">Miniaplicativos para o painel do COSMIC</p>
     <p xml:lang="pt">Miniaplicativos para o painel do COSMIC</p>
@@ -31,6 +38,8 @@
     <p xml:lang="nl">Applets voor het paneel van COSMIC</p>
     <p xml:lang="de">Applets für das COSMIC-Panel</p>
     <p xml:lang="ru">Мини-приложения для панели COSMIC</summary>
+    <p xml:lang="sk">Aplety pre panel COSMIC</p>
+    <p xml:lang="es">Applets para el panel de COSMIC</p>
   </description>
   <launchable type="desktop-id">com.system76.CosmicAppletAppList.desktop</launchable>
   <launchable type="desktop-id">com.system76.CosmicAppletAudio.desktop</launchable>

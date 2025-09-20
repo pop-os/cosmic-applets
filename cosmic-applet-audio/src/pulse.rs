@@ -1,21 +1,20 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
-use std::{cell::RefCell, mem, rc::Rc, thread, time::Duration};
+use std::{cell::RefCell, mem, rc::Rc, sync::LazyLock, thread, time::Duration};
 
 extern crate libpulse_binding as pulse;
 
 use cosmic::{
-    iced::{self, stream, Subscription},
+    iced::{self, Subscription, stream},
     iced_futures::futures::{self, SinkExt},
 };
-use cosmic_time::once_cell::sync::Lazy;
 
 use libpulse_binding::{
     callbacks::ListResult,
     context::{
-        introspect::{Introspector, SinkInfo, SourceInfo},
         Context,
+        introspect::{Introspector, SinkInfo, SourceInfo},
     },
     error::PAErr,
     mainloop::standard::{IterateResult, Mainloop},
@@ -23,10 +22,10 @@ use libpulse_binding::{
     volume::ChannelVolumes,
 };
 
-use tokio::sync::{mpsc, Mutex};
+use tokio::sync::{Mutex, mpsc};
 
-pub static FROM_PULSE: Lazy<Mutex<Option<(mpsc::Receiver<Message>, mpsc::Sender<Message>)>>> =
-    Lazy::new(|| Mutex::new(None));
+pub static FROM_PULSE: LazyLock<Mutex<Option<(mpsc::Receiver<Message>, mpsc::Sender<Message>)>>> =
+    LazyLock::new(|| Mutex::new(None));
 
 pub fn connect() -> iced::Subscription<Event> {
     struct SomeWorker;
@@ -509,22 +508,22 @@ impl PulseServer {
             match self.mainloop.borrow_mut().iterate(false) {
                 IterateResult::Success(_) => {}
                 IterateResult::Err(e) => {
-                    return Err(PulseServerError::IterateErr(IterateResult::Err(e)))
+                    return Err(PulseServerError::IterateErr(IterateResult::Err(e)));
                 }
                 IterateResult::Quit(e) => {
-                    return Err(PulseServerError::IterateErr(IterateResult::Quit(e)))
+                    return Err(PulseServerError::IterateErr(IterateResult::Quit(e)));
                 }
             }
 
             match self.context.borrow().get_state() {
                 pulse::context::State::Ready => break,
                 pulse::context::State::Failed => {
-                    return Err(PulseServerError::ContextErr(pulse::context::State::Failed))
+                    return Err(PulseServerError::ContextErr(pulse::context::State::Failed));
                 }
                 pulse::context::State::Terminated => {
                     return Err(PulseServerError::ContextErr(
                         pulse::context::State::Terminated,
-                    ))
+                    ));
                 }
                 _ => {}
             }
@@ -758,10 +757,10 @@ impl PulseServer {
         loop {
             match self.mainloop.borrow_mut().iterate(false) {
                 IterateResult::Err(e) => {
-                    return Err(PulseServerError::IterateErr(IterateResult::Err(e)))
+                    return Err(PulseServerError::IterateErr(IterateResult::Err(e)));
                 }
                 IterateResult::Quit(e) => {
-                    return Err(PulseServerError::IterateErr(IterateResult::Quit(e)))
+                    return Err(PulseServerError::IterateErr(IterateResult::Quit(e)));
                 }
                 IterateResult::Success(_) => {}
             }
@@ -771,7 +770,7 @@ impl PulseServer {
                 pulse::operation::State::Cancelled => {
                     return Err(PulseServerError::OperationErr(
                         pulse::operation::State::Cancelled,
-                    ))
+                    ));
                 }
             }
         }

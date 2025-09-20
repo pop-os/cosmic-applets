@@ -16,15 +16,15 @@ use cctk::{
     },
     workspace::{Workspace, WorkspaceHandler, WorkspaceState},
 };
-use futures::{channel::mpsc, executor::block_on, SinkExt};
+use futures::{SinkExt, channel::mpsc, executor::block_on};
 use std::os::{
     fd::{FromRawFd, RawFd},
     unix::net::UnixStream,
 };
 use wayland_client::{
+    Connection, QueueHandle,
     globals::registry_queue_init,
     protocol::wl_output::{self, WlOutput},
-    Connection, QueueHandle,
 };
 
 #[derive(Debug, Clone)]
