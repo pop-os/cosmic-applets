@@ -19,11 +19,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: 1.80.1
+          toolchain: 1.85.1
           components: clippy
       - name: install dependencies
-        run: sudo apt update && sudo apt install -y libxkbcommon-dev libwayland-dev libdbus-1-dev libpulse-dev libinput-dev
+        run: sudo apt update && sudo apt install -y libxkbcommon-dev libwayland-dev libdbus-1-dev libpulse-dev libpipewire-0.3-dev libinput-dev
       - uses: actions-rs-plus/clippy-check@v2
         with:
-          toolchain: 1.80.1
+          toolchain: 1.85.1
           args: --all --all-targets --all-features

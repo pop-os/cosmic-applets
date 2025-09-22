@@ -1,5 +1,6 @@
 [Desktop Entry]
 Name=Bluetooth
+Name[ar]=بلوتوث
 Name[zh_CN]=蓝牙
 Type=Application
 Exec=cosmic-applet-bluetooth

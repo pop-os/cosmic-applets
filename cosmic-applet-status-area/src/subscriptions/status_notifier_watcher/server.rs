@@ -7,11 +7,11 @@
 
 use futures::prelude::*;
 use zbus::{
+    Result,
     fdo::{DBusProxy, RequestNameFlags, RequestNameReply},
     message::Header,
     names::{BusName, UniqueName, WellKnownName},
     object_server::SignalEmitter,
-    Result,
 };
 
 const NAME: WellKnownName =
@@ -65,7 +65,7 @@ impl StatusNotifierWatcher {
 
     #[zbus(signal)]
     async fn status_notifier_item_registered(ctxt: &SignalEmitter<'_>, service: &str)
-        -> Result<()>;
+    -> Result<()>;
 
     #[zbus(signal)]
     async fn status_notifier_item_unregistered(
@@ -118,17 +118,19 @@ pub async fn create_service(connection: &zbus::Connection) -> zbus::Result<()> {
                     have_bus_name = false;
                 }
             } else if let BusName::Unique(name) = &args.name {
-                let mut interface = interface.get_mut().await;
-                if let Some(idx) = interface
-                    .items
-                    .iter()
-                    .position(|(unique_name, _)| unique_name == name)
-                {
-                    let ctxt = SignalEmitter::new(&connection, OBJECT_PATH).unwrap();
-                    let service = interface.items.remove(idx).1;
-                    StatusNotifierWatcher::status_notifier_item_unregistered(&ctxt, &service)
-                        .await
-                        .unwrap();
+                if args.new_owner.is_none() {
+                    let mut interface = interface.get_mut().await;
+                    if let Some(idx) = interface
+                        .items
+                        .iter()
+                        .position(|(unique_name, _)| unique_name == name)
+                    {
+                        let ctxt = SignalEmitter::new(&connection, OBJECT_PATH).unwrap();
+                        let service = interface.items.remove(idx).1;
+                        StatusNotifierWatcher::status_notifier_item_unregistered(&ctxt, &service)
+                            .await
+                            .unwrap();
+                    }
                 }
             }
         }

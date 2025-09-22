@@ -1,11 +1,14 @@
 [Desktop Entry]
 Name=Notifications Center
+Name[ar]=مركز الإشعارات
 Name[zh_CN]=通知中心
 Name[hu]=Értesítési központ
 Name[pl]=Centrum powiadomień
 Name[pt]=Central de Notificações
 Name[nl]=Meldingscentrum
 Name[de]=Notifizierungszentrum
+Name[sk]=Centrum oznámení
+Name[es]=Centro de notificaciones
 Type=Application
 Exec=cosmic-applet-notifications
 Terminal=false
