@@ -26,8 +26,9 @@ use cosmic::{
         window,
     },
     iced_core::{Alignment, Background, Border, Color, Shadow},
-    surface, theme,
-    widget::{divider, horizontal_space, icon, scrollable, slider, text, vertical_space},
+    surface,
+    theme::{self, Button},
+    widget::{button, divider, horizontal_space, icon, scrollable, slider, text, vertical_space},
 };
 use cosmic_config::{Config, CosmicConfigEntry};
 use cosmic_settings_subscriptions::{
@@ -505,21 +506,47 @@ impl cosmic::Application for CosmicBatteryApplet {
     }
 
     fn view(&self) -> Element<Message> {
-        // let Spacing { space_xxxs, .. } = theme::active().cosmic().spacing;
+        let Spacing { space_xs, .. } = theme::active().cosmic().spacing;
 
-        // let icon = icon::from_name(self.icon_name.as_str()).into();
+        let is_horizontal = match self.core.applet.anchor {
+            PanelAnchor::Top | PanelAnchor::Bottom => true,
+            PanelAnchor::Left | PanelAnchor::Right => false,
+        };
 
-        // let percent = self
-        //     .core
-        //     .applet
-        //     .text(format!("{:.0}%", self.battery_percent))
-        //     .into();
+        let mut children = vec![icon::from_name(self.icon_name.as_str()).into()];
 
-        let btn = self
-            .core
-            .applet
-            .icon_button(&self.icon_name)
+        let suggested_size = self.core.applet.suggested_size(true);
+        let applet_padding = self.core.applet.suggested_padding(true);
+
+        if self.config.show_percentage {
+            children.push(
+                self.core
+                    .applet
+                    .text(format!("{:.0}%", self.battery_percent))
+                    .width(Length::Fixed(suggested_size.0 as f32))
+                    .height(Length::Fixed(suggested_size.1 as f32))
+                    .align_x(Alignment::Center)
+                    .align_y(Alignment::Center)
+                    .into(),
+            );
+        }
+
+        let btn_content: Element<_> = if is_horizontal {
+            row(children)
+                .spacing(space_xs)
+                .align_y(Alignment::Center)
+                .into()
+        } else {
+            column(children)
+                .spacing(space_xs)
+                .align_x(Alignment::Center)
+                .into()
+        };
+
+        let btn = button::custom(btn_content)
             .on_press_down(Message::TogglePopup)
+            .class(Button::AppletIcon)
+            .padding(applet_padding)
             .into();
 
         let content = if !self.gpus.is_empty() {
@@ -540,13 +567,14 @@ impl cosmic::Application for CosmicBatteryApplet {
                 })))
                 .into();
 
-            match self.core.applet.anchor {
-                PanelAnchor::Left | PanelAnchor::Right => Column::with_children(vec![btn, dot])
-                    .align_x(Alignment::Center)
-                    .into(),
-                PanelAnchor::Top | PanelAnchor::Bottom => Row::with_children(vec![btn, dot])
+            if is_horizontal {
+                Row::with_children(vec![btn, dot])
                     .align_y(Alignment::Center)
-                    .into(),
+                    .into()
+            } else {
+                Column::with_children(vec![btn, dot])
+                    .align_x(Alignment::Center)
+                    .into()
             }
         } else {
             btn
