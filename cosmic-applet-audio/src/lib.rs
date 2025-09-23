@@ -603,6 +603,17 @@ impl cosmic::Application for Audio {
                             tracing::error!("Error playing previous: {}", err);
                         }
                     }),
+                    MprisRequest::Raise => tokio::spawn(async move {
+                        let res = player.media_player().await;
+                        if let Err(err) = res {
+                            tracing::error!("Error fetching MediaPlayer: {}", err);
+                        } else {
+                            let res = res.unwrap().raise().await;
+                            if let Err(err) = res {
+                                tracing::error!("Error raising client: {}", err);
+                            }
+                        }
+                    }),
                 };
             }
             Message::OpenSettings => {
@@ -945,10 +956,13 @@ impl cosmic::Application for Audio {
             audio_content = audio_content
                 .push(padded_control(divider::horizontal::default()).padding([space_xxs, space_s]));
             audio_content = audio_content.push(
-                Row::with_children(elements)
-                    .align_y(Alignment::Center)
-                    .spacing(8)
-                    .padding(menu_control_padding()),
+                menu_button(
+                    Row::with_children(elements)
+                        .align_y(Alignment::Center)
+                        .spacing(8),
+                )
+                .on_press(Message::MprisRequest(MprisRequest::Raise))
+                .padding(menu_control_padding()),
             );
         }
         let content = column![

@@ -126,6 +126,7 @@ pub enum MprisRequest {
     Pause,
     Next,
     Previous,
+    Raise,
 }
 
 struct State {
@@ -282,7 +283,7 @@ async fn run(output: &mut futures::channel::mpsc::Sender<MprisUpdate>) {
             _ = state.any_player_state_stream.next(), if !state.players.is_empty() => {
                 state.update_active_player().await;
             },
-        };
+        }
     }
 }
 
