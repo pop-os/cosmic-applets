@@ -3,6 +3,7 @@ airplane-mode = Mód Eitleáin
 airplane-mode-on = Tá Mód Eitleáin ar siúl
 turn-off-airplane-mode = Múch é chun Wi-Fi, Bluetooth agus leathanbhanda soghluaiste a chumasú.
 wifi = Wi-Fi
+identity = Céannacht
 ipv4 = Seoladh IPv4
 ipv6 = Seoladh IPv6
 mac = MAC
