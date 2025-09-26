@@ -1,11 +1,14 @@
 [Desktop Entry]
 Name=Network
+Name[ar]=الشبكة
 Name[zh_CN]=网络
 Name[hu]=Hálózat
 Name[pl]=Sieć
 Name[pt]=Rede
 Name[nl]=Netwerk
 Name[de]=Netzwerk
+Name[sk]=Sieť
+Name[es]=Red
 Type=Application
 Exec=cosmic-applet-network
 Terminal=false

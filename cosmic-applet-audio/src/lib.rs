@@ -8,7 +8,7 @@ use std::sync::LazyLock;
 use std::time::Duration;
 
 use crate::{localize::localize, pulse::DeviceInfo};
-use config::AudioAppletConfig;
+use config::{AudioAppletConfig, amplification_sink, amplification_source};
 use cosmic::{
     Element, Renderer, Task, Theme, app,
     applet::{
@@ -63,9 +63,11 @@ pub struct Audio {
     output_volume: f64,
     output_volume_debounce: bool,
     output_volume_text: String,
+    output_amplification: bool,
     input_volume: f64,
     input_volume_debounce: bool,
     input_volume_text: String,
+    input_amplification: bool,
     current_output: Option<DeviceInfo>,
     current_input: Option<DeviceInfo>,
     outputs: Vec<DeviceInfo>,
@@ -337,6 +339,9 @@ impl cosmic::Application for Audio {
                     let new_id = window::Id::unique();
                     self.popup.replace(new_id);
                     self.timeline = Timeline::new();
+
+                    self.output_amplification = amplification_sink();
+                    self.input_amplification = amplification_source();
 
                     let popup_settings = self.core.applet.get_popup_settings(
                         self.core.main_window_id().unwrap(),
@@ -701,21 +706,28 @@ impl cosmic::Application for Audio {
             .applet
             .icon_button(self.output_icon_name())
             .on_press_down(Message::TogglePopup);
+
+        const WHEEL_STEP: f32 = 5.0; // 5% per wheel event
         let btn = crate::mouse_area::MouseArea::new(btn).on_mouse_wheel(|delta| {
-            let change = match delta {
-                iced::mouse::ScrollDelta::Lines { x, y } => (x + y) * 5.,
-                iced::mouse::ScrollDelta::Pixels { y, .. } => y / 40.3125,
+            let scroll_vector = match delta {
+                iced::mouse::ScrollDelta::Lines { y, .. } => y.signum() * WHEEL_STEP, // -1/0/1
+                iced::mouse::ScrollDelta::Pixels { y, .. } => y.signum(),             // -1/0/1
             };
-            if change.abs() < f32::EPSILON {
+            if scroll_vector == 0.0 {
                 return Message::Ignore;
             }
-            let new_volume = self
-                .current_output
-                .as_ref()
-                .map_or(0f64, |v| volume_to_percent(v.volume.avg()) + change as f64)
-                .clamp(0.0, 150.0);
+
+            let new_volume = (self.output_volume + (scroll_vector as f64)).clamp(
+                0.0,
+                if self.output_amplification {
+                    150.0
+                } else {
+                    100.0
+                },
+            );
             Message::SetOutputVolume(new_volume)
         });
+
         let playback_buttons = (!self.core.applet.suggested_bounds.as_ref().is_some_and(|c| {
             // if we have a configure for width and height, we're in a overflow popup
             c.width > 0. && c.height > 0.
@@ -758,6 +770,23 @@ impl cosmic::Application for Audio {
                     .align_x(Alignment::Center)
             )]
         } else {
+            let output_slider = if self.output_amplification {
+                slider(0.0..=150.0, self.output_volume, Message::SetOutputVolume)
+                    .width(Length::FillPortion(5))
+                    .breakpoints(&[100.])
+            } else {
+                slider(0.0..=100.0, self.output_volume, Message::SetOutputVolume)
+                    .width(Length::FillPortion(5))
+            };
+            let input_slider = if self.input_amplification {
+                slider(0.0..=150.0, self.input_volume, Message::SetInputVolume)
+                    .width(Length::FillPortion(5))
+                    .breakpoints(&[100.])
+            } else {
+                slider(0.0..=100.0, self.input_volume, Message::SetInputVolume)
+                    .width(Length::FillPortion(5))
+            };
+
             column![
                 padded_control(
                     row![
@@ -770,9 +799,7 @@ impl cosmic::Application for Audio {
                         .icon_size(24)
                         .line_height(24)
                         .on_press(Message::SetOutputMute(!out_mute)),
-                        slider(0.0..=150.0, self.output_volume, Message::SetOutputVolume)
-                            .width(Length::FillPortion(5))
-                            .breakpoints(&[100.]),
+                        output_slider,
                         container(text(&self.output_volume_text).size(16))
                             .width(Length::FillPortion(1))
                             .align_x(Alignment::End)
@@ -791,9 +818,7 @@ impl cosmic::Application for Audio {
                         .icon_size(24)
                         .line_height(24)
                         .on_press(Message::SetInputMute(!in_mute)),
-                        slider(0.0..=150.0, self.input_volume, Message::SetInputVolume)
-                            .width(Length::FillPortion(5))
-                            .breakpoints(&[100.]),
+                        input_slider,
                         container(text(&self.input_volume_text).size(16))
                             .width(Length::FillPortion(1))
                             .align_x(Alignment::End)

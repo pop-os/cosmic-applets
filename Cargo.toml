@@ -25,11 +25,11 @@ resolver = "3"
 
 [workspace.dependencies]
 anyhow = "1.0.99"
-cctk = { git = "https://github.com/pop-os/cosmic-protocols", package = "cosmic-client-toolkit", rev = "178eb0b" }
+cctk = { git = "https://github.com/pop-os/cosmic-protocols", package = "cosmic-client-toolkit", rev = "6254f50" }
 cosmic-applets-config = { path = "cosmic-applets-config" }
 cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols", default-features = false, features = [
     "client",
-], rev = "1425bd4" }
+], rev = "6254f50" }
 cosmic-settings-subscriptions = { git = "https://github.com/pop-os/cosmic-settings-subscriptions" }
 
 cosmic-time = { git = "https://github.com/pop-os/cosmic-time", default-features = false }
@@ -55,9 +55,9 @@ libcosmic = { git = "https://github.com/pop-os/libcosmic", default-features = fa
 rust-embed = "8.7.2"
 rust-embed-utils = "8.7.2"
 rustix = { version = "1.0", features = ["fs", "process"] }
-zbus = { version = "5.9.0", default-features = false, features = ["tokio"] }
+zbus = { version = "5.10.0", default-features = false, features = ["tokio"] }
 tracing = "0.1"
-tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
 tracing-log = "0.2.0"
 tokio = { version = "1.47.1", features = ["full"] }
 cosmic-config = { git = "https://github.com/pop-os/libcosmic" }
@@ -72,9 +72,6 @@ lto = "thin"
 ignored = ["libcosmic"]
 
 # [patch."https://github.com/pop-os/libcosmic"]
-# cosmic-config = { git = "https://github.com/pop-os/libcosmic//", branch = "desktop-entries-and-icons" }
-# libcosmic = { git = "https://github.com/pop-os/libcosmic//", branch = "desktop-entries-and-icons" }
-# iced_futures = { git = "https://github.com/pop-os/libcosmic//", branch = "desktop-entries-and-icons" }
 # cosmic-config = { path = "../libcosmic/cosmic-config" }
 # libcosmic = { path = "../libcosmic" }
 # iced_futures = { path = "../libcosmic/iced/futures" }
@@ -82,8 +79,9 @@ ignored = ["libcosmic"]
 # [patch."https://github.com/pop-os/winit.git"]
 # winit = { git = "https://github.com/rust-windowing/winit.git", rev = "241b7a80bba96c91fa3901729cd5dec66abb9be4" }
 # winit = { path = "../winit" }
+
 [patch."https://github.com/smithay/client-toolkit.git"]
-sctk = { package = "smithay-client-toolkit", version = "=0.19.2" }
+sctk = { package = "smithay-client-toolkit", version = "0.20.0" }
 
 [patch."https://github.com/pop-os/cosmic-protocols"]
 cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols//", branch = "main" }

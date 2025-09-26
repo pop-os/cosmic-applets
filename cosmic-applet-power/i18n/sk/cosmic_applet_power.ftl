@@ -1,8 +1,9 @@
 power = Napájanie
 settings = Nastavenia...
-lock-screen = Zamknutá obrazovka
+lock-screen = Uzamknúť obrazovku
 lock-screen-shortcut = Super + Escape
 log-out = Odhlásiť sa
+log-out-shortcut = Super + Shift + Escape
 suspend = Uspať
 restart = Reštartovať
 shutdown = Vypnúť
@@ -21,15 +22,15 @@ confirm-title =
         [restart] { restart }
         [suspend] { suspend }
         [shutdown] { shutdown }
-        [log-out] Ukončiť všetky spustené aplikácie a odhlásiť sa
-        *[other] Vykonať vybranú operáciu
+        [log-out] Ukončiť všetky aplikácie a odhlásiť sa
+        *[other] Použiť vybranú akciu
     } teraz?
 confirm-body = 
     Systém { $action ->
         [restart] sa reštartuje
         [suspend] sa uspí
         [shutdown] sa vypne
-        [lock-screen] sa zamkne
+        [lock-screen] sa uzamkne
         [log-out] odhlási prihláseného používateľa
         *[other] vykoná vybranú operáciu
     } automaticky za { $countdown } sekúnd.

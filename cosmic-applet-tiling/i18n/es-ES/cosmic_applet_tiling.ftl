@@ -1,9 +1,9 @@
-tile-windows = Automáticamente poner ventanas en mosaico
-tile-current = Automáticamente el espacio de trabajo actual en mosaico
+tile-windows = Ventanas en mosaico automáticamente
+tile-current = Espacio de trabajo actual en mosaico
 shortcuts = Atajos
 navigate-windows = Navegar ventanas
 move-window = Mover ventanas
-toggle-floating-window = Toggle floating window
+toggle-floating-window = Alternar ventana flotante
 view-all-shortcuts = Ver todos los atajos...
 active-hint = Destacar la ventana activa
 gaps = Márgenes

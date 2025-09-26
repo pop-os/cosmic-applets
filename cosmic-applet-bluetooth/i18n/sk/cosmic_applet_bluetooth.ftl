@@ -1,12 +1,12 @@
 bluetooth = Bluetooth
-other-devices = Iné Bluetooth zariadenia
+other-devices = Ďalšie Bluetooth zariadenia
 settings = Nastavenia Bluetooth...
 connected = Pripojené
-confirm-pin = Potvrdte prosím, že nasledovný PIN sa zhoduje na zariadení {$deviceName}
+confirm-pin = Prosím, potvrďte, že nasledujúci PIN sa zhoduje s tým, ktorý je zobrazený na {$deviceName}
 confirm = Potvrdiť
 cancel = Zrušiť
 unsuccessful = Párovanie neúspešné
-check-device = Uistite sa, že zariadenie {$deviceName} je zapnuté, v dosahu, a je v režime párovania.
-try-again = Skúste znova
+check-device = Uistite sa, že {$deviceName} je zapnuté, v dosahu a pripravené na párovanie.
+try-again = Skúsiť znova
 discoverable = Viditeľné
 pairable = Párovateľné

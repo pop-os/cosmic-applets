@@ -10,11 +10,9 @@ cosmic-comp-config = { git = "https://github.com/pop-os/cosmic-comp.git", rev = 
 i18n-embed-fl.workspace = true
 i18n-embed.workspace = true
 libcosmic.workspace = true
-libpulse-binding = "2.30.1"
 rust-embed.workspace = true
 tokio.workspace = true
 tracing-log.workspace = true
 tracing-subscriber.workspace = true
 tracing.workspace = true
-serde = { workspace = true, features = ["derive"] }
 xkb-data = "0.2"

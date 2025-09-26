@@ -457,7 +457,7 @@ impl cosmic::Application for Notifications {
                     .iter()
                     .rev()
                     .map(|n| {
-                        let app_name = text(if n.app_name.len() > 24 {
+                        let app_name = text::caption(if n.app_name.len() > 24 {
                             Cow::from(format!(
                                 "{:.26}...",
                                 n.app_name.lines().next().unwrap_or_default()
@@ -465,7 +465,6 @@ impl cosmic::Application for Notifications {
                         } else {
                             Cow::from(&n.app_name)
                         })
-                        .size(12)
                         .width(Length::Fill);
 
                         let duration_since = text::caption(duration_ago_msg(n));
@@ -481,59 +480,20 @@ impl cosmic::Application for Notifications {
                             n.id,
                             Element::from(
                                 column!(
-                                    match n.image() {
-                                        Some(cosmic_notifications_util::Image::File(path)) => {
-                                            row![
-                                                icon::from_path(PathBuf::from(path))
-                                                    .icon()
-                                                    .size(16),
-                                                app_name,
-                                                duration_since,
-                                                close_notif
-                                            ]
+                                    if let Some(icon) = n.notification_icon() {
+                                        row![icon.size(16), app_name, duration_since, close_notif]
                                             .spacing(8)
                                             .align_y(Alignment::Center)
-                                        }
-                                        Some(cosmic_notifications_util::Image::Name(name)) => {
-                                            row![
-                                                icon::from_name(name.as_str()).size(16),
-                                                app_name,
-                                                duration_since,
-                                                close_notif
-                                            ]
+                                    } else {
+                                        row![app_name, duration_since, close_notif]
                                             .spacing(8)
                                             .align_y(Alignment::Center)
-                                        }
-                                        Some(cosmic_notifications_util::Image::Data {
-                                            width,
-                                            height,
-                                            data,
-                                        }) => {
-                                            row![
-                                                icon::from_raster_pixels(
-                                                    *width,
-                                                    *height,
-                                                    data.clone()
-                                                )
-                                                .icon()
-                                                .size(16),
-                                                app_name,
-                                                duration_since,
-                                                close_notif
-                                            ]
-                                            .spacing(8)
-                                            .align_y(Alignment::Center)
-                                        }
-                                        None => row![app_name, duration_since, close_notif]
-                                            .spacing(8)
-                                            .align_y(Alignment::Center),
                                     },
                                     column![
                                         text::body(n.summary.lines().next().unwrap_or_default())
                                             .width(Length::Fill),
-                                        text(n.body.lines().next().unwrap_or_default())
+                                        text::caption(n.body.lines().next().unwrap_or_default())
                                             .width(Length::Fill)
-                                            .size(12)
                                     ]
                                 )
                                 .width(Length::Fill),
@@ -564,7 +524,7 @@ impl cosmic::Application for Notifications {
                     {
                         Some(cosmic::widget::icon::from_path(path))
                     } else {
-                        Some(cosmic::widget::icon::from_name(n.app_icon.clone()).handle())
+                        Some(cosmic::widget::icon::from_name(n.app_icon.as_str()).handle())
                     }
                 });
                 let card_list = anim!(

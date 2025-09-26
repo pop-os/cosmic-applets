@@ -1,10 +1,13 @@
 [Desktop Entry]
 Name=Workspaces Button
+Name[ar]=زر مساحات العمل
 Name[zh_CN]=工作区按钮
 Name[pl]=Przycisk przestrzeni roboczych
 Name[hu]=Munkaterületek gomb
-Name[pt]=Botão de áreas de trabalho
+Name[pt]=Botão de Áreas de Trabalho
 Name[nl]=Knop werkbladenoverzicht
+Name[sk]=Tlačidlo pracovných plôch
+Name[es]=Botón de espacios de trabajo
 Type=Application
 Exec=cosmic-panel-button com.system76.CosmicWorkspaces
 Terminal=false

@@ -13,8 +13,6 @@ cosmic-notifications-util = { git = "https://github.com/pop-os/cosmic-notificati
 cosmic-notifications-config = { git = "https://github.com/pop-os/cosmic-notifications" }
 # cosmic-notifications-util = { path = "../../cosmic-notifications-daemon/cosmic-notifications-util" }
 # cosmic-notifications-config = { path = "../../cosmic-notifications-daemon/cosmic-notifications-config" }
-sendfd = { version = "0.4", features = ["tokio"] }
-bytemuck = "1"
 futures-util = { workspace = true, features = ["sink"] }
 tracing-subscriber.workspace = true
 tracing-log.workspace = true
@@ -26,6 +24,5 @@ i18n-embed = { workspace = true, features = [
 ] }
 i18n-embed-fl.workspace = true
 rust-embed.workspace = true
-rust-embed-utils.workspace = true
 zbus = { workspace = true, features = ["tokio", "p2p"] }
-url = "2.5.4"
+url = "2.5.7"
