@@ -101,7 +101,7 @@ pub fn notifications(proxy: NotificationsAppletProxy<'static>) -> Subscription<O
                             }
                             v = next_input => {
                                 if let Some(Input::Activated(id, action)) = v {
-                                    if let Err(err) = proxy.invoke_action(id, action.clone()).await {
+                                    if proxy.invoke_action(id, action.clone()).await.is_err() {
                                         tracing::error!("Failed to invoke action {id} {action}");
                                     } else {
                                         tracing::error!("Invoked {action} for {id}")

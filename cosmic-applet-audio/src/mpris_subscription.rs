@@ -35,7 +35,7 @@ pub struct PlayerStatus {
 impl PlayerStatus {
     async fn new(player: Player) -> Option<Self> {
         let metadata = player.metadata().await.ok()?;
-        let pathname = metadata.url().unwrap_or("".into());
+        let pathname = metadata.url().unwrap_or_default();
         let pathbuf = PathBuf::from(pathname);
 
         let title = metadata
@@ -108,7 +108,7 @@ impl MprisPlayer {
         })
     }
 
-    fn name(&self) -> &BusName {
+    fn name(&self) -> &BusName<'_> {
         self.player.inner().destination()
     }
 }
@@ -171,7 +171,7 @@ impl State {
         filter_firefox_players(&mut players);
 
         // pre-sort by path so that the same player is always selected
-        players.sort_by(|a, b| a.name().cmp(&b.name()));
+        players.sort_by(|a, b| a.name().cmp(b.name()));
 
         let mut state = Self {
             conn,
@@ -196,7 +196,7 @@ impl State {
         };
         self.players.push(player);
         filter_firefox_players(&mut self.players);
-        self.players.sort_by(|a, b| a.name().cmp(&b.name()));
+        self.players.sort_by(|a, b| a.name().cmp(b.name()));
         self.update_any_player_state_stream().await;
     }
 
@@ -287,7 +287,7 @@ async fn run(output: &mut futures::channel::mpsc::Sender<MprisUpdate>) {
     }
 }
 
-async fn find_active<'a>(players: &'a Vec<MprisPlayer>) -> Option<&'a MprisPlayer> {
+async fn find_active<'a>(players: &'a [MprisPlayer]) -> Option<&'a MprisPlayer> {
     let mut best = (0, None::<&'a MprisPlayer>);
     let eval = |p: Player| async move {
         let v = {

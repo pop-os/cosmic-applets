@@ -348,17 +348,12 @@ impl cosmic::Application for CosmicNetworkApplet {
                             .unwrap_or_default();
 
                         if conn_match && success {
-                            if let Some(s) = state
+                            if let Some(ActiveConnectionInfo::WiFi { state, .. }) = state
                                 .active_conns
                                 .iter_mut()
                                 .find(|ap| &ap.name() == ssid && ap.hw_address() == *hw_address)
                             {
-                                match s {
-                                    ActiveConnectionInfo::WiFi { state, .. } => {
-                                        *state = ActiveConnectionState::Activated;
-                                    }
-                                    _ => {}
-                                };
+                                *state = ActiveConnectionState::Activated;
                             }
                             self.failed_known_ssids.remove(ssid);
                             self.new_connection = None;
@@ -485,7 +480,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                     let _ = tx.unbounded_send(NetworkManagerRequest::Authenticate {
                         ssid: access_point.ssid.clone(),
                         identity: is_enterprise.then(|| identity.clone()),
-                        password: password,
+                        password,
                         hw_address: access_point.hw_address,
                     });
                     self.new_connection
@@ -624,7 +619,7 @@ impl cosmic::Application for CosmicNetworkApplet {
             .into()
     }
 
-    fn view_window(&self, _id: window::Id) -> Element<Message> {
+    fn view_window(&self, _id: window::Id) -> Element<'_, Message> {
         let Spacing {
             space_xxs, space_s, ..
         } = theme::active().cosmic().spacing;
@@ -899,7 +894,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                             .align_y(Alignment::Center)
                             .spacing(8),
                     )
-                    .on_press(Message::OpenHwDevice(Some(hw_device.clone()))),
+                    .on_press(Message::OpenHwDevice(Some(hw_device))),
                 ));
             }
 

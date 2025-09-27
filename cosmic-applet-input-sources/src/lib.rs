@@ -199,7 +199,7 @@ impl cosmic::Application for Window {
         Task::none()
     }
 
-    fn view(&self) -> Element<Self::Message> {
+    fn view(&self) -> Element<'_, Self::Message> {
         let input_source_text = self.core.applet.text(
             self.active_layouts
                 .first()
@@ -233,7 +233,7 @@ impl cosmic::Application for Window {
         .into()
     }
 
-    fn view_window(&self, _id: Id) -> Element<Self::Message> {
+    fn view_window(&self, _id: Id) -> Element<'_, Self::Message> {
         let Spacing {
             space_xxs, space_s, ..
         } = theme::active().cosmic().spacing;

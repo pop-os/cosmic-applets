@@ -156,7 +156,7 @@ pub fn bluetooth_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
                     event_handler(event).await;
                     // Consume any additional available events.
                     let mut count = 0;
-                    while let Some(event) = session_rx.try_recv().ok() {
+                    while let Ok(event) = session_rx.try_recv() {
                         event_handler(event).await;
                         count += 1;
                         if count == 100 {
@@ -623,7 +623,7 @@ impl BluerSessionState {
                                 }
                             };
 
-                        while let Some(_) = change_stream.next().await {
+                        while change_stream.next().await.is_some() {
                             new_devices = build_device_list(new_devices, &adapter_clone).await;
                             for d in new_devices
                                 .iter()

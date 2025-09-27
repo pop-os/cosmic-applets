@@ -273,7 +273,7 @@ impl ToplevelInfoHandler for State {
     ) {
         let Some(w) = self
             .toplevel_info_state
-            .info(&toplevel)
+            .info(toplevel)
             .map(|t| t.workspace.clone())
         else {
             return;
@@ -289,7 +289,7 @@ impl ToplevelInfoHandler for State {
     ) {
         let Some(w) = self
             .toplevel_info_state
-            .info(&toplevel)
+            .info(toplevel)
             .map(|t| t.workspace.clone())
         else {
             return;

@@ -65,15 +65,13 @@ impl App {
     }
 
     fn overflow_index(&self) -> Option<usize> {
-        let Some(max_major_axis_len) = self.core.applet.suggested_bounds.as_ref().map(|c| {
+        let max_major_axis_len = self.core.applet.suggested_bounds.as_ref().map(|c| {
             // if we have a configure for width and height, we're in a overflow popup
             match self.core.applet.anchor {
                 PanelAnchor::Top | PanelAnchor::Bottom => c.width as u32,
                 PanelAnchor::Left | PanelAnchor::Right => c.height as u32,
             }
-        }) else {
-            return None;
-        };
+        })?;
 
         let button_total_size =
             self.core.applet.suggested_size(true).0 + self.core.applet.suggested_padding(true) * 2;
@@ -111,7 +109,7 @@ impl App {
         });
         let theme = self.core.system_theme();
         let cosmic = theme.cosmic();
-        let corners = cosmic.corner_radii.clone();
+        let corners = cosmic.corner_radii;
         let pad = corners.radius_m[0];
 
         self.core
@@ -232,10 +230,9 @@ impl cosmic::Application for App {
                     let i = self.menus.keys().position(|&i| i == id).unwrap();
                     let (i, parent) = self
                         .overflow_index()
-                        .clone()
                         .and_then(|overflow_i| {
                             if overflow_i <= i {
-                                Some(i - overflow_i).zip(self.overflow_popup.clone())
+                                Some(i - overflow_i).zip(self.overflow_popup)
                             } else {
                                 Some((i, self.core.main_window_id().unwrap()))
                             }
@@ -315,10 +312,9 @@ impl cosmic::Application for App {
 
                 let (i, parent) = self
                     .overflow_index()
-                    .clone()
                     .and_then(|overflow_i| {
                         if overflow_i <= i {
-                            Some(i - overflow_i).zip(self.overflow_popup.clone())
+                            Some(i - overflow_i).zip(self.overflow_popup)
                         } else {
                             Some((i, self.core.main_window_id().unwrap()))
                         }
@@ -384,8 +380,7 @@ impl cosmic::Application for App {
                     }
 
                     self.overflow_popup = Some(popup_id);
-                    let mut cmds = Vec::new();
-                    cmds.push(get_popup(popup_settings));
+                    let cmds = vec![get_popup(popup_settings)];
                     return Task::batch(cmds);
                 } else {
                     return Task::none();
@@ -513,7 +508,7 @@ impl cosmic::Application for App {
 
         let theme = self.core.system_theme();
         let cosmic = theme.cosmic();
-        let corners = cosmic.corner_radii.clone();
+        let corners = cosmic.corner_radii;
         let pad = corners.radius_m[0];
         match self.open_menu {
             Some(id) => match self.menus.get(&id) {

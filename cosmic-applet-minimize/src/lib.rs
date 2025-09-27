@@ -286,7 +286,7 @@ impl cosmic::Application for Minimize {
         wayland_subscription::wayland_subscription().map(Message::Wayland)
     }
 
-    fn view(&self) -> Element<Self::Message> {
+    fn view(&self) -> Element<'_, Self::Message> {
         let max_icon_count = self
             .max_icon_count()
             .map(|n| {
@@ -339,7 +339,7 @@ impl cosmic::Application for Minimize {
 
         // TODO optional dividers on ends if detects app list neighbor
         // not sure the best way to tell if there is an adjacent app-list
-        let icon_buttons = icon_buttons.chain(overflow_btn.into_iter());
+        let icon_buttons = icon_buttons.chain(overflow_btn);
         let content: Element<_> = if matches!(
             self.core.applet.anchor,
             PanelAnchor::Top | PanelAnchor::Bottom
@@ -384,7 +384,7 @@ impl cosmic::Application for Minimize {
         .into()
     }
 
-    fn view_window(&self, _id: window::Id) -> Element<Self::Message> {
+    fn view_window(&self, _id: window::Id) -> Element<'_, Self::Message> {
         let max_icon_count = self
             .max_icon_count()
             .map(|n| {

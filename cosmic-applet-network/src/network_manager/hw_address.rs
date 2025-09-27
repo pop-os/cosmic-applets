@@ -16,10 +16,10 @@ impl HwAddress {
         }
         u64::from_str_radix(columnless_vec.join("").as_str(), 16)
             .ok()
-            .and_then(|address| Some(HwAddress { address }))
+            .map(|address| HwAddress { address })
     }
-    pub fn from_string(arg: &String) -> Option<Self> {
-        HwAddress::from_str(arg.as_str())
+    pub fn from_string(arg: &str) -> Option<Self> {
+        HwAddress::from_str(arg)
     }
     pub fn to_string(&self) -> String {
         // return if self.address > 100000000000000 {

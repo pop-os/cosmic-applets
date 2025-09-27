@@ -88,7 +88,10 @@ impl Session {
         self.condvar.notify_all();
     }
 
-    fn wait_while<F: FnMut(&SessionInner) -> bool>(&self, mut f: F) -> MutexGuard<SessionInner> {
+    fn wait_while<F: FnMut(&SessionInner) -> bool>(
+        &self,
+        mut f: F,
+    ) -> MutexGuard<'_, SessionInner> {
         self.condvar
             .wait_while(self.inner.lock().unwrap(), |data| f(data))
             .unwrap()
@@ -168,10 +171,7 @@ impl CaptureData {
         }
 
         // XXX
-        if !formats
-            .shm_formats
-            .contains(&wl_shm::Format::Abgr8888.into())
-        {
+        if !formats.shm_formats.contains(&wl_shm::Format::Abgr8888) {
             tracing::error!("No suitable buffer format found");
             tracing::warn!("Available formats: {:#?}", formats);
             return None;
@@ -297,7 +297,7 @@ impl AppData {
         handle: &ExtForeignToplevelHandleV1,
     ) -> Option<ZcosmicToplevelHandleV1> {
         self.toplevel_info_state
-            .info(&handle)?
+            .info(handle)?
             .cosmic_toplevel
             .clone()
     }
@@ -311,9 +311,7 @@ impl AppData {
             capturer: self.screencopy_state.capturer().clone(),
         };
         std::thread::spawn(move || {
-            use std::ffi::CStr;
-            let name =
-                unsafe { CStr::from_bytes_with_nul_unchecked(b"minimize-applet-screencopy\0") };
+            let name = c"minimize-applet-screencopy";
             let Ok(fd) = rustix::fs::memfd_create(name, rustix::fs::MemfdFlags::CLOEXEC) else {
                 tracing::error!("Failed to get fd for capture");
                 return;

@@ -166,7 +166,7 @@ pub enum Message {
 }
 
 impl Audio {
-    fn playback_buttons(&self) -> Option<Element<Message>> {
+    fn playback_buttons(&self) -> Option<Element<'_, Message>> {
         if self.player_status.is_some() && self.config.show_media_controls_in_top_panel {
             let mut elements = Vec::with_capacity(3);
             if self
@@ -224,7 +224,7 @@ impl Audio {
         }
     }
 
-    fn go_previous(&self, icon_size: u16) -> Option<Element<Message>> {
+    fn go_previous(&self, icon_size: u16) -> Option<Element<'_, Message>> {
         self.player_status.as_ref().and_then(|s| {
             if s.can_go_previous {
                 Some(
@@ -240,7 +240,7 @@ impl Audio {
         })
     }
 
-    fn go_next(&self, icon_size: u16) -> Option<Element<Message>> {
+    fn go_next(&self, icon_size: u16) -> Option<Element<'_, Message>> {
         self.player_status.as_ref().and_then(|s| {
             if s.can_go_next {
                 Some(
@@ -711,7 +711,7 @@ impl cosmic::Application for Audio {
         ])
     }
 
-    fn view(&self) -> Element<Message> {
+    fn view(&self) -> Element<'_, Message> {
         let btn = self
             .core
             .applet
@@ -765,7 +765,7 @@ impl cosmic::Application for Audio {
             .into()
     }
 
-    fn view_window(&self, _id: window::Id) -> Element<Message> {
+    fn view_window(&self, _id: window::Id) -> Element<'_, Message> {
         let Spacing {
             space_xxs, space_s, ..
         } = theme::active().cosmic().spacing;

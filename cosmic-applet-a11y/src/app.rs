@@ -303,7 +303,7 @@ impl cosmic::Application for CosmicA11yApplet {
         Task::none()
     }
 
-    fn view(&self) -> Element<Message> {
+    fn view(&self) -> Element<'_, Message> {
         self.core
             .applet
             .icon_button("preferences-desktop-accessibility-symbolic")
@@ -311,7 +311,7 @@ impl cosmic::Application for CosmicA11yApplet {
             .into()
     }
 
-    fn view_window(&self, _id: window::Id) -> Element<Message> {
+    fn view_window(&self, _id: window::Id) -> Element<'_, Message> {
         let Spacing {
             space_xxs, space_s, ..
         } = theme::active().cosmic().spacing;

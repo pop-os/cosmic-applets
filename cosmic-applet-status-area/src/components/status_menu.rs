@@ -134,7 +134,7 @@ impl State {
         self.icon_pixmap.as_ref()
     }
 
-    pub fn popup_view(&self) -> cosmic::Element<Msg> {
+    pub fn popup_view(&self) -> cosmic::Element<'_, Msg> {
         if let Some(layout) = self.layout.as_ref() {
             layout_view(layout, self.expanded)
         } else {
@@ -165,7 +165,7 @@ impl State {
     }
 }
 
-fn layout_view(layout: &Layout, expanded: Option<i32>) -> cosmic::Element<Msg> {
+fn layout_view(layout: &Layout, expanded: Option<i32>) -> cosmic::Element<'_, Msg> {
     iced::widget::column(layout.children().iter().filter_map(|i| {
         if !i.visible() {
             None

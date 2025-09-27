@@ -159,7 +159,7 @@ impl Window {
         calendar
     }
 
-    fn vertical_layout(&self) -> Element<Message> {
+    fn vertical_layout(&self) -> Element<'_, Message> {
         let mut elements = Vec::new();
         let date = self.now.naive_local();
         let datetime = self.create_datetime(&date);
@@ -216,7 +216,7 @@ impl Window {
         )
     }
 
-    fn horizontal_layout(&self) -> Element<Message> {
+    fn horizontal_layout(&self) -> Element<'_, Message> {
         let datetime = self.create_datetime(&self.now);
         let mut prefs = DateTimeFormatterPreferences::from(self.locale.clone());
         prefs.hour_cycle = Some(if self.config.military_time {
@@ -616,7 +616,7 @@ impl cosmic::Application for Window {
         }
     }
 
-    fn view(&self) -> Element<Message> {
+    fn view(&self) -> Element<'_, Message> {
         let horizontal = matches!(
             self.core.applet.anchor,
             PanelAnchor::Top | PanelAnchor::Bottom
@@ -646,7 +646,7 @@ impl cosmic::Application for Window {
         .into()
     }
 
-    fn view_window(&self, _id: window::Id) -> Element<Message> {
+    fn view_window(&self, _id: window::Id) -> Element<'_, Message> {
         let Spacing {
             space_xxs, space_s, ..
         } = theme::active().cosmic().spacing;

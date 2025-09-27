@@ -223,16 +223,14 @@ impl cosmic::Application for Window {
                         .activate_position(if c.autotile { 0 } else { 1 });
                 }
 
-                if c.active_hint != self.config.active_hint {
-                    if self.popup.is_some() {
-                        self.timeline
-                            .set_chain(if c.active_hint {
-                                cosmic_time::chain::Toggler::on(self.active_hint.clone(), 1.0)
-                            } else {
-                                cosmic_time::chain::Toggler::off(self.active_hint.clone(), 1.0)
-                            })
-                            .start();
-                    }
+                if c.active_hint != self.config.active_hint && self.popup.is_some() {
+                    self.timeline
+                        .set_chain(if c.active_hint {
+                            cosmic_time::chain::Toggler::on(self.active_hint.clone(), 1.0)
+                        } else {
+                            cosmic_time::chain::Toggler::off(self.active_hint.clone(), 1.0)
+                        })
+                        .start();
                 }
 
                 self.config = *c;
@@ -276,7 +274,7 @@ impl cosmic::Application for Window {
         Task::none()
     }
 
-    fn view(&self) -> Element<Self::Message> {
+    fn view(&self) -> Element<'_, Self::Message> {
         self.core
             .applet
             .icon_button(if self.autotiled { ON } else { OFF })
@@ -284,7 +282,7 @@ impl cosmic::Application for Window {
             .into()
     }
 
-    fn view_window(&self, _id: Id) -> Element<Self::Message> {
+    fn view_window(&self, _id: Id) -> Element<'_, Self::Message> {
         let Spacing {
             space_xxxs,
             space_xxs,

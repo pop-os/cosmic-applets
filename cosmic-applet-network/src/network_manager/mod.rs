@@ -510,7 +510,7 @@ impl NetworkManagerState {
         self.wireless_access_points = Vec::new();
     }
 
-    async fn connect_wifi<'a>(
+    async fn connect_wifi(
         &self,
         conn: &Connection,
         ssid: &str,
@@ -631,8 +631,8 @@ impl NetworkManagerState {
                 let (_, active_conn) = nm
                     .add_and_activate_connection(conn_settings, device.inner().path(), &ap.path)
                     .await?;
-                let dummy = ActiveConnectionProxy::new(&conn, active_conn).await?;
-                let active = ActiveConnectionProxy::builder(&conn)
+                let dummy = ActiveConnectionProxy::new(conn, active_conn).await?;
+                let active = ActiveConnectionProxy::builder(conn)
                     .destination(dummy.inner().destination().to_owned())
                     .unwrap()
                     .interface(dummy.inner().interface().to_owned())
@@ -654,14 +654,13 @@ impl NetworkManagerState {
                 } else if let Ok(enums::ActiveConnectionState::Deactivated) = state {
                     anyhow::bail!("Failed to activate connection");
                 }
-                match tokio::time::timeout(Duration::from_secs(20), changes.next()).await {
-                    Ok(Some(s)) => {
-                        let state = s.get().await.unwrap_or_default().into();
-                        if matches!(state, enums::ActiveConnectionState::Activated) {
-                            return Ok(());
-                        }
+                if let Ok(Some(s)) =
+                    tokio::time::timeout(Duration::from_secs(20), changes.next()).await
+                {
+                    let state = s.get().await.unwrap_or_default().into();
+                    if matches!(state, enums::ActiveConnectionState::Activated) {
+                        return Ok(());
                     }
-                    _ => {}
                 };
 
                 count -= 1;

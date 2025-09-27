@@ -100,6 +100,7 @@ pub struct AccessPoint {
 // TODO do we want to support eap methods other than peap in the applet?
 // Then we'd need a dropdown for the eap method,
 // and tls requires a cert instead of a password
+#[allow(clippy::upper_case_acronyms)]
 #[derive(Debug, Clone, Copy)]
 pub enum NetworkType {
     Open,

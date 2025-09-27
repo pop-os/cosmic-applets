@@ -483,7 +483,7 @@ impl cosmic::Application for CosmicBatteryApplet {
         Task::none()
     }
 
-    fn view(&self) -> Element<Message> {
+    fn view(&self) -> Element<'_, Message> {
         let btn = self
             .core
             .applet
@@ -524,7 +524,7 @@ impl cosmic::Application for CosmicBatteryApplet {
         self.core.applet.autosize_window(content).into()
     }
 
-    fn view_window(&self, _id: window::Id) -> Element<Message> {
+    fn view_window(&self, _id: window::Id) -> Element<'_, Message> {
         let Spacing {
             space_xxs, space_s, ..
         } = theme::active().cosmic().spacing;

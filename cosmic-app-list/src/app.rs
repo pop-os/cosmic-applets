@@ -269,15 +269,15 @@ impl DockItem {
                             .first()
                             .map(|t| Message::Toggle(t.0.foreign_toplevel.clone()))
                     } else {
-                        Some(Message::TopLevelListPopup((*id).into(), window_id))
+                        Some(Message::TopLevelListPopup(*id, window_id))
                     })
                     .width(Length::Shrink)
                     .height(Length::Shrink),
             )
-            .on_right_release(Message::Popup((*id).into(), window_id))
+            .on_right_release(Message::Popup(*id, window_id))
             .on_middle_release({
                 launch_on_preferred_gpu(desktop_info, gpus)
-                    .unwrap_or_else(|| Message::Popup((*id).into(), window_id))
+                    .unwrap_or_else(|| Message::Popup(*id, window_id))
             })
             .into()
         } else {
@@ -420,7 +420,7 @@ fn index_in_list(
 
     if let Some(existing_preview) = existing_preview {
         if index >= existing_preview {
-            index.checked_sub(1).unwrap_or_default()
+            index.saturating_sub(1)
         } else {
             index
         }
@@ -1369,9 +1369,10 @@ impl cosmic::Application for CosmicAppList {
                         + 2 * self.core.applet.suggested_padding(false);
                     let (_favorite_popup_cutoff, active_popup_cutoff) =
                         self.panel_overflow_lengths();
-                    let popup_applet_count = self.active_list.len().saturating_sub(
-                        (active_popup_cutoff.unwrap_or_default()).saturating_sub(1) as usize,
-                    ) as f32;
+                    let popup_applet_count =
+                        self.active_list.len().saturating_sub(
+                            (active_popup_cutoff.unwrap_or_default()).saturating_sub(1),
+                        ) as f32;
                     let popup_applet_size = applet_suggested_size as f32 * popup_applet_count
                         + 4.0 * (popup_applet_count - 1.);
                     let (max_width, max_height) = match self.core.applet.anchor {
@@ -1425,9 +1426,10 @@ impl cosmic::Application for CosmicAppList {
                         + 2 * self.core.applet.suggested_padding(false);
                     let (favorite_popup_cutoff, _active_popup_cutoff) =
                         self.panel_overflow_lengths();
-                    let popup_applet_count = self.pinned_list.len().saturating_sub(
-                        favorite_popup_cutoff.unwrap_or_default().saturating_sub(1) as usize,
-                    ) as f32;
+                    let popup_applet_count =
+                        self.pinned_list.len().saturating_sub(
+                            favorite_popup_cutoff.unwrap_or_default().saturating_sub(1),
+                        ) as f32;
                     let popup_applet_size = applet_suggested_size as f32 * popup_applet_count
                         + 4.0 * (popup_applet_count - 1.);
                     let (max_width, max_height) = match self.core.applet.anchor {
@@ -1462,7 +1464,7 @@ impl cosmic::Application for CosmicAppList {
         Task::none()
     }
 
-    fn view(&self) -> Element<Message> {
+    fn view(&self) -> Element<'_, Message> {
         let focused_item = self.currently_active_toplevel();
         let theme = self.core.system_theme();
         let dot_radius = theme.cosmic().radius_xs();
@@ -1682,7 +1684,7 @@ impl cosmic::Application for CosmicAppList {
                     row(favorites).spacing(app_icon.icon_spacing),
                     |_, _| Message::DndDropFinished,
                 )
-                .drag_id(DND_FAVORITES.clone()),
+                .drag_id(DND_FAVORITES),
                 row(active).spacing(app_icon.icon_spacing).into(),
                 container(vertical_rule(1))
                     .height(Length::Fill)
@@ -1697,7 +1699,7 @@ impl cosmic::Application for CosmicAppList {
                     column(favorites).spacing(app_icon.icon_spacing),
                     |_data: Option<DndPathBuf>, _| Message::DndDropFinished,
                 )
-                .drag_id(DND_FAVORITES.clone()),
+                .drag_id(DND_FAVORITES),
                 column(active).spacing(app_icon.icon_spacing).into(),
                 container(divider::horizontal::default())
                     .width(Length::Fill)
@@ -1766,7 +1768,7 @@ impl cosmic::Application for CosmicAppList {
             .into()
     }
 
-    fn view_window(&self, id: window::Id) -> Element<Message> {
+    fn view_window(&self, id: window::Id) -> Element<'_, Message> {
         let theme = self.core.system_theme();
 
         if let Some((_, item, _, _)) = self.dnd_source.as_ref().filter(|s| s.0 == id) {
@@ -1907,7 +1909,7 @@ impl cosmic::Application for CosmicAppList {
                         }),
                     );
 
-                    if toplevels.len() > 0 {
+                    if !toplevels.is_empty() {
                         content = content.push(divider::horizontal::light());
                         content = match toplevels.len() {
                             1 => content.push(
@@ -2117,7 +2119,7 @@ impl cosmic::Application for CosmicAppList {
                     }
                 })
                 .collect();
-            favorites.extend(favorites_extra[..favorite_to_remove].into_iter().cloned());
+            favorites.extend(favorites_extra[..favorite_to_remove].iter().cloned());
             let favorites: Vec<_> = favorites
                 .iter()
                 .rev()
@@ -2297,7 +2299,7 @@ impl CosmicAppList {
             favorite_index = (btn_count as usize).min(self.pinned_list.len());
         }
         // tracing::error!("{} {} {:?}", btn_count, favorite_index, active_index);
-        return (Some(favorite_index), active_index);
+        (Some(favorite_index), active_index)
     }
 
     fn currently_active_toplevel(&self) -> Vec<ExtForeignToplevelHandleV1> {
@@ -2383,9 +2385,7 @@ impl CosmicAppList {
 }
 
 fn launch_on_preferred_gpu(desktop_info: &DesktopEntry, gpus: Option<&[Gpu]>) -> Option<Message> {
-    let Some(exec) = desktop_info.exec() else {
-        return None;
-    };
+    let exec = desktop_info.exec()?;
 
     let gpu_idx = gpus.map(|gpus| {
         if desktop_info.prefers_non_default_gpu() {

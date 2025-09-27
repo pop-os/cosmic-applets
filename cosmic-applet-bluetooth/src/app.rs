@@ -347,7 +347,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
         Task::none()
     }
 
-    fn view(&self) -> Element<Message> {
+    fn view(&self) -> Element<'_, Message> {
         self.core
             .applet
             .icon_button(&self.icon_name)
@@ -355,7 +355,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
             .into()
     }
 
-    fn view_window(&self, _id: window::Id) -> Element<Message> {
+    fn view_window(&self, _id: window::Id) -> Element<'_, Message> {
         let Spacing {
             space_xxs, space_s, ..
         } = theme::active().cosmic().spacing;
@@ -363,10 +363,9 @@ impl cosmic::Application for CosmicBluetoothApplet {
         let mut known_bluetooth = vec![];
         // PERF: This should be pre-filtered in an update.
         for dev in self.bluer_state.devices.iter().filter(|d| {
-            !self
-                .request_confirmation
+            self.request_confirmation
                 .as_ref()
-                .map_or(false, |(dev, _, _)| d.address == dev.address)
+                .is_none_or(|(dev, _, _)| d.address != dev.address)
         }) {
             let mut row = row![
                 icon::from_name(dev.icon).size(16).symbolic(true),
@@ -380,7 +379,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
 
             if let Some(battery) = dev.battery_percent {
                 let icon = match battery {
-                    b if b >= 20 && b < 40 => "battery-low",
+                    b if (20..40).contains(&b) => "battery-low",
                     b if b < 20 => "battery-caution",
                     _ => "battery",
                 };
@@ -529,10 +528,10 @@ impl cosmic::Application for CosmicBluetoothApplet {
                 matches!(
                     d.status,
                     BluerDeviceStatus::Disconnected | BluerDeviceStatus::Pairing
-                ) && !self
+                ) && self
                     .request_confirmation
                     .as_ref()
-                    .map_or(false, |(dev, _, _)| d.address == dev.address)
+                    .is_none_or(|(dev, _, _)| d.address != dev.address)
                     && (d.has_name() || d.is_known_device_type())
             }) {
                 let row = row![

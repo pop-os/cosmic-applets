@@ -211,7 +211,7 @@ impl cosmic::Application for IcedWorkspacesApplet {
         Task::none()
     }
 
-    fn view(&self) -> Element<Message> {
+    fn view(&self) -> Element<'_, Message> {
         if self.workspaces.is_empty() {
             return row![].padding(8).into();
         }
@@ -224,7 +224,7 @@ impl cosmic::Application for IcedWorkspacesApplet {
         let suggested_window_size = self.core.applet.suggested_window_size();
         let popup_index = self.popup_index().unwrap_or(self.workspaces.len());
 
-        let buttons = self.workspaces[..popup_index].iter().filter_map(|w| {
+        let buttons = self.workspaces[..popup_index].iter().map(|w| {
             let content = self.core.applet.text(&w.name).font(cosmic::font::bold());
 
             let (width, height) = if self.core.applet.is_horizontal() {
@@ -258,79 +258,73 @@ impl cosmic::Application for IcedWorkspacesApplet {
             )
             .padding(0);
 
-            Some(
-                btn.class(
-                    if w.state.contains(ext_workspace_handle_v1::State::Active) {
-                        cosmic::theme::iced::Button::Primary
-                    } else if w.state.contains(ext_workspace_handle_v1::State::Urgent) {
-                        let appearance = |theme: &Theme| {
-                            let cosmic = theme.cosmic();
-                            button::Style {
+            btn.class(
+                if w.state.contains(ext_workspace_handle_v1::State::Active) {
+                    cosmic::theme::iced::Button::Primary
+                } else if w.state.contains(ext_workspace_handle_v1::State::Urgent) {
+                    let appearance = |theme: &Theme| {
+                        let cosmic = theme.cosmic();
+                        button::Style {
+                            background: Some(Background::Color(cosmic.palette.neutral_3.into())),
+                            border: Border {
+                                radius: cosmic.radius_xl().into(),
+                                ..Default::default()
+                            },
+                            border_radius: theme.cosmic().radius_xl().into(),
+                            text_color: theme.cosmic().destructive_button.base.into(),
+                            ..button::Style::default()
+                        }
+                    };
+                    cosmic::theme::iced::Button::Custom(Box::new(
+                        move |theme, status| match status {
+                            button::Status::Active => appearance(theme),
+                            button::Status::Hovered => button::Style {
                                 background: Some(Background::Color(
-                                    cosmic.palette.neutral_3.into(),
+                                    theme.current_container().component.hover.into(),
                                 )),
                                 border: Border {
-                                    radius: cosmic.radius_xl().into(),
+                                    radius: theme.cosmic().radius_xl().into(),
                                     ..Default::default()
                                 },
-                                border_radius: theme.cosmic().radius_xl().into(),
-                                text_color: theme.cosmic().destructive_button.base.into(),
-                                ..button::Style::default()
-                            }
-                        };
-                        cosmic::theme::iced::Button::Custom(Box::new(move |theme, status| {
-                            match status {
-                                button::Status::Active => appearance(theme),
-                                button::Status::Hovered => button::Style {
-                                    background: Some(Background::Color(
-                                        theme.current_container().component.hover.into(),
-                                    )),
-                                    border: Border {
-                                        radius: theme.cosmic().radius_xl().into(),
-                                        ..Default::default()
-                                    },
-                                    ..appearance(theme)
-                                },
-                                button::Status::Pressed => appearance(theme),
-                                button::Status::Disabled => appearance(theme),
-                            }
-                        }))
-                    } else {
-                        let appearance = |theme: &Theme| {
-                            let cosmic = theme.cosmic();
-                            button::Style {
-                                background: None,
+                                ..appearance(theme)
+                            },
+                            button::Status::Pressed => appearance(theme),
+                            button::Status::Disabled => appearance(theme),
+                        },
+                    ))
+                } else {
+                    let appearance = |theme: &Theme| {
+                        let cosmic = theme.cosmic();
+                        button::Style {
+                            background: None,
+                            border: Border {
+                                radius: cosmic.radius_xl().into(),
+                                ..Default::default()
+                            },
+                            border_radius: cosmic.radius_xl().into(),
+                            text_color: theme.current_container().component.on.into(),
+                            ..button::Style::default()
+                        }
+                    };
+                    cosmic::theme::iced::Button::Custom(Box::new(
+                        move |theme, status| match status {
+                            button::Status::Active => appearance(theme),
+                            button::Status::Hovered => button::Style {
+                                background: Some(Background::Color(
+                                    theme.current_container().component.hover.into(),
+                                )),
                                 border: Border {
-                                    radius: cosmic.radius_xl().into(),
+                                    radius: theme.cosmic().radius_xl().into(),
                                     ..Default::default()
                                 },
-                                border_radius: cosmic.radius_xl().into(),
-                                text_color: theme.current_container().component.on.into(),
-                                ..button::Style::default()
-                            }
-                        };
-                        cosmic::theme::iced::Button::Custom(Box::new(move |theme, status| {
-                            match status {
-                                button::Status::Active => appearance(theme),
-                                button::Status::Hovered => button::Style {
-                                    background: Some(Background::Color(
-                                        theme.current_container().component.hover.into(),
-                                    )),
-                                    border: Border {
-                                        radius: theme.cosmic().radius_xl().into(),
-                                        ..Default::default()
-                                    },
-                                    ..appearance(theme)
-                                },
-                                button::Status::Pressed | button::Status::Disabled => {
-                                    appearance(theme)
-                                }
-                            }
-                        }))
-                    },
-                )
-                .into(),
+                                ..appearance(theme)
+                            },
+                            button::Status::Pressed | button::Status::Disabled => appearance(theme),
+                        },
+                    ))
+                },
             )
+            .into()
         });
         // TODO if there is a popup_index, create a button with a popup for the remaining workspaces
         // Should it appear on hover or on click?

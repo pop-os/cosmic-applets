@@ -79,7 +79,7 @@ async fn is_desktop() -> bool {
 }
 
 async fn powered_on(path: impl AsRef<Path>) -> bool {
-    let Some(component) = path.as_ref().components().last() else {
+    let Some(component) = path.as_ref().components().next_back() else {
         return true;
     };
     let name_str = component.as_os_str();
@@ -290,7 +290,7 @@ impl Gpu {
                             let executable = std::fs::read_link(format!("/proc/{}/exe", pid))
                                 .ok()?
                                 .components()
-                                .last()?
+                                .next_back()?
                                 .as_os_str()
                                 .to_string_lossy()
                                 .into_owned();

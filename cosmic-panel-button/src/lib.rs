@@ -103,7 +103,7 @@ impl cosmic::Application for Button {
         Task::none()
     }
 
-    fn view(&self) -> cosmic::Element<Msg> {
+    fn view(&self) -> cosmic::Element<'_, Msg> {
         // currently, panel being anchored to the left or right is a hard
         // override for icon, later if text is updated to wrap, we may
         // use Override::Text to override this behavior

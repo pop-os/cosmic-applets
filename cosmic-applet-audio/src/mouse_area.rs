@@ -267,7 +267,7 @@ where
         renderer: &Renderer,
         dnd_rectangles: &mut cosmic::iced_core::clipboard::DndDestinationRectangles,
     ) {
-        if let Some(state) = state.children.iter().next() {
+        if let Some(state) = state.children.first() {
             self.content
                 .as_widget()
                 .drag_destinations(state, layout, renderer, dnd_rectangles);

@@ -532,7 +532,7 @@ impl PulseServer {
     }
 
     // Get a list of output devices
-    pub fn get_sinks(&self) -> Result<Vec<DeviceInfo>, PulseServerError> {
+    pub fn get_sinks(&self) -> Result<Vec<DeviceInfo>, PulseServerError<'_>> {
         let list: Rc<RefCell<Option<Vec<DeviceInfo>>>> = Rc::new(RefCell::new(Some(Vec::new())));
         let list_ref = list.clone();
 
@@ -551,7 +551,7 @@ impl PulseServer {
     }
 
     // Get a list of input devices
-    pub fn get_sources(&self) -> Result<Vec<DeviceInfo>, PulseServerError> {
+    pub fn get_sources(&self) -> Result<Vec<DeviceInfo>, PulseServerError<'_>> {
         let list: Rc<RefCell<Option<Vec<DeviceInfo>>>> = Rc::new(RefCell::new(Some(Vec::new())));
         let list_ref = list.clone();
 
@@ -569,7 +569,7 @@ impl PulseServer {
         })
     }
 
-    pub fn get_server_info(&mut self) -> Result<ServerInfo, PulseServerError> {
+    pub fn get_server_info(&mut self) -> Result<ServerInfo, PulseServerError<'_>> {
         let info = Rc::new(RefCell::new(Some(None)));
         let info_ref = info.clone();
 
@@ -643,7 +643,7 @@ impl PulseServer {
         true
     }
 
-    fn get_default_sink(&mut self) -> Result<DeviceInfo, PulseServerError> {
+    fn get_default_sink(&mut self) -> Result<DeviceInfo, PulseServerError<'_>> {
         let server_info = self.get_server_info();
         match server_info {
             Ok(info) => {
@@ -668,7 +668,7 @@ impl PulseServer {
         }
     }
 
-    fn get_default_source(&mut self) -> Result<DeviceInfo, PulseServerError> {
+    fn get_default_source(&mut self) -> Result<DeviceInfo, PulseServerError<'_>> {
         let server_info = self.get_server_info();
         match server_info {
             Ok(info) => {
@@ -750,7 +750,7 @@ impl PulseServer {
     fn wait_for_result<G: ?Sized>(
         &self,
         operation: pulse::operation::Operation<G>,
-    ) -> Result<(), PulseServerError> {
+    ) -> Result<(), PulseServerError<'_>> {
         // TODO: make this loop async. It is already in an async context, so
         // we could make this thread sleep while waiting for the pulse server's
         // response.

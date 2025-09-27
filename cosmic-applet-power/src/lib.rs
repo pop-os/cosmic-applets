@@ -181,7 +181,7 @@ impl cosmic::Application for Power {
         }
     }
 
-    fn view(&self) -> Element<Message> {
+    fn view(&self) -> Element<'_, Message> {
         self.core
             .applet
             .icon_button(&self.icon_name)
@@ -189,7 +189,7 @@ impl cosmic::Application for Power {
             .into()
     }
 
-    fn view_window(&self, id: window::Id) -> Element<Message> {
+    fn view_window(&self, id: window::Id) -> Element<'_, Message> {
         let Spacing {
             space_xxs,
             space_s,
@@ -264,7 +264,7 @@ impl cosmic::Application for Power {
     }
 }
 
-fn power_buttons(name: &str, on_press: Message) -> button::Button<Message> {
+fn power_buttons(name: &str, on_press: Message) -> button::Button<'_, Message> {
     button::custom(
         widget::container(text_icon(name, 40))
             .width(Length::Fill)
