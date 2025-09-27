@@ -277,14 +277,14 @@ impl DockItem {
             .on_right_release(Message::Popup(*id, window_id))
             .on_middle_release({
                 launch_on_preferred_gpu(desktop_info, gpus)
-                    .unwrap_or_else(|| Message::Popup(*id, window_id))
+                    .unwrap_or(Message::Popup(*id, window_id))
             })
             .into()
         } else {
             icon_button.into()
         };
 
-        let path = desktop_info.path.to_path_buf();
+        let path = desktop_info.path.clone();
         let icon_button = if dnd_source_enabled && interaction_enabled {
             dnd_source(icon_button)
                 .window(window_id)
@@ -589,9 +589,10 @@ fn find_desktop_entries<'a>(
 ) -> impl Iterator<Item = fde::DesktopEntry> + 'a {
     app_ids.iter().map(|fav| {
         let unicase_fav = fde::unicase::Ascii::new(fav.as_str());
-        fde::find_app_by_id(desktop_entries, unicase_fav)
-            .map(ToOwned::to_owned)
-            .unwrap_or_else(|| fde::DesktopEntry::from_appid(fav.clone()).to_owned())
+        fde::find_app_by_id(desktop_entries, unicase_fav).map_or_else(
+            || fde::DesktopEntry::from_appid(fav.clone()).clone(),
+            ToOwned::to_owned,
+        )
     })
 }
 
@@ -610,7 +611,7 @@ impl CosmicAppList {
             .enumerate()
             .map(|(pinned_ctr, (e, original_id))| DockItem {
                 id: pinned_ctr as u32,
-                toplevels: Default::default(),
+                toplevels: Vec::new(),
                 desktop_info: e.clone(),
                 original_app_id: original_id.clone(),
             })
@@ -681,12 +682,9 @@ impl cosmic::Application for CosmicAppList {
                     .chain(self.pinned_list.iter())
                     .find(|t| t.id == id)
                 {
-                    let rectangle = match self.rectangles.get(&toplevel_group.id.into()) {
-                        Some(r) => r,
-                        None => {
-                            tracing::error!("No rectangle found for toplevel group");
-                            return Task::none();
-                        }
+                    let Some(rectangle) = self.rectangles.get(&toplevel_group.id.into()) else {
+                        tracing::error!("No rectangle found for toplevel group");
+                        return Task::none();
                     };
 
                     let new_id = window::Id::unique();
@@ -751,9 +749,8 @@ impl cosmic::Application for CosmicAppList {
                         }
                     }
 
-                    let rectangle = match self.rectangles.get(&toplevel_group.id.into()) {
-                        Some(r) => r,
-                        None => return Task::none(),
+                    let Some(rectangle) = self.rectangles.get(&toplevel_group.id.into()) else {
+                        return Task::none();
                     };
 
                     let new_id = window::Id::unique();
@@ -1040,7 +1037,7 @@ impl cosmic::Application for CosmicAppList {
                             self.active_list.remove(pos)
                         };
                         dock_item.toplevels = t.toplevels;
-                    };
+                    }
                     dock_item.id = self.item_ctr;
 
                     if dock_item.desktop_info.exec().is_some() {
@@ -1095,7 +1092,7 @@ impl cosmic::Application for CosmicAppList {
                                     pending::<()>().await;
                                 }
                             },
-                            |_| Message::IncrementSubscriptionCtr,
+                            |()| Message::IncrementSubscriptionCtr,
                         )
                         .map(cosmic::action::app);
                     }
@@ -1242,7 +1239,7 @@ impl cosmic::Application for CosmicAppList {
                                 app_id.as_deref(),
                                 terminal,
                             )
-                            .await
+                            .await;
                         });
                     }
                 }
@@ -1307,13 +1304,13 @@ impl cosmic::Application for CosmicAppList {
                             {
                                 let mut d = self.active_list.remove(p);
                                 // but use the id from the config
-                                d.original_app_id = original_id.clone();
+                                d.original_app_id.clone_from(original_id);
                                 d
                             } else {
                                 self.item_ctr += 1;
                                 DockItem {
                                     id: self.item_ctr,
-                                    toplevels: Default::default(),
+                                    toplevels: Vec::new(),
                                     desktop_info: de.clone(),
                                     original_app_id: original_id.clone(),
                                 }
@@ -1591,45 +1588,44 @@ impl cosmic::Application for CosmicAppList {
             );
         }
 
-        let mut active: Vec<_> = self.active_list[..active_popup_cutoff
-            .map(|n| {
+        let mut active: Vec<_> =
+            self.active_list[..active_popup_cutoff.map_or(self.active_list.len(), |n| {
                 if n < self.active_list.len() {
                     n.saturating_sub(1)
                 } else {
                     n
                 }
-            })
-            .unwrap_or(self.active_list.len())]
-            .iter()
-            .map(|dock_item| {
-                self.core
-                    .applet
-                    .applet_tooltip(
-                        dock_item.as_icon(
-                            &self.core.applet,
-                            self.rectangle_tracker.as_ref(),
-                            self.popup.is_none(),
-                            self.config.enable_drag_source,
-                            self.gpus.as_deref(),
+            })]
+                .iter()
+                .map(|dock_item| {
+                    self.core
+                        .applet
+                        .applet_tooltip(
+                            dock_item.as_icon(
+                                &self.core.applet,
+                                self.rectangle_tracker.as_ref(),
+                                self.popup.is_none(),
+                                self.config.enable_drag_source,
+                                self.gpus.as_deref(),
+                                dock_item
+                                    .toplevels
+                                    .iter()
+                                    .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
+                                dot_radius,
+                                self.core.main_window_id().unwrap(),
+                            ),
                             dock_item
-                                .toplevels
-                                .iter()
-                                .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
-                            dot_radius,
-                            self.core.main_window_id().unwrap(),
-                        ),
-                        dock_item
-                            .desktop_info
-                            .full_name(&self.locales)
-                            .unwrap_or_default()
-                            .to_string(),
-                        self.popup.is_some(),
-                        Message::Surface,
-                        None,
-                    )
-                    .into()
-            })
-            .collect();
+                                .desktop_info
+                                .full_name(&self.locales)
+                                .unwrap_or_default()
+                                .to_string(),
+                            self.popup.is_some(),
+                            Message::Surface,
+                            None,
+                        )
+                        .into()
+                })
+                .collect();
 
         if active_popup_cutoff.is_some_and(|n| n < self.active_list.len()) {
             // button to show more active
@@ -1660,15 +1656,13 @@ impl cosmic::Application for CosmicAppList {
                 + self.core.applet.suggested_padding(false) * 2;
             window_size
                 .map(|w| w.width)
-                .map(|b| (b / suggested_width as f32) as u32)
-                .unwrap_or(u32::MAX) as usize
+                .map_or(u32::MAX, |b| (b / suggested_width as f32) as u32) as usize
         } else {
             let suggested_height = self.core.applet.suggested_size(false).1
                 + self.core.applet.suggested_padding(false) * 2;
             window_size
                 .map(|w| w.height)
-                .map(|b| (b / suggested_height as f32) as u32)
-                .unwrap_or(u32::MAX) as usize
+                .map_or(u32::MAX, |b| (b / suggested_height as f32) as u32) as usize
         }
         .max(4);
         if max_num < favorites.len() + active.len() {
@@ -2013,45 +2007,44 @@ impl cosmic::Application for CosmicAppList {
             let focused_item = self.currently_active_toplevel();
             let dot_radius = theme.cosmic().radius_xs();
             // show the overflow popup for active list
-            let active: Vec<_> = self.active_list[active_popup_cutoff
-                .map(|n| {
+            let active: Vec<_> =
+                self.active_list[..active_popup_cutoff.map_or(self.active_list.len(), |n| {
                     if n < self.active_list.len() {
                         n.saturating_sub(1)
                     } else {
                         n - 1
                     }
-                })
-                .unwrap_or(self.active_list.len() - 1)..]
-                .iter()
-                .map(|dock_item| {
-                    self.core
-                        .applet
-                        .applet_tooltip(
-                            dock_item.as_icon(
-                                &self.core.applet,
-                                self.rectangle_tracker.as_ref(),
-                                self.popup.is_none(),
-                                self.config.enable_drag_source,
-                                self.gpus.as_deref(),
+                })]
+                    .iter()
+                    .map(|dock_item| {
+                        self.core
+                            .applet
+                            .applet_tooltip(
+                                dock_item.as_icon(
+                                    &self.core.applet,
+                                    self.rectangle_tracker.as_ref(),
+                                    self.popup.is_none(),
+                                    self.config.enable_drag_source,
+                                    self.gpus.as_deref(),
+                                    dock_item
+                                        .toplevels
+                                        .iter()
+                                        .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
+                                    dot_radius,
+                                    self.core.main_window_id().unwrap(),
+                                ),
                                 dock_item
-                                    .toplevels
-                                    .iter()
-                                    .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
-                                dot_radius,
-                                id,
-                            ),
-                            dock_item
-                                .desktop_info
-                                .full_name(&self.locales)
-                                .unwrap_or_default()
-                                .to_string(),
-                            self.popup.is_some(),
-                            Message::Surface,
-                            Some(id),
-                        )
-                        .into()
-                })
-                .collect();
+                                    .desktop_info
+                                    .full_name(&self.locales)
+                                    .unwrap_or_default()
+                                    .to_string(),
+                                self.popup.is_some(),
+                                Message::Surface,
+                                None,
+                            )
+                            .into()
+                    })
+                    .collect();
             let content = match &self.core.applet.anchor {
                 PanelAnchor::Left | PanelAnchor::Right => container(
                     Column::with_children(active)
@@ -2119,7 +2112,7 @@ impl cosmic::Application for CosmicAppList {
                     }
                 })
                 .collect();
-            favorites.extend(favorites_extra[..favorite_to_remove].iter().cloned());
+            favorites.extend(favorites_extra[..favorite_to_remove].iter().copied());
             let favorites: Vec<_> = favorites
                 .iter()
                 .rev()
@@ -2333,52 +2326,50 @@ impl CosmicAppList {
         info: &ToplevelInfo,
         unicase_appid: Ascii<&str>,
     ) -> DesktopEntry {
-        match fde::find_app_by_id(&self.desktop_entries, unicase_appid) {
-            Some(appid) => appid.clone(),
-            None => {
-                // Update desktop entries in case it was not found.
+        if let Some(appid) = fde::find_app_by_id(&self.desktop_entries, unicase_appid) {
+            appid.clone()
+        } else {
+            // Update desktop entries in case it was not found.
 
-                self.update_desktop_entries();
-                match fde::find_app_by_id(&self.desktop_entries, unicase_appid) {
-                    Some(appid) => appid.clone(),
-                    None => {
-                        tracing::error!(id = info.app_id, "could not find desktop entry for app");
+            self.update_desktop_entries();
+            if let Some(appid) = fde::find_app_by_id(&self.desktop_entries, unicase_appid) {
+                appid.clone()
+            } else {
+                tracing::error!(id = info.app_id, "could not find desktop entry for app");
 
-                        let mut fallback_entry = fde::DesktopEntry::from_appid(info.app_id.clone());
+                let mut fallback_entry = fde::DesktopEntry::from_appid(info.app_id.clone());
 
-                        // proton opens games as steam_app_X, where X is either
-                        // the steam appid or "default". games with a steam appid
-                        // can have a desktop entry generated elsewhere; this
-                        // specifically handles non-steam games opened
-                        // under proton
-                        // in addition, try to match WINE entries who have its
-                        // appid = the full name of the executable (incl. .exe)
-                        let is_proton_game = info.app_id == "steam_app_default";
-                        if is_proton_game || info.app_id.ends_with(".exe") {
-                            for entry in &self.desktop_entries {
-                                let localised_name = entry
-                                    .name(&self.locales)
-                                    .map(|x| x.to_string())
-                                    .unwrap_or_default();
+                // proton opens games as steam_app_X, where X is either
+                // the steam appid or "default". games with a steam appid
+                // can have a desktop entry generated elsewhere; this
+                // specifically handles non-steam games opened
+                // under proton
+                // in addition, try to match WINE entries who have its
+                // appid = the full name of the executable (incl. .exe)
+                let is_proton_game = info.app_id == "steam_app_default";
+                if is_proton_game || info.app_id.ends_with(".exe") {
+                    for entry in &self.desktop_entries {
+                        let localised_name = entry
+                            .name(&self.locales)
+                            .map(|x| x.to_string())
+                            .unwrap_or_default();
 
-                                if localised_name == info.title {
-                                    // if this is a proton game, we only want
-                                    // to look for game entries
-                                    if is_proton_game
-                                        && !entry.categories().unwrap_or_default().contains(&"Game")
-                                    {
-                                        continue;
-                                    }
-
-                                    fallback_entry = entry.clone();
-                                    break;
-                                }
+                        if localised_name == info.title {
+                            // if this is a proton game, we only want
+                            // to look for game entries
+                            if is_proton_game
+                                && !entry.categories().unwrap_or_default().contains(&"Game")
+                            {
+                                continue;
                             }
-                        }
 
-                        fallback_entry
+                            fallback_entry = entry.clone();
+                            break;
+                        }
                     }
                 }
+
+                fallback_entry
             }
         }
     }

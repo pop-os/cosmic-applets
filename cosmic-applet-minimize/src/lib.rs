@@ -88,25 +88,23 @@ impl Minimize {
     fn find_new_desktop_entry(&mut self, appid: &str) -> fde::DesktopEntry {
         let unicase_appid = fde::unicase::Ascii::new(appid);
 
-        let de = match fde::find_app_by_id(&self.desktop_entries, unicase_appid) {
-            Some(de) => de,
-            None => {
-                // Update desktop entries in case it was not found.
-                self.update_desktop_entries();
-                match fde::find_app_by_id(&self.desktop_entries, unicase_appid) {
-                    Some(appid) => appid,
-                    None => {
-                        tracing::warn!(appid, "could not find desktop entry for app");
-                        let mut entry = fde::DesktopEntry {
-                            appid: appid.to_owned(),
-                            groups: Default::default(),
-                            path: Default::default(),
-                            ubuntu_gettext_domain: None,
-                        };
-                        entry.add_desktop_entry("Name".to_string(), appid.to_owned());
-                        return entry;
-                    }
-                }
+        let de = if let Some(de) = fde::find_app_by_id(&self.desktop_entries, unicase_appid) {
+            de
+        } else {
+            // Update desktop entries in case it was not found.
+            self.update_desktop_entries();
+            if let Some(appid) = fde::find_app_by_id(&self.desktop_entries, unicase_appid) {
+                appid
+            } else {
+                tracing::warn!(appid, "could not find desktop entry for app");
+                let mut entry = fde::DesktopEntry {
+                    appid: appid.to_owned(),
+                    groups: Default::default(),
+                    path: Default::default(),
+                    ubuntu_gettext_domain: None,
+                };
+                entry.add_desktop_entry("Name".to_string(), appid.to_owned());
+                return entry;
             }
         };
 
@@ -186,7 +184,7 @@ impl cosmic::Application for Minimize {
                                         .desktop_entry
                                         .icon()
                                         .unwrap_or(&apps[pos].desktop_entry.appid),
-                                )
+                                );
                             }
                             apps[pos].toplevel_info = toplevel_info;
                         } else {
@@ -278,7 +276,7 @@ impl cosmic::Application for Minimize {
                     cosmic::app::Action::Surface(a),
                 ));
             }
-        };
+        }
         Task::none()
     }
 
@@ -287,16 +285,13 @@ impl cosmic::Application for Minimize {
     }
 
     fn view(&self) -> Element<'_, Self::Message> {
-        let max_icon_count = self
-            .max_icon_count()
-            .map(|n| {
-                if n < self.apps.len() {
-                    n - 1
-                } else {
-                    self.apps.len()
-                }
-            })
-            .unwrap_or(self.apps.len());
+        let max_icon_count = self.max_icon_count().map_or(self.apps.len(), |n| {
+            if n < self.apps.len() {
+                n - 1
+            } else {
+                self.apps.len()
+            }
+        });
         let (width, _) = self.core.applet.suggested_size(false);
         let padding = self.core.applet.suggested_padding(false);
         let theme = self.core.system_theme().cosmic();
@@ -385,16 +380,13 @@ impl cosmic::Application for Minimize {
     }
 
     fn view_window(&self, _id: window::Id) -> Element<'_, Self::Message> {
-        let max_icon_count = self
-            .max_icon_count()
-            .map(|n| {
-                if n < self.apps.len() {
-                    n - 1
-                } else {
-                    self.apps.len()
-                }
-            })
-            .unwrap_or(self.apps.len());
+        let max_icon_count = self.max_icon_count().map_or(self.apps.len(), |n| {
+            if n < self.apps.len() {
+                n - 1
+            } else {
+                self.apps.len()
+            }
+        });
         let (width, _) = self.core.applet.suggested_size(false);
         let padding = self.core.applet.suggested_padding(false);
         let theme = self.core.system_theme().cosmic();

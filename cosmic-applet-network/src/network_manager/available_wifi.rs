@@ -24,7 +24,7 @@ pub async fn handle_wireless_device(
     if let Some(t) = scan_changed.next().await {
         if let Ok(-1) = t.get().await {
             eprintln!("scan errored");
-            return Ok(Default::default());
+            return Ok(Vec::new());
         }
     }
     let access_points = device.get_access_points().await?;
@@ -33,8 +33,7 @@ pub async fn handle_wireless_device(
         .await
         .and_then(|dev| dev.cached_state())
         .unwrap_or_default()
-        .map(|s| s.into())
-        .unwrap_or_else(|| DeviceState::Unknown);
+        .map_or(DeviceState::Unknown, |s| s.into());
     // Sort by strength and remove duplicates
     let mut aps = HashMap::<String, AccessPoint>::new();
     for ap in access_points {
@@ -45,7 +44,7 @@ pub async fn handle_wireless_device(
             if access_point.strength > strength {
                 continue;
             }
-        };
+        }
         let proxy: &AccessPointProxy = &ap;
         let Ok(flags) = ap.rsn_flags().await else {
             continue;

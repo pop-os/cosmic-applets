@@ -110,7 +110,7 @@ impl cosmic::Application for IcedWorkspacesApplet {
                 },
                 core,
                 workspaces: Vec::new(),
-                workspace_tx: Default::default(),
+                workspace_tx: Option::default(),
                 scroll: 0.0,
                 next_scroll: None,
                 last_scroll: Instant::now(),

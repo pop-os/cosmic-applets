@@ -181,15 +181,15 @@ pub fn run() -> iced::Result {
         if let Ok(bytes) = fs::read_to_string(&path) {
             if let Ok(entry) = DesktopEntry::from_str(&path, &bytes, Some(&locales)) {
                 desktop = Some(Desktop {
-                    name: entry
-                        .name(&locales)
-                        .map(|x| x.to_string())
-                        .unwrap_or_else(|| panic!("Desktop file '{filename}' doesn't have `Name`")),
+                    name: entry.name(&locales).map_or_else(
+                        || panic!("Desktop file '{filename}' doesn't have `Name`"),
+                        |x| x.to_string(),
+                    ),
                     icon: entry.icon().map(|x| x.to_string()),
-                    exec: entry
-                        .exec()
-                        .map(|x| x.to_string())
-                        .unwrap_or_else(|| panic!("Desktop file '{filename}' doesn't have `Exec`")),
+                    exec: entry.exec().map_or_else(
+                        || panic!("Desktop file '{filename}' doesn't have `Exec`"),
+                        |x| x.to_string(),
+                    ),
                 });
                 break;
             }

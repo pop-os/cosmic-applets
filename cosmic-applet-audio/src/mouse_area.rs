@@ -104,7 +104,7 @@ struct State {
 impl Default for State {
     fn default() -> Self {
         Self {
-            drag_initiated: Default::default(),
+            drag_initiated: Option::default(),
             is_out_of_bounds: true,
         }
     }
@@ -129,8 +129,8 @@ impl<'a, Message, Theme, Renderer> MouseArea<'a, Message, Theme, Renderer> {
     }
 }
 
-impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
-    for MouseArea<'a, Message, Theme, Renderer>
+impl<Message, Theme, Renderer> Widget<Message, Theme, Renderer>
+    for MouseArea<'_, Message, Theme, Renderer>
 where
     Renderer: renderer::Renderer,
     Message: Clone,

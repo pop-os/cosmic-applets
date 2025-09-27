@@ -235,7 +235,7 @@ impl cosmic::Application for CosmicA11yApplet {
                     });
                 } else {
                     tracing::error!("Wayland tx is None");
-                };
+                }
             }
             Message::Token(u) => match u {
                 TokenUpdate::Init(tx) => {

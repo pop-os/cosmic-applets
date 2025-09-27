@@ -110,7 +110,7 @@ impl cosmic::Application for Window {
         let window = Self {
             core,
             popup: None,
-            timeline: Default::default(),
+            timeline: Timeline::default(),
             autotiled: config.autotile,
             config,
             config_helper,
@@ -202,7 +202,7 @@ impl cosmic::Application for Window {
                     };
 
                     if let Err(err) = tx.send(AppRequest::TilingState(state)) {
-                        error!("Failed to send the tiling state update. {err:?}")
+                        error!("Failed to send the tiling state update. {err:?}");
                     }
                 }
             }
@@ -250,7 +250,7 @@ impl cosmic::Application for Window {
                     };
 
                     if let Err(err) = tx.send(AppRequest::DefaultBehavior(state)) {
-                        error!("Failed to send the tiling state update. {err:?}")
+                        error!("Failed to send the tiling state update. {err:?}");
                     }
                 }
 

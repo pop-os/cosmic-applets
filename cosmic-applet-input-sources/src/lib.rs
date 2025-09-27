@@ -294,7 +294,7 @@ impl Window {
             .chain(std::iter::repeat(""));
 
         'outer: for (layout, variant) in layouts.zip(variants) {
-            println!("{} : {}", layout, variant);
+            println!("{layout} : {variant}");
             for xkb_layout in &self.layouts {
                 if layout != xkb_layout.name() {
                     continue;

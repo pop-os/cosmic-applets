@@ -95,7 +95,7 @@ pub fn bluetooth_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
                 }
 
                 retry_count = retry_count.saturating_add(1);
-                _ = tokio::time::sleep(Duration::from_millis(
+                () = tokio::time::sleep(Duration::from_millis(
                     2_u64.saturating_pow(retry_count).min(68719476734),
                 ))
                 .await;
@@ -165,7 +165,7 @@ pub fn bluetooth_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
                     }
                 } else {
                     break;
-                };
+                }
 
                 session_state.rx = Some(session_rx);
                 interval.tick().await;
@@ -271,10 +271,9 @@ impl BluerDevice {
     #[inline(never)]
     pub async fn from_device(device: &bluer::Device) -> Self {
         let (mut name, is_paired, is_trusted, is_connected, battery_percent, icon) = futures::join!(
-            device.name().map(|res| res
-                .ok()
-                .flatten()
-                .unwrap_or_else(|| device.address().to_string())),
+            device
+                .name()
+                .map(|res| res.ok().flatten().unwrap_or(device.address().to_string())),
             device.is_paired().map(Result::unwrap_or_default),
             device.is_trusted().map(Result::unwrap_or_default),
             device.is_connected().map(Result::unwrap_or_default),
@@ -286,7 +285,7 @@ impl BluerDevice {
 
         if name.is_empty() {
             name = device.address().to_string();
-        };
+        }
 
         let status = if is_connected {
             BluerDeviceStatus::Connected
@@ -385,9 +384,8 @@ impl BluerSessionState {
                 let agent_clone = adapter_clone_1.clone();
                 let tx_clone = tx_clone_1.clone();
                 Box::pin(async move {
-                    let device = match agent_clone.device(req.device) {
-                        Ok(d) => d,
-                        Err(_) => return Err(bluer::agent::ReqError::Rejected),
+                    let Ok(device) = agent_clone.device(req.device) else {
+                        return Err(bluer::agent::ReqError::Rejected);
                     };
                     let _ = tx_clone
                         .send(BluerSessionEvent::AgentEvent(
@@ -397,16 +395,15 @@ impl BluerSessionState {
                         ))
                         .await;
                     let pin_code = fastrand::u32(0..999999);
-                    Ok(format!("{:06}", pin_code))
+                    Ok(format!("{pin_code:06}"))
                 })
             })),
             display_pin_code: Some(Box::new(move |req| {
                 let agent_clone = adapter_clone_2.clone();
                 let tx_clone = tx_clone_2.clone();
                 Box::pin(async move {
-                    let device = match agent_clone.device(req.device) {
-                        Ok(d) => d,
-                        Err(_) => return Err(bluer::agent::ReqError::Rejected),
+                    let Ok(device) = agent_clone.device(req.device) else {
+                        return Err(bluer::agent::ReqError::Rejected);
                     };
                     let _ = tx_clone
                         .send(BluerSessionEvent::AgentEvent(
@@ -424,9 +421,8 @@ impl BluerSessionState {
                 let agent_clone = adapter_clone_3.clone();
                 let tx_clone = tx_clone_3.clone();
                 Box::pin(async move {
-                    let device = match agent_clone.device(req.device) {
-                        Ok(d) => d,
-                        Err(_) => return Err(bluer::agent::ReqError::Rejected),
+                    let Ok(device) = agent_clone.device(req.device) else {
+                        return Err(bluer::agent::ReqError::Rejected);
                     };
                     let _ = tx_clone
                         .send(BluerSessionEvent::AgentEvent(
@@ -443,9 +439,8 @@ impl BluerSessionState {
                 let agent_clone = adapter_clone_4.clone();
                 let tx_clone = tx_clone_4.clone();
                 Box::pin(async move {
-                    let device = match agent_clone.device(req.device) {
-                        Ok(d) => d,
-                        Err(_) => return Err(bluer::agent::ReqError::Rejected),
+                    let Ok(device) = agent_clone.device(req.device) else {
+                        return Err(bluer::agent::ReqError::Rejected);
                     };
                     let _ = tx_clone
                         .send(BluerSessionEvent::AgentEvent(
@@ -462,9 +457,8 @@ impl BluerSessionState {
                 let agent_clone = adapter_clone_5.clone();
                 let tx_clone = tx_clone_5.clone();
                 Box::pin(async move {
-                    let device = match agent_clone.device(req.device) {
-                        Ok(d) => d,
-                        Err(_) => return Err(bluer::agent::ReqError::Rejected),
+                    let Ok(device) = agent_clone.device(req.device) else {
+                        return Err(bluer::agent::ReqError::Rejected);
                     };
                     let (tx, mut rx) = channel(1);
                     let _ = tx_clone
@@ -487,9 +481,8 @@ impl BluerSessionState {
                 let agent_clone = adapter_clone_6.clone();
                 let tx_clone = tx_clone_6.clone();
                 Box::pin(async move {
-                    let device = match agent_clone.device(req.device) {
-                        Ok(d) => d,
-                        Err(_) => return Err(bluer::agent::ReqError::Rejected),
+                    let Ok(device) = agent_clone.device(req.device) else {
+                        return Err(bluer::agent::ReqError::Rejected);
                     };
                     let (tx, mut rx) = channel(1);
                     let _ = tx_clone
@@ -511,9 +504,8 @@ impl BluerSessionState {
                 let agent_clone = adapter_clone_7.clone();
                 let tx_clone = tx_clone_7.clone();
                 Box::pin(async move {
-                    let device = match agent_clone.device(req.device) {
-                        Ok(d) => d,
-                        Err(_) => return Err(bluer::agent::ReqError::Rejected),
+                    let Ok(device) = agent_clone.device(req.device) else {
+                        return Err(bluer::agent::ReqError::Rejected);
                     };
                     let (tx, mut rx) = channel(1);
                     // TODO better describe the service to the user
@@ -614,14 +606,12 @@ impl BluerSessionState {
                         let mut new_devices = Vec::new();
                         let mut interval = tokio::time::interval(Duration::from_secs(10));
                         interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
-                        let mut change_stream =
-                            match adapter_clone.discover_devices_with_changes().await {
-                                Ok(stream) => stream,
-                                Err(_) => {
-                                    tick(&mut interval).await;
-                                    return;
-                                }
-                            };
+                        let Ok(mut change_stream) =
+                            adapter_clone.discover_devices_with_changes().await
+                        else {
+                            tick(&mut interval).await;
+                            return;
+                        };
 
                         while change_stream.next().await.is_some() {
                             new_devices = build_device_list(new_devices, &adapter_clone).await;
@@ -679,7 +669,7 @@ impl BluerSessionState {
                     match &req_clone {
                         BluerRequest::SetBluetoothEnabled(enabled) => {
                             if let Err(e) = adapter_clone.set_powered(*enabled).await {
-                                tracing::error!("Failed to power off bluetooth adapter. {e:?}")
+                                tracing::error!("Failed to power off bluetooth adapter. {e:?}");
                             }
 
                             // rfkill will be persisted after reboot
@@ -695,8 +685,8 @@ impl BluerSessionState {
                                 .ok()
                                 .and_then(|o| {
                                     let lines = String::from_utf8(o.stdout).ok()?;
-                                    lines.split("\n").into_iter().find_map(|row| {
-                                        let (id, cname) = row.trim().split_once(" ")?;
+                                    lines.split('\n').into_iter().find_map(|row| {
+                                        let (id, cname) = row.trim().split_once(' ')?;
                                         (name == cname).then_some(id.to_string())
                                     })
                                 })
@@ -768,7 +758,7 @@ impl BluerSessionState {
                             }
                         }
                         BluerRequest::StateUpdate => {}
-                    };
+                    }
 
                     let _ = tx_clone
                         .send(BluerSessionEvent::RequestResponse {
@@ -820,7 +810,7 @@ async fn build_device_list(mut devices: Vec<BluerDevice>, adapter: &Adapter) -> 
         .collect::<FuturesUnordered<_>>();
 
     while let Some(device) = device_stream.next().await {
-        devices.push(device)
+        devices.push(device);
     }
 
     devices.sort();

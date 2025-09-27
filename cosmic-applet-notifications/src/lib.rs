@@ -125,12 +125,12 @@ impl cosmic::Application for Notifications {
             core,
             config_helper: helper,
             config,
-            icon_name: Default::default(),
+            icon_name: String::default(),
             popup: None,
-            timeline: Default::default(),
-            dbus_sender: Default::default(),
+            timeline: Timeline::default(),
+            dbus_sender: Option::default(),
             cards: Vec::new(),
-            token_tx: Default::default(),
+            token_tx: Option::default(),
             proxy: block_on(crate::subscriptions::notifications::get_proxy())
                 .expect("Failed to get proxy"),
             notifications_tx: None,
@@ -392,7 +392,7 @@ impl cosmic::Application for Notifications {
                     cosmic::app::Action::Surface(a),
                 ));
             }
-        };
+        }
         self.update_icon();
         Task::none()
     }

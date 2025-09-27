@@ -172,8 +172,7 @@ impl Audio {
             if self
                 .player_status
                 .as_ref()
-                .map(|s| s.can_go_previous)
-                .unwrap_or_default()
+                .is_some_and(|s| s.can_go_previous)
             {
                 elements.push(
                     self.core
@@ -181,7 +180,7 @@ impl Audio {
                         .icon_button(GO_BACK)
                         .on_press(Message::MprisRequest(MprisRequest::Previous))
                         .into(),
-                )
+                );
             }
             if let Some(play) = self.is_play() {
                 elements.push(
@@ -196,12 +195,7 @@ impl Audio {
                         .into(),
                 );
             }
-            if self
-                .player_status
-                .as_ref()
-                .map(|s| s.can_go_next)
-                .unwrap_or_default()
-            {
+            if self.player_status.as_ref().is_some_and(|s| s.can_go_next) {
                 elements.push(
                     self.core
                         .applet
@@ -277,17 +271,11 @@ impl Audio {
     }
 
     fn current_output_mute(&self) -> bool {
-        self.current_output
-            .as_ref()
-            .map(|o| o.mute)
-            .unwrap_or_default()
+        self.current_output.as_ref().is_some_and(|o| o.mute)
     }
 
     fn current_input_mute(&self) -> bool {
-        self.current_input
-            .as_ref()
-            .map(|o| o.mute)
-            .unwrap_or_default()
+        self.current_input.as_ref().is_some_and(|o| o.mute)
     }
 }
 
@@ -421,7 +409,7 @@ impl cosmic::Application for Audio {
                             connection.send(pulse::Message::SetSourceVolumeByName(
                                 name.clone(),
                                 device.volume,
-                            ))
+                            ));
                         }
                     }
                 }
@@ -434,7 +422,7 @@ impl cosmic::Application for Audio {
                     if let Some(device) = &self.current_output {
                         if let Some(name) = &device.name {
                             connection
-                                .send(pulse::Message::SetSinkMuteByName(name.clone(), device.mute))
+                                .send(pulse::Message::SetSinkMuteByName(name.clone(), device.mute));
                         }
                     }
                 }
@@ -625,7 +613,7 @@ impl cosmic::Application for Audio {
                     });
                 } else {
                     tracing::error!("Wayland tx is None");
-                };
+                }
             }
             Message::Token(u) => match u {
                 TokenUpdate::Init(tx) => {
@@ -688,7 +676,7 @@ impl cosmic::Application for Audio {
                     cosmic::app::Action::Surface(a),
                 ));
             }
-        };
+        }
 
         Task::none()
     }

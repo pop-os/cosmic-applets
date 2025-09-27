@@ -254,7 +254,7 @@ async fn run(output: &mut futures::channel::mpsc::Sender<MprisUpdate>) {
                 _ = output.send(MprisUpdate::Player(player_status)).await;
             } else {
                 tracing::error!("Failed to get player status.");
-            };
+            }
         } else {
             let _ = output.send(MprisUpdate::Setup).await;
         }
@@ -303,7 +303,7 @@ async fn find_active<'a>(players: &'a [MprisPlayer]) -> Option<&'a MprisPlayer> 
         v + p.metadata().await.is_ok() as i32
     };
 
-    for p in players.iter() {
+    for p in players {
         let v = eval(p.player.clone()).await;
         if v > best.0 {
             best = (v, Some(p));

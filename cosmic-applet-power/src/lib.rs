@@ -99,7 +99,7 @@ impl cosmic::Application for Power {
                 core,
                 icon_name: "system-shutdown-symbolic".to_string(),
                 subsurface_id: window::Id::unique(),
-                popup: Default::default(),
+                popup: Option::default(),
             },
             Task::none(),
         )
@@ -158,12 +158,12 @@ impl cosmic::Application for Power {
                         }
                     }
                     a => return a.perform(),
-                };
+                }
                 Task::none()
             }
             Message::Zbus(result) => {
                 if let Err(e) = result {
-                    eprintln!("cosmic-applet-power ERROR: '{}'", e);
+                    eprintln!("cosmic-applet-power ERROR: '{e}'");
                 }
                 Task::none()
             }
@@ -340,16 +340,13 @@ async fn lock() -> zbus::Result<()> {
 async fn log_out() -> zbus::Result<()> {
     let session_type = std::env::var("XDG_CURRENT_DESKTOP").ok();
     let connection = Connection::session().await?;
-    match session_type.as_ref().map(|s| s.trim()) {
-        Some("pop:GNOME") => {
-            let manager_proxy = SessionManagerProxy::new(&connection).await?;
-            manager_proxy.logout(0).await?;
-        }
+    if let Some("pop:GNOME") = session_type.as_ref().map(|s| s.trim()) {
+        let manager_proxy = SessionManagerProxy::new(&connection).await?;
+        manager_proxy.logout(0).await?;
+    } else {
         // By default assume COSMIC
-        _ => {
-            let cosmic_session = CosmicSessionProxy::new(&connection).await?;
-            cosmic_session.exit().await?;
-        }
+        let cosmic_session = CosmicSessionProxy::new(&connection).await?;
+        cosmic_session.exit().await?;
     }
     Ok(())
 }

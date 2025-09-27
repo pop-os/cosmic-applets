@@ -56,7 +56,7 @@ impl State {
                     Ok(layout) => {
                         self.layout = Some(layout);
                     }
-                    Err(err) => eprintln!("Error getting layout from icon: {}", err),
+                    Err(err) => eprintln!("Error getting layout from icon: {err}"),
                 }
                 iced::Task::none()
             }
@@ -109,7 +109,7 @@ impl State {
                     let _ = menu_proxy.event(id, "clicked", &0.into(), 0).await;
                 });
                 if is_submenu {
-                    self.expanded = if self.expanded != Some(id) {
+                    self.expanded = if self.expanded.is_none() {
                         Some(id)
                     } else {
                         None

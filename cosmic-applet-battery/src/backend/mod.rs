@@ -66,7 +66,7 @@ pub async fn get_power_profile(daemon: Backend<'_>) -> Result<Power> {
                 "Battery" => Ok(Power::Battery),
                 "Balanced" => Ok(Power::Balanced),
                 "Performance" => Ok(Power::Performance),
-                _ => panic!("Unknown power profile: {}", power),
+                _ => panic!("Unknown power profile: {power}"),
             }
         }
         Backend::PowerProfilesDaemon(ppd) => {
@@ -226,7 +226,7 @@ pub async fn get_charging_limit() -> anyhow::Result<bool> {
                 Backend::PowerProfilesDaemon(_) => {
                     tracing::info!("Power Profiles Daemon is not supported.");
                 }
-            };
+            }
         }
     }
     anyhow::bail!("Unsupported")
@@ -245,7 +245,7 @@ pub async fn set_charging_limit() -> Result<()> {
                         "Setting charging limit via Power Profiles Daemon is not supported."
                     );
                 }
-            };
+            }
         }
     }
     Ok(())

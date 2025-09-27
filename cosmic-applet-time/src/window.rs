@@ -500,10 +500,10 @@ impl cosmic::Application for Window {
                 }
             }
             Message::Tick => {
-                self.now = self
-                    .timezone
-                    .map(|tz| chrono::Local::now().with_timezone(&tz).fixed_offset())
-                    .unwrap_or_else(|| chrono::Local::now().into());
+                self.now = self.timezone.map_or_else(
+                    || chrono::Local::now().into(),
+                    |tz| chrono::Local::now().with_timezone(&tz).fixed_offset(),
+                );
                 Task::none()
             }
             Message::Rectangle(u) => {
@@ -523,8 +523,8 @@ impl cosmic::Application for Window {
                 }
                 Task::none()
             }
-            Message::SelectDay(_day) => {
-                if let Some(date) = self.date_selected.with_day(_day) {
+            Message::SelectDay(day) => {
+                if let Some(date) = self.date_selected.with_day(day) {
                     self.date_selected = date;
                 } else {
                     tracing::error!("invalid naivedate");
@@ -562,7 +562,7 @@ impl cosmic::Application for Window {
                     });
                 } else {
                     tracing::error!("Wayland tx is None");
-                };
+                }
                 Task::none()
             }
             Message::Token(u) => {

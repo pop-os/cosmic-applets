@@ -209,12 +209,12 @@ impl cosmic::Application for App {
                     self.resize_window()
                 }
                 status_notifier_watcher::Event::Error(err) => {
-                    eprintln!("Status notifier error: {}", err);
+                    eprintln!("Status notifier error: {err}");
                     Task::none()
                 }
             },
             Msg::TogglePopup(id) => {
-                self.open_menu = if self.open_menu != Some(id) {
+                self.open_menu = if self.open_menu.is_none() {
                     Some(id)
                 } else {
                     None
@@ -237,7 +237,7 @@ impl cosmic::Application for App {
                                 Some((i, self.core.main_window_id().unwrap()))
                             }
                         })
-                        .unwrap_or_else(|| (0, self.core.main_window_id().unwrap()));
+                        .unwrap_or((0, self.core.main_window_id().unwrap()));
 
                     let mut popup_settings = self
                         .core
@@ -319,7 +319,7 @@ impl cosmic::Application for App {
                             Some((i, self.core.main_window_id().unwrap()))
                         }
                     })
-                    .unwrap_or_else(|| (0, self.core.main_window_id().unwrap()));
+                    .unwrap_or((0, self.core.main_window_id().unwrap()));
 
                 let mut popup_settings = self
                     .core
@@ -437,7 +437,7 @@ impl cosmic::Application for App {
 
         subscriptions.push(status_notifier_watcher::subscription().map(Msg::StatusNotifier));
 
-        for (id, menu) in self.menus.iter() {
+        for (id, menu) in &self.menus {
             subscriptions.push(menu.subscription().with(*id).map(Msg::StatusMenu));
         }
         subscriptions.push(activation_token_subscription(0).map(Msg::Token));

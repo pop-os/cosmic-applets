@@ -52,7 +52,7 @@ async fn start_listening(
     let mut active_conns_changed = network_manager.receive_active_connections_changed().await;
     active_conns_changed.next().await;
 
-    while let (Some(_change), _) = tokio::join!(
+    while let (Some(_change), ()) = tokio::join!(
         active_conns_changed.next(),
         tokio::time::sleep(tokio::time::Duration::from_secs(1))
     ) {
