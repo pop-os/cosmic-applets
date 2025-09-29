@@ -1,0 +1,12 @@
+bluetooth = Bluetooth
+other-devices = Další Bluetooth zařízení
+settings = Nastavení Bluetooth...
+connected = Připojeno
+confirm-pin = Ověřte prosím, že následující PIN se shoduje s tím, který je zobrazen na {$deviceName}
+confirm = Potvrdit
+cancel = Zrušit
+unsuccessful = Párování neúspešné
+check-device = Ujistěte se, že {$deviceName} je zapnuté, v dosahu a připravené na párování.
+try-again = Zkusit znovu
+discoverable = Viditelné
+pairable = Párovatelné
