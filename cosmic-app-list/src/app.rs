@@ -78,10 +78,10 @@ struct AppletIconData {
 static DND_FAVORITES: u64 = u64::MAX;
 
 impl AppletIconData {
-    fn new(applet: &Context) -> Self {
+    fn new(applet: &Context, spacing_xs: f32) -> Self {
         let icon_size = applet.suggested_size(false).0;
         let padding = applet.suggested_padding(false);
-        let icon_spacing = 4.0;
+        let icon_spacing = spacing_xs;
 
         let (dot_radius, bar_size) = match applet.size {
             Size::Hardcoded(_) => (2.0, 8.0),
@@ -168,8 +168,9 @@ impl DockItem {
             id,
             ..
         } = self;
+        let space_xs = theme::spacing().space_xs as f32;
 
-        let app_icon = AppletIconData::new(applet);
+        let app_icon = AppletIconData::new(applet, space_xs);
 
         let cosmic_icon = fde::IconSource::from_unknown(desktop_info.icon().unwrap_or_default())
             .as_cosmic_icon()
@@ -1467,8 +1468,10 @@ impl cosmic::Application for CosmicAppList {
     fn view(&self) -> Element<Message> {
         let focused_item = self.currently_active_toplevel();
         let theme = self.core.system_theme();
-        let dot_radius = theme.cosmic().radius_xs();
-        let app_icon = AppletIconData::new(&self.core.applet);
+        let cosmic = theme.cosmic();
+        let space_xs = cosmic.space_xs() as f32;
+        let dot_radius = cosmic.radius_xs();
+        let app_icon = AppletIconData::new(&self.core.applet, space_xs);
         let is_horizontal = match self.core.applet.anchor {
             PanelAnchor::Top | PanelAnchor::Bottom => true,
             PanelAnchor::Left | PanelAnchor::Right => false,
@@ -2248,6 +2251,8 @@ impl CosmicAppList {
     /// Returns the length of the group in the favorite list after which items are displayed in a popup.
     /// Shrink the favorite list until it only has active windows, or until it fits in the length provided.
     fn panel_overflow_lengths(&self) -> (Option<usize>, Option<usize>) {
+        let spacing = cosmic::theme::spacing();
+        let space_xs = spacing.space_xs as f32;
         let mut favorite_index;
         let mut active_index = None;
         let Some(mut max_major_axis_len) = self.core.applet.suggested_bounds.as_ref().map(|c| {
@@ -2262,7 +2267,7 @@ impl CosmicAppList {
         // tracing::error!("{} {}", max_major_axis_len, self.pinned_list.len());
         // subtract the divider width
         max_major_axis_len -= 1;
-        let applet_icon = AppletIconData::new(&self.core.applet);
+        let applet_icon = AppletIconData::new(&self.core.applet, space_xs);
 
         let button_total_size = self.core.applet.suggested_size(true).0
             + self.core.applet.suggested_padding(true) * 2

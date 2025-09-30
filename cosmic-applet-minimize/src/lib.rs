@@ -300,7 +300,7 @@ impl cosmic::Application for Minimize {
         let (width, _) = self.core.applet.suggested_size(false);
         let padding = self.core.applet.suggested_padding(false);
         let theme = self.core.system_theme().cosmic();
-        let space_xxs = theme.space_xxs();
+        let space_xs = theme.space_xs();
         let icon_buttons = self.apps[..max_icon_count].iter().map(|app| {
             self.core
                 .applet
@@ -348,14 +348,14 @@ impl cosmic::Application for Minimize {
                 .align_y(cosmic::iced_core::Alignment::Center)
                 .height(Length::Shrink)
                 .width(Length::Shrink)
-                .spacing(space_xxs)
+                .spacing(space_xs)
                 .into()
         } else {
             Column::with_children(icon_buttons)
                 .align_x(cosmic::iced_core::Alignment::Center)
                 .height(Length::Shrink)
                 .width(Length::Shrink)
-                .spacing(space_xxs)
+                .spacing(space_xs)
                 .into()
         };
 
@@ -398,7 +398,7 @@ impl cosmic::Application for Minimize {
         let (width, _) = self.core.applet.suggested_size(false);
         let padding = self.core.applet.suggested_padding(false);
         let theme = self.core.system_theme().cosmic();
-        let space_xxs = theme.space_xxs();
+        let space_xs = theme.space_xs();
         let icon_buttons = self.apps[max_icon_count..].iter().map(|app| {
             tooltip(
                 Element::from(crate::window_image::WindowImage::new(
@@ -438,14 +438,14 @@ impl cosmic::Application for Minimize {
                             .align_y(cosmic::iced_core::Alignment::Center)
                             .height(Length::Shrink)
                             .width(Length::Shrink)
-                            .spacing(space_xxs),
+                            .spacing(space_xs),
                     )
                 } else {
                     Column::with_children(icon_buttons)
                         .align_x(cosmic::iced_core::Alignment::Center)
                         .height(Length::Shrink)
                         .width(Length::Shrink)
-                        .spacing(space_xxs)
+                        .spacing(space_xs)
                         .into()
                 },
             )
