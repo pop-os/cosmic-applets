@@ -2,13 +2,13 @@ hours-ago = { $duration } { $duration ->
     [one] hodinu
     [few] hodiny
     [many] hodín
-    [other] hodín
+    *[other] hodín
 } dozadu
 minutes-ago = { $duration } { $duration ->
     [one] minútu
     [few] minúty
     [many] minút
-    [other] minút
+    *[other] minút
 } dozadu
 show-less = Zobraziť menej
 show-more = Zobraziť ešte {$more}

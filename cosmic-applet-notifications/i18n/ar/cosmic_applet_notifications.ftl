@@ -1,6 +1,6 @@
 hours-ago = { NUMBER($duration) ->
   [1] قبل ساعة
-  *[other] قبل {\$duration} ساعة
+  *[other] قبل {$duration} ساعة
 }
 minutes-ago = { NUMBER($duration) ->
   [1] قبل دقيقة
