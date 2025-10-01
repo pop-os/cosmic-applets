@@ -17,20 +17,3 @@ confirm-button = {
         [log-out] تسجيل الخروج
         *[other] تأكيد
 }
-confirm-title = {
-    $action ->
-        [restart] إعادة التشغيل
-        [suspend] تعليق
-        [shutdown] إيقاف التشغيل
-        [log-out] إغلاق جميع التطبيقات وتسجيل الخروج
-        *[other] تنفيذ الإجراء المحدد
-  } الآن؟
-confirm-body =
-  سيقوم النظام بـ{ $action ->
-        [restart] إعادة التشغيل
-        [suspend] التعليق
-        [shutdown] الإيقاف
-        [lock-screen] قفل الشاشة
-        [log-out] تسجيل الخروج
-        *[other] تنفيذ الإجراء المحدد
-  } تلقائيًا خلال { $countdown } ثانية.
