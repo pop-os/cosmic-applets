@@ -1,17 +1,15 @@
-hours-ago = { $duration } { $duration ->
-    [one] hodinu
-    [few] hodiny
-    [many] hodin
-    *[other] hodin
-} dozadu
-minutes-ago = { $duration } { $duration ->
-    [one] minutu
-    [few] minuty
-    [many] minut
-    *[other] minut
-} dozadu
+hours-ago =
+    Před { $duration } { $duration ->
+        [one] hodinou
+       *[other] hodinami
+    }
+minutes-ago =
+    Před { $duration } { $duration ->
+        [one] minutou
+       *[other] minutami
+    }
 show-less = Zobrazit méně
-show-more = Zobrazit ještě {$more}
+show-more = Zobrazit ještě { $more }
 clear-group = Vymazat skupinu
 clear-all = Vymazat všechna oznámení
 do-not-disturb = Nerušit

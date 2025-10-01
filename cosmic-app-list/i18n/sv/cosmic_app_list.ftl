@@ -1,8 +1,8 @@
-cosmic-app-list = App-fält
-pin = Fäst till app-fält
+cosmic-app-list = Programfält
+pin = Fäst till programfält
 quit = Avsluta
 quit-all = Avsluta alla
 new-window = Nytt fönster
 run = Kör
-run-on = Kör på {$gpu}
+run-on = Kör på { $gpu }
 run-on-default = (Standard)

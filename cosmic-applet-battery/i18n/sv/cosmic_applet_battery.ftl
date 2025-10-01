@@ -11,4 +11,4 @@ hours = t
 until-empty = till urladdad
 power-settings = Ström- & Batteriinställningar...
 dgpu-running = Diskret GPU är aktiv och kan minska batteritiden
-dgpu-applications = Applikationer använder {$gpu_name} diskret GPU
+dgpu-applications = Program använder { $gpu_name } diskret GPU

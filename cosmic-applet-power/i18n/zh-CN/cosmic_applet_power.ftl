@@ -9,29 +9,28 @@ restart = 重启
 shutdown = 关机
 confirm = 确认
 cancel = 取消
-confirm-button = {
-    $action -> 
+confirm-button =
+    { $action ->
         [restart] { restart }
         [suspend] { suspend }
-        [shutdown] { shutdown }
+        [shutdown] 关机
         [log-out] { log-out }
-        *[other] { confirm }
-}
-confirm-title = 
-    确认要 { $action -> 
+       *[other] { confirm }
+    }
+confirm-title =
+    确认要{ $action ->
         [restart] { restart }
         [suspend] { suspend }
         [shutdown] { shutdown }
-        [log-out] 退出所有应用并 { log-out }
-        *[other] 应用所选操作
-    } 吗？
-confirm-body = 
-    系统将在 { $countdown } 秒后自动 { $action ->
-        [restart] { restart }
-        [suspend] { suspend }
-        [shutdown] { shutdown }
-        [lock-screen] { lock-screen }
-        [log-out] { log-out }
-        *[other] 应用所选操作
-    } 。
-
+        [log-out] 退出所有应用并登出
+       *[other] 应用所选操作
+    }吗？
+confirm-body =
+    系统将在 { $countdown } 秒后自动{ $action ->
+        [restart] 重启
+        [suspend] 挂起
+        [shutdown] 关机
+        [lock-screen] 锁定屏幕
+        [log-out] 登出
+       *[other] 应用所选操作
+    }。
