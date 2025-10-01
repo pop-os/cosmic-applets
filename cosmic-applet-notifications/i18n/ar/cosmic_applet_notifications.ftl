@@ -1,10 +1,10 @@
 hours-ago = { $duration ->
-  [1] قبل ساعة
-  *[other] قبل {$duration} ساعة
+    [one] قبل ساعة
+    *[other] قبل {$duration} ساعة
 }
 minutes-ago = { $duration ->
-  [1] قبل دقيقة
-  *[other] قبل {$duration} دقيقة
+    [one] قبل دقيقة
+    *[other] قبل {$duration} دقيقة
 }
 show-less = عرض أقل
 show-more = عرض المزيد ({$more})
