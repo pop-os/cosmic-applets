@@ -16,6 +16,6 @@ visible-wireless-networks = Redes inalámbricas visibles
 enter-password = Introduce la contraseña o clave de cifrado
 router-wps-button = También puedes conectarte presionando el botón WPS en el rúter
 unable-to-connect = No se puede conectar a la red
-check-wifi-connection = Asegúrate de que la conexión wifi esté activa y de que la contraseña sea correcta
+check-wifi-connection = Verifica que la conexión Wi-Fi esté activa y que la contraseña sea correcta
 reset = Reiniciar
 identity = Identidad

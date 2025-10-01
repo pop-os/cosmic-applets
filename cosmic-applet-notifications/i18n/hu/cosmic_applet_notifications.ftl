@@ -1,10 +1,15 @@
-hours-ago = { $duration } órával ezelőtt
-minutes-ago = { $duration } { $duration ->
-    [one] perce
-    *[other] perccel
-} ezelőtt
+hours-ago =
+    { $duration } { $duration ->
+        [one] órával
+       *[other] órával
+    } ezelőtt
+minutes-ago =
+    { $duration } { $duration ->
+        [one] perce
+       *[other] perccel
+    } ezelőtt
 show-less = Kevesebb megjelenítése
-show-more = {$more} további megjelenítése
+show-more = { $more } további megjelenítése
 clear-group = Csoport törlése
 clear-all = Minden értesítés törlése
 do-not-disturb = Ne zavarjanak
