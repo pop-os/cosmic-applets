@@ -1,0 +1,12 @@
+bluetooth = Bluetooth
+other-devices = Muud Bluetoothi seadmed
+settings = Bluetoothi seadistused...
+connected = Ühendatud
+confirm-pin = Palun kinnita, et järgnev PIN-kood vastab sellele, mis on kuvatud seadmes „{ $deviceName }“
+confirm = Kinnita
+cancel = Katkesta
+unsuccessful = Paardumine ei õnnestunud
+check-device = Palun kontrolli, et { $deviceName } on lülitatud sisse, asub sinu lähedal ja on paardumiseks valmis.
+try-again = Proovi uuesti
+discoverable = Leitav
+pairable = Paardutav
