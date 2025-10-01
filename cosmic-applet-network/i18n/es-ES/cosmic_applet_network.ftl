@@ -17,5 +17,5 @@ visible-wireless-networks = Redes inalámbricas visibles
 enter-password = Introduzca la contraseña o la clave de encriptación
 router-wps-button = También se puede conectar al pulsar el botón "WPS" en el enrutador
 unable-to-connect = No se ha podido conectar al red
-check-wifi-connection = Verifique que el Wi-Fi esté conectado al internet y que la contraseña sea válida.
+check-wifi-connection = Verifique que el Wi-Fi esté conectado al internet y que la contraseña sea válida
 reset = Reiniciar
