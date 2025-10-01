@@ -10,12 +10,12 @@ shutdown = إيقاف التشغيل
 confirm = تأكيد
 cancel = إلغاء
 confirm-button = {
-  $action ->
-       [restart] إعادة التشغيل
-       [suspend] تعليق
-       [shutdown] إيقاف التشغيل
-       [log-out] تسجيل الخروج
-       *[other] تأكيد
+    $action ->
+        [restart] إعادة التشغيل
+        [suspend] تعليق
+        [shutdown] إيقاف التشغيل
+        [log-out] تسجيل الخروج
+        *[other] تأكيد
 }
 confirm-title = {
     $action ->
