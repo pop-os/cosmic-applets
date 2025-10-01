@@ -1,8 +1,8 @@
-hours-ago = { NUMBER($duration) ->
+hours-ago = { $duration ->
   [1] قبل ساعة
   *[other] قبل {$duration} ساعة
 }
-minutes-ago = { NUMBER($duration) ->
+minutes-ago = { $duration ->
   [1] قبل دقيقة
   *[other] قبل {$duration} دقيقة
 }
