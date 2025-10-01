@@ -11,4 +11,4 @@ hours = س
 until-empty = حتى النفاد
 power-settings = إعدادات الطاقة والبطارية...
 dgpu-running = وحدة معالجة الرسومات المنفصلة نشطة وقد تقلل من عمر البطارية
-dgpu-applications = التطبيقات التي تستخدم وحدة {\$gpu\_name} المنفصلة
+dgpu-applications = التطبيقات التي تستخدم وحدة { $gpu_name } المنفصلة
