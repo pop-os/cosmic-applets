@@ -9,6 +9,6 @@ seconds = s
 minutes = m
 hours = t
 until-empty = till urladdad
-power-settings = Ström- & Batteriinställningar...
+power-settings = Ström- & batteriinställningar...
 dgpu-running = Diskret GPU är aktiv och kan minska batteritiden
 dgpu-applications = Program använder { $gpu_name } diskret GPU
