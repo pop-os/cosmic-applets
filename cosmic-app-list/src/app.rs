@@ -54,7 +54,6 @@ use cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::Sta
 use futures::future::pending;
 use iced::{Alignment, Background, Length};
 use itertools::Itertools;
-use rand::{Rng, rng};
 use std::{borrow::Cow, collections::HashMap, path::PathBuf, rc::Rc, str::FromStr, time::Duration};
 use switcheroo_control::Gpu;
 use tokio::time::sleep;
@@ -1084,8 +1083,7 @@ impl cosmic::Application for CosmicAppList {
                         }
                         self.active_list.clear();
                         let subscription_ctr = self.subscription_ctr;
-                        let mut rng = rng();
-                        let rand_d = rng.random_range(0..100);
+                        let rand_d = fastrand::u64(0..100);
                         return iced::Task::perform(
                             async move {
                                 if let Some(millis) = 2u64

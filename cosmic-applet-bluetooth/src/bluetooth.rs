@@ -24,7 +24,6 @@ use cosmic::{
 };
 
 use futures::{FutureExt, stream::FuturesUnordered};
-use rand::Rng;
 use tokio::{
     spawn,
     sync::{
@@ -397,8 +396,7 @@ impl BluerSessionState {
                             ),
                         ))
                         .await;
-                    let mut rng = rand::rng();
-                    let pin_code = rng.random_range(0..999999);
+                    let pin_code = fastrand::u32(0..999999);
                     Ok(format!("{:06}", pin_code))
                 })
             })),
@@ -437,8 +435,7 @@ impl BluerSessionState {
                             ),
                         ))
                         .await;
-                    let mut rng = rand::rng();
-                    let pin_code = rng.random_range(0..999999);
+                    let pin_code = fastrand::u32(0..999999);
                     Ok(pin_code)
                 })
             })),
