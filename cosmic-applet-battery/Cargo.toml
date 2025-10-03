@@ -11,6 +11,7 @@ cosmic-settings-subscriptions = { workspace = true, features = [
     "settings_daemon",
 ] }
 cosmic-time.workspace = true
+cosmic-config.workspace = true
 drm = "0.14.1"
 futures.workspace = true
 i18n-embed-fl.workspace = true
@@ -23,3 +24,4 @@ tracing-subscriber.workspace = true
 tracing.workspace = true
 udev = "0.9"
 zbus.workspace = true
+serde.workspace = true
