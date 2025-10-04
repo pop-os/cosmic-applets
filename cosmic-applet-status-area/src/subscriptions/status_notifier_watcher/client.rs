@@ -33,7 +33,7 @@ pub async fn watch(connection: &zbus::Connection) -> zbus::Result<EventStream> {
 
     let name = connection.unique_name().unwrap().as_str();
     if let Err(err) = watcher.register_status_notifier_host(name).await {
-        eprintln!("Failed to register status notifier host: {}", err);
+        eprintln!("Failed to register status notifier host: {err}");
     }
 
     let connection_clone = connection.clone();

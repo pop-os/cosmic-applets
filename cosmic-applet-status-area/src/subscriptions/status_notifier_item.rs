@@ -76,7 +76,7 @@ impl StatusNotifierItem {
     }
 
     pub fn icon_subscription(&self) -> iced::Subscription<IconUpdate> {
-        fn icon_events<'a>(
+        fn icon_events(
             item_proxy: StatusNotifierItemProxy<'static>,
         ) -> impl futures::Stream<Item = IconUpdate> + 'static {
             async move {
@@ -99,7 +99,7 @@ impl StatusNotifierItem {
             format!("status-notifier-item-icon-{}", &self.name),
             async move {
                 let new_icon_stream = item_proxy.receive_new_icon().await.unwrap();
-                futures::stream::once(async { () })
+                futures::stream::once(async {})
                     .chain(new_icon_stream.map(|_| ()))
                     .flat_map(move |()| icon_events(item_proxy.clone()))
             }

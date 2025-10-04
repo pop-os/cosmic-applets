@@ -78,7 +78,7 @@ pub fn spawn_workspaces(tx: mpsc::Sender<Vec<Workspace>>) -> SyncSender<Workspac
             };
             let loop_handle = event_loop.handle();
             loop_handle
-                .insert_source(workspaces_rx, |e, _, state| match e {
+                .insert_source(workspaces_rx, |e, (), state| match e {
                     Event::Msg(WorkspaceEvent::Activate(handle)) => {
                         handle.activate();
                         state

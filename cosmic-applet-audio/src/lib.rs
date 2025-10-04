@@ -166,14 +166,13 @@ pub enum Message {
 }
 
 impl Audio {
-    fn playback_buttons(&self) -> Option<Element<Message>> {
+    fn playback_buttons(&self) -> Option<Element<'_, Message>> {
         if self.player_status.is_some() && self.config.show_media_controls_in_top_panel {
             let mut elements = Vec::with_capacity(3);
             if self
                 .player_status
                 .as_ref()
-                .map(|s| s.can_go_previous)
-                .unwrap_or_default()
+                .is_some_and(|s| s.can_go_previous)
             {
                 elements.push(
                     self.core
@@ -181,7 +180,7 @@ impl Audio {
                         .icon_button(GO_BACK)
                         .on_press(Message::MprisRequest(MprisRequest::Previous))
                         .into(),
-                )
+                );
             }
             if let Some(play) = self.is_play() {
                 elements.push(
@@ -196,12 +195,7 @@ impl Audio {
                         .into(),
                 );
             }
-            if self
-                .player_status
-                .as_ref()
-                .map(|s| s.can_go_next)
-                .unwrap_or_default()
-            {
+            if self.player_status.as_ref().is_some_and(|s| s.can_go_next) {
                 elements.push(
                     self.core
                         .applet
@@ -224,7 +218,7 @@ impl Audio {
         }
     }
 
-    fn go_previous(&self, icon_size: u16) -> Option<Element<Message>> {
+    fn go_previous(&self, icon_size: u16) -> Option<Element<'_, Message>> {
         self.player_status.as_ref().and_then(|s| {
             if s.can_go_previous {
                 Some(
@@ -240,7 +234,7 @@ impl Audio {
         })
     }
 
-    fn go_next(&self, icon_size: u16) -> Option<Element<Message>> {
+    fn go_next(&self, icon_size: u16) -> Option<Element<'_, Message>> {
         self.player_status.as_ref().and_then(|s| {
             if s.can_go_next {
                 Some(
@@ -277,17 +271,11 @@ impl Audio {
     }
 
     fn current_output_mute(&self) -> bool {
-        self.current_output
-            .as_ref()
-            .map(|o| o.mute)
-            .unwrap_or_default()
+        self.current_output.as_ref().is_some_and(|o| o.mute)
     }
 
     fn current_input_mute(&self) -> bool {
-        self.current_input
-            .as_ref()
-            .map(|o| o.mute)
-            .unwrap_or_default()
+        self.current_input.as_ref().is_some_and(|o| o.mute)
     }
 }
 
@@ -421,7 +409,7 @@ impl cosmic::Application for Audio {
                             connection.send(pulse::Message::SetSourceVolumeByName(
                                 name.clone(),
                                 device.volume,
-                            ))
+                            ));
                         }
                     }
                 }
@@ -434,7 +422,7 @@ impl cosmic::Application for Audio {
                     if let Some(device) = &self.current_output {
                         if let Some(name) = &device.name {
                             connection
-                                .send(pulse::Message::SetSinkMuteByName(name.clone(), device.mute))
+                                .send(pulse::Message::SetSinkMuteByName(name.clone(), device.mute));
                         }
                     }
                 }
@@ -625,7 +613,7 @@ impl cosmic::Application for Audio {
                     });
                 } else {
                     tracing::error!("Wayland tx is None");
-                };
+                }
             }
             Message::Token(u) => match u {
                 TokenUpdate::Init(tx) => {
@@ -688,7 +676,7 @@ impl cosmic::Application for Audio {
                     cosmic::app::Action::Surface(a),
                 ));
             }
-        };
+        }
 
         Task::none()
     }
@@ -711,7 +699,7 @@ impl cosmic::Application for Audio {
         ])
     }
 
-    fn view(&self) -> Element<Message> {
+    fn view(&self) -> Element<'_, Message> {
         let btn = self
             .core
             .applet
@@ -765,7 +753,7 @@ impl cosmic::Application for Audio {
             .into()
     }
 
-    fn view_window(&self, _id: window::Id) -> Element<Message> {
+    fn view_window(&self, _id: window::Id) -> Element<'_, Message> {
         let Spacing {
             space_xxs, space_s, ..
         } = theme::active().cosmic().spacing;

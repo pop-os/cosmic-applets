@@ -88,7 +88,7 @@ pub fn spawn_workspaces(tx: mpsc::Sender<TilingState>) -> SyncSender<AppRequest>
             };
             let loop_handle = event_loop.handle();
             loop_handle
-                .insert_source(workspaces_rx, |e, _, state| match e {
+                .insert_source(workspaces_rx, |e, (), state| match e {
                     Event::Msg(AppRequest::TilingState(autotile)) => {
                         if let Some(w) = state.workspace_state.workspace_groups().find_map(|g| {
                             if let Some(o) = state.expected_output.as_ref() {
@@ -183,9 +183,10 @@ impl State {
                     .filter_map(|handle| self.workspace_state.workspace_info(handle))
                     .find_map(|w| {
                         if w.state.contains(ext_workspace_handle_v1::State::Active) {
-                            w.tiling.and_then(|e| match e {
-                                WEnum::Value(v) => Some(v),
-                                _ => {
+                            w.tiling.and_then(|e| {
+                                if let WEnum::Value(v) = e {
+                                    Some(v)
+                                } else {
                                     error!("No tiling state for the workspace");
                                     None
                                 }
@@ -273,7 +274,7 @@ impl ToplevelInfoHandler for State {
     ) {
         let Some(w) = self
             .toplevel_info_state
-            .info(&toplevel)
+            .info(toplevel)
             .map(|t| t.workspace.clone())
         else {
             return;
@@ -289,7 +290,7 @@ impl ToplevelInfoHandler for State {
     ) {
         let Some(w) = self
             .toplevel_info_state
-            .info(&toplevel)
+            .info(toplevel)
             .map(|t| t.workspace.clone())
         else {
             return;

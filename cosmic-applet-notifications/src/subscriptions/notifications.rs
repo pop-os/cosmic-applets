@@ -66,7 +66,7 @@ pub fn notifications(proxy: NotificationsAppletProxy<'static>) -> Subscription<O
                             std::process::exit(0);
                         } else {
                             tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-                        };
+                        }
                         continue;
                     }
                 }
@@ -101,10 +101,10 @@ pub fn notifications(proxy: NotificationsAppletProxy<'static>) -> Subscription<O
                             }
                             v = next_input => {
                                 if let Some(Input::Activated(id, action)) = v {
-                                    if let Err(err) = proxy.invoke_action(id, action.clone()).await {
+                                    if proxy.invoke_action(id, action.clone()).await.is_err() {
                                         tracing::error!("Failed to invoke action {id} {action}");
                                     } else {
-                                        tracing::error!("Invoked {action} for {id}")
+                                        tracing::error!("Invoked {action} for {id}");
                                     }
                                 } else {
                                     tracing::error!("Channel closed, ending notifications subscription");

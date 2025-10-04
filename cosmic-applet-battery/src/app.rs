@@ -261,7 +261,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                 }
                 return cosmic::iced::Task::perform(
                     tokio::time::sleep(Duration::from_millis(200)),
-                    |_| cosmic::Action::App(Message::SetKbdBrightnessDebounced),
+                    |()| cosmic::Action::App(Message::SetKbdBrightnessDebounced),
                 );
             }
             Message::SetScreenBrightnessDebounced => {
@@ -276,7 +276,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                 }
                 return cosmic::iced::Task::perform(
                     tokio::time::sleep(Duration::from_millis(200)),
-                    |_| cosmic::Action::App(Message::SetScreenBrightnessDebounced),
+                    |()| cosmic::Action::App(Message::SetScreenBrightnessDebounced),
                 );
             }
             Message::ReleaseKbdBrightness => {
@@ -410,7 +410,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                     });
                 } else {
                     tracing::error!("Wayland tx is None");
-                };
+                }
             }
             Message::Token(u) => match u {
                 TokenUpdate::Init(tx) => {
@@ -433,17 +433,13 @@ impl cosmic::Application for CosmicBatteryApplet {
                 self.update_trigger = Some(tx);
             }
             Message::GpuOn(path, name, app_list) => {
-                let toggled = self
-                    .gpus
-                    .get(&path)
-                    .map(|data| data.toggled)
-                    .unwrap_or_default();
+                let toggled = self.gpus.get(&path).is_some_and(|data| data.toggled);
                 self.gpus.insert(
                     path,
                     GPUData {
                         name,
-                        app_list,
                         toggled,
+                        app_list,
                     },
                 );
             }
@@ -483,7 +479,7 @@ impl cosmic::Application for CosmicBatteryApplet {
         Task::none()
     }
 
-    fn view(&self) -> Element<Message> {
+    fn view(&self) -> Element<'_, Message> {
         let btn = self
             .core
             .applet
@@ -491,7 +487,9 @@ impl cosmic::Application for CosmicBatteryApplet {
             .on_press_down(Message::TogglePopup)
             .into();
 
-        let content = if !self.gpus.is_empty() {
+        let content = if self.gpus.is_empty() {
+            btn
+        } else {
             let dot = container(vertical_space().height(Length::Fixed(0.0)))
                 .padding(2.0)
                 .class(cosmic::style::Container::Custom(Box::new(|theme| {
@@ -517,14 +515,12 @@ impl cosmic::Application for CosmicBatteryApplet {
                     .align_y(Alignment::Center)
                     .into(),
             }
-        } else {
-            btn
         };
 
         self.core.applet.autosize_window(content).into()
     }
 
-    fn view_window(&self, _id: window::Id) -> Element<Message> {
+    fn view_window(&self, _id: window::Id) -> Element<'_, Message> {
         let Spacing {
             space_xxs, space_s, ..
         } = theme::active().cosmic().spacing;
@@ -740,7 +736,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                                     width: 0.0,
                                     color: Color::TRANSPARENT,
                                 },
-                                shadow: Default::default(),
+                                shadow: Shadow::default(),
                                 icon_color: Some(Color::TRANSPARENT),
                             }
                         },))),

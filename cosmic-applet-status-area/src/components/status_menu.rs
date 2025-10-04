@@ -56,7 +56,7 @@ impl State {
                     Ok(layout) => {
                         self.layout = Some(layout);
                     }
-                    Err(err) => eprintln!("Error getting layout from icon: {}", err),
+                    Err(err) => eprintln!("Error getting layout from icon: {err}"),
                 }
                 iced::Task::none()
             }
@@ -109,7 +109,7 @@ impl State {
                     let _ = menu_proxy.event(id, "clicked", &0.into(), 0).await;
                 });
                 if is_submenu {
-                    self.expanded = if self.expanded != Some(id) {
+                    self.expanded = if self.expanded.is_none() {
                         Some(id)
                     } else {
                         None
@@ -134,7 +134,7 @@ impl State {
         self.icon_pixmap.as_ref()
     }
 
-    pub fn popup_view(&self) -> cosmic::Element<Msg> {
+    pub fn popup_view(&self) -> cosmic::Element<'_, Msg> {
         if let Some(layout) = self.layout.as_ref() {
             layout_view(layout, self.expanded)
         } else {
@@ -165,7 +165,7 @@ impl State {
     }
 }
 
-fn layout_view(layout: &Layout, expanded: Option<i32>) -> cosmic::Element<Msg> {
+fn layout_view(layout: &Layout, expanded: Option<i32>) -> cosmic::Element<'_, Msg> {
     iced::widget::column(layout.children().iter().filter_map(|i| {
         if !i.visible() {
             None

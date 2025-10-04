@@ -74,9 +74,8 @@ async fn start_listening(
 ) -> State {
     match state {
         State::Ready => {
-            let conn = match Connection::system().await {
-                Ok(c) => c,
-                Err(_) => return State::Finished,
+            let Ok(conn) = Connection::system().await else {
+                return State::Finished;
             };
 
             let (tx, rx) = unbounded();
@@ -96,9 +95,8 @@ async fn start_listening(
             }
         }
         State::Waiting(conn, mut rx) => {
-            let network_manager = match NetworkManager::new(&conn).await {
-                Ok(n) => n,
-                Err(_) => return State::Finished,
+            let Ok(network_manager) = NetworkManager::new(&conn).await else {
+                return State::Finished;
             };
 
             match rx.next().await {
@@ -114,7 +112,7 @@ async fn start_listening(
                         }
                         let mut is_there_device = false;
                         for device in c.devices().await.unwrap_or_default() {
-                            if HwAddress::from_string(device.hw_address().await.as_ref().unwrap())
+                            if HwAddress::from_str(device.hw_address().await.as_ref().unwrap())
                                 == Some(hw_address)
                             {
                                 is_there_device = true;
@@ -288,7 +286,7 @@ async fn start_listening(
                 _ => {
                     return State::Finished;
                 }
-            };
+            }
 
             State::Waiting(conn, rx)
         }
@@ -494,7 +492,7 @@ impl NetworkManagerState {
                 ap.network_type,
                 ap.working,
                 ap.state
-            )
+            );
         }
         self_.active_conns = active_conns;
         self_.known_access_points = known_access_points;
@@ -510,7 +508,7 @@ impl NetworkManagerState {
         self.wireless_access_points = Vec::new();
     }
 
-    async fn connect_wifi<'a>(
+    async fn connect_wifi(
         &self,
         conn: &Connection,
         ssid: &str,
@@ -587,7 +585,7 @@ impl NetworkManagerState {
                 .hw_address()
                 .await
                 .ok()
-                .and_then(|device_address| HwAddress::from_string(&device_address))
+                .and_then(|device_address| HwAddress::from_str(&device_address))
                 .unwrap_or_default();
             if device_hw_address != hw_address {
                 continue;
@@ -631,8 +629,8 @@ impl NetworkManagerState {
                 let (_, active_conn) = nm
                     .add_and_activate_connection(conn_settings, device.inner().path(), &ap.path)
                     .await?;
-                let dummy = ActiveConnectionProxy::new(&conn, active_conn).await?;
-                let active = ActiveConnectionProxy::builder(&conn)
+                let dummy = ActiveConnectionProxy::new(conn, active_conn).await?;
+                let active = ActiveConnectionProxy::builder(conn)
                     .destination(dummy.inner().destination().to_owned())
                     .unwrap()
                     .interface(dummy.inner().interface().to_owned())
@@ -645,7 +643,7 @@ impl NetworkManagerState {
                 ActiveConnection::from(active)
             };
             let mut changes = active_conn.receive_state_changed().await;
-            _ = tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+            () = tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
             let mut count = 5;
             loop {
                 let state = active_conn.state().await;
@@ -654,15 +652,14 @@ impl NetworkManagerState {
                 } else if let Ok(enums::ActiveConnectionState::Deactivated) = state {
                     anyhow::bail!("Failed to activate connection");
                 }
-                match tokio::time::timeout(Duration::from_secs(20), changes.next()).await {
-                    Ok(Some(s)) => {
-                        let state = s.get().await.unwrap_or_default().into();
-                        if matches!(state, enums::ActiveConnectionState::Activated) {
-                            return Ok(());
-                        }
+                if let Ok(Some(s)) =
+                    tokio::time::timeout(Duration::from_secs(20), changes.next()).await
+                {
+                    let state = s.get().await.unwrap_or_default().into();
+                    if matches!(state, enums::ActiveConnectionState::Activated) {
+                        return Ok(());
                     }
-                    _ => {}
-                };
+                }
 
                 count -= 1;
                 if count <= 0 {

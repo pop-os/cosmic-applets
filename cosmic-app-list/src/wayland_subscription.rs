@@ -91,16 +91,13 @@ async fn start_listening(
                 }
                 guard.as_mut().unwrap()
             };
-            match rx.next().await {
-                Some(u) => {
-                    _ = output.send(u).await;
-                    State::Waiting
-                }
-                None => {
-                    _ = output.send(WaylandUpdate::Finished).await;
-                    tracing::error!("Wayland handler thread died");
-                    State::Finished
-                }
+            if let Some(u) = rx.next().await {
+                _ = output.send(u).await;
+                State::Waiting
+            } else {
+                _ = output.send(WaylandUpdate::Finished).await;
+                tracing::error!("Wayland handler thread died");
+                State::Finished
             }
         }
         State::Finished => iced::futures::future::pending().await,
