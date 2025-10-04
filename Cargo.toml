@@ -64,7 +64,7 @@ cosmic-config = { git = "https://github.com/pop-os/libcosmic" }
 serde = { version = "1.0.219", features = ["derive"] }
 
 [profile.release]
-opt-level = "s"
+opt-level = 3
 panic = "abort"
 lto = "thin"
 
