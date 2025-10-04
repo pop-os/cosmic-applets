@@ -56,7 +56,7 @@ struct Notifications {
 
 impl Notifications {
     fn update_cards(&mut self, id: id::Cards) {
-        if let Some((id, _, card_value, ..)) = self.cards.iter_mut().find(|c| c.0 == id) {
+        if let Some((id, _, card_value, ..)) = self.cards.iter().find(|c| c.0 == id) {
             let chain = if *card_value {
                 chain::Cards::on(id.clone(), 1.)
             } else {

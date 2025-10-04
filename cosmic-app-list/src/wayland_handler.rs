@@ -87,10 +87,7 @@ impl OutputHandler for AppData {
         if let Some(info) = self.output_state.info(&output) {
             let _ = self
                 .tx
-                .unbounded_send(WaylandUpdate::Output(OutputUpdate::Add(
-                    output.clone(),
-                    info.clone(),
-                )));
+                .unbounded_send(WaylandUpdate::Output(OutputUpdate::Add(output, info)));
         }
     }
 
@@ -103,10 +100,7 @@ impl OutputHandler for AppData {
         if let Some(info) = self.output_state.info(&output) {
             let _ = self
                 .tx
-                .unbounded_send(WaylandUpdate::Output(OutputUpdate::Update(
-                    output.clone(),
-                    info.clone(),
-                )));
+                .unbounded_send(WaylandUpdate::Output(OutputUpdate::Update(output, info)));
         }
     }
 
@@ -118,7 +112,7 @@ impl OutputHandler for AppData {
     ) {
         let _ = self
             .tx
-            .unbounded_send(WaylandUpdate::Output(OutputUpdate::Remove(output.clone())));
+            .unbounded_send(WaylandUpdate::Output(OutputUpdate::Remove(output)));
     }
 }
 
@@ -136,12 +130,12 @@ impl WorkspaceHandler for AppData {
                     .iter()
                     .filter_map(|handle| self.workspace_state.workspace_info(handle))
                     .find(|w| w.state.contains(WorkspaceUpdateState::Active))
+                    .map(|workspace| workspace.handle.clone())
             })
-            .map(|workspace| workspace.handle.clone())
             .collect::<Vec<_>>();
         let _ = self
             .tx
-            .unbounded_send(WaylandUpdate::Workspace(active_workspaces.clone()));
+            .unbounded_send(WaylandUpdate::Workspace(active_workspaces));
     }
 }
 
@@ -699,7 +693,6 @@ pub(crate) fn wayland_handler(
         exit: false,
         tx,
         conn,
-        queue_handle: qh.clone(),
         output_state: OutputState::new(&globals, &qh),
         workspace_state: WorkspaceState::new(&registry_state, &qh),
         toplevel_info_state: ToplevelInfoState::new(&registry_state, &qh),
@@ -709,6 +702,7 @@ pub(crate) fn wayland_handler(
         seat_state: SeatState::new(&globals, &qh),
         shm_state: Shm::bind(&globals, &qh).unwrap(),
         activation_state: ActivationState::bind::<AppData>(&globals, &qh).ok(),
+        queue_handle: qh,
     };
 
     loop {

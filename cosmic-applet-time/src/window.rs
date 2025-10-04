@@ -125,12 +125,11 @@ impl Window {
             first_day_of_week,
         );
 
-        let mut day_iter = first_day.iter_days();
+        let day_iter = first_day.iter_days();
         let prefs = DateTimeFormatterPreferences::from(self.locale.clone());
         let weekday = DateTimeFormatter::try_new(prefs, fieldsets::E::short()).unwrap();
 
-        for _ in 0..7 {
-            let date = day_iter.next().unwrap();
+        for date in day_iter.take(7) {
             let datetime = self.create_datetime(&date);
             calendar = calendar.push(
                 text::caption(weekday.format(&datetime).to_string())

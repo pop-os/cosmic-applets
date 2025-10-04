@@ -173,7 +173,7 @@ impl cosmic::Application for Minimize {
                         // Temporarily take ownership to appease the borrow checker.
                         let mut apps = std::mem::take(&mut self.apps);
 
-                        if let Some(pos) = apps.iter_mut().position(|a| {
+                        if let Some(pos) = apps.iter().position(|a| {
                             a.toplevel_info.foreign_toplevel == toplevel_info.foreign_toplevel
                         }) {
                             if apps[pos].toplevel_info.app_id != toplevel_info.app_id {
