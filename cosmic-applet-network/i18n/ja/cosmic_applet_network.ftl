@@ -18,3 +18,4 @@ router-wps-button = 「WPS」ボタンを押すことでも接続できます
 unable-to-connect = ネットワークに接続できません
 check-wifi-connection = Wi-Fiがインターネットに接続しているか、パスワードが正しいかと確認してください
 identity = ID
+reset = リセット
