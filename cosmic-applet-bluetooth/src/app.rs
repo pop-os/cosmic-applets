@@ -370,7 +370,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
         }) {
             let mut row = row![
                 icon::from_name(dev.icon).size(16).symbolic(true),
-                text::body(dev.name.clone())
+                text::body(dev.name.as_str())
                     .align_x(Alignment::Start)
                     .align_y(Alignment::Center)
                     .width(Length::Fill)

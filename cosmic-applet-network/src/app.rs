@@ -370,7 +370,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                     } = &req
                     {
                         if let Some(NewConnectionState::Waiting(access_point)) =
-                            self.new_connection.clone()
+                            self.new_connection.as_ref()
                         {
                             if !success
                                 && ssid == &access_point.ssid
@@ -384,7 +384,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                                     }
                                 } else if let Some(NewConnectionState::EnterPassword {
                                     access_point, ..
-                                }) = self.new_connection.clone()
+                                }) = self.new_connection.as_ref()
                                 {
                                     if success && ssid == &access_point.ssid && *hw_address == access_point.hw_address {
                                         self.new_connection = None;

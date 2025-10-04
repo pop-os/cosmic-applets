@@ -499,11 +499,7 @@ impl cosmic::Application for Audio {
                             self.inputs = sources
                                 .into_iter()
                                 .filter(|source| {
-                                    !source
-                                        .name
-                                        .as_ref()
-                                        .unwrap_or(&String::from("Generic"))
-                                        .contains("monitor")
+                                    !source.name.as_ref().is_some_and(|n| n.contains("monitor"))
                                 })
                                 .collect()
                         }
@@ -830,15 +826,15 @@ impl cosmic::Application for Audio {
                     self.is_open == IsOpen::Output,
                     fl!("output"),
                     match &self.current_output {
-                        Some(output) => pretty_name(output.description.clone()),
-                        None => String::from("No device selected"),
-                    },
+                        Some(output) => output.description.as_deref().unwrap_or("Generic"),
+                        None => "No device selected",
+                    }
+                    .to_string(),
                     self.outputs
-                        .clone()
-                        .into_iter()
+                        .iter()
                         .map(|output| (
                             output.name.clone().unwrap_or_default(),
-                            pretty_name(output.description)
+                            output.description.clone().unwrap_or("Generic".into())
                         ))
                         .collect(),
                     Message::OutputToggle,
@@ -848,15 +844,14 @@ impl cosmic::Application for Audio {
                     self.is_open == IsOpen::Input,
                     fl!("input"),
                     match &self.current_input {
-                        Some(input) => pretty_name(input.description.clone()),
+                        Some(input) => input.description.clone().unwrap_or("Generic".into()),
                         None => fl!("no-device"),
                     },
                     self.inputs
-                        .clone()
-                        .into_iter()
+                        .iter()
                         .map(|input| (
                             input.name.clone().unwrap_or_default(),
-                            pretty_name(input.description)
+                            input.description.clone().unwrap_or("Generic".into())
                         ))
                         .collect(),
                     Message::InputToggle,
@@ -1018,13 +1013,6 @@ fn revealer_head(
         text::caption(selected),
     ])
     .on_press(toggle)
-}
-
-fn pretty_name(name: Option<String>) -> String {
-    match name {
-        Some(n) => n,
-        None => String::from("Generic"),
-    }
 }
 
 #[derive(Default)]

@@ -171,7 +171,7 @@ impl State {
         filter_firefox_players(&mut players);
 
         // pre-sort by path so that the same player is always selected
-        players.sort_by(|a, b| a.name().cmp(b.name()));
+        players.sort_unstable_by(|a, b| a.name().cmp(b.name()));
 
         let mut state = Self {
             conn,
@@ -196,7 +196,7 @@ impl State {
         };
         self.players.push(player);
         filter_firefox_players(&mut self.players);
-        self.players.sort_by(|a, b| a.name().cmp(b.name()));
+        self.players.sort_unstable_by(|a, b| a.name().cmp(b.name()));
         self.update_any_player_state_stream().await;
     }
 

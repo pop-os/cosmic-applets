@@ -475,12 +475,12 @@ pub(crate) fn wayland_handler(
         exit: false,
         tx,
         conn,
-        queue_handle: qh.clone(),
         shm_state,
         screencopy_state,
         seat_state: SeatState::new(&globals, &qh),
         toplevel_info_state: ToplevelInfoState::new(&registry_state, &qh),
         toplevel_manager_state: ToplevelManagerState::new(&registry_state, &qh),
+        queue_handle: qh,
         registry_state,
     };
 

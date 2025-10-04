@@ -590,7 +590,7 @@ fn find_desktop_entries<'a>(
     app_ids.iter().map(|fav| {
         let unicase_fav = fde::unicase::Ascii::new(fav.as_str());
         fde::find_app_by_id(desktop_entries, unicase_fav).map_or_else(
-            || fde::DesktopEntry::from_appid(fav.clone()).clone(),
+            || fde::DesktopEntry::from_appid(fav.clone()),
             ToOwned::to_owned,
         )
     })
@@ -612,7 +612,7 @@ impl CosmicAppList {
             .map(|(pinned_ctr, (e, original_id))| DockItem {
                 id: pinned_ctr as u32,
                 toplevels: Vec::new(),
-                desktop_info: e.clone(),
+                desktop_info: e,
                 original_app_id: original_id.clone(),
             })
             .collect();
@@ -1490,7 +1490,10 @@ impl cosmic::Application for CosmicAppList {
         } else {
             0
         };
-        let favorites: Vec<_> = (&mut self.pinned_list.iter().rev())
+        let favorites: Vec<_> = self
+            .pinned_list
+            .iter()
+            .rev()
             .filter(|f| {
                 if favorite_to_remove > 0 && f.toplevels.is_empty() {
                     favorite_to_remove -= 1;
@@ -1812,11 +1815,7 @@ impl cosmic::Application for CosmicAppList {
                                     Message::Exec(exec.to_string(), None, desktop_info.terminal()),
                                 ));
                         } else if let Some(gpus) = self.gpus.as_ref() {
-                            let default_idx = if desktop_info.prefers_non_default_gpu() {
-                                gpus.iter().position(|gpu| !gpu.default).unwrap_or(0)
-                            } else {
-                                gpus.iter().position(|gpu| gpu.default).unwrap_or(0)
-                            };
+                            let default_idx = preferred_gpu_idx(desktop_info, gpus.iter());
                             for (i, gpu) in gpus.iter().enumerate() {
                                 content = content.push(
                                     menu_button(text::body(format!(
@@ -2101,7 +2100,10 @@ impl cosmic::Application for CosmicAppList {
                 0
             };
             let mut favorites_extra = Vec::with_capacity(favorite_to_remove);
-            let mut favorites: Vec<_> = (&mut self.pinned_list.iter().rev())
+            let mut favorites: Vec<_> = self
+                .pinned_list
+                .iter()
+                .rev()
                 .filter(|f| {
                     if favorite_to_remove > 0 && f.toplevels.is_empty() {
                         favorite_to_remove -= 1;
@@ -2299,9 +2301,9 @@ impl CosmicAppList {
         if self.active_workspaces.is_empty() {
             return Vec::new();
         }
-        let current_output = self.core.applet.output_name.clone();
+        let current_output = self.core.applet.output_name.as_ref();
         let mut focused_toplevels: Vec<ExtForeignToplevelHandleV1> = Vec::new();
-        let active_workspaces = self.active_workspaces.clone();
+        let active_workspaces = &self.active_workspaces;
         for toplevel_list in self.active_list.iter().chain(self.pinned_list.iter()) {
             for (t_info, _) in &toplevel_list.toplevels {
                 if t_info.state.contains(&State::Activated)
@@ -2378,19 +2380,21 @@ impl CosmicAppList {
 fn launch_on_preferred_gpu(desktop_info: &DesktopEntry, gpus: Option<&[Gpu]>) -> Option<Message> {
     let exec = desktop_info.exec()?;
 
-    let gpu_idx = gpus.map(|gpus| {
-        if desktop_info.prefers_non_default_gpu() {
-            gpus.iter().position(|gpu| !gpu.default).unwrap_or(0)
-        } else {
-            gpus.iter().position(|gpu| gpu.default).unwrap_or(0)
-        }
-    });
+    let gpu_idx = gpus.map(|gpus| preferred_gpu_idx(desktop_info, gpus.iter()));
 
     Some(Message::Exec(
         exec.to_string(),
         gpu_idx,
         desktop_info.terminal(),
     ))
+}
+
+fn preferred_gpu_idx<'a, I>(desktop_info: &DesktopEntry, mut gpus: I) -> usize
+where
+    I: Iterator<Item = &'a Gpu>,
+{
+    gpus.position(|gpu| gpu.default ^ desktop_info.prefers_non_default_gpu())
+        .unwrap_or(0)
 }
 
 #[derive(Debug, Default, Clone)]
@@ -2428,8 +2432,6 @@ impl AsMimeTypes for DndPathBuf {
     }
 
     fn as_bytes(&self, _mime_type: &str) -> Option<std::borrow::Cow<'static, [u8]>> {
-        Some(Cow::Owned(
-            self.0.clone().to_str()?.to_string().into_bytes(),
-        ))
+        Some(Cow::Owned(self.0.to_str()?.as_bytes().to_vec()))
     }
 }
