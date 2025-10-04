@@ -101,6 +101,7 @@ struct CosmicNetworkApplet {
     // UI state
     nm_sender: Option<UnboundedSender<NetworkManagerRequest>>,
     show_visible_networks: bool,
+    show_available_vpns: bool,
     new_connection: Option<NewConnectionState>,
     conn: Option<Connection>,
     timeline: Timeline,
@@ -120,6 +121,82 @@ fn wifi_icon(strength: u8) -> &'static str {
     } else {
         "network-wireless-signal-excellent-symbolic"
     }
+}
+
+fn vpn_section<'a>(
+    nm_state: &'a NetworkManagerState,
+    show_available_vpns: bool,
+    space_xxs: u16,
+    space_s: u16,
+) -> Column<'a, Message> {
+    let mut vpn_col = column![];
+
+    if !nm_state.available_vpns.is_empty() {
+        let dropdown_icon = if show_available_vpns {
+            "go-up-symbolic"
+        } else {
+            "go-down-symbolic"
+        };
+
+        vpn_col = vpn_col.push(
+            padded_control(divider::horizontal::default()).padding([space_xxs, space_s])
+        );
+
+        let vpn_toggle_btn = menu_button(row![
+            text::body(fl!("vpn-connections"))
+                .width(Length::Fill)
+                .height(Length::Fixed(24.0))
+                .align_y(Alignment::Center),
+            container(icon::from_name(dropdown_icon).size(16).symbolic(true))
+                .center(Length::Fixed(24.0))
+        ])
+        .on_press(Message::ToggleVpnList);
+
+        vpn_col = vpn_col.push(vpn_toggle_btn);
+
+        if show_available_vpns {
+            for vpn in &nm_state.available_vpns {
+                // Check if this VPN is currently active
+                let is_active = nm_state.active_conns.iter().any(|conn| {
+                    matches!(conn, ActiveConnectionInfo::Vpn { name, .. } if name == &vpn.name)
+                });
+
+                let mut btn_content = vec![
+                    icon::from_name("network-vpn-symbolic")
+                        .size(24)
+                        .symbolic(true)
+                        .into(),
+                    text::body(&vpn.name)
+                        .width(Length::Fill)
+                        .into(),
+                ];
+
+                if is_active {
+                    btn_content.push(
+                        text::body(fl!("connected"))
+                            .align_x(Alignment::End)
+                            .into(),
+                    );
+                }
+
+                let mut btn = menu_button(
+                    Row::with_children(btn_content)
+                        .align_y(Alignment::Center)
+                        .spacing(8),
+                );
+
+                btn = if is_active {
+                    btn.on_press(Message::DeactivateVpn(vpn.name.clone()))
+                } else {
+                    btn.on_press(Message::ActivateVpn(vpn.uuid.clone()))
+                };
+
+                vpn_col = vpn_col.push(btn);
+            }
+        }
+    }
+
+    vpn_col
 }
 
 impl CosmicNetworkApplet {
@@ -246,7 +323,10 @@ pub(crate) enum Message {
     ResetFailedKnownSsid(String, HwAddress),
     OpenHwDevice(Option<HwAddress>),
     TogglePasswordVisibility,
-    Surface(surface::Action), // Errored(String),
+    Surface(surface::Action),
+    ActivateVpn(String),      // UUID of VPN to activate
+    DeactivateVpn(String),    // Name of VPN to deactivate
+    ToggleVpnList,            // Show/hide available VPNs
 }
 
 impl cosmic::Application for CosmicNetworkApplet {
@@ -611,6 +691,19 @@ impl cosmic::Application for CosmicNetworkApplet {
                 {
                     *identity = new_identity;
                 }
+            }
+            Message::ActivateVpn(uuid) => {
+                if let Some(tx) = self.nm_sender.as_ref() {
+                    let _ = tx.unbounded_send(NetworkManagerRequest::ActivateVpn(uuid));
+                }
+            }
+            Message::DeactivateVpn(name) => {
+                if let Some(tx) = self.nm_sender.as_ref() {
+                    let _ = tx.unbounded_send(NetworkManagerRequest::DeactivateVpn(name));
+                }
+            }
+            Message::ToggleVpnList => {
+                self.show_available_vpns = !self.show_available_vpns;
             }
         }
         Task::none()
@@ -1003,6 +1096,7 @@ impl cosmic::Application for CosmicNetworkApplet {
         content = content.push(available_connections_btn);
 
         if !self.show_visible_networks {
+            content = content.push(vpn_section(&self.nm_state, self.show_available_vpns, space_xxs, space_s));
             return self.view_window_return(content);
         }
 
@@ -1146,6 +1240,9 @@ impl cosmic::Application for CosmicNetworkApplet {
             content = content
                 .push(scrollable(Column::with_children(list_col)).height(Length::Fixed(300.0)));
         }
+
+        // Add VPN connections section after wireless networks when they are expanded
+        content = content.push(vpn_section(&self.nm_state, self.show_available_vpns, space_xxs, space_s));
 
         self.view_window_return(content)
     }
