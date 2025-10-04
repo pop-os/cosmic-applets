@@ -14,6 +14,7 @@ connect = Connect
 cancel = Cancel
 settings = Network settings...
 visible-wireless-networks = Visible wireless networks
+vpn-connections = VPN connections
 enter-password = Enter the password or encryption key
 router-wps-button = You can also connect by pressing the "WPS" button on the router
 unable-to-connect = Unable to connect to network
