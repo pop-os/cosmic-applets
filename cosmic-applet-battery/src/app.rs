@@ -568,11 +568,11 @@ impl cosmic::Application for CosmicBatteryApplet {
                 .into();
 
             if is_horizontal {
-                Row::with_children(vec![btn, dot])
+                Row::from_vec(vec![btn, dot])
                     .align_y(Alignment::Center)
                     .into()
             } else {
-                Column::with_children(vec![btn, dot])
+                Column::from_vec(vec![btn, dot])
                     .align_x(Alignment::Center)
                     .into()
             }
