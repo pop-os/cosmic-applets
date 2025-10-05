@@ -17,4 +17,4 @@ arrow-keys = pilar
 tiled = Kaklad
 floating = Flytande
 autotile-behavior = Kakla fönster på arbetsytor
-new-workspace = Nytt beteende för arbetsyta
+new-workspace = Beteende för ny arbetsyta

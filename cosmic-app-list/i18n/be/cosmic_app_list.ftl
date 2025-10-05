@@ -4,5 +4,5 @@ quit = Выйсці
 quit-all = Выйсці з усіх
 new-window = Новае акно
 run = Запусціць
-run-on = Запусціць на {$gpu}
-run-on-default = (Па змаўчанні)
+run-on = Запусціць на { $gpu }
+run-on-default = (Прадвызначана)
