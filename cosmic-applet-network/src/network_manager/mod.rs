@@ -295,7 +295,7 @@ async fn start_listening(
                             tracing::error!("Failed to connect to NetworkManager: {:?}", e);
                             _ = output
                                 .send(NetworkManagerEvent::RequestResponse {
-                                    req: NetworkManagerRequest::ActivateVpn(uuid.clone()),
+                                    req: NetworkManagerRequest::ActivateVpn(uuid),
                                     success: false,
                                     state: NetworkManagerState::new(&conn).await.unwrap_or_default(),
                                 })
@@ -360,7 +360,7 @@ async fn start_listening(
                             tracing::error!("Failed to connect to NetworkManager: {:?}", e);
                             _ = output
                                 .send(NetworkManagerEvent::RequestResponse {
-                                    req: NetworkManagerRequest::DeactivateVpn(name.clone()),
+                                    req: NetworkManagerRequest::DeactivateVpn(name),
                                     success: false,
                                     state: NetworkManagerState::new(&conn).await.unwrap_or_default(),
                                 })
