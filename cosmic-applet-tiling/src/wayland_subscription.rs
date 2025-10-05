@@ -80,6 +80,6 @@ impl WorkspacesWatcher {
     pub fn new() -> anyhow::Result<Self> {
         let (tx, rx) = mpsc::channel(20);
         let tx = wayland::spawn_workspaces(tx);
-        Ok(Self { tx, rx })
+        Ok(Self { rx, tx })
     }
 }

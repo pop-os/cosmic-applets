@@ -104,7 +104,7 @@ struct State {
 impl Default for State {
     fn default() -> Self {
         Self {
-            drag_initiated: Default::default(),
+            drag_initiated: Option::default(),
             is_out_of_bounds: true,
         }
     }
@@ -129,8 +129,8 @@ impl<'a, Message, Theme, Renderer> MouseArea<'a, Message, Theme, Renderer> {
     }
 }
 
-impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
-    for MouseArea<'a, Message, Theme, Renderer>
+impl<Message, Theme, Renderer> Widget<Message, Theme, Renderer>
+    for MouseArea<'_, Message, Theme, Renderer>
 where
     Renderer: renderer::Renderer,
     Message: Clone,
@@ -267,7 +267,7 @@ where
         renderer: &Renderer,
         dnd_rectangles: &mut cosmic::iced_core::clipboard::DndDestinationRectangles,
     ) {
-        if let Some(state) = state.children.iter().next() {
+        if let Some(state) = state.children.first() {
             self.content
                 .as_widget()
                 .drag_destinations(state, layout, renderer, dnd_rectangles);

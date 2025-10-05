@@ -1,0 +1,14 @@
+battery = Aku
+until-empty = kuni tühjenemiseni
+battery-desc = Vähendatud elektritarve ja jõudlus.
+balanced = Tasakaalustatud
+balanced-desc = Standardne elektritarve ja jõudlus.
+performance = Suure jõudlusega
+performance-desc = Suur elektritarve ja jõudlus.
+max-charge = Määrates täislaetuse ülempiiriks 80%, võid suurendada aku eluiga
+seconds = sek
+minutes = min
+hours = t
+power-settings = Toite- ja akuseadistused...
+dgpu-running = Eraldi graafikaprotsessor on aktiivne ja võib vähendada aku eluiga
+dgpu-applications = Rakendused, mis kasutavad eraldi graafikaprotsessorit { $gpu_name }

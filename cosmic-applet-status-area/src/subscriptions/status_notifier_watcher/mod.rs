@@ -36,10 +36,10 @@ pub fn subscription() -> iced::Subscription<Event> {
                     }
                     Err(err) => Some((Event::Error(err.to_string()), State::Failed)),
                 },
-                State::Connected(mut stream) => match stream.next().await {
-                    Some(event) => Some((event, State::Connected(stream))),
-                    None => None,
-                },
+                State::Connected(mut stream) => stream
+                    .next()
+                    .await
+                    .map(|event| (event, State::Connected(stream))),
                 State::Failed => None,
             }
         }),

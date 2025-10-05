@@ -7,7 +7,7 @@ fn main() -> cosmic::iced::Result {
     tracing_subscriber::fmt::init();
     let _ = tracing_log::LogTracer::init();
 
-    tracing::info!("Starting battery applet with version {VERSION}");
+    tracing::info!("Starting accessibility applet with version {VERSION}");
 
     cosmic_applet_a11y::run()
 }

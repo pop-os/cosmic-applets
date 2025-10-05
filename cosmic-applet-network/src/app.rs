@@ -127,9 +127,8 @@ impl CosmicNetworkApplet {
         self.update_togglers(&new_state);
         // check for failed conns that can be reset
         for new_s in &mut new_state.active_conns {
-            let state = match new_s {
-                ActiveConnectionInfo::WiFi { state, .. } => state,
-                _ => continue,
+            let ActiveConnectionInfo::WiFi { state, .. } = new_s else {
+                continue;
             };
 
             if matches!(state, ActiveConnectionState::Activated) {
@@ -180,7 +179,7 @@ impl CosmicNetworkApplet {
                     _ => icon_name,
                 },
             )
-            .to_string()
+            .to_string();
     }
 
     fn update_togglers(&mut self, state: &NetworkManagerState) {
@@ -194,7 +193,7 @@ impl CosmicNetworkApplet {
                 chain::Toggler::off(WIFI.clone(), 1.)
             };
             timeline.set_chain(chain);
-        };
+        }
 
         if state.airplane_mode != self.nm_state.airplane_mode {
             changed = true;
@@ -204,7 +203,7 @@ impl CosmicNetworkApplet {
                 chain::Toggler::off(AIRPLANE_MODE.clone(), 1.)
             };
             timeline.set_chain(chain);
-        };
+        }
         if changed {
             timeline.start();
         }
@@ -344,21 +343,15 @@ impl cosmic::Application for CosmicNetworkApplet {
                         let conn_match = self
                             .new_connection
                             .as_ref()
-                            .map(|c| c.ssid() == ssid && c.hw_address() == *hw_address)
-                            .unwrap_or_default();
+                            .is_some_and(|c| c.ssid() == ssid && c.hw_address() == *hw_address);
 
                         if conn_match && success {
-                            if let Some(s) = state
+                            if let Some(ActiveConnectionInfo::WiFi { state, .. }) = state
                                 .active_conns
                                 .iter_mut()
                                 .find(|ap| &ap.name() == ssid && ap.hw_address() == *hw_address)
                             {
-                                match s {
-                                    ActiveConnectionInfo::WiFi { state, .. } => {
-                                        *state = ActiveConnectionState::Activated;
-                                    }
-                                    _ => {}
-                                };
+                                *state = ActiveConnectionState::Activated;
                             }
                             self.failed_known_ssids.remove(ssid);
                             self.new_connection = None;
@@ -401,7 +394,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                             } else if self
                             .new_connection
                             .as_ref()
-                            .map(|c| c.ssid()).is_some_and(|ssid| {
+                            .map(NewConnectionState::ssid).is_some_and(|ssid| {
                                 state.active_conns.iter().any(|c|
                                     matches!(c, ActiveConnectionInfo::WiFi { name, state: ActiveConnectionState::Activated, .. } if ssid == name)
                                 )
@@ -423,9 +416,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                 }
             },
             Message::SelectWirelessAccessPoint(access_point) => {
-                let tx = if let Some(tx) = self.nm_sender.as_ref() {
-                    tx
-                } else {
+                let Some(tx) = self.nm_sender.as_ref() else {
                     return Task::none();
                 };
 
@@ -467,9 +458,7 @@ impl cosmic::Application for CosmicNetworkApplet {
             }
             Message::SubmitPassword => {
                 // save password
-                let tx = if let Some(tx) = self.nm_sender.as_ref() {
-                    tx
-                } else {
+                let Some(tx) = self.nm_sender.as_ref() else {
                     return Task::none();
                 };
 
@@ -485,12 +474,12 @@ impl cosmic::Application for CosmicNetworkApplet {
                     let _ = tx.unbounded_send(NetworkManagerRequest::Authenticate {
                         ssid: access_point.ssid.clone(),
                         identity: is_enterprise.then(|| identity.clone()),
-                        password: password,
+                        password,
                         hw_address: access_point.hw_address,
                     });
                     self.new_connection
                         .replace(NewConnectionState::Waiting(access_point));
-                };
+                }
             }
             Message::ActivateKnownWifi(ssid, hw_address) => {
                 let mut network_type = NetworkType::Open;
@@ -616,7 +605,7 @@ impl cosmic::Application for CosmicNetworkApplet {
         Task::none()
     }
 
-    fn view(&self) -> Element<Message> {
+    fn view(&self) -> Element<'_, Message> {
         self.core
             .applet
             .icon_button(&self.icon_name)
@@ -624,7 +613,7 @@ impl cosmic::Application for CosmicNetworkApplet {
             .into()
     }
 
-    fn view_window(&self, _id: window::Id) -> Element<Message> {
+    fn view_window(&self, _id: window::Id) -> Element<'_, Message> {
         let Spacing {
             space_xxs, space_s, ..
         } = theme::active().cosmic().spacing;
@@ -744,7 +733,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                                 .into(),
                         ),
                         _ => {}
-                    };
+                    }
                     if self.failed_known_ssids.contains(name) {
                         btn_content.push(
                             cosmic::widget::button::icon(
@@ -753,7 +742,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                             .icon_size(16)
                             .on_press(Message::ResetFailedKnownSsid(name.clone(), *hw_address))
                             .into(),
-                        )
+                        );
                     }
 
                     known_wifi.push(Element::from(
@@ -768,7 +757,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                         .align_x(Alignment::Center),
                     ));
                 }
-            };
+            }
         }
 
         let mut content = if let Some(hw_device_to_show) = self.hw_device_to_show {
@@ -899,7 +888,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                             .align_y(Alignment::Center)
                             .spacing(8),
                     )
-                    .on_press(Message::OpenHwDevice(Some(hw_device.clone()))),
+                    .on_press(Message::OpenHwDevice(Some(hw_device))),
                 ));
             }
 
@@ -955,7 +944,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                             known.hw_address,
                         ))
                         .into(),
-                )
+                );
             }
 
             let mut btn = menu_button(

@@ -11,7 +11,7 @@ fn main() -> cosmic::iced::Result {
         return Ok(());
     };
 
-    let start = applet.rfind('/').map(|v| v + 1).unwrap_or(0);
+    let start = applet.rfind('/').map_or(0, |v| v + 1);
     let cmd = &applet.as_str()[start..];
 
     tracing::info!("Starting `{cmd}` with version {VERSION}");

@@ -42,7 +42,7 @@ pub async fn active_connections(
                 Some(SpecificDevice::Wired(wired_device)) => {
                     info.push(ActiveConnectionInfo::Wired {
                         name: connection.id().await?,
-                        hw_address: HwAddress::from_string(&wired_device.hw_address().await?)
+                        hw_address: HwAddress::from_str(&wired_device.hw_address().await?)
                             .unwrap_or_default(),
                         speed: wired_device.speed().await?,
                         ip_addresses: addresses.clone(),
@@ -53,10 +53,8 @@ pub async fn active_connections(
                         info.push(ActiveConnectionInfo::WiFi {
                             name: String::from_utf8_lossy(&access_point.ssid().await?).into_owned(),
                             ip_addresses: addresses.clone(),
-                            hw_address: HwAddress::from_string(
-                                &wireless_device.hw_address().await?,
-                            )
-                            .unwrap_or_default(),
+                            hw_address: HwAddress::from_str(&wireless_device.hw_address().await?)
+                                .unwrap_or_default(),
                             state,
                             strength: access_point.strength().await.unwrap_or_default(),
                         });

@@ -1,7 +1,7 @@
 network = Sieć
 airplane-mode = Tryb samolotowy
 airplane-mode-on = Tryb samolotowy jest włączony
-turn-off-airplane-mode = Wyłącz by uruchomić Wi-Fi, Bluetooth i łączność komórkową
+turn-off-airplane-mode = Wyłącz by uruchomić Wi-Fi, Bluetooth i łączność komórkową.
 wifi = Wi-Fi
 identity = Tożsamość
 ipv4 = Adres IPv4

@@ -1,0 +1,14 @@
+battery = Batteri
+battery-desc = Minskad strömanvändning och prestanda.
+balanced = Balanserad
+balanced-desc = Standard prestanda och strömanvändning.
+performance = Hög prestanda
+performance-desc = Hög prestanda och strömanvändning.
+max-charge = Öka livslängden på ditt battery genom att begränsa laddning till 80%
+seconds = s
+minutes = m
+hours = t
+until-empty = till urladdad
+power-settings = Ström- & batteriinställningar...
+dgpu-running = Diskret GPU är aktiv och kan minska batteritiden
+dgpu-applications = Program använder { $gpu_name } diskret GPU

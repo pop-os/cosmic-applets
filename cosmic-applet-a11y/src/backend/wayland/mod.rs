@@ -82,6 +82,6 @@ pub struct WaylandWatcher {
 impl WaylandWatcher {
     pub fn new() -> anyhow::Result<Self> {
         let (tx, rx) = thread::spawn_wayland_connection(1)?;
-        Ok(Self { tx, rx })
+        Ok(Self { rx, tx })
     }
 }

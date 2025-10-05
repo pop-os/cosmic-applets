@@ -125,12 +125,12 @@ impl cosmic::Application for Notifications {
             core,
             config_helper: helper,
             config,
-            icon_name: Default::default(),
+            icon_name: String::default(),
             popup: None,
-            timeline: Default::default(),
-            dbus_sender: Default::default(),
+            timeline: Timeline::default(),
+            dbus_sender: Option::default(),
             cards: Vec::new(),
-            token_tx: Default::default(),
+            token_tx: Option::default(),
             proxy: block_on(crate::subscriptions::notifications::get_proxy())
                 .expect("Failed to get proxy"),
             notifications_tx: None,
@@ -290,7 +290,7 @@ impl cosmic::Application for Notifications {
                 }
             }
             Message::ClearAll(None) => {
-                for n in self.cards.drain(..).map(|n| n.1).flatten() {
+                for n in self.cards.drain(..).flat_map(|n| n.1) {
                     if let Some(tx) = &self.dbus_sender {
                         let tx = tx.clone();
                         tokio::spawn(async move {
@@ -365,7 +365,7 @@ impl cosmic::Application for Notifications {
                 {
                     Some(ActionId::Default.to_string())
                 } else {
-                    notification.actions.get(0).map(|a| a.0.to_string())
+                    notification.actions.first().map(|a| a.0.to_string())
                 };
 
                 let Some(action) = maybe_action else {
@@ -392,12 +392,12 @@ impl cosmic::Application for Notifications {
                     cosmic::app::Action::Surface(a),
                 ));
             }
-        };
+        }
         self.update_icon();
         Task::none()
     }
 
-    fn view(&self) -> Element<Message> {
+    fn view(&self) -> Element<'_, Message> {
         self.core
             .applet
             .icon_button(&self.icon_name)
@@ -405,7 +405,7 @@ impl cosmic::Application for Notifications {
             .into()
     }
 
-    fn view_window(&self, _id: window::Id) -> Element<Message> {
+    fn view_window(&self, _id: window::Id) -> Element<'_, Message> {
         let Spacing {
             space_xxs, space_s, ..
         } = theme::active().cosmic().spacing;
@@ -423,7 +423,7 @@ impl cosmic::Application for Notifications {
         ]);
 
         let notifications = if self.cards.is_empty() {
-            let no_notifications = String::from(fl!("no-notifications"));
+            let no_notifications = fl!("no-notifications");
             row![
                 container(
                     column![

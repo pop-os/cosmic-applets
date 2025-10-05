@@ -88,7 +88,10 @@ impl Session {
         self.condvar.notify_all();
     }
 
-    fn wait_while<F: FnMut(&SessionInner) -> bool>(&self, mut f: F) -> MutexGuard<SessionInner> {
+    fn wait_while<F: FnMut(&SessionInner) -> bool>(
+        &self,
+        mut f: F,
+    ) -> MutexGuard<'_, SessionInner> {
         self.condvar
             .wait_while(self.inner.lock().unwrap(), |data| f(data))
             .unwrap()
@@ -150,7 +153,7 @@ impl CaptureData {
                 &self.qh,
                 SessionData {
                     session: session.clone(),
-                    session_data: Default::default(),
+                    session_data: ScreencopySessionData::default(),
                 },
             )
             .unwrap();
@@ -168,22 +171,19 @@ impl CaptureData {
         }
 
         // XXX
-        if !formats
-            .shm_formats
-            .contains(&wl_shm::Format::Abgr8888.into())
-        {
+        if !formats.shm_formats.contains(&wl_shm::Format::Abgr8888) {
             tracing::error!("No suitable buffer format found");
             tracing::warn!("Available formats: {:#?}", formats);
             return None;
-        };
+        }
 
         let buf_len = width * height * 4;
         if let Some(len) = len {
             if len != buf_len {
                 return None;
             }
-        } else if let Err(_err) = rustix::fs::ftruncate(&fd, buf_len as _) {
-        };
+        } else if let Err(_err) = rustix::fs::ftruncate(&fd, buf_len.into()) {
+        }
         let pool = self
             .wl_shm
             .create_pool(fd.as_fd(), buf_len as i32, &self.qh, ());
@@ -202,7 +202,7 @@ impl CaptureData {
             &[],
             &self.qh,
             FrameData {
-                frame_data: Default::default(),
+                frame_data: ScreencopyFrameData::default(),
                 session: capture_session.clone(),
             },
         );
@@ -237,7 +237,7 @@ impl<T: AsFd> ShmImage<T> {
     pub fn image(&self) -> anyhow::Result<image::RgbaImage> {
         let mmap = unsafe { memmap2::Mmap::map(&self.fd.as_fd())? };
         image::RgbaImage::from_raw(self.width, self.height, mmap.to_vec())
-            .ok_or_else(|| anyhow::anyhow!("ShmImage had incorrect size"))
+            .ok_or(anyhow::anyhow!("ShmImage had incorrect size"))
     }
 }
 
@@ -297,7 +297,7 @@ impl AppData {
         handle: &ExtForeignToplevelHandleV1,
     ) -> Option<ZcosmicToplevelHandleV1> {
         self.toplevel_info_state
-            .info(&handle)?
+            .info(handle)?
             .cosmic_toplevel
             .clone()
     }
@@ -311,9 +311,7 @@ impl AppData {
             capturer: self.screencopy_state.capturer().clone(),
         };
         std::thread::spawn(move || {
-            use std::ffi::CStr;
-            let name =
-                unsafe { CStr::from_bytes_with_nul_unchecked(b"minimize-applet-screencopy\0") };
+            let name = c"minimize-applet-screencopy";
             let Ok(fd) = rustix::fs::memfd_create(name, rustix::fs::MemfdFlags::CLOEXEC) else {
                 tracing::error!("Failed to get fd for capture");
                 return;
@@ -347,7 +345,7 @@ impl AppData {
                     tx.send(WaylandUpdate::Image(handle, WaylandImage::new(img))),
                 ) {
                     tracing::error!("Failed to send image event to subscription {err:?}");
-                };
+                }
             } else {
                 tracing::error!("Failed to capture image");
             }
@@ -448,7 +446,7 @@ pub(crate) fn wayland_handler(
         .expect("Failed to insert wayland source.");
 
     if handle
-        .insert_source(rx, |event, _, state| match event {
+        .insert_source(rx, |event, (), state| match event {
             calloop::channel::Event::Msg(req) => match req {
                 WaylandRequest::Toplevel(req) => match req {
                     ToplevelRequest::Activate(handle) => {
@@ -552,7 +550,7 @@ impl Dispatch<wl_shm_pool::WlShmPool, ()> for AppData {
         _app_data: &mut Self,
         _buffer: &wl_shm_pool::WlShmPool,
         _event: wl_shm_pool::Event,
-        _: &(),
+        (): &(),
         _: &Connection,
         _qh: &QueueHandle<Self>,
     ) {
@@ -564,7 +562,7 @@ impl Dispatch<wl_buffer::WlBuffer, ()> for AppData {
         _app_data: &mut Self,
         _buffer: &wl_buffer::WlBuffer,
         _event: wl_buffer::Event,
-        _: &(),
+        (): &(),
         _: &Connection,
         _qh: &QueueHandle<Self>,
     ) {

@@ -10,18 +10,18 @@ shutdown = Múch
 confirm = Deimhnigh
 cancel = Cealaigh
 confirm-button = {
-    $action -> 
-        [restart] { atosaigh }
-        [suspend] { cuir ar fionraí }
+    $action ->
+        [restart] atosaigh
+        [suspend] cuir ar fionraí
         [shutdown] Múch an córas
-        [log-out] { logáil amach }
-        *[other] { deimhnigh }
+        [log-out] logáil amach
+        *[other] deimhnigh
 }
-confirm-title = 
+confirm-title =
     { $action ->
-        [restart] { atosaigh }
-        [suspend] { cuir ar fionraí }
-        [shutdown] { múch }
+        [restart] atosaigh
+        [suspend] cuir ar fionraí
+        [shutdown] múch
         [log-out] Dún gach aip agus logáil amach
         *[other] Cuir an gníomh roghnaithe i bhfeidhm
     } anois?
