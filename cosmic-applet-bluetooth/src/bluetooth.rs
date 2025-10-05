@@ -249,12 +249,7 @@ impl Ord for BluerDevice {
 impl PartialOrd for BluerDevice {
     #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        match self.status.cmp(&other.status) {
-            std::cmp::Ordering::Equal => {
-                Some(self.name.to_lowercase().cmp(&other.name.to_lowercase()))
-            }
-            o => Some(o),
-        }
+        Some(self.cmp(other))
     }
 }
 

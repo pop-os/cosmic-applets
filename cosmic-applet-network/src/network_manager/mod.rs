@@ -263,10 +263,9 @@ async fn start_listening(
                         let settings = c.get_settings().await.ok().unwrap_or_default();
                         let s = Settings::new(settings);
                         if s.wifi
-                            .clone()
-                            .and_then(|w| w.ssid)
-                            .and_then(|ssid| String::from_utf8(ssid).ok())
-                            .is_some_and(|s| s == ssid)
+                            .as_ref()
+                            .and_then(|w| w.ssid.as_deref())
+                            .is_some_and(|s| std::str::from_utf8(s).is_ok_and(|s| s == ssid))
                         {
                             // todo most likely we can here forget ssid from wrong hw_address
                             _ = c.delete().await;
@@ -429,14 +428,7 @@ impl NetworkManagerState {
         )
         .await
         .unwrap_or_default();
-        active_conns.sort_by(|a, b| {
-            let helper = |conn: &ActiveConnectionInfo| match conn {
-                ActiveConnectionInfo::Vpn { name, .. } => format!("0{name}"),
-                ActiveConnectionInfo::Wired { name, .. } => format!("1{name}"),
-                ActiveConnectionInfo::WiFi { name, .. } => format!("2{name}"),
-            };
-            helper(a).cmp(&helper(b))
-        });
+        active_conns.sort();
         let devices = network_manager.devices().await.ok().unwrap_or_default();
         let wireless_access_point_futures: Vec<_> = devices
             .into_iter()
@@ -483,7 +475,7 @@ impl NetworkManagerState {
             })
             .cloned()
             .collect();
-        wireless_access_points.sort_by(|a, b| b.strength.cmp(&a.strength));
+        wireless_access_points.sort_by_key(|ap| ap.strength);
         self_.wireless_access_points = wireless_access_points;
         for ap in &self_.wireless_access_points {
             tracing::info!(
@@ -519,11 +511,11 @@ impl NetworkManagerState {
         let nm = NetworkManager::new(conn).await?;
 
         for c in nm.active_connections().await.unwrap_or_default() {
-            if self
-                .wireless_access_points
-                .iter()
-                .any(|w| Ok(Some(w.ssid.clone())) == c.cached_id() && w.hw_address == hw_address)
-            {
+            if self.wireless_access_points.iter().any(|w| {
+                c.cached_id()
+                    .is_ok_and(|opt| opt.is_some_and(|id| id == w.ssid))
+                    && w.hw_address == hw_address
+            }) {
                 _ = nm.deactivate_connection(&c).await;
             }
         }
@@ -556,7 +548,7 @@ impl NetworkManagerState {
                 HashMap::from([
                     ("identity", Value::Str(identity.into())),
                     // most common default
-                    ("eap", Value::Array(vec!["peap"].into())),
+                    ("eap", Value::Array(["peap"].as_slice().into())),
                     // most common default
                     ("phase2-auth", Value::Str("mschapv2".into())),
                     ("password", Value::Str(password.unwrap_or("").into())),
@@ -605,16 +597,13 @@ impl NetworkManagerState {
 
                 let s = Settings::new(settings);
                 // todo try to add hw_address comparing here if it changes anything
-                if let Some(cur_ssid) = s
-                    .wifi
-                    .clone()
-                    .and_then(|w| w.ssid)
-                    .and_then(|ssid| String::from_utf8(ssid).ok())
+                if s.wifi
+                    .as_ref()
+                    .and_then(|w| w.ssid.as_deref())
+                    .is_some_and(|s| std::str::from_utf8(s).is_ok_and(|cur_ssid| cur_ssid == ssid))
                 {
-                    if cur_ssid == ssid {
-                        known_conn = Some(c);
-                        break;
-                    }
+                    known_conn = Some(c);
+                    break;
                 }
             }
 

@@ -112,7 +112,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
         match message {
             Message::TogglePopup => {
                 if let Some(p) = self.popup.take() {
-                    return Task::batch(vec![
+                    return Task::batch([
                         destroy_popup(p),
                         cosmic::task::future(
                             set_tick(Duration::from_secs(10))
@@ -134,7 +134,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
                     );
 
                     let tx = self.bluer_sender.clone();
-                    return Task::batch(vec![
+                    return Task::batch([
                         iced::Task::perform(
                             async {
                                 if let Some(tx) = tx {
@@ -361,7 +361,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
             space_xxs, space_s, ..
         } = theme::active().cosmic().spacing;
 
-        let mut known_bluetooth = vec![];
+        let mut known_bluetooth = Vec::new();
         // PERF: This should be pre-filtered in an update.
         for dev in self.bluer_state.devices.iter().filter(|d| {
             self.request_confirmation
@@ -370,7 +370,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
         }) {
             let mut row = row![
                 icon::from_name(dev.icon).size(16).symbolic(true),
-                text::body(dev.name.clone())
+                text::body(dev.name.as_str())
                     .align_x(Alignment::Start)
                     .align_y(Alignment::Center)
                     .width(Length::Fill)
@@ -493,7 +493,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
                 padded_control(
                     text::body(fl!(
                         "confirm-pin",
-                        HashMap::from_iter(vec![("deviceName", device.name.clone())])
+                        HashMap::from([("deviceName", device.name.clone())])
                     ))
                     .align_x(Alignment::Start)
                     .align_y(Alignment::Center)
@@ -571,7 +571,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        Subscription::batch(vec![
+        Subscription::batch([
             activation_token_subscription(0).map(Message::Token),
             bluetooth_subscription(0).map(Message::BluetoothEvent),
             self.timeline

@@ -173,7 +173,7 @@ impl cosmic::Application for Minimize {
                         // Temporarily take ownership to appease the borrow checker.
                         let mut apps = std::mem::take(&mut self.apps);
 
-                        if let Some(pos) = apps.iter_mut().position(|a| {
+                        if let Some(pos) = apps.iter().position(|a| {
                             a.toplevel_info.foreign_toplevel == toplevel_info.foreign_toplevel
                         }) {
                             if apps[pos].toplevel_info.app_id != toplevel_info.app_id {
@@ -194,7 +194,7 @@ impl cosmic::Application for Minimize {
                                 name: desktop_entry
                                     .full_name(&self.locales)
                                     .unwrap_or(Cow::Borrowed(&desktop_entry.appid))
-                                    .to_string(),
+                                    .into_owned(),
                                 icon_source: fde::IconSource::from_unknown(
                                     desktop_entry.icon().unwrap_or(&desktop_entry.appid),
                                 ),

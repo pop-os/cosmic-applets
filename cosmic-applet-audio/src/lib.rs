@@ -131,8 +131,9 @@ impl Audio {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Default)]
 enum IsOpen {
+    #[default]
     None,
     Output,
     Input,
@@ -289,12 +290,6 @@ impl cosmic::Application for Audio {
         (
             Self {
                 core,
-                is_open: IsOpen::None,
-                current_output: None,
-                current_input: None,
-                outputs: vec![],
-                inputs: vec![],
-                token_tx: None,
                 ..Default::default()
             },
             Task::none(),
@@ -495,17 +490,11 @@ impl cosmic::Application for Audio {
                     match msg {
                         // This is where we match messages from the subscription to app state
                         pulse::Message::SetSinks(sinks) => self.outputs = sinks,
-                        pulse::Message::SetSources(sources) => {
-                            self.inputs = sources
-                                .into_iter()
-                                .filter(|source| {
-                                    !source
-                                        .name
-                                        .as_ref()
-                                        .unwrap_or(&String::from("Generic"))
-                                        .contains("monitor")
-                                })
-                                .collect()
+                        pulse::Message::SetSources(mut sources) => {
+                            sources.retain(|source| {
+                                !source.name.as_ref().is_some_and(|n| n.contains("monitor"))
+                            });
+                            self.inputs = sources;
                         }
                         pulse::Message::SetDefaultSink(sink) => {
                             self.update_output(Some(sink));
@@ -682,7 +671,7 @@ impl cosmic::Application for Audio {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        Subscription::batch(vec![
+        Subscription::batch([
             pulse::connect().map(Message::Pulse),
             self.timeline
                 .as_subscription()
@@ -738,11 +727,11 @@ impl cosmic::Application for Audio {
             .autosize_window(if let Some(Some(playback_buttons)) = playback_buttons {
                 match self.core.applet.anchor {
                     PanelAnchor::Left | PanelAnchor::Right => Element::from(
-                        Column::with_children(vec![playback_buttons, btn.into()])
+                        Column::with_children([playback_buttons, btn.into()])
                             .align_x(Alignment::Center),
                     ),
                     PanelAnchor::Top | PanelAnchor::Bottom => {
-                        Row::with_children(vec![playback_buttons, btn.into()])
+                        Row::with_children([playback_buttons, btn.into()])
                             .align_y(Alignment::Center)
                             .into()
                     }
@@ -833,14 +822,7 @@ impl cosmic::Application for Audio {
                         Some(output) => pretty_name(output.description.clone()),
                         None => String::from("No device selected"),
                     },
-                    self.outputs
-                        .clone()
-                        .into_iter()
-                        .map(|output| (
-                            output.name.clone().unwrap_or_default(),
-                            pretty_name(output.description)
-                        ))
-                        .collect(),
+                    self.outputs.as_slice(),
                     Message::OutputToggle,
                     Message::OutputChanged,
                 ),
@@ -851,14 +833,7 @@ impl cosmic::Application for Audio {
                         Some(input) => pretty_name(input.description.clone()),
                         None => fl!("no-device"),
                     },
-                    self.inputs
-                        .clone()
-                        .into_iter()
-                        .map(|input| (
-                            input.name.clone().unwrap_or_default(),
-                            pretty_name(input.description)
-                        ))
-                        .collect(),
+                    self.inputs.as_slice(),
                     Message::InputToggle,
                     Message::InputChanged,
                 )
@@ -986,17 +961,23 @@ fn revealer(
     open: bool,
     title: String,
     selected: String,
-    options: Vec<(String, String)>,
+    device_info: &[DeviceInfo],
     toggle: Message,
     mut change: impl FnMut(String) -> Message + 'static,
 ) -> widget::Column<'static, Message, crate::Theme, Renderer> {
     if open {
-        options.iter().fold(
+        let options = device_info.iter().map(|device| {
+            (
+                device.name.clone().unwrap_or_default(),
+                pretty_name(device.description.clone()),
+            )
+        });
+        options.fold(
             column![revealer_head(open, title, selected, toggle)].width(Length::Fill),
             |col, (id, name)| {
                 col.push(
-                    menu_button(text::body(name.clone()))
-                        .on_press(change(id.clone()))
+                    menu_button(text::body(name))
+                        .on_press(change(id))
                         .width(Length::Fill)
                         .padding([8, 48]),
                 )
@@ -1054,12 +1035,6 @@ impl PulseState {
         if let Self::Connected(c) = self {
             *self = Self::Disconnected(c.clone());
         }
-    }
-}
-
-impl Default for IsOpen {
-    fn default() -> Self {
-        Self::None
     }
 }
 

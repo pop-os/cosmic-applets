@@ -154,8 +154,7 @@ impl CosmicBatteryApplet {
             }
         } else {
             "off"
-        }
-        .to_string();
+        };
 
         self.display_icon_name =
             format!("cosmic-applet-battery-display-brightness-{screen_brightness}-symbolic",);
@@ -219,7 +218,7 @@ impl cosmic::Application for CosmicBatteryApplet {
 
                 ..Default::default()
             },
-            Task::batch(vec![zbus_session_cmd, init_charging_limit_cmd]),
+            Task::batch([zbus_session_cmd, init_charging_limit_cmd]),
         )
     }
 
@@ -508,10 +507,10 @@ impl cosmic::Application for CosmicBatteryApplet {
                 .into();
 
             match self.core.applet.anchor {
-                PanelAnchor::Left | PanelAnchor::Right => Column::with_children(vec![btn, dot])
+                PanelAnchor::Left | PanelAnchor::Right => Column::with_children([btn, dot])
                     .align_x(Alignment::Center)
                     .into(),
-                PanelAnchor::Top | PanelAnchor::Bottom => Row::with_children(vec![btn, dot])
+                PanelAnchor::Top | PanelAnchor::Bottom => Row::with_children([btn, dot])
                     .align_y(Alignment::Center)
                     .into(),
             }

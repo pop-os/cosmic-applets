@@ -777,8 +777,8 @@ pub struct DeviceInfo {
 impl<'a> From<&SinkInfo<'a>> for DeviceInfo {
     fn from(info: &SinkInfo<'a>) -> Self {
         Self {
-            name: info.name.clone().map(|x| x.into_owned()),
-            description: info.description.clone().map(|x| x.into_owned()),
+            name: info.name.as_deref().map(str::to_string),
+            description: info.description.as_deref().map(str::to_string),
             volume: info.volume,
             mute: info.mute,
             index: info.index,
@@ -789,8 +789,8 @@ impl<'a> From<&SinkInfo<'a>> for DeviceInfo {
 impl<'a> From<&SourceInfo<'a>> for DeviceInfo {
     fn from(info: &SourceInfo<'a>) -> Self {
         Self {
-            name: info.name.clone().map(|x| x.into_owned()),
-            description: info.description.clone().map(|x| x.into_owned()),
+            name: info.name.as_deref().map(str::to_string),
+            description: info.description.as_deref().map(str::to_string),
             volume: info.volume,
             mute: info.mute,
             index: info.index,
@@ -824,14 +824,15 @@ pub struct ServerInfo {
 
 impl<'a> From<&'a pulse::context::introspect::ServerInfo<'a>> for ServerInfo {
     fn from(info: &'a pulse::context::introspect::ServerInfo<'a>) -> Self {
+        use std::borrow::Cow;
         Self {
-            user_name: info.user_name.as_ref().map(|cow| cow.to_string()),
-            host_name: info.host_name.as_ref().map(|cow| cow.to_string()),
-            server_version: info.server_version.as_ref().map(|cow| cow.to_string()),
-            server_name: info.server_name.as_ref().map(|cow| cow.to_string()),
+            user_name: info.user_name.as_ref().map(Cow::to_string),
+            host_name: info.host_name.as_ref().map(Cow::to_string),
+            server_version: info.server_version.as_ref().map(Cow::to_string),
+            server_name: info.server_name.as_ref().map(Cow::to_string),
             //sample_spec: info.sample_spec,
-            default_sink_name: info.default_sink_name.as_ref().map(|cow| cow.to_string()),
-            default_source_name: info.default_source_name.as_ref().map(|cow| cow.to_string()),
+            default_sink_name: info.default_sink_name.as_ref().map(Cow::to_string),
+            default_source_name: info.default_source_name.as_ref().map(Cow::to_string),
             cookie: info.cookie,
             //channel_map: info.channel_map,
         }
