@@ -401,7 +401,7 @@ impl cosmic::Application for CosmicA11yApplet {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        Subscription::batch(vec![
+        Subscription::batch([
             accessibility::subscription().map(Message::DBusUpdate),
             backend::wayland::a11y_subscription().map(Message::WaylandUpdate),
             self.timeline

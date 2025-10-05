@@ -237,7 +237,7 @@ impl<T: AsFd> ShmImage<T> {
     pub fn image(&self) -> anyhow::Result<image::RgbaImage> {
         let mmap = unsafe { memmap2::Mmap::map(&self.fd.as_fd())? };
         image::RgbaImage::from_raw(self.width, self.height, mmap.to_vec())
-            .ok_or(anyhow::anyhow!("ShmImage had incorrect size"))
+            .ok_or_else(|| anyhow::anyhow!("ShmImage had incorrect size"))
     }
 }
 
@@ -475,12 +475,12 @@ pub(crate) fn wayland_handler(
         exit: false,
         tx,
         conn,
-        queue_handle: qh.clone(),
         shm_state,
         screencopy_state,
         seat_state: SeatState::new(&globals, &qh),
         toplevel_info_state: ToplevelInfoState::new(&registry_state, &qh),
         toplevel_manager_state: ToplevelManagerState::new(&registry_state, &qh),
+        queue_handle: qh,
         registry_state,
     };
 

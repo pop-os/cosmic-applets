@@ -179,7 +179,7 @@ impl State {
             players,
             active_player: None,
             active_player_metadata_stream: None,
-            any_player_state_stream: futures::stream::select_all(Vec::new()),
+            any_player_state_stream: futures::stream::select_all([]),
         };
         state.update_active_player().await;
         state.update_any_player_state_stream().await;
@@ -243,7 +243,7 @@ async fn run(output: &mut futures::channel::mpsc::Sender<MprisUpdate>) {
     let mut state = match State::new().await {
         Ok(state) => state,
         Err(err) => {
-            tracing::error!("Faile do monitor for mpris clients: {}", err);
+            tracing::error!("Failed to monitor for mpris clients: {}", err);
             return;
         }
     };

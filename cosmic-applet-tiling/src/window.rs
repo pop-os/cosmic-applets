@@ -132,7 +132,7 @@ impl cosmic::Application for Window {
             .timeline
             .as_subscription()
             .map(|(_, now)| Message::Frame(now));
-        Subscription::batch(vec![
+        Subscription::batch([
             timeline,
             self.core
                 .watch_config::<CosmicCompConfig>("com.system76.CosmicComp")

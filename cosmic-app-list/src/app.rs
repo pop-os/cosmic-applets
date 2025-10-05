@@ -53,7 +53,6 @@ use cosmic_app_list_config::{APP_ID, AppListConfig};
 use cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::State;
 use futures::future::pending;
 use iced::{Alignment, Background, Length};
-use itertools::Itertools;
 use std::{borrow::Cow, collections::HashMap, path::PathBuf, rc::Rc, str::FromStr, time::Duration};
 use switcheroo_control::Gpu;
 use tokio::time::sleep;
@@ -177,31 +176,24 @@ impl DockItem {
             .width(app_icon.icon_size.into())
             .height(app_icon.icon_size.into());
 
-        let dots = if toplevels.is_empty() {
-            (0..1)
-                .map(|_| {
-                    container(vertical_space().height(Length::Fixed(0.0)))
-                        .padding(app_icon.dot_radius)
-                        .into()
-                })
-                .collect_vec()
-        } else {
-            (0..1)
-                .map(|_| {
-                    container(if toplevels.len() == 1 {
-                        vertical_space().height(Length::Fixed(0.0))
-                    } else {
-                        match applet.anchor {
-                            PanelAnchor::Left | PanelAnchor::Right => {
-                                vertical_space().height(app_icon.bar_size)
-                            }
-                            PanelAnchor::Top | PanelAnchor::Bottom => {
-                                horizontal_space().width(app_icon.bar_size)
-                            }
-                        }
-                    })
-                    .padding(app_icon.dot_radius)
-                    .class(theme::style::Container::Custom(Box::new(move |theme| {
+        let dot_constructor = || {
+            let space = if toplevels.len() <= 1 {
+                vertical_space().height(Length::Fixed(0.0))
+            } else {
+                match applet.anchor {
+                    PanelAnchor::Left | PanelAnchor::Right => {
+                        vertical_space().height(app_icon.bar_size)
+                    }
+                    PanelAnchor::Top | PanelAnchor::Bottom => {
+                        horizontal_space().width(app_icon.bar_size)
+                    }
+                }
+            };
+            let mut container = container(space).padding(app_icon.dot_radius);
+
+            if !toplevels.is_empty() {
+                container =
+                    container.class(theme::style::Container::Custom(Box::new(move |theme| {
                         container::Style {
                             text_color: Some(Color::TRANSPARENT),
                             background: if is_focused {
@@ -218,34 +210,35 @@ impl DockItem {
                             icon_color: Some(Color::TRANSPARENT),
                         }
                     })))
-                    .into()
-                })
-                .collect_vec()
+            }
+            container.into()
         };
 
+        let dots = std::iter::repeat_with(dot_constructor).take(2);
+
         let icon_wrapper: Element<_> = match applet.anchor {
-            PanelAnchor::Left => row(vec![
+            PanelAnchor::Left => row([
                 column(dots).into(),
                 horizontal_space().width(Length::Fixed(1.0)).into(),
                 cosmic_icon.clone().into(),
             ])
             .align_y(Alignment::Center)
             .into(),
-            PanelAnchor::Right => row(vec![
+            PanelAnchor::Right => row([
                 cosmic_icon.clone().into(),
                 horizontal_space().width(Length::Fixed(1.0)).into(),
                 column(dots).into(),
             ])
             .align_y(Alignment::Center)
             .into(),
-            PanelAnchor::Top => column(vec![
+            PanelAnchor::Top => column([
                 row(dots).into(),
                 vertical_space().height(Length::Fixed(1.0)).into(),
                 cosmic_icon.clone().into(),
             ])
             .align_x(Alignment::Center)
             .into(),
-            PanelAnchor::Bottom => column(vec![
+            PanelAnchor::Bottom => column([
                 cosmic_icon.clone().into(),
                 vertical_space().height(Length::Fixed(1.0)).into(),
                 row(dots).into(),
@@ -470,7 +463,7 @@ where
                         img.img.clone(),
                     )))
                 } else {
-                    Image::new(Handle::from_rgba(1, 1, vec![0, 0, 0, 255])).into()
+                    Image::new(Handle::from_rgba(1, 1, [0u8, 0u8, 0u8, 255u8].as_slice())).into()
                 })
                 .class(Container::Custom(Box::new(move |theme| {
                     container::Style {
@@ -590,7 +583,7 @@ fn find_desktop_entries<'a>(
     app_ids.iter().map(|fav| {
         let unicase_fav = fde::unicase::Ascii::new(fav.as_str());
         fde::find_app_by_id(desktop_entries, unicase_fav).map_or_else(
-            || fde::DesktopEntry::from_appid(fav.clone()).clone(),
+            || fde::DesktopEntry::from_appid(fav.clone()),
             ToOwned::to_owned,
         )
     })
@@ -612,7 +605,7 @@ impl CosmicAppList {
             .map(|(pinned_ctr, (e, original_id))| DockItem {
                 id: pinned_ctr as u32,
                 toplevels: Vec::new(),
-                desktop_info: e.clone(),
+                desktop_info: e,
                 original_app_id: original_id.clone(),
             })
             .collect();
@@ -673,7 +666,7 @@ impl cosmic::Application for CosmicAppList {
                     } else {
                         self.overflow_active_popup = None;
                         self.overflow_favorites_popup = None;
-                        return Task::batch(vec![destroy_popup(popup_id), destroy_popup(parent)]);
+                        return Task::batch([destroy_popup(popup_id), destroy_popup(parent)]);
                     }
                 }
                 if let Some(toplevel_group) = self
@@ -733,7 +726,7 @@ impl cosmic::Application for CosmicAppList {
                     } else {
                         self.overflow_active_popup = None;
                         self.overflow_favorites_popup = None;
-                        return Task::batch(vec![destroy_popup(popup_id), destroy_popup(parent)]);
+                        return Task::batch([destroy_popup(popup_id), destroy_popup(parent)]);
                     }
                 }
                 if let Some(toplevel_group) = self
@@ -1490,7 +1483,10 @@ impl cosmic::Application for CosmicAppList {
         } else {
             0
         };
-        let favorites: Vec<_> = (&mut self.pinned_list.iter().rev())
+        let favorites: Vec<_> = self
+            .pinned_list
+            .iter()
+            .rev()
             .filter(|f| {
                 if favorite_to_remove > 0 && f.toplevels.is_empty() {
                     favorite_to_remove -= 1;
@@ -1524,7 +1520,7 @@ impl cosmic::Application for CosmicAppList {
                             .desktop_info
                             .full_name(&self.locales)
                             .unwrap_or_default()
-                            .to_string(),
+                            .into_owned(),
                         self.popup.is_some(),
                         Message::Surface,
                         None,
@@ -1618,7 +1614,7 @@ impl cosmic::Application for CosmicAppList {
                                 .desktop_info
                                 .full_name(&self.locales)
                                 .unwrap_or_default()
-                                .to_string(),
+                                .into_owned(),
                             self.popup.is_some(),
                             Message::Surface,
                             None,
@@ -1812,11 +1808,7 @@ impl cosmic::Application for CosmicAppList {
                                     Message::Exec(exec.to_string(), None, desktop_info.terminal()),
                                 ));
                         } else if let Some(gpus) = self.gpus.as_ref() {
-                            let default_idx = if desktop_info.prefers_non_default_gpu() {
-                                gpus.iter().position(|gpu| !gpu.default).unwrap_or(0)
-                            } else {
-                                gpus.iter().position(|gpu| gpu.default).unwrap_or(0)
-                            };
+                            let default_idx = preferred_gpu_idx(desktop_info, gpus.iter());
                             for (i, gpu) in gpus.iter().enumerate() {
                                 content = content.push(
                                     menu_button(text::body(format!(
@@ -2037,7 +2029,7 @@ impl cosmic::Application for CosmicAppList {
                                     .desktop_info
                                     .full_name(&self.locales)
                                     .unwrap_or_default()
-                                    .to_string(),
+                                    .into_owned(),
                                 self.popup.is_some(),
                                 Message::Surface,
                                 None,
@@ -2101,7 +2093,10 @@ impl cosmic::Application for CosmicAppList {
                 0
             };
             let mut favorites_extra = Vec::with_capacity(favorite_to_remove);
-            let mut favorites: Vec<_> = (&mut self.pinned_list.iter().rev())
+            let mut favorites: Vec<_> = self
+                .pinned_list
+                .iter()
+                .rev()
                 .filter(|f| {
                     if favorite_to_remove > 0 && f.toplevels.is_empty() {
                         favorite_to_remove -= 1;
@@ -2190,7 +2185,7 @@ impl cosmic::Application for CosmicAppList {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        Subscription::batch(vec![
+        Subscription::batch([
             wayland_subscription().map(Message::Wayland),
             listen_with(|e, _, id| match e {
                 cosmic::iced_runtime::core::Event::PlatformSpecific(
@@ -2299,9 +2294,9 @@ impl CosmicAppList {
         if self.active_workspaces.is_empty() {
             return Vec::new();
         }
-        let current_output = self.core.applet.output_name.clone();
+        let current_output = self.core.applet.output_name.as_ref();
         let mut focused_toplevels: Vec<ExtForeignToplevelHandleV1> = Vec::new();
-        let active_workspaces = self.active_workspaces.clone();
+        let active_workspaces = &self.active_workspaces;
         for toplevel_list in self.active_list.iter().chain(self.pinned_list.iter()) {
             for (t_info, _) in &toplevel_list.toplevels {
                 if t_info.state.contains(&State::Activated)
@@ -2349,10 +2344,7 @@ impl CosmicAppList {
                 let is_proton_game = info.app_id == "steam_app_default";
                 if is_proton_game || info.app_id.ends_with(".exe") {
                     for entry in &self.desktop_entries {
-                        let localised_name = entry
-                            .name(&self.locales)
-                            .map(|x| x.to_string())
-                            .unwrap_or_default();
+                        let localised_name = entry.name(&self.locales).unwrap_or_default();
 
                         if localised_name == info.title {
                             // if this is a proton game, we only want
@@ -2378,19 +2370,21 @@ impl CosmicAppList {
 fn launch_on_preferred_gpu(desktop_info: &DesktopEntry, gpus: Option<&[Gpu]>) -> Option<Message> {
     let exec = desktop_info.exec()?;
 
-    let gpu_idx = gpus.map(|gpus| {
-        if desktop_info.prefers_non_default_gpu() {
-            gpus.iter().position(|gpu| !gpu.default).unwrap_or(0)
-        } else {
-            gpus.iter().position(|gpu| gpu.default).unwrap_or(0)
-        }
-    });
+    let gpu_idx = gpus.map(|gpus| preferred_gpu_idx(desktop_info, gpus.iter()));
 
     Some(Message::Exec(
         exec.to_string(),
         gpu_idx,
         desktop_info.terminal(),
     ))
+}
+
+fn preferred_gpu_idx<'a, I>(desktop_info: &DesktopEntry, mut gpus: I) -> usize
+where
+    I: Iterator<Item = &'a Gpu>,
+{
+    gpus.position(|gpu| gpu.default ^ desktop_info.prefers_non_default_gpu())
+        .unwrap_or(0)
 }
 
 #[derive(Debug, Default, Clone)]
@@ -2428,8 +2422,6 @@ impl AsMimeTypes for DndPathBuf {
     }
 
     fn as_bytes(&self, _mime_type: &str) -> Option<std::borrow::Cow<'static, [u8]>> {
-        Some(Cow::Owned(
-            self.0.clone().to_str()?.to_string().into_bytes(),
-        ))
+        Some(Cow::Owned(self.0.to_str()?.as_bytes().to_vec()))
     }
 }

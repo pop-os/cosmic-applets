@@ -56,7 +56,7 @@ struct Notifications {
 
 impl Notifications {
     fn update_cards(&mut self, id: id::Cards) {
-        if let Some((id, _, card_value, ..)) = self.cards.iter_mut().find(|c| c.0 == id) {
+        if let Some((id, _, card_value, ..)) = self.cards.iter().find(|c| c.0 == id) {
             let chain = if *card_value {
                 chain::Cards::on(id.clone(), 1.)
             } else {
@@ -152,7 +152,7 @@ impl cosmic::Application for Notifications {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        Subscription::batch(vec![
+        Subscription::batch([
             self.core
                 .watch_config(cosmic_notifications_config::ID)
                 .map(|res| {
@@ -217,7 +217,7 @@ impl cosmic::Application for Notifications {
                             c.1.push(n);
                             c.3 = fl!(
                                 "show-more",
-                                HashMap::from_iter(vec![("more", c.1.len().saturating_sub(1))])
+                                HashMap::from([("more", c.1.len().saturating_sub(1))])
                             );
                         }
                     } else {
@@ -225,7 +225,7 @@ impl cosmic::Application for Notifications {
                             id::Cards::new(n.app_name.clone()),
                             vec![n],
                             false,
-                            fl!("show-more", HashMap::from_iter(vec![("more", "1")])),
+                            fl!("show-more", HashMap::from([("more", "1")])),
                             fl!("show-less"),
                             fl!("clear-group"),
                         ));
@@ -263,7 +263,7 @@ impl cosmic::Application for Notifications {
                         c.1.retain(|n| n.id != id);
                         c.3 = fl!(
                             "show-more",
-                            HashMap::from_iter(vec![("more", c.1.len().saturating_sub(1))])
+                            HashMap::from([("more", c.1.len().saturating_sub(1))])
                         );
                     }
                     self.cards.retain(|c| !c.1.is_empty());
@@ -581,9 +581,9 @@ fn duration_ago_msg(notification: &Notification) -> String {
         let min = d.as_secs() / 60;
         let hrs = min / 60;
         if hrs > 0 {
-            fl!("hours-ago", HashMap::from_iter(vec![("duration", hrs)]))
+            fl!("hours-ago", HashMap::from([("duration", hrs)]))
         } else {
-            fl!("minutes-ago", HashMap::from_iter(vec![("duration", min)]))
+            fl!("minutes-ago", HashMap::from([("duration", min)]))
         }
     } else {
         String::new()

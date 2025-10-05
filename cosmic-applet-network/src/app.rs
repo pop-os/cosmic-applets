@@ -370,7 +370,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                     } = &req
                     {
                         if let Some(NewConnectionState::Waiting(access_point)) =
-                            self.new_connection.clone()
+                            self.new_connection.as_ref()
                         {
                             if !success
                                 && ssid == &access_point.ssid
@@ -384,7 +384,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                                     }
                                 } else if let Some(NewConnectionState::EnterPassword {
                                     access_point, ..
-                                }) = self.new_connection.clone()
+                                }) = self.new_connection.as_ref()
                                 {
                                     if success && ssid == &access_point.ssid && *hw_address == access_point.hw_address {
                                         self.new_connection = None;
@@ -863,7 +863,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                 let mut btn_content = vec![
                     column![
                         text::body(display_name),
-                        Column::with_children(vec![text("Adapter").size(10).into()])
+                        Column::with_children([text("Adapter").size(10).into()])
                     ]
                     .width(Length::Fill)
                     .into(),
@@ -1149,7 +1149,7 @@ impl cosmic::Application for CosmicNetworkApplet {
 
         if let Some(conn) = self.conn.as_ref() {
             let has_popup = self.popup.is_some();
-            Subscription::batch(vec![
+            Subscription::batch([
                 timeline,
                 network_sub,
                 token_sub,
@@ -1161,7 +1161,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                     .map(Message::NetworkManagerEvent),
             ])
         } else {
-            Subscription::batch(vec![timeline, network_sub, token_sub])
+            Subscription::batch([timeline, network_sub, token_sub])
         }
     }
 

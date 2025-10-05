@@ -57,11 +57,13 @@ pub struct WaylandImage {
 
 impl WaylandImage {
     pub fn new(img: image::RgbaImage) -> Self {
+        let width = img.width();
+        let height = img.height();
+
         Self {
-            // TODO avoid copy?
-            img: Bytes::copy_from_slice(img.as_bytes()),
-            width: img.width(),
-            height: img.height(),
+            img: Bytes::from_owner(img.into_vec()),
+            width,
+            height,
         }
     }
 }

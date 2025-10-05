@@ -380,8 +380,7 @@ impl cosmic::Application for App {
                     }
 
                     self.overflow_popup = Some(popup_id);
-                    let cmds = vec![get_popup(popup_settings)];
-                    return Task::batch(cmds);
+                    return get_popup(popup_settings);
                 } else {
                     return Task::none();
                 }
