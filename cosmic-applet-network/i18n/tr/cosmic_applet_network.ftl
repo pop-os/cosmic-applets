@@ -18,3 +18,4 @@ router-wps-button = Yönlendiricideki "WPS" düğmesine basarak da bağlanabilir
 unable-to-connect = Ağa bağlanılamadı
 check-wifi-connection = Wi-Fi'nin internete bağlı olduğundan ve parolanın doğru olduğundan emin olun
 reset = Sıfırla
+identity = Kimlik

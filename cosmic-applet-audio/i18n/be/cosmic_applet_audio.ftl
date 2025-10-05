@@ -1,4 +1,4 @@
-output = Выхад
+output = Вывад
 input = Уваход
 show-media-controls = Паказваць элементы кіраваня мультымедыя на верхняй панэлі
 sound-settings = Налады гуку...
