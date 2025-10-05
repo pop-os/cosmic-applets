@@ -6,7 +6,7 @@ use crate::{
         Power, PowerProfileRequest, PowerProfileUpdate, get_charging_limit,
         power_profile_subscription, set_charging_limit,
     },
-    config,
+    config::{self, BatteryConfig},
     dgpu::{Entry, GpuUpdate, dgpu_subscription},
     fl,
 };
@@ -26,9 +26,11 @@ use cosmic::{
         window,
     },
     iced_core::{Alignment, Background, Border, Color, Shadow},
-    surface, theme,
-    widget::{divider, horizontal_space, icon, scrollable, slider, text, vertical_space},
+    surface,
+    theme::{self, Button},
+    widget::{button, divider, horizontal_space, icon, scrollable, slider, text, vertical_space},
 };
+use cosmic_config::{Config, CosmicConfigEntry};
 use cosmic_settings_subscriptions::{
     settings_daemon,
     upower::{
@@ -64,6 +66,7 @@ pub fn run() -> cosmic::iced::Result {
 }
 
 static MAX_CHARGE: LazyLock<id::Toggler> = LazyLock::new(id::Toggler::unique);
+static SHOW_PERCENTAGE: LazyLock<id::Toggler> = LazyLock::new(id::Toggler::unique);
 
 #[derive(Clone, Default)]
 struct GPUData {
@@ -75,6 +78,7 @@ struct GPUData {
 #[derive(Clone, Default)]
 struct CosmicBatteryApplet {
     core: cosmic::app::Core,
+    config: BatteryConfig,
     icon_name: String,
     display_icon_name: String,
     charging_limit: Option<bool>,
@@ -179,6 +183,7 @@ enum Message {
     ReleaseScreenBrightness,
     InitChargingLimit(Option<bool>),
     SetChargingLimit(chain::Toggler, bool),
+    ShowBatteryPercentage(chain::Toggler, bool),
     KeyboardBacklight(KeyboardBacklightUpdate),
     UpowerDevice(DeviceDbusEvent),
     GpuInit(UnboundedSender<()>),
@@ -204,6 +209,11 @@ impl cosmic::Application for CosmicBatteryApplet {
     const APP_ID: &'static str = config::APP_ID;
 
     fn init(core: cosmic::app::Core, _flags: Self::Flags) -> (Self, app::Task<Self::Message>) {
+        let config = Config::new(config::APP_ID, BatteryConfig::VERSION)
+            .ok()
+            .and_then(|c| BatteryConfig::get_entry(&c).ok())
+            .unwrap_or_default();
+
         let zbus_session_cmd = Task::perform(zbus::Connection::session(), |res| {
             cosmic::Action::App(Message::ZbusConnection(res))
         });
@@ -213,6 +223,7 @@ impl cosmic::Application for CosmicBatteryApplet {
         (
             Self {
                 core,
+                config,
                 icon_name: "battery-symbolic".to_string(),
                 display_icon_name: "display-brightness-symbolic".to_string(),
                 token_tx: None,
@@ -310,6 +321,17 @@ impl cosmic::Application for CosmicBatteryApplet {
                     return cosmic::iced::Task::perform(set_charging_limit(), |_| {
                         cosmic::Action::None
                     });
+                }
+            }
+            Message::ShowBatteryPercentage(chain, show) => {
+                self.timeline.set_chain(chain).start();
+
+                if let Ok(helper) =
+                    cosmic::cosmic_config::Config::new(Self::APP_ID, BatteryConfig::VERSION)
+                {
+                    if let Err(err) = self.config.set_show_percentage(&helper, show) {
+                        tracing::error!(?err, "Error writing config");
+                    }
                 }
             }
             Message::Errored(why) => {
@@ -479,12 +501,48 @@ impl cosmic::Application for CosmicBatteryApplet {
         Task::none()
     }
 
-    fn view(&self) -> Element<'_, Message> {
-        let btn = self
-            .core
-            .applet
-            .icon_button(&self.icon_name)
+    fn view(&self) -> Element<Message> {
+        let Spacing { space_xs, .. } = theme::active().cosmic().spacing;
+
+        let is_horizontal = match self.core.applet.anchor {
+            PanelAnchor::Top | PanelAnchor::Bottom => true,
+            PanelAnchor::Left | PanelAnchor::Right => false,
+        };
+
+        let mut children = vec![icon::from_name(self.icon_name.as_str()).into()];
+
+        let suggested_size = self.core.applet.suggested_size(true);
+        let applet_padding = self.core.applet.suggested_padding(true);
+
+        if self.config.show_percentage {
+            children.push(
+                self.core
+                    .applet
+                    .text(format!("{:.0}%", self.battery_percent))
+                    .width(Length::Fixed(suggested_size.0 as f32))
+                    .height(Length::Fixed(suggested_size.1 as f32))
+                    .align_x(Alignment::Center)
+                    .align_y(Alignment::Center)
+                    .into(),
+            );
+        }
+
+        let btn_content: Element<_> = if is_horizontal {
+            row(children)
+                .spacing(space_xs)
+                .align_y(Alignment::Center)
+                .into()
+        } else {
+            column(children)
+                .spacing(space_xs)
+                .align_x(Alignment::Center)
+                .into()
+        };
+
+        let btn = button::custom(btn_content)
             .on_press_down(Message::TogglePopup)
+            .class(Button::AppletIcon)
+            .padding(applet_padding)
             .into();
 
         let content = if self.gpus.is_empty() {
@@ -507,13 +565,14 @@ impl cosmic::Application for CosmicBatteryApplet {
                 })))
                 .into();
 
-            match self.core.applet.anchor {
-                PanelAnchor::Left | PanelAnchor::Right => Column::with_children(vec![btn, dot])
-                    .align_x(Alignment::Center)
-                    .into(),
-                PanelAnchor::Top | PanelAnchor::Bottom => Row::with_children(vec![btn, dot])
+            if is_horizontal {
+                Row::from_vec(vec![btn, dot])
                     .align_y(Alignment::Center)
-                    .into(),
+                    .into()
+            } else {
+                Column::from_vec(vec![btn, dot])
+                    .align_x(Alignment::Center)
+                    .into()
             }
         };
 
@@ -642,6 +701,27 @@ impl cosmic::Application for CosmicBatteryApplet {
                     .into(),
             );
         }
+
+        content.push(
+            padded_control(
+                anim!(
+                    //toggler
+                    SHOW_PERCENTAGE,
+                    &self.timeline,
+                    fl!("show-percentage"),
+                    self.config.show_percentage,
+                    Message::ShowBatteryPercentage,
+                )
+                .text_size(14)
+                .width(Length::Fill),
+            )
+            .into(),
+        );
+        content.push(
+            padded_control(divider::horizontal::default())
+                .padding([space_xxs, space_s])
+                .into(),
+        );
 
         if let Some(max_screen_brightness) = self.max_screen_brightness {
             if let Some(screen_brightness) = self.screen_brightness {
