@@ -79,8 +79,13 @@ static DND_FAVORITES: u64 = u64::MAX;
 impl AppletIconData {
     fn new(applet: &Context) -> Self {
         let icon_size = applet.suggested_size(false).0;
-        let padding = applet.suggested_padding(false);
-        let icon_spacing = 4.0;
+        let (major_padding, cross_padding) = applet.suggested_padding(false);
+        let (h_padding, v_padding) = if applet.is_horizontal() {
+            (major_padding as f32, cross_padding as f32)
+        } else {
+            (cross_padding as f32, major_padding as f32)
+        };
+        let icon_spacing = applet.spacing as f32;
 
         let (dot_radius, bar_size) = match applet.size {
             Size::Hardcoded(_) => (2.0, 8.0),
@@ -98,14 +103,31 @@ impl AppletIconData {
                 }
             }
         };
-
-        let padding = padding as f32;
-
         let padding = match applet.anchor {
-            PanelAnchor::Top => [padding - (dot_radius * 2. + 1.), padding, padding, padding],
-            PanelAnchor::Bottom => [padding, padding, padding - (dot_radius * 2. + 1.), padding],
-            PanelAnchor::Left => [padding, padding, padding, padding - (dot_radius * 2. + 1.)],
-            PanelAnchor::Right => [padding, padding - (dot_radius * 2. + 1.), padding, padding],
+            PanelAnchor::Top => [
+                v_padding - (dot_radius * 2. + 1.),
+                h_padding,
+                v_padding,
+                h_padding,
+            ],
+            PanelAnchor::Bottom => [
+                v_padding,
+                h_padding,
+                v_padding - (dot_radius * 2. + 1.),
+                h_padding,
+            ],
+            PanelAnchor::Left => [
+                v_padding,
+                h_padding,
+                v_padding,
+                h_padding - (dot_radius * 2. + 1.),
+            ],
+            PanelAnchor::Right => [
+                v_padding,
+                h_padding - (dot_radius * 2. + 1.),
+                v_padding,
+                h_padding,
+            ],
         };
         AppletIconData {
             icon_size,
@@ -920,7 +942,7 @@ impl cosmic::Application for CosmicAppList {
             }
             Message::DndEnter(x, y) => {
                 let item_size = self.core.applet.suggested_size(false).0
-                    + 2 * self.core.applet.suggested_padding(false);
+                    + 2 * self.core.applet.suggested_padding(false).0;
                 let pos_in_list = match self.core.applet.anchor {
                     PanelAnchor::Top | PanelAnchor::Bottom => x as f32,
                     PanelAnchor::Left | PanelAnchor::Right => y as f32,
@@ -942,7 +964,7 @@ impl cosmic::Application for CosmicAppList {
             }
             Message::DndMotion(x, y) => {
                 let item_size = self.core.applet.suggested_size(false).0
-                    + 2 * self.core.applet.suggested_padding(false);
+                    + 2 * self.core.applet.suggested_padding(false).0;
                 let pos_in_list = match self.core.applet.anchor {
                     PanelAnchor::Top | PanelAnchor::Bottom => x as f32,
                     PanelAnchor::Left | PanelAnchor::Right => y as f32,
@@ -1350,7 +1372,7 @@ impl cosmic::Application for CosmicAppList {
                         };
                     }
                     let applet_suggested_size = self.core.applet.suggested_size(false).0
-                        + 2 * self.core.applet.suggested_padding(false);
+                        + 2 * self.core.applet.suggested_padding(false).0;
                     let (_favorite_popup_cutoff, active_popup_cutoff) =
                         self.panel_overflow_lengths();
                     let popup_applet_count =
@@ -1407,7 +1429,7 @@ impl cosmic::Application for CosmicAppList {
                         };
                     }
                     let applet_suggested_size = self.core.applet.suggested_size(false).0
-                        + 2 * self.core.applet.suggested_padding(false);
+                        + 2 * self.core.applet.suggested_padding(false).0;
                     let (favorite_popup_cutoff, _active_popup_cutoff) =
                         self.panel_overflow_lengths();
                     let popup_applet_count =
@@ -1573,7 +1595,7 @@ impl cosmic::Application for CosmicAppList {
                     icon::from_name("starred-symbolic.symbolic")
                         .size(self.core.applet.suggested_size(false).0),
                 )
-                .padding(self.core.applet.suggested_padding(false))
+                .padding(self.core.applet.suggested_padding(false).1) // TODO
                 .into(),
             );
         }
@@ -1643,13 +1665,13 @@ impl cosmic::Application for CosmicAppList {
         let window_size = self.core.applet.suggested_bounds.as_ref();
         let max_num = if self.core.applet.is_horizontal() {
             let suggested_width = self.core.applet.suggested_size(false).0
-                + self.core.applet.suggested_padding(false) * 2;
+                + self.core.applet.suggested_padding(false).0 * 2;
             window_size
                 .map(|w| w.width)
                 .map_or(u32::MAX, |b| (b / suggested_width as f32) as u32) as usize
         } else {
             let suggested_height = self.core.applet.suggested_size(false).1
-                + self.core.applet.suggested_padding(false) * 2;
+                + self.core.applet.suggested_padding(false).0 * 2;
             window_size
                 .map(|w| w.height)
                 .map_or(u32::MAX, |b| (b / suggested_height as f32) as u32) as usize
@@ -2247,7 +2269,7 @@ impl CosmicAppList {
         let applet_icon = AppletIconData::new(&self.core.applet);
 
         let button_total_size = self.core.applet.suggested_size(true).0
-            + self.core.applet.suggested_padding(true) * 2
+            + self.core.applet.suggested_padding(true).0 * 2
             + applet_icon.icon_spacing as u16;
 
         let favorite_active_cnt = self

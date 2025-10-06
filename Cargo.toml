@@ -72,7 +72,10 @@ lto = "thin"
 [workspace.metadata.cargo-machete]
 ignored = ["libcosmic"]
 
-# [patch."https://github.com/pop-os/libcosmic"]
+[patch."https://github.com/pop-os/libcosmic"]
+cosmic-config = { git = "https://github.com/pop-os/libcosmic//", branch = "shrinkable-applets" }
+libcosmic = { git = "https://github.com/pop-os/libcosmic//", branch = "shrinkable-applets" }
+iced_futures = { git = "https://github.com/pop-os/libcosmic//", branch = "shrinkable-applets" }
 # cosmic-config = { path = "../libcosmic/cosmic-config" }
 # libcosmic = { path = "../libcosmic" }
 # iced_futures = { path = "../libcosmic/iced/futures" }

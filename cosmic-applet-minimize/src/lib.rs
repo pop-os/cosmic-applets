@@ -74,7 +74,7 @@ impl Minimize {
             return index;
         };
         let button_total_size = self.core.applet.suggested_size(true).0
-            + self.core.applet.suggested_padding(true) * 2
+            + self.core.applet.suggested_padding(true).0 * 2
             + 4;
         let btn_count = max_major_axis_len / button_total_size as u32;
         if btn_count >= self.apps.len() as u32 {
@@ -143,8 +143,11 @@ impl cosmic::Application for Minimize {
         };
 
         app.update_desktop_entries();
-
-        (app, Task::none())
+        let t = iced::window::minimize::<cosmic::Action<Message>>(
+            app.core.main_window_id().unwrap(),
+            true,
+        );
+        (app, t)
     }
 
     fn core(&self) -> &cosmic::app::Core {
@@ -205,11 +208,22 @@ impl cosmic::Application for Minimize {
                         }
 
                         self.apps = apps;
+
+                        return iced::window::maximize(self.core.main_window_id().unwrap(), true);
                     }
                     ToplevelUpdate::Remove(handle) => {
+                        let prev_was_empty = self.apps.is_empty();
                         self.apps
                             .retain(|a| a.toplevel_info.foreign_toplevel != handle);
                         self.apps.shrink_to_fit();
+                        let changed = prev_was_empty != self.apps.is_empty();
+                        if self.apps.is_empty() && changed {
+                            // hide the window
+                            return iced::window::minimize(
+                                self.core.main_window_id().unwrap(),
+                                true,
+                            );
+                        }
                     }
                 },
                 WaylandUpdate::Image(handle, img) => {
@@ -241,7 +255,7 @@ impl cosmic::Application for Minimize {
 
                     self.overflow_popup = Some(new_id);
                     let icon_size = self.core.applet.suggested_size(true).0 as u32
-                        + 2 * self.core.applet.suggested_padding(true) as u32;
+                        + 2 * self.core.applet.suggested_padding(true).1 as u32;
                     let spacing = self.core.system_theme().cosmic().space_xxs() as u32;
                     let major_axis_len = (icon_size + spacing) * (pos.saturating_sub(1) as u32);
                     let rectangle = match self.core.applet.anchor {
@@ -293,9 +307,16 @@ impl cosmic::Application for Minimize {
             }
         });
         let (width, _) = self.core.applet.suggested_size(false);
-        let padding = self.core.applet.suggested_padding(false);
+        let (major_padding, cross_padding) = self.core.applet.suggested_padding(false);
+        let padding = if matches!(
+            self.core.applet.anchor,
+            PanelAnchor::Top | PanelAnchor::Bottom
+        ) {
+            (major_padding, cross_padding)
+        } else {
+            (cross_padding, major_padding)
+        };
         let theme = self.core.system_theme().cosmic();
-        let space_xxs = theme.space_xxs();
         let icon_buttons = self.apps[..max_icon_count].iter().map(|app| {
             self.core
                 .applet
@@ -332,6 +353,7 @@ impl cosmic::Application for Minimize {
             None
         };
 
+        let spacing = self.core.applet.spacing;
         // TODO optional dividers on ends if detects app list neighbor
         // not sure the best way to tell if there is an adjacent app-list
         let icon_buttons = icon_buttons.chain(overflow_btn);
@@ -343,14 +365,14 @@ impl cosmic::Application for Minimize {
                 .align_y(cosmic::iced_core::Alignment::Center)
                 .height(Length::Shrink)
                 .width(Length::Shrink)
-                .spacing(space_xxs)
+                .spacing(spacing as f32)
                 .into()
         } else {
             Column::with_children(icon_buttons)
                 .align_x(cosmic::iced_core::Alignment::Center)
                 .height(Length::Shrink)
                 .width(Length::Shrink)
-                .spacing(space_xxs)
+                .spacing(spacing as f32)
                 .into()
         };
 
@@ -388,7 +410,15 @@ impl cosmic::Application for Minimize {
             }
         });
         let (width, _) = self.core.applet.suggested_size(false);
-        let padding = self.core.applet.suggested_padding(false);
+        let (major_padding, cross_padding) = self.core.applet.suggested_padding(false);
+        let padding = if matches!(
+            self.core.applet.anchor,
+            PanelAnchor::Top | PanelAnchor::Bottom
+        ) {
+            (major_padding, cross_padding)
+        } else {
+            (cross_padding, major_padding)
+        };
         let theme = self.core.system_theme().cosmic();
         let space_xxs = theme.space_xxs();
         let icon_buttons = self.apps[max_icon_count..].iter().map(|app| {
@@ -429,15 +459,13 @@ impl cosmic::Application for Minimize {
                         Row::with_children(icon_buttons)
                             .align_y(cosmic::iced_core::Alignment::Center)
                             .height(Length::Shrink)
-                            .width(Length::Shrink)
-                            .spacing(space_xxs),
+                            .width(Length::Shrink),
                     )
                 } else {
                     Column::with_children(icon_buttons)
                         .align_x(cosmic::iced_core::Alignment::Center)
                         .height(Length::Shrink)
                         .width(Length::Shrink)
-                        .spacing(space_xxs)
                         .into()
                 },
             )

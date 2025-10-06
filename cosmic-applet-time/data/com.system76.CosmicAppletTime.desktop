@@ -19,6 +19,7 @@ Keywords=COSMIC;Iced;
 Icon=com.system76.CosmicAppletTime-symbolic
 NoDisplay=true
 X-CosmicApplet=true
+X-CosmicShrinkable=true
 X-HostWaylandDisplay=true
 X-CosmicHoverPopup=Auto
 # No shrink priority, as this applet is always visible when configured

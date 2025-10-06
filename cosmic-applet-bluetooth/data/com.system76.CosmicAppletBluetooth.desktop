@@ -12,5 +12,6 @@ Icon=com.system76.CosmicAppletBluetooth-symbolic
 StartupNotify=true
 NoDisplay=true
 X-CosmicApplet=true
+X-CosmicShrinkable=true
 X-CosmicHoverPopup=Auto
 X-OverflowPriority=10

@@ -484,7 +484,7 @@ impl cosmic::Application for CosmicBatteryApplet {
     }
 
     fn view(&self) -> Element<'_, Message> {
-        let btn = self
+        let btn: Element<'_, Message> = self
             .core
             .applet
             .icon_button(&self.icon_name)
@@ -508,17 +508,24 @@ impl cosmic::Application for CosmicBatteryApplet {
                         shadow: Shadow::default(),
                         icon_color: Some(Color::TRANSPARENT),
                     }
-                })))
-                .into();
+                })));
+            let (dot_align_x, dot_align_y) = match self.core.applet.anchor {
+                PanelAnchor::Left => (Alignment::Start, Alignment::Center),
+                PanelAnchor::Right => (Alignment::End, Alignment::Center),
+                PanelAnchor::Top => (Alignment::Center, Alignment::Start),
+                PanelAnchor::Bottom => (Alignment::Center, Alignment::End),
+            };
 
-            match self.core.applet.anchor {
-                PanelAnchor::Left | PanelAnchor::Right => Column::with_children([btn, dot])
-                    .align_x(Alignment::Center)
-                    .into(),
-                PanelAnchor::Top | PanelAnchor::Bottom => Row::with_children([btn, dot])
-                    .align_y(Alignment::Center)
-                    .into(),
-            }
+            cosmic::iced::widget::stack![
+                btn,
+                container(dot)
+                    .width(Length::Fill)
+                    .height(Length::Fill)
+                    .align_y(dot_align_y)
+                    .align_x(dot_align_x)
+                    .padding(2.0)
+            ]
+            .into()
         };
 
         self.core.applet.autosize_window(content).into()
@@ -790,7 +797,7 @@ impl cosmic::Application for CosmicBatteryApplet {
             if gpu.toggled
                 && !self.core.applet.suggested_bounds.as_ref().is_some_and(|c| {
                     let suggested_size = self.core.applet.suggested_size(true);
-                    let padding = self.core.applet.suggested_padding(true);
+                    let padding = self.core.applet.suggested_padding(true).1;
                     let w = suggested_size.0 + 2 * padding;
                     let h = suggested_size.1 + 2 * padding;
                     // if we have a configure for width and height, we're in a overflow popup
