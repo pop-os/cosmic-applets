@@ -21,5 +21,6 @@ Icon=com.system76.CosmicAppletTiling-symbolic
 StartupNotify=true
 NoDisplay=true
 X-CosmicApplet=true
+X-CosmicShrinkable=true
 X-HostWaylandDisplay=true
 X-CosmicHoverPopup=Auto

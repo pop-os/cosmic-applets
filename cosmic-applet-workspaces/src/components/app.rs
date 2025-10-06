@@ -74,7 +74,7 @@ impl IcedWorkspacesApplet {
             return index;
         };
         let button_total_size = self.core.applet.suggested_size(true).0
-            + self.core.applet.suggested_padding(true) * 2
+            + self.core.applet.suggested_padding(true).1 * 2
             + 4;
         let btn_count = max_major_axis_len / button_total_size as u32;
         if btn_count >= self.workspaces.len() as u32 {
@@ -219,8 +219,8 @@ impl cosmic::Application for IcedWorkspacesApplet {
             self.core.applet.anchor,
             PanelAnchor::Top | PanelAnchor::Bottom
         );
-        let suggested_total =
-            self.core.applet.suggested_size(true).0 + self.core.applet.suggested_padding(true) * 2;
+        let suggested_total = self.core.applet.suggested_size(true).0
+            + self.core.applet.suggested_padding(true).1 * 2;
         let suggested_window_size = self.core.applet.suggested_window_size();
         let popup_index = self.popup_index().unwrap_or(self.workspaces.len());
 
@@ -245,9 +245,9 @@ impl cosmic::Application for IcedWorkspacesApplet {
                     .align_y(Alignment::Center),
             )
             .padding(if horizontal {
-                [0, self.core.applet.suggested_padding(true)]
+                [0, self.core.applet.suggested_padding(true).1]
             } else {
-                [self.core.applet.suggested_padding(true), 0]
+                [self.core.applet.suggested_padding(true).1, 0]
             })
             .on_press(
                 if w.state.contains(ext_workspace_handle_v1::State::Active) {

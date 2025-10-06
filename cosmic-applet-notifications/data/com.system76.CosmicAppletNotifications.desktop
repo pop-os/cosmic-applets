@@ -20,6 +20,7 @@ Keywords=COSMIC;Iced;
 Icon=com.system76.CosmicAppletNotifications-symbolic
 NoDisplay=true
 X-CosmicApplet=true
+X-CosmicShrinkable=true
 X-NotificationsApplet=true
 X-CosmicHoverPopup=Auto
 X-OverflowPriority=10

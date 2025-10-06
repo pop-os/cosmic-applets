@@ -204,13 +204,6 @@ impl cosmic::Application for CosmicBluetoothApplet {
                     ) => {
                         // my headphones seem to always request this
                         // doesn't seem to be defined in the UX mockups
-                        // dbg!(
-                        //     "request service authorization",
-                        //     d.name,
-                        //     bluer::id::Service::try_from(service)
-                        //         .map(|s| s.to_string())
-                        //         .unwrap_or_else(|_| "unknown".to_string())
-                        // );
                     }
                 },
             },

@@ -22,6 +22,7 @@ Icon=com.system76.CosmicAppletAudio-symbolic
 StartupNotify=true
 NoDisplay=true
 X-CosmicApplet=true
+X-CosmicShrinkable=true
 # Indicates that the auto-hover click should go to the "end" of the hover popup
 X-CosmicHoverPopup=End
 X-OverflowPriority=10

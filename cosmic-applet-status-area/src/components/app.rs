@@ -56,7 +56,7 @@ impl App {
 
     fn resize_window(&self) -> app::Task<Msg> {
         let icon_size = self.core.applet.suggested_size(true).0 as u32
-            + self.core.applet.suggested_padding(true) as u32 * 2;
+            + self.core.applet.suggested_padding(true).1 as u32 * 2;
         let n = self.menus.len() as u32;
         window::resize(
             self.core.main_window_id().unwrap(),
@@ -73,8 +73,8 @@ impl App {
             }
         })?;
 
-        let button_total_size =
-            self.core.applet.suggested_size(true).0 + self.core.applet.suggested_padding(true) * 2;
+        let button_total_size = self.core.applet.suggested_size(true).0
+            + self.core.applet.suggested_padding(true).1 * 2;
 
         let menu_count = self.menus.len();
 
@@ -250,11 +250,11 @@ impl cosmic::Application for App {
                         PanelAnchor::Left | PanelAnchor::Right
                     ) {
                         let suggested_size = self.core.applet.suggested_size(false).1
-                            + 2 * self.core.applet.suggested_padding(false);
+                            + 2 * self.core.applet.suggested_padding(false).1;
                         popup_settings.positioner.anchor_rect.y = i as i32 * suggested_size as i32;
                     } else {
                         let suggested_size = self.core.applet.suggested_size(false).0
-                            + 2 * self.core.applet.suggested_padding(false);
+                            + 2 * self.core.applet.suggested_padding(false).1;
                         popup_settings.positioner.anchor_rect.x = i as i32 * suggested_size as i32;
                     }
                     cmds.push(get_popup(popup_settings));
@@ -332,11 +332,11 @@ impl cosmic::Application for App {
                     PanelAnchor::Left | PanelAnchor::Right
                 ) {
                     let suggested_size = self.core.applet.suggested_size(false).1
-                        + 2 * self.core.applet.suggested_padding(false);
+                        + 2 * self.core.applet.suggested_padding(false).1;
                     popup_settings.positioner.anchor_rect.y = i as i32 * suggested_size as i32;
                 } else {
                     let suggested_size = self.core.applet.suggested_size(false).0
-                        + 2 * self.core.applet.suggested_padding(false);
+                        + 2 * self.core.applet.suggested_padding(false).1;
                     popup_settings.positioner.anchor_rect.x = i as i32 * suggested_size as i32;
                 }
                 cmds.push(get_popup(popup_settings));
@@ -369,12 +369,12 @@ impl cosmic::Application for App {
                         PanelAnchor::Left | PanelAnchor::Right
                     ) {
                         let suggested_size = self.core.applet.suggested_size(false).1
-                            + 2 * self.core.applet.suggested_padding(false);
+                            + 2 * self.core.applet.suggested_padding(false).1;
                         popup_settings.positioner.anchor_rect.y =
                             overflow_index as i32 * suggested_size as i32;
                     } else {
                         let suggested_size = self.core.applet.suggested_size(false).0
-                            + 2 * self.core.applet.suggested_padding(false);
+                            + 2 * self.core.applet.suggested_padding(false).1;
                         popup_settings.positioner.anchor_rect.x =
                             overflow_index as i32 * suggested_size as i32;
                     }
@@ -418,11 +418,11 @@ impl cosmic::Application for App {
                     PanelAnchor::Left | PanelAnchor::Right
                 ) {
                     let suggested_size = self.core.applet.suggested_size(false).1
-                        + 2 * self.core.applet.suggested_padding(false);
+                        + 2 * self.core.applet.suggested_padding(false).1;
                     popup_settings.positioner.anchor_rect.y = i as i32 * suggested_size as i32;
                 } else {
                     let suggested_size = self.core.applet.suggested_size(false).0
-                        + 2 * self.core.applet.suggested_padding(false);
+                        + 2 * self.core.applet.suggested_padding(false).1;
                     popup_settings.positioner.anchor_rect.x = i as i32 * suggested_size as i32;
                 }
                 cmds.push(get_popup(popup_settings));

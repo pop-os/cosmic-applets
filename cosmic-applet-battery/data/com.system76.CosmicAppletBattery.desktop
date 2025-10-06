@@ -21,5 +21,6 @@ Icon=com.system76.CosmicAppletBattery-symbolic
 StartupNotify=true
 NoDisplay=true
 X-CosmicApplet=true
+X-CosmicShrinkable=true
 X-CosmicHoverPopup=Start
 X-OverflowPriority=10
