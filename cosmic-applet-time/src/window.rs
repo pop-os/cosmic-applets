@@ -208,7 +208,8 @@ impl Window {
                 date_time_col,
                 horizontal_space().width(Length::Fixed(
                     (self.core.applet.suggested_size(true).0
-                        + 2 * self.core.applet.suggested_padding(true)) as f32
+                        + 2 * self.core.applet.suggested_padding(true).1)
+                        as f32
                 ))
             )
             .align_x(Alignment::Center),
@@ -260,7 +261,8 @@ impl Window {
                 self.core.applet.text(formatted_date),
                 container(vertical_space().height(Length::Fixed(
                     (self.core.applet.suggested_size(true).1
-                        + 2 * self.core.applet.suggested_padding(true)) as f32
+                        + 2 * self.core.applet.suggested_padding(true).1)
+                        as f32
                 )))
             )
             .align_y(Alignment::Center),
@@ -627,9 +629,9 @@ impl cosmic::Application for Window {
             self.vertical_layout()
         })
         .padding(if horizontal {
-            [0, self.core.applet.suggested_padding(true)]
+            [0, self.core.applet.suggested_padding(true).0]
         } else {
-            [self.core.applet.suggested_padding(true), 0]
+            [self.core.applet.suggested_padding(true).0, 0]
         })
         .on_press_down(Message::TogglePopup)
         .class(cosmic::theme::Button::AppletIcon);

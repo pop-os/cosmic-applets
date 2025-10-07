@@ -142,13 +142,13 @@ impl cosmic::Application for Button {
                     self.core.applet.text(&self.desktop.name),
                     vertical_space().height(Length::Fixed(
                         (self.core.applet.suggested_size(true).1
-                            + 2 * self.core.applet.suggested_padding(true))
+                            + 2 * self.core.applet.suggested_padding(true).1)
                             as f32
                     ))
                 )
                 .align_y(iced::Alignment::Center);
                 cosmic::widget::button::custom(content)
-                    .padding([0, self.core.applet.suggested_padding(true)])
+                    .padding([0, self.core.applet.suggested_padding(true).1])
                     .class(cosmic::theme::Button::AppletIcon)
                     .on_press_down(Msg::Press)
                     .into()
