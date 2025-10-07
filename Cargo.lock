@@ -1539,7 +1539,7 @@ dependencies = [
 [[package]]
 name = "cosmic-notifications-config"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/cosmic-notifications#81b636c069c0d931ba4d1d3823eba70ed8e54ba2"
+source = "git+https://github.com/pop-os/cosmic-notifications#00b5f6e3c78254fea75dc7dd7e78f7ecf2ba9665"
 dependencies = [
  "cosmic-config",
  "serde",
@@ -1548,7 +1548,7 @@ dependencies = [
 [[package]]
 name = "cosmic-notifications-util"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/cosmic-notifications#81b636c069c0d931ba4d1d3823eba70ed8e54ba2"
+source = "git+https://github.com/pop-os/cosmic-notifications#00b5f6e3c78254fea75dc7dd7e78f7ecf2ba9665"
 dependencies = [
  "fast_image_resize",
  "libcosmic",
@@ -4451,6 +4451,7 @@ dependencies = [
 [[package]]
 name = "mpris2-zbus"
 version = "0.1.0"
+source = "git+https://github.com/pop-os/dbus-settings-bindings?branch=precise-capturing#531fb30e2a7f794af6f8d656d630e8364c688d46"
 dependencies = [
  "futures-util",
  "serde",
