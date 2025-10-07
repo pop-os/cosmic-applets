@@ -1096,7 +1096,9 @@ impl cosmic::Application for CosmicNetworkApplet {
         content = content.push(available_connections_btn);
 
         if !self.show_visible_networks {
-            content = content.push(vpn_section(&self.nm_state, self.show_available_vpns, space_xxs, space_s));
+            if !self.nm_state.available_vpns.is_empty() {
+                content = content.push(vpn_section(&self.nm_state, self.show_available_vpns, space_xxs, space_s));
+            }
             return self.view_window_return(content);
         }
 
@@ -1242,7 +1244,9 @@ impl cosmic::Application for CosmicNetworkApplet {
         }
 
         // Add VPN connections section after wireless networks when they are expanded
-        content = content.push(vpn_section(&self.nm_state, self.show_available_vpns, space_xxs, space_s));
+        if !self.nm_state.available_vpns.is_empty() {
+            content = content.push(vpn_section(&self.nm_state, self.show_available_vpns, space_xxs, space_s));
+        }
 
         self.view_window_return(content)
     }
