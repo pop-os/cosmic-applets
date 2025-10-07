@@ -808,6 +808,6 @@ async fn build_device_list(mut devices: Vec<BluerDevice>, adapter: &Adapter) -> 
         devices.push(device);
     }
 
-    devices.sort();
+    devices.sort_unstable();
     devices
 }
