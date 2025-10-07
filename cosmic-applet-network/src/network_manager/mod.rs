@@ -420,7 +420,7 @@ impl NetworkManagerState {
         let s = NetworkManagerSettings::new(conn).await?;
         _ = s.load_connections(&[]).await;
         let known_conns = s.list_connections().await.unwrap_or_default();
-        let mut active_conns = active_connections(
+        let active_conns = active_connections(
             network_manager
                 .active_connections()
                 .await
@@ -428,7 +428,7 @@ impl NetworkManagerState {
         )
         .await
         .unwrap_or_default();
-        active_conns.sort();
+        // active_conns.sort(); active_connections should have already sorted the vector
         let devices = network_manager.devices().await.ok().unwrap_or_default();
         let wireless_access_point_futures: Vec<_> = devices
             .into_iter()

@@ -77,7 +77,7 @@ pub async fn handle_wireless_device(
         );
     }
     let mut aps = aps.into_values().collect::<Vec<_>>();
-    aps.sort_by_key(|ap| ap.strength);
+    aps.sort_unstable_by_key(|ap| ap.strength);
     Ok(aps)
 }
 

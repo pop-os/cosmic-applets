@@ -71,7 +71,7 @@ pub async fn active_connections(
         }
     }
 
-    info.sort();
+    info.sort_unstable();
     Ok(info)
 }
 
