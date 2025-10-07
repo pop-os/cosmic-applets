@@ -116,10 +116,10 @@ impl std::cmp::Ord for ActiveConnectionInfo {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         match (self, other) {
             (Self::Vpn { .. }, Self::Wired { .. } | Self::WiFi { .. })
-            | (Self::Wired { .. }, Self::WiFi { .. }) => std::cmp::Ordering::Greater,
+            | (Self::Wired { .. }, Self::WiFi { .. }) => std::cmp::Ordering::Less,
 
             (Self::WiFi { .. }, Self::Wired { .. } | Self::Vpn { .. })
-            | (Self::Wired { .. }, Self::Vpn { .. }) => std::cmp::Ordering::Less,
+            | (Self::Wired { .. }, Self::Vpn { .. }) => std::cmp::Ordering::Greater,
 
             (Self::Vpn { name: n1, .. }, Self::Vpn { name: n2, .. })
             | (Self::Wired { name: n1, .. }, Self::Wired { name: n2, .. })
