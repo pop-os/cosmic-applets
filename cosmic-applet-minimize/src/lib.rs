@@ -74,7 +74,7 @@ impl Minimize {
             return index;
         };
         let button_total_size = self.core.applet.suggested_size(true).0
-            + self.core.applet.suggested_padding(true) * 2
+            + self.core.applet.suggested_padding(true).0 * 2
             + 4;
         let btn_count = max_major_axis_len / button_total_size as u32;
         if btn_count >= self.apps.len() as u32 {
@@ -241,7 +241,7 @@ impl cosmic::Application for Minimize {
 
                     self.overflow_popup = Some(new_id);
                     let icon_size = self.core.applet.suggested_size(true).0 as u32
-                        + 2 * self.core.applet.suggested_padding(true) as u32;
+                        + 2 * self.core.applet.suggested_padding(true).1 as u32;
                     let spacing = self.core.system_theme().cosmic().space_xxs() as u32;
                     let major_axis_len = (icon_size + spacing) * (pos.saturating_sub(1) as u32);
                     let rectangle = match self.core.applet.anchor {
@@ -293,9 +293,16 @@ impl cosmic::Application for Minimize {
             }
         });
         let (width, _) = self.core.applet.suggested_size(false);
-        let padding = self.core.applet.suggested_padding(false);
+        let (major_padding, cross_padding) = self.core.applet.suggested_padding(false);
+        let padding = if matches!(
+            self.core.applet.anchor,
+            PanelAnchor::Top | PanelAnchor::Bottom
+        ) {
+            (major_padding, cross_padding)
+        } else {
+            (cross_padding, major_padding)
+        };
         let theme = self.core.system_theme().cosmic();
-        let space_xxs = theme.space_xxs();
         let icon_buttons = self.apps[..max_icon_count].iter().map(|app| {
             self.core
                 .applet
@@ -343,14 +350,12 @@ impl cosmic::Application for Minimize {
                 .align_y(cosmic::iced_core::Alignment::Center)
                 .height(Length::Shrink)
                 .width(Length::Shrink)
-                .spacing(space_xxs)
                 .into()
         } else {
             Column::with_children(icon_buttons)
                 .align_x(cosmic::iced_core::Alignment::Center)
                 .height(Length::Shrink)
                 .width(Length::Shrink)
-                .spacing(space_xxs)
                 .into()
         };
 
@@ -388,7 +393,15 @@ impl cosmic::Application for Minimize {
             }
         });
         let (width, _) = self.core.applet.suggested_size(false);
-        let padding = self.core.applet.suggested_padding(false);
+        let (major_padding, cross_padding) = self.core.applet.suggested_padding(false);
+        let padding = if matches!(
+            self.core.applet.anchor,
+            PanelAnchor::Top | PanelAnchor::Bottom
+        ) {
+            (major_padding, cross_padding)
+        } else {
+            (cross_padding, major_padding)
+        };
         let theme = self.core.system_theme().cosmic();
         let space_xxs = theme.space_xxs();
         let icon_buttons = self.apps[max_icon_count..].iter().map(|app| {
@@ -429,15 +442,13 @@ impl cosmic::Application for Minimize {
                         Row::with_children(icon_buttons)
                             .align_y(cosmic::iced_core::Alignment::Center)
                             .height(Length::Shrink)
-                            .width(Length::Shrink)
-                            .spacing(space_xxs),
+                            .width(Length::Shrink),
                     )
                 } else {
                     Column::with_children(icon_buttons)
                         .align_x(cosmic::iced_core::Alignment::Center)
                         .height(Length::Shrink)
                         .width(Length::Shrink)
-                        .spacing(space_xxs)
                         .into()
                 },
             )

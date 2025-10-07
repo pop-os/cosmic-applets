@@ -212,7 +212,7 @@ impl cosmic::Application for Window {
                     input_source_text,
                     horizontal_space().width(Length::Fixed(
                         (self.core.applet.suggested_size(true).0
-                            + 2 * self.core.applet.suggested_padding(true))
+                            + 2 * self.core.applet.suggested_padding(true).1)
                             as f32
                     ))
                 )
@@ -221,7 +221,8 @@ impl cosmic::Application for Window {
                 .align_x(Alignment::Center),
                 vertical_space().height(Length::Fixed(
                     (self.core.applet.suggested_size(true).1
-                        + 2 * self.core.applet.suggested_padding(true)) as f32
+                        + 2 * self.core.applet.suggested_padding(true).1)
+                        as f32
                 ))
             )
             .align_y(Alignment::Center)

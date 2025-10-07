@@ -729,12 +729,12 @@ impl cosmic::Application for Audio {
                     PanelAnchor::Left | PanelAnchor::Right => Element::from(
                         Column::with_children(vec![playback_buttons, btn.into()])
                             .align_x(Alignment::Center)
-                            .spacing(-(self.core.applet.suggested_padding(true) as f32)),
+                            .spacing(-(self.core.applet.suggested_padding(true).0 as f32)),
                     ),
                     PanelAnchor::Top | PanelAnchor::Bottom => {
                         Row::with_children([playback_buttons, btn.into()])
                             .align_y(Alignment::Center)
-                            .spacing(-(self.core.applet.suggested_padding(true) as f32))
+                            .spacing(-(self.core.applet.suggested_padding(true).0 as f32))
                             .into()
                     }
                 }
