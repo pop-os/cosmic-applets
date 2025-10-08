@@ -1,4 +1,5 @@
 pub mod active_conns;
+pub mod available_vpns;
 pub mod available_wifi;
 pub mod current_networks;
 pub mod devices;
@@ -34,6 +35,7 @@ use zbus::{
 };
 
 use self::{
+    available_vpns::{VpnConnection, load_vpn_connections},
     available_wifi::{AccessPoint, handle_wireless_device},
     current_networks::{ActiveConnectionInfo, active_connections},
 };
@@ -282,6 +284,123 @@ async fn start_listening(
                         })
                         .await;
                 }
+                Some(NetworkManagerRequest::ActivateVpn(uuid)) => {
+                    tracing::info!("Activating VPN with UUID: {}", uuid);
+                    let network_manager = match NetworkManager::new(&conn).await {
+                        Ok(n) => n,
+                        Err(e) => {
+                            tracing::error!("Failed to connect to NetworkManager: {:?}", e);
+                            _ = output
+                                .send(NetworkManagerEvent::RequestResponse {
+                                    req: NetworkManagerRequest::ActivateVpn(uuid),
+                                    success: false,
+                                    state: NetworkManagerState::new(&conn).await.unwrap_or_default(),
+                                })
+                                .await;
+                            return State::Waiting(conn, rx);
+                        }
+                    };
+
+                    let mut success = false;
+
+                    // Find the connection by UUID
+                    if let Ok(nm_settings) = NetworkManagerSettings::new(&conn).await {
+                        if let Ok(connections) = nm_settings.list_connections().await {
+                            for connection in connections {
+                                if let Ok(settings) = connection.get_settings().await {
+                                    let settings = Settings::new(settings);
+                                    if let Some(conn_settings) = &settings.connection {
+                                        if conn_settings.uuid.as_ref() == Some(&uuid) {
+                                            // Activate the VPN connection without a specific device
+                                            // Call the D-Bus method directly since VPNs don't need a device
+                                            use zbus::zvariant::ObjectPath;
+                                            let empty_device = ObjectPath::try_from("/").unwrap();
+
+                                            match network_manager.inner()
+                                                .call_method("ActivateConnection", &(connection.inner().path(), empty_device.clone(), empty_device))
+                                                .await
+                                            {
+                                                Ok(_) => {
+                                                    tracing::info!("Successfully activated VPN: {}", uuid);
+                                                    success = true;
+                                                }
+                                                Err(e) => {
+                                                    tracing::error!("Failed to activate VPN {}: {:?}", uuid, e);
+                                                }
+                                            }
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if !success {
+                        tracing::warn!("VPN connection with UUID {} not found or failed to activate", uuid);
+                    }
+
+                    let state = NetworkManagerState::new(&conn).await.unwrap_or_default();
+                    _ = output
+                        .send(NetworkManagerEvent::RequestResponse {
+                            req: NetworkManagerRequest::ActivateVpn(uuid),
+                            success,
+                            state,
+                        })
+                        .await;
+                }
+                Some(NetworkManagerRequest::DeactivateVpn(name)) => {
+                    tracing::info!("Deactivating VPN: {}", name);
+                    let network_manager = match NetworkManager::new(&conn).await {
+                        Ok(n) => n,
+                        Err(e) => {
+                            tracing::error!("Failed to connect to NetworkManager: {:?}", e);
+                            _ = output
+                                .send(NetworkManagerEvent::RequestResponse {
+                                    req: NetworkManagerRequest::DeactivateVpn(name),
+                                    success: false,
+                                    state: NetworkManagerState::new(&conn).await.unwrap_or_default(),
+                                })
+                                .await;
+                            return State::Waiting(conn, rx);
+                        }
+                    };
+
+                    let mut success = false;
+
+                    // Find and deactivate the active VPN connection by name
+                    if let Ok(active_connections) = network_manager.active_connections().await {
+                        for active_conn in active_connections {
+                            if let Ok(conn_id) = active_conn.id().await {
+                                if conn_id == name && active_conn.vpn().await.unwrap_or(false) {
+                                    match network_manager.deactivate_connection(&active_conn).await {
+                                        Ok(_) => {
+                                            tracing::info!("Successfully deactivated VPN: {}", name);
+                                            success = true;
+                                            break;
+                                        }
+                                        Err(e) => {
+                                            tracing::error!("Failed to deactivate VPN {}: {:?}", name, e);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if !success {
+                        tracing::warn!("Active VPN connection '{}' not found or failed to deactivate", name);
+                    }
+
+                    let state = NetworkManagerState::new(&conn).await.unwrap_or_default();
+                    _ = output
+                        .send(NetworkManagerEvent::RequestResponse {
+                            req: NetworkManagerRequest::DeactivateVpn(name),
+                            success,
+                            state,
+                        })
+                        .await;
+                }
                 _ => {
                     return State::Finished;
                 }
@@ -360,6 +479,8 @@ pub enum NetworkManagerRequest {
     },
     Forget(String, HwAddress),
     Reload,
+    ActivateVpn(String),      // UUID of VPN connection to activate
+    DeactivateVpn(String),    // Name of active VPN connection to deactivate
 }
 
 #[derive(Debug, Clone)]
@@ -384,6 +505,7 @@ pub struct NetworkManagerState {
     pub wireless_access_points: Vec<AccessPoint>,
     pub active_conns: Vec<ActiveConnectionInfo>,
     pub known_access_points: Vec<AccessPoint>,
+    pub available_vpns: Vec<VpnConnection>,
     pub wifi_enabled: bool,
     pub airplane_mode: bool,
     pub connectivity: NmConnectivityState,
@@ -395,6 +517,7 @@ impl Default for NetworkManagerState {
             wireless_access_points: Vec::new(),
             active_conns: Vec::new(),
             known_access_points: Vec::new(),
+            available_vpns: Vec::new(),
             wifi_enabled: false,
             airplane_mode: false,
             connectivity: NmConnectivityState::Unknown,
@@ -490,6 +613,9 @@ impl NetworkManagerState {
         self_.known_access_points = known_access_points;
         self_.connectivity = network_manager.connectivity().await?;
 
+        // Load available VPN connections
+        self_.available_vpns = load_vpn_connections(conn).await.unwrap_or_default();
+
         Ok(self_)
     }
 
@@ -498,6 +624,7 @@ impl NetworkManagerState {
         self.active_conns = Vec::new();
         self.known_access_points = Vec::new();
         self.wireless_access_points = Vec::new();
+        self.available_vpns = Vec::new();
     }
 
     async fn connect_wifi(
