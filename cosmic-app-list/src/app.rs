@@ -30,14 +30,14 @@ use cosmic::{
     cosmic_config::{Config, CosmicConfigEntry},
     desktop::IconSourceExt,
     iced::{
-        self, Color, Limits, Subscription,
+        self, Limits, Subscription,
         clipboard::mime::{AllowedMimeTypes, AsMimeTypes},
         event::listen_with,
         platform_specific::shell::commands::popup::{destroy_popup, get_popup},
         widget::{Column, Row, column, mouse_area, row, vertical_rule, vertical_space},
         window,
     },
-    iced_core::{Border, Padding, Shadow},
+    iced_core::{Border, Padding},
     iced_runtime::{core::event, dnd::peek_dnd},
     surface,
     theme::{self, Button, Container},
@@ -176,8 +176,8 @@ impl DockItem {
             .width(app_icon.icon_size.into())
             .height(app_icon.icon_size.into());
 
-        let dot_constructor = || {
-            let space = if toplevels.len() <= 1 {
+        let indicator = {
+            let container = if toplevels.len() <= 1 {
                 vertical_space().height(Length::Fixed(0.0))
             } else {
                 match applet.anchor {
@@ -188,37 +188,31 @@ impl DockItem {
                         horizontal_space().width(app_icon.bar_size)
                     }
                 }
-            };
-            let mut container = container(space).padding(app_icon.dot_radius);
-
-            if !toplevels.is_empty() {
-                container =
-                    container.class(theme::style::Container::Custom(Box::new(move |theme| {
-                        container::Style {
-                            text_color: Some(Color::TRANSPARENT),
-                            background: if is_focused {
-                                Some(Background::Color(theme.cosmic().accent_color().into()))
-                            } else {
-                                Some(Background::Color(theme.cosmic().on_bg_color().into()))
-                            },
-                            border: Border {
-                                radius: dot_border_radius.into(),
-                                width: 0.0,
-                                color: Color::TRANSPARENT,
-                            },
-                            shadow: Shadow::default(),
-                            icon_color: Some(Color::TRANSPARENT),
-                        }
-                    })))
             }
-            container.into()
-        };
+            .apply(container)
+            .padding(app_icon.dot_radius);
 
-        let dots = std::iter::repeat_with(dot_constructor).take(2);
+            if toplevels.is_empty() {
+                container
+            } else {
+                container.class(theme::Container::custom(move |theme| container::Style {
+                    background: if is_focused {
+                        Some(Background::Color(theme.cosmic().accent_color().into()))
+                    } else {
+                        Some(Background::Color(theme.cosmic().on_bg_color().into()))
+                    },
+                    border: Border {
+                        radius: dot_border_radius.into(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                }))
+            }
+        };
 
         let icon_wrapper: Element<_> = match applet.anchor {
             PanelAnchor::Left => row([
-                column(dots).into(),
+                indicator.into(),
                 horizontal_space().width(Length::Fixed(1.0)).into(),
                 cosmic_icon.clone().into(),
             ])
@@ -227,12 +221,12 @@ impl DockItem {
             PanelAnchor::Right => row([
                 cosmic_icon.clone().into(),
                 horizontal_space().width(Length::Fixed(1.0)).into(),
-                column(dots).into(),
+                indicator.into(),
             ])
             .align_y(Alignment::Center)
             .into(),
             PanelAnchor::Top => column([
-                row(dots).into(),
+                indicator.into(),
                 vertical_space().height(Length::Fixed(1.0)).into(),
                 cosmic_icon.clone().into(),
             ])
@@ -241,7 +235,7 @@ impl DockItem {
             PanelAnchor::Bottom => column([
                 cosmic_icon.clone().into(),
                 vertical_space().height(Length::Fixed(1.0)).into(),
-                row(dots).into(),
+                indicator.into(),
             ])
             .align_x(Alignment::Center)
             .into(),
@@ -893,7 +887,7 @@ impl cosmic::Application for CosmicAppList {
                 }
             }
             Message::DragFinished => {
-                if let Some((_, mut toplevel_group, _, pinned_pos)) = self.dnd_source.take() {
+                if let Some((_, mut toplevel_group, _, _pinned_pos)) = self.dnd_source.take() {
                     if self.dnd_offer.take().is_some() {
                         if let Some((_, toplevel_group, _, pinned_pos)) = self.dnd_source.as_ref() {
                             let mut pos = 0;
@@ -965,7 +959,6 @@ impl cosmic::Application for CosmicAppList {
                 }
             }
             Message::DndLeave => {
-                let mut cnt = 0;
                 if let Some((_, toplevel_group, _, pinned_pos)) = self.dnd_source.as_ref() {
                     let mut pos = 0;
                     self.pinned_list.retain_mut(|pinned| {
@@ -1513,7 +1506,7 @@ impl cosmic::Application for CosmicAppList {
                                 .toplevels
                                 .iter()
                                 .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
-                            theme.cosmic().radius_xs(),
+                            dot_radius,
                             self.core.main_window_id().unwrap(),
                         ),
                         dock_item
