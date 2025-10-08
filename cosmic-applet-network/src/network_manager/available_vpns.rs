@@ -29,7 +29,10 @@ pub async fn load_vpn_connections(conn: &Connection) -> anyhow::Result<Vec<VpnCo
             if let Some(conn_type) = &connection_settings.type_ {
                 // VPN connections have type "vpn" or "wireguard"
                 if conn_type == "vpn" || conn_type == "wireguard" {
-                    let name = connection_settings.id.clone().unwrap_or_else(|| "Unknown VPN".to_string());
+                    let name = connection_settings
+                        .id
+                        .clone()
+                        .unwrap_or_else(|| "Unknown VPN".to_string());
                     let uuid = connection_settings.uuid.clone().unwrap_or_default();
 
                     vpn_connections.push(VpnConnection { name, uuid });

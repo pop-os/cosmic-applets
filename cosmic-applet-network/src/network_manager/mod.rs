@@ -294,7 +294,9 @@ async fn start_listening(
                                 .send(NetworkManagerEvent::RequestResponse {
                                     req: NetworkManagerRequest::ActivateVpn(uuid),
                                     success: false,
-                                    state: NetworkManagerState::new(&conn).await.unwrap_or_default(),
+                                    state: NetworkManagerState::new(&conn)
+                                        .await
+                                        .unwrap_or_default(),
                                 })
                                 .await;
                             return State::Waiting(conn, rx);
@@ -316,16 +318,31 @@ async fn start_listening(
                                             use zbus::zvariant::ObjectPath;
                                             let empty_device = ObjectPath::try_from("/").unwrap();
 
-                                            match network_manager.inner()
-                                                .call_method("ActivateConnection", &(connection.inner().path(), empty_device.clone(), empty_device))
+                                            match network_manager
+                                                .inner()
+                                                .call_method(
+                                                    "ActivateConnection",
+                                                    &(
+                                                        connection.inner().path(),
+                                                        empty_device.clone(),
+                                                        empty_device,
+                                                    ),
+                                                )
                                                 .await
                                             {
                                                 Ok(_) => {
-                                                    tracing::info!("Successfully activated VPN: {}", uuid);
+                                                    tracing::info!(
+                                                        "Successfully activated VPN: {}",
+                                                        uuid
+                                                    );
                                                     success = true;
                                                 }
                                                 Err(e) => {
-                                                    tracing::error!("Failed to activate VPN {}: {:?}", uuid, e);
+                                                    tracing::error!(
+                                                        "Failed to activate VPN {}: {:?}",
+                                                        uuid,
+                                                        e
+                                                    );
                                                 }
                                             }
                                             break;
@@ -337,7 +354,10 @@ async fn start_listening(
                     }
 
                     if !success {
-                        tracing::warn!("VPN connection with UUID {} not found or failed to activate", uuid);
+                        tracing::warn!(
+                            "VPN connection with UUID {} not found or failed to activate",
+                            uuid
+                        );
                     }
 
                     let state = NetworkManagerState::new(&conn).await.unwrap_or_default();
@@ -359,7 +379,9 @@ async fn start_listening(
                                 .send(NetworkManagerEvent::RequestResponse {
                                     req: NetworkManagerRequest::DeactivateVpn(name),
                                     success: false,
-                                    state: NetworkManagerState::new(&conn).await.unwrap_or_default(),
+                                    state: NetworkManagerState::new(&conn)
+                                        .await
+                                        .unwrap_or_default(),
                                 })
                                 .await;
                             return State::Waiting(conn, rx);
@@ -373,14 +395,22 @@ async fn start_listening(
                         for active_conn in active_connections {
                             if let Ok(conn_id) = active_conn.id().await {
                                 if conn_id == name && active_conn.vpn().await.unwrap_or(false) {
-                                    match network_manager.deactivate_connection(&active_conn).await {
+                                    match network_manager.deactivate_connection(&active_conn).await
+                                    {
                                         Ok(_) => {
-                                            tracing::info!("Successfully deactivated VPN: {}", name);
+                                            tracing::info!(
+                                                "Successfully deactivated VPN: {}",
+                                                name
+                                            );
                                             success = true;
                                             break;
                                         }
                                         Err(e) => {
-                                            tracing::error!("Failed to deactivate VPN {}: {:?}", name, e);
+                                            tracing::error!(
+                                                "Failed to deactivate VPN {}: {:?}",
+                                                name,
+                                                e
+                                            );
                                         }
                                     }
                                 }
@@ -389,7 +419,10 @@ async fn start_listening(
                     }
 
                     if !success {
-                        tracing::warn!("Active VPN connection '{}' not found or failed to deactivate", name);
+                        tracing::warn!(
+                            "Active VPN connection '{}' not found or failed to deactivate",
+                            name
+                        );
                     }
 
                     let state = NetworkManagerState::new(&conn).await.unwrap_or_default();
@@ -479,8 +512,8 @@ pub enum NetworkManagerRequest {
     },
     Forget(String, HwAddress),
     Reload,
-    ActivateVpn(String),      // UUID of VPN connection to activate
-    DeactivateVpn(String),    // Name of active VPN connection to deactivate
+    ActivateVpn(String),   // UUID of VPN connection to activate
+    DeactivateVpn(String), // Name of active VPN connection to deactivate
 }
 
 #[derive(Debug, Clone)]
