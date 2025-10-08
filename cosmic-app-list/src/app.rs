@@ -2287,7 +2287,7 @@ impl CosmicAppList {
         if self.active_workspaces.is_empty() {
             return Vec::new();
         }
-        let current_output = self.core.applet.output_name.as_ref();
+        let current_output = &self.core.applet.output_name;
         let mut focused_toplevels: Vec<ExtForeignToplevelHandleV1> = Vec::new();
         let active_workspaces = &self.active_workspaces;
         for toplevel_list in self.active_list.iter().chain(self.pinned_list.iter()) {
@@ -2298,7 +2298,7 @@ impl CosmicAppList {
                         .any(|workspace| t_info.workspace.contains(workspace))
                     && t_info.output.iter().any(|x| {
                         self.output_list.get(x).is_some_and(|val| {
-                            val.name.as_ref().is_some_and(|n| *n == current_output)
+                            val.name.as_ref().is_some_and(|n| n == current_output)
                         })
                     })
                 {

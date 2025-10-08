@@ -719,7 +719,7 @@ sctk::delegate_shm!(AppData);
 cctk::delegate_toplevel_info!(AppData);
 cctk::delegate_workspace!(AppData);
 cctk::delegate_toplevel_manager!(AppData);
-cctk::delegate_screencopy!(AppData, session: [SessionData], frame: [FrameData]);
+cctk::delegate_screencopy!(AppData);
 
 sctk::delegate_activation!(AppData, ExecRequestData);
 
