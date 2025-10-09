@@ -1,5 +1,5 @@
-tile-windows = Organizar ventanas automáticamente
-tile-current = Organizar automáticamente el espacio de trabajo actual
+tile-windows = Organizar ventanas en mosaico automáticamente
+tile-current = Organizar ventanas en mosaico en el espacio de trabajo actual
 shortcuts = Atajos
 navigate-windows = Navegar entre ventanas
 move-window = Mover ventana
@@ -14,7 +14,7 @@ per-workspace = Por espacio de trabajo
 super = Súper
 shift = Mayús
 arrow-keys = flechas
-tiled = Organizado
+tiled = En mosaico
 floating = Flotante
-autotile-behavior = Organizar ventanas en espacios de trabajo
+autotile-behavior = Organizar ventanas en mosaico en los espacios de trabajo
 new-workspace = Comportamiento de espacios de trabajo nuevos

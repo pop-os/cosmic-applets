@@ -1,0 +1,12 @@
+bluetooth = Bluetooth
+cancel = Hætta við
+confirm = Staðfesta
+other-devices = Önnur Bluetooth-tæki
+settings = Bluetooth stillingar...
+connected = Tengt
+confirm-pin = Staðfestu að eftirfarandi PIN-númer samsvari því sem er sýnt { $deviceName }
+unsuccessful = Pörun mistókst
+check-device = Gakktu úr skugga um að kveikt sé á { $deviceName }, það sé nógu nálægt og tilbúið til að parast.
+try-again = Reyna aftur
+pairable = Paranlegt
+discoverable = Sýnilegt

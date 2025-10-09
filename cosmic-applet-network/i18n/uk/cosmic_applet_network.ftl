@@ -19,3 +19,4 @@ unable-to-connect = Не вдалося підключитися до мереж
 check-wifi-connection = Переконайтеся, що Wi-Fi підключено до Інтернету, а пароль — правильний
 reset = Скинути
 identity = Ідентичність
+vpn-connections = Підключення VPN

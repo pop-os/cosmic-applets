@@ -1,0 +1,14 @@
+battery = Rafhlaða
+battery-desc = Dregið úr orkunotkun og afköstum.
+balanced = Jafnvægi
+balanced-desc = Venjuleg afköst og rafhlöðunýting.
+performance = Mikil afköst
+performance-desc = Mikil afköst og orkunotkun.
+max-charge = Auktu líftíma rafhlöðunnar með því að stilla hámarkshleðslu á 80%
+seconds = sek.
+minutes = mín.
+hours = klst.
+until-empty = þar til hún tæmist
+power-settings = Orku- og rafhlöðustillingar...
+dgpu-running = Aðskilið skjákort er virkt og getur dregið úr endingu rafhlöðunnar
+dgpu-applications = Forrit sem nota { $gpu_name } aðskilið skjákort

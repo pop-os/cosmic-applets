@@ -1,7 +1,7 @@
-output = الإخراج
+output = مخرج
 input = الإدخال
-show-media-controls = إظهار عناصر التحكم بالوسائط على اللوحة
+show-media-controls = عرض عناصر التحكم بالوسائط على شريط المهام
 sound-settings = إعدادات الصوت...
-disconnected = غير متصل ببولس أوديو
+disconnected = PulseAudio غير متصل
 no-device = لم يتم اختيار جهاز
 unknown-artist = فنان غير معروف

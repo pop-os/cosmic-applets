@@ -1,5 +1,5 @@
 screen-reader = Skjermleser
-magnifier = Forstørring
+magnifier = Forstørrelsesglass
 invert-colors = Fargeinvertering
 settings = Tilgjengelighetsinnstillinger...
 filter-colors = Fargekorrigering

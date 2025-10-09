@@ -19,3 +19,4 @@ router-wps-button = Du kan også koble til ved å trykke på "WPS"-knappen på r
 unable-to-connect = Kan ikke koble til nettverket
 check-wifi-connection = Sørg for at Wi-Fi er koblet til internett og at passordet er riktig
 reset = Tilbakestill
+vpn-connections = VPN-tilkoblinger

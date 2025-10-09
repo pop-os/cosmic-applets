@@ -19,3 +19,4 @@ router-wps-button = Můžete se také připojit stisknutím tlačítka "WPS" na 
 unable-to-connect = Nepodařilo se připojit k síti
 check-wifi-connection = Ujistěte se, že Wi-Fi má připojení k internetu a heslo je správné
 reset = Obnovit
+vpn-connections = Připojení VPN
