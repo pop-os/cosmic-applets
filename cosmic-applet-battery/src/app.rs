@@ -479,7 +479,7 @@ impl cosmic::Application for CosmicBatteryApplet {
     }
 
     fn view(&self) -> Element<'_, Message> {
-        let btn = self
+        let btn: Element<'_, Message> = self
             .core
             .applet
             .icon_button(&self.icon_name)
@@ -503,17 +503,24 @@ impl cosmic::Application for CosmicBatteryApplet {
                         shadow: Shadow::default(),
                         icon_color: Some(Color::TRANSPARENT),
                     }
-                })))
-                .into();
+                })));
+            let (dot_align_x, dot_align_y) = match self.core.applet.anchor {
+                PanelAnchor::Left => (Alignment::Start, Alignment::Center),
+                PanelAnchor::Right => (Alignment::End, Alignment::Center),
+                PanelAnchor::Top => (Alignment::Center, Alignment::Start),
+                PanelAnchor::Bottom => (Alignment::Center, Alignment::End),
+            };
 
-            match self.core.applet.anchor {
-                PanelAnchor::Left | PanelAnchor::Right => Column::with_children([btn, dot])
-                    .align_x(Alignment::Center)
-                    .into(),
-                PanelAnchor::Top | PanelAnchor::Bottom => Row::with_children([btn, dot])
-                    .align_y(Alignment::Center)
-                    .into(),
-            }
+            cosmic::iced::widget::stack![
+                btn,
+                container(dot)
+                    .width(Length::Fill)
+                    .height(Length::Fill)
+                    .align_y(dot_align_y)
+                    .align_x(dot_align_x)
+                    .padding(2.0)
+            ]
+            .into()
         };
 
         self.core.applet.autosize_window(content).into()
