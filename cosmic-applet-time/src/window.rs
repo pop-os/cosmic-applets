@@ -28,10 +28,11 @@ use std::sync::LazyLock;
 use timedate_zbus::TimeDateProxy;
 use tokio::{sync::watch, time};
 
-use crate::{config::TimeAppletConfig, fl, time::get_calendar_first};
+use crate::{config::TimeAppletConfig, fl};
 use cosmic::applet::token::subscription::{
     TokenRequest, TokenUpdate, activation_token_subscription,
 };
+use cosmic::widget::calendar::get_calender_first;
 use icu::{
     datetime::{
         DateTimeFormatter, DateTimeFormatterPreferences, fieldsets,
@@ -119,7 +120,11 @@ impl Window {
         let mut first_day_of_week = chrono::Weekday::try_from(self.config.first_day_of_week)
             .unwrap_or(chrono::Weekday::Sun);
 
-        let first_day = get_calendar_first(self.date_selected, first_day_of_week);
+        let first_day = get_calender_first(
+            self.date_selected.year(),
+            self.date_selected.month(),
+            first_day_of_week,
+        );
 
         let prefs = DateTimeFormatterPreferences::from(self.locale.clone());
         let weekday = DateTimeFormatter::try_new(prefs, fieldsets::E::short()).unwrap();
