@@ -119,35 +119,35 @@ impl cosmic::Application for CosmicBluetoothApplet {
                                 .map(|()| cosmic::Action::App(Message::Ignore)),
                         ),
                     ]);
-                } else {
-                    // TODO request update of state maybe
-                    let new_id = window::Id::unique();
-                    self.popup.replace(new_id);
-                    self.timeline = Timeline::new();
-
-                    let popup_settings = self.core.applet.get_popup_settings(
-                        self.core.main_window_id().unwrap(),
-                        new_id,
-                        None,
-                        None,
-                        None,
-                    );
-
-                    let tx = self.bluer_sender.clone();
-                    return Task::batch([
-                        iced::Task::perform(
-                            async {
-                                if let Some(tx) = tx {
-                                    let _ = tx.send(BluerRequest::StateUpdate).await;
-                                }
-                            },
-                            |()| cosmic::action::app(Message::Ignore),
-                        ),
-                        get_popup(popup_settings),
-                        cosmic::task::future(set_tick(Duration::from_secs(3)))
-                            .map(|()| cosmic::Action::App(Message::Ignore)),
-                    ]);
                 }
+
+                // TODO request update of state maybe
+                let new_id = window::Id::unique();
+                self.popup.replace(new_id);
+                self.timeline = Timeline::new();
+
+                let popup_settings = self.core.applet.get_popup_settings(
+                    self.core.main_window_id().unwrap(),
+                    new_id,
+                    None,
+                    None,
+                    None,
+                );
+
+                let tx = self.bluer_sender.clone();
+                return Task::batch([
+                    iced::Task::perform(
+                        async {
+                            if let Some(tx) = tx {
+                                let _ = tx.send(BluerRequest::StateUpdate).await;
+                            }
+                        },
+                        |()| cosmic::action::app(Message::Ignore),
+                    ),
+                    get_popup(popup_settings),
+                    cosmic::task::future(set_tick(Duration::from_secs(3)))
+                        .map(|()| cosmic::Action::App(Message::Ignore)),
+                ]);
             }
             Message::Ignore => {}
             Message::ToggleVisibleDevices(enabled) => {
@@ -457,7 +457,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
         if !known_bluetooth.is_empty() {
             content = content
                 .push(padded_control(divider::horizontal::default()).padding([space_xxs, space_s]));
-            content = content.push(Column::with_children(known_bluetooth));
+            content = content.push(Column::from_vec(known_bluetooth));
         }
         let dropdown_icon = if self.show_visible_devices {
             "go-up-symbolic"
@@ -559,9 +559,9 @@ impl cosmic::Application for CosmicBluetoothApplet {
 
         if item_counter > 10 {
             content = content
-                .push(scrollable(Column::with_children(list_column)).height(Length::Fixed(300.0)));
+                .push(scrollable(Column::from_vec(list_column)).height(Length::Fixed(300.0)));
         } else {
-            content = content.push(Column::with_children(list_column));
+            content = content.push(Column::from_vec(list_column));
         }
         content = content
             .push(padded_control(divider::horizontal::default()).padding([space_xxs, space_s]))

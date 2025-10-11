@@ -312,7 +312,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                 }
             }
             Message::Errored(why) => {
-                tracing::error!("{}", why);
+                tracing::error!("{why}");
             }
             Message::TogglePopup => {
                 self.dragging_kbd_brightness = false;
@@ -320,37 +320,37 @@ impl cosmic::Application for CosmicBatteryApplet {
 
                 if let Some(p) = self.popup.take() {
                     return destroy_popup(p);
-                } else {
-                    if let Some(tx) = &self.kbd_sender {
-                        let _ = tx.send(KeyboardBacklightRequest::Get);
-                    }
-                    self.timeline = Timeline::new();
-
-                    let new_id = window::Id::unique();
-                    self.popup.replace(new_id);
-
-                    let popup_settings = self.core.applet.get_popup_settings(
-                        self.core.main_window_id().unwrap(),
-                        new_id,
-                        Some((1, 1)),
-                        None,
-                        None,
-                    );
-                    if let Some(tx) = self.power_profile_sender.as_ref() {
-                        let _ = tx.send(PowerProfileRequest::Get);
-                    }
-                    if let Some(tx) = self.update_trigger.as_ref() {
-                        let _ = tx.send(());
-                    }
-                    let mut tasks = vec![get_popup(popup_settings)];
-                    // Try again every time a popup is opened
-                    if self.charging_limit.is_none() {
-                        tasks.push(Task::perform(get_charging_limit(), |limit| {
-                            cosmic::Action::App(Message::InitChargingLimit(limit.ok()))
-                        }));
-                    }
-                    return Task::batch(tasks);
                 }
+
+                if let Some(tx) = &self.kbd_sender {
+                    let _ = tx.send(KeyboardBacklightRequest::Get);
+                }
+                self.timeline = Timeline::new();
+
+                let new_id = window::Id::unique();
+                self.popup.replace(new_id);
+
+                let popup_settings = self.core.applet.get_popup_settings(
+                    self.core.main_window_id().unwrap(),
+                    new_id,
+                    Some((1, 1)),
+                    None,
+                    None,
+                );
+                if let Some(tx) = self.power_profile_sender.as_ref() {
+                    let _ = tx.send(PowerProfileRequest::Get);
+                }
+                if let Some(tx) = self.update_trigger.as_ref() {
+                    let _ = tx.send(());
+                }
+                let mut tasks = vec![get_popup(popup_settings)];
+                // Try again every time a popup is opened
+                if self.charging_limit.is_none() {
+                    tasks.push(Task::perform(get_charging_limit(), |limit| {
+                        cosmic::Action::App(Message::InitChargingLimit(limit.ok()))
+                    }));
+                }
+                return Task::batch(tasks);
             }
             Message::UpowerDevice(event) => match event {
                 DeviceDbusEvent::Update {
@@ -451,7 +451,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                 }
             }
             Message::ZbusConnection(Err(err)) => {
-                tracing::error!("Failed to connect to session dbus: {}", err);
+                tracing::error!("Failed to connect to session dbus: {err}");
             }
             Message::ZbusConnection(Ok(conn)) => {
                 self.zbus_connection = Some(conn);
@@ -814,7 +814,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                     );
                 }
                 content.push(
-                    scrollable(Column::with_children(list_apps))
+                    scrollable(Column::from_vec(list_apps))
                         .height(Length::Fixed(300.0))
                         .into(),
                 );

@@ -33,7 +33,7 @@ pub fn run() -> cosmic::iced::Result {
     let layouts = match xkb_data::all_keyboard_layouts() {
         Ok(layouts) => layouts,
         Err(why) => {
-            tracing::error!("could not get keyboard layouts data: {:?}", why);
+            tracing::error!("could not get keyboard layouts data: {why:?}");
             return Ok(());
         }
     };
@@ -44,14 +44,14 @@ pub fn run() -> cosmic::iced::Result {
                 let config = match CosmicCompConfig::get_entry(&config_handler) {
                     Ok(ok) => ok,
                     Err((errs, config)) => {
-                        tracing::error!("errors loading config: {:?}", errs);
+                        tracing::error!("errors loading config: {errs:?}");
                         config
                     }
                 };
                 (Some(config_handler), config)
             }
             Err(err) => {
-                tracing::error!("failed to create config handler: {}", err);
+                tracing::error!("failed to create config handler: {err}");
                 (None, CosmicCompConfig::default())
             }
         };
@@ -213,7 +213,7 @@ impl cosmic::Application for Window {
                     horizontal_space().width(Length::Fixed(
                         (self.core.applet.suggested_size(true).0
                             + 2 * self.core.applet.suggested_padding(true))
-                            as f32
+                        .into()
                     ))
                 )
                 .width(Length::Shrink)
@@ -221,7 +221,8 @@ impl cosmic::Application for Window {
                 .align_x(Alignment::Center),
                 vertical_space().height(Length::Fixed(
                     (self.core.applet.suggested_size(true).1
-                        + 2 * self.core.applet.suggested_padding(true)) as f32
+                        + 2 * self.core.applet.suggested_padding(true))
+                    .into()
                 ))
             )
             .align_y(Alignment::Center)
