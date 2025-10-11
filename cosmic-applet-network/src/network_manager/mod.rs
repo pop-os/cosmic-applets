@@ -216,7 +216,7 @@ async fn start_listening(
 
                     if let Err(err) = err {
                         success = false;
-                        tracing::error!("{:?}", &err);
+                        tracing::error!("{err:?}");
                     }
 
                     _ = output
@@ -285,11 +285,11 @@ async fn start_listening(
                         .await;
                 }
                 Some(NetworkManagerRequest::ActivateVpn(uuid)) => {
-                    tracing::info!("Activating VPN with UUID: {}", uuid);
+                    tracing::info!("Activating VPN with UUID: {uuid}");
                     let network_manager = match NetworkManager::new(&conn).await {
                         Ok(n) => n,
                         Err(e) => {
-                            tracing::error!("Failed to connect to NetworkManager: {:?}", e);
+                            tracing::error!("Failed to connect to NetworkManager: {e:?}");
                             _ = output
                                 .send(NetworkManagerEvent::RequestResponse {
                                     req: NetworkManagerRequest::ActivateVpn(uuid),
@@ -309,46 +309,41 @@ async fn start_listening(
                     if let Ok(nm_settings) = NetworkManagerSettings::new(&conn).await {
                         if let Ok(connections) = nm_settings.list_connections().await {
                             for connection in connections {
-                                if let Ok(settings) = connection.get_settings().await {
-                                    let settings = Settings::new(settings);
-                                    if let Some(conn_settings) = &settings.connection {
-                                        if conn_settings.uuid.as_ref() == Some(&uuid) {
-                                            // Activate the VPN connection without a specific device
-                                            // Call the D-Bus method directly since VPNs don't need a device
-                                            use zbus::zvariant::ObjectPath;
-                                            let empty_device = ObjectPath::try_from("/").unwrap();
+                                let Ok(settings) = connection.get_settings().await else {
+                                    continue;
+                                };
+                                let Some(conn_settings) = Settings::new(settings).connection else {
+                                    continue;
+                                };
+                                let Some(uuid) = conn_settings.uuid.as_ref() else {
+                                    continue;
+                                };
+                                // Activate the VPN connection without a specific device
+                                // Call the D-Bus method directly since VPNs don't need a device
+                                use zbus::zvariant::ObjectPath;
+                                let empty_device = ObjectPath::try_from("/").unwrap();
 
-                                            match network_manager
-                                                .inner()
-                                                .call_method(
-                                                    "ActivateConnection",
-                                                    &(
-                                                        connection.inner().path(),
-                                                        empty_device.clone(),
-                                                        empty_device,
-                                                    ),
-                                                )
-                                                .await
-                                            {
-                                                Ok(_) => {
-                                                    tracing::info!(
-                                                        "Successfully activated VPN: {}",
-                                                        uuid
-                                                    );
-                                                    success = true;
-                                                }
-                                                Err(e) => {
-                                                    tracing::error!(
-                                                        "Failed to activate VPN {}: {:?}",
-                                                        uuid,
-                                                        e
-                                                    );
-                                                }
-                                            }
-                                            break;
-                                        }
+                                match network_manager
+                                    .inner()
+                                    .call_method(
+                                        "ActivateConnection",
+                                        &(
+                                            connection.inner().path(),
+                                            empty_device.clone(),
+                                            empty_device,
+                                        ),
+                                    )
+                                    .await
+                                {
+                                    Ok(_) => {
+                                        tracing::info!("Successfully activated VPN: {uuid}");
+                                        success = true;
+                                    }
+                                    Err(e) => {
+                                        tracing::error!("Failed to activate VPN {uuid}: {e:?}");
                                     }
                                 }
+                                break;
                             }
                         }
                     }
@@ -370,11 +365,11 @@ async fn start_listening(
                         .await;
                 }
                 Some(NetworkManagerRequest::DeactivateVpn(name)) => {
-                    tracing::info!("Deactivating VPN: {}", name);
+                    tracing::info!("Deactivating VPN: {name}");
                     let network_manager = match NetworkManager::new(&conn).await {
                         Ok(n) => n,
                         Err(e) => {
-                            tracing::error!("Failed to connect to NetworkManager: {:?}", e);
+                            tracing::error!("Failed to connect to NetworkManager: {e:?}");
                             _ = output
                                 .send(NetworkManagerEvent::RequestResponse {
                                     req: NetworkManagerRequest::DeactivateVpn(name),
@@ -397,19 +392,14 @@ async fn start_listening(
                                 if conn_id == name && active_conn.vpn().await.unwrap_or(false) {
                                     match network_manager.deactivate_connection(&active_conn).await
                                     {
-                                        Ok(_) => {
-                                            tracing::info!(
-                                                "Successfully deactivated VPN: {}",
-                                                name
-                                            );
+                                        Ok(()) => {
+                                            tracing::info!("Successfully deactivated VPN: {name}");
                                             success = true;
                                             break;
                                         }
                                         Err(e) => {
                                             tracing::error!(
-                                                "Failed to deactivate VPN {}: {:?}",
-                                                name,
-                                                e
+                                                "Failed to deactivate VPN {name}: {e:?}"
                                             );
                                         }
                                     }
@@ -483,7 +473,7 @@ async fn attempt_wifi_connection(
         .connect_wifi(conn, ssid.as_ref(), None, None, hw_address)
         .await
     {
-        tracing::error!("Failed to connect to access point: {:?}", err);
+        tracing::error!("Failed to connect to access point: {err:?}");
         false
     } else {
         true

@@ -203,16 +203,16 @@ impl Audio {
                         .icon_button(GO_NEXT)
                         .on_press(Message::MprisRequest(MprisRequest::Next))
                         .into(),
-                )
+                );
             }
 
             Some(match self.core.applet.anchor {
-                PanelAnchor::Left | PanelAnchor::Right => Column::with_children(elements)
-                    .align_x(Alignment::Center)
-                    .into(),
-                PanelAnchor::Top | PanelAnchor::Bottom => Row::with_children(elements)
-                    .align_y(Alignment::Center)
-                    .into(),
+                PanelAnchor::Left | PanelAnchor::Right => {
+                    Column::from_vec(elements).align_x(Alignment::Center).into()
+                }
+                PanelAnchor::Top | PanelAnchor::Bottom => {
+                    Row::from_vec(elements).align_y(Alignment::Center).into()
+                }
             })
         } else {
             None
@@ -315,34 +315,34 @@ impl cosmic::Application for Audio {
             Message::TogglePopup => {
                 if let Some(p) = self.popup.take() {
                     return destroy_popup(p);
-                } else {
-                    if let Some(conn) = self.pulse_state.connection() {
-                        conn.send(pulse::Message::UpdateConnection);
-                    }
-                    let new_id = window::Id::unique();
-                    self.popup.replace(new_id);
-                    self.timeline = Timeline::new();
-
-                    self.output_amplification = amplification_sink();
-                    self.input_amplification = amplification_source();
-
-                    let popup_settings = self.core.applet.get_popup_settings(
-                        self.core.main_window_id().unwrap(),
-                        new_id,
-                        None,
-                        None,
-                        None,
-                    );
-
-                    if let Some(conn) = self.pulse_state.connection() {
-                        conn.send(pulse::Message::GetDefaultSink);
-                        conn.send(pulse::Message::GetDefaultSource);
-                        conn.send(pulse::Message::GetSinks);
-                        conn.send(pulse::Message::GetSources);
-                    }
-
-                    return get_popup(popup_settings);
                 }
+
+                if let Some(conn) = self.pulse_state.connection() {
+                    conn.send(pulse::Message::UpdateConnection);
+                }
+                let new_id = window::Id::unique();
+                self.popup.replace(new_id);
+                self.timeline = Timeline::new();
+
+                self.output_amplification = amplification_sink();
+                self.input_amplification = amplification_source();
+
+                let popup_settings = self.core.applet.get_popup_settings(
+                    self.core.main_window_id().unwrap(),
+                    new_id,
+                    None,
+                    None,
+                    None,
+                );
+
+                if let Some(conn) = self.pulse_state.connection() {
+                    conn.send(pulse::Message::GetDefaultSink);
+                    conn.send(pulse::Message::GetDefaultSource);
+                    conn.send(pulse::Message::GetSinks);
+                    conn.send(pulse::Message::GetSources);
+                }
+
+                return get_popup(popup_settings);
             }
             Message::SetOutputVolume(vol) => {
                 if self.output_volume == vol {
@@ -400,7 +400,7 @@ impl cosmic::Application for Audio {
                 if let PulseState::Connected(connection) = &mut self.pulse_state {
                     if let Some(device) = &self.current_input {
                         if let Some(name) = &device.name {
-                            tracing::info!("increasing volume of {}", name);
+                            tracing::info!("increasing volume of {name}");
                             connection.send(pulse::Message::SetSourceVolumeByName(
                                 name.clone(),
                                 device.volume,
@@ -432,7 +432,7 @@ impl cosmic::Application for Audio {
                             connection.send(pulse::Message::SetSourceMuteByName(
                                 name.clone(),
                                 device.mute,
-                            ))
+                            ));
                         }
                     }
                 }
@@ -506,7 +506,7 @@ impl cosmic::Application for Audio {
                             panic!("Subscription error handling is bad. This should never happen.")
                         }
                         _ => {
-                            tracing::trace!("Received misc message")
+                            tracing::trace!("Received misc message");
                         }
                     }
                 }
@@ -559,35 +559,35 @@ impl cosmic::Application for Audio {
                     MprisRequest::Play => tokio::spawn(async move {
                         let res = player.play().await;
                         if let Err(err) = res {
-                            tracing::error!("Error playing: {}", err);
+                            tracing::error!("Error playing: {err}");
                         }
                     }),
                     MprisRequest::Pause => tokio::spawn(async move {
                         let res = player.pause().await;
                         if let Err(err) = res {
-                            tracing::error!("Error pausing: {}", err);
+                            tracing::error!("Error pausing: {err}");
                         }
                     }),
                     MprisRequest::Next => tokio::spawn(async move {
                         let res = player.next().await;
                         if let Err(err) = res {
-                            tracing::error!("Error playing next: {}", err);
+                            tracing::error!("Error playing next: {err}");
                         }
                     }),
                     MprisRequest::Previous => tokio::spawn(async move {
                         let res = player.previous().await;
                         if let Err(err) = res {
-                            tracing::error!("Error playing previous: {}", err);
+                            tracing::error!("Error playing previous: {err}");
                         }
                     }),
                     MprisRequest::Raise => tokio::spawn(async move {
                         let res = player.media_player().await;
                         if let Err(err) = res {
-                            tracing::error!("Error fetching MediaPlayer: {}", err);
+                            tracing::error!("Error fetching MediaPlayer: {err}");
                         } else {
                             let res = res.unwrap().raise().await;
                             if let Err(err) = res {
-                                tracing::error!("Error raising client: {}", err);
+                                tracing::error!("Error raising client: {err}");
                             }
                         }
                     }),
@@ -626,10 +626,10 @@ impl cosmic::Application for Audio {
                     self.current_output.as_mut().map(|output| {
                         output
                             .volume
-                            .set(output.volume.len(), percent_to_volume(value as f64))
+                            .set(output.volume.len(), percent_to_volume(value.into()))
                     });
 
-                    self.output_volume = value as f64;
+                    self.output_volume = value.into();
                     self.output_volume_text = format!("{}%", self.output_volume.round());
                 }
                 sub_pulse::Event::SinkMute(value) => {
@@ -641,10 +641,10 @@ impl cosmic::Application for Audio {
                     self.current_input.as_mut().map(|input| {
                         input
                             .volume
-                            .set(input.volume.len(), percent_to_volume(value as f64))
+                            .set(input.volume.len(), percent_to_volume(value.into()))
                     });
 
-                    self.input_volume = value as f64;
+                    self.input_volume = value.into();
                     self.input_volume_text = format!("{}%", self.input_volume.round());
                 }
                 sub_pulse::Event::SourceMute(value) => {
@@ -726,15 +726,12 @@ impl cosmic::Application for Audio {
             .applet
             .autosize_window(if let Some(Some(playback_buttons)) = playback_buttons {
                 match self.core.applet.anchor {
-                    PanelAnchor::Left | PanelAnchor::Right => Element::from(
-                        Column::with_children([playback_buttons, btn.into()])
-                            .align_x(Alignment::Center),
-                    ),
-                    PanelAnchor::Top | PanelAnchor::Bottom => {
-                        Row::with_children([playback_buttons, btn.into()])
-                            .align_y(Alignment::Center)
-                            .into()
+                    PanelAnchor::Left | PanelAnchor::Right => {
+                        Element::from(column![playback_buttons, btn].align_x(Alignment::Center))
                     }
+                    PanelAnchor::Top | PanelAnchor::Bottom => row![playback_buttons, btn]
+                        .align_y(Alignment::Center)
+                        .into(),
                 }
             } else {
                 btn.into()
@@ -842,10 +839,10 @@ impl cosmic::Application for Audio {
         };
 
         if let Some(s) = self.player_status.as_ref() {
-            let mut elements = Vec::with_capacity(5);
+            let mut elements = Row::with_capacity(5);
 
             if let Some(icon_path) = s.icon.clone() {
-                elements.push(icon(icon::from_path(icon_path)).size(36).into());
+                elements = elements.push(icon(icon::from_path(icon_path)).size(36));
             }
 
             let title = if let Some(title) = s.title.as_ref() {
@@ -873,13 +870,12 @@ impl cosmic::Application for Audio {
                 fl!("unknown-artist")
             };
 
-            elements.push(
+            elements = elements.push(
                 column![
                     text::body(title).width(Length::Shrink),
                     text::caption(artists).width(Length::Shrink),
                 ]
-                .width(Length::FillPortion(5))
-                .into(),
+                .width(Length::FillPortion(5)),
             );
 
             let mut control_elements = Vec::with_capacity(4);
@@ -908,24 +904,19 @@ impl cosmic::Application for Audio {
                 control_elements.push(go_next);
             }
             let control_cnt = control_elements.len() as u16;
-            elements.push(
-                Row::with_children(control_elements)
+            elements = elements.push(
+                Row::from_vec(control_elements)
                     .align_y(Alignment::Center)
                     .width(Length::FillPortion(control_cnt.saturating_add(1)))
-                    .spacing(8)
-                    .into(),
+                    .spacing(8),
             );
 
             audio_content = audio_content
                 .push(padded_control(divider::horizontal::default()).padding([space_xxs, space_s]));
             audio_content = audio_content.push(
-                menu_button(
-                    Row::with_children(elements)
-                        .align_y(Alignment::Center)
-                        .spacing(8),
-                )
-                .on_press(Message::MprisRequest(MprisRequest::Raise))
-                .padding(menu_control_padding()),
+                menu_button(elements.align_y(Alignment::Center).spacing(8))
+                    .on_press(Message::MprisRequest(MprisRequest::Raise))
+                    .padding(menu_control_padding()),
             );
         }
         let content = column![

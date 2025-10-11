@@ -86,7 +86,7 @@ async fn start_listening(
                     State::Connecting(1)
                 }
                 Some(m) => {
-                    tracing::error!("Unexpected message: {:?}", m);
+                    tracing::error!("Unexpected message: {m:?}");
                     State::Connecting(1)
                 }
                 None => {
@@ -258,7 +258,7 @@ impl PulseHandle {
                                             .send(Message::SetDefaultSink(sink))
                                             .await
                                         {
-                                            tracing::error!("ERROR! {}", err);
+                                            tracing::error!("ERROR! {err}");
                                         }
                                     }
                                     Err(_) => Self::send_disconnected(&from_pulse_send).await,
@@ -274,11 +274,11 @@ impl PulseHandle {
                                             .send(Message::SetDefaultSource(source))
                                             .await
                                         {
-                                            tracing::error!("ERROR! {}", err);
+                                            tracing::error!("ERROR! {err}");
                                         }
                                     }
                                     Err(e) => {
-                                        tracing::error!("ERROR! {:?}", e);
+                                        tracing::error!("ERROR! {e:?}");
                                         Self::send_disconnected(&from_pulse_send).await;
                                     }
                                 }
@@ -292,7 +292,7 @@ impl PulseHandle {
                                         if let Err(err) =
                                             from_pulse_send.send(Message::SetSinks(sinks)).await
                                         {
-                                            tracing::error!("ERROR! {}", err);
+                                            tracing::error!("ERROR! {err}");
                                         }
                                     }
                                     Err(_) => Self::send_disconnected(&from_pulse_send).await,
@@ -307,7 +307,7 @@ impl PulseHandle {
                                         if let Err(err) =
                                             from_pulse_send.send(Message::SetSources(sinks)).await
                                         {
-                                            tracing::error!("ERROR! {}", err);
+                                            tracing::error!("ERROR! {err}");
                                         }
                                     }
                                     Err(_) => Self::send_disconnected(&from_pulse_send).await,
@@ -366,10 +366,7 @@ impl PulseHandle {
                                             server = Some(new_server);
                                         }
                                         Err(err) => {
-                                            tracing::error!(
-                                                "Failed to connect to server: {:?}",
-                                                err
-                                            );
+                                            tracing::error!("Failed to connect to server: {err:?}");
                                             Self::send_disconnected(&from_pulse_send).await;
                                         }
                                     }
@@ -389,8 +386,8 @@ impl PulseHandle {
                                             .send(Message::SetDefaultSink(device))
                                             .await
                                         {
-                                            tracing::error!("ERROR! {:?}", err);
-                                        };
+                                            tracing::error!("ERROR! {err:?}");
+                                        }
                                     }
                                 }
                             }
@@ -408,7 +405,7 @@ impl PulseHandle {
                                             .send(Message::SetDefaultSource(device))
                                             .await
                                         {
-                                            tracing::error!("ERROR! {:?}", err);
+                                            tracing::error!("ERROR! {err:?}");
                                         }
                                     }
                                 }
