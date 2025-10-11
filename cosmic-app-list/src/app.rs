@@ -1361,10 +1361,10 @@ impl cosmic::Application for CosmicAppList {
                         + 4.0 * (popup_applet_count - 1.);
                     let (max_width, max_height) = match self.core.applet.anchor {
                         PanelAnchor::Top | PanelAnchor::Bottom => {
-                            (popup_applet_size, applet_suggested_size as f32)
+                            (popup_applet_size, applet_suggested_size.into())
                         }
                         PanelAnchor::Left | PanelAnchor::Right => {
-                            (applet_suggested_size as f32, popup_applet_size)
+                            (applet_suggested_size.into(), popup_applet_size)
                         }
                     };
                     popup_settings.positioner.size_limits = Limits::NONE
@@ -1715,14 +1715,14 @@ impl cosmic::Application for CosmicAppList {
 
         let mut content = match &self.core.applet.anchor {
             PanelAnchor::Left | PanelAnchor::Right => container(
-                Column::with_children(content_list)
+                Column::from_vec(content_list)
                     .spacing(4.0)
                     .align_x(Alignment::Center)
                     .height(h)
                     .width(w),
             ),
             PanelAnchor::Top | PanelAnchor::Bottom => container(
-                Row::with_children(content_list)
+                Row::from_vec(content_list)
                     .spacing(4.0)
                     .align_y(Alignment::Center)
                     .height(h)
@@ -2033,14 +2033,14 @@ impl cosmic::Application for CosmicAppList {
                     .collect();
             let content = match &self.core.applet.anchor {
                 PanelAnchor::Left | PanelAnchor::Right => container(
-                    Column::with_children(active)
+                    Column::from_vec(active)
                         .spacing(4.0)
                         .align_x(Alignment::Center)
                         .width(Length::Shrink)
                         .height(Length::Shrink),
                 ),
                 PanelAnchor::Top | PanelAnchor::Bottom => container(
-                    Row::with_children(active)
+                    Row::from_vec(active)
                         .spacing(4.0)
                         .align_y(Alignment::Center)
                         .width(Length::Shrink)
@@ -2136,14 +2136,14 @@ impl cosmic::Application for CosmicAppList {
                 .collect();
             let content = match &self.core.applet.anchor {
                 PanelAnchor::Left | PanelAnchor::Right => container(
-                    Column::with_children(favorites)
+                    Column::from_vec(favorites)
                         .spacing(4.0)
                         .align_x(Alignment::Center)
                         .width(Length::Shrink)
                         .height(Length::Shrink),
                 ),
                 PanelAnchor::Top | PanelAnchor::Bottom => container(
-                    Row::with_children(favorites)
+                    Row::from_vec(favorites)
                         .spacing(4.0)
                         .align_y(Alignment::Center)
                         .width(Length::Shrink)
@@ -2241,7 +2241,7 @@ impl CosmicAppList {
         }) else {
             return (None, active_index);
         };
-        // tracing::error!("{} {}", max_major_axis_len, self.pinned_list.len());
+        // tracing::error!("{max_major_axis_len} {}", self.pinned_list.len());
         // subtract the divider width
         max_major_axis_len -= 1;
         let applet_icon = AppletIconData::new(&self.core.applet);
@@ -2280,7 +2280,7 @@ impl CosmicAppList {
         } else {
             favorite_index = (btn_count as usize).min(self.pinned_list.len());
         }
-        // tracing::error!("{} {} {:?}", btn_count, favorite_index, active_index);
+        // tracing::error!("{btn_count} {favorite_index} {active_index:?}");
         (Some(favorite_index), active_index)
     }
 
@@ -2336,7 +2336,11 @@ impl CosmicAppList {
                 // in addition, try to match WINE entries who have its
                 // appid = the full name of the executable (incl. .exe)
                 let is_proton_game = info.app_id == "steam_app_default";
-                if is_proton_game || info.app_id.ends_with(".exe") {
+                if is_proton_game
+                    || PathBuf::from(info.app_id.clone())
+                        .extension()
+                        .is_some_and(|ext| ext.eq_ignore_ascii_case("exe"))
+                {
                     for entry in &self.desktop_entries {
                         let localised_name = entry.name(&self.locales).unwrap_or_default();
 

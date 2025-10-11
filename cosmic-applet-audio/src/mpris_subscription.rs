@@ -164,7 +164,7 @@ impl State {
                     players.push(player);
                 }
                 Err(err) => {
-                    tracing::error!("Failed to add player: {}", err);
+                    tracing::error!("Failed to add player: {err}");
                 }
             }
         }
@@ -190,7 +190,7 @@ impl State {
         let player = match MprisPlayer::new(&self.conn, name).await {
             Ok(player) => player,
             Err(err) => {
-                tracing::error!("Failed to add player: {}", err);
+                tracing::error!("Failed to add player: {err}");
                 return;
             }
         };
@@ -243,7 +243,7 @@ async fn run(output: &mut futures::channel::mpsc::Sender<MprisUpdate>) {
     let mut state = match State::new().await {
         Ok(state) => state,
         Err(err) => {
-            tracing::error!("Failed to monitor for mpris clients: {}", err);
+            tracing::error!("Failed to monitor for mpris clients: {err}");
             return;
         }
     };
@@ -273,7 +273,7 @@ async fn run(output: &mut futures::channel::mpsc::Sender<MprisUpdate>) {
                     Some(Ok(enumerator::Event::Add(name))) => state.add_player(name).await,
                     Some(Ok(enumerator::Event::Remove(name))) => state.remove_player(name).await,
                     Some(Err(err)) => {
-                        tracing::error!("Error listening for mpris clients: {:?}", err);
+                        tracing::error!("Error listening for mpris clients: {err:?}");
                         return;
                     }
                     None => {}

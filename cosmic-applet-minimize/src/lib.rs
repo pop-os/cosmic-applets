@@ -235,40 +235,40 @@ impl cosmic::Application for Minimize {
             Message::OpenOverflowPopup => {
                 if let Some(id) = self.overflow_popup.take() {
                     return destroy_popup(id);
-                } else {
-                    let new_id = window::Id::unique();
-                    let pos = self.max_icon_count().unwrap_or_default();
-
-                    self.overflow_popup = Some(new_id);
-                    let icon_size = self.core.applet.suggested_size(true).0 as u32
-                        + 2 * self.core.applet.suggested_padding(true) as u32;
-                    let spacing = self.core.system_theme().cosmic().space_xxs() as u32;
-                    let major_axis_len = (icon_size + spacing) * (pos.saturating_sub(1) as u32);
-                    let rectangle = match self.core.applet.anchor {
-                        PanelAnchor::Top | PanelAnchor::Bottom => iced::Rectangle {
-                            x: major_axis_len as i32,
-                            y: 0,
-                            width: icon_size as i32,
-                            height: icon_size as i32,
-                        },
-                        PanelAnchor::Left | PanelAnchor::Right => iced::Rectangle {
-                            x: 0,
-                            y: major_axis_len as i32,
-                            width: icon_size as i32,
-                            height: icon_size as i32,
-                        },
-                    };
-                    let mut popup_settings = self.core.applet.get_popup_settings(
-                        self.core.main_window_id().unwrap(),
-                        new_id,
-                        None,
-                        None,
-                        None,
-                    );
-                    popup_settings.positioner.anchor_rect = rectangle;
-
-                    return get_popup(popup_settings);
                 }
+
+                let new_id = window::Id::unique();
+                let pos = self.max_icon_count().unwrap_or_default();
+
+                self.overflow_popup = Some(new_id);
+                let icon_size = self.core.applet.suggested_size(true).0 as u32
+                    + 2 * self.core.applet.suggested_padding(true) as u32;
+                let spacing = self.core.system_theme().cosmic().space_xxs() as u32;
+                let major_axis_len = (icon_size + spacing) * (pos.saturating_sub(1) as u32);
+                let rectangle = match self.core.applet.anchor {
+                    PanelAnchor::Top | PanelAnchor::Bottom => iced::Rectangle {
+                        x: major_axis_len as i32,
+                        y: 0,
+                        width: icon_size as i32,
+                        height: icon_size as i32,
+                    },
+                    PanelAnchor::Left | PanelAnchor::Right => iced::Rectangle {
+                        x: 0,
+                        y: major_axis_len as i32,
+                        width: icon_size as i32,
+                        height: icon_size as i32,
+                    },
+                };
+                let mut popup_settings = self.core.applet.get_popup_settings(
+                    self.core.main_window_id().unwrap(),
+                    new_id,
+                    None,
+                    None,
+                    None,
+                );
+                popup_settings.positioner.anchor_rect = rectangle;
+
+                return get_popup(popup_settings);
             }
             Message::CloseOverflowPopup => todo!(),
             Message::Surface(a) => {
@@ -300,13 +300,13 @@ impl cosmic::Application for Minimize {
             self.core
                 .applet
                 .applet_tooltip(
-                    Element::from(crate::window_image::WindowImage::new(
+                    crate::window_image::WindowImage::new(
                         app.wayland_image.clone(),
                         &app.icon_source,
-                        width as f32,
+                        width.into(),
                         Message::Activate(app.toplevel_info.foreign_toplevel.clone()),
                         padding,
-                    )),
+                    ),
                     app.name.clone(),
                     self.overflow_popup.is_some(),
                     Message::Surface,
@@ -393,13 +393,13 @@ impl cosmic::Application for Minimize {
         let space_xxs = theme.space_xxs();
         let icon_buttons = self.apps[max_icon_count..].iter().map(|app| {
             tooltip(
-                Element::from(crate::window_image::WindowImage::new(
+                crate::window_image::WindowImage::new(
                     app.wayland_image.clone(),
                     &app.icon_source,
-                    width as f32,
+                    width.into(),
                     Message::Activate(app.toplevel_info.foreign_toplevel.clone()),
                     padding,
-                )),
+                ),
                 text(&app.name).shaping(text::Shaping::Advanced),
                 // tooltip::Position::FollowCursor,
                 // FIXME tooltip fails to appear when created as indicated in design

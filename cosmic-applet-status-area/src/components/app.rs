@@ -269,11 +269,11 @@ impl cosmic::Application for App {
             Msg::Token(u) => match u {
                 TokenUpdate::Init(tx) => {
                     self.token_tx = Some(tx);
-                    return Task::none();
+                    Task::none()
                 }
                 TokenUpdate::Finished => {
                     self.token_tx = None;
-                    return Task::none();
+                    Task::none()
                 }
                 TokenUpdate::ActivationToken { token, exec: id } => {
                     if let Some(((state, id), token)) = str::parse(&id)
@@ -289,21 +289,21 @@ impl cosmic::Application for App {
                             )
                             .map(move |msg| cosmic::action::app(Msg::StatusMenu((id, msg))));
                     }
-                    return Task::none();
+                    Task::none()
                 }
             },
             Msg::Hovered(id) => {
                 let mut cmds = Vec::new();
                 if let Some(old_id) = self.open_menu.take() {
-                    if old_id != id {
-                        if let Some(popup_id) = self.popup.take() {
-                            cmds.push(destroy_popup(popup_id));
-                        }
-                        self.open_menu = Some(id);
-                    } else {
+                    if old_id == id {
                         self.open_menu = Some(old_id);
                         return Task::none();
                     }
+
+                    if let Some(popup_id) = self.popup.take() {
+                        cmds.push(destroy_popup(popup_id));
+                    }
+                    self.open_menu = Some(id);
                 } else {
                     return Task::none();
                 }
@@ -343,15 +343,13 @@ impl cosmic::Application for App {
                 Task::batch(cmds)
             }
             Msg::Surface(a) => {
-                return cosmic::task::message(cosmic::Action::Cosmic(
-                    cosmic::app::Action::Surface(a),
-                ));
+                cosmic::task::message(cosmic::Action::Cosmic(cosmic::app::Action::Surface(a)))
             }
             Msg::ToggleOverflow => {
                 if let Some(popup_id) = self.overflow_popup.take() {
                     self.popup = None;
                     self.open_menu = None;
-                    return destroy_popup(popup_id);
+                    destroy_popup(popup_id)
                 } else if let Some(overflow_index) = self.overflow_index() {
                     // If we don't have an overflow, create it
                     let popup_id = self.next_popup_id();
@@ -380,9 +378,9 @@ impl cosmic::Application for App {
                     }
 
                     self.overflow_popup = Some(popup_id);
-                    return get_popup(popup_settings);
+                    get_popup(popup_settings)
                 } else {
-                    return Task::none();
+                    Task::none()
                 }
             }
             Msg::HoveredOverflow => {

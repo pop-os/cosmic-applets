@@ -17,9 +17,8 @@ pub async fn load_vpn_connections(conn: &Connection) -> anyhow::Result<Vec<VpnCo
     let mut vpn_connections = Vec::new();
 
     for connection in connections {
-        let settings_map = match connection.get_settings().await {
-            Ok(s) => s,
-            Err(_) => continue,
+        let Ok(settings_map) = connection.get_settings().await else {
+            continue;
         };
 
         let settings = Settings::new(settings_map);

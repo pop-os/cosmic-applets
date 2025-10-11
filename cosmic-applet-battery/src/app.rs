@@ -313,7 +313,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                 }
             }
             Message::Errored(why) => {
-                tracing::error!("{}", why);
+                tracing::error!("{why}");
             }
             Message::TogglePopup => {
                 self.dragging_kbd_brightness = false;
@@ -321,37 +321,37 @@ impl cosmic::Application for CosmicBatteryApplet {
 
                 if let Some(p) = self.popup.take() {
                     return destroy_popup(p);
-                } else {
-                    if let Some(tx) = &self.kbd_sender {
-                        let _ = tx.send(KeyboardBacklightRequest::Get);
-                    }
-                    self.timeline = Timeline::new();
-
-                    let new_id = window::Id::unique();
-                    self.popup.replace(new_id);
-
-                    let popup_settings = self.core.applet.get_popup_settings(
-                        self.core.main_window_id().unwrap(),
-                        new_id,
-                        Some((1, 1)),
-                        None,
-                        None,
-                    );
-                    if let Some(tx) = self.power_profile_sender.as_ref() {
-                        let _ = tx.send(PowerProfileRequest::Get);
-                    }
-                    if let Some(tx) = self.update_trigger.as_ref() {
-                        let _ = tx.send(());
-                    }
-                    let mut tasks = vec![get_popup(popup_settings)];
-                    // Try again every time a popup is opened
-                    if self.charging_limit.is_none() {
-                        tasks.push(Task::perform(get_charging_limit(), |limit| {
-                            cosmic::Action::App(Message::InitChargingLimit(limit.ok()))
-                        }));
-                    }
-                    return Task::batch(tasks);
                 }
+
+                if let Some(tx) = &self.kbd_sender {
+                    let _ = tx.send(KeyboardBacklightRequest::Get);
+                }
+                self.timeline = Timeline::new();
+
+                let new_id = window::Id::unique();
+                self.popup.replace(new_id);
+
+                let popup_settings = self.core.applet.get_popup_settings(
+                    self.core.main_window_id().unwrap(),
+                    new_id,
+                    Some((1, 1)),
+                    None,
+                    None,
+                );
+                if let Some(tx) = self.power_profile_sender.as_ref() {
+                    let _ = tx.send(PowerProfileRequest::Get);
+                }
+                if let Some(tx) = self.update_trigger.as_ref() {
+                    let _ = tx.send(());
+                }
+                let mut tasks = vec![get_popup(popup_settings)];
+                // Try again every time a popup is opened
+                if self.charging_limit.is_none() {
+                    tasks.push(Task::perform(get_charging_limit(), |limit| {
+                        cosmic::Action::App(Message::InitChargingLimit(limit.ok()))
+                    }));
+                }
+                return Task::batch(tasks);
             }
             Message::UpowerDevice(event) => match event {
                 DeviceDbusEvent::Update {
@@ -452,7 +452,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                 }
             }
             Message::ZbusConnection(Err(err)) => {
-                tracing::error!("Failed to connect to session dbus: {}", err);
+                tracing::error!("Failed to connect to session dbus: {err}");
             }
             Message::ZbusConnection(Ok(conn)) => {
                 self.zbus_connection = Some(conn);
@@ -480,7 +480,7 @@ impl cosmic::Application for CosmicBatteryApplet {
     }
 
     fn view(&self) -> Element<'_, Message> {
-        let btn = self
+        let btn: Element<'_, Message> = self
             .core
             .applet
             .icon_button(&self.icon_name)
@@ -504,16 +504,15 @@ impl cosmic::Application for CosmicBatteryApplet {
                         shadow: Shadow::default(),
                         icon_color: Some(Color::TRANSPARENT),
                     }
-                })))
-                .into();
+                })));
 
             match self.core.applet.anchor {
-                PanelAnchor::Left | PanelAnchor::Right => Column::with_children([btn, dot])
-                    .align_x(Alignment::Center)
-                    .into(),
-                PanelAnchor::Top | PanelAnchor::Bottom => Row::with_children([btn, dot])
-                    .align_y(Alignment::Center)
-                    .into(),
+                PanelAnchor::Left | PanelAnchor::Right => {
+                    column![btn, dot].align_x(Alignment::Center).into()
+                }
+                PanelAnchor::Top | PanelAnchor::Bottom => {
+                    row![btn, dot].align_y(Alignment::Center).into()
+                }
             }
         };
 
@@ -539,7 +538,7 @@ impl cosmic::Application for CosmicBatteryApplet {
             },
         );
 
-        let mut content = vec![
+        let mut content = column![
             padded_control(
                 row![
                     icon::from_name(&*self.icon_name).size(24).symbolic(true),
@@ -547,11 +546,8 @@ impl cosmic::Application for CosmicBatteryApplet {
                 ]
                 .spacing(8)
                 .align_y(Alignment::Center),
-            )
-            .into(),
-            padded_control(divider::horizontal::default())
-                .padding([space_xxs, space_s])
-                .into(),
+            ),
+            padded_control(divider::horizontal::default()).padding([space_xxs, space_s]),
             menu_button(
                 row![
                     column![
@@ -571,8 +567,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                 ]
                 .align_y(Alignment::Center),
             )
-            .on_press(Message::SelectProfile(Power::Battery))
-            .into(),
+            .on_press(Message::SelectProfile(Power::Battery)),
             menu_button(
                 row![
                     column![
@@ -592,8 +587,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                 ]
                 .align_y(Alignment::Center),
             )
-            .on_press(Message::SelectProfile(Power::Balanced))
-            .into(),
+            .on_press(Message::SelectProfile(Power::Balanced)),
             menu_button(
                 row![
                     column![
@@ -613,143 +607,119 @@ impl cosmic::Application for CosmicBatteryApplet {
                 ]
                 .align_y(Alignment::Center),
             )
-            .on_press(Message::SelectProfile(Power::Performance))
-            .into(),
-            padded_control(divider::horizontal::default())
-                .padding([space_xxs, space_s])
-                .into(),
+            .on_press(Message::SelectProfile(Power::Performance)),
+            padded_control(divider::horizontal::default()).padding([space_xxs, space_s]),
         ];
 
         if let Some(charging_limit) = self.charging_limit {
-            content.push(
-                padded_control(
-                    anim!(
-                        //toggler
-                        MAX_CHARGE,
-                        &self.timeline,
-                        fl!("max-charge"),
-                        charging_limit,
-                        Message::SetChargingLimit,
-                    )
-                    .text_size(14)
-                    .width(Length::Fill),
+            content = content.push(padded_control(
+                anim!(
+                    //toggler
+                    MAX_CHARGE,
+                    &self.timeline,
+                    fl!("max-charge"),
+                    charging_limit,
+                    Message::SetChargingLimit,
                 )
-                .into(),
-            );
-            content.push(
-                padded_control(divider::horizontal::default())
-                    .padding([space_xxs, space_s])
-                    .into(),
-            );
+                .text_size(14)
+                .width(Length::Fill),
+            ));
+            content = content
+                .push(padded_control(divider::horizontal::default()).padding([space_xxs, space_s]));
         }
 
         if let Some(max_screen_brightness) = self.max_screen_brightness {
             if let Some(screen_brightness) = self.screen_brightness {
-                content.push(
-                    padded_control(
-                        row![
-                            icon::from_name(self.display_icon_name.as_str())
-                                .size(24)
-                                .symbolic(true),
-                            slider(
-                                1..=max_screen_brightness,
-                                screen_brightness,
-                                Message::SetScreenBrightness
-                            )
-                            .on_release(Message::ReleaseScreenBrightness),
-                            container(
-                                text(format!(
-                                    "{:.0}%",
-                                    self.screen_brightness_percent().unwrap_or(0.) * 100.
-                                ))
-                                .size(16)
-                            )
-                            .width(Length::Fixed(40.0))
-                            .align_x(Alignment::End)
-                        ]
-                        .spacing(12),
-                    )
-                    .into(),
-                );
+                content = content.push(padded_control(
+                    row![
+                        icon::from_name(self.display_icon_name.as_str())
+                            .size(24)
+                            .symbolic(true),
+                        slider(
+                            1..=max_screen_brightness,
+                            screen_brightness,
+                            Message::SetScreenBrightness
+                        )
+                        .on_release(Message::ReleaseScreenBrightness),
+                        container(
+                            text(format!(
+                                "{:.0}%",
+                                self.screen_brightness_percent().unwrap_or(0.) * 100.
+                            ))
+                            .size(16)
+                        )
+                        .width(Length::Fixed(40.0))
+                        .align_x(Alignment::End)
+                    ]
+                    .spacing(12),
+                ));
             }
         }
 
         if let Some(max_kbd_brightness) = self.max_kbd_brightness {
             if let Some(kbd_brightness) = self.kbd_brightness {
-                content.push(
-                    padded_control(
-                        row![
-                            icon::from_name("keyboard-brightness-symbolic")
-                                .size(24)
-                                .symbolic(true),
-                            slider(
-                                0..=max_kbd_brightness,
-                                kbd_brightness,
-                                Message::SetKbdBrightness
-                            )
-                            .on_release(Message::ReleaseKbdBrightness),
-                            container(
-                                text(format!(
-                                    "{:.0}%",
-                                    100. * kbd_brightness as f64 / max_kbd_brightness as f64
-                                ))
-                                .size(16)
-                            )
-                            .width(Length::Fixed(40.0))
-                            .align_x(Alignment::End)
-                        ]
-                        .spacing(12),
-                    )
-                    .into(),
-                );
+                content = content.push(padded_control(
+                    row![
+                        icon::from_name("keyboard-brightness-symbolic")
+                            .size(24)
+                            .symbolic(true),
+                        slider(
+                            0..=max_kbd_brightness,
+                            kbd_brightness,
+                            Message::SetKbdBrightness
+                        )
+                        .on_release(Message::ReleaseKbdBrightness),
+                        container(
+                            text(format!(
+                                "{:.0}%",
+                                100. * kbd_brightness as f64 / max_kbd_brightness as f64
+                            ))
+                            .size(16)
+                        )
+                        .width(Length::Fixed(40.0))
+                        .align_x(Alignment::End)
+                    ]
+                    .spacing(12),
+                ));
             }
         }
 
-        content.push(
-            padded_control(divider::horizontal::default())
-                .padding([space_xxs, space_s])
-                .into(),
-        );
+        content = content
+            .push(padded_control(divider::horizontal::default()).padding([space_xxs, space_s]));
 
         if !self.gpus.is_empty() {
-            content.push(
-                padded_control(
-                    row![
-                        text(fl!("dgpu-running"))
-                            .size(16)
-                            .width(Length::Fill)
-                            .align_x(Alignment::Start),
-                        container(
-                            vertical_space()
-                                .width(Length::Fixed(0.0))
-                                .height(Length::Fixed(0.0))
-                        )
-                        .padding(4)
-                        .class(cosmic::style::Container::Custom(Box::new(|theme| {
-                            container::Style {
-                                text_color: Some(Color::TRANSPARENT),
-                                background: Some(Background::Color(
-                                    theme.cosmic().accent_color().into(),
-                                )),
-                                border: Border {
-                                    radius: 4.0.into(),
-                                    width: 0.0,
-                                    color: Color::TRANSPARENT,
-                                },
-                                shadow: Shadow::default(),
-                                icon_color: Some(Color::TRANSPARENT),
-                            }
-                        },))),
-                    ]
-                    .align_y(Alignment::Center),
-                )
-                .into(),
-            );
-            content.push(
-                padded_control(divider::horizontal::default())
-                    .padding([space_xxs, space_s])
-                    .into(),
-            );
+            content = content.push(padded_control(
+                row![
+                    text(fl!("dgpu-running"))
+                        .size(16)
+                        .width(Length::Fill)
+                        .align_x(Alignment::Start),
+                    container(
+                        vertical_space()
+                            .width(Length::Fixed(0.0))
+                            .height(Length::Fixed(0.0))
+                    )
+                    .padding(4)
+                    .class(cosmic::style::Container::Custom(Box::new(|theme| {
+                        container::Style {
+                            text_color: Some(Color::TRANSPARENT),
+                            background: Some(Background::Color(
+                                theme.cosmic().accent_color().into(),
+                            )),
+                            border: Border {
+                                radius: 4.0.into(),
+                                width: 0.0,
+                                color: Color::TRANSPARENT,
+                            },
+                            shadow: Shadow::default(),
+                            icon_color: Some(Color::TRANSPARENT),
+                        }
+                    },))),
+                ]
+                .align_y(Alignment::Center),
+            ));
+            content = content
+                .push(padded_control(divider::horizontal::default()).padding([space_xxs, space_s]));
         }
 
         for (key, gpu) in &self.gpus {
@@ -757,7 +727,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                 continue;
             }
 
-            content.push(
+            content = content.push(
                 menu_button(
                     row![
                         text::body(fl!(
@@ -779,8 +749,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                     ]
                     .align_y(Alignment::Center),
                 )
-                .on_press(Message::ToggleGpuApps(key.clone()))
-                .into(),
+                .on_press(Message::ToggleGpuApps(key.clone())),
             );
 
             if gpu.toggled
@@ -795,47 +764,36 @@ impl cosmic::Application for CosmicBatteryApplet {
                 })
             {
                 let app_list = gpu.app_list.as_ref().unwrap();
-                let mut list_apps = Vec::with_capacity(app_list.len());
+                let mut list_apps = Column::with_capacity(app_list.len());
                 for app in app_list {
-                    list_apps.push(
-                        padded_control(
-                            row![
-                                if let Some(icon) = &app.icon {
-                                    container(icon::from_name(&**icon).size(12).symbolic(true))
-                                } else {
-                                    container(horizontal_space().width(12.0))
-                                },
-                                column![text::body(&app.name), text::caption(&app.secondary)]
-                                    .width(Length::Fill),
-                            ]
-                            .spacing(8)
-                            .align_y(Alignment::Center),
-                        )
-                        .into(),
-                    );
+                    list_apps = list_apps.push(padded_control(
+                        row![
+                            if let Some(icon) = &app.icon {
+                                container(icon::from_name(&**icon).size(12).symbolic(true))
+                            } else {
+                                container(horizontal_space().width(12.0))
+                            },
+                            column![text::body(&app.name), text::caption(&app.secondary)]
+                                .width(Length::Fill),
+                        ]
+                        .spacing(8)
+                        .align_y(Alignment::Center),
+                    ));
                 }
-                content.push(
-                    scrollable(Column::with_children(list_apps))
-                        .height(Length::Fixed(300.0))
-                        .into(),
-                );
+                content = content.push(scrollable(list_apps).height(Length::Fixed(300.0)));
             }
-            content.push(
-                padded_control(divider::horizontal::default())
-                    .padding([space_xxs, space_s])
-                    .into(),
-            );
+            content = content
+                .push(padded_control(divider::horizontal::default()).padding([space_xxs, space_s]));
         }
 
-        content.push(
+        content = content.push(
             menu_button(text::body(fl!("power-settings")).width(Length::Fill))
-                .on_press(Message::OpenSettings)
-                .into(),
+                .on_press(Message::OpenSettings),
         );
 
         self.core
             .applet
-            .popup_container(Column::with_children(content).padding([8, 0]))
+            .popup_container(content.padding([8, 0]))
             .into()
     }
 

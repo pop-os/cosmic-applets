@@ -55,10 +55,7 @@ pub fn notifications(proxy: NotificationsAppletProxy<'static>) -> Subscription<O
                         break;
                     }
                     Err(err) => {
-                        error!(
-                            "failed to get a stream of signals for notifications. {}",
-                            err
-                        );
+                        error!("failed to get a stream of signals for notifications. {err}");
                         fail_count = fail_count.saturating_add(1);
                         if fail_count > 5 {
                             error!("Failed to receive notification events");
@@ -147,7 +144,7 @@ pub trait NotificationsApplet {
 pub async fn get_proxy() -> anyhow::Result<NotificationsAppletProxy<'static>> {
     let raw_fd = std::env::var("COSMIC_NOTIFICATIONS")?;
     let raw_fd = raw_fd.parse::<RawFd>()?;
-    tracing::info!("Connecting to notifications daemon on fd {}", raw_fd);
+    tracing::info!("Connecting to notifications daemon on fd {raw_fd}");
 
     let stream = unsafe { std::os::unix::net::UnixStream::from_raw_fd(raw_fd) };
     stream.set_nonblocking(true)?;

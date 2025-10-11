@@ -369,9 +369,9 @@ fn all_gpus<S: AsRef<str>>(seat: S) -> io::Result<Vec<Gpu>> {
                 if let Some(dev) = device {
                     if dev.driver().is_some() {
                         break dev.driver().map(OsStr::to_os_string);
-                    } else {
-                        device = dev.parent();
                     }
+
+                    device = dev.parent();
                 } else {
                     break None;
                 }
@@ -504,9 +504,9 @@ async fn start_listening(
                                             if let Some(dev) = device {
                                                 if dev.driver().is_some() {
                                                     break dev.driver().map(OsStr::to_os_string);
-                                                } else {
-                                                    device = dev.parent();
                                                 }
+
+                                                device = dev.parent();
                                             } else {
                                                 break None;
                                             }

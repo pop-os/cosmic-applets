@@ -55,7 +55,7 @@ pub fn proxy() -> Subscription<Output> {
                         };
                         let tx = sender.clone();
                         if let Err(err) = output.send(Output::Ready(sender)).await {
-                            error!("Failed to send sender: {}", err);
+                            error!("Failed to send sender: {err}");
                             state = State::Finished;
                             continue;
                         }
@@ -73,8 +73,7 @@ pub fn proxy() -> Subscription<Output> {
                             }
                             Err(err) => {
                                 error!(
-                                    "failed to get a stream of signals for notifications. {}",
-                                    err
+                                    "failed to get a stream of signals for notifications. {err}"
                                 );
                                 State::Finished
                             }
@@ -83,7 +82,7 @@ pub fn proxy() -> Subscription<Output> {
                     State::WaitingForNotificationEvent(proxy, rx) => match rx.recv().await {
                         Some(Input::Dismiss(id)) => {
                             if let Err(err) = proxy.close_notification(id).await {
-                                error!("Failed to close notification: {}", err);
+                                error!("Failed to close notification: {err}");
                             }
                         }
                         Some(Input::CloseEvent(id)) => {

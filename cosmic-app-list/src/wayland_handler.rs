@@ -404,7 +404,7 @@ impl CaptureData {
         // XXX
         if !formats.shm_formats.contains(&wl_shm::Format::Abgr8888) {
             tracing::error!("No suitable buffer format found");
-            tracing::warn!("Available formats: {:#?}", formats);
+            tracing::warn!("Available formats: {formats:#?}");
             return None;
         }
 

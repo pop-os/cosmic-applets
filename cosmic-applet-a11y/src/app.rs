@@ -147,22 +147,21 @@ impl cosmic::Application for CosmicA11yApplet {
             Message::TogglePopup => {
                 if let Some(p) = self.popup.take() {
                     return destroy_popup(p);
-                } else {
-                    self.timeline = Timeline::new();
-
-                    let new_id = window::Id::unique();
-                    self.popup.replace(new_id);
-
-                    let popup_settings = self.core.applet.get_popup_settings(
-                        self.core.main_window_id().unwrap(),
-                        new_id,
-                        Some((1, 1)),
-                        None,
-                        None,
-                    );
-
-                    return get_popup(popup_settings);
                 }
+                self.timeline = Timeline::new();
+
+                let new_id = window::Id::unique();
+                self.popup.replace(new_id);
+
+                let popup_settings = self.core.applet.get_popup_settings(
+                    self.core.main_window_id().unwrap(),
+                    new_id,
+                    Some((1, 1)),
+                    None,
+                    None,
+                );
+
+                return get_popup(popup_settings);
             }
             Message::CloseRequested(id) => {
                 if Some(id) == self.popup {

@@ -123,12 +123,12 @@ fn wifi_icon(strength: u8) -> &'static str {
     }
 }
 
-fn vpn_section<'a>(
-    nm_state: &'a NetworkManagerState,
+fn vpn_section(
+    nm_state: &NetworkManagerState,
     show_available_vpns: bool,
     space_xxs: u16,
     space_s: u16,
-) -> Column<'a, Message> {
+) -> Column<'_, Message> {
     let mut vpn_col = column![];
 
     if !nm_state.available_vpns.is_empty() {
@@ -160,23 +160,19 @@ fn vpn_section<'a>(
                     matches!(conn, ActiveConnectionInfo::Vpn { name, .. } if name == &vpn.name)
                 });
 
-                let mut btn_content = vec![
+                let mut btn_content = row![
                     icon::from_name("network-vpn-symbolic")
                         .size(24)
-                        .symbolic(true)
-                        .into(),
-                    text::body(&vpn.name).width(Length::Fill).into(),
+                        .symbolic(true),
+                    text::body(&vpn.name).width(Length::Fill),
                 ];
 
                 if is_active {
-                    btn_content.push(text::body(fl!("connected")).align_x(Alignment::End).into());
+                    btn_content =
+                        btn_content.push(text::body(fl!("connected")).align_x(Alignment::End));
                 }
 
-                let mut btn = menu_button(
-                    Row::with_children(btn_content)
-                        .align_y(Alignment::Center)
-                        .spacing(8),
-                );
+                let mut btn = menu_button(btn_content.align_y(Alignment::Center).spacing(8));
 
                 btn = if is_active {
                     btn.on_press(Message::DeactivateVpn(vpn.name.clone()))
@@ -354,25 +350,25 @@ impl cosmic::Application for CosmicNetworkApplet {
                 if let Some(p) = self.popup.take() {
                     self.show_visible_networks = false;
                     return destroy_popup(p);
-                } else {
-                    // TODO request update of state maybe
-                    let new_id = window::Id::unique();
-                    self.popup.replace(new_id);
-                    self.timeline = Timeline::new();
-
-                    let popup_settings = self.core.applet.get_popup_settings(
-                        self.core.main_window_id().unwrap(),
-                        new_id,
-                        None,
-                        None,
-                        None,
-                    );
-
-                    if let Some(tx) = self.nm_sender.as_mut() {
-                        let _ = tx.unbounded_send(NetworkManagerRequest::Reload);
-                    }
-                    return get_popup(popup_settings);
                 }
+
+                // TODO request update of state maybe
+                let new_id = window::Id::unique();
+                self.popup.replace(new_id);
+                self.timeline = Timeline::new();
+
+                let popup_settings = self.core.applet.get_popup_settings(
+                    self.core.main_window_id().unwrap(),
+                    new_id,
+                    None,
+                    None,
+                    None,
+                );
+
+                if let Some(tx) = self.nm_sender.as_mut() {
+                    let _ = tx.unbounded_send(NetworkManagerRequest::Reload);
+                }
+                return get_popup(popup_settings);
             }
             Message::ToggleAirplaneMode(enabled) => {
                 self.toggle_wifi_ctr += 1;
@@ -712,10 +708,10 @@ impl cosmic::Application for CosmicNetworkApplet {
                     if self.hw_device_to_show.is_some() {
                         continue;
                     }
-                    let mut ipv4 = Vec::with_capacity(ip_addresses.len() + 1);
-                    ipv4.push(text::body(name).into());
+                    let mut ipv4 = Column::with_capacity(ip_addresses.len() + 1);
+                    ipv4 = ipv4.push(text::body(name));
                     for addr in ip_addresses {
-                        ipv4.push(text::caption(format!("{}: {}", fl!("ipv4"), addr)).into());
+                        ipv4 = ipv4.push(text::caption(format!("{}: {}", fl!("ipv4"), addr)));
                     }
                     vpn_ethernet_col = vpn_ethernet_col.push(column![
                         row![
@@ -725,7 +721,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                                     .into()
                             )
                             .size(40),
-                            Column::with_children(ipv4),
+                            ipv4,
                             text::body(fl!("connected"))
                                 .width(Length::Fill)
                                 .align_x(Alignment::End),
@@ -748,10 +744,10 @@ impl cosmic::Application for CosmicNetworkApplet {
                     {
                         continue;
                     }
-                    let mut ipv4 = Vec::with_capacity(ip_addresses.len() + 1);
-                    ipv4.push(text::body(name).into());
+                    let mut ipv4 = Column::with_capacity(ip_addresses.len() + 1);
+                    ipv4 = ipv4.push(text::body(name));
                     for addr in ip_addresses {
-                        ipv4.push(text(format!("{}: {}", fl!("ipv4"), addr)).size(12).into());
+                        ipv4 = ipv4.push(text(format!("{}: {}", fl!("ipv4"), addr)).size(12));
                     }
 
                     vpn_ethernet_col = vpn_ethernet_col.push(column![
@@ -762,7 +758,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                                     .into()
                             )
                             .size(40),
-                            Column::with_children(ipv4),
+                            ipv4,
                             text::body(format!(
                                 "{} - {speed} {}",
                                 fl!("connected"),
@@ -790,55 +786,47 @@ impl cosmic::Application for CosmicNetworkApplet {
                     {
                         continue;
                     }
-                    let mut ipv4 = Vec::with_capacity(ip_addresses.len());
+                    let mut ipv4 = Column::with_capacity(ip_addresses.len());
                     for addr in ip_addresses {
-                        ipv4.push(text(format!("{}: {}", fl!("ipv4"), addr)).size(12).into());
+                        ipv4 = ipv4.push(text(format!("{}: {}", fl!("ipv4"), addr)).size(12));
                     }
-                    let mut btn_content = vec![
+                    let mut btn_content = row![
                         icon::from_name(wifi_icon(*strength))
                             .size(24)
-                            .symbolic(true)
-                            .into(),
-                        column![text::body(name), Column::with_children(ipv4)]
-                            .width(Length::Fill)
-                            .into(),
+                            .symbolic(true),
+                        column![text::body(name), ipv4].width(Length::Fill),
                     ];
                     match state {
                         ActiveConnectionState::Activating | ActiveConnectionState::Deactivating => {
-                            btn_content.push(
+                            btn_content = btn_content.push(
                                 icon::from_name("process-working-symbolic")
                                     .size(24)
-                                    .symbolic(true)
-                                    .into(),
+                                    .symbolic(true),
                             );
                         }
-                        ActiveConnectionState::Activated => btn_content.push(
-                            text::body(fl!("connected"))
-                                .align_x(Alignment::End)
-                                .align_y(Alignment::Center)
-                                .into(),
-                        ),
+                        ActiveConnectionState::Activated => {
+                            btn_content = btn_content.push(
+                                text::body(fl!("connected"))
+                                    .align_x(Alignment::End)
+                                    .align_y(Alignment::Center),
+                            );
+                        }
                         _ => {}
                     }
                     if self.failed_known_ssids.contains(name) {
-                        btn_content.push(
+                        btn_content = btn_content.push(
                             cosmic::widget::button::icon(
                                 from_name("view-refresh-symbolic").size(16),
                             )
                             .icon_size(16)
-                            .on_press(Message::ResetFailedKnownSsid(name.clone(), *hw_address))
-                            .into(),
+                            .on_press(Message::ResetFailedKnownSsid(name.clone(), *hw_address)),
                         );
                     }
 
                     known_wifi.push(Element::from(
                         column![
-                            menu_button(
-                                Row::with_children(btn_content)
-                                    .align_y(Alignment::Center)
-                                    .spacing(8)
-                            )
-                            .on_press(Message::Disconnect(name.clone(), *hw_address))
+                            menu_button(btn_content.align_y(Alignment::Center).spacing(8))
+                                .on_press(Message::Disconnect(name.clone(), *hw_address))
                         ]
                         .align_x(Alignment::Center),
                     ));
@@ -946,36 +934,23 @@ impl cosmic::Application for CosmicNetworkApplet {
                     .active_conns
                     .iter()
                     .any(|conn| conn.hw_address() == hw_device);
-                let mut btn_content = vec![
-                    column![
-                        text::body(display_name),
-                        Column::with_children([text("Adapter").size(10).into()])
-                    ]
-                    .width(Length::Fill)
-                    .into(),
+                let mut btn_content = row![
+                    column![text::body(display_name), column![text("Adapter").size(10)]]
+                        .width(Length::Fill),
                 ];
                 if is_connected {
-                    btn_content.push(
+                    btn_content = btn_content.push(
                         text::body(fl!("connected"))
                             .width(Length::Fill)
-                            .align_x(Alignment::End)
-                            .into(),
+                            .align_x(Alignment::End),
                     );
                 }
-                btn_content.push(
-                    icon::from_name("go-next-symbolic")
-                        .size(16)
-                        .symbolic(true)
-                        .into(),
+                btn_content =
+                    btn_content.push(icon::from_name("go-next-symbolic").size(16).symbolic(true));
+                content = content.push(
+                    menu_button(btn_content.align_y(Alignment::Center).spacing(8))
+                        .on_press(Message::OpenHwDevice(Some(hw_device))),
                 );
-                content = content.push(Element::from(
-                    menu_button(
-                        Row::with_children(btn_content)
-                            .align_y(Alignment::Center)
-                            .spacing(8),
-                    )
-                    .on_press(Message::OpenHwDevice(Some(hw_device))),
-                ));
             }
 
             return self.view_window_return(content);
@@ -987,57 +962,48 @@ impl cosmic::Application for CosmicNetworkApplet {
                     continue;
                 }
             }
-            let mut btn_content = Vec::with_capacity(2);
+            let mut btn_content = Row::with_capacity(2);
             let ssid = text::body(&known.ssid).width(Length::Fill);
             if known.working {
-                btn_content.push(
+                btn_content = btn_content.push(
                     icon::from_name("network-wireless-acquiring-symbolic")
                         .size(24)
-                        .symbolic(true)
-                        .into(),
+                        .symbolic(true),
                 );
-                btn_content.push(ssid.into());
-                btn_content.push(
+                btn_content = btn_content.push(ssid);
+                btn_content = btn_content.push(
                     icon::from_name("process-working-symbolic")
                         .size(24)
-                        .symbolic(true)
-                        .into(),
+                        .symbolic(true),
                 );
             } else if matches!(known.state, DeviceState::Unavailable) {
-                btn_content.push(
+                btn_content = btn_content.push(
                     icon::from_name("network-wireless-disconnected-symbolic")
                         .size(24)
-                        .symbolic(true)
-                        .into(),
+                        .symbolic(true),
                 );
-                btn_content.push(ssid.into());
+                btn_content = btn_content.push(ssid);
             } else {
-                btn_content.push(
+                btn_content = btn_content.push(
                     icon::from_name(wifi_icon(known.strength))
                         .size(24)
-                        .symbolic(true)
-                        .into(),
+                        .symbolic(true),
                 );
-                btn_content.push(ssid.into());
+                btn_content = btn_content.push(ssid);
             }
 
             if self.failed_known_ssids.contains(&known.ssid) {
-                btn_content.push(
+                btn_content = btn_content.push(
                     cosmic::widget::button::icon(from_name("view-refresh-symbolic").size(16))
                         .icon_size(16)
                         .on_press(Message::ResetFailedKnownSsid(
                             known.ssid.clone(),
                             known.hw_address,
-                        ))
-                        .into(),
+                        )),
                 );
             }
 
-            let mut btn = menu_button(
-                Row::with_children(btn_content)
-                    .align_y(Alignment::Center)
-                    .spacing(8),
-            );
+            let mut btn = menu_button(btn_content.align_y(Alignment::Center).spacing(8));
             btn = match known.state {
                 DeviceState::Failed
                 | DeviceState::Unknown
@@ -1200,7 +1166,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                 }
             }
         } else {
-            let mut list_col = Vec::with_capacity(self.nm_state.wireless_access_points.len());
+            let mut list_col = Column::with_capacity(self.nm_state.wireless_access_points.len());
             for ap in &self.nm_state.wireless_access_points {
                 if ap.hw_address != self.hw_device_to_show.unwrap_or(ap.hw_address) {
                     continue;
@@ -1224,10 +1190,9 @@ impl cosmic::Application for CosmicNetworkApplet {
                     .spacing(12),
                 )
                 .on_press(Message::SelectWirelessAccessPoint(ap.clone()));
-                list_col.push(button.into());
+                list_col = list_col.push(button);
             }
-            content = content
-                .push(scrollable(Column::with_children(list_col)).height(Length::Fixed(300.0)));
+            content = content.push(scrollable(list_col).height(Length::Fixed(300.0)));
         }
 
         // Add VPN connections section after wireless networks when they are expanded
