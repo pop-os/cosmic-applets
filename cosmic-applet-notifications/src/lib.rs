@@ -115,7 +115,7 @@ impl cosmic::Application for Notifications {
             .map(|helper| {
                 NotificationsConfig::get_entry(helper).unwrap_or_else(|(errors, config)| {
                     for err in errors {
-                        tracing::error!("{:?}", err);
+                        tracing::error!("{err:?}");
                     }
                     config
                 })
@@ -157,7 +157,7 @@ impl cosmic::Application for Notifications {
                 .watch_config(cosmic_notifications_config::ID)
                 .map(|res| {
                     for err in res.errors {
-                        tracing::error!("{:?}", err);
+                        tracing::error!("{err:?}");
                     }
                     Message::Config(res.config)
                 }),
@@ -200,7 +200,7 @@ impl cosmic::Application for Notifications {
                 self.config.do_not_disturb = b;
                 if let Some(helper) = &self.config_helper {
                     if let Err(err) = self.config.write_entry(helper) {
-                        tracing::error!("{:?}", err);
+                        tracing::error!("{err:?}");
                     }
                 }
             }
@@ -239,7 +239,7 @@ impl cosmic::Application for Notifications {
                 self.config = config;
             }
             Message::Dismissed(id) => {
-                info!("Dismissed {}", id);
+                info!("Dismissed {id}");
                 for c in &mut self.cards {
                     c.1.retain(|n| n.id != id);
                 }
@@ -249,7 +249,7 @@ impl cosmic::Application for Notifications {
                     let tx = tx.clone();
                     tokio::spawn(async move {
                         if let Err(err) = tx.send(subscriptions::dbus::Input::Dismiss(id)).await {
-                            tracing::error!("{:?}", err);
+                            tracing::error!("{err:?}");
                         }
                     });
                 }
@@ -282,7 +282,7 @@ impl cosmic::Application for Notifications {
                                 if let Err(err) =
                                     tx.send(subscriptions::dbus::Input::Dismiss(n.id)).await
                                 {
-                                    tracing::error!("{:?}", err);
+                                    tracing::error!("{err:?}");
                                 }
                             });
                         }
@@ -297,7 +297,7 @@ impl cosmic::Application for Notifications {
                             if let Err(err) =
                                 tx.send(subscriptions::dbus::Input::Dismiss(n.id)).await
                             {
-                                tracing::error!("{:?}", err);
+                                tracing::error!("{err:?}");
                             }
                         });
                     }
@@ -380,7 +380,7 @@ impl cosmic::Application for Notifications {
                     tokio::spawn(async move {
                         if let Err(err) = tx.send(notifications::Input::Activated(id, action)).await
                         {
-                            tracing::error!("{:?}", err);
+                            tracing::error!("{err:?}");
                         } else {
                             tracing::error!("Sent notification action");
                         }
@@ -545,12 +545,8 @@ impl cosmic::Application for Notifications {
             }
 
             row!(
-                scrollable(
-                    Column::with_children(notifs)
-                        .spacing(8)
-                        .height(Length::Shrink),
-                )
-                .height(Length::Shrink)
+                scrollable(Column::from_vec(notifs).spacing(8).height(Length::Shrink))
+                    .height(Length::Shrink)
             )
             .padding(menu_control_padding())
         };

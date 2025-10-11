@@ -173,7 +173,7 @@ fn vpn_section<'a>(
                 }
 
                 let mut btn = menu_button(
-                    Row::with_children(btn_content)
+                    Row::from_vec(btn_content)
                         .align_y(Alignment::Center)
                         .spacing(8),
                 );
@@ -354,25 +354,25 @@ impl cosmic::Application for CosmicNetworkApplet {
                 if let Some(p) = self.popup.take() {
                     self.show_visible_networks = false;
                     return destroy_popup(p);
-                } else {
-                    // TODO request update of state maybe
-                    let new_id = window::Id::unique();
-                    self.popup.replace(new_id);
-                    self.timeline = Timeline::new();
-
-                    let popup_settings = self.core.applet.get_popup_settings(
-                        self.core.main_window_id().unwrap(),
-                        new_id,
-                        None,
-                        None,
-                        None,
-                    );
-
-                    if let Some(tx) = self.nm_sender.as_mut() {
-                        let _ = tx.unbounded_send(NetworkManagerRequest::Reload);
-                    }
-                    return get_popup(popup_settings);
                 }
+
+                // TODO request update of state maybe
+                let new_id = window::Id::unique();
+                self.popup.replace(new_id);
+                self.timeline = Timeline::new();
+
+                let popup_settings = self.core.applet.get_popup_settings(
+                    self.core.main_window_id().unwrap(),
+                    new_id,
+                    None,
+                    None,
+                    None,
+                );
+
+                if let Some(tx) = self.nm_sender.as_mut() {
+                    let _ = tx.unbounded_send(NetworkManagerRequest::Reload);
+                }
+                return get_popup(popup_settings);
             }
             Message::ToggleAirplaneMode(enabled) => {
                 self.toggle_wifi_ctr += 1;
@@ -725,7 +725,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                                     .into()
                             )
                             .size(40),
-                            Column::with_children(ipv4),
+                            Column::from_vec(ipv4),
                             text::body(fl!("connected"))
                                 .width(Length::Fill)
                                 .align_x(Alignment::End),
@@ -762,7 +762,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                                     .into()
                             )
                             .size(40),
-                            Column::with_children(ipv4),
+                            Column::from_vec(ipv4),
                             text::body(format!(
                                 "{} - {speed} {}",
                                 fl!("connected"),
@@ -799,7 +799,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                             .size(24)
                             .symbolic(true)
                             .into(),
-                        column![text::body(name), Column::with_children(ipv4)]
+                        column![text::body(name), Column::from_vec(ipv4)]
                             .width(Length::Fill)
                             .into(),
                     ];
@@ -1034,7 +1034,7 @@ impl cosmic::Application for CosmicNetworkApplet {
             }
 
             let mut btn = menu_button(
-                Row::with_children(btn_content)
+                Row::from_vec(btn_content)
                     .align_y(Alignment::Center)
                     .spacing(8),
             );
@@ -1055,7 +1055,7 @@ impl cosmic::Application for CosmicNetworkApplet {
             known_wifi.push(Element::from(row![btn].align_y(Alignment::Center)));
         }
         let has_known_wifi = !known_wifi.is_empty();
-        content = content.push(Column::with_children(known_wifi));
+        content = content.push(Column::from_vec(known_wifi));
         if has_known_wifi {
             content = content
                 .push(padded_control(divider::horizontal::default()).padding([space_xxs, space_s]));
@@ -1226,8 +1226,8 @@ impl cosmic::Application for CosmicNetworkApplet {
                 .on_press(Message::SelectWirelessAccessPoint(ap.clone()));
                 list_col.push(button.into());
             }
-            content = content
-                .push(scrollable(Column::with_children(list_col)).height(Length::Fixed(300.0)));
+            content =
+                content.push(scrollable(Column::from_vec(list_col)).height(Length::Fixed(300.0)));
         }
 
         // Add VPN connections section after wireless networks when they are expanded

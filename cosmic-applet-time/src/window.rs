@@ -28,10 +28,11 @@ use std::sync::LazyLock;
 use timedate_zbus::TimeDateProxy;
 use tokio::{sync::watch, time};
 
-use crate::{config::TimeAppletConfig, fl, time::get_calendar_first};
+use crate::{config::TimeAppletConfig, fl};
 use cosmic::applet::token::subscription::{
     TokenRequest, TokenUpdate, activation_token_subscription,
 };
+use cosmic::widget::calendar::get_calender_first;
 use icu::{
     datetime::{
         DateTimeFormatter, DateTimeFormatterPreferences, fieldsets,
@@ -119,17 +120,16 @@ impl Window {
         let mut first_day_of_week = chrono::Weekday::try_from(self.config.first_day_of_week)
             .unwrap_or(chrono::Weekday::Sun);
 
-        let first_day = get_calendar_first(
+        let first_day = get_calender_first(
             self.date_selected.year(),
             self.date_selected.month(),
             first_day_of_week,
         );
 
-        let day_iter = first_day.iter_days();
         let prefs = DateTimeFormatterPreferences::from(self.locale.clone());
         let weekday = DateTimeFormatter::try_new(prefs, fieldsets::E::short()).unwrap();
 
-        for date in day_iter.take(7) {
+        for date in first_day.iter_days().take(7) {
             let datetime = self.create_datetime(&date);
             calendar = calendar.push(
                 text::caption(weekday.format(&datetime).to_string())
@@ -140,13 +140,11 @@ impl Window {
         }
         calendar = calendar.insert_row();
 
-        let mut day_iter = first_day.iter_days();
-        for i in 0..42 {
+        for (i, date) in first_day.iter_days().enumerate().take(42) {
             if i > 0 && i % 7 == 0 {
                 calendar = calendar.insert_row();
             }
 
-            let date = day_iter.next().unwrap();
             let is_month = date.month() == self.date_selected.month()
                 && date.year_ce() == self.date_selected.year_ce();
             let is_day = date.day() == self.date_selected.day() && is_month;
@@ -199,7 +197,7 @@ impl Window {
             elements.push(self.core.applet.text(p.to_owned()).into());
         }
 
-        let date_time_col = Column::with_children(elements)
+        let date_time_col = Column::from_vec(elements)
             .align_x(Alignment::Center)
             .spacing(4);
 
@@ -208,7 +206,8 @@ impl Window {
                 date_time_col,
                 horizontal_space().width(Length::Fixed(
                     (self.core.applet.suggested_size(true).0
-                        + 2 * self.core.applet.suggested_padding(true)) as f32
+                        + 2 * self.core.applet.suggested_padding(true))
+                    .into()
                 ))
             )
             .align_x(Alignment::Center),
@@ -258,10 +257,13 @@ impl Window {
         Element::from(
             row!(
                 self.core.applet.text(formatted_date),
-                container(vertical_space().height(Length::Fixed(
-                    (self.core.applet.suggested_size(true).1
-                        + 2 * self.core.applet.suggested_padding(true)) as f32
-                )))
+                container(
+                    vertical_space().height(Length::Fixed(
+                        (self.core.applet.suggested_size(true).1
+                            + 2 * self.core.applet.suggested_padding(true))
+                        .into()
+                    ))
+                )
             )
             .align_y(Alignment::Center),
         )
@@ -608,9 +610,7 @@ impl cosmic::Application for Window {
                 self.update(Message::Tick)
             }
             Message::Surface(a) => {
-                return cosmic::task::message(cosmic::Action::Cosmic(
-                    cosmic::app::Action::Surface(a),
-                ));
+                cosmic::task::message(cosmic::Action::Cosmic(cosmic::app::Action::Surface(a)))
             }
         }
     }
