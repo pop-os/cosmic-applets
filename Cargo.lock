@@ -21,12 +21,12 @@ checksum = "366ffbaa4442f4684d91e2cd7c5ea7c4ed8add41959a31447066e279e432b618"
 [[package]]
 name = "accesskit"
 version = "0.16.0"
-source = "git+https://github.com/wash2/accesskit?tag=iced-xdg-surface-0.13#956955342dadab7e588e21be726817fca39510f3"
+source = "git+https://github.com/wash2/accesskit?tag=iced-xdg-surface-0.13-rc#c46afc041b1968a5af0186fa6aba3ea9cf24c8c3"
 
 [[package]]
 name = "accesskit_atspi_common"
 version = "0.9.0"
-source = "git+https://github.com/wash2/accesskit?tag=iced-xdg-surface-0.13#956955342dadab7e588e21be726817fca39510f3"
+source = "git+https://github.com/wash2/accesskit?tag=iced-xdg-surface-0.13-rc#c46afc041b1968a5af0186fa6aba3ea9cf24c8c3"
 dependencies = [
  "accesskit",
  "accesskit_consumer",
@@ -39,7 +39,7 @@ dependencies = [
 [[package]]
 name = "accesskit_consumer"
 version = "0.24.0"
-source = "git+https://github.com/wash2/accesskit?tag=iced-xdg-surface-0.13#956955342dadab7e588e21be726817fca39510f3"
+source = "git+https://github.com/wash2/accesskit?tag=iced-xdg-surface-0.13-rc#c46afc041b1968a5af0186fa6aba3ea9cf24c8c3"
 dependencies = [
  "accesskit",
  "immutable-chunkmap",
@@ -48,7 +48,7 @@ dependencies = [
 [[package]]
 name = "accesskit_macos"
 version = "0.17.0"
-source = "git+https://github.com/wash2/accesskit?tag=iced-xdg-surface-0.13#956955342dadab7e588e21be726817fca39510f3"
+source = "git+https://github.com/wash2/accesskit?tag=iced-xdg-surface-0.13-rc#c46afc041b1968a5af0186fa6aba3ea9cf24c8c3"
 dependencies = [
  "accesskit",
  "accesskit_consumer",
@@ -61,7 +61,7 @@ dependencies = [
 [[package]]
 name = "accesskit_unix"
 version = "0.12.0"
-source = "git+https://github.com/wash2/accesskit?tag=iced-xdg-surface-0.13#956955342dadab7e588e21be726817fca39510f3"
+source = "git+https://github.com/wash2/accesskit?tag=iced-xdg-surface-0.13-rc#c46afc041b1968a5af0186fa6aba3ea9cf24c8c3"
 dependencies = [
  "accesskit",
  "accesskit_atspi_common",
@@ -76,7 +76,7 @@ dependencies = [
 [[package]]
 name = "accesskit_windows"
 version = "0.22.0"
-source = "git+https://github.com/wash2/accesskit?tag=iced-xdg-surface-0.13#956955342dadab7e588e21be726817fca39510f3"
+source = "git+https://github.com/wash2/accesskit?tag=iced-xdg-surface-0.13-rc#c46afc041b1968a5af0186fa6aba3ea9cf24c8c3"
 dependencies = [
  "accesskit",
  "accesskit_consumer",
@@ -88,7 +88,7 @@ dependencies = [
 [[package]]
 name = "accesskit_winit"
 version = "0.22.0"
-source = "git+https://github.com/wash2/accesskit?tag=iced-xdg-surface-0.13#956955342dadab7e588e21be726817fca39510f3"
+source = "git+https://github.com/wash2/accesskit?tag=iced-xdg-surface-0.13-rc#c46afc041b1968a5af0186fa6aba3ea9cf24c8c3"
 dependencies = [
  "accesskit",
  "accesskit_macos",
@@ -1475,7 +1475,7 @@ dependencies = [
 [[package]]
 name = "cosmic-config"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic#b9a00c6e799b80154190f11943bb65c1fc4dc58b"
+source = "git+https://github.com/pop-os/libcosmic//?branch=discrete-scroll#1562f8eedcefda78b2a90bcefc19d0f7b9c653ce"
 dependencies = [
  "atomicwrites",
  "cosmic-config-derive",
@@ -1496,7 +1496,7 @@ dependencies = [
 [[package]]
 name = "cosmic-config-derive"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic#b9a00c6e799b80154190f11943bb65c1fc4dc58b"
+source = "git+https://github.com/pop-os/libcosmic//?branch=discrete-scroll#1562f8eedcefda78b2a90bcefc19d0f7b9c653ce"
 dependencies = [
  "quote",
  "syn 2.0.106",
@@ -1672,7 +1672,7 @@ dependencies = [
 [[package]]
 name = "cosmic-theme"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic#b9a00c6e799b80154190f11943bb65c1fc4dc58b"
+source = "git+https://github.com/pop-os/libcosmic//?branch=discrete-scroll#1562f8eedcefda78b2a90bcefc19d0f7b9c653ce"
 dependencies = [
  "almost",
  "cosmic-config",
@@ -2064,7 +2064,7 @@ checksum = "75b325c5dbd37f80359721ad39aca5a29fb04c89279657cffdda8736d0c0b9d2"
 [[package]]
 name = "dpi"
 version = "0.1.1"
-source = "git+https://github.com/pop-os/winit.git?tag=iced-xdg-surface-0.13#dbe91fcc363c101f1d6ed5301d49911b01a26f61"
+source = "git+https://github.com/pop-os/winit.git?tag=iced-xdg-surface-0.13-rc#8dfaba290f9a00d3e13be71f1e6f438889cf5546"
 
 [[package]]
 name = "drm"
@@ -2808,9 +2808,9 @@ dependencies = [
 
 [[package]]
 name = "grid"
-version = "0.11.0"
+version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1df00eed8d1f0db937f6be10e46e8072b0671accb504cf0f959c5c52c679f5b9"
+checksum = "12101ecc8225ea6d675bc70263074eab6169079621c2186fe0c66590b2df9681"
 
 [[package]]
 name = "guillotiere"
@@ -3005,7 +3005,7 @@ dependencies = [
 [[package]]
 name = "iced"
 version = "0.14.0-dev"
-source = "git+https://github.com/pop-os/libcosmic#b9a00c6e799b80154190f11943bb65c1fc4dc58b"
+source = "git+https://github.com/pop-os/libcosmic//?branch=discrete-scroll#1562f8eedcefda78b2a90bcefc19d0f7b9c653ce"
 dependencies = [
  "dnd",
  "iced_accessibility",
@@ -3023,7 +3023,7 @@ dependencies = [
 [[package]]
 name = "iced_accessibility"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic#b9a00c6e799b80154190f11943bb65c1fc4dc58b"
+source = "git+https://github.com/pop-os/libcosmic//?branch=discrete-scroll#1562f8eedcefda78b2a90bcefc19d0f7b9c653ce"
 dependencies = [
  "accesskit",
  "accesskit_winit",
@@ -3032,7 +3032,7 @@ dependencies = [
 [[package]]
 name = "iced_core"
 version = "0.14.0-dev"
-source = "git+https://github.com/pop-os/libcosmic#b9a00c6e799b80154190f11943bb65c1fc4dc58b"
+source = "git+https://github.com/pop-os/libcosmic//?branch=discrete-scroll#1562f8eedcefda78b2a90bcefc19d0f7b9c653ce"
 dependencies = [
  "bitflags 2.9.4",
  "bytes",
@@ -3056,7 +3056,7 @@ dependencies = [
 [[package]]
 name = "iced_futures"
 version = "0.14.0-dev"
-source = "git+https://github.com/pop-os/libcosmic#b9a00c6e799b80154190f11943bb65c1fc4dc58b"
+source = "git+https://github.com/pop-os/libcosmic//?branch=discrete-scroll#1562f8eedcefda78b2a90bcefc19d0f7b9c653ce"
 dependencies = [
  "futures",
  "iced_core",
@@ -3082,7 +3082,7 @@ dependencies = [
 [[package]]
 name = "iced_graphics"
 version = "0.14.0-dev"
-source = "git+https://github.com/pop-os/libcosmic#b9a00c6e799b80154190f11943bb65c1fc4dc58b"
+source = "git+https://github.com/pop-os/libcosmic//?branch=discrete-scroll#1562f8eedcefda78b2a90bcefc19d0f7b9c653ce"
 dependencies = [
  "bitflags 2.9.4",
  "bytemuck",
@@ -3104,7 +3104,7 @@ dependencies = [
 [[package]]
 name = "iced_renderer"
 version = "0.14.0-dev"
-source = "git+https://github.com/pop-os/libcosmic#b9a00c6e799b80154190f11943bb65c1fc4dc58b"
+source = "git+https://github.com/pop-os/libcosmic//?branch=discrete-scroll#1562f8eedcefda78b2a90bcefc19d0f7b9c653ce"
 dependencies = [
  "iced_graphics",
  "iced_tiny_skia",
@@ -3116,7 +3116,7 @@ dependencies = [
 [[package]]
 name = "iced_runtime"
 version = "0.14.0-dev"
-source = "git+https://github.com/pop-os/libcosmic#b9a00c6e799b80154190f11943bb65c1fc4dc58b"
+source = "git+https://github.com/pop-os/libcosmic//?branch=discrete-scroll#1562f8eedcefda78b2a90bcefc19d0f7b9c653ce"
 dependencies = [
  "bytes",
  "cosmic-client-toolkit",
@@ -3131,7 +3131,7 @@ dependencies = [
 [[package]]
 name = "iced_tiny_skia"
 version = "0.14.0-dev"
-source = "git+https://github.com/pop-os/libcosmic#b9a00c6e799b80154190f11943bb65c1fc4dc58b"
+source = "git+https://github.com/pop-os/libcosmic//?branch=discrete-scroll#1562f8eedcefda78b2a90bcefc19d0f7b9c653ce"
 dependencies = [
  "bytemuck",
  "cosmic-text",
@@ -3147,7 +3147,7 @@ dependencies = [
 [[package]]
 name = "iced_wgpu"
 version = "0.14.0-dev"
-source = "git+https://github.com/pop-os/libcosmic#b9a00c6e799b80154190f11943bb65c1fc4dc58b"
+source = "git+https://github.com/pop-os/libcosmic//?branch=discrete-scroll#1562f8eedcefda78b2a90bcefc19d0f7b9c653ce"
 dependencies = [
  "as-raw-xcb-connection",
  "bitflags 2.9.4",
@@ -3178,7 +3178,7 @@ dependencies = [
 [[package]]
 name = "iced_widget"
 version = "0.14.0-dev"
-source = "git+https://github.com/pop-os/libcosmic#b9a00c6e799b80154190f11943bb65c1fc4dc58b"
+source = "git+https://github.com/pop-os/libcosmic//?branch=discrete-scroll#1562f8eedcefda78b2a90bcefc19d0f7b9c653ce"
 dependencies = [
  "cosmic-client-toolkit",
  "dnd",
@@ -3197,7 +3197,7 @@ dependencies = [
 [[package]]
 name = "iced_winit"
 version = "0.14.0-dev"
-source = "git+https://github.com/pop-os/libcosmic#b9a00c6e799b80154190f11943bb65c1fc4dc58b"
+source = "git+https://github.com/pop-os/libcosmic//?branch=discrete-scroll#1562f8eedcefda78b2a90bcefc19d0f7b9c653ce"
 dependencies = [
  "cosmic-client-toolkit",
  "dnd",
@@ -3986,7 +3986,7 @@ checksum = "6a82ae493e598baaea5209805c49bbf2ea7de956d50d7da0da1164f9c6d28543"
 [[package]]
 name = "libcosmic"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/libcosmic#b9a00c6e799b80154190f11943bb65c1fc4dc58b"
+source = "git+https://github.com/pop-os/libcosmic//?branch=discrete-scroll#1562f8eedcefda78b2a90bcefc19d0f7b9c653ce"
 dependencies = [
  "apply",
  "ashpd 0.12.0",
@@ -6394,12 +6394,13 @@ dependencies = [
 
 [[package]]
 name = "taffy"
-version = "0.3.11"
-source = "git+https://github.com/DioxusLabs/taffy?rev=7781c70#7781c70241f7f572130c13106f2a869a9cf80885"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b25026fb8cc9ab51ab9fdabe5d11706796966f6d1c78e19871ef63be2b8f0644"
 dependencies = [
  "arrayvec",
  "grid",
- "num-traits",
+ "serde",
  "slotmap",
 ]
 
@@ -7876,7 +7877,7 @@ checksum = "271414315aff87387382ec3d271b52d7ae78726f5d44ac98b4f4030c91880486"
 [[package]]
 name = "winit"
 version = "0.30.5"
-source = "git+https://github.com/pop-os/winit.git?tag=iced-xdg-surface-0.13#dbe91fcc363c101f1d6ed5301d49911b01a26f61"
+source = "git+https://github.com/pop-os/winit.git?tag=iced-xdg-surface-0.13-rc#8dfaba290f9a00d3e13be71f1e6f438889cf5546"
 dependencies = [
  "ahash",
  "android-activity",
