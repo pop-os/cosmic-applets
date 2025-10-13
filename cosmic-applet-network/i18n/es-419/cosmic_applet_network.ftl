@@ -19,3 +19,4 @@ unable-to-connect = No se puede conectar a la red
 check-wifi-connection = Verifica que la conexión Wi-Fi esté activa y que la contraseña sea correcta
 reset = Reiniciar
 identity = Identidad
+vpn-connections = Conexiones VPN

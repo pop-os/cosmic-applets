@@ -8,7 +8,11 @@ active-hint = Наговештај активног прозора
 gaps = Празнине
 floating-window-exceptions = Изузеци плутајућих прозора...
 window-management-settings = Подешавања управљања прозорима...
-
 super = Super
 shift = Shift
 arrow-keys = стрелице
+tile-current = Уплочај тренутну радну површину
+all-workspaces = Све радне површине
+per-workspace = За сваку радну површину
+tiled = Поплочано
+floating = Лебдећи

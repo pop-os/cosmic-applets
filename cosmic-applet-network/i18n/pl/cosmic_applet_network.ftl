@@ -19,3 +19,4 @@ router-wps-button = Możesz się również połączyć wciskając przycisk „WP
 unable-to-connect = Nie można połączyć się z siecią
 check-wifi-connection = Upewnij się, że Wi-Fi ma połączenie z internetem oraz hasło jest poprawne
 reset = Reset
+vpn-connections = Połączenia VPN
