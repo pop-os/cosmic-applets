@@ -19,3 +19,4 @@ router-wps-button = A router „WPS” gombjának megnyomásával is csatlakozha
 unable-to-connect = Nem lehet csatlakozni a hálózathoz
 check-wifi-connection = Győződj meg arról, hogy a Wi-Fi csatlakozik az internethez, és a jelszó helyes
 reset = Visszaállítás
+vpn-connections = VPN-kapcsolatok

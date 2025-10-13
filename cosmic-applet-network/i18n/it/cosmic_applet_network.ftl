@@ -18,3 +18,5 @@ router-wps-button = Puoi anche connetterti premendo il pulsante "WPS" presente n
 unable-to-connect = Impossibile connettersi alla rete
 check-wifi-connection = Assicurati che il Wi-Fi sia connesso a internet e che la password sia corretta
 reset = Reset
+vpn-connections = Connessioni VPN
+identity = Identità

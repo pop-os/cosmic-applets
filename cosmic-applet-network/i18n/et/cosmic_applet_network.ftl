@@ -19,3 +19,4 @@ router-wps-button = Sa võid proovida ühendada ka nii, et vajutad ruuteril asuv
 unable-to-connect = Ühendamine võrguga ei õnnestu
 check-wifi-connection = Palun kontrolli, et WiFi seadmel on internetiühendus on olemas ja salasõna on õige
 reset = Lähtesta
+vpn-connections = VPN-ühendused

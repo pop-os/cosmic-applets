@@ -19,3 +19,4 @@ router-wps-button = 您也可以通过按路由器上的“WPS”按钮连接
 unable-to-connect = 无法连接到网络
 check-wifi-connection = 确保 Wi-Fi 已连接到互联网并且密码正确
 reset = 重置
+vpn-connections = VPN连接

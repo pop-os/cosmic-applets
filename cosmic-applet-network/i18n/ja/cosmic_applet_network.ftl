@@ -19,3 +19,4 @@ unable-to-connect = ネットワークに接続できません
 check-wifi-connection = Wi-Fiがインターネットに接続しているか、パスワードが正しいかと確認してください
 identity = ID
 reset = リセット
+vpn-connections = VPS接続
