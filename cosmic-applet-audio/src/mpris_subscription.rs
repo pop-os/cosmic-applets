@@ -40,10 +40,12 @@ impl PlayerStatus {
 
         let title = metadata
             .title()
-            .or(pathbuf
-                .file_name()
-                .and_then(|s| s.to_str())
-                .and_then(|s| decode(s).map_or(None, |s| Some(s.into_owned()))))
+            .or_else(|| {
+                pathbuf
+                    .file_name()
+                    .and_then(|s| s.to_str())
+                    .and_then(|s| decode(s).map_or(None, |s| Some(s.into_owned())))
+            })
             .map(Cow::from);
         let artists = metadata
             .artists()

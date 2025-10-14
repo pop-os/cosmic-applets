@@ -53,10 +53,10 @@ fn format_duration(duration: Duration) -> String {
         if min > 60 {
             format!("{}:{:02}", min / 60, min % 60)
         } else {
-            format!("{}{}", min, fl!("minutes"))
+            format!("{min}{}", fl!("minutes"))
         }
     } else {
-        format!("{}{}", secs, fl!("seconds"))
+        format!("{secs}{}", fl!("seconds"))
     }
 }
 

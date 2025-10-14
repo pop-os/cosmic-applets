@@ -53,6 +53,7 @@ pub async fn tick(interval: &mut tokio::time::Interval) {
     let guard = TICK.read().await;
     if *guard != interval.period() {
         *interval = tokio::time::interval(*guard);
+        drop(guard);
         interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
     }
     interval.tick().await;

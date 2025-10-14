@@ -327,11 +327,7 @@ async fn start_listening(
                                     .inner()
                                     .call_method(
                                         "ActivateConnection",
-                                        &(
-                                            connection.inner().path(),
-                                            empty_device.clone(),
-                                            empty_device,
-                                        ),
+                                        &[connection.inner().path(), &empty_device, &empty_device],
                                     )
                                     .await
                                 {
@@ -350,8 +346,7 @@ async fn start_listening(
 
                     if !success {
                         tracing::warn!(
-                            "VPN connection with UUID {} not found or failed to activate",
-                            uuid
+                            "VPN connection with UUID {uuid} not found or failed to activate"
                         );
                     }
 
@@ -410,8 +405,7 @@ async fn start_listening(
 
                     if !success {
                         tracing::warn!(
-                            "Active VPN connection '{}' not found or failed to deactivate",
-                            name
+                            "Active VPN connection '{name}' not found or failed to deactivate"
                         );
                     }
 
@@ -604,8 +598,7 @@ impl NetworkManagerState {
             let s = Settings::new(s);
             if let Some(cur_ssid) = s
                 .wifi
-                .clone()
-                .and_then(|w| w.ssid)
+                .and_then(|w| w.ssid.clone())
                 .and_then(|ssid| String::from_utf8(ssid).ok())
             {
                 known_ssid.push(cur_ssid);
