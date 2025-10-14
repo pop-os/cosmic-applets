@@ -97,8 +97,7 @@ async fn powered_on(path: impl AsRef<Path>) -> bool {
         "D3cold" | "D3hot" => false,
         x => {
             debug!(
-                "Unknown power state {} for node {}",
-                x,
+                "Unknown power state {x} for node {}",
                 path.as_ref().display()
             );
             true
@@ -231,7 +230,7 @@ impl Gpu {
                     return None;
                 }
                 Err(err) => {
-                    debug!("smi returned error code: {}", err);
+                    debug!("smi returned error code: {err}");
                     return None;
                 }
             };

@@ -53,8 +53,7 @@ impl cosmic::Application for Button {
             .and_then(|c| CosmicPanelButtonConfig::get_entry(&c).ok())
             .unwrap_or_default()
             .configs
-            .get(&core.applet.panel_type.to_string())
-            .cloned()
+            .remove(&core.applet.panel_type.to_string())
             .unwrap_or_default();
         (
             Self {
@@ -88,11 +87,10 @@ impl cosmic::Application for Button {
                     .unwrap()
                     .wait();
             }
-            Msg::ConfigUpdated(conf) => {
+            Msg::ConfigUpdated(mut conf) => {
                 self.config = conf
                     .configs
-                    .get(&self.core.applet.panel_type.to_string())
-                    .cloned()
+                    .remove(&self.core.applet.panel_type.to_string())
                     .unwrap_or_default();
             }
             Msg::Surface(a) => {
