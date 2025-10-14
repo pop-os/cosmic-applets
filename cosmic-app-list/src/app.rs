@@ -82,7 +82,7 @@ impl AppletIconData {
         let padding = applet.suggested_padding(false);
         let icon_spacing = 4.0;
 
-        let (dot_radius, bar_size) = match applet.size {
+        let (dot_radius, bar_size): (f32, f32) = match applet.size {
             Size::Hardcoded(_) => (2.0, 8.0),
             Size::PanelSize(ref s) => {
                 let size = s.get_applet_icon_size_with_padding(false);
@@ -102,10 +102,30 @@ impl AppletIconData {
         let padding = padding as f32;
 
         let padding = match applet.anchor {
-            PanelAnchor::Top => [padding - (dot_radius * 2. + 1.), padding, padding, padding],
-            PanelAnchor::Bottom => [padding, padding, padding - (dot_radius * 2. + 1.), padding],
-            PanelAnchor::Left => [padding, padding, padding, padding - (dot_radius * 2. + 1.)],
-            PanelAnchor::Right => [padding, padding - (dot_radius * 2. + 1.), padding, padding],
+            PanelAnchor::Top => [
+                padding - dot_radius.mul_add(2., 1.),
+                padding,
+                padding,
+                padding,
+            ],
+            PanelAnchor::Bottom => [
+                padding,
+                padding,
+                padding - dot_radius.mul_add(2., 1.),
+                padding,
+            ],
+            PanelAnchor::Left => [
+                padding,
+                padding,
+                padding,
+                padding - dot_radius.mul_add(2., 1.),
+            ],
+            PanelAnchor::Right => [
+                padding,
+                padding - dot_radius.mul_add(2., 1.),
+                padding,
+                padding,
+            ],
         };
         AppletIconData {
             icon_size,
@@ -212,32 +232,32 @@ impl DockItem {
         };
 
         let icon_wrapper: Element<_> = match applet.anchor {
-            PanelAnchor::Left => row([
-                indicator.into(),
-                horizontal_space().width(Length::Fixed(1.0)).into(),
-                cosmic_icon.clone().into(),
-            ])
+            PanelAnchor::Left => row![
+                indicator,
+                horizontal_space().width(Length::Fixed(1.0)),
+                cosmic_icon.clone(),
+            ]
             .align_y(Alignment::Center)
             .into(),
-            PanelAnchor::Right => row([
-                cosmic_icon.clone().into(),
-                horizontal_space().width(Length::Fixed(1.0)).into(),
-                indicator.into(),
-            ])
+            PanelAnchor::Right => row![
+                cosmic_icon.clone(),
+                horizontal_space().width(Length::Fixed(1.0)),
+                indicator,
+            ]
             .align_y(Alignment::Center)
             .into(),
-            PanelAnchor::Top => column([
-                indicator.into(),
-                vertical_space().height(Length::Fixed(1.0)).into(),
-                cosmic_icon.clone().into(),
-            ])
+            PanelAnchor::Top => column![
+                indicator,
+                vertical_space().height(Length::Fixed(1.0)),
+                cosmic_icon.clone(),
+            ]
             .align_x(Alignment::Center)
             .into(),
-            PanelAnchor::Bottom => column([
-                cosmic_icon.clone().into(),
-                vertical_space().height(Length::Fixed(1.0)).into(),
-                indicator.into(),
-            ])
+            PanelAnchor::Bottom => column![
+                cosmic_icon.clone(),
+                vertical_space().height(Length::Fixed(1.0)),
+                indicator,
+            ]
             .align_x(Alignment::Center)
             .into(),
         };
@@ -453,9 +473,7 @@ where
             column![
                 container(if let Some(img) = img {
                     Element::from(Image::new(Handle::from_rgba(
-                        img.width,
-                        img.height,
-                        img.img.clone(),
+                        img.width, img.height, img.img,
                     )))
                 } else {
                     Image::new(Handle::from_rgba(1, 1, [0u8, 0u8, 0u8, 255u8].as_slice())).into()
@@ -769,24 +787,24 @@ impl cosmic::Application for CosmicAppList {
                         height: height as i32,
                     };
                     let max_windows = 7.0;
-                    let window_spacing = 8.0;
+                    let window_spacing = 8.0_f32;
                     popup_settings.positioner.size_limits = match self.core.applet.anchor {
                         PanelAnchor::Right | PanelAnchor::Left => Limits::NONE
                             .min_width(100.0)
                             .min_height(30.0)
-                            .max_width(window_spacing * 2.0 + TOPLEVEL_BUTTON_WIDTH)
+                            .max_width(window_spacing.mul_add(2.0, TOPLEVEL_BUTTON_WIDTH))
                             .max_height(
-                                TOPLEVEL_BUTTON_HEIGHT * max_windows
-                                    + window_spacing * (max_windows + 1.0),
+                                TOPLEVEL_BUTTON_HEIGHT
+                                    .mul_add(max_windows, window_spacing * (max_windows + 1.0)),
                             ),
                         PanelAnchor::Bottom | PanelAnchor::Top => Limits::NONE
                             .min_width(30.0)
                             .min_height(100.0)
                             .max_width(
-                                TOPLEVEL_BUTTON_WIDTH * max_windows
-                                    + window_spacing * (max_windows + 1.0),
+                                TOPLEVEL_BUTTON_WIDTH
+                                    .mul_add(max_windows, window_spacing * (max_windows + 1.0)),
                             )
-                            .max_height(window_spacing * 2.0 + TOPLEVEL_BUTTON_HEIGHT),
+                            .max_height(window_spacing.mul_add(2.0, TOPLEVEL_BUTTON_HEIGHT)),
                     };
 
                     return get_popup(popup_settings);
@@ -883,8 +901,7 @@ impl cosmic::Application for CosmicAppList {
                     })
                 {
                     let icon_id = window::Id::unique();
-                    self.dnd_source =
-                        Some((icon_id, toplevel_group.clone(), DndAction::empty(), pos));
+                    self.dnd_source = Some((icon_id, toplevel_group, DndAction::empty(), pos));
                 }
             }
             Message::DragFinished => {
@@ -1141,7 +1158,7 @@ impl cosmic::Application for CosmicAppList {
                                             updated_appid = true;
                                         }
 
-                                        *t_info = info.clone();
+                                        t_info.clone_from(&info);
                                         break 'toplevel_loop;
                                     }
                                 }
@@ -1298,7 +1315,7 @@ impl cosmic::Application for CosmicAppList {
                                 DockItem {
                                     id: self.item_ctr,
                                     toplevels: Vec::new(),
-                                    desktop_info: de.clone(),
+                                    desktop_info: de,
                                     original_app_id: original_id.clone(),
                                 }
                             }
@@ -1357,8 +1374,8 @@ impl cosmic::Application for CosmicAppList {
                         self.active_list.len().saturating_sub(
                             (active_popup_cutoff.unwrap_or_default()).saturating_sub(1),
                         ) as f32;
-                    let popup_applet_size = applet_suggested_size as f32 * popup_applet_count
-                        + 4.0 * (popup_applet_count - 1.);
+                    let popup_applet_size = (applet_suggested_size as f32)
+                        .mul_add(popup_applet_count, 4.0 * (popup_applet_count - 1.));
                     let (max_width, max_height) = match self.core.applet.anchor {
                         PanelAnchor::Top | PanelAnchor::Bottom => {
                             (popup_applet_size, applet_suggested_size.into())
@@ -1414,8 +1431,8 @@ impl cosmic::Application for CosmicAppList {
                         self.pinned_list.len().saturating_sub(
                             favorite_popup_cutoff.unwrap_or_default().saturating_sub(1),
                         ) as f32;
-                    let popup_applet_size = applet_suggested_size as f32 * popup_applet_count
-                        + 4.0 * (popup_applet_count - 1.);
+                    let popup_applet_size = (applet_suggested_size as f32)
+                        .mul_add(popup_applet_count, 4.0 * (popup_applet_count - 1.));
                     let (max_width, max_height) = match self.core.applet.anchor {
                         PanelAnchor::Top | PanelAnchor::Bottom => {
                             (popup_applet_size, applet_suggested_size as f32)
@@ -1665,11 +1682,11 @@ impl cosmic::Application for CosmicAppList {
                 Length::Shrink,
                 Length::Shrink,
                 DndDestination::for_data::<DndPathBuf>(
-                    row(favorites).spacing(app_icon.icon_spacing),
+                    Row::from_vec(favorites).spacing(app_icon.icon_spacing),
                     |_, _| Message::DndDropFinished,
                 )
                 .drag_id(DND_FAVORITES),
-                row(active).spacing(app_icon.icon_spacing).into(),
+                Row::from_vec(active).spacing(app_icon.icon_spacing).into(),
                 container(vertical_rule(1))
                     .height(Length::Fill)
                     .padding([divider_padding, 0])
@@ -1680,11 +1697,13 @@ impl cosmic::Application for CosmicAppList {
                 Length::Shrink,
                 Length::Shrink,
                 DndDestination::for_data(
-                    column(favorites).spacing(app_icon.icon_spacing),
+                    Column::from_vec(favorites).spacing(app_icon.icon_spacing),
                     |_data: Option<DndPathBuf>, _| Message::DndDropFinished,
                 )
                 .drag_id(DND_FAVORITES),
-                column(active).spacing(app_icon.icon_spacing).into(),
+                Column::from_vec(active)
+                    .spacing(app_icon.icon_spacing)
+                    .into(),
                 container(divider::horizontal::default())
                     .width(Length::Fill)
                     .padding([0, divider_padding])
@@ -1847,7 +1866,7 @@ impl cosmic::Application for CosmicAppList {
                     }
 
                     if !toplevels.is_empty() {
-                        let mut list_col = column![];
+                        let mut list_col = Column::with_capacity(toplevels.len());
                         for (info, _) in toplevels {
                             let title = if info.title.len() > 34 {
                                 format!("{:.32}...", &info.title)
@@ -1937,8 +1956,10 @@ impl cosmic::Application for CosmicAppList {
                 }
                 PopupType::TopLevelList => match self.core.applet.anchor {
                     PanelAnchor::Left | PanelAnchor::Right => {
-                        let mut content =
-                            column![].padding(8).align_x(Alignment::Center).spacing(8);
+                        let mut content = Column::with_capacity(toplevels.len())
+                            .padding(8)
+                            .align_x(Alignment::Center)
+                            .spacing(8);
                         for (info, img) in toplevels {
                             let title = if info.title.len() > 18 {
                                 format!("{:.16}...", &info.title)
@@ -1960,7 +1981,10 @@ impl cosmic::Application for CosmicAppList {
                             .into()
                     }
                     PanelAnchor::Bottom | PanelAnchor::Top => {
-                        let mut content = row![].padding(8).align_y(Alignment::Center).spacing(8);
+                        let mut content = Row::with_capacity(toplevels.len())
+                            .padding(8)
+                            .align_y(Alignment::Center)
+                            .spacing(8);
                         for (info, img) in toplevels {
                             let title = if info.title.len() > 18 {
                                 format!("{:.16}...", &info.title)
@@ -2171,9 +2195,9 @@ impl cosmic::Application for CosmicAppList {
                 .into()
         } else {
             let suggested = self.core.applet.suggested_size(false);
-            iced::widget::row!()
-                .width(Length::Fixed(suggested.0 as f32))
-                .height(Length::Fixed(suggested.1 as f32))
+            Row::new()
+                .width(Length::Fixed(suggested.0.into()))
+                .height(Length::Fixed(suggested.1.into()))
                 .into()
         }
     }
@@ -2353,7 +2377,7 @@ impl CosmicAppList {
                                 continue;
                             }
 
-                            fallback_entry = entry.clone();
+                            fallback_entry.clone_from(entry);
                             break;
                         }
                     }

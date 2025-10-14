@@ -196,17 +196,16 @@ impl Window {
 
         let date_time_col = elements.align_x(Alignment::Center).spacing(4);
 
-        Element::from(
-            column!(
-                date_time_col,
-                horizontal_space().width(Length::Fixed(
-                    (self.core.applet.suggested_size(true).0
-                        + 2 * self.core.applet.suggested_padding(true))
-                    .into()
-                ))
-            )
-            .align_x(Alignment::Center),
+        column!(
+            date_time_col,
+            horizontal_space().width(Length::Fixed(
+                (self.core.applet.suggested_size(true).0
+                    + 2 * self.core.applet.suggested_padding(true))
+                .into()
+            ))
         )
+        .align_x(Alignment::Center)
+        .into()
     }
 
     fn horizontal_layout(&self) -> Element<'_, Message> {

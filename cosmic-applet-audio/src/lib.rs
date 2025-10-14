@@ -42,7 +42,7 @@ mod pulse;
 static FULL_VOLUME: f64 = Volume::NORMAL.0 as f64;
 
 // Max volume is 150% volume.
-static MAX_VOLUME: f64 = FULL_VOLUME + (FULL_VOLUME * 0.5);
+static MAX_VOLUME: f64 = FULL_VOLUME * 1.5;
 
 static SHOW_MEDIA_CONTROLS: LazyLock<id::Toggler> = LazyLock::new(id::Toggler::unique);
 

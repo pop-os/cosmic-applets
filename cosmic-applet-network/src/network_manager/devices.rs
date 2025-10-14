@@ -14,7 +14,7 @@ pub fn devices_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
     Subscription::run_with_id(
         (id, has_popup),
         stream::channel(50, move |mut output| {
-            let mut state = initial.clone();
+            let mut state = initial;
 
             async move {
                 loop {

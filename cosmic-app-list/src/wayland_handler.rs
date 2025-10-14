@@ -620,7 +620,7 @@ pub(crate) fn wayland_handler(
         .insert_source(rx, |event, (), state| match event {
             calloop::channel::Event::Msg(req) => match req {
                 WaylandRequest::Screencopy(handle) => {
-                    state.send_image(handle.clone());
+                    state.send_image(handle);
                 }
                 WaylandRequest::Toplevel(req) => match req {
                     ToplevelRequest::Activate(handle) => {

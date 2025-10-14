@@ -648,12 +648,11 @@ impl cosmic::Application for CosmicNetworkApplet {
                     self.nm_state.active_conns.remove(pos);
                     ap.clone()
                 } else {
-                    tracing::warn!("Failed to find known access point with ssid: {}", ssid);
+                    tracing::warn!("Failed to find known access point with ssid: {ssid}");
                     return Task::none();
                 };
                 if let Some(tx) = self.nm_sender.as_ref() {
-                    let _ =
-                        tx.unbounded_send(NetworkManagerRequest::Forget(ssid.clone(), hw_address));
+                    let _ = tx.unbounded_send(NetworkManagerRequest::Forget(ssid, hw_address));
                     self.show_visible_networks = true;
                     return self.update(Message::SelectWirelessAccessPoint(ap));
                 }
@@ -700,7 +699,7 @@ impl cosmic::Application for CosmicNetworkApplet {
             space_xxs, space_s, ..
         } = theme::active().cosmic().spacing;
 
-        let mut vpn_ethernet_col = column![];
+        let mut vpn_ethernet_col = Column::with_capacity(1);
         let mut known_wifi = Vec::new();
         for conn in &self.nm_state.active_conns {
             match conn {
@@ -711,7 +710,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                     let mut ipv4 = Column::with_capacity(ip_addresses.len() + 1);
                     ipv4 = ipv4.push(text::body(name));
                     for addr in ip_addresses {
-                        ipv4 = ipv4.push(text::caption(format!("{}: {}", fl!("ipv4"), addr)));
+                        ipv4 = ipv4.push(text::caption(format!("{}: {addr}", fl!("ipv4"))));
                     }
                     vpn_ethernet_col = vpn_ethernet_col.push(column![
                         row![
@@ -747,7 +746,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                     let mut ipv4 = Column::with_capacity(ip_addresses.len() + 1);
                     ipv4 = ipv4.push(text::body(name));
                     for addr in ip_addresses {
-                        ipv4 = ipv4.push(text(format!("{}: {}", fl!("ipv4"), addr)).size(12));
+                        ipv4 = ipv4.push(text(format!("{}: {addr}", fl!("ipv4"))).size(12));
                     }
 
                     vpn_ethernet_col = vpn_ethernet_col.push(column![
@@ -1076,7 +1075,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                     content = content.push(id);
 
                     let is_enterprise = matches!(access_point.network_type, NetworkType::EAP);
-                    let enter_password_col = column![]
+                    let enter_password_col = Column::with_capacity(6)
                         .push_maybe(is_enterprise.then(|| text::body(fl!("identity"))))
                         .push_maybe(is_enterprise.then(|| {
                             text_input::text_input("", identity).on_input(Message::Identity)
