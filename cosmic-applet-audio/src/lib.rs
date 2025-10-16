@@ -731,14 +731,20 @@ impl cosmic::Application for Audio {
                                 .push(btn)
                                 .align_x(Alignment::Center)
                                 // TODO configurable variable from the panel?
-                                .spacing(-(self.core.applet.suggested_padding(true).0 as f32) / 2.),
+                                .spacing(
+                                    -(self.core.applet.suggested_padding(true).0 as f32)
+                                        * self.core.applet.padding_overlap,
+                                ),
                         ),
                         PanelAnchor::Top | PanelAnchor::Bottom => {
                             applet_row::Row::with_children(playback_buttons)
                                 .push(btn)
                                 .align_y(Alignment::Center)
                                 // TODO configurable variable from the panel?
-                                .spacing(-(self.core.applet.suggested_padding(true).0 as f32) / 2.)
+                                .spacing(
+                                    -(self.core.applet.suggested_padding(true).0 as f32)
+                                        * self.core.applet.padding_overlap,
+                                )
                                 .into()
                         }
                     }

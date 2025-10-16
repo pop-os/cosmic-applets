@@ -206,32 +206,10 @@ impl cosmic::Application for Window {
                 .map_or("", |l| l.layout.as_str()),
         );
 
-        cosmic::widget::button::custom(
-            row!(
-                column!(
-                    input_source_text,
-                    horizontal_space().width(Length::Fixed(
-                        (self.core.applet.suggested_size(true).0
-                            + 2 * self.core.applet.suggested_padding(true).1)
-                            as f32
-                    ))
-                )
-                .width(Length::Shrink)
-                .height(Length::Shrink)
-                .align_x(Alignment::Center),
-                vertical_space().height(Length::Fixed(
-                    (self.core.applet.suggested_size(true).1
-                        + 2 * self.core.applet.suggested_padding(true).1)
-                        as f32
-                ))
-            )
-            .align_y(Alignment::Center)
-            .width(Length::Shrink)
-            .height(Length::Shrink),
-        )
-        .on_press_down(Message::TogglePopup)
-        .class(cosmic::theme::Button::AppletIcon)
-        .into()
+        self.core
+            .applet
+            .text_button(input_source_text, Message::TogglePopup)
+            .into()
     }
 
     fn view_window(&self, _id: Id) -> Element<'_, Self::Message> {
