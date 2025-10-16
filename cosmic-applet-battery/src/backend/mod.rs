@@ -148,9 +148,8 @@ async fn start_listening(
                     _ = output.send(PowerProfileUpdate::Error(e)).await;
                     if let Some(next_type) = backend_type.next() {
                         return State::Connecting(next_type, conn);
-                    } else {
-                        return State::Finished;
-                    };
+                    }
+                    return State::Finished;
                 }
             };
             // Successful connection
@@ -160,9 +159,8 @@ async fn start_listening(
                     _ = output.send(PowerProfileUpdate::Error(e)).await;
                     if let Some(next_type) = backend_type.next() {
                         return State::Connecting(next_type, conn);
-                    } else {
-                        return State::Finished;
-                    };
+                    }
+                    return State::Finished;
                 }
             };
             let (tx, rx) = tokio::sync::mpsc::unbounded_channel();

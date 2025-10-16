@@ -241,7 +241,7 @@ fn layout_view(layout: &Layout, expanded: Option<i32>) -> cosmic::Element<'_, Ms
 
 fn row_button(content: Vec<cosmic::Element<Msg>>) -> cosmic::widget::Button<Msg> {
     menu_button(
-        iced::widget::Row::with_children(content)
+        iced::widget::Row::from_vec(content)
             .spacing(8)
             .align_y(iced::Alignment::Center)
             .width(iced::Length::Fill),

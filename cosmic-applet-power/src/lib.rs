@@ -174,9 +174,7 @@ impl cosmic::Application for Power {
                 Task::none()
             }
             Message::Surface(a) => {
-                return cosmic::task::message(cosmic::Action::Cosmic(
-                    cosmic::app::Action::Surface(a),
-                ));
+                cosmic::task::message(cosmic::Action::Cosmic(cosmic::app::Action::Surface(a)))
             }
         }
     }

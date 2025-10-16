@@ -97,8 +97,7 @@ async fn powered_on(path: impl AsRef<Path>) -> bool {
         "D3cold" | "D3hot" => false,
         x => {
             debug!(
-                "Unknown power state {} for node {}",
-                x,
+                "Unknown power state {x} for node {}",
                 path.as_ref().display()
             );
             true
@@ -231,7 +230,7 @@ impl Gpu {
                     return None;
                 }
                 Err(err) => {
-                    debug!("smi returned error code: {}", err);
+                    debug!("smi returned error code: {err}");
                     return None;
                 }
             };
@@ -369,9 +368,9 @@ fn all_gpus<S: AsRef<str>>(seat: S) -> io::Result<Vec<Gpu>> {
                 if let Some(dev) = device {
                     if dev.driver().is_some() {
                         break dev.driver().map(OsStr::to_os_string);
-                    } else {
-                        device = dev.parent();
                     }
+
+                    device = dev.parent();
                 } else {
                     break None;
                 }
@@ -504,9 +503,9 @@ async fn start_listening(
                                             if let Some(dev) = device {
                                                 if dev.driver().is_some() {
                                                     break dev.driver().map(OsStr::to_os_string);
-                                                } else {
-                                                    device = dev.parent();
                                                 }
+
+                                                device = dev.parent();
                                             } else {
                                                 break None;
                                             }
