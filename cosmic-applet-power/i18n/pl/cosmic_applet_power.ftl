@@ -1,29 +1,29 @@
 power = Zasilanie
-settings = Ustawienia...
+settings = Ustawienia…
 lock-screen = Ekran Blokady
 lock-screen-shortcut = Super + Esc
 log-out = Wyloguj się
 log-out-shortcut = Super + Shift + Esc
 suspend = Wstrzymaj
-restart = Uruchom ponownie
+restart = Uruchom Ponownie
 shutdown = Wyłącz
 confirm = Potwierdź
 cancel = Anuluj
-confirm-button = {
-    $action ->
+confirm-button =
+    { $action ->
         [restart] { restart }
         [suspend] { suspend }
         [shutdown] { shutdown }
         [log-out] { log-out }
-        *[other] { confirm }
-}
+       *[other] { confirm }
+    }
 confirm-title =
     { $action ->
         [restart] Uruchomić ponownie
         [suspend] Wstrzymać
         [shutdown] Wyłączyć
         [log-out] Zamknąć wszystkie aplikacje i wylogować się
-        *[other] Wykonać wybraną akcję
+       *[other] Wykonać wybraną akcję
     }?
 confirm-body =
     Urządzenie automatycznie { $action ->
@@ -32,9 +32,9 @@ confirm-body =
         [shutdown] wyłączy się
         [lock-screen] zablokuje ekran
         [log-out] wyloguje się
-        *[other] wykona wybraną akcję
+       *[other] wykona wybraną akcję
     } za { $countdown ->
         [1] sekundę
-        [few] {$countdown} sekundy
-        *[other] {$countdown} sekund
+        [few] { $countdown } sekundy
+       *[other] { $countdown } sekund
     }.

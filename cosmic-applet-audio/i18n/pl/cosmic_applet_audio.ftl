@@ -1,6 +1,6 @@
 output = Wyjście
 input = Wejście
-show-media-controls = Pokaż sterowanie multimediami w panelu
+show-media-controls = Pokaż sterowanie multimediami na panelu
 sound-settings = Ustawienia dźwięku…
 disconnected = Rozłączono PulseAudio
 no-device = Nie wybrano urządzenia

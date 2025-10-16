@@ -1,6 +1,6 @@
-screen-reader = Засіб читання з екрану
+screen-reader = Читач екрана
 magnifier = Лупа
-invert-colors = Інвертація кольорів
+invert-colors = Інверсія кольорів
 settings = Налаштування доступності...
 filter-colors = Виправлення кольорової сліпоти
-high-contrast = Режим високої контрастності
+high-contrast = Висока контрастність
