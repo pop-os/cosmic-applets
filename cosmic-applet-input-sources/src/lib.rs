@@ -11,7 +11,7 @@ use cosmic::{
     cosmic_config::{self, ConfigSet, CosmicConfigEntry},
     cosmic_theme::Spacing,
     iced::{
-        Task,
+        Rectangle, Task,
         platform_specific::shell::commands::popup::{destroy_popup, get_popup},
         widget::{column, row},
         window::Id,
@@ -20,11 +20,17 @@ use cosmic::{
     iced_runtime::{Appearance, core::window},
     prelude::*,
     surface, theme,
-    widget::{self, horizontal_space, vertical_space},
+    widget::{
+        self, autosize, horizontal_space,
+        rectangle_tracker::{RectangleTracker, RectangleUpdate, rectangle_tracker_subscription},
+        vertical_space,
+    },
 };
 use cosmic_comp_config::CosmicCompConfig;
+use std::sync::LazyLock;
 use xkb_data::KeyboardLayout;
 
+static AUTOSIZE_MAIN_ID: LazyLock<widget::Id> = LazyLock::new(|| widget::Id::new("autosize-main"));
 pub const ID: &str = "com.system76.CosmicAppletInputSources";
 
 pub fn run() -> cosmic::iced::Result {
@@ -77,6 +83,8 @@ pub struct Window {
     comp_config_handler: Option<cosmic_config::Config>,
     layouts: Vec<KeyboardLayout>,
     active_layouts: Vec<ActiveLayout>,
+    rectangle_tracker: Option<RectangleTracker<u32>>,
+    rectangle: Rectangle,
 }
 
 #[derive(Clone, Debug)]
@@ -87,6 +95,7 @@ pub enum Message {
     SetActiveLayout(usize),
     KeyboardSettings,
     Surface(surface::Action),
+    Rectangle(RectangleUpdate<u32>),
 }
 
 #[derive(Debug)]
@@ -119,6 +128,8 @@ impl cosmic::Application for Window {
             popup: None,
             comp_config: flags.comp_config,
             active_layouts: Vec::new(),
+            rectangle_tracker: None,
+            rectangle: Rectangle::default(),
         };
         (window, Task::none())
     }
@@ -194,6 +205,14 @@ impl cosmic::Application for Window {
                     cosmic::app::Action::Surface(a),
                 ));
             }
+            Message::Rectangle(u) => match u {
+                RectangleUpdate::Rectangle(r) => {
+                    self.rectangle = r.1;
+                }
+                RectangleUpdate::Init(tracker) => {
+                    self.rectangle_tracker = Some(tracker);
+                }
+            },
         }
 
         Task::none()
@@ -205,31 +224,18 @@ impl cosmic::Application for Window {
                 .first()
                 .map_or("", |l| l.layout.as_str()),
         );
-
-        cosmic::widget::button::custom(
-            row!(
-                column!(
-                    input_source_text,
-                    horizontal_space().width(Length::Fixed(
-                        (self.core.applet.suggested_size(true).0
-                            + 2 * self.core.applet.suggested_padding(true))
-                            as f32
-                    ))
-                )
-                .width(Length::Shrink)
-                .height(Length::Shrink)
-                .align_x(Alignment::Center),
-                vertical_space().height(Length::Fixed(
-                    (self.core.applet.suggested_size(true).1
-                        + 2 * self.core.applet.suggested_padding(true)) as f32
-                ))
-            )
-            .align_y(Alignment::Center)
-            .width(Length::Shrink)
-            .height(Length::Shrink),
+        let button = self
+            .core
+            .applet
+            .text_button(input_source_text, Message::TogglePopup);
+        autosize::autosize(
+            if let Some(tracker) = self.rectangle_tracker.as_ref() {
+                Element::from(tracker.container(0, button).ignore_bounds(true))
+            } else {
+                button.into()
+            },
+            AUTOSIZE_MAIN_ID.clone(),
         )
-        .on_press_down(Message::TogglePopup)
-        .class(cosmic::theme::Button::AppletIcon)
         .into()
     }
 
@@ -263,18 +269,21 @@ impl cosmic::Application for Window {
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {
-        self.core
-            .watch_config("com.system76.CosmicComp")
-            .map(|update| {
-                if !update.errors.is_empty() {
-                    tracing::error!(
-                        "errors loading config {:?}: {:?}",
-                        update.keys,
-                        update.errors
-                    );
-                }
-                Message::CompConfig(Box::new(update.config))
-            })
+        Subscription::batch(vec![
+            rectangle_tracker_subscription(0).map(|e| Message::Rectangle(e.1)),
+            self.core
+                .watch_config("com.system76.CosmicComp")
+                .map(|update| {
+                    if !update.errors.is_empty() {
+                        tracing::error!(
+                            "errors loading config {:?}: {:?}",
+                            update.keys,
+                            update.errors
+                        );
+                    }
+                    Message::CompConfig(Box::new(update.config))
+                }),
+        ])
     }
 
     fn style(&self) -> Option<Appearance> {

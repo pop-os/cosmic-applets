@@ -12,8 +12,9 @@ use config::{AudioAppletConfig, amplification_sink, amplification_source};
 use cosmic::{
     Element, Renderer, Task, Theme, app,
     applet::{
+        column as applet_column,
         cosmic_panel_config::PanelAnchor,
-        menu_button, menu_control_padding, padded_control,
+        menu_button, menu_control_padding, padded_control, row as applet_row,
         token::subscription::{TokenRequest, TokenUpdate, activation_token_subscription},
     },
     cctk::sctk::reexports::calloop,
@@ -166,10 +167,16 @@ pub enum Message {
     Surface(surface::Action),
 }
 
+// TODO
+// mouse area with on enter and a stack widget for all buttons
+// most recently entered button is on top
+// position is a multiple of button size
+// on leave of applet, popup button is on top again
+
 impl Audio {
-    fn playback_buttons(&self) -> Option<Element<'_, Message>> {
+    fn playback_buttons(&self) -> Vec<Element<'_, Message>> {
+        let mut elements: Vec<Element<'_, Message>> = Vec::new();
         if self.player_status.is_some() && self.config.show_media_controls_in_top_panel {
-            let mut elements = Vec::with_capacity(3);
             if self
                 .player_status
                 .as_ref()
@@ -205,18 +212,8 @@ impl Audio {
                         .into(),
                 )
             }
-
-            Some(match self.core.applet.anchor {
-                PanelAnchor::Left | PanelAnchor::Right => Column::with_children(elements)
-                    .align_x(Alignment::Center)
-                    .into(),
-                PanelAnchor::Top | PanelAnchor::Bottom => Row::with_children(elements)
-                    .align_y(Alignment::Center)
-                    .into(),
-            })
-        } else {
-            None
         }
+        elements
     }
 
     fn go_previous(&self, icon_size: u16) -> Option<Element<'_, Message>> {
@@ -724,21 +721,37 @@ impl cosmic::Application for Audio {
 
         self.core
             .applet
-            .autosize_window(if let Some(Some(playback_buttons)) = playback_buttons {
-                match self.core.applet.anchor {
-                    PanelAnchor::Left | PanelAnchor::Right => Element::from(
-                        Column::with_children([playback_buttons, btn.into()])
-                            .align_x(Alignment::Center),
-                    ),
-                    PanelAnchor::Top | PanelAnchor::Bottom => {
-                        Row::with_children([playback_buttons, btn.into()])
-                            .align_y(Alignment::Center)
-                            .into()
+            .autosize_window(
+                if let Some(playback_buttons) = playback_buttons
+                    && !playback_buttons.is_empty()
+                {
+                    match self.core.applet.anchor {
+                        PanelAnchor::Left | PanelAnchor::Right => Element::from(
+                            applet_column::Column::with_children(playback_buttons)
+                                .push(btn)
+                                .align_x(Alignment::Center)
+                                // TODO configurable variable from the panel?
+                                .spacing(
+                                    -(self.core.applet.suggested_padding(true).0 as f32)
+                                        * self.core.applet.padding_overlap,
+                                ),
+                        ),
+                        PanelAnchor::Top | PanelAnchor::Bottom => {
+                            applet_row::Row::with_children(playback_buttons)
+                                .push(btn)
+                                .align_y(Alignment::Center)
+                                // TODO configurable variable from the panel?
+                                .spacing(
+                                    -(self.core.applet.suggested_padding(true).0 as f32)
+                                        * self.core.applet.padding_overlap,
+                                )
+                                .into()
+                        }
                     }
-                }
-            } else {
-                btn.into()
-            })
+                } else {
+                    btn.into()
+                },
+            )
             .into()
     }
 

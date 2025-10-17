@@ -11,7 +11,8 @@ i18n-embed-fl.workspace = true
 i18n-embed.workspace = true
 libcosmic.workspace = true
 libpulse-binding = "2.30.1"
-mpris2-zbus = { git = "https://github.com/pop-os/dbus-settings-bindings" }
+mpris2-zbus = { git = "https://github.com/pop-os/dbus-settings-bindings", branch = "precise-capturing" }
+# mpris2-zbus = { path = "../../dbus-settings-bindings/mpris2" }
 rust-embed.workspace = true
 serde.workspace = true
 tokio.workspace = true
