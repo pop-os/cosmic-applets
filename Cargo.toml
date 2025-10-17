@@ -86,3 +86,8 @@ sctk = { package = "smithay-client-toolkit", version = "0.20.0" }
 [patch."https://github.com/pop-os/cosmic-protocols"]
 cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols//", branch = "main" }
 cosmic-client-toolkit = { git = "https://github.com/pop-os/cosmic-protocols//", branch = "main" }
+
+[patch."https://github.com/pop-os/libcosmic"]
+libcosmic = { git = "https://github.com/pop-os/libcosmic//", branch = "discrete-scroll" }
+cosmic-config = { git = "https://github.com/pop-os/libcosmic//", branch = "discrete-scroll" }
+iced_futures = { git = "https://github.com/pop-os/libcosmic//", branch = "discrete-scroll" }
