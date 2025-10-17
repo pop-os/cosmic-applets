@@ -1,7 +1,7 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
-use crate::bluetooth::{BluerDeviceStatus, BluerRequest, BluerState, set_tick};
+use crate::bluetooth::{BluerDeviceStatus, BluerRequest, BluerState, set_discovery, set_tick};
 use cosmic::{
     app,
     applet::token::subscription::{TokenRequest, TokenUpdate, activation_token_subscription},
@@ -112,6 +112,8 @@ impl cosmic::Application for CosmicBluetoothApplet {
         match message {
             Message::TogglePopup => {
                 if let Some(p) = self.popup.take() {
+                    set_discovery(false);
+
                     return Task::batch([
                         destroy_popup(p),
                         cosmic::task::future(
@@ -120,6 +122,8 @@ impl cosmic::Application for CosmicBluetoothApplet {
                         ),
                     ]);
                 } else {
+                    set_discovery(true);
+
                     // TODO request update of state maybe
                     let new_id = window::Id::unique();
                     self.popup.replace(new_id);
@@ -133,16 +137,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
                         None,
                     );
 
-                    let tx = self.bluer_sender.clone();
                     return Task::batch([
-                        iced::Task::perform(
-                            async {
-                                if let Some(tx) = tx {
-                                    let _ = tx.send(BluerRequest::StateUpdate).await;
-                                }
-                            },
-                            |()| cosmic::action::app(Message::Ignore),
-                        ),
                         get_popup(popup_settings),
                         cosmic::task::future(set_tick(Duration::from_secs(3)))
                             .map(|()| cosmic::Action::App(Message::Ignore)),
@@ -173,20 +168,6 @@ impl cosmic::Application for CosmicBluetoothApplet {
                     }
 
                     self.bluer_state = state;
-                    // TODO special handling for some requests
-                    match req {
-                        BluerRequest::StateUpdate
-                            if self.popup.is_some() && self.bluer_sender.is_some() =>
-                        {
-                            let tx = self.bluer_sender.clone().unwrap();
-                            tokio::spawn(async move {
-                                // sleep for a bit before requesting state update again
-                                tokio::time::sleep(Duration::from_millis(3000)).await;
-                                let _ = tx.send(BluerRequest::StateUpdate).await;
-                            });
-                        }
-                        _ => {}
-                    }
                 }
                 BluerEvent::Init { sender, state } => {
                     self.bluer_sender.replace(sender);

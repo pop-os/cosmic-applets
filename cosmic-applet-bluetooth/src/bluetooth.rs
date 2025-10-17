@@ -2,16 +2,19 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     fmt::Debug,
     hash::Hash,
     mem,
-    sync::{Arc, LazyLock},
+    sync::{
+        Arc, LazyLock,
+        atomic::{AtomicBool, Ordering},
+    },
     time::Duration,
 };
 
 use bluer::{
-    Adapter, Address, Session, Uuid,
+    Adapter, AdapterProperty, Address, Session, Uuid,
     agent::{Agent, AgentHandle},
 };
 
@@ -34,6 +37,11 @@ use tokio::{
 };
 
 static TICK: LazyLock<RwLock<Duration>> = LazyLock::new(|| RwLock::new(Duration::from_secs(10)));
+static DISCOVERY: AtomicBool = AtomicBool::new(false);
+
+pub fn set_discovery(v: bool) {
+    DISCOVERY.store(v, Ordering::Relaxed);
+}
 
 pub async fn set_tick(duration: Duration) {
     let mut guard = TICK.write().await;
@@ -106,7 +114,7 @@ pub fn bluetooth_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
             // reconnect to paired and trusted devices
             if state.bluetooth_enabled {
                 for d in &state.devices {
-                    if d.paired_and_trusted() {
+                    if d.paired_and_trusted() && !matches!(d.status, BluerDeviceStatus::Connected) {
                         _ = session_state
                             .req_tx
                             .send(BluerRequest::ConnectDevice(d.address))
@@ -184,7 +192,6 @@ pub enum BluerRequest {
     ConnectDevice(Address),
     DisconnectDevice(Address),
     CancelConnect(Address),
-    StateUpdate,
 }
 
 #[derive(Debug, Clone)]
@@ -579,26 +586,28 @@ impl BluerSessionState {
 
     #[inline]
     fn process_changes(&mut self) {
-        let tx = self.tx.clone();
         let req_tx = self.req_tx.clone();
+        let tx = self.tx.clone();
         let Some(mut wake_up) = self.wake_up_discover_rx.take() else {
             tracing::error!("Failed to take wake up channel");
             return;
         };
         let adapter_clone = self.adapter.clone();
-        let _monitor_devices: tokio::task::JoinHandle<Result<(), anyhow::Error>> =
-            spawn(async move {
-                let mut devices: Vec<BluerDevice> = Vec::new();
-                let mut interval = tokio::time::interval(Duration::from_secs(1));
-                interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
 
-                loop {
-                    interval.tick().await;
-                    let wakeup_fut = wake_up.recv();
+        _ = spawn(async move {
+            let mut is_powered = adapter_clone.is_powered().await.unwrap_or_default();
 
-                    // Listens for process changes and builds edvice lists.
-                    let listener_fut = async {
-                        let mut new_devices = Vec::new();
+            let mut devices: Vec<BluerDevice> = Vec::new();
+            let mut interval = tokio::time::interval(Duration::from_secs(1));
+            interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+
+            loop {
+                interval.tick().await;
+
+                let wakeup_fut = wake_up.recv();
+
+                let listener_fut = async {
+                    if DISCOVERY.load(Ordering::SeqCst) || devices.is_empty() {
                         let mut interval = tokio::time::interval(Duration::from_secs(10));
                         interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
                         let Ok(mut change_stream) =
@@ -608,41 +617,91 @@ impl BluerSessionState {
                             return;
                         };
 
-                        while change_stream.next().await.is_some() {
-                            new_devices = build_device_list(new_devices, &adapter_clone).await;
-                            for d in new_devices
-                                .iter()
-                                .filter(|d| !devices.contains(d) && d.paired_and_trusted())
-                            {
-                                _ = req_tx.send(BluerRequest::ConnectDevice(d.address)).await;
+                        loop {
+                            let Some(adapter_event) = change_stream.next().await else {
+                                break;
+                            };
+                            match adapter_event {
+                                bluer::AdapterEvent::PropertyChanged(AdapterProperty::Powered(
+                                    v,
+                                )) => {
+                                    is_powered = v;
+                                }
+                                e => {
+                                    match e {
+                                        bluer::AdapterEvent::DeviceAdded(address)
+                                            if !devices.iter().any(|d| d.address == address) =>
+                                        {
+                                            devices =
+                                                build_device_list(Vec::new(), &adapter_clone).await;
+                                            for d in devices.iter().filter(|d| {
+                                                d.paired_and_trusted()
+                                                    && !matches!(
+                                                        d.status,
+                                                        BluerDeviceStatus::Connected
+                                                    )
+                                            }) {
+                                                _ = req_tx
+                                                    .send(BluerRequest::ConnectDevice(d.address))
+                                                    .await;
+                                            }
+                                        }
+                                        bluer::AdapterEvent::DeviceRemoved(address)
+                                            if devices.iter().any(|d| d.address == address) =>
+                                        {
+                                            // Remove the device from new_devices if it exists
+                                            devices.retain(|d| d.address != address);
+                                        }
+
+                                        bluer::AdapterEvent::PropertyChanged(p) => {
+                                            tracing::info!("property change ignored {p:?}");
+                                            interval.tick().await;
+                                            continue;
+                                        }
+                                        bluer::AdapterEvent::DeviceAdded(address)
+                                        | bluer::AdapterEvent::DeviceRemoved(address) => {
+                                            tracing::info!(
+                                                "device change that is already handled {address}"
+                                            );
+                                            interval.tick().await;
+                                            continue;
+                                        }
+                                    }
+                                }
                             }
 
                             let _ = tx
                                 .send(BluerSessionEvent::ChangesProcessed(BluerState {
-                                    devices: new_devices.clone(),
-                                    bluetooth_enabled: adapter_clone
-                                        .is_powered()
-                                        .await
-                                        .unwrap_or_default(),
+                                    devices: devices.clone(),
+                                    bluetooth_enabled: is_powered,
                                 }))
                                 .await;
 
-                            devices.clear();
-                            mem::swap(&mut new_devices, &mut devices);
+                            interval.tick().await;
+                            if !DISCOVERY.load(Ordering::SeqCst) && !devices.is_empty() {
+                                break;
+                            }
+                        }
+                    } else {
+                        loop {
+                            if DISCOVERY.load(Ordering::SeqCst) || devices.is_empty() {
+                                break;
+                            }
                             interval.tick().await;
                         }
-                    };
+                    }
+                };
 
-                    futures::pin_mut!(listener_fut);
-                    futures::pin_mut!(wakeup_fut);
+                futures::pin_mut!(listener_fut);
+                futures::pin_mut!(wakeup_fut);
 
-                    futures::future::select(listener_fut, wakeup_fut).await;
-                }
-            });
+                futures::future::select(listener_fut, wakeup_fut).await;
+            }
+        });
     }
 
     #[inline]
-    fn process_requests(&self, request_rx: Receiver<BluerRequest>) {
+    fn process_requests(&mut self, request_rx: Receiver<BluerRequest>) {
         let active_requests = self.active_requests.clone();
         let adapter = self.adapter.clone();
         let tx = self.tx.clone();
@@ -752,7 +811,6 @@ impl BluerSessionState {
                                 err_msg = Some("No active connection request found".to_string());
                             }
                         }
-                        BluerRequest::StateUpdate => {}
                     }
 
                     let _ = tx_clone
@@ -791,7 +849,14 @@ async fn bluer_state(adapter: &Adapter) -> BluerState {
 
 #[inline(never)]
 async fn build_device_list(mut devices: Vec<BluerDevice>, adapter: &Adapter) -> Vec<BluerDevice> {
-    let addrs = adapter.device_addresses().await.unwrap_or_default();
+    let addrs: Vec<Address> = adapter
+        .device_addresses()
+        .await
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|addr| !devices.iter().any(|d| d.address == *addr))
+        .collect();
+
     devices.clear();
     if addrs.len() > devices.capacity() {
         devices.reserve(addrs.len() - devices.capacity());
