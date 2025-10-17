@@ -84,7 +84,7 @@ impl AppletIconData {
         } else {
             (cross_padding as f32, major_padding as f32)
         };
-        let icon_spacing = 0.0;
+        let icon_spacing = applet.spacing as f32;
 
         let (dot_radius, bar_size) = match applet.size {
             Size::Hardcoded(_) => (2.0, 8.0),
