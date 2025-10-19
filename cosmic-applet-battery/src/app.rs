@@ -40,7 +40,8 @@ use cosmic_settings_subscriptions::{
 };
 use cosmic_time::{Instant, Timeline, anim, chain, id};
 
-use std::{collections::HashMap, path::PathBuf, sync::LazyLock, time::Duration};
+use rustc_hash::FxHashMap;
+use std::{path::PathBuf, sync::LazyLock, time::Duration};
 use tokio::sync::mpsc::UnboundedSender;
 
 // XXX improve
@@ -80,7 +81,7 @@ struct CosmicBatteryApplet {
     charging_limit: Option<bool>,
     battery_percent: f64,
     on_battery: bool,
-    gpus: HashMap<PathBuf, GPUData>,
+    gpus: FxHashMap<PathBuf, GPUData>,
     update_trigger: Option<UnboundedSender<()>>,
     time_remaining: Duration,
     max_kbd_brightness: Option<i32>,

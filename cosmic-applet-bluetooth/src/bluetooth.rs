@@ -1,8 +1,9 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
+use rustc_hash::FxHashMap;
+
 use std::{
-    collections::HashMap,
     fmt::Debug,
     hash::Hash,
     mem,
@@ -350,7 +351,7 @@ pub struct BluerSessionState {
     wake_up_discover_tx: Sender<()>,
     wake_up_discover_rx: Option<Receiver<()>>,
     tx: Sender<BluerSessionEvent>,
-    active_requests: Arc<Mutex<HashMap<BluerRequest, JoinHandle<anyhow::Result<()>>>>>,
+    active_requests: Arc<Mutex<FxHashMap<BluerRequest, JoinHandle<anyhow::Result<()>>>>>,
 }
 
 impl BluerSessionState {
@@ -533,7 +534,7 @@ impl BluerSessionState {
             wake_up_discover_rx: Some(wake_up_discover_rx),
             wake_up_discover_tx,
             tx,
-            active_requests: Arc::new(Mutex::new(HashMap::new())),
+            active_requests: Default::default(),
         };
         self_.process_requests(req_rx);
         self_.process_changes();

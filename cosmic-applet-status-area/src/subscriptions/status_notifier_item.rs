@@ -3,7 +3,7 @@
 
 use cosmic::iced::{self, Subscription};
 use futures::{FutureExt, StreamExt};
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 use zbus::zvariant::{self, OwnedValue};
 
 #[derive(Clone, Debug)]
@@ -153,8 +153,11 @@ impl<'a> serde::Deserialize<'a> for Layout {
 }
 
 impl zvariant::Type for Layout {
-    const SIGNATURE: &'static zvariant::Signature =
-        <(i32, HashMap<String, zvariant::Value>, Vec<zvariant::Value>)>::SIGNATURE;
+    const SIGNATURE: &zvariant::Signature = <(
+        i32,
+        FxHashMap<String, zvariant::Value>,
+        Vec<zvariant::Value>,
+    )>::SIGNATURE;
 }
 
 #[derive(Clone, Debug, zvariant::DeserializeDict)]
@@ -184,7 +187,7 @@ pub struct LayoutProps {
 }
 
 impl zvariant::Type for LayoutProps {
-    const SIGNATURE: &'static zvariant::Signature = <HashMap<String, zvariant::Value>>::SIGNATURE;
+    const SIGNATURE: &zvariant::Signature = <FxHashMap<String, zvariant::Value>>::SIGNATURE;
 }
 
 #[allow(dead_code)]

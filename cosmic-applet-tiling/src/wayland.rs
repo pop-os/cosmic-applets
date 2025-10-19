@@ -20,12 +20,10 @@ use cctk::{
 use cosmic::iced::futures;
 use cosmic_protocols::workspace::v2::client::zcosmic_workspace_handle_v2::TilingState;
 use futures::{SinkExt, channel::mpsc, executor::block_on};
-use std::{
-    collections::HashSet,
-    os::{
-        fd::{FromRawFd, RawFd},
-        unix::net::UnixStream,
-    },
+use rustc_hash::FxHashSet;
+use std::os::{
+    fd::{FromRawFd, RawFd},
+    unix::net::UnixStream,
 };
 use tracing::error;
 use wayland_client::{
@@ -79,7 +77,7 @@ pub fn spawn_workspaces(tx: mpsc::Sender<TilingState>) -> SyncSender<AppRequest>
                 configured_output,
                 workspace_state: WorkspaceState::new(&registry_state, &qhandle),
                 toplevel_info_state: ToplevelInfoState::new(&registry_state, &qhandle),
-                workspaces_with_previous_toplevel: HashSet::new(),
+                workspaces_with_previous_toplevel: FxHashSet::default(),
                 registry_state,
                 expected_output: None,
                 tx,
@@ -167,7 +165,7 @@ pub struct State {
     registry_state: RegistryState,
     workspace_state: WorkspaceState,
     toplevel_info_state: ToplevelInfoState,
-    workspaces_with_previous_toplevel: HashSet<ext_workspace_handle_v1::ExtWorkspaceHandleV1>,
+    workspaces_with_previous_toplevel: FxHashSet<ext_workspace_handle_v1::ExtWorkspaceHandleV1>,
     have_workspaces: bool,
 }
 

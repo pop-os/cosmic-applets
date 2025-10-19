@@ -8,6 +8,7 @@ license = "GPL-3.0-only"
 futures.workspace = true
 libcosmic.workspace = true
 serde.workspace = true
+rustc-hash.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 tracing-log.workspace = true

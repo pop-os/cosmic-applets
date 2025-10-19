@@ -9,6 +9,7 @@ use cosmic_dbus_networkmanager::{
 };
 
 use futures_util::StreamExt;
+use rustc_hash::FxHashMap;
 use std::collections::HashMap;
 use zbus::zvariant::ObjectPath;
 
@@ -34,7 +35,7 @@ pub async fn handle_wireless_device(
         .unwrap_or_default()
         .map_or(DeviceState::Unknown, |s| s.into());
     // Sort by strength and remove duplicates
-    let mut aps = HashMap::<String, AccessPoint>::new();
+    let mut aps = FxHashMap::<String, AccessPoint>::default();
     for ap in access_points {
         let ssid = String::from_utf8_lossy(ap.ssid().await?.as_slice()).into_owned();
         let wps_push = ap.flags().await?.contains(ApFlags::WPS_PBC);
