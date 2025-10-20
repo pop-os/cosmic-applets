@@ -19,8 +19,11 @@ use cctk::{
         workspace::v1::client::ext_workspace_handle_v1::ExtWorkspaceHandleV1,
     },
 };
-use cosmic::desktop::fde::unicase::Ascii;
-use cosmic::desktop::fde::{self, DesktopEntry, get_languages_from_env};
+use cosmic::desktop::{
+    fde::unicase::Ascii,
+    fde::{self, DesktopEntry, get_languages_from_env},
+    load_applications_for_app_ids,
+};
 use cosmic::{
     Apply, Element, Task, app,
     applet::{
@@ -53,7 +56,14 @@ use cosmic_app_list_config::{APP_ID, AppListConfig};
 use cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::State;
 use futures::future::pending;
 use iced::{Alignment, Background, Length};
-use std::{borrow::Cow, collections::HashMap, path::PathBuf, rc::Rc, str::FromStr, time::Duration};
+use std::{
+    borrow::Cow,
+    collections::{HashMap, HashSet},
+    path::PathBuf,
+    rc::Rc,
+    str::FromStr,
+    time::Duration,
+};
 use switcheroo_control::Gpu;
 use tokio::time::sleep;
 use url::Url;
@@ -603,6 +613,124 @@ impl CosmicAppList {
                 original_app_id: original_id.clone(),
             })
             .collect();
+    }
+
+    fn cache_desktop_entry(&mut self, entry: &DesktopEntry) {
+        if self
+            .desktop_entries
+            .iter()
+            .any(|existing| existing.id() == entry.id())
+        {
+            return;
+        }
+        self.desktop_entries.push(entry.clone());
+    }
+
+    fn load_entry_via_libcosmic(&mut self, candidate_ids: &[String]) -> Option<DesktopEntry> {
+        if candidate_ids.is_empty() {
+            return None;
+        }
+
+        let xdg_current_desktop = std::env::var("XDG_CURRENT_DESKTOP").ok();
+        let candidate_refs: Vec<&str> = candidate_ids.iter().map(String::as_ref).collect();
+
+        let locales = self.locales.clone();
+        let desktop_iter = fde::Iter::new(fde::default_paths())
+            .filter_map(move |path| fde::DesktopEntry::from_path(path, Some(&locales)).ok());
+
+        let iter = load_applications_for_app_ids(
+            desktop_iter,
+            &self.locales,
+            candidate_refs,
+            false,
+            false,
+            xdg_current_desktop.as_deref(),
+        );
+
+        for app in iter {
+            if let Some(path) = app.path.clone() {
+                if let Ok(entry) = fde::DesktopEntry::from_path(path, Some(&self.locales)) {
+                    return Some(entry);
+                }
+            }
+        }
+
+        None
+    }
+
+    fn candidate_desktop_ids(info: &ToplevelInfo) -> Vec<String> {
+        const SUFFIXES: &[&str] = &[".desktop", ".Desktop", ".DESKTOP"];
+        let mut ordered = Vec::new();
+        let mut seen = HashSet::new();
+
+        fn push_candidate(seen: &mut HashSet<String>, ordered: &mut Vec<String>, candidate: &str) {
+            let trimmed = candidate.trim();
+            if trimmed.is_empty() {
+                return;
+            }
+
+            let key = trimmed.to_ascii_lowercase();
+            if seen.insert(key) {
+                ordered.push(trimmed.to_string());
+            }
+        }
+
+        fn add_variants(
+            seen: &mut HashSet<String>,
+            ordered: &mut Vec<String>,
+            value: &str,
+            suffixes: &[&str],
+        ) {
+            if value.is_empty() {
+                return;
+            }
+
+            let stripped_quotes = value.trim_matches(|c: char| c == '"' || c == '\'');
+            let trimmed = stripped_quotes.trim();
+            if trimmed.is_empty() {
+                return;
+            }
+
+            push_candidate(seen, ordered, trimmed);
+            if stripped_quotes != trimmed {
+                push_candidate(seen, ordered, stripped_quotes.trim());
+            }
+
+            for suffix in suffixes {
+                if trimmed.ends_with(suffix) {
+                    let cut = &trimmed[..trimmed.len() - suffix.len()];
+                    push_candidate(seen, ordered, cut);
+                }
+            }
+
+            if trimmed.contains('.') {
+                if let Some(last) = trimmed.rsplit('.').next() {
+                    if last.len() >= 2 {
+                        push_candidate(seen, ordered, last);
+                    }
+                }
+            }
+
+            if trimmed.contains('-') {
+                push_candidate(seen, ordered, &trimmed.replace('-', "_"));
+            }
+            if trimmed.contains('_') {
+                push_candidate(seen, ordered, &trimmed.replace('_', "-"));
+            }
+
+            for token in trimmed.split(|c: char| matches!(c, '.' | '-' | '_' | '@' | ' ')) {
+                if token.len() >= 2 && token != trimmed {
+                    push_candidate(seen, ordered, token);
+                }
+            }
+        }
+
+        add_variants(&mut seen, &mut ordered, info.app_id.as_str(), SUFFIXES);
+        add_variants(&mut seen, &mut ordered, info.identifier.as_str(), SUFFIXES);
+        add_variants(&mut seen, &mut ordered, info.title.as_str(), &[]);
+        add_variants(&mut seen, &mut ordered, info.title.as_str(), &[]);
+
+        ordered
     }
 }
 
@@ -2314,49 +2442,62 @@ impl CosmicAppList {
         info: &ToplevelInfo,
         unicase_appid: Ascii<&str>,
     ) -> DesktopEntry {
-        if let Some(appid) = fde::find_app_by_id(&self.desktop_entries, unicase_appid) {
-            appid.clone()
-        } else {
-            // Update desktop entries in case it was not found.
+        if let Some(entry) = fde::find_app_by_id(&self.desktop_entries, unicase_appid) {
+            return entry.clone();
+        }
 
-            self.update_desktop_entries();
-            if let Some(appid) = fde::find_app_by_id(&self.desktop_entries, unicase_appid) {
-                appid.clone()
-            } else {
-                tracing::error!(id = info.app_id, "could not find desktop entry for app");
+        // Update desktop entries in case it was not found.
+        self.update_desktop_entries();
+        if let Some(entry) = fde::find_app_by_id(&self.desktop_entries, unicase_appid) {
+            return entry.clone();
+        }
 
-                let mut fallback_entry = fde::DesktopEntry::from_appid(info.app_id.clone());
+        let candidate_ids = Self::candidate_desktop_ids(info);
 
-                // proton opens games as steam_app_X, where X is either
-                // the steam appid or "default". games with a steam appid
-                // can have a desktop entry generated elsewhere; this
-                // specifically handles non-steam games opened
-                // under proton
-                // in addition, try to match WINE entries who have its
-                // appid = the full name of the executable (incl. .exe)
-                let is_proton_game = info.app_id == "steam_app_default";
-                if is_proton_game || info.app_id.ends_with(".exe") {
-                    for entry in &self.desktop_entries {
-                        let localised_name = entry.name(&self.locales).unwrap_or_default();
-
-                        if localised_name == info.title {
-                            // if this is a proton game, we only want
-                            // to look for game entries
-                            if is_proton_game
-                                && !entry.categories().unwrap_or_default().contains(&"Game")
-                            {
-                                continue;
-                            }
-
-                            fallback_entry = entry.clone();
-                            break;
-                        }
-                    }
-                }
-
-                fallback_entry
+        for candidate in &candidate_ids {
+            if let Some(entry) = fde::find_app_by_id(
+                &self.desktop_entries,
+                fde::unicase::Ascii::new(candidate.as_str()),
+            ) {
+                return entry.clone();
             }
         }
+
+        if let Some(entry) = self.load_entry_via_libcosmic(&candidate_ids) {
+            self.cache_desktop_entry(&entry);
+            return entry;
+        }
+
+        tracing::error!(id = info.app_id, "could not find desktop entry for app");
+
+        let mut fallback_entry = fde::DesktopEntry::from_appid(info.app_id.clone());
+
+        // proton opens games as steam_app_X, where X is either
+        // the steam appid or "default". games with a steam appid
+        // can have a desktop entry generated elsewhere; this
+        // specifically handles non-steam games opened
+        // under proton
+        // in addition, try to match WINE entries who have its
+        // appid = the full name of the executable (incl. .exe)
+        let is_proton_game = info.app_id == "steam_app_default";
+        if is_proton_game || info.app_id.ends_with(".exe") {
+            for entry in &self.desktop_entries {
+                let localised_name = entry.name(&self.locales).unwrap_or_default();
+
+                if localised_name == info.title {
+                    // if this is a proton game, we only want
+                    // to look for game entries
+                    if is_proton_game && !entry.categories().unwrap_or_default().contains(&"Game") {
+                        continue;
+                    }
+
+                    fallback_entry = entry.clone();
+                    break;
+                }
+            }
+        }
+
+        fallback_entry
     }
 }
 
