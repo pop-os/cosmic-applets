@@ -631,7 +631,7 @@ impl NetworkManagerState {
             })
             .cloned()
             .collect();
-        wireless_access_points.sort_by_key(|ap| ap.strength);
+        wireless_access_points.sort_by(|a, b| b.strength.cmp(&a.strength));
         self_.wireless_access_points = wireless_access_points;
         for ap in &self_.wireless_access_points {
             tracing::info!(

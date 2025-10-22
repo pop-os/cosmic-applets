@@ -53,7 +53,8 @@ use cosmic_app_list_config::{APP_ID, AppListConfig};
 use cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::State;
 use futures::future::pending;
 use iced::{Alignment, Background, Length};
-use std::{borrow::Cow, collections::HashMap, path::PathBuf, rc::Rc, str::FromStr, time::Duration};
+use rustc_hash::FxHashMap;
+use std::{borrow::Cow, path::PathBuf, rc::Rc, str::FromStr, time::Duration};
 use switcheroo_control::Gpu;
 use tokio::time::sleep;
 use url::Url;
@@ -327,12 +328,12 @@ struct CosmicAppList {
     wayland_sender: Option<Sender<WaylandRequest>>,
     seat: Option<WlSeat>,
     rectangle_tracker: Option<RectangleTracker<DockItemId>>,
-    rectangles: HashMap<DockItemId, iced::Rectangle>,
+    rectangles: FxHashMap<DockItemId, iced::Rectangle>,
     dnd_offer: Option<DndOffer>,
     is_listening_for_dnd: bool,
     gpus: Option<Vec<Gpu>>,
     active_workspaces: Vec<ExtWorkspaceHandleV1>,
-    output_list: HashMap<WlOutput, OutputInfo>,
+    output_list: FxHashMap<WlOutput, OutputInfo>,
     locales: Vec<String>,
     overflow_favorites_popup: Option<window::Id>,
     overflow_active_popup: Option<window::Id>,

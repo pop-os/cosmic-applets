@@ -6,6 +6,7 @@ license = "GPL-3.0-only"
 
 [dependencies]
 libcosmic.workspace = true
+rustc-hash.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 tracing-log.workspace = true

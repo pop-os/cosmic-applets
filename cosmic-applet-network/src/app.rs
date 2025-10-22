@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use rustc_hash::FxHashSet;
 use std::sync::LazyLock;
 
 use cosmic::{
@@ -107,7 +107,7 @@ struct CosmicNetworkApplet {
     timeline: Timeline,
     toggle_wifi_ctr: u128,
     token_tx: Option<calloop::channel::Sender<TokenRequest>>,
-    failed_known_ssids: HashSet<String>,
+    failed_known_ssids: FxHashSet<String>,
     hw_device_to_show: Option<HwAddress>,
 }
 

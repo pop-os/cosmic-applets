@@ -19,6 +19,7 @@ memmap2 = "0.9.8"
 fastrand = "2.3.0"
 rust-embed.workspace = true
 rustix.workspace = true
+rustc-hash.workspace = true
 switcheroo-control = { git = "https://github.com/pop-os/dbus-settings-bindings" }
 tokio.workspace = true
 tracing-log.workspace = true
