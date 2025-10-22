@@ -14,6 +14,7 @@ i18n-embed.workspace = true
 libcosmic.workspace = true
 fastrand = "2.3.0"
 rust-embed.workspace = true
+rustc-hash.workspace = true
 tokio.workspace = true
 tracing-log.workspace = true
 tracing-subscriber.workspace = true

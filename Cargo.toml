@@ -54,6 +54,7 @@ libcosmic = { git = "https://github.com/pop-os/libcosmic", default-features = fa
 ] }
 rust-embed = "8.7.2"
 rust-embed-utils = "8.7.2"
+rustc-hash = "2.1"
 rustix = { version = "1.1", features = ["fs", "process"] }
 zbus = { version = "5.11.0", default-features = false, features = ["tokio"] }
 tracing = "0.1"
