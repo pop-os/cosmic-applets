@@ -5,4 +5,4 @@ quit-all = Закрити все
 new-window = Нове вікно
 run = Запустити
 run-on = Запустити на { $gpu }
-run-on-default = (типовій)
+run-on-default = (звичайній)
