@@ -53,6 +53,7 @@ pub async fn tick(interval: &mut tokio::time::Interval) {
     let guard = TICK.read().await;
     if *guard != interval.period() {
         *interval = tokio::time::interval(*guard);
+        drop(guard);
         interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
     }
     interval.tick().await;
@@ -740,7 +741,7 @@ impl BluerSessionState {
                                 .ok()
                                 .and_then(|o| {
                                     let lines = String::from_utf8(o.stdout).ok()?;
-                                    lines.split('\n').into_iter().find_map(|row| {
+                                    lines.split('\n').find_map(|row| {
                                         let (id, cname) = row.trim().split_once(' ')?;
                                         (name == cname).then_some(id.to_string())
                                     })
@@ -771,10 +772,8 @@ impl BluerSessionState {
                                 let res = device.pair().await;
                                 if let Err(err) = res {
                                     err_msg = Some(err.to_string());
-                                } else {
-                                    if let Err(err) = device.set_trusted(true).await {
-                                        tracing::error!(?err, "Failed to trust device.");
-                                    }
+                                } else if let Err(err) = device.set_trusted(true).await {
+                                    tracing::error!(?err, "Failed to trust device.");
                                 }
                             }
                         }
@@ -786,10 +785,8 @@ impl BluerSessionState {
                                 let res = device.connect().await;
                                 if let Err(err) = res {
                                     err_msg = Some(err.to_string());
-                                } else {
-                                    if let Err(err) = device.set_trusted(true).await {
-                                        tracing::error!(?err, "Failed to trust device.");
-                                    }
+                                } else if let Err(err) = device.set_trusted(true).await {
+                                    tracing::error!(?err, "Failed to trust device.");
                                 }
                             }
                         }

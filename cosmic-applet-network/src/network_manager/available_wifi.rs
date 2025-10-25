@@ -33,7 +33,7 @@ pub async fn handle_wireless_device(
         .await
         .and_then(|dev| dev.cached_state())
         .unwrap_or_default()
-        .map_or(DeviceState::Unknown, |s| s.into());
+        .map_or(DeviceState::Unknown, std::convert::Into::into);
     // Sort by strength and remove duplicates
     let mut aps = FxHashMap::<String, AccessPoint>::default();
     for ap in access_points {

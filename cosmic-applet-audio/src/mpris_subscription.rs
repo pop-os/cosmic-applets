@@ -40,10 +40,12 @@ impl PlayerStatus {
 
         let title = metadata
             .title()
-            .or(pathbuf
-                .file_name()
-                .and_then(|s| s.to_str())
-                .and_then(|s| decode(s).map_or(None, |s| Some(s.into_owned()))))
+            .or_else(|| {
+                pathbuf
+                    .file_name()
+                    .and_then(|s| s.to_str())
+                    .and_then(|s| decode(s).map_or(None, |s| Some(s.into_owned())))
+            })
             .map(Cow::from);
         let artists = metadata
             .artists()
@@ -164,7 +166,7 @@ impl State {
                     players.push(player);
                 }
                 Err(err) => {
-                    tracing::error!("Failed to add player: {}", err);
+                    tracing::error!("Failed to add player: {err}");
                 }
             }
         }
@@ -190,7 +192,7 @@ impl State {
         let player = match MprisPlayer::new(&self.conn, name).await {
             Ok(player) => player,
             Err(err) => {
-                tracing::error!("Failed to add player: {}", err);
+                tracing::error!("Failed to add player: {err}");
                 return;
             }
         };
@@ -243,7 +245,7 @@ async fn run(output: &mut futures::channel::mpsc::Sender<MprisUpdate>) {
     let mut state = match State::new().await {
         Ok(state) => state,
         Err(err) => {
-            tracing::error!("Failed to monitor for mpris clients: {}", err);
+            tracing::error!("Failed to monitor for mpris clients: {err}");
             return;
         }
     };
@@ -273,7 +275,7 @@ async fn run(output: &mut futures::channel::mpsc::Sender<MprisUpdate>) {
                     Some(Ok(enumerator::Event::Add(name))) => state.add_player(name).await,
                     Some(Ok(enumerator::Event::Remove(name))) => state.remove_player(name).await,
                     Some(Err(err)) => {
-                        tracing::error!("Error listening for mpris clients: {:?}", err);
+                        tracing::error!("Error listening for mpris clients: {err:?}");
                         return;
                     }
                     None => {}
