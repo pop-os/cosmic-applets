@@ -11,6 +11,8 @@ pub struct TimeAppletConfig {
     pub first_day_of_week: u8,
     pub show_date_in_top_panel: bool,
     pub show_weekday: bool,
+    #[serde(default, deserialize_with = "strftime_opt_de")]
+    pub format_strftime: Option<String>,
 }
 
 impl Default for TimeAppletConfig {
@@ -21,6 +23,21 @@ impl Default for TimeAppletConfig {
             first_day_of_week: 6,
             show_date_in_top_panel: true,
             show_weekday: false,
+            format_strftime: None,
         }
     }
+}
+
+/// Deserialize optional String but only if it is non-empty.
+fn strftime_opt_de<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    serde::Deserialize::deserialize(deserializer).map(|strftime: Option<String>| {
+        if strftime.as_deref().is_none_or(str::is_empty) {
+            None
+        } else {
+            strftime
+        }
+    })
 }

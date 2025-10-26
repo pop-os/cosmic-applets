@@ -159,45 +159,61 @@ impl Window {
     }
 
     fn vertical_layout(&self) -> Element<'_, Message> {
-        let mut elements = Vec::new();
-        let date = self.now.naive_local();
-        let datetime = self.create_datetime(&date);
-        let mut prefs = DateTimeFormatterPreferences::from(self.locale.clone());
-        prefs.hour_cycle = Some(if self.config.military_time {
-            HourCycle::H23
+        let elements: Vec<Element<'_, Message>> = if let Some(formatted) = self
+            .config
+            .format_strftime
+            .as_deref()
+            .map(|format| self.now.format(format).to_string())
+        {
+            // strftime formatter may override locale specific elements so it stands alone rather
+            // than using ICU to determine a format.
+            formatted
+                .split_whitespace()
+                .map(|piece| self.core.applet.text(piece.to_owned()).into())
+                .collect()
         } else {
-            HourCycle::H12
-        });
+            let mut elements = Vec::new();
+            let date = self.now.naive_local();
+            let datetime = self.create_datetime(&date);
+            let mut prefs = DateTimeFormatterPreferences::from(self.locale.clone());
+            prefs.hour_cycle = Some(if self.config.military_time {
+                HourCycle::H23
+            } else {
+                HourCycle::H12
+            });
 
-        if self.config.show_date_in_top_panel {
-            let formatted_date = DateTimeFormatter::try_new(prefs, fieldsets::MD::medium())
+            if self.config.show_date_in_top_panel {
+                let formatted_date = DateTimeFormatter::try_new(prefs, fieldsets::MD::medium())
+                    .unwrap()
+                    .format(&datetime)
+                    .to_string();
+
+                for p in formatted_date.split_whitespace() {
+                    elements.push(self.core.applet.text(p.to_owned()).into());
+                }
+                elements.push(
+                    horizontal_rule(2)
+                        .width(self.core.applet.suggested_size(true).0)
+                        .into(),
+                );
+            }
+            let mut fs = fieldsets::T::medium();
+            if !self.config.show_seconds {
+                fs = fs.with_time_precision(TimePrecision::Minute);
+            }
+            let formatted_time = DateTimeFormatter::try_new(prefs, fs)
                 .unwrap()
                 .format(&datetime)
                 .to_string();
 
-            for p in formatted_date.split_whitespace() {
+            // todo: split using formatToParts when it is implemented
+            // https://github.com/unicode-org/icu4x/issues/4936#issuecomment-2128812667
+            for p in formatted_time.split_whitespace().flat_map(|s| s.split(':')) {
                 elements.push(self.core.applet.text(p.to_owned()).into());
             }
-            elements.push(
-                horizontal_rule(2)
-                    .width(self.core.applet.suggested_size(true).0)
-                    .into(),
-            );
-        }
-        let mut fs = fieldsets::T::medium();
-        if !self.config.show_seconds {
-            fs = fs.with_time_precision(TimePrecision::Minute);
-        }
-        let formatted_time = DateTimeFormatter::try_new(prefs, fs)
-            .unwrap()
-            .format(&datetime)
-            .to_string();
 
-        // todo: split using formatToParts when it is implemented
-        // https://github.com/unicode-org/icu4x/issues/4936#issuecomment-2128812667
-        for p in formatted_time.split_whitespace().flat_map(|s| s.split(':')) {
-            elements.push(self.core.applet.text(p.to_owned()).into());
-        }
+            elements
+        };
 
         let date_time_col = Column::with_children(elements)
             .align_x(Alignment::Center)
@@ -216,26 +232,44 @@ impl Window {
     }
 
     fn horizontal_layout(&self) -> Element<'_, Message> {
-        let datetime = self.create_datetime(&self.now);
-        let mut prefs = DateTimeFormatterPreferences::from(self.locale.clone());
-        prefs.hour_cycle = Some(if self.config.military_time {
-            HourCycle::H23
+        let formatted_date = if let Some(formatted) = self
+            .config
+            .format_strftime
+            .as_deref()
+            .map(|format| self.now.format(format).to_string())
+        {
+            formatted
         } else {
-            HourCycle::H12
-        });
-
-        let formatted_date = if self.config.show_date_in_top_panel {
-            if self.config.show_weekday {
-                let mut fs = fieldsets::MDET::long();
-                if !self.config.show_seconds {
-                    fs = fs.with_time_precision(TimePrecision::Minute);
-                }
-                DateTimeFormatter::try_new(prefs, fs)
-                    .unwrap()
-                    .format(&datetime)
-                    .to_string()
+            let datetime = self.create_datetime(&self.now);
+            let mut prefs = DateTimeFormatterPreferences::from(self.locale.clone());
+            prefs.hour_cycle = Some(if self.config.military_time {
+                HourCycle::H23
             } else {
-                let mut fs = fieldsets::MDT::long();
+                HourCycle::H12
+            });
+
+            if self.config.show_date_in_top_panel {
+                if self.config.show_weekday {
+                    let mut fs = fieldsets::MDET::long();
+                    if !self.config.show_seconds {
+                        fs = fs.with_time_precision(TimePrecision::Minute);
+                    }
+                    DateTimeFormatter::try_new(prefs, fs)
+                        .unwrap()
+                        .format(&datetime)
+                        .to_string()
+                } else {
+                    let mut fs = fieldsets::MDT::long();
+                    if !self.config.show_seconds {
+                        fs = fs.with_time_precision(TimePrecision::Minute);
+                    }
+                    DateTimeFormatter::try_new(prefs, fs)
+                        .unwrap()
+                        .format(&datetime)
+                        .to_string()
+                }
+            } else {
+                let mut fs = fieldsets::T::medium();
                 if !self.config.show_seconds {
                     fs = fs.with_time_precision(TimePrecision::Minute);
                 }
@@ -244,15 +278,6 @@ impl Window {
                     .format(&datetime)
                     .to_string()
             }
-        } else {
-            let mut fs = fieldsets::T::medium();
-            if !self.config.show_seconds {
-                fs = fs.with_time_precision(TimePrecision::Minute);
-            }
-            DateTimeFormatter::try_new(prefs, fs)
-                .unwrap()
-                .format(&datetime)
-                .to_string()
         };
 
         Element::from(
