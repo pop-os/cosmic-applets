@@ -79,17 +79,5 @@ ignored = ["libcosmic"]
 sctk = { package = "smithay-client-toolkit", version = "0.20.0" }
 
 [patch."https://github.com/pop-os/cosmic-protocols"]
-# xtask-managed cosmic-protocols begin
-cosmic-protocols = { path = "../../cosmic-protocols" }
-cosmic-client-toolkit = { path = "../../cosmic-protocols/client-toolkit" }
-# xtask-managed cosmic-protocols end
-
-[patch."https://github.com/pop-os/libcosmic"]
-# xtask-managed libcosmic begin
-libcosmic = { path = "../../libcosmic" }
-cosmic-config = { path = "../../libcosmic/cosmic-config" }
-cosmic-config-derive = { path = "../../libcosmic/cosmic-config-derive" }
-cosmic-theme = { path = "../../libcosmic/cosmic-theme" }
-# (Reverted in PR #1123) Do not patch iced crates here.
-# xtask-managed libcosmic end
-
+cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols//", branch = "main" }
+cosmic-client-toolkit = { git = "https://github.com/pop-os/cosmic-protocols//", branch = "main" }
