@@ -90,19 +90,6 @@ libcosmic = { path = "../../libcosmic" }
 cosmic-config = { path = "../../libcosmic/cosmic-config" }
 cosmic-config-derive = { path = "../../libcosmic/cosmic-config-derive" }
 cosmic-theme = { path = "../../libcosmic/cosmic-theme" }
-iced = { path = "../../libcosmic/iced" }
-iced_core = { path = "../../libcosmic/iced/core" }
-iced_futures = { path = "../../libcosmic/iced/futures" }
-iced_graphics = { path = "../../libcosmic/iced/graphics" }
-iced_runtime = { path = "../../libcosmic/iced/runtime" }
-iced_renderer = { path = "../../libcosmic/iced/renderer" }
-iced_widget = { path = "../../libcosmic/iced/widget" }
-iced_tiny_skia = { path = "../../libcosmic/iced/tiny_skia" }
-iced_wgpu = { path = "../../libcosmic/iced/wgpu" }
-iced_winit = { path = "../../libcosmic/iced/winit" }
+# (Reverted in PR #1123) Do not patch iced crates here.
 # xtask-managed libcosmic end
 
-[patch."https://github.com/pop-os/cosmic-text.git"]
-# xtask-managed cosmic-text begin
-cosmic-text = { path = "../../cosmic-text" }
-# xtask-managed cosmic-text end
