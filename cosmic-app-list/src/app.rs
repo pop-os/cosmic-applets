@@ -54,10 +54,7 @@ use cosmic_app_list_config::{APP_ID, AppListConfig};
 use cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::State;
 use futures::future::pending;
 use iced::{Alignment, Background, Length};
-<<<<<<< Updated upstream
 use rustc_hash::FxHashMap;
-use std::{borrow::Cow, path::PathBuf, rc::Rc, str::FromStr, time::Duration};
-=======
 use std::{
     borrow::Cow,
     cell::RefCell,
@@ -68,7 +65,6 @@ use std::{
     time::Duration,
 };
 use std::sync::{Mutex, OnceLock};
->>>>>>> Stashed changes
 use switcheroo_control::Gpu;
 use tokio::time::sleep;
 use url::Url;
