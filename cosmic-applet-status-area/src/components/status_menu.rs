@@ -8,8 +8,29 @@ use cosmic::{
     iced,
     widget::icon,
 };
+use std::{
+    cell::RefCell,
+    path::PathBuf,
+};
+use tracing::warn;
 
 use crate::subscriptions::status_notifier_item::{IconUpdate, Layout, StatusNotifierItem};
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum IconLogState {
+    NamedResolved {
+        name: String,
+        path: PathBuf,
+    },
+    NamedMissing {
+        name: String,
+    },
+    Pixmap {
+        width: i32,
+        height: i32,
+        bytes: usize,
+    },
+}
 
 #[derive(Clone, Debug)]
 pub enum Msg {
@@ -27,6 +48,7 @@ pub struct State {
     // TODO handle icon with multiple sizes?
     icon_pixmap: Option<icon::Handle>,
     click_event: Option<(i32, bool)>,
+    icon_log: RefCell<Option<IconLogState>>,
 }
 
 impl State {
@@ -39,6 +61,7 @@ impl State {
                 icon_name: String::new(),
                 icon_pixmap: None,
                 click_event: None,
+                icon_log: RefCell::new(None),
             },
             iced::Task::none(),
         )
@@ -63,25 +86,68 @@ impl State {
             Msg::Icon(update) => {
                 match update {
                     IconUpdate::Name(name) => {
-                        self.icon_name = name;
+                        if self.icon_name != name {
+                            self.icon_name = name;
+                            self.log_named_icon();
+                        }
                     }
                     IconUpdate::Pixmap(icons) => {
-                        self.icon_pixmap = icons
-                            .into_iter()
-                            .max_by_key(|i| (i.width, i.height))
-                            .map(|mut i| {
-                                if i.width <= 0 || i.height <= 0 || i.bytes.is_empty() {
-                                    // App sent invalid icon data during initialization - show placeholder until NewIcon signal
-                                    eprintln!("Skipping invalid icon: {}x{} with {} bytes, app may still be initializing",
-                                            i.width, i.height, i.bytes.len());
-                                    return icon::from_name("dialog-question").symbolic(true).handle();
-                                }
-                                // Convert ARGB to RGBA
-                                for pixel in i.bytes.chunks_exact_mut(4) {
-                                    pixel.rotate_left(1);
-                                }
-                                icon::from_raster_pixels(i.width as u32, i.height as u32, i.bytes)
-                            });
+                        if icons.is_empty() {
+                            self.record_icon_log(
+                                IconLogState::Pixmap {
+                                    width: 0,
+                                    height: 0,
+                                    bytes: 0,
+                                },
+                                || {
+                                    warn!(
+                                        target: "cosmic_panel::tray::icon",
+                                        item = %self.item.name(),
+                                        "Status notifier item sent empty icon pixmap list"
+                                    );
+                                },
+                            );
+                            self.icon_pixmap = None;
+                        } else {
+                            self.icon_pixmap = icons
+                                .into_iter()
+                                .max_by_key(|i| (i.width, i.height))
+                                .map(|mut i| {
+                                    if i.width <= 0 || i.height <= 0 || i.bytes.is_empty() {
+                                        warn!(
+                                            target: "cosmic_panel::tray::icon",
+                                            item = %self.item.name(),
+                                            width = i.width,
+                                            height = i.height,
+                                            bytes = i.bytes.len(),
+                                            "Skipping invalid tray icon pixmap dimensions"
+                                        );
+                                        return icon::from_name("dialog-question")
+                                            .symbolic(true)
+                                            .handle();
+                                    }
+                                    // Convert ARGB to RGBA
+                                    for pixel in i.bytes.chunks_exact_mut(4) {
+                                        pixel.rotate_left(1);
+                                    }
+
+                                    // Do not log success for pixmap updates to reduce noise.
+                                    self.record_icon_log(
+                                        IconLogState::Pixmap {
+                                            width: i.width,
+                                            height: i.height,
+                                            bytes: i.bytes.len(),
+                                        },
+                                        || {},
+                                    );
+
+                                    icon::from_raster_pixels(
+                                        i.width as u32,
+                                        i.height as u32,
+                                        i.bytes,
+                                    )
+                                });
+                        }
                     }
                 }
 
@@ -176,6 +242,69 @@ impl State {
         tokio::spawn(async move {
             let _ = menu_proxy.event(0, "closed", &0i32.into(), 0).await;
         });
+    }
+
+    fn record_icon_log(&self, new_state: IconLogState, log: impl FnOnce()) {
+        let mut current = self.icon_log.borrow_mut();
+        if current.as_ref() != Some(&new_state) {
+            log();
+            *current = Some(new_state);
+        }
+    }
+
+    fn log_named_icon(&self) {
+        let name = self.icon_name.trim();
+        if name.is_empty() {
+            self.record_icon_log(
+                IconLogState::NamedMissing {
+                    name: String::new(),
+                },
+                || {
+                    warn!(
+                        target: "cosmic_panel::tray::icon",
+                        item = %self.item.name(),
+                        "Status notifier icon name is empty"
+                    );
+                },
+            );
+            return;
+        }
+
+        // Prefer SVG only for symbolic icons; otherwise allow raster picks.
+        let named = if name.ends_with("-symbolic") {
+            icon::from_name(name).prefer_svg(true)
+        } else {
+            icon::from_name(name)
+        };
+        let path = named.clone().path();
+
+        match path {
+            Some(path) => {
+                // Success case: record state to avoid repeated warns, but do not log.
+                self.record_icon_log(
+                    IconLogState::NamedResolved {
+                        name: name.to_string(),
+                        path: path.clone(),
+                    },
+                    || {},
+                );
+            }
+            None => {
+                self.record_icon_log(
+                    IconLogState::NamedMissing {
+                        name: name.to_string(),
+                    },
+                    || {
+                        warn!(
+                            target: "cosmic_panel::tray::icon",
+                            item = %self.item.name(),
+                            icon_name = name,
+                            "Tray icon name missing from current icon themes"
+                        );
+                    },
+                );
+            }
+        }
     }
 }
 
