@@ -9,6 +9,7 @@ Name[pt]=Botão de Áreas de Trabalho
 Name[nl]=Knop werkbladenoverzicht
 Name[sk]=Tlačidlo pracovných plôch
 Name[es]=Botón de espacios de trabajo
+Name[sv]=Knapp för arbetsytor
 Type=Application
 Exec=cosmic-panel-button com.system76.CosmicWorkspaces
 Terminal=false

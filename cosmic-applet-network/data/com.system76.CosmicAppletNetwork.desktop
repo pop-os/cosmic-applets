@@ -9,6 +9,7 @@ Name[pt]=Rede
 Name[nl]=Netwerk
 Name[de]=Netzwerk
 Name[sk]=Sieť
+Name[sv]=Nätverk
 Name[es]=Red
 Type=Application
 Exec=cosmic-applet-network

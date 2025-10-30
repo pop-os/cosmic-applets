@@ -9,6 +9,7 @@ Name[pt]=Data, Hora e Calendário
 Name[nl]=Datum, tijd en agenda
 Name[sk]=Dátum, čas a kalendár
 Name[es]=Fecha, hora y calendario
+Name[sv]=Datum, Tid & Kalender
 Type=Application
 Exec=cosmic-applet-time
 Terminal=false

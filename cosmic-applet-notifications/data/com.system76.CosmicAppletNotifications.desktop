@@ -9,6 +9,7 @@ Name[pt]=Central de Notificações
 Name[nl]=Meldingscentrum
 Name[de]=Notifizierungszentrum
 Name[sk]=Centrum oznámení
+Name[sv]=Aviseringscenter
 Name[es]=Centro de notificaciones
 Type=Application
 Exec=cosmic-applet-notifications
