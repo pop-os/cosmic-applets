@@ -53,8 +53,7 @@ impl cosmic::Application for Button {
             .and_then(|c| CosmicPanelButtonConfig::get_entry(&c).ok())
             .unwrap_or_default()
             .configs
-            .get(&core.applet.panel_type.to_string())
-            .cloned()
+            .remove(&core.applet.panel_type.to_string())
             .unwrap_or_default();
         (
             Self {
@@ -85,13 +84,13 @@ impl cosmic::Application for Button {
                     .arg("-c")
                     .arg(&self.desktop.exec)
                     .spawn()
-                    .unwrap();
+                    .unwrap()
+                    .wait();
             }
-            Msg::ConfigUpdated(conf) => {
+            Msg::ConfigUpdated(mut conf) => {
                 self.config = conf
                     .configs
-                    .get(&self.core.applet.panel_type.to_string())
-                    .cloned()
+                    .remove(&self.core.applet.panel_type.to_string())
                     .unwrap_or_default();
             }
             Msg::Surface(a) => {
@@ -143,7 +142,7 @@ impl cosmic::Application for Button {
                     vertical_space().height(Length::Fixed(
                         (self.core.applet.suggested_size(true).1
                             + 2 * self.core.applet.suggested_padding(true))
-                            as f32
+                        .into()
                     ))
                 )
                 .align_y(iced::Alignment::Center);
@@ -185,10 +184,10 @@ pub fn run() -> iced::Result {
                         || panic!("Desktop file '{filename}' doesn't have `Name`"),
                         |x| x.to_string(),
                     ),
-                    icon: entry.icon().map(|x| x.to_string()),
+                    icon: entry.icon().map(ToString::to_string),
                     exec: entry.exec().map_or_else(
                         || panic!("Desktop file '{filename}' doesn't have `Exec`"),
-                        |x| x.to_string(),
+                        ToString::to_string,
                     ),
                 });
                 break;

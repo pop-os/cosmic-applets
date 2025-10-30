@@ -28,13 +28,13 @@ where
         on_press: Msg,
         padding: u16,
     ) -> Self {
-        let border = 1.0;
+        let border = 1.0_f32;
         Self {
             image_button: button::custom(
                 container(
                     container(if let Some(img) = img {
                         let max_dim = img.width.max(img.height).max(1);
-                        let ratio = max_dim as f32 / (size - border * 2.0).max(1.0);
+                        let ratio = max_dim as f32 / (border.mul_add(-2.0, size)).max(1.0);
                         let adjusted_width = img.width as f32 / ratio;
                         let adjusted_height = img.height as f32 / ratio;
 
@@ -47,8 +47,8 @@ where
                     } else {
                         Element::from(
                             icon.as_cosmic_icon()
-                                .width(Length::Fixed((size - border * 2.0).max(0.)))
-                                .height(Length::Fixed((size - border * 2.0).max(0.))),
+                                .width(Length::Fixed((border.mul_add(-2.0, size)).max(0.)))
+                                .height(Length::Fixed((border.mul_add(-2.0, size)).max(0.))),
                         )
                     })
                     .class(Container::Custom(Box::new(move |theme| container::Style {
@@ -63,7 +63,7 @@ where
                     .height(Length::Shrink)
                     .width(Length::Shrink),
                 )
-                .center(Length::Fixed(size + padding as f32 * 2.0))
+                .center(Length::Fixed((padding as f32).mul_add(2.0, size)))
                 .padding(padding),
             )
             .on_press(on_press)
@@ -193,12 +193,7 @@ impl<Msg> Widget<Msg, cosmic::Theme, cosmic::Renderer> for WindowImage<'_, Msg> 
     ) {
         let layout = layout.children().collect::<Vec<_>>();
         let children = [&self.image_button, &self.icon];
-        for (i, (layout, child)) in layout
-            .into_iter()
-            .zip(children.into_iter())
-            .enumerate()
-            .rev()
-        {
+        for (i, (layout, child)) in layout.into_iter().zip(children).enumerate().rev() {
             let tree = &mut tree.children[i];
             child.as_widget().operate(tree, layout, renderer, operation);
         }
@@ -220,12 +215,7 @@ impl<Msg> Widget<Msg, cosmic::Theme, cosmic::Renderer> for WindowImage<'_, Msg> 
         let layout = layout.children().collect::<Vec<_>>();
         // draw children in order
         let mut status = cosmic::iced_core::event::Status::Ignored;
-        for (i, (layout, child)) in layout
-            .into_iter()
-            .zip(children.into_iter())
-            .enumerate()
-            .rev()
-        {
+        for (i, (layout, child)) in layout.into_iter().zip(children).enumerate().rev() {
             let tree = &mut state.children[i];
 
             status = child.as_widget_mut().on_event(
@@ -255,12 +245,7 @@ impl<Msg> Widget<Msg, cosmic::Theme, cosmic::Renderer> for WindowImage<'_, Msg> 
     ) -> cosmic::iced_core::mouse::Interaction {
         let children = [&self.image_button, &self.icon];
         let layout = layout.children().collect::<Vec<_>>();
-        for (i, (layout, child)) in layout
-            .into_iter()
-            .zip(children.into_iter())
-            .enumerate()
-            .rev()
-        {
+        for (i, (layout, child)) in layout.into_iter().zip(children).enumerate().rev() {
             let tree = &state.children[i];
             let interaction = child
                 .as_widget()

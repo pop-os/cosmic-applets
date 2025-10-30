@@ -4,7 +4,6 @@
 pub use cosmic_applets_config::time as config;
 
 mod localize;
-mod time;
 mod window;
 
 use window::Window;

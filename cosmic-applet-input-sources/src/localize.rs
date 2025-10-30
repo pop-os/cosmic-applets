@@ -40,6 +40,6 @@ pub fn localize() {
     let localizer = localizer();
     let requested_languages = i18n_embed::DesktopLanguageRequester::requested_languages();
     if let Err(error) = localizer.select(&requested_languages) {
-        tracing::error!("Error while loading language for App List {}", error);
+        tracing::error!("Error while loading language for App List {error}");
     }
 }
