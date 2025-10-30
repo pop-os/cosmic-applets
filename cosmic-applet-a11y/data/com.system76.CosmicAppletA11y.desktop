@@ -9,6 +9,7 @@ Name[pt]=Acessibilidade
 Name[nl]=Toegankelijkheid
 Name[de]= Zugänglichkeit
 Name[sk]=Zjednodušenie ovládania
+Name[sv]=Tillgänglighet
 Name[es]=Accesibilidad
 Type=Application
 Exec=cosmic-applet-a11y
