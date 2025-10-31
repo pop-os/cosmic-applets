@@ -339,6 +339,7 @@ impl cosmic::Application for Minimize {
             None
         };
 
+        let spacing = self.core.applet.spacing;
         // TODO optional dividers on ends if detects app list neighbor
         // not sure the best way to tell if there is an adjacent app-list
         let icon_buttons = icon_buttons.chain(overflow_btn);
@@ -350,12 +351,14 @@ impl cosmic::Application for Minimize {
                 .align_y(cosmic::iced_core::Alignment::Center)
                 .height(Length::Shrink)
                 .width(Length::Shrink)
+                .spacing(spacing as f32)
                 .into()
         } else {
             Column::with_children(icon_buttons)
                 .align_x(cosmic::iced_core::Alignment::Center)
                 .height(Length::Shrink)
                 .width(Length::Shrink)
+                .spacing(spacing as f32)
                 .into()
         };
 

@@ -48,14 +48,14 @@ impl Button {
     ) -> cosmic::widget::Button<'a, Message> {
         let theme = cosmic::theme::active();
         let theme = theme.cosmic();
-        let space_xs = theme.space_xs();
 
         let suggested = self.core.applet.suggested_size(icon.symbolic);
-        let (_, applet_padding_minor_axis) = self.core.applet.suggested_padding(icon.symbolic);
+        let (major_padding, applet_padding_minor_axis) =
+            self.core.applet.suggested_padding(icon.symbolic);
         let (horizontal_padding, vertical_padding) = if self.core.applet.is_horizontal() {
-            (space_xs, applet_padding_minor_axis)
+            (major_padding, applet_padding_minor_axis)
         } else {
-            (applet_padding_minor_axis, space_xs)
+            (applet_padding_minor_axis, major_padding)
         };
         let symbolic = icon.symbolic;
 
