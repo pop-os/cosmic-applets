@@ -159,15 +159,12 @@ impl Window {
     }
 
     fn vertical_layout(&self) -> Element<'_, Message> {
-        let elements: Vec<Element<'_, Message>> = if let Some(formatted) = self
-            .config
-            .format_strftime
-            .as_deref()
-            .map(|format| self.now.format(format).to_string())
-        {
+        let elements: Vec<Element<'_, Message>> = if !self.config.format_strftime.is_empty() {
             // strftime formatter may override locale specific elements so it stands alone rather
             // than using ICU to determine a format.
-            formatted
+            self.now
+                .format(&self.config.format_strftime)
+                .to_string()
                 .split_whitespace()
                 .map(|piece| self.core.applet.text(piece.to_owned()).into())
                 .collect()
@@ -232,13 +229,8 @@ impl Window {
     }
 
     fn horizontal_layout(&self) -> Element<'_, Message> {
-        let formatted_date = if let Some(formatted) = self
-            .config
-            .format_strftime
-            .as_deref()
-            .map(|format| self.now.format(format).to_string())
-        {
-            formatted
+        let formatted_date = if !self.config.format_strftime.is_empty() {
+            self.now.format(&self.config.format_strftime).to_string()
         } else {
             let datetime = self.create_datetime(&self.now);
             let mut prefs = DateTimeFormatterPreferences::from(self.locale.clone());
