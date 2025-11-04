@@ -250,3 +250,22 @@ pub async fn set_charging_limit() -> Result<()> {
     }
     Ok(())
 }
+
+// unset battery charging thresholds via s76 power_daemon
+pub async fn unset_charging_limit() -> Result<()> {
+    if let Ok(conn) = Connection::system().await {
+        if let Ok(backend) = get_power_backend(&conn, &BackendType::S76PowerDaemon).await {
+            match backend {
+                Backend::S76PowerDaemon(proxy) => {
+                    let _ = proxy.set_charge_thresholds(&(90, 100)).await;
+                }
+                Backend::PowerProfilesDaemon(_) => {
+                    tracing::info!(
+                        "Unsetting charging limit via Power Profiles Daemon is not supported."
+                    );
+                }
+            }
+        }
+    }
+    Ok(())
+}
