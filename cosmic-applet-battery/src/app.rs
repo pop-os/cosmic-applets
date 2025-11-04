@@ -4,7 +4,7 @@
 use crate::{
     backend::{
         Power, PowerProfileRequest, PowerProfileUpdate, get_charging_limit,
-        power_profile_subscription, set_charging_limit,
+        power_profile_subscription, set_charging_limit, unset_charging_limit,
     },
     config,
     dgpu::{Entry, GpuUpdate, dgpu_subscription},
@@ -308,6 +308,10 @@ impl cosmic::Application for CosmicBatteryApplet {
 
                 if enable {
                     return cosmic::iced::Task::perform(set_charging_limit(), |_| {
+                        cosmic::Action::None
+                    });
+                } else {
+                    return cosmic::iced::Task::perform(unset_charging_limit(), |_| {
                         cosmic::Action::None
                     });
                 }
