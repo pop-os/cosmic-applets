@@ -8,6 +8,7 @@ use cosmic::{
     iced,
     widget::icon,
 };
+use std::path::{Path, PathBuf};
 
 use crate::subscriptions::status_notifier_item::{IconUpdate, Layout, StatusNotifierItem};
 
@@ -26,6 +27,7 @@ pub struct State {
     icon_name: String,
     // TODO handle icon with multiple sizes?
     icon_pixmap: Option<icon::Handle>,
+    icon_theme_path: Option<PathBuf>,
     click_event: Option<(i32, bool)>,
 }
 
@@ -38,6 +40,7 @@ impl State {
                 expanded: None,
                 icon_name: String::new(),
                 icon_pixmap: None,
+                icon_theme_path: None,
                 click_event: None,
             },
             iced::Task::none(),
@@ -78,6 +81,7 @@ impl State {
                         }
                         icon::from_raster_pixels(i.width as u32, i.height as u32, i.bytes)
                     }));
+                self.icon_theme_path = update.theme_path;
 
                 iced::Task::none()
             }
@@ -136,6 +140,10 @@ impl State {
 
     pub fn icon_pixmap(&self) -> Option<&icon::Handle> {
         self.icon_pixmap.as_ref()
+    }
+
+    pub fn icon_theme_path(&self) -> Option<&Path> {
+        self.icon_theme_path.as_deref()
     }
 
     pub fn popup_view(&self) -> cosmic::Element<'_, Msg> {
