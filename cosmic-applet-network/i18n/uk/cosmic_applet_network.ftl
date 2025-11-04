@@ -1,7 +1,7 @@
 network = Мережа
 airplane-mode = Режим польоту
 airplane-mode-on = Режим польоту увімкнено
-turn-off-airplane-mode = Вимкніть, щоб активувати Wi-Fi, Bluetooth та мобільний інтернет.
+turn-off-airplane-mode = Вимкніть, щоб увімкнути Wi-Fi, Bluetooth і мобільний інтернет.
 wifi = Wi-Fi
 ipv4 = Адреса IPv4
 ipv6 = Адреса IPv6
