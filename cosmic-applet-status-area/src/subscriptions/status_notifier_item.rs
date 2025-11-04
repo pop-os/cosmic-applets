@@ -21,9 +21,9 @@ pub struct Icon {
 }
 
 #[derive(Clone, Debug)]
-pub enum IconUpdate {
-    Name(String),
-    Pixmap(Vec<Icon>),
+pub struct IconUpdate {
+    pub name: Option<String>,
+    pub pixmap: Option<Vec<Icon>>,
 }
 
 impl StatusNotifierItem {
@@ -93,22 +93,13 @@ impl StatusNotifierItem {
     }
 
     pub fn icon_subscription(&self) -> iced::Subscription<IconUpdate> {
-        fn icon_events(
-            item_proxy: StatusNotifierItemProxy<'static>,
-        ) -> impl futures::Stream<Item = IconUpdate> + 'static {
-            async move {
-                let icon_name = item_proxy.icon_name().await;
-                let icon_pixmap = item_proxy.icon_pixmap().await;
-                futures::stream::iter(
-                    [
-                        icon_name.map(IconUpdate::Name),
-                        icon_pixmap.map(IconUpdate::Pixmap),
-                    ]
-                    .into_iter()
-                    .filter_map(Result::ok),
-                )
+        async fn icon_events(item_proxy: StatusNotifierItemProxy<'static>) -> IconUpdate {
+            let icon_name = item_proxy.icon_name().await;
+            let icon_pixmap = item_proxy.icon_pixmap().await;
+            IconUpdate {
+                name: icon_name.ok(),
+                pixmap: icon_pixmap.ok(),
             }
-            .flatten_stream()
         }
 
         let item_proxy = self.item_proxy.clone();
@@ -118,7 +109,7 @@ impl StatusNotifierItem {
                 let new_icon_stream = item_proxy.receive_new_icon().await.unwrap();
                 futures::stream::once(async {})
                     .chain(new_icon_stream.map(|_| ()))
-                    .flat_map(move |()| icon_events(item_proxy.clone()))
+                    .then(move |()| icon_events(item_proxy.clone()))
             }
             .flatten_stream(),
         )
