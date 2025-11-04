@@ -9,28 +9,28 @@ restart = Рестартиране
 shutdown = Изключване
 confirm = Потвърждаване
 cancel = Отказване
-confirm-button = {
-    $action -> 
+confirm-button =
+    { $action ->
         [restart] { restart }
-        [suspend] { suspend}
+        [suspend] { suspend }
         [shutdown] Изключване
         [log-out] { log-out }
-        *[other] { confirm}
-}
-confirm-title = 
-    { $action -> 
+       *[other] { confirm }
+    }
+confirm-title =
+    { $action ->
         [restart] { restart }
         [suspend] { suspend }
         [shutdown] { shutdown }
         [log-out] Спиране на всички програми и изход
-        *[other] Прилагане на избраното действие
+       *[other] Прилагане на избраното действие
     } сега?
-confirm-body = 
+confirm-body =
     Системата ще { $action ->
         [restart] се рестартира
         [suspend] се приспи
         [shutdown] се изключи
         [lock-screen] се заключи
         [log-out] излезе от сесията
-        *[other] приложи избраното действие
+       *[other] приложи избраното действие
     } автоматично след { $countdown } секунди.
