@@ -61,29 +61,23 @@ impl State {
                 iced::Task::none()
             }
             Msg::Icon(update) => {
-                match update {
-                    IconUpdate::Name(name) => {
-                        self.icon_name = name;
-                    }
-                    IconUpdate::Pixmap(icons) => {
-                        self.icon_pixmap = icons
-                            .into_iter()
-                            .max_by_key(|i| (i.width, i.height))
-                            .map(|mut i| {
-                                if i.width <= 0 || i.height <= 0 || i.bytes.is_empty() {
-                                    // App sent invalid icon data during initialization - show placeholder until NewIcon signal
-                                    eprintln!("Skipping invalid icon: {}x{} with {} bytes, app may still be initializing",
-                                            i.width, i.height, i.bytes.len());
-                                    return icon::from_name("dialog-question").symbolic(true).handle();
-                                }
-                                // Convert ARGB to RGBA
-                                for pixel in i.bytes.chunks_exact_mut(4) {
-                                    pixel.rotate_left(1);
-                                }
-                                icon::from_raster_pixels(i.width as u32, i.height as u32, i.bytes)
-                            });
-                    }
-                }
+                self.icon_name = update.name.unwrap_or_default();
+                self.icon_pixmap = update.pixmap.and_then(|icons| icons
+                    .into_iter()
+                    .max_by_key(|i| (i.width, i.height))
+                    .map(|mut i| {
+                        if i.width <= 0 || i.height <= 0 || i.bytes.is_empty() {
+                            // App sent invalid icon data during initialization - show placeholder until NewIcon signal
+                            eprintln!("Skipping invalid icon: {}x{} with {} bytes, app may still be initializing",
+                                    i.width, i.height, i.bytes.len());
+                            return icon::from_name("dialog-question").symbolic(true).handle();
+                        }
+                        // Convert ARGB to RGBA
+                        for pixel in i.bytes.chunks_exact_mut(4) {
+                            pixel.rotate_left(1);
+                        }
+                        icon::from_raster_pixels(i.width as u32, i.height as u32, i.bytes)
+                    }));
 
                 iced::Task::none()
             }
