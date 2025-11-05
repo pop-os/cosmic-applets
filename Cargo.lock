@@ -1235,7 +1235,9 @@ dependencies = [
 name = "cosmic-applet-input-sources"
 version = "0.1.0"
 dependencies = [
+ "cosmic-client-toolkit",
  "cosmic-comp-config",
+ "futures",
  "i18n-embed",
  "i18n-embed-fl",
  "libcosmic",
@@ -1245,6 +1247,7 @@ dependencies = [
  "tracing-log",
  "tracing-subscriber",
  "xkb-data",
+ "xkbcommon 0.7.0",
 ]
 
 [[package]]
@@ -1434,7 +1437,7 @@ dependencies = [
 [[package]]
 name = "cosmic-client-toolkit"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/cosmic-protocols//?branch=main#d0e95be25e423cfe523b11111a3666ed7aaf0dc4"
+source = "git+https://github.com/pop-os/cosmic-protocols//?branch=keymap#500e76ac0da6bae322dc5b3a2e845bf714164e3c"
 dependencies = [
  "bitflags 2.9.4",
  "cosmic-protocols",
@@ -1570,7 +1573,7 @@ dependencies = [
 [[package]]
 name = "cosmic-protocols"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/cosmic-protocols//?branch=main#d0e95be25e423cfe523b11111a3666ed7aaf0dc4"
+source = "git+https://github.com/pop-os/cosmic-protocols//?branch=keymap#500e76ac0da6bae322dc5b3a2e845bf714164e3c"
 dependencies = [
  "bitflags 2.9.4",
  "wayland-backend",
