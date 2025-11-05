@@ -43,6 +43,11 @@ use icu::{
 
 static AUTOSIZE_MAIN_ID: LazyLock<Id> = LazyLock::new(|| Id::new("autosize-main"));
 
+// Specifiers for strftime that indicate seconds. Subsecond precision isn't supported by the applet
+// so those specifiers aren't listed here. This list is non-exhaustive, and it's possible that %X
+// and other specifiers have to be added depending on locales.
+const STRFTIME_SECONDS: &[char] = &['S', 'T', '+', 's'];
+
 fn get_system_locale() -> Locale {
     for var in ["LC_TIME", "LC_ALL", "LANG"] {
         if let Ok(locale_str) = std::env::var(var) {
@@ -604,7 +609,20 @@ impl cosmic::Application for Window {
             Message::ConfigChanged(c) => {
                 // Don't interrupt the tick subscription unless necessary
                 self.show_seconds_tx.send_if_modified(|show_seconds| {
-                    if *show_seconds == c.show_seconds {
+                    if !c.format_strftime.is_empty() {
+                        if c.format_strftime.split('%').any(|s| {
+                            STRFTIME_SECONDS.contains(&s.chars().next().unwrap_or_default())
+                        }) && !*show_seconds
+                        {
+                            // The strftime formatter contains a seconds specifier. Force enable
+                            // ticking per seconds internally regardless of the user setting.
+                            // This does not change the user's setting. It's invisible to the user.
+                            *show_seconds = true;
+                            true
+                        } else {
+                            false
+                        }
+                    } else if *show_seconds == c.show_seconds {
                         false
                     } else {
                         *show_seconds = c.show_seconds;
