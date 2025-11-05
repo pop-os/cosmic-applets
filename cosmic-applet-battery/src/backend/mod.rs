@@ -220,7 +220,7 @@ pub async fn get_charging_limit() -> anyhow::Result<bool> {
             match backend {
                 Backend::S76PowerDaemon(proxy) => {
                     if let Ok((start, end)) = proxy.get_charge_thresholds().await {
-                        return Ok(start > 0 || end > 0);
+                        return Ok(end > start && end < 100);
                     }
                 }
                 Backend::PowerProfilesDaemon(_) => {
