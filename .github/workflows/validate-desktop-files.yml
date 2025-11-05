@@ -13,7 +13,7 @@ jobs:
       image: ubuntu:25.10
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install desktop-file-utils
         run: |
