@@ -10,7 +10,7 @@ use zbus::zvariant::{self, OwnedValue};
 pub struct StatusNotifierItem {
     name: String,
     item_proxy: StatusNotifierItemProxy<'static>,
-    menu_proxy: DBusMenuProxy<'static>,
+    menu_proxy: Option<DBusMenuProxy<'static>>,
 }
 
 #[derive(Clone, Debug, zvariant::Value)]
@@ -42,7 +42,22 @@ impl StatusNotifierItem {
             .build()
             .await?;
 
-        let menu_path = item_proxy.menu().await?;
+        // XX: some items will not implement this but have a menu anyway
+        let is_menu = item_proxy.item_is_menu().await;
+
+        let menu_path = item_proxy.menu().await;
+
+        // Why would an item say it has no menu but provide a menu path? Slack does this.
+        let mut is_menu = menu_path.is_ok() || is_menu.unwrap_or(false);
+
+        if !is_menu {
+            return Ok(Self {
+                name,
+                item_proxy,
+                menu_proxy: None,
+            });
+        }
+        let menu_path = menu_path?;
         let menu_proxy = DBusMenuProxy::builder(connection)
             .destination(dest.to_string())?
             .path(menu_path)?
@@ -52,7 +67,7 @@ impl StatusNotifierItem {
         Ok(Self {
             name,
             item_proxy,
-            menu_proxy,
+            menu_proxy: Some(menu_proxy),
         })
     }
 
@@ -62,7 +77,9 @@ impl StatusNotifierItem {
 
     // TODO: Only fetch changed part of layout, if that's any faster
     pub fn layout_subscription(&self) -> iced::Subscription<Result<Layout, String>> {
-        let menu_proxy = self.menu_proxy.clone();
+        let Some(menu_proxy) = self.menu_proxy.clone() else {
+            return Subscription::none();
+        };
         Subscription::run_with_id(
             format!("status-notifier-item-layout-{}", &self.name),
             async move {
@@ -107,8 +124,8 @@ impl StatusNotifierItem {
         )
     }
 
-    pub fn menu_proxy(&self) -> &DBusMenuProxy<'static> {
-        &self.menu_proxy
+    pub fn menu_proxy(&self) -> Option<&DBusMenuProxy<'static>> {
+        self.menu_proxy.as_ref()
     }
 
     pub fn item_proxy(&self) -> &StatusNotifierItemProxy<'static> {
@@ -135,10 +152,17 @@ pub trait StatusNotifierItem {
     #[zbus(property)]
     fn menu(&self) -> zbus::Result<zvariant::OwnedObjectPath>;
 
+    #[zbus(property)]
+    fn item_is_menu(&self) -> zbus::Result<bool>;
+
     #[zbus(signal)]
     fn new_icon(&self) -> zbus::Result<()>;
 
     fn provide_xdg_activation_token(&self, token: String) -> zbus::Result<()>;
+
+    fn activate(&self, x: i32, y: i32) -> zbus::Result<()>;
+
+    fn secondary_activate(&self, x: i32, y: i32) -> zbus::Result<()>;
 }
 
 #[derive(Clone, Debug)]
