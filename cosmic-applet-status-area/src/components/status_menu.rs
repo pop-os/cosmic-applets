@@ -20,7 +20,7 @@ pub enum Msg {
 }
 
 pub struct State {
-    item: StatusNotifierItem,
+    pub item: StatusNotifierItem,
     layout: Option<Layout>,
     expanded: Option<i32>,
     icon_name: String,
@@ -101,9 +101,19 @@ impl State {
                 let Some((id, is_submenu)) = self.click_event else {
                     return iced::Task::none();
                 };
-
-                let menu_proxy = self.item.menu_proxy().clone();
                 let item_proxy = self.item.item_proxy().clone();
+
+                let Some(menu_proxy) = self.item.menu_proxy().cloned() else {
+                    tokio::spawn(async move {
+                        let _ = item_proxy.provide_xdg_activation_token(token).await;
+                        if let Err(err) = item_proxy.activate(0, 0).await {
+                            tracing::error!(
+                                "Error activating status notifier item without menu proxy: {err:?}"
+                            );
+                        }
+                    });
+                    return iced::Task::none();
+                };
                 tokio::spawn(async move {
                     let _ = item_proxy.provide_xdg_activation_token(token).await;
                     let _ = menu_proxy.event(id, "clicked", &0.into(), 0).await;
@@ -150,7 +160,9 @@ impl State {
     }
 
     pub fn opened(&self) {
-        let menu_proxy = self.item.menu_proxy().clone();
+        let Some(menu_proxy) = self.item.menu_proxy().cloned() else {
+            return;
+        };
         tokio::spawn(async move {
             let _ = menu_proxy.event(0, "opened", &0i32.into(), 0).await;
             let _ = menu_proxy.about_to_show(0).await;
@@ -158,7 +170,9 @@ impl State {
     }
 
     pub fn closed(&self) {
-        let menu_proxy = self.item.menu_proxy().clone();
+        let Some(menu_proxy) = self.item.menu_proxy().cloned() else {
+            return;
+        };
         tokio::spawn(async move {
             let _ = menu_proxy.event(0, "closed", &0i32.into(), 0).await;
         });

@@ -460,7 +460,11 @@ impl cosmic::Application for App {
                             .icon_button_from_handle(icon.clone().symbolic(true)),
                         _ => self.core.applet.icon_button(menu.icon_name()),
                     }
-                    .on_press_down(Msg::TogglePopup(*id)),
+                    .on_press_down(if menu.item.menu_proxy().is_some() {
+                        Msg::TogglePopup(*id)
+                    } else {
+                        Msg::StatusMenu((*id, status_menu::Msg::Click(0, true)))
+                    }),
                 )
                 .on_enter(Msg::Hovered(*id))
                 .into()
