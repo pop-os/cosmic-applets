@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 mod localize;
+mod wayland;
 
+use cctk::cosmic_protocols::keyboard_layout::v1::client::zcosmic_keyboard_layout_v1::ZcosmicKeyboardLayoutV1;
 use cosmic::iced::{Alignment, Length};
 use cosmic::{
     app,
@@ -77,6 +79,9 @@ pub struct Window {
     comp_config_handler: Option<cosmic_config::Config>,
     layouts: Vec<KeyboardLayout>,
     active_layouts: Vec<ActiveLayout>,
+    layout_list: Vec<String>,
+    keyboard_layout: Option<ZcosmicKeyboardLayoutV1>,
+    layout_index: usize,
 }
 
 #[derive(Clone, Debug)]
@@ -87,6 +92,7 @@ pub enum Message {
     SetActiveLayout(usize),
     KeyboardSettings,
     Surface(surface::Action),
+    Wayland(wayland::Event),
 }
 
 #[derive(Debug)]
@@ -119,6 +125,9 @@ impl cosmic::Application for Window {
             popup: None,
             comp_config: flags.comp_config,
             active_layouts: Vec::new(),
+            layout_list: Vec::new(),
+            keyboard_layout: None,
+            layout_index: 0,
         };
         (window, Task::none())
     }
@@ -161,31 +170,11 @@ impl cosmic::Application for Window {
                 tokio::spawn(cosmic::process::spawn(cmd));
             }
             Message::SetActiveLayout(pos) => {
-                if pos == 0 {
-                    return Task::none();
-                }
-
-                self.active_layouts.swap(0, pos);
-                let mut new_layout = String::new();
-                let mut new_variant = String::new();
-
-                for layout in &self.active_layouts {
-                    new_layout.push_str(&layout.layout);
-                    new_layout.push(',');
-                    new_variant.push_str(&layout.variant);
-                    new_variant.push(',');
-                }
-
-                let _excess_comma = new_layout.pop();
-                let _excess_comma = new_variant.pop();
-
-                self.comp_config.xkb_config.layout = new_layout;
-                self.comp_config.xkb_config.variant = new_variant;
-                if let Some(comp_config_handler) = &self.comp_config_handler {
-                    if let Err(err) =
-                        comp_config_handler.set("xkb_config", &self.comp_config.xkb_config)
-                    {
-                        tracing::error!("Failed to set config 'xkb_config' {err}");
+                if let Some(keyboard_layout) = &self.keyboard_layout {
+                    keyboard_layout.set_group(pos as u32);
+                    use cctk::wayland_client::{Connection, Proxy};
+                    if let Some(backend) = keyboard_layout.backend().upgrade() {
+                        backend.flush();
                     }
                 }
             }
@@ -194,6 +183,17 @@ impl cosmic::Application for Window {
                     cosmic::app::Action::Surface(a),
                 ));
             }
+            Message::Wayland(event) => match event {
+                wayland::Event::LayoutList(layouts) => {
+                    self.layout_list = layouts;
+                }
+                wayland::Event::Layout(index) => {
+                    self.layout_index = index;
+                }
+                wayland::Event::KeyboardLayout(keyboard_layout) => {
+                    self.keyboard_layout = Some(keyboard_layout);
+                }
+            },
         }
 
         Task::none()
@@ -201,9 +201,9 @@ impl cosmic::Application for Window {
 
     fn view(&self) -> Element<'_, Self::Message> {
         let input_source_text = self.core.applet.text(
-            self.active_layouts
-                .first()
-                .map_or("", |l| l.layout.as_str()),
+            self.layout_list
+                .get(self.layout_index)
+                .map_or("", |s| s.as_str()),
         );
 
         cosmic::widget::button::custom(
@@ -239,15 +239,15 @@ impl cosmic::Application for Window {
         } = theme::active().cosmic().spacing;
 
         let mut content_list =
-            widget::column::with_capacity(4 + self.active_layouts.len()).padding([8, 0]);
-        for (id, layout) in self.active_layouts.iter().enumerate() {
-            let group = widget::column::with_capacity(2)
-                .push(widget::text::body(layout.description.as_str()))
-                .push(widget::text::caption(layout.layout.as_str()));
+            widget::column::with_capacity(4 + self.layout_list.len()).padding([8, 0]);
+        for (id, layout) in self.layout_list.iter().enumerate() {
+            let group = widget::column::with_capacity(2).push(widget::text::body(layout));
+            //.push(widget::text::body(layout.description.as_str()))
+            //.push(widget::text::caption(layout.layout.as_str()));
             content_list = content_list
                 .push(applet::menu_button(group).on_press(Message::SetActiveLayout(id)));
         }
-        if !self.active_layouts.is_empty() {
+        if !self.layout_list.is_empty() {
             content_list = content_list.push(
                 applet::padded_control(widget::divider::horizontal::default())
                     .padding([space_xxs, space_s])
@@ -263,18 +263,21 @@ impl cosmic::Application for Window {
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {
-        self.core
-            .watch_config("com.system76.CosmicComp")
-            .map(|update| {
-                if !update.errors.is_empty() {
-                    tracing::error!(
-                        "errors loading config {:?}: {:?}",
-                        update.keys,
-                        update.errors
-                    );
-                }
-                Message::CompConfig(Box::new(update.config))
-            })
+        Subscription::batch([
+            self.core
+                .watch_config("com.system76.CosmicComp")
+                .map(|update| {
+                    if !update.errors.is_empty() {
+                        tracing::error!(
+                            "errors loading config {:?}: {:?}",
+                            update.keys,
+                            update.errors
+                        );
+                    }
+                    Message::CompConfig(Box::new(update.config))
+                }),
+            wayland::subscription().map(Message::Wayland),
+        ])
     }
 
     fn style(&self) -> Option<Appearance> {
@@ -294,7 +297,6 @@ impl Window {
             .chain(std::iter::repeat(""));
 
         'outer: for (layout, variant) in layouts.zip(variants) {
-            println!("{layout} : {variant}");
             for xkb_layout in &self.layouts {
                 if layout != xkb_layout.name() {
                     continue;

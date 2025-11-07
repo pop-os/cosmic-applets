@@ -16,3 +16,6 @@ tracing-log.workspace = true
 tracing-subscriber.workspace = true
 tracing.workspace = true
 xkb-data = "0.2"
+cctk.workspace = true
+xkbcommon = "0.7.0"
+futures.workspace = true
