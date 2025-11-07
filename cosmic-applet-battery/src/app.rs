@@ -139,12 +139,9 @@ impl CosmicBatteryApplet {
         let raw = self.screen_brightness? as i64;
         let max = self.max_screen_brightness?.max(1) as i64;
         if max <= 20 {
-            // Matching brightness calculation logic from cosmic-osd and cosmic-settings-daemon
-            let mut k = (raw * 20 + max / 2) / max;
-            if k < 0 { k = 0; }
-            if k > 20 { k = 20; }
-            let p = if k == 0 { 1 } else { 5 * k };
-            Some((p as f64) / 100.0)
+            // Coarse panels (<=20 brightness levels)
+            let rung = (raw.saturating_add(1)).min(20);
+            Some((5 * rung) as f64 / 100.0)
         } else {
             let p = ((raw * 100 + max / 2) / max).clamp(1, 100) as f64;
             Some(p / 100.0)
