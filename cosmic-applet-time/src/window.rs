@@ -43,6 +43,11 @@ use icu::{
 
 static AUTOSIZE_MAIN_ID: LazyLock<Id> = LazyLock::new(|| Id::new("autosize-main"));
 
+// Specifiers for strftime that indicate seconds. Subsecond precision isn't supported by the applet
+// so those specifiers aren't listed here. This list is non-exhaustive, and it's possible that %X
+// and other specifiers have to be added depending on locales.
+const STRFTIME_SECONDS: &[char] = &['S', 'T', '+', 's'];
+
 fn get_system_locale() -> Locale {
     for var in ["LC_TIME", "LC_ALL", "LANG"] {
         if let Ok(locale_str) = std::env::var(var) {
@@ -159,45 +164,58 @@ impl Window {
     }
 
     fn vertical_layout(&self) -> Element<'_, Message> {
-        let mut elements = Vec::new();
-        let date = self.now.naive_local();
-        let datetime = self.create_datetime(&date);
-        let mut prefs = DateTimeFormatterPreferences::from(self.locale.clone());
-        prefs.hour_cycle = Some(if self.config.military_time {
-            HourCycle::H23
+        let elements: Vec<Element<'_, Message>> = if !self.config.format_strftime.is_empty() {
+            // strftime formatter may override locale specific elements so it stands alone rather
+            // than using ICU to determine a format.
+            self.now
+                .format(&self.config.format_strftime)
+                .to_string()
+                .split_whitespace()
+                .map(|piece| self.core.applet.text(piece.to_owned()).into())
+                .collect()
         } else {
-            HourCycle::H12
-        });
+            let mut elements = Vec::new();
+            let date = self.now.naive_local();
+            let datetime = self.create_datetime(&date);
+            let mut prefs = DateTimeFormatterPreferences::from(self.locale.clone());
+            prefs.hour_cycle = Some(if self.config.military_time {
+                HourCycle::H23
+            } else {
+                HourCycle::H12
+            });
 
-        if self.config.show_date_in_top_panel {
-            let formatted_date = DateTimeFormatter::try_new(prefs, fieldsets::MD::medium())
+            if self.config.show_date_in_top_panel {
+                let formatted_date = DateTimeFormatter::try_new(prefs, fieldsets::MD::medium())
+                    .unwrap()
+                    .format(&datetime)
+                    .to_string();
+
+                for p in formatted_date.split_whitespace() {
+                    elements.push(self.core.applet.text(p.to_owned()).into());
+                }
+                elements.push(
+                    horizontal_rule(2)
+                        .width(self.core.applet.suggested_size(true).0)
+                        .into(),
+                );
+            }
+            let mut fs = fieldsets::T::medium();
+            if !self.config.show_seconds {
+                fs = fs.with_time_precision(TimePrecision::Minute);
+            }
+            let formatted_time = DateTimeFormatter::try_new(prefs, fs)
                 .unwrap()
                 .format(&datetime)
                 .to_string();
 
-            for p in formatted_date.split_whitespace() {
+            // todo: split using formatToParts when it is implemented
+            // https://github.com/unicode-org/icu4x/issues/4936#issuecomment-2128812667
+            for p in formatted_time.split_whitespace().flat_map(|s| s.split(':')) {
                 elements.push(self.core.applet.text(p.to_owned()).into());
             }
-            elements.push(
-                horizontal_rule(2)
-                    .width(self.core.applet.suggested_size(true).0)
-                    .into(),
-            );
-        }
-        let mut fs = fieldsets::T::medium();
-        if !self.config.show_seconds {
-            fs = fs.with_time_precision(TimePrecision::Minute);
-        }
-        let formatted_time = DateTimeFormatter::try_new(prefs, fs)
-            .unwrap()
-            .format(&datetime)
-            .to_string();
 
-        // todo: split using formatToParts when it is implemented
-        // https://github.com/unicode-org/icu4x/issues/4936#issuecomment-2128812667
-        for p in formatted_time.split_whitespace().flat_map(|s| s.split(':')) {
-            elements.push(self.core.applet.text(p.to_owned()).into());
-        }
+            elements
+        };
 
         let date_time_col = Column::with_children(elements)
             .align_x(Alignment::Center)
@@ -216,26 +234,39 @@ impl Window {
     }
 
     fn horizontal_layout(&self) -> Element<'_, Message> {
-        let datetime = self.create_datetime(&self.now);
-        let mut prefs = DateTimeFormatterPreferences::from(self.locale.clone());
-        prefs.hour_cycle = Some(if self.config.military_time {
-            HourCycle::H23
+        let formatted_date = if !self.config.format_strftime.is_empty() {
+            self.now.format(&self.config.format_strftime).to_string()
         } else {
-            HourCycle::H12
-        });
-
-        let formatted_date = if self.config.show_date_in_top_panel {
-            if self.config.show_weekday {
-                let mut fs = fieldsets::MDET::long();
-                if !self.config.show_seconds {
-                    fs = fs.with_time_precision(TimePrecision::Minute);
-                }
-                DateTimeFormatter::try_new(prefs, fs)
-                    .unwrap()
-                    .format(&datetime)
-                    .to_string()
+            let datetime = self.create_datetime(&self.now);
+            let mut prefs = DateTimeFormatterPreferences::from(self.locale.clone());
+            prefs.hour_cycle = Some(if self.config.military_time {
+                HourCycle::H23
             } else {
-                let mut fs = fieldsets::MDT::long();
+                HourCycle::H12
+            });
+
+            if self.config.show_date_in_top_panel {
+                if self.config.show_weekday {
+                    let mut fs = fieldsets::MDET::long();
+                    if !self.config.show_seconds {
+                        fs = fs.with_time_precision(TimePrecision::Minute);
+                    }
+                    DateTimeFormatter::try_new(prefs, fs)
+                        .unwrap()
+                        .format(&datetime)
+                        .to_string()
+                } else {
+                    let mut fs = fieldsets::MDT::long();
+                    if !self.config.show_seconds {
+                        fs = fs.with_time_precision(TimePrecision::Minute);
+                    }
+                    DateTimeFormatter::try_new(prefs, fs)
+                        .unwrap()
+                        .format(&datetime)
+                        .to_string()
+                }
+            } else {
+                let mut fs = fieldsets::T::medium();
                 if !self.config.show_seconds {
                     fs = fs.with_time_precision(TimePrecision::Minute);
                 }
@@ -244,15 +275,6 @@ impl Window {
                     .format(&datetime)
                     .to_string()
             }
-        } else {
-            let mut fs = fieldsets::T::medium();
-            if !self.config.show_seconds {
-                fs = fs.with_time_precision(TimePrecision::Minute);
-            }
-            DateTimeFormatter::try_new(prefs, fs)
-                .unwrap()
-                .format(&datetime)
-                .to_string()
         };
 
         Element::from(
@@ -587,7 +609,20 @@ impl cosmic::Application for Window {
             Message::ConfigChanged(c) => {
                 // Don't interrupt the tick subscription unless necessary
                 self.show_seconds_tx.send_if_modified(|show_seconds| {
-                    if *show_seconds == c.show_seconds {
+                    if !c.format_strftime.is_empty() {
+                        if c.format_strftime.split('%').any(|s| {
+                            STRFTIME_SECONDS.contains(&s.chars().next().unwrap_or_default())
+                        }) && !*show_seconds
+                        {
+                            // The strftime formatter contains a seconds specifier. Force enable
+                            // ticking per seconds internally regardless of the user setting.
+                            // This does not change the user's setting. It's invisible to the user.
+                            *show_seconds = true;
+                            true
+                        } else {
+                            false
+                        }
+                    } else if *show_seconds == c.show_seconds {
                         false
                     } else {
                         *show_seconds = c.show_seconds;
