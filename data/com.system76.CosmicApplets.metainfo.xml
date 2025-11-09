@@ -10,6 +10,7 @@
   <url type="bugtracker">https://github.com/pop-os/cosmic-applets</url>
   <name>COSMIC Applets</name>
   <name xml:lang="ar">بريمجات COSMIC</name>
+  <name xml:lang="bg">Графични обекти за COSMIC</name>
   <name xml:lang="cs">Applety COSMIC</name>
   <name xml:lang="pl">Aplety COSMIC</name>
   <name xml:lang="pt_BR">Miniaplicativos</name>
@@ -20,6 +21,7 @@
   <name xml:lang="sv">COSMIC Miniprogram</name>
   <summary>Applets for the COSMIC panel</summary>
   <summary xml:lang="ar">بريمجات للوحة COSMIC</summary>
+  <summary xml:lang="bg">Графични обекти за панела на COSMIC</summary>
   <summary xml:lang="cs">Applety pro panel COSMIC</summary>
   <summary xml:lang="pl">Aplety dla panelu COSMIC</summary>
   <summary xml:lang="pt_BR">Miniaplicativos para o painel do COSMIC</summary>
@@ -33,6 +35,7 @@
   <description>
     <p>Applets for the COSMIC panel</p>
     <p xml:lang="ar">بريمجات للوحة COSMIC</p>
+    <p xml:lang="bg">Графични обекти за панела на COSMIC</p>
     <p xml:lang="cs">Applety pro panel COSMIC</p>
     <p xml:lang="pl">Aplety dla panelu COSMIC</p>
     <p xml:lang="pt_BR">Miniaplicativos para o painel do COSMIC</p>
