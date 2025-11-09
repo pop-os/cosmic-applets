@@ -1,21 +1,20 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
-use std::{cell::RefCell, mem, rc::Rc, thread, time::Duration};
+use std::{cell::RefCell, mem, rc::Rc, sync::LazyLock, thread, time::Duration};
 
 extern crate libpulse_binding as pulse;
 
 use cosmic::{
-    iced::{self, stream, Subscription},
+    iced::{self, Subscription, stream},
     iced_futures::futures::{self, SinkExt},
 };
-use cosmic_time::once_cell::sync::Lazy;
 
 use libpulse_binding::{
     callbacks::ListResult,
     context::{
-        introspect::{Introspector, SinkInfo, SourceInfo},
         Context,
+        introspect::{Introspector, SinkInfo, SourceInfo},
     },
     error::PAErr,
     mainloop::standard::{IterateResult, Mainloop},
@@ -23,10 +22,10 @@ use libpulse_binding::{
     volume::ChannelVolumes,
 };
 
-use tokio::sync::{mpsc, Mutex};
+use tokio::sync::{Mutex, mpsc};
 
-pub static FROM_PULSE: Lazy<Mutex<Option<(mpsc::Receiver<Message>, mpsc::Sender<Message>)>>> =
-    Lazy::new(|| Mutex::new(None));
+pub static FROM_PULSE: LazyLock<Mutex<Option<(mpsc::Receiver<Message>, mpsc::Sender<Message>)>>> =
+    LazyLock::new(|| Mutex::new(None));
 
 pub fn connect() -> iced::Subscription<Event> {
     struct SomeWorker;
@@ -169,7 +168,7 @@ impl Connection {
                     panic!();
                 }
                 mpsc::error::TrySendError::Full(_) => {
-                    tracing::warn!("Failed to send message to PulseAudio server: channel is full")
+                    tracing::warn!("Failed to send message to PulseAudio server: channel is full");
                 }
             }
         }
@@ -250,9 +249,8 @@ impl PulseHandle {
                     for msg in msgs.drain(..) {
                         match msg {
                             Message::GetDefaultSink => {
-                                let server = match server.as_mut() {
-                                    Some(s) => s,
-                                    None => continue,
+                                let Some(server) = server.as_mut() else {
+                                    continue;
                                 };
                                 match server.get_default_sink() {
                                     Ok(sink) => {
@@ -267,9 +265,8 @@ impl PulseHandle {
                                 }
                             }
                             Message::GetDefaultSource => {
-                                let server = match server.as_mut() {
-                                    Some(s) => s,
-                                    None => continue,
+                                let Some(server) = server.as_mut() else {
+                                    continue;
                                 };
                                 match server.get_default_source() {
                                     Ok(source) => {
@@ -287,9 +284,8 @@ impl PulseHandle {
                                 }
                             }
                             Message::GetSinks => {
-                                let server = match server.as_mut() {
-                                    Some(s) => s,
-                                    None => continue,
+                                let Some(server) = server.as_mut() else {
+                                    continue;
                                 };
                                 match server.get_sinks() {
                                     Ok(sinks) => {
@@ -303,9 +299,8 @@ impl PulseHandle {
                                 }
                             }
                             Message::GetSources => {
-                                let server = match server.as_mut() {
-                                    Some(s) => s,
-                                    None => continue,
+                                let Some(server) = server.as_mut() else {
+                                    continue;
                                 };
                                 match server.get_sources() {
                                     Ok(sinks) => {
@@ -319,23 +314,20 @@ impl PulseHandle {
                                 }
                             }
                             Message::SetSinkVolumeByName(name, channel_volumes) => {
-                                let server = match server.as_mut() {
-                                    Some(s) => s,
-                                    None => continue,
+                                let Some(server) = server.as_mut() else {
+                                    continue;
                                 };
-                                server.set_sink_volume_by_name(&name, &channel_volumes)
+                                server.set_sink_volume_by_name(&name, &channel_volumes);
                             }
                             Message::SetSourceVolumeByName(name, channel_volumes) => {
-                                let server = match server.as_mut() {
-                                    Some(s) => s,
-                                    None => continue,
+                                let Some(server) = server.as_mut() else {
+                                    continue;
                                 };
-                                server.set_source_volume_by_name(&name, &channel_volumes)
+                                server.set_source_volume_by_name(&name, &channel_volumes);
                             }
                             Message::SetSinkMuteByName(name, mute) => {
-                                let server = match server.as_mut() {
-                                    Some(s) => s,
-                                    None => continue,
+                                let Some(server) = server.as_mut() else {
+                                    continue;
                                 };
 
                                 let op =
@@ -343,9 +335,8 @@ impl PulseHandle {
                                 server.wait_for_result(op).ok();
                             }
                             Message::SetSourceMuteByName(name, mute) => {
-                                let server = match server.as_mut() {
-                                    Some(s) => s,
-                                    None => continue,
+                                let Some(server) = server.as_mut() else {
+                                    continue;
                                 };
 
                                 let op = server
@@ -368,7 +359,7 @@ impl PulseHandle {
                                         Self::send_connected(&from_pulse_send).await;
                                     }
                                 } else {
-                                    match PulseServer::connect().and_then(|server| server.init()) {
+                                    match PulseServer::connect().and_then(PulseServer::init) {
                                         Ok(new_server) => {
                                             tracing::info!("Connected to server");
                                             Self::send_connected(&from_pulse_send).await;
@@ -385,13 +376,11 @@ impl PulseHandle {
                                 }
                             }
                             Message::SetDefaultSink(device) => {
-                                let server = match server.as_mut() {
-                                    Some(s) => s,
-                                    None => continue,
+                                let Some(server) = server.as_mut() else {
+                                    continue;
                                 };
-                                let default_sink = match server.get_default_sink() {
-                                    Ok(sink) => sink,
-                                    Err(_) => continue,
+                                let Ok(default_sink) = server.get_default_sink() else {
+                                    continue;
                                 };
                                 let to_move = server.get_sink_inputs(default_sink.index);
                                 if let Some(name) = device.name.as_ref() {
@@ -406,13 +395,11 @@ impl PulseHandle {
                                 }
                             }
                             Message::SetDefaultSource(device) => {
-                                let server = match server.as_mut() {
-                                    Some(s) => s,
-                                    None => continue,
+                                let Some(server) = server.as_mut() else {
+                                    continue;
                                 };
-                                let default_source = match server.get_default_source() {
-                                    Ok(source) => source,
-                                    Err(_) => continue,
+                                let Ok(default_source) = server.get_default_source() else {
+                                    continue;
                                 };
                                 let to_move = server.get_source_outputs(default_source.index);
                                 if let Some(name) = device.name.as_ref() {
@@ -422,12 +409,12 @@ impl PulseHandle {
                                             .await
                                         {
                                             tracing::error!("ERROR! {:?}", err);
-                                        };
+                                        }
                                     }
                                 }
                             }
                             _ => {
-                                tracing::warn!("message doesn't match")
+                                tracing::warn!("message doesn't match");
                             }
                         }
                     }
@@ -441,12 +428,12 @@ impl PulseHandle {
     }
 
     async fn send_disconnected(sender: &tokio::sync::mpsc::Sender<Message>) {
-        sender.send(Message::Disconnected).await.unwrap()
+        sender.send(Message::Disconnected).await.unwrap();
     }
 
     #[allow(dead_code)]
     async fn send_connected(sender: &tokio::sync::mpsc::Sender<Message>) {
-        sender.send(Message::Connected).await.unwrap()
+        sender.send(Message::Connected).await.unwrap();
     }
 }
 
@@ -509,22 +496,22 @@ impl PulseServer {
             match self.mainloop.borrow_mut().iterate(false) {
                 IterateResult::Success(_) => {}
                 IterateResult::Err(e) => {
-                    return Err(PulseServerError::IterateErr(IterateResult::Err(e)))
+                    return Err(PulseServerError::IterateErr(IterateResult::Err(e)));
                 }
                 IterateResult::Quit(e) => {
-                    return Err(PulseServerError::IterateErr(IterateResult::Quit(e)))
+                    return Err(PulseServerError::IterateErr(IterateResult::Quit(e)));
                 }
             }
 
             match self.context.borrow().get_state() {
                 pulse::context::State::Ready => break,
                 pulse::context::State::Failed => {
-                    return Err(PulseServerError::ContextErr(pulse::context::State::Failed))
+                    return Err(PulseServerError::ContextErr(pulse::context::State::Failed));
                 }
                 pulse::context::State::Terminated => {
                     return Err(PulseServerError::ContextErr(
                         pulse::context::State::Terminated,
-                    ))
+                    ));
                 }
                 _ => {}
             }
@@ -533,7 +520,7 @@ impl PulseServer {
     }
 
     // Get a list of output devices
-    pub fn get_sinks(&self) -> Result<Vec<DeviceInfo>, PulseServerError> {
+    pub fn get_sinks(&self) -> Result<Vec<DeviceInfo>, PulseServerError<'_>> {
         let list: Rc<RefCell<Option<Vec<DeviceInfo>>>> = Rc::new(RefCell::new(Some(Vec::new())));
         let list_ref = list.clone();
 
@@ -544,7 +531,7 @@ impl PulseServer {
                 }
             },
         );
-        self.wait_for_result(operation).and_then(|_| {
+        self.wait_for_result(operation).and_then(|()| {
             list.borrow_mut().take().ok_or(PulseServerError::Misc(
                 "get_sinks(): failed to wait for operation",
             ))
@@ -552,7 +539,7 @@ impl PulseServer {
     }
 
     // Get a list of input devices
-    pub fn get_sources(&self) -> Result<Vec<DeviceInfo>, PulseServerError> {
+    pub fn get_sources(&self) -> Result<Vec<DeviceInfo>, PulseServerError<'_>> {
         let list: Rc<RefCell<Option<Vec<DeviceInfo>>>> = Rc::new(RefCell::new(Some(Vec::new())));
         let list_ref = list.clone();
 
@@ -563,14 +550,14 @@ impl PulseServer {
                 }
             },
         );
-        self.wait_for_result(operation).and_then(|_| {
+        self.wait_for_result(operation).and_then(|()| {
             list.borrow_mut().take().ok_or(PulseServerError::Misc(
                 "get_sources(): Failed to wait for operation",
             ))
         })
     }
 
-    pub fn get_server_info(&mut self) -> Result<ServerInfo, PulseServerError> {
+    pub fn get_server_info(&mut self) -> Result<ServerInfo, PulseServerError<'_>> {
         let info = Rc::new(RefCell::new(Some(None)));
         let info_ref = info.clone();
 
@@ -644,7 +631,7 @@ impl PulseServer {
         true
     }
 
-    fn get_default_sink(&mut self) -> Result<DeviceInfo, PulseServerError> {
+    fn get_default_sink(&mut self) -> Result<DeviceInfo, PulseServerError<'_>> {
         let server_info = self.get_server_info();
         match server_info {
             Ok(info) => {
@@ -669,7 +656,7 @@ impl PulseServer {
         }
     }
 
-    fn get_default_source(&mut self) -> Result<DeviceInfo, PulseServerError> {
+    fn get_default_source(&mut self) -> Result<DeviceInfo, PulseServerError<'_>> {
         let server_info = self.get_server_info();
         match server_info {
             Ok(info) => {
@@ -751,17 +738,17 @@ impl PulseServer {
     fn wait_for_result<G: ?Sized>(
         &self,
         operation: pulse::operation::Operation<G>,
-    ) -> Result<(), PulseServerError> {
+    ) -> Result<(), PulseServerError<'_>> {
         // TODO: make this loop async. It is already in an async context, so
         // we could make this thread sleep while waiting for the pulse server's
         // response.
         loop {
             match self.mainloop.borrow_mut().iterate(false) {
                 IterateResult::Err(e) => {
-                    return Err(PulseServerError::IterateErr(IterateResult::Err(e)))
+                    return Err(PulseServerError::IterateErr(IterateResult::Err(e)));
                 }
                 IterateResult::Quit(e) => {
-                    return Err(PulseServerError::IterateErr(IterateResult::Quit(e)))
+                    return Err(PulseServerError::IterateErr(IterateResult::Quit(e)));
                 }
                 IterateResult::Success(_) => {}
             }
@@ -771,7 +758,7 @@ impl PulseServer {
                 pulse::operation::State::Cancelled => {
                     return Err(PulseServerError::OperationErr(
                         pulse::operation::State::Cancelled,
-                    ))
+                    ));
                 }
             }
         }
@@ -790,8 +777,8 @@ pub struct DeviceInfo {
 impl<'a> From<&SinkInfo<'a>> for DeviceInfo {
     fn from(info: &SinkInfo<'a>) -> Self {
         Self {
-            name: info.name.clone().map(|x| x.into_owned()),
-            description: info.description.clone().map(|x| x.into_owned()),
+            name: info.name.as_deref().map(str::to_string),
+            description: info.description.as_deref().map(str::to_string),
             volume: info.volume,
             mute: info.mute,
             index: info.index,
@@ -802,8 +789,8 @@ impl<'a> From<&SinkInfo<'a>> for DeviceInfo {
 impl<'a> From<&SourceInfo<'a>> for DeviceInfo {
     fn from(info: &SourceInfo<'a>) -> Self {
         Self {
-            name: info.name.clone().map(|x| x.into_owned()),
-            description: info.description.clone().map(|x| x.into_owned()),
+            name: info.name.as_deref().map(str::to_string),
+            description: info.description.as_deref().map(str::to_string),
             volume: info.volume,
             mute: info.mute,
             index: info.index,
@@ -837,14 +824,15 @@ pub struct ServerInfo {
 
 impl<'a> From<&'a pulse::context::introspect::ServerInfo<'a>> for ServerInfo {
     fn from(info: &'a pulse::context::introspect::ServerInfo<'a>) -> Self {
+        use std::borrow::Cow;
         Self {
-            user_name: info.user_name.as_ref().map(|cow| cow.to_string()),
-            host_name: info.host_name.as_ref().map(|cow| cow.to_string()),
-            server_version: info.server_version.as_ref().map(|cow| cow.to_string()),
-            server_name: info.server_name.as_ref().map(|cow| cow.to_string()),
+            user_name: info.user_name.as_ref().map(Cow::to_string),
+            host_name: info.host_name.as_ref().map(Cow::to_string),
+            server_version: info.server_version.as_ref().map(Cow::to_string),
+            server_name: info.server_name.as_ref().map(Cow::to_string),
             //sample_spec: info.sample_spec,
-            default_sink_name: info.default_sink_name.as_ref().map(|cow| cow.to_string()),
-            default_source_name: info.default_source_name.as_ref().map(|cow| cow.to_string()),
+            default_sink_name: info.default_sink_name.as_ref().map(Cow::to_string),
+            default_source_name: info.default_source_name.as_ref().map(Cow::to_string),
             cookie: info.cookie,
             //channel_map: info.channel_map,
         }

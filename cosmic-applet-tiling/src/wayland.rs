@@ -19,19 +19,17 @@ use cctk::{
 };
 use cosmic::iced::futures;
 use cosmic_protocols::workspace::v2::client::zcosmic_workspace_handle_v2::TilingState;
-use futures::{channel::mpsc, executor::block_on, SinkExt};
-use std::{
-    collections::HashSet,
-    os::{
-        fd::{FromRawFd, RawFd},
-        unix::net::UnixStream,
-    },
+use futures::{SinkExt, channel::mpsc, executor::block_on};
+use rustc_hash::FxHashSet;
+use std::os::{
+    fd::{FromRawFd, RawFd},
+    unix::net::UnixStream,
 };
 use tracing::error;
 use wayland_client::{
+    Connection, QueueHandle,
     globals::registry_queue_init,
     protocol::wl_output::{self, WlOutput},
-    Connection, QueueHandle,
 };
 
 #[derive(Debug, Clone)]
@@ -79,7 +77,7 @@ pub fn spawn_workspaces(tx: mpsc::Sender<TilingState>) -> SyncSender<AppRequest>
                 configured_output,
                 workspace_state: WorkspaceState::new(&registry_state, &qhandle),
                 toplevel_info_state: ToplevelInfoState::new(&registry_state, &qhandle),
-                workspaces_with_previous_toplevel: HashSet::new(),
+                workspaces_with_previous_toplevel: FxHashSet::default(),
                 registry_state,
                 expected_output: None,
                 tx,
@@ -88,7 +86,7 @@ pub fn spawn_workspaces(tx: mpsc::Sender<TilingState>) -> SyncSender<AppRequest>
             };
             let loop_handle = event_loop.handle();
             loop_handle
-                .insert_source(workspaces_rx, |e, _, state| match e {
+                .insert_source(workspaces_rx, |e, (), state| match e {
                     Event::Msg(AppRequest::TilingState(autotile)) => {
                         if let Some(w) = state.workspace_state.workspace_groups().find_map(|g| {
                             if let Some(o) = state.expected_output.as_ref() {
@@ -167,7 +165,7 @@ pub struct State {
     registry_state: RegistryState,
     workspace_state: WorkspaceState,
     toplevel_info_state: ToplevelInfoState,
-    workspaces_with_previous_toplevel: HashSet<ext_workspace_handle_v1::ExtWorkspaceHandleV1>,
+    workspaces_with_previous_toplevel: FxHashSet<ext_workspace_handle_v1::ExtWorkspaceHandleV1>,
     have_workspaces: bool,
 }
 
@@ -183,9 +181,10 @@ impl State {
                     .filter_map(|handle| self.workspace_state.workspace_info(handle))
                     .find_map(|w| {
                         if w.state.contains(ext_workspace_handle_v1::State::Active) {
-                            w.tiling.and_then(|e| match e {
-                                WEnum::Value(v) => Some(v),
-                                _ => {
+                            w.tiling.and_then(|e| {
+                                if let WEnum::Value(v) = e {
+                                    Some(v)
+                                } else {
                                     error!("No tiling state for the workspace");
                                     None
                                 }
@@ -273,7 +272,7 @@ impl ToplevelInfoHandler for State {
     ) {
         let Some(w) = self
             .toplevel_info_state
-            .info(&toplevel)
+            .info(toplevel)
             .map(|t| t.workspace.clone())
         else {
             return;
@@ -289,7 +288,7 @@ impl ToplevelInfoHandler for State {
     ) {
         let Some(w) = self
             .toplevel_info_state
-            .info(&toplevel)
+            .info(toplevel)
             .map(|t| t.workspace.clone())
         else {
             return;

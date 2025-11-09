@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use cosmic::cosmic_config::{
-    self, cosmic_config_derive::CosmicConfigEntry, Config, CosmicConfigEntry,
+    self, Config, CosmicConfigEntry, cosmic_config_derive::CosmicConfigEntry,
 };
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
@@ -42,7 +42,7 @@ impl AppListConfig {
     }
 
     pub fn remove_pinned(&mut self, id: &str, config: &Config) {
-        if let Some(pos) = self.favorites.iter().position(|e| e == &id) {
+        if let Some(pos) = self.favorites.iter().position(|e| e == id) {
             self.favorites.remove(pos);
             let _ = self.write_entry(config);
         }

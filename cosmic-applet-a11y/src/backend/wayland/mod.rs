@@ -4,19 +4,19 @@
 use anyhow;
 use cctk::sctk::reexports::calloop::{self, channel::SyncSender};
 use cosmic::iced::{
-    self,
-    futures::{self, channel::mpsc, SinkExt, StreamExt},
-    stream, Subscription,
+    self, Subscription,
+    futures::{self, SinkExt, StreamExt, channel::mpsc},
+    stream,
 };
 use cosmic_protocols::a11y::v1::client::cosmic_a11y_manager_v1::Filter;
 use cosmic_settings_subscriptions::cosmic_a11y_manager::{
     self as thread, AccessibilityEvent, AccessibilityRequest,
 };
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 use tokio::sync::Mutex;
 
-pub static WAYLAND_RX: Lazy<Mutex<Option<tokio::sync::mpsc::Receiver<AccessibilityEvent>>>> =
-    Lazy::new(|| Mutex::new(None));
+pub static WAYLAND_RX: LazyLock<Mutex<Option<tokio::sync::mpsc::Receiver<AccessibilityEvent>>>> =
+    LazyLock::new(|| Mutex::new(None));
 
 #[derive(Debug, Clone)]
 pub enum WaylandUpdate {
@@ -82,6 +82,6 @@ pub struct WaylandWatcher {
 impl WaylandWatcher {
     pub fn new() -> anyhow::Result<Self> {
         let (tx, rx) = thread::spawn_wayland_connection(1)?;
-        Ok(Self { tx, rx })
+        Ok(Self { rx, tx })
     }
 }

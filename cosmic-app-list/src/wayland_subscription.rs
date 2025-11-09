@@ -12,23 +12,23 @@ use cctk::{
     },
 };
 use cosmic::{
-    iced::{self, stream, Subscription},
+    iced::{self, Subscription, stream},
     iced_core::image::Bytes,
 };
 use image::EncodableLayout;
 
 use futures::{
-    channel::mpsc::{unbounded, UnboundedReceiver},
     SinkExt, StreamExt,
+    channel::mpsc::{UnboundedReceiver, unbounded},
 };
-use once_cell::sync::Lazy;
 use std::fmt::Debug;
+use std::sync::LazyLock;
 use tokio::sync::Mutex;
 
 use crate::wayland_handler::wayland_handler;
 
-pub static WAYLAND_RX: Lazy<Mutex<Option<UnboundedReceiver<WaylandUpdate>>>> =
-    Lazy::new(|| Mutex::new(None));
+pub static WAYLAND_RX: LazyLock<Mutex<Option<UnboundedReceiver<WaylandUpdate>>>> =
+    LazyLock::new(|| Mutex::new(None));
 
 pub fn wayland_subscription() -> iced::Subscription<WaylandUpdate> {
     Subscription::run_with_id(
@@ -57,11 +57,13 @@ pub struct WaylandImage {
 
 impl WaylandImage {
     pub fn new(img: image::RgbaImage) -> Self {
+        let width = img.width();
+        let height = img.height();
+
         Self {
-            // TODO avoid copy?
-            img: Bytes::copy_from_slice(img.as_bytes()),
-            width: img.width(),
-            height: img.height(),
+            img: Bytes::from_owner(img.into_vec()),
+            width,
+            height,
         }
     }
 }
@@ -91,16 +93,13 @@ async fn start_listening(
                 }
                 guard.as_mut().unwrap()
             };
-            match rx.next().await {
-                Some(u) => {
-                    _ = output.send(u).await;
-                    State::Waiting
-                }
-                None => {
-                    _ = output.send(WaylandUpdate::Finished).await;
-                    tracing::error!("Wayland handler thread died");
-                    State::Finished
-                }
+            if let Some(u) = rx.next().await {
+                _ = output.send(u).await;
+                State::Waiting
+            } else {
+                _ = output.send(WaylandUpdate::Finished).await;
+                tracing::error!("Wayland handler thread died");
+                State::Finished
             }
         }
         State::Finished => iced::futures::future::pending().await,

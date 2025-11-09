@@ -1,11 +1,16 @@
 [Desktop Entry]
 Name=Notifications Tray
 Name[bg]=Тава за известия
+Name[ar]=درج الإشعارات
+Name[cs]=Panel oznámení
 Name[zh_CN]=通知托盘
 Name[hu]=Értesítési terület
 Name[nl]=Meldingsvlak
 Name[pl]=Zasobnik powiadomień
 Name[pt]=Área de Notificações
+Name[sk]=Panel oznámení
+Name[sv]=Fält för programikoner
+Name[es]=Bandeja de notificaciones
 Type=Application
 Exec=cosmic-applet-status-area
 Terminal=false

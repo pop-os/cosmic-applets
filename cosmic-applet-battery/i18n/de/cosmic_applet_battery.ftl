@@ -11,4 +11,4 @@ hours = h
 until-empty = bis leer
 power-settings = Energie- und Akkueinstellungen...
 dgpu-running = Dedizierte GPU ist aktiv und kann die Akkulaufzeit reduzieren
-dgpu-applications = Anwendungen, die die dedizierte GPU {$gpu_name} nutzen
+dgpu-applications = Anwendungen, die die dedizierte GPU { $gpu_name } nutzen

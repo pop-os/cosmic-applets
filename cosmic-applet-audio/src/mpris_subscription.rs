@@ -4,8 +4,8 @@
 use std::{borrow::Cow, fmt::Debug, hash::Hash, path::PathBuf};
 
 use cosmic::{
-    iced::{self, stream, Subscription},
-    iced_futures::futures::{self, future::OptionFuture, SinkExt, StreamExt},
+    iced::{self, Subscription, stream},
+    iced_futures::futures::{self, SinkExt, StreamExt, future::OptionFuture},
 };
 use mpris2_zbus::{
     enumerator,
@@ -15,8 +15,8 @@ use mpris2_zbus::{
 use tokio::join;
 use urlencoding::decode;
 use zbus::{
-    names::{BusName, OwnedBusName},
     Connection,
+    names::{BusName, OwnedBusName},
 };
 
 #[derive(Clone, Debug)]
@@ -35,7 +35,7 @@ pub struct PlayerStatus {
 impl PlayerStatus {
     async fn new(player: Player) -> Option<Self> {
         let metadata = player.metadata().await.ok()?;
-        let pathname = metadata.url().unwrap_or("".into());
+        let pathname = metadata.url().unwrap_or_default();
         let pathbuf = PathBuf::from(pathname);
 
         let title = metadata
@@ -108,7 +108,7 @@ impl MprisPlayer {
         })
     }
 
-    fn name(&self) -> &BusName {
+    fn name(&self) -> &BusName<'_> {
         self.player.inner().destination()
     }
 }
@@ -126,6 +126,7 @@ pub enum MprisRequest {
     Pause,
     Next,
     Previous,
+    Raise,
 }
 
 struct State {
@@ -170,7 +171,7 @@ impl State {
         filter_firefox_players(&mut players);
 
         // pre-sort by path so that the same player is always selected
-        players.sort_by(|a, b| a.name().cmp(&b.name()));
+        players.sort_unstable_by(|a, b| a.name().cmp(b.name()));
 
         let mut state = Self {
             conn,
@@ -178,7 +179,7 @@ impl State {
             players,
             active_player: None,
             active_player_metadata_stream: None,
-            any_player_state_stream: futures::stream::select_all(Vec::new()),
+            any_player_state_stream: futures::stream::select_all([]),
         };
         state.update_active_player().await;
         state.update_any_player_state_stream().await;
@@ -195,7 +196,7 @@ impl State {
         };
         self.players.push(player);
         filter_firefox_players(&mut self.players);
-        self.players.sort_by(|a, b| a.name().cmp(&b.name()));
+        self.players.sort_by(|a, b| a.name().cmp(b.name()));
         self.update_any_player_state_stream().await;
     }
 
@@ -242,7 +243,7 @@ async fn run(output: &mut futures::channel::mpsc::Sender<MprisUpdate>) {
     let mut state = match State::new().await {
         Ok(state) => state,
         Err(err) => {
-            tracing::error!("Faile do monitor for mpris clients: {}", err);
+            tracing::error!("Failed to monitor for mpris clients: {}", err);
             return;
         }
     };
@@ -253,7 +254,7 @@ async fn run(output: &mut futures::channel::mpsc::Sender<MprisUpdate>) {
                 _ = output.send(MprisUpdate::Player(player_status)).await;
             } else {
                 tracing::error!("Failed to get player status.");
-            };
+            }
         } else {
             let _ = output.send(MprisUpdate::Setup).await;
         }
@@ -282,11 +283,11 @@ async fn run(output: &mut futures::channel::mpsc::Sender<MprisUpdate>) {
             _ = state.any_player_state_stream.next(), if !state.players.is_empty() => {
                 state.update_active_player().await;
             },
-        };
+        }
     }
 }
 
-async fn find_active<'a>(players: &'a Vec<MprisPlayer>) -> Option<&'a MprisPlayer> {
+async fn find_active<'a>(players: &'a [MprisPlayer]) -> Option<&'a MprisPlayer> {
     let mut best = (0, None::<&'a MprisPlayer>);
     let eval = |p: Player| async move {
         let v = {
@@ -302,7 +303,7 @@ async fn find_active<'a>(players: &'a Vec<MprisPlayer>) -> Option<&'a MprisPlaye
         v + p.metadata().await.is_ok() as i32
     };
 
-    for p in players.iter() {
+    for p in players {
         let v = eval(p.player.clone()).await;
         if v > best.0 {
             best = (v, Some(p));

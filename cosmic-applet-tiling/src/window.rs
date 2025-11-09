@@ -6,15 +6,15 @@ use crate::{
 };
 use cctk::sctk::reexports::calloop::channel::SyncSender;
 use cosmic::{
-    app,
+    Element, Task, app,
     app::Core,
     applet::{menu_button, padded_control},
     cosmic_config::{Config, ConfigSet, CosmicConfigEntry},
     cosmic_theme::Spacing,
     iced::{
+        Length, Subscription,
         platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
         window::Id,
-        Length, Limits, Subscription,
     },
     iced_widget::{column, row},
     surface, theme,
@@ -23,11 +23,10 @@ use cosmic::{
         segmented_button::{self, Entity, SingleSelectModel},
         segmented_control, text,
     },
-    Element, Task,
 };
 use cosmic_comp_config::{CosmicCompConfig, TileBehavior};
 use cosmic_protocols::workspace::v2::client::zcosmic_workspace_handle_v2::TilingState;
-use cosmic_time::{anim, chain, id, Timeline};
+use cosmic_time::{Timeline, anim, chain, id};
 use std::{thread, time::Instant};
 use tracing::error;
 
@@ -111,7 +110,7 @@ impl cosmic::Application for Window {
         let window = Self {
             core,
             popup: None,
-            timeline: Default::default(),
+            timeline: Timeline::default(),
             autotiled: config.autotile,
             config,
             config_helper,
@@ -133,7 +132,7 @@ impl cosmic::Application for Window {
             .timeline
             .as_subscription()
             .map(|(_, now)| Message::Frame(now));
-        Subscription::batch(vec![
+        Subscription::batch([
             timeline,
             self.core
                 .watch_config::<CosmicCompConfig>("com.system76.CosmicComp")
@@ -173,7 +172,7 @@ impl cosmic::Application for Window {
                     self.active_hint = id::Toggler::unique();
                     let new_id = Id::unique();
                     self.popup = Some(new_id);
-                    let mut popup_settings = self.core.applet.get_popup_settings(
+                    let popup_settings = self.core.applet.get_popup_settings(
                         self.core.main_window_id().unwrap(),
                         new_id,
                         Some((1, 1)),
@@ -182,7 +181,7 @@ impl cosmic::Application for Window {
                     );
 
                     get_popup(popup_settings)
-                }
+                };
             }
             Message::PopupClosed(id) => {
                 if self.popup.as_ref() == Some(&id) {
@@ -203,7 +202,7 @@ impl cosmic::Application for Window {
                     };
 
                     if let Err(err) = tx.send(AppRequest::TilingState(state)) {
-                        error!("Failed to send the tiling state update. {err:?}")
+                        error!("Failed to send the tiling state update. {err:?}");
                     }
                 }
             }
@@ -224,16 +223,14 @@ impl cosmic::Application for Window {
                         .activate_position(if c.autotile { 0 } else { 1 });
                 }
 
-                if c.active_hint != self.config.active_hint {
-                    if self.popup.is_some() {
-                        self.timeline
-                            .set_chain(if c.active_hint {
-                                cosmic_time::chain::Toggler::on(self.active_hint.clone(), 1.0)
-                            } else {
-                                cosmic_time::chain::Toggler::off(self.active_hint.clone(), 1.0)
-                            })
-                            .start();
-                    }
+                if c.active_hint != self.config.active_hint && self.popup.is_some() {
+                    self.timeline
+                        .set_chain(if c.active_hint {
+                            cosmic_time::chain::Toggler::on(self.active_hint.clone(), 1.0)
+                        } else {
+                            cosmic_time::chain::Toggler::off(self.active_hint.clone(), 1.0)
+                        })
+                        .start();
                 }
 
                 self.config = *c;
@@ -253,7 +250,7 @@ impl cosmic::Application for Window {
                     };
 
                     if let Err(err) = tx.send(AppRequest::DefaultBehavior(state)) {
-                        error!("Failed to send the tiling state update. {err:?}")
+                        error!("Failed to send the tiling state update. {err:?}");
                     }
                 }
 
@@ -277,7 +274,7 @@ impl cosmic::Application for Window {
         Task::none()
     }
 
-    fn view(&self) -> Element<Self::Message> {
+    fn view(&self) -> Element<'_, Self::Message> {
         self.core
             .applet
             .icon_button(if self.autotiled { ON } else { OFF })
@@ -285,7 +282,7 @@ impl cosmic::Application for Window {
             .into()
     }
 
-    fn view_window(&self, _id: Id) -> Element<Self::Message> {
+    fn view_window(&self, _id: Id) -> Element<'_, Self::Message> {
         let Spacing {
             space_xxxs,
             space_xxs,

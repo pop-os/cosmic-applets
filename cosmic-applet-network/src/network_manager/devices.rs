@@ -1,5 +1,5 @@
 use super::{NetworkManagerEvent, NetworkManagerState};
-use cosmic::iced::{self, stream, Subscription};
+use cosmic::iced::{self, Subscription, stream};
 use cosmic_dbus_networkmanager::nm::NetworkManager;
 use futures::{SinkExt, StreamExt};
 use std::{fmt::Debug, hash::Hash};
@@ -51,7 +51,7 @@ async fn start_listening(
     let mut devices_changed = network_manager.receive_devices_changed().await;
 
     let secs = if has_popup { 4 } else { 60 };
-    while let (Some(_change), _) = tokio::join!(
+    while let (Some(_change), ()) = tokio::join!(
         devices_changed.next(),
         tokio::time::sleep(tokio::time::Duration::from_secs(secs))
     ) {

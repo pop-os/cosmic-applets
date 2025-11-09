@@ -18,3 +18,5 @@ router-wps-button = Is féidir leat nascadh freisin trí chnaipe "WPS" an ródai
 unable-to-connect = Ní féidir ceangal leis an líonra
 check-wifi-connection = Cinntigh go bhfuil Wi-Fi ceangailte leis an idirlíon agus go bhfuil an focal faire ceart
 reset = Athshocraigh
+identity = Céannacht
+vpn-connections = Naisc VPN

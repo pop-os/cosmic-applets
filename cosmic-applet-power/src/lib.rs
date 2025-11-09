@@ -1,28 +1,20 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
-use std::cell::LazyCell;
-
 use cosmic::{
-    app,
+    Element, Task, app,
     applet::{menu_button, padded_control},
-    cctk::wayland_protocols::xdg::shell::client::xdg_positioner::Gravity,
     cosmic_theme::Spacing,
     iced::{
-        self,
-        platform_specific::{
-            runtime::wayland::subsurface,
-            shell::commands::popup::{destroy_popup, get_popup},
-        },
+        self, Alignment, Length,
+        platform_specific::shell::commands::popup::{destroy_popup, get_popup},
         widget::{self, column, row},
-        window, Alignment, Length,
+        window,
     },
-    iced_runtime::core::layout::Limits,
     surface, theme,
-    widget::{autosize, button, divider, icon, layer_container::layer_container, text, Space},
-    Element, Task,
+    widget::{Space, button, divider, icon, text},
 };
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 
 use logind_zbus::{
     manager::ManagerProxy,
@@ -39,8 +31,8 @@ pub mod session_manager;
 
 use crate::{cosmic_session::CosmicSessionProxy, session_manager::SessionManagerProxy};
 
-static SUBSURFACE_ID: Lazy<cosmic::widget::Id> =
-    Lazy::new(|| cosmic::widget::Id::new("subsurface"));
+static SUBSURFACE_ID: LazyLock<cosmic::widget::Id> =
+    LazyLock::new(|| cosmic::widget::Id::new("subsurface"));
 
 pub fn run() -> cosmic::iced::Result {
     localize::localize();
@@ -107,7 +99,7 @@ impl cosmic::Application for Power {
                 core,
                 icon_name: "system-shutdown-symbolic".to_string(),
                 subsurface_id: window::Id::unique(),
-                popup: Default::default(),
+                popup: Option::default(),
             },
             Task::none(),
         )
@@ -126,7 +118,7 @@ impl cosmic::Application for Power {
                     let new_id = window::Id::unique();
                     self.popup.replace(new_id);
 
-                    let mut popup_settings = self.core.applet.get_popup_settings(
+                    let popup_settings = self.core.applet.get_popup_settings(
                         self.core.main_window_id().unwrap(),
                         new_id,
                         None,
@@ -166,12 +158,12 @@ impl cosmic::Application for Power {
                         }
                     }
                     a => return a.perform(),
-                };
+                }
                 Task::none()
             }
             Message::Zbus(result) => {
                 if let Err(e) = result {
-                    eprintln!("cosmic-applet-power ERROR: '{}'", e);
+                    eprintln!("cosmic-applet-power ERROR: '{e}'");
                 }
                 Task::none()
             }
@@ -189,7 +181,7 @@ impl cosmic::Application for Power {
         }
     }
 
-    fn view(&self) -> Element<Message> {
+    fn view(&self) -> Element<'_, Message> {
         self.core
             .applet
             .icon_button(&self.icon_name)
@@ -197,7 +189,7 @@ impl cosmic::Application for Power {
             .into()
     }
 
-    fn view_window(&self, id: window::Id) -> Element<Message> {
+    fn view_window(&self, id: window::Id) -> Element<'_, Message> {
         let Spacing {
             space_xxs,
             space_s,
@@ -272,7 +264,7 @@ impl cosmic::Application for Power {
     }
 }
 
-fn power_buttons(name: &str, on_press: Message) -> button::Button<Message> {
+fn power_buttons(name: &str, on_press: Message) -> button::Button<'_, Message> {
     button::custom(
         widget::container(text_icon(name, 40))
             .width(Length::Fill)
@@ -348,16 +340,13 @@ async fn lock() -> zbus::Result<()> {
 async fn log_out() -> zbus::Result<()> {
     let session_type = std::env::var("XDG_CURRENT_DESKTOP").ok();
     let connection = Connection::session().await?;
-    match session_type.as_ref().map(|s| s.trim()) {
-        Some("pop:GNOME") => {
-            let manager_proxy = SessionManagerProxy::new(&connection).await?;
-            manager_proxy.logout(0).await?;
-        }
+    if let Some("pop:GNOME") = session_type.as_ref().map(|s| s.trim()) {
+        let manager_proxy = SessionManagerProxy::new(&connection).await?;
+        manager_proxy.logout(0).await?;
+    } else {
         // By default assume COSMIC
-        _ => {
-            let cosmic_session = CosmicSessionProxy::new(&connection).await?;
-            cosmic_session.exit().await?;
-        }
+        let cosmic_session = CosmicSessionProxy::new(&connection).await?;
+        cosmic_session.exit().await?;
     }
     Ok(())
 }

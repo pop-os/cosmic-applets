@@ -1,6 +1,6 @@
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 
-use cosmic_config::{cosmic_config_derive::CosmicConfigEntry, CosmicConfigEntry};
+use cosmic_config::{CosmicConfigEntry, cosmic_config_derive::CosmicConfigEntry};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone, CosmicConfigEntry)]
@@ -8,13 +8,13 @@ use serde::{Deserialize, Serialize};
 #[serde(deny_unknown_fields)]
 pub struct CosmicPanelButtonConfig {
     /// configs indexed by panel name
-    pub configs: HashMap<String, IndividualConfig>,
+    pub configs: FxHashMap<String, IndividualConfig>,
 }
 
 impl Default for CosmicPanelButtonConfig {
     fn default() -> Self {
         Self {
-            configs: HashMap::from([
+            configs: FxHashMap::from_iter([
                 (
                     "Panel".to_string(),
                     IndividualConfig {

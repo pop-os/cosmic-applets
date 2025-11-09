@@ -42,7 +42,7 @@ pub async fn active_connections(
                 Some(SpecificDevice::Wired(wired_device)) => {
                     info.push(ActiveConnectionInfo::Wired {
                         name: connection.id().await?,
-                        hw_address: HwAddress::from_string(&wired_device.hw_address().await?)
+                        hw_address: HwAddress::from_str(&wired_device.hw_address().await?)
                             .unwrap_or_default(),
                         speed: wired_device.speed().await?,
                         ip_addresses: addresses.clone(),
@@ -53,10 +53,8 @@ pub async fn active_connections(
                         info.push(ActiveConnectionInfo::WiFi {
                             name: String::from_utf8_lossy(&access_point.ssid().await?).into_owned(),
                             ip_addresses: addresses.clone(),
-                            hw_address: HwAddress::from_string(
-                                &wireless_device.hw_address().await?,
-                            )
-                            .unwrap_or_default(),
+                            hw_address: HwAddress::from_str(&wireless_device.hw_address().await?)
+                                .unwrap_or_default(),
                             state,
                             strength: access_point.strength().await.unwrap_or_default(),
                         });
@@ -73,15 +71,7 @@ pub async fn active_connections(
         }
     }
 
-    info.sort_by(|a, b| {
-        let helper = |conn: &ActiveConnectionInfo| match conn {
-            ActiveConnectionInfo::Vpn { name, .. } => format!("0{name}"),
-            ActiveConnectionInfo::Wired { name, .. } => format!("1{name}"),
-            ActiveConnectionInfo::WiFi { name, .. } => format!("2{name}"),
-        };
-        helper(a).cmp(&helper(b))
-    });
-
+    info.sort_unstable();
     Ok(info)
 }
 
@@ -109,16 +99,74 @@ pub enum ActiveConnectionInfo {
 impl ActiveConnectionInfo {
     pub fn name(&self) -> String {
         match &self {
-            Self::Wired { name, .. } => name.clone(),
-            Self::WiFi { name, .. } => name.clone(),
-            Self::Vpn { name, .. } => name.clone(),
+            Self::Wired { name, .. } | Self::WiFi { name, .. } | Self::Vpn { name, .. } => {
+                name.clone()
+            }
         }
     }
     pub fn hw_address(&self) -> HwAddress {
         match &self {
-            Self::Wired { hw_address, .. } => *hw_address,
-            Self::WiFi { hw_address, .. } => *hw_address,
+            Self::Wired { hw_address, .. } | Self::WiFi { hw_address, .. } => *hw_address,
             Self::Vpn { .. } => HwAddress::default(),
+        }
+    }
+}
+
+impl std::cmp::Ord for ActiveConnectionInfo {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        match (self, other) {
+            (Self::Vpn { .. }, Self::Wired { .. } | Self::WiFi { .. })
+            | (Self::Wired { .. }, Self::WiFi { .. }) => std::cmp::Ordering::Less,
+
+            (Self::WiFi { .. }, Self::Wired { .. } | Self::Vpn { .. })
+            | (Self::Wired { .. }, Self::Vpn { .. }) => std::cmp::Ordering::Greater,
+
+            (Self::Vpn { name: n1, .. }, Self::Vpn { name: n2, .. })
+            | (Self::Wired { name: n1, .. }, Self::Wired { name: n2, .. })
+            | (Self::WiFi { name: n1, .. }, Self::WiFi { name: n2, .. }) => n1.cmp(n2),
+        }
+    }
+}
+
+impl std::cmp::Eq for ActiveConnectionInfo {}
+
+impl std::cmp::PartialOrd for ActiveConnectionInfo {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl std::cmp::PartialEq for ActiveConnectionInfo {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (
+                Self::Wired {
+                    name: n1,
+                    hw_address: a1,
+                    ..
+                },
+                Self::Wired {
+                    name: n2,
+                    hw_address: a2,
+                    ..
+                },
+            )
+            | (
+                Self::WiFi {
+                    name: n1,
+                    hw_address: a1,
+                    ..
+                },
+                Self::WiFi {
+                    name: n2,
+                    hw_address: a2,
+                    ..
+                },
+            ) => n1 == n2 && a1 == a2,
+
+            (Self::Vpn { name: n1, .. }, Self::Vpn { name: n2, .. }) => n1 == n2,
+
+            _ => false,
         }
     }
 }

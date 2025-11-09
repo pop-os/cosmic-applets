@@ -1,12 +1,17 @@
 [Desktop Entry]
 Name=App Tray
 Name[bg]=Тава за програми
+Name[ar]=درج التطبيقات
+Name[cs]=Panel aplikací
 Name[zh_CN]=应用托盘
 Name[hu]=Alkalmazástálca
 Name[pl]=Zasobnik aplikacji
 Name[pt]=Bandeja de Aplicativos
 Name[de]=App-Tray
 Name[nl]=App-Tray
+Name[sk]=Panel aplikácií
+Name[sv]=Programfält
+Name[es]=Bandeja de aplicaciones
 Type=Application
 Exec=cosmic-app-list
 Terminal=false

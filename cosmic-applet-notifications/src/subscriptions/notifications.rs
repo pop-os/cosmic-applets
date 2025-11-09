@@ -12,7 +12,6 @@ use cosmic_notifications_util::Notification;
 use futures_util::{SinkExt, StreamExt};
 use std::{
     collections::HashMap,
-    future::pending,
     os::unix::io::{FromRawFd, RawFd},
     pin::pin,
 };
@@ -67,7 +66,7 @@ pub fn notifications(proxy: NotificationsAppletProxy<'static>) -> Subscription<O
                             std::process::exit(0);
                         } else {
                             tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-                        };
+                        }
                         continue;
                     }
                 }
@@ -81,7 +80,7 @@ pub fn notifications(proxy: NotificationsAppletProxy<'static>) -> Subscription<O
                         cosmic::iced::futures::select! {
                             v = next_signal => {
                                 if let Some(msg) = v {
-                                    let Some(args) = msg.args().into_iter().next() else {
+                                    let Ok(args) = msg.args() else {
                                         break;
                                     };
                                     let notification = Notification::new(
@@ -102,10 +101,10 @@ pub fn notifications(proxy: NotificationsAppletProxy<'static>) -> Subscription<O
                             }
                             v = next_input => {
                                 if let Some(Input::Activated(id, action)) = v {
-                                    if let Err(err) = proxy.invoke_action(id, action.clone()).await {
+                                    if proxy.invoke_action(id, action.clone()).await.is_err() {
                                         tracing::error!("Failed to invoke action {id} {action}");
                                     } else {
-                                        tracing::error!("Invoked {action} for {id}")
+                                        tracing::error!("Invoked {action} for {id}");
                                     }
                                 } else {
                                     tracing::error!("Channel closed, ending notifications subscription");

@@ -4,38 +4,35 @@
 mod localize;
 mod mouse_area;
 
+use std::sync::LazyLock;
 use std::time::Duration;
 
 use crate::{localize::localize, pulse::DeviceInfo};
-use config::AudioAppletConfig;
+use config::{AudioAppletConfig, amplification_sink, amplification_source};
 use cosmic::{
-    app,
+    Element, Renderer, Task, Theme, app,
     applet::{
         cosmic_panel_config::PanelAnchor,
         menu_button, menu_control_padding, padded_control,
-        token::subscription::{activation_token_subscription, TokenRequest, TokenUpdate},
+        token::subscription::{TokenRequest, TokenUpdate, activation_token_subscription},
     },
     cctk::sctk::reexports::calloop,
     cosmic_config::CosmicConfigEntry,
     cosmic_theme::Spacing,
     iced::{
-        self,
+        self, Alignment, Length, Subscription,
         widget::{self, column, row, slider},
-        window, Alignment, Length, Limits, Subscription,
+        window,
     },
     surface, theme,
-    widget::{button, divider, horizontal_space, icon, text, Column, Row},
-    Element, Renderer, Task, Theme,
+    widget::{Column, Row, button, container, divider, horizontal_space, icon, text},
 };
 use cosmic_settings_subscriptions::pulse as sub_pulse;
-use cosmic_time::{anim, chain, id, once_cell::sync::Lazy, Instant, Timeline};
-use iced::{
-    platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
-    widget::container,
-};
+use cosmic_time::{Instant, Timeline, anim, chain, id};
+use iced::platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup};
 use libpulse_binding::volume::Volume;
-use mpris2_zbus::player::PlaybackStatus;
 use mpris_subscription::{MprisRequest, MprisUpdate};
+use mpris2_zbus::player::PlaybackStatus;
 
 mod config;
 mod mpris_subscription;
@@ -47,7 +44,7 @@ static FULL_VOLUME: f64 = Volume::NORMAL.0 as f64;
 // Max volume is 150% volume.
 static MAX_VOLUME: f64 = FULL_VOLUME + (FULL_VOLUME * 0.5);
 
-static SHOW_MEDIA_CONTROLS: Lazy<id::Toggler> = Lazy::new(id::Toggler::unique);
+static SHOW_MEDIA_CONTROLS: LazyLock<id::Toggler> = LazyLock::new(id::Toggler::unique);
 
 const GO_BACK: &str = "media-skip-backward-symbolic";
 const GO_NEXT: &str = "media-skip-forward-symbolic";
@@ -66,9 +63,11 @@ pub struct Audio {
     output_volume: f64,
     output_volume_debounce: bool,
     output_volume_text: String,
+    output_amplification: bool,
     input_volume: f64,
     input_volume_debounce: bool,
     input_volume_text: String,
+    input_amplification: bool,
     current_output: Option<DeviceInfo>,
     current_input: Option<DeviceInfo>,
     outputs: Vec<DeviceInfo>,
@@ -132,8 +131,9 @@ impl Audio {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Default)]
 enum IsOpen {
+    #[default]
     None,
     Output,
     Input,
@@ -167,14 +167,13 @@ pub enum Message {
 }
 
 impl Audio {
-    fn playback_buttons(&self) -> Option<Element<Message>> {
+    fn playback_buttons(&self) -> Option<Element<'_, Message>> {
         if self.player_status.is_some() && self.config.show_media_controls_in_top_panel {
             let mut elements = Vec::with_capacity(3);
             if self
                 .player_status
                 .as_ref()
-                .map(|s| s.can_go_previous)
-                .unwrap_or_default()
+                .is_some_and(|s| s.can_go_previous)
             {
                 elements.push(
                     self.core
@@ -182,7 +181,7 @@ impl Audio {
                         .icon_button(GO_BACK)
                         .on_press(Message::MprisRequest(MprisRequest::Previous))
                         .into(),
-                )
+                );
             }
             if let Some(play) = self.is_play() {
                 elements.push(
@@ -197,12 +196,7 @@ impl Audio {
                         .into(),
                 );
             }
-            if self
-                .player_status
-                .as_ref()
-                .map(|s| s.can_go_next)
-                .unwrap_or_default()
-            {
+            if self.player_status.as_ref().is_some_and(|s| s.can_go_next) {
                 elements.push(
                     self.core
                         .applet
@@ -225,7 +219,7 @@ impl Audio {
         }
     }
 
-    fn go_previous(&self, icon_size: u16) -> Option<Element<Message>> {
+    fn go_previous(&self, icon_size: u16) -> Option<Element<'_, Message>> {
         self.player_status.as_ref().and_then(|s| {
             if s.can_go_previous {
                 Some(
@@ -241,7 +235,7 @@ impl Audio {
         })
     }
 
-    fn go_next(&self, icon_size: u16) -> Option<Element<Message>> {
+    fn go_next(&self, icon_size: u16) -> Option<Element<'_, Message>> {
         self.player_status.as_ref().and_then(|s| {
             if s.can_go_next {
                 Some(
@@ -278,17 +272,11 @@ impl Audio {
     }
 
     fn current_output_mute(&self) -> bool {
-        self.current_output
-            .as_ref()
-            .map(|o| o.mute)
-            .unwrap_or_default()
+        self.current_output.as_ref().is_some_and(|o| o.mute)
     }
 
     fn current_input_mute(&self) -> bool {
-        self.current_input
-            .as_ref()
-            .map(|o| o.mute)
-            .unwrap_or_default()
+        self.current_input.as_ref().is_some_and(|o| o.mute)
     }
 }
 
@@ -302,12 +290,6 @@ impl cosmic::Application for Audio {
         (
             Self {
                 core,
-                is_open: IsOpen::None,
-                current_output: None,
-                current_input: None,
-                outputs: vec![],
-                inputs: vec![],
-                token_tx: None,
                 ..Default::default()
             },
             Task::none(),
@@ -341,7 +323,10 @@ impl cosmic::Application for Audio {
                     self.popup.replace(new_id);
                     self.timeline = Timeline::new();
 
-                    let mut popup_settings = self.core.applet.get_popup_settings(
+                    self.output_amplification = amplification_sink();
+                    self.input_amplification = amplification_source();
+
+                    let popup_settings = self.core.applet.get_popup_settings(
                         self.core.main_window_id().unwrap(),
                         new_id,
                         None,
@@ -419,7 +404,7 @@ impl cosmic::Application for Audio {
                             connection.send(pulse::Message::SetSourceVolumeByName(
                                 name.clone(),
                                 device.volume,
-                            ))
+                            ));
                         }
                     }
                 }
@@ -432,7 +417,7 @@ impl cosmic::Application for Audio {
                     if let Some(device) = &self.current_output {
                         if let Some(name) = &device.name {
                             connection
-                                .send(pulse::Message::SetSinkMuteByName(name.clone(), device.mute))
+                                .send(pulse::Message::SetSinkMuteByName(name.clone(), device.mute));
                         }
                     }
                 }
@@ -505,17 +490,11 @@ impl cosmic::Application for Audio {
                     match msg {
                         // This is where we match messages from the subscription to app state
                         pulse::Message::SetSinks(sinks) => self.outputs = sinks,
-                        pulse::Message::SetSources(sources) => {
-                            self.inputs = sources
-                                .into_iter()
-                                .filter(|source| {
-                                    !source
-                                        .name
-                                        .as_ref()
-                                        .unwrap_or(&String::from("Generic"))
-                                        .contains("monitor")
-                                })
-                                .collect()
+                        pulse::Message::SetSources(mut sources) => {
+                            sources.retain(|source| {
+                                !source.name.as_ref().is_some_and(|n| n.contains("monitor"))
+                            });
+                            self.inputs = sources;
                         }
                         pulse::Message::SetDefaultSink(sink) => {
                             self.update_output(Some(sink));
@@ -601,6 +580,17 @@ impl cosmic::Application for Audio {
                             tracing::error!("Error playing previous: {}", err);
                         }
                     }),
+                    MprisRequest::Raise => tokio::spawn(async move {
+                        let res = player.media_player().await;
+                        if let Err(err) = res {
+                            tracing::error!("Error fetching MediaPlayer: {}", err);
+                        } else {
+                            let res = res.unwrap().raise().await;
+                            if let Err(err) = res {
+                                tracing::error!("Error raising client: {}", err);
+                            }
+                        }
+                    }),
                 };
             }
             Message::OpenSettings => {
@@ -612,7 +602,7 @@ impl cosmic::Application for Audio {
                     });
                 } else {
                     tracing::error!("Wayland tx is None");
-                };
+                }
             }
             Message::Token(u) => match u {
                 TokenUpdate::Init(tx) => {
@@ -675,13 +665,13 @@ impl cosmic::Application for Audio {
                     cosmic::app::Action::Surface(a),
                 ));
             }
-        };
+        }
 
         Task::none()
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        Subscription::batch(vec![
+        Subscription::batch([
             pulse::connect().map(Message::Pulse),
             self.timeline
                 .as_subscription()
@@ -698,27 +688,34 @@ impl cosmic::Application for Audio {
         ])
     }
 
-    fn view(&self) -> Element<Message> {
+    fn view(&self) -> Element<'_, Message> {
         let btn = self
             .core
             .applet
             .icon_button(self.output_icon_name())
             .on_press_down(Message::TogglePopup);
+
+        const WHEEL_STEP: f32 = 5.0; // 5% per wheel event
         let btn = crate::mouse_area::MouseArea::new(btn).on_mouse_wheel(|delta| {
-            let change = match delta {
-                iced::mouse::ScrollDelta::Lines { x, y } => (x + y) * 5.,
-                iced::mouse::ScrollDelta::Pixels { y, .. } => y / 40.3125,
+            let scroll_vector = match delta {
+                iced::mouse::ScrollDelta::Lines { y, .. } => y.signum() * WHEEL_STEP, // -1/0/1
+                iced::mouse::ScrollDelta::Pixels { y, .. } => y.signum(),             // -1/0/1
             };
-            if change.abs() < f32::EPSILON {
+            if scroll_vector == 0.0 {
                 return Message::Ignore;
             }
-            let new_volume = self
-                .current_output
-                .as_ref()
-                .map_or(0f64, |v| volume_to_percent(v.volume.avg()) + change as f64)
-                .clamp(0.0, 150.0);
+
+            let new_volume = (self.output_volume + (scroll_vector as f64)).clamp(
+                0.0,
+                if self.output_amplification {
+                    150.0
+                } else {
+                    100.0
+                },
+            );
             Message::SetOutputVolume(new_volume)
         });
+
         let playback_buttons = (!self.core.applet.suggested_bounds.as_ref().is_some_and(|c| {
             // if we have a configure for width and height, we're in a overflow popup
             c.width > 0. && c.height > 0.
@@ -730,11 +727,11 @@ impl cosmic::Application for Audio {
             .autosize_window(if let Some(Some(playback_buttons)) = playback_buttons {
                 match self.core.applet.anchor {
                     PanelAnchor::Left | PanelAnchor::Right => Element::from(
-                        Column::with_children(vec![playback_buttons, btn.into()])
+                        Column::with_children([playback_buttons, btn.into()])
                             .align_x(Alignment::Center),
                     ),
                     PanelAnchor::Top | PanelAnchor::Bottom => {
-                        Row::with_children(vec![playback_buttons, btn.into()])
+                        Row::with_children([playback_buttons, btn.into()])
                             .align_y(Alignment::Center)
                             .into()
                     }
@@ -745,7 +742,7 @@ impl cosmic::Application for Audio {
             .into()
     }
 
-    fn view_window(&self, _id: window::Id) -> Element<Message> {
+    fn view_window(&self, _id: window::Id) -> Element<'_, Message> {
         let Spacing {
             space_xxs, space_s, ..
         } = theme::active().cosmic().spacing;
@@ -761,6 +758,23 @@ impl cosmic::Application for Audio {
                     .align_x(Alignment::Center)
             )]
         } else {
+            let output_slider = if self.output_amplification {
+                slider(0.0..=150.0, self.output_volume, Message::SetOutputVolume)
+                    .width(Length::FillPortion(5))
+                    .breakpoints(&[100.])
+            } else {
+                slider(0.0..=100.0, self.output_volume, Message::SetOutputVolume)
+                    .width(Length::FillPortion(5))
+            };
+            let input_slider = if self.input_amplification {
+                slider(0.0..=150.0, self.input_volume, Message::SetInputVolume)
+                    .width(Length::FillPortion(5))
+                    .breakpoints(&[100.])
+            } else {
+                slider(0.0..=100.0, self.input_volume, Message::SetInputVolume)
+                    .width(Length::FillPortion(5))
+            };
+
             column![
                 padded_control(
                     row![
@@ -773,9 +787,7 @@ impl cosmic::Application for Audio {
                         .icon_size(24)
                         .line_height(24)
                         .on_press(Message::SetOutputMute(!out_mute)),
-                        slider(0.0..=150.0, self.output_volume, Message::SetOutputVolume)
-                            .width(Length::FillPortion(5))
-                            .breakpoints(&[100.]),
+                        output_slider,
                         container(text(&self.output_volume_text).size(16))
                             .width(Length::FillPortion(1))
                             .align_x(Alignment::End)
@@ -794,9 +806,7 @@ impl cosmic::Application for Audio {
                         .icon_size(24)
                         .line_height(24)
                         .on_press(Message::SetInputMute(!in_mute)),
-                        slider(0.0..=150.0, self.input_volume, Message::SetInputVolume)
-                            .width(Length::FillPortion(5))
-                            .breakpoints(&[100.]),
+                        input_slider,
                         container(text(&self.input_volume_text).size(16))
                             .width(Length::FillPortion(1))
                             .align_x(Alignment::End)
@@ -812,14 +822,7 @@ impl cosmic::Application for Audio {
                         Some(output) => pretty_name(output.description.clone()),
                         None => String::from("No device selected"),
                     },
-                    self.outputs
-                        .clone()
-                        .into_iter()
-                        .map(|output| (
-                            output.name.clone().unwrap_or_default(),
-                            pretty_name(output.description)
-                        ))
-                        .collect(),
+                    self.outputs.as_slice(),
                     Message::OutputToggle,
                     Message::OutputChanged,
                 ),
@@ -830,14 +833,7 @@ impl cosmic::Application for Audio {
                         Some(input) => pretty_name(input.description.clone()),
                         None => fl!("no-device"),
                     },
-                    self.inputs
-                        .clone()
-                        .into_iter()
-                        .map(|input| (
-                            input.name.clone().unwrap_or_default(),
-                            pretty_name(input.description)
-                        ))
-                        .collect(),
+                    self.inputs.as_slice(),
                     Message::InputToggle,
                     Message::InputChanged,
                 )
@@ -923,10 +919,13 @@ impl cosmic::Application for Audio {
             audio_content = audio_content
                 .push(padded_control(divider::horizontal::default()).padding([space_xxs, space_s]));
             audio_content = audio_content.push(
-                Row::with_children(elements)
-                    .align_y(Alignment::Center)
-                    .spacing(8)
-                    .padding(menu_control_padding()),
+                menu_button(
+                    Row::with_children(elements)
+                        .align_y(Alignment::Center)
+                        .spacing(8),
+                )
+                .on_press(Message::MprisRequest(MprisRequest::Raise))
+                .padding(menu_control_padding()),
             );
         }
         let content = column![
@@ -962,17 +961,23 @@ fn revealer(
     open: bool,
     title: String,
     selected: String,
-    options: Vec<(String, String)>,
+    device_info: &[DeviceInfo],
     toggle: Message,
     mut change: impl FnMut(String) -> Message + 'static,
 ) -> widget::Column<'static, Message, crate::Theme, Renderer> {
     if open {
-        options.iter().fold(
+        let options = device_info.iter().map(|device| {
+            (
+                device.name.clone().unwrap_or_default(),
+                pretty_name(device.description.clone()),
+            )
+        });
+        options.fold(
             column![revealer_head(open, title, selected, toggle)].width(Length::Fill),
             |col, (id, name)| {
                 col.push(
-                    menu_button(text::body(name.clone()))
-                        .on_press(change(id.clone()))
+                    menu_button(text::body(name))
+                        .on_press(change(id))
                         .width(Length::Fill)
                         .padding([8, 48]),
                 )
@@ -1030,12 +1035,6 @@ impl PulseState {
         if let Self::Connected(c) = self {
             *self = Self::Disconnected(c.clone());
         }
-    }
-}
-
-impl Default for IsOpen {
-    fn default() -> Self {
-        Self::None
     }
 }
 

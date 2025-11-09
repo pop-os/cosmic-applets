@@ -2,26 +2,24 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use config::{CosmicPanelButtonConfig, IndividualConfig, Override};
-use cosmic::desktop::fde::{self, get_languages_from_env, DesktopEntry};
+use cosmic::desktop::fde::{self, DesktopEntry, get_languages_from_env};
 use cosmic::{
-    app,
+    Task, app,
     applet::{
-        cosmic_panel_config::{PanelAnchor, PanelSize},
         Size,
+        cosmic_panel_config::{PanelAnchor, PanelSize},
     },
     iced::{self, Length},
     iced_widget::row,
     surface,
-    widget::{autosize, vertical_space, Id},
-    Task,
+    widget::{Id, autosize, vertical_space},
 };
 use cosmic_config::{Config, CosmicConfigEntry};
-use once_cell::sync::Lazy;
-use std::{env, fs, process::Command};
+use std::{env, fs, process::Command, sync::LazyLock};
 
 mod config;
 
-static AUTOSIZE_MAIN_ID: Lazy<Id> = Lazy::new(|| Id::new("autosize-main"));
+static AUTOSIZE_MAIN_ID: LazyLock<Id> = LazyLock::new(|| Id::new("autosize-main"));
 
 #[derive(Debug, Clone, Default)]
 struct Desktop {
@@ -105,7 +103,7 @@ impl cosmic::Application for Button {
         Task::none()
     }
 
-    fn view(&self) -> cosmic::Element<Msg> {
+    fn view(&self) -> cosmic::Element<'_, Msg> {
         // currently, panel being anchored to the left or right is a hard
         // override for icon, later if text is updated to wrap, we may
         // use Override::Text to override this behavior
@@ -183,15 +181,15 @@ pub fn run() -> iced::Result {
         if let Ok(bytes) = fs::read_to_string(&path) {
             if let Ok(entry) = DesktopEntry::from_str(&path, &bytes, Some(&locales)) {
                 desktop = Some(Desktop {
-                    name: entry
-                        .name(&locales)
-                        .map(|x| x.to_string())
-                        .unwrap_or_else(|| panic!("Desktop file '{filename}' doesn't have `Name`")),
+                    name: entry.name(&locales).map_or_else(
+                        || panic!("Desktop file '{filename}' doesn't have `Name`"),
+                        |x| x.to_string(),
+                    ),
                     icon: entry.icon().map(|x| x.to_string()),
-                    exec: entry
-                        .exec()
-                        .map(|x| x.to_string())
-                        .unwrap_or_else(|| panic!("Desktop file '{filename}' doesn't have `Exec`")),
+                    exec: entry.exec().map_or_else(
+                        || panic!("Desktop file '{filename}' doesn't have `Exec`"),
+                        |x| x.to_string(),
+                    ),
                 });
                 break;
             }

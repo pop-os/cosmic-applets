@@ -1,0 +1,2 @@
+input = Inngang
+output = Utgang

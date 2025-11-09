@@ -8,32 +8,33 @@ restart = Перезавантажити
 shutdown = Вимкнути
 confirm = Підтвердити
 cancel = Скасувати
-confirm-button = {
-    $action -> 
+confirm-button =
+    { $action ->
         [restart] { restart }
-        [suspend] { suspend}
+        [suspend] { suspend }
         [shutdown] Вимкнути
         [log-out] { log-out }
-        *[other] { confirm}
-}
-confirm-title = 
-    { $action -> 
+       *[other] { confirm }
+    }
+confirm-title =
+    { $action ->
         [restart] { restart }
         [suspend] { suspend }
         [shutdown] { shutdown }
-        [log-out] Закрити всі застосунки та вийти
-        *[other] Виконати вибрану дію
+        [log-out] Вийти з усіх застосунків та завершити сеанс
+       *[other] Виконати обрану дію
     } зараз?
-confirm-body = 
+confirm-body =
     Система { $action ->
         [restart] перезавантажиться
-        [suspend] призупиниться
+        [suspend] призупинеться
         [shutdown] вимкнеться
         [lock-screen] заблокує екран
-        [log-out] виконає вихід
-        *[other] Виконати вибрану дію
+        [log-out] завершить сеанс
+       *[other] виконає обрану дію
     } автоматично за { $countdown } { $countdown ->
         [one] секунду
         [few] секунди
-        *[other] секунд
+       *[other] секунд
     }.
+log-out-shortcut = Super + Shift + Escape

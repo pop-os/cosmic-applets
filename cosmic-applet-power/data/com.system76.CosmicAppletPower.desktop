@@ -1,11 +1,16 @@
 [Desktop Entry]
 Name=User Session
 Name[bg]=Потребителска сесия
+Name[ar]=جلسة المستخدم
+Name[cs]=Uživatelská relace
 Name[zh_CN]=用户会话
 Name[hu]=Felhasználói Munkamenet
 Name[pl]=Sesja użytkownika
 Name[pt]=Sessão de Usuário
 Name[nl]=Gebruikerssessie
+Name[sk]=Používateľská relácia
+Name[sv]=Användarsession
+Name[es]=Sesión de usuario
 Type=Application
 Exec=cosmic-applet-power
 Terminal=false

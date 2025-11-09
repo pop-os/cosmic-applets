@@ -1,35 +1,36 @@
 power = 電源
-settings = 設定...
+settings = 設定…
 lock-screen = 鎖定螢幕
 lock-screen-shortcut = Super + Escape
 log-out = 登出
+log-out-shortcut = Super + Shift + Escape
 suspend = 暫停
 restart = 重新啟動
-shutdown = 關機
+shutdown = 關閉電源
 confirm = 確認
 cancel = 取消
-confirm-button = {
-    $action -> 
+confirm-button =
+    { $action ->
         [restart] { restart }
         [suspend] { suspend }
-        [shutdown] { shutdown }
+        [shutdown] 關閉電源
         [log-out] { log-out }
-        *[other] { confirm }
-}
-confirm-title = 
-    { $action -> 
+       *[other] { confirm }
+    }
+confirm-title =
+    { $action ->
         [restart] { restart }
         [suspend] { suspend }
         [shutdown] { shutdown }
-        [log-out] 關閉所有應用程式並 { log-out }
-        *[other] 立即執行選定的操作
+        [log-out] 結束所有應用程式並登出
+       *[other] 套用選定的操作
     } 嗎？
-confirm-body = 
+confirm-body =
     系統將在 { $countdown } 秒後自動 { $action ->
-        [restart] { restart }
-        [suspend] { suspend }
-        [shutdown] { shutdown }
-        [lock-screen] { lock-screen }
-        [log-out] { log-out }
-        *[other] 執行選定的操作
+        [restart] 重新啟動
+        [suspend] 睡眠
+        [shutdown] 關閉電源
+        [lock-screen] 鎖定螢幕
+        [log-out] 登出
+       *[other] 套用選定的操作
     }。

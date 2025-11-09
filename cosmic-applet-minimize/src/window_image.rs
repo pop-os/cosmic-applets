@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use cosmic::{
-    desktop::{fde, IconSourceExt},
-    iced::Limits,
-    iced_core::{layout, overlay, widget::Tree, Border, Layout, Length, Size, Vector},
-    theme::{Button, Container},
-    widget::{button, container, image::Handle, Image, Widget},
     Element,
+    desktop::{IconSourceExt, fde},
+    iced::Limits,
+    iced_core::{Border, Layout, Length, Size, Vector, layout, overlay, widget::Tree},
+    theme::{Button, Container},
+    widget::{Image, Widget, button, container, image::Handle},
 };
 
 use crate::wayland_subscription::WaylandImage;
@@ -17,7 +17,7 @@ pub struct WindowImage<'a, Msg> {
     icon: Element<'a, Msg>,
 }
 
-impl<'a, Msg> WindowImage<'a, Msg>
+impl<Msg> WindowImage<'_, Msg>
 where
     Msg: 'static + Clone,
 {
@@ -81,13 +81,13 @@ where
     }
 }
 
-impl<'a, Msg> Widget<Msg, cosmic::Theme, cosmic::Renderer> for WindowImage<'a, Msg> {
+impl<Msg> Widget<Msg, cosmic::Theme, cosmic::Renderer> for WindowImage<'_, Msg> {
     fn children(&self) -> Vec<cosmic::iced_core::widget::Tree> {
         vec![Tree::new(&self.image_button), Tree::new(&self.icon)]
     }
 
     fn diff(&mut self, tree: &mut cosmic::iced_core::widget::Tree) {
-        tree.diff_children(&mut [&mut self.image_button, &mut self.icon])
+        tree.diff_children(&mut [&mut self.image_button, &mut self.icon]);
     }
 
     fn overlay<'b>(

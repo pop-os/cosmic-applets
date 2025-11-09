@@ -1,0 +1,12 @@
+bluetooth = Bluetooth
+other-devices = Andra Bluetooth enheter
+settings = Bluetooth-inställningar...
+connected = Ansluten
+confirm-pin = Bekräfta att följande PIN matchar den som visas på { $deviceName }
+confirm = Bekräfta
+cancel = Avbryt
+unsuccessful = Hopkoppling misslyckades
+check-device = Säkerställ { $deviceName } är påslagen, innom räckvidd, och redo att kopplas.
+try-again = Försök igen
+discoverable = Kan upptäckas
+pairable = Kan kopplas

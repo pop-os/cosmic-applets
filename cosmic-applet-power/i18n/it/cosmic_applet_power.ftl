@@ -9,29 +9,28 @@ restart = Riavvia
 shutdown = Spegni
 confirm = Conferma
 cancel = Annulla
-confirm-button = {
-    $action -> 
-        [restart] { restart }
-        [suspend] { suspend}
-        [shutdown] Spegni
-        [log-out] { log-out }
-        *[other] { confirm}
-}
-confirm-title = 
-    { $action -> 
+confirm-button =
+    { $action ->
         [restart] { restart }
         [suspend] { suspend }
-        [shutdown] { shutdown }
-        [log-out] Chiudi tutte le applicazioni e termina la sessione
-        *[other] Applica l'azione selezionata
-    } now?
-confirm-body = 
+        [shutdown] Spegni
+        [log-out] { log-out }
+       *[other] { confirm }
+    }
+confirm-title =
     { $action ->
         [restart] { restart }
         [suspend] { suspend }
         [shutdown] { shutdown }
-        [lock-screen] Blocco schermo in corso
-        [log-out] Disconnessione in corso
-        *[other] L'azione selezionata
-    } verrà eseguita tra { $countdown } secondi.
-
+        [log-out] Chiudi tutte le applicazioni e termina la sessione
+       *[other] Applica l'azione selezionata
+    } now?
+confirm-body =
+    { $action ->
+        [restart] Riavvia
+        [suspend] Sospendi
+        [shutdown] Spegni
+        [lock-screen] Blocco schermo
+        [log-out] Termina sessione
+       *[other] L'azione selezionata verrà applicata
+    } automaticamente tra { $countdown } secondi.

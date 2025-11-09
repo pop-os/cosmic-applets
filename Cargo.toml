@@ -21,31 +21,27 @@ members = [
     "cosmic-applets-config",
 ]
 
-resolver = "2"
+resolver = "3"
 
 [workspace.dependencies]
-anyhow = "1.0.95"
-cctk = { git = "https://github.com/pop-os/cosmic-protocols", package = "cosmic-client-toolkit", rev = "178eb0b" }
+anyhow = "1.0.100"
+cctk = { git = "https://github.com/pop-os/cosmic-protocols", package = "cosmic-client-toolkit", rev = "d0e95be" }
 cosmic-applets-config = { path = "cosmic-applets-config" }
 cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols", default-features = false, features = [
     "client",
-], rev = "1425bd4" }
+], rev = "d0e95be" }
 cosmic-settings-subscriptions = { git = "https://github.com/pop-os/cosmic-settings-subscriptions" }
 
-cosmic-time = { git = "https://github.com/pop-os/cosmic-time", default-features = false, features = [
-    "once_cell",
-] }
-# cosmic-time = { path = "../cosmic-time", default-features = false, features = [
-#     "once_cell",
-# ] }
+cosmic-time = { git = "https://github.com/pop-os/cosmic-time", default-features = false }
+# cosmic-time = { path = "../cosmic-time", default-features = false ] }
 
 futures = "0.3"
 futures-util = "0.3"
-i18n-embed = { version = "0.15.3", features = [
+i18n-embed = { version = "0.16.0", features = [
     "fluent-system",
     "desktop-requester",
 ] }
-i18n-embed-fl = "0.9"
+i18n-embed-fl = "0.10"
 libcosmic = { git = "https://github.com/pop-os/libcosmic", default-features = false, features = [
     "applet",
     "applet-token",
@@ -56,20 +52,20 @@ libcosmic = { git = "https://github.com/pop-os/libcosmic", default-features = fa
     "desktop-systemd-scope",
     "winit",
 ] }
-once_cell = "1"
-rust-embed = "8.5"
-rust-embed-utils = "8.5.0"
-rustix = { version = "1.0", features = ["fs", "process"] }
-zbus = { version = "5.7.1", default-features = false, features = ["tokio"] }
+rust-embed = "8.7.2"
+rust-embed-utils = "8.7.2"
+rustc-hash = "2.1"
+rustix = { version = "1.1", features = ["fs", "process"] }
+zbus = { version = "5.11.0", default-features = false, features = ["tokio"] }
 tracing = "0.1"
-tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
 tracing-log = "0.2.0"
-tokio = { version = "1.45.0", features = ["full"] }
+tokio = { version = "1.47.1", features = ["full"] }
 cosmic-config = { git = "https://github.com/pop-os/libcosmic" }
-serde = { version = "1.0.219", features = ["derive"] }
+serde = { version = "1.0.228", features = ["derive"] }
 
 [profile.release]
-opt-level = "s"
+opt-level = 3
 panic = "abort"
 lto = "thin"
 
@@ -77,9 +73,6 @@ lto = "thin"
 ignored = ["libcosmic"]
 
 # [patch."https://github.com/pop-os/libcosmic"]
-# cosmic-config = { git = "https://github.com/pop-os/libcosmic//", branch = "desktop-entries-and-icons" }
-# libcosmic = { git = "https://github.com/pop-os/libcosmic//", branch = "desktop-entries-and-icons" }
-# iced_futures = { git = "https://github.com/pop-os/libcosmic//", branch = "desktop-entries-and-icons" }
 # cosmic-config = { path = "../libcosmic/cosmic-config" }
 # libcosmic = { path = "../libcosmic" }
 # iced_futures = { path = "../libcosmic/iced/futures" }
@@ -87,8 +80,9 @@ ignored = ["libcosmic"]
 # [patch."https://github.com/pop-os/winit.git"]
 # winit = { git = "https://github.com/rust-windowing/winit.git", rev = "241b7a80bba96c91fa3901729cd5dec66abb9be4" }
 # winit = { path = "../winit" }
+
 [patch."https://github.com/smithay/client-toolkit.git"]
-sctk = { package = "smithay-client-toolkit", version = "=0.19.2" }
+sctk = { package = "smithay-client-toolkit", version = "0.20.0" }
 
 [patch."https://github.com/pop-os/cosmic-protocols"]
 cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols//", branch = "main" }

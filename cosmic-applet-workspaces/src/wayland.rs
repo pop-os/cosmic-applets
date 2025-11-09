@@ -16,15 +16,15 @@ use cctk::{
     },
     workspace::{Workspace, WorkspaceHandler, WorkspaceState},
 };
-use futures::{channel::mpsc, executor::block_on, SinkExt};
+use futures::{SinkExt, channel::mpsc, executor::block_on};
 use std::os::{
     fd::{FromRawFd, RawFd},
     unix::net::UnixStream,
 };
 use wayland_client::{
+    Connection, QueueHandle,
     globals::registry_queue_init,
     protocol::wl_output::{self, WlOutput},
-    Connection, QueueHandle,
 };
 
 #[derive(Debug, Clone)]
@@ -78,7 +78,7 @@ pub fn spawn_workspaces(tx: mpsc::Sender<Vec<Workspace>>) -> SyncSender<Workspac
             };
             let loop_handle = event_loop.handle();
             loop_handle
-                .insert_source(workspaces_rx, |e, _, state| match e {
+                .insert_source(workspaces_rx, |e, (), state| match e {
                     Event::Msg(WorkspaceEvent::Activate(handle)) => {
                         handle.activate();
                         state

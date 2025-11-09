@@ -15,10 +15,17 @@ use cosmic::{
     iced::{self, Subscription},
     iced_futures::stream,
 };
-use drm::control::Device as ControlDevice;
+use drm::{
+    control::{
+        Device as ControlDevice,
+        connector::{Info as ConnectorInfo, Interface},
+    },
+    node::DrmNode,
+};
 use futures::{FutureExt, SinkExt};
 use tokio::{
     io::unix::AsyncFd,
+    sync::mpsc::{self, UnboundedReceiver, UnboundedSender},
     task::spawn_blocking,
     time::{self, Interval},
 };
@@ -56,6 +63,7 @@ impl Debug for GpuMonitor {
 struct Gpu {
     path: PathBuf,
     name: String,
+    boot_vga: bool,
     primary: bool,
     enabled: bool,
     driver: Option<OsString>,
@@ -71,7 +79,7 @@ async fn is_desktop() -> bool {
 }
 
 async fn powered_on(path: impl AsRef<Path>) -> bool {
-    let Some(component) = path.as_ref().components().last() else {
+    let Some(component) = path.as_ref().components().next_back() else {
         return true;
     };
     let name_str = component.as_os_str();
@@ -79,7 +87,7 @@ async fn powered_on(path: impl AsRef<Path>) -> bool {
         return true;
     };
     let Ok(state) =
-        tokio::fs::read_to_string(format!("/sys/class/drm/{}/device/power_state", name)).await
+        tokio::fs::read_to_string(format!("/sys/class/drm/{name}/device/power_state")).await
     else {
         return true;
     };
@@ -146,26 +154,32 @@ pub struct RunningApp {
     executable_name: String,
 }
 
+fn connectors(path: &impl AsRef<Path>) -> Option<impl Iterator<Item = ConnectorInfo>> {
+    struct Device(std::fs::File);
+    impl AsFd for Device {
+        fn as_fd(&self) -> std::os::unix::prelude::BorrowedFd<'_> {
+            self.0.as_fd()
+        }
+    }
+    impl drm::Device for Device {}
+    impl ControlDevice for Device {}
+
+    let device = Device(std::fs::File::open(path).ok()?);
+    let resources = device.resource_handles().ok()?;
+
+    Some(
+        resources
+            .connectors
+            .into_iter()
+            .filter_map(move |conn| device.get_connector(conn, false).ok()),
+    )
+}
+
 impl Gpu {
     async fn connected_outputs(&self) -> Option<Vec<Entry>> {
         let path = self.path.clone();
         spawn_blocking(move || {
-            struct Device(std::fs::File);
-            impl AsFd for Device {
-                fn as_fd(&self) -> std::os::unix::prelude::BorrowedFd<'_> {
-                    self.0.as_fd()
-                }
-            }
-            impl drm::Device for Device {}
-            impl ControlDevice for Device {}
-
-            let device = Device(std::fs::File::open(path).ok()?);
-            let resources = device.resource_handles().ok()?;
-
-            let outputs = resources
-                .connectors
-                .into_iter()
-                .filter_map(|conn| device.get_connector(conn, false).ok())
+            let outputs = connectors(&path)?
                 .filter(|info| info.state() == drm::control::connector::State::Connected)
                 .map(|info| Entry {
                     name: format!(
@@ -177,6 +191,7 @@ impl Gpu {
                     secondary: String::new(),
                 })
                 .collect();
+
             // TODO read and parse edid with libdisplay-info and display output manufacture/model
 
             Some(outputs)
@@ -186,120 +201,117 @@ impl Gpu {
     }
 
     async fn app_list(&self, running_apps: &[RunningApp]) -> Option<Vec<Entry>> {
-        match self.driver.as_ref().and_then(|s| s.to_str()) {
-            Some("nvidia") => {
-                // figure out bus path for calling nvidia-smi
-                let mut sys_path = PathBuf::from("/sys/class/drm");
-                sys_path.push(self.path.components().last()?.as_os_str());
-                let buslink = std::fs::read_link(sys_path)
-                    .ok()?
-                    .components()
-                    .rev()
-                    .nth(2)?
-                    .as_os_str()
-                    .to_string_lossy()
-                    .into_owned();
+        if let Some("nvidia") = self.driver.as_ref().and_then(|s| s.to_str()) {
+            // figure out bus path for calling nvidia-smi
+            let mut sys_path = PathBuf::from("/sys/class/drm");
+            sys_path.push(self.path.components().next_back()?.as_os_str());
+            let buslink = std::fs::read_link(sys_path).ok()?;
+            let buslink = buslink.components().nth_back(2)?.as_os_str();
 
-                let smi_output = match tokio::process::Command::new("nvidia-smi")
-                    .args(["pmon", "--id", &buslink, "--count", "1"])
-                    .output()
-                    .await
-                {
-                    Ok(output) if output.status.success() => {
-                        String::from_utf8_lossy(&output.stdout).into_owned()
-                    }
-                    Ok(output) => {
-                        debug!(
-                            "smi returned error code {}: {}",
-                            output.status,
-                            String::from_utf8_lossy(&output.stdout)
-                        );
-                        return None;
-                    }
-                    Err(err) => {
-                        debug!("smi returned error code: {}", err);
-                        return None;
-                    }
-                };
+            let smi_output = match tokio::process::Command::new("nvidia-smi")
+                .args([
+                    "pmon".as_ref(),
+                    "--id".as_ref(),
+                    buslink,
+                    "--count".as_ref(),
+                    "1".as_ref(),
+                ])
+                .output()
+                .await
+            {
+                Ok(output) if output.status.success() => {
+                    String::from_utf8_lossy(&output.stdout).into_owned()
+                }
+                Ok(output) => {
+                    debug!(
+                        "smi returned error code {}: {}",
+                        output.status,
+                        String::from_utf8_lossy(&output.stdout)
+                    );
+                    return None;
+                }
+                Err(err) => {
+                    debug!("smi returned error code: {}", err);
+                    return None;
+                }
+            };
 
-                Some(
-                    smi_output
-                        .lines()
-                        .filter(|line| {
-                            // smi shows an empty line filled with - when no app is running
-                            let components = line.split_whitespace().collect::<Vec<_>>();
-                            components[1].trim().ne("-") && !line.starts_with('#')
-                        })
-                        .map(|line| {
-                            let components = line.split_whitespace().collect::<Vec<_>>();
-                            let pid = components[1].trim();
-                            let process_name = components.last().unwrap().trim();
+            Some(
+                smi_output
+                    .lines()
+                    .filter(|line| {
+                        // smi shows an empty line filled with - when no app is running
+                        let components = line.split_whitespace().collect::<Vec<_>>();
+                        components[1].trim().ne("-") && !line.starts_with('#')
+                    })
+                    .map(|line| {
+                        let components = line.split_whitespace().collect::<Vec<_>>();
+                        let pid = components[1].trim();
+                        let process_name = components.last().unwrap().trim();
 
-                            if let Some(application) = running_apps
-                                .iter()
-                                .find(|running_app| running_app.executable_name == process_name)
-                            {
-                                Entry {
-                                    name: application.name.clone(),
-                                    icon: application.icon.clone(),
-                                    secondary: String::new(),
-                                }
-                            } else {
-                                Entry {
-                                    name: process_name.to_string(),
-                                    icon: None,
-                                    secondary: pid.to_string(),
-                                }
+                        if let Some(application) = running_apps
+                            .iter()
+                            .find(|running_app| running_app.executable_name == process_name)
+                        {
+                            Entry {
+                                name: application.name.clone(),
+                                icon: application.icon.clone(),
+                                secondary: String::new(),
                             }
-                        })
-                        .collect(),
-                )
-            }
-            _ => {
-                let lsof_output = match tokio::process::Command::new("lsof")
-                    .args([OsStr::new("-t"), self.path.as_os_str()])
-                    .output()
-                    .await
-                {
-                    Ok(output) => String::from_utf8_lossy(&output.stdout).into_owned(),
-                    Err(err) => {
-                        debug!("lsof returned error code: {}", err);
-                        return None;
-                    }
-                };
-
-                Some(
-                    lsof_output
-                        .lines()
-                        .filter_map(|pid| {
-                            let executable = std::fs::read_link(format!("/proc/{}/exe", pid))
-                                .ok()?
-                                .components()
-                                .last()?
-                                .as_os_str()
-                                .to_string_lossy()
-                                .into_owned();
-
-                            if let Some(application) = running_apps
-                                .iter()
-                                .find(|running_app| running_app.executable_name == executable)
-                            {
-                                Some(Entry {
-                                    name: application.name.clone(),
-                                    icon: application.icon.clone(),
-                                    secondary: String::new(),
-                                })
-                            } else {
-                                Some(Entry {
-                                    name: executable,
-                                    icon: None,
-                                    secondary: pid.to_string(),
-                                })
+                        } else {
+                            Entry {
+                                name: process_name.to_string(),
+                                icon: None,
+                                secondary: pid.to_string(),
                             }
-                        })
-                        .collect(),
-                )
-            }
+                        }
+                    })
+                    .collect(),
+            )
+        } else {
+            let lsof_output = match tokio::process::Command::new("lsof")
+                .args([OsStr::new("-t"), self.path.as_os_str()])
+                .output()
+                .await
+            {
+                Ok(output) => String::from_utf8_lossy(&output.stdout).into_owned(),
+                Err(err) => {
+                    debug!("lsof returned error code: {err}");
+                    return None;
+                }
+            };
+
+            Some(
+                lsof_output
+                    .lines()
+                    .filter_map(|pid| {
+                        let executable = std::fs::read_link(format!("/proc/{pid}/exe"))
+                            .ok()?
+                            .components()
+                            .next_back()?
+                            .as_os_str()
+                            .to_string_lossy()
+                            .into_owned();
+
+                        if let Some(application) = running_apps
+                            .iter()
+                            .find(|running_app| running_app.executable_name == executable)
+                        {
+                            Some(Entry {
+                                name: application.name.clone(),
+                                icon: application.icon.clone(),
+                                secondary: String::new(),
+                            })
+                        } else {
+                            Some(Entry {
+                                name: executable,
+                                icon: None,
+                                secondary: pid.to_string(),
+                            })
+                        }
+                    })
+                    .collect(),
+            )
         }
     }
 }
@@ -308,23 +320,25 @@ fn all_gpus<S: AsRef<str>>(seat: S) -> io::Result<Vec<Gpu>> {
     let mut enumerator = udev::Enumerator::new()?;
     enumerator.match_subsystem("drm")?;
     enumerator.match_sysname("card[0-9]*")?;
-    Ok(enumerator
+    let mut gpus = enumerator
         .scan_devices()?
-        .filter(|device| {
-            device
+        .filter_map(|device| {
+            if device
                 .property_value("ID_SEAT")
-                .map(|x| x.to_os_string())
-                .unwrap_or_else(|| OsString::from("seat0"))
-                == *seat.as_ref()
-        })
-        .flat_map(|device| {
+                .unwrap_or_else(|| OsStr::new("seat0"))
+                != seat.as_ref()
+            {
+                return None;
+            }
             let path = device.devnode().map(PathBuf::from)?;
+            let node = DrmNode::from_path(&path).ok()?;
+            if !node.has_render() {
+                return None;
+            }
+
             let boot_vga = if let Ok(Some(pci)) = device.parent_with_subsystem(Path::new("pci")) {
-                if let Some(value) = pci.attribute_value("boot_vga") {
-                    value == "1"
-                } else {
-                    false
-                }
+                pci.attribute_value("boot_vga")
+                    .is_some_and(|value| value == "1")
             } else {
                 false
             };
@@ -332,10 +346,10 @@ fn all_gpus<S: AsRef<str>>(seat: S) -> io::Result<Vec<Gpu>> {
             let name = if let Some(parent) = device.parent() {
                 let vendor = parent
                     .property_value("SWITCHEROO_CONTROL_VENDOR_NAME")
-                    .or_else(|| parent.property_value("ID_VENDOR_FROM_DATABASE"));
+                    .or(parent.property_value("ID_VENDOR_FROM_DATABASE"));
                 let name = parent
                     .property_value("SWITCHEROO_CONTROL_PRODUCT_NAME")
-                    .or_else(|| parent.property_value("ID_MODEL_FROM_DATABASE"));
+                    .or(parent.property_value("ID_MODEL_FROM_DATABASE"));
 
                 if vendor.is_none() && name.is_none() {
                     String::from("Unknown GPU")
@@ -354,7 +368,7 @@ fn all_gpus<S: AsRef<str>>(seat: S) -> io::Result<Vec<Gpu>> {
             let driver = loop {
                 if let Some(dev) = device {
                     if dev.driver().is_some() {
-                        break dev.driver().map(std::ffi::OsStr::to_os_string);
+                        break dev.driver().map(OsStr::to_os_string);
                     } else {
                         device = dev.parent();
                     }
@@ -369,13 +383,36 @@ fn all_gpus<S: AsRef<str>>(seat: S) -> io::Result<Vec<Gpu>> {
             Some(Gpu {
                 path,
                 name,
-                primary: boot_vga,
+                boot_vga,
+                primary: false,
                 enabled: false,
                 driver,
                 interval,
             })
         })
-        .collect())
+        .collect::<Vec<_>>();
+
+    if let Some(primary_idx) = gpus
+        .iter()
+        .position(|gpu| {
+            connectors(&gpu.path).is_some_and(|conns| {
+                conns
+                    .filter(|info| info.state() == drm::control::connector::State::Connected)
+                    .any(|info| {
+                        let i = info.interface();
+                        i == Interface::EmbeddedDisplayPort
+                            || i == Interface::LVDS
+                            || i == Interface::DSI
+                    })
+            })
+        })
+        .or(gpus.iter().position(|gpu| gpu.boot_vga))
+        .or((gpus.len() == 1).then_some(0))
+    {
+        gpus[primary_idx].primary = true;
+    }
+
+    Ok(gpus)
 }
 
 pub fn dgpu_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
@@ -396,12 +433,13 @@ pub fn dgpu_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
 #[derive(Debug)]
 pub enum State {
     Ready,
-    Waiting(GpuMonitor),
+    Waiting(GpuMonitor, UnboundedReceiver<()>),
     Finished,
 }
 
 #[derive(Debug)]
 pub enum GpuUpdate {
+    Init(UnboundedSender<()>),
     Off(PathBuf),
     On(PathBuf, String, Option<Vec<Entry>>),
 }
@@ -412,10 +450,17 @@ async fn start_listening(
 ) -> State {
     match state {
         State::Ready => match GpuMonitor::new().await {
-            Some(monitor) => State::Waiting(monitor),
+            Some(monitor) => {
+                let (tx, rx) = mpsc::unbounded_channel();
+                if output.send(GpuUpdate::Init(tx)).await.is_err() {
+                    State::Finished
+                } else {
+                    State::Waiting(monitor, rx)
+                }
+            }
             None => State::Finished,
         },
-        State::Waiting(mut monitor) => {
+        State::Waiting(mut monitor, mut trigger) => {
             let select_all = futures::future::select_all(
                 monitor
                     .gpus
@@ -436,10 +481,10 @@ async fn start_listening(
                                         let name = if let Some(parent) = device.parent() {
                                             let vendor = parent
                                                 .property_value("SWITCHEROO_CONTROL_VENDOR_NAME")
-                                                .or_else(|| parent.property_value("ID_VENDOR_FROM_DATABASE"));
+                                                .or(parent.property_value("ID_VENDOR_FROM_DATABASE"));
                                             let name = parent
                                                 .property_value("SWITCHEROO_CONTROL_PRODUCT_NAME")
-                                                .or_else(|| parent.property_value("ID_MODEL_FROM_DATABASE"));
+                                                .or(parent.property_value("ID_MODEL_FROM_DATABASE"));
 
                                             if vendor.is_none() && name.is_none() {
                                                 String::from("Unknown GPU")
@@ -458,7 +503,7 @@ async fn start_listening(
                                         let driver = loop {
                                             if let Some(dev) = device {
                                                 if dev.driver().is_some() {
-                                                    break dev.driver().map(std::ffi::OsStr::to_os_string);
+                                                    break dev.driver().map(OsStr::to_os_string);
                                                 } else {
                                                     device = dev.parent();
                                                 }
@@ -472,6 +517,7 @@ async fn start_listening(
                                         monitor.gpus.push(Gpu {
                                             path: path.to_path_buf(),
                                             name,
+                                            boot_vga: false,
                                             primary: false,
                                             enabled: false,
                                             driver,
@@ -503,7 +549,7 @@ async fn start_listening(
                 i = select_all => {
                     let gpu = &mut monitor.gpus[i];
                     if gpu.path == monitor.primary_gpu {
-                        return State::Waiting(monitor);
+                        return State::Waiting(monitor, trigger);
                     }
 
                     trace!("Polling gpu {}", gpu.path.display());
@@ -529,9 +575,14 @@ async fn start_listening(
                         return State::Finished;
                     }
                 }
+                _ = trigger.recv() => {
+                    for gpu in &mut monitor.gpus {
+                        gpu.interval.reset_immediately();
+                    }
+                }
             };
 
-            State::Waiting(monitor)
+            State::Waiting(monitor, trigger)
         }
         State::Finished => iced::futures::future::pending().await,
     }

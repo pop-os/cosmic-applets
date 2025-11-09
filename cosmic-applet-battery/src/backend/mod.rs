@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use cosmic::{
-    iced::{self, futures::SinkExt, Subscription},
+    iced::{self, Subscription, futures::SinkExt},
     iced_futures::stream,
 };
 use std::{fmt::Debug, hash::Hash};
@@ -66,7 +66,7 @@ pub async fn get_power_profile(daemon: Backend<'_>) -> Result<Power> {
                 "Battery" => Ok(Power::Battery),
                 "Balanced" => Ok(Power::Balanced),
                 "Performance" => Ok(Power::Performance),
-                _ => panic!("Unknown power profile: {}", power),
+                _ => panic!("Unknown power profile: {power}"),
             }
         }
         Backend::PowerProfilesDaemon(ppd) => {
@@ -214,24 +214,22 @@ pub enum PowerProfileUpdate {
 }
 
 // check if battery charging thresholds is set
-pub async fn get_charging_limit() -> bool {
+pub async fn get_charging_limit() -> anyhow::Result<bool> {
     if let Ok(conn) = Connection::system().await {
         if let Ok(backend) = get_power_backend(&conn, &BackendType::S76PowerDaemon).await {
             match backend {
                 Backend::S76PowerDaemon(proxy) => {
                     if let Ok((start, end)) = proxy.get_charge_thresholds().await {
-                        return start > 0 || end > 0;
+                        return Ok(end > start && end < 100);
                     }
                 }
                 Backend::PowerProfilesDaemon(_) => {
                     tracing::info!("Power Profiles Daemon is not supported.");
-
-                    return false;
                 }
-            };
+            }
         }
     }
-    false
+    anyhow::bail!("Unsupported")
 }
 
 // set battery charging thresholds via s76 power_daemon
@@ -247,7 +245,26 @@ pub async fn set_charging_limit() -> Result<()> {
                         "Setting charging limit via Power Profiles Daemon is not supported."
                     );
                 }
-            };
+            }
+        }
+    }
+    Ok(())
+}
+
+// unset battery charging thresholds via s76 power_daemon
+pub async fn unset_charging_limit() -> Result<()> {
+    if let Ok(conn) = Connection::system().await {
+        if let Ok(backend) = get_power_backend(&conn, &BackendType::S76PowerDaemon).await {
+            match backend {
+                Backend::S76PowerDaemon(proxy) => {
+                    let _ = proxy.set_charge_thresholds(&(90, 100)).await;
+                }
+                Backend::PowerProfilesDaemon(_) => {
+                    tracing::info!(
+                        "Unsetting charging limit via Power Profiles Daemon is not supported."
+                    );
+                }
+            }
         }
     }
     Ok(())

@@ -1,12 +1,9 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
-use cosmic::{
-    iced::{self, Subscription},
-    widget::icon,
-};
+use cosmic::iced::{self, Subscription};
 use futures::{FutureExt, StreamExt};
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 use zbus::zvariant::{self, OwnedValue};
 
 #[derive(Clone, Debug)]
@@ -79,7 +76,7 @@ impl StatusNotifierItem {
     }
 
     pub fn icon_subscription(&self) -> iced::Subscription<IconUpdate> {
-        fn icon_events<'a>(
+        fn icon_events(
             item_proxy: StatusNotifierItemProxy<'static>,
         ) -> impl futures::Stream<Item = IconUpdate> + 'static {
             async move {
@@ -102,7 +99,7 @@ impl StatusNotifierItem {
             format!("status-notifier-item-icon-{}", &self.name),
             async move {
                 let new_icon_stream = item_proxy.receive_new_icon().await.unwrap();
-                futures::stream::once(async { () })
+                futures::stream::once(async {})
                     .chain(new_icon_stream.map(|_| ()))
                     .flat_map(move |()| icon_events(item_proxy.clone()))
             }
@@ -112,6 +109,10 @@ impl StatusNotifierItem {
 
     pub fn menu_proxy(&self) -> &DBusMenuProxy<'static> {
         &self.menu_proxy
+    }
+
+    pub fn item_proxy(&self) -> &StatusNotifierItemProxy<'static> {
+        &self.item_proxy
     }
 }
 
@@ -136,6 +137,8 @@ pub trait StatusNotifierItem {
 
     #[zbus(signal)]
     fn new_icon(&self) -> zbus::Result<()>;
+
+    fn provide_xdg_activation_token(&self, token: String) -> zbus::Result<()>;
 }
 
 #[derive(Clone, Debug)]
@@ -150,8 +153,11 @@ impl<'a> serde::Deserialize<'a> for Layout {
 }
 
 impl zvariant::Type for Layout {
-    const SIGNATURE: &'static zvariant::Signature =
-        <(i32, HashMap<String, zvariant::Value>, Vec<zvariant::Value>)>::SIGNATURE;
+    const SIGNATURE: &zvariant::Signature = <(
+        i32,
+        FxHashMap<String, zvariant::Value>,
+        Vec<zvariant::Value>,
+    )>::SIGNATURE;
 }
 
 #[derive(Clone, Debug, zvariant::DeserializeDict)]
@@ -181,7 +187,7 @@ pub struct LayoutProps {
 }
 
 impl zvariant::Type for LayoutProps {
-    const SIGNATURE: &'static zvariant::Signature = <HashMap<String, zvariant::Value>>::SIGNATURE;
+    const SIGNATURE: &zvariant::Signature = <FxHashMap<String, zvariant::Value>>::SIGNATURE;
 }
 
 #[allow(dead_code)]
@@ -249,7 +255,7 @@ pub trait DBusMenu {
     ) -> zbus::Result<(u32, Layout)>;
 
     fn event(&self, id: i32, event_id: &str, data: &OwnedValue, timestamp: u32)
-        -> zbus::Result<()>;
+    -> zbus::Result<()>;
 
     fn about_to_show(&self, id: i32) -> zbus::Result<bool>;
 

@@ -7,11 +7,11 @@
 
 use futures::prelude::*;
 use zbus::{
+    Result,
     fdo::{DBusProxy, RequestNameFlags, RequestNameReply},
     message::Header,
     names::{BusName, UniqueName, WellKnownName},
     object_server::SignalEmitter,
-    Result,
 };
 
 const NAME: WellKnownName =
@@ -33,7 +33,7 @@ impl StatusNotifierWatcher {
     ) {
         let sender = hdr.sender().unwrap();
         let service = if service.starts_with('/') {
-            format!("{}{}", sender, service)
+            format!("{sender}{service}")
         } else {
             service.to_string()
         };
@@ -65,7 +65,7 @@ impl StatusNotifierWatcher {
 
     #[zbus(signal)]
     async fn status_notifier_item_registered(ctxt: &SignalEmitter<'_>, service: &str)
-        -> Result<()>;
+    -> Result<()>;
 
     #[zbus(signal)]
     async fn status_notifier_item_unregistered(
@@ -95,7 +95,7 @@ pub async fn create_service(connection: &zbus::Connection) -> zbus::Result<()> {
 
     let flags = RequestNameFlags::AllowReplacement.into();
     if dbus_proxy.request_name(NAME.as_ref(), flags).await? == RequestNameReply::InQueue {
-        eprintln!("Bus name '{}' already owned", NAME);
+        eprintln!("Bus name '{NAME}' already owned");
     }
 
     let connection = connection.clone();
@@ -103,32 +103,31 @@ pub async fn create_service(connection: &zbus::Connection) -> zbus::Result<()> {
         let mut have_bus_name = false;
         let unique_name = connection.unique_name().map(|x| x.as_ref());
         while let Some(evt) = name_owner_changed_stream.next().await {
-            let args = match evt.args() {
-                Ok(args) => args,
-                Err(_) => {
-                    continue;
-                }
+            let Ok(args) = evt.args() else {
+                continue;
             };
             if args.name.as_ref() == NAME {
                 if args.new_owner.as_ref() == unique_name.as_ref() {
-                    eprintln!("Acquired bus name: {}", NAME);
+                    eprintln!("Acquired bus name: {NAME}");
                     have_bus_name = true;
                 } else if have_bus_name {
-                    eprintln!("Lost bus name: {}", NAME);
+                    eprintln!("Lost bus name: {NAME}");
                     have_bus_name = false;
                 }
             } else if let BusName::Unique(name) = &args.name {
-                let mut interface = interface.get_mut().await;
-                if let Some(idx) = interface
-                    .items
-                    .iter()
-                    .position(|(unique_name, _)| unique_name == name)
-                {
-                    let ctxt = SignalEmitter::new(&connection, OBJECT_PATH).unwrap();
-                    let service = interface.items.remove(idx).1;
-                    StatusNotifierWatcher::status_notifier_item_unregistered(&ctxt, &service)
-                        .await
-                        .unwrap();
+                if args.new_owner.is_none() {
+                    let mut interface = interface.get_mut().await;
+                    if let Some(idx) = interface
+                        .items
+                        .iter()
+                        .position(|(unique_name, _)| unique_name == name)
+                    {
+                        let ctxt = SignalEmitter::new(&connection, OBJECT_PATH).unwrap();
+                        let service = interface.items.remove(idx).1;
+                        StatusNotifierWatcher::status_notifier_item_unregistered(&ctxt, &service)
+                            .await
+                            .unwrap();
+                    }
                 }
             }
         }

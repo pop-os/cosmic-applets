@@ -10,7 +10,7 @@ use std::borrow::Cow;
 
 use crate::localize::localize;
 use cosmic::{
-    app,
+    Task, app,
     applet::cosmic_panel_config::PanelAnchor,
     cctk::{
         sctk::reexports::calloop, toplevel_info::ToplevelInfo,
@@ -18,27 +18,25 @@ use cosmic::{
     },
     desktop::fde,
     iced::{
-        self,
+        self, Length, Limits, Subscription,
         id::Id as WidgetId,
         platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
         widget::text,
         window::{self},
-        Length, Limits, Subscription,
     },
     surface,
     widget::{autosize::autosize, mouse_area},
-    Task,
 };
 
 use cosmic::iced_widget::{Column, Row};
 
-use cosmic::{widget::tooltip, Element};
-use once_cell::sync::Lazy;
+use cosmic::{Element, widget::tooltip};
+use std::sync::LazyLock;
 use wayland_subscription::{
     ToplevelRequest, ToplevelUpdate, WaylandImage, WaylandRequest, WaylandUpdate,
 };
 
-static AUTOSIZE_MAIN_ID: Lazy<WidgetId> = Lazy::new(|| WidgetId::new("autosize-main"));
+static AUTOSIZE_MAIN_ID: LazyLock<WidgetId> = LazyLock::new(|| WidgetId::new("autosize-main"));
 
 pub fn run() -> cosmic::iced::Result {
     localize();
@@ -90,25 +88,23 @@ impl Minimize {
     fn find_new_desktop_entry(&mut self, appid: &str) -> fde::DesktopEntry {
         let unicase_appid = fde::unicase::Ascii::new(appid);
 
-        let de = match fde::find_app_by_id(&self.desktop_entries, unicase_appid) {
-            Some(de) => de,
-            None => {
-                // Update desktop entries in case it was not found.
-                self.update_desktop_entries();
-                match fde::find_app_by_id(&self.desktop_entries, unicase_appid) {
-                    Some(appid) => appid,
-                    None => {
-                        tracing::warn!(appid, "could not find desktop entry for app");
-                        let mut entry = fde::DesktopEntry {
-                            appid: appid.to_owned(),
-                            groups: Default::default(),
-                            path: Default::default(),
-                            ubuntu_gettext_domain: None,
-                        };
-                        entry.add_desktop_entry("Name".to_string(), appid.to_owned());
-                        return entry;
-                    }
-                }
+        let de = if let Some(de) = fde::find_app_by_id(&self.desktop_entries, unicase_appid) {
+            de
+        } else {
+            // Update desktop entries in case it was not found.
+            self.update_desktop_entries();
+            if let Some(appid) = fde::find_app_by_id(&self.desktop_entries, unicase_appid) {
+                appid
+            } else {
+                tracing::warn!(appid, "could not find desktop entry for app");
+                let mut entry = fde::DesktopEntry {
+                    appid: appid.to_owned(),
+                    groups: Default::default(),
+                    path: Default::default(),
+                    ubuntu_gettext_domain: None,
+                };
+                entry.add_desktop_entry("Name".to_string(), appid.to_owned());
+                return entry;
             }
         };
 
@@ -177,7 +173,7 @@ impl cosmic::Application for Minimize {
                         // Temporarily take ownership to appease the borrow checker.
                         let mut apps = std::mem::take(&mut self.apps);
 
-                        if let Some(pos) = apps.iter_mut().position(|a| {
+                        if let Some(pos) = apps.iter().position(|a| {
                             a.toplevel_info.foreign_toplevel == toplevel_info.foreign_toplevel
                         }) {
                             if apps[pos].toplevel_info.app_id != toplevel_info.app_id {
@@ -188,7 +184,7 @@ impl cosmic::Application for Minimize {
                                         .desktop_entry
                                         .icon()
                                         .unwrap_or(&apps[pos].desktop_entry.appid),
-                                )
+                                );
                             }
                             apps[pos].toplevel_info = toplevel_info;
                         } else {
@@ -198,7 +194,7 @@ impl cosmic::Application for Minimize {
                                 name: desktop_entry
                                     .full_name(&self.locales)
                                     .unwrap_or(Cow::Borrowed(&desktop_entry.appid))
-                                    .to_string(),
+                                    .into_owned(),
                                 icon_source: fde::IconSource::from_unknown(
                                     desktop_entry.icon().unwrap_or(&desktop_entry.appid),
                                 ),
@@ -280,7 +276,7 @@ impl cosmic::Application for Minimize {
                     cosmic::app::Action::Surface(a),
                 ));
             }
-        };
+        }
         Task::none()
     }
 
@@ -288,17 +284,14 @@ impl cosmic::Application for Minimize {
         wayland_subscription::wayland_subscription().map(Message::Wayland)
     }
 
-    fn view(&self) -> Element<Self::Message> {
-        let max_icon_count = self
-            .max_icon_count()
-            .map(|n| {
-                if n < self.apps.len() {
-                    n - 1
-                } else {
-                    self.apps.len()
-                }
-            })
-            .unwrap_or(self.apps.len());
+    fn view(&self) -> Element<'_, Self::Message> {
+        let max_icon_count = self.max_icon_count().map_or(self.apps.len(), |n| {
+            if n < self.apps.len() {
+                n - 1
+            } else {
+                self.apps.len()
+            }
+        });
         let (width, _) = self.core.applet.suggested_size(false);
         let padding = self.core.applet.suggested_padding(false);
         let theme = self.core.system_theme().cosmic();
@@ -341,7 +334,7 @@ impl cosmic::Application for Minimize {
 
         // TODO optional dividers on ends if detects app list neighbor
         // not sure the best way to tell if there is an adjacent app-list
-        let icon_buttons = icon_buttons.chain(overflow_btn.into_iter());
+        let icon_buttons = icon_buttons.chain(overflow_btn);
         let content: Element<_> = if matches!(
             self.core.applet.anchor,
             PanelAnchor::Top | PanelAnchor::Bottom
@@ -386,17 +379,14 @@ impl cosmic::Application for Minimize {
         .into()
     }
 
-    fn view_window(&self, _id: window::Id) -> Element<Self::Message> {
-        let max_icon_count = self
-            .max_icon_count()
-            .map(|n| {
-                if n < self.apps.len() {
-                    n - 1
-                } else {
-                    self.apps.len()
-                }
-            })
-            .unwrap_or(self.apps.len());
+    fn view_window(&self, _id: window::Id) -> Element<'_, Self::Message> {
+        let max_icon_count = self.max_icon_count().map_or(self.apps.len(), |n| {
+            if n < self.apps.len() {
+                n - 1
+            } else {
+                self.apps.len()
+            }
+        });
         let (width, _) = self.core.applet.suggested_size(false);
         let padding = self.core.applet.suggested_padding(false);
         let theme = self.core.system_theme().cosmic();

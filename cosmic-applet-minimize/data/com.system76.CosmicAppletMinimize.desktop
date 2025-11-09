@@ -1,12 +1,17 @@
 [Desktop Entry]
 Name=Minimized Windows
 Name[bg]=Минимизирани прозорци
+Name[ar]=النوافذ المصغّرة
+Name[cs]=Minimalizovaná okna
 Name[zh_CN]=最小化窗口
 Name[hu]=Kis méretű ablakok
 Name[pl]=Zminimalizowane okna
 Name[pt]=Janelas Minimizadas
 Name[nl]=Geminimaliseerde vensters
 Name[de]=Minimierte Fenster
+Name[sk]=Minimalizované okná
+Name[es]=Ventanas minimizadas
+Name[sv]=Minimera fönster
 Type=Application
 Exec=cosmic-applet-minimize
 Terminal=false

@@ -4,16 +4,16 @@
 use crate::wayland::{self, AppRequest};
 use cctk::sctk::reexports::calloop::channel::SyncSender;
 use cosmic::iced::{
-    self,
-    futures::{self, channel::mpsc, SinkExt, StreamExt},
-    stream, Subscription,
+    self, Subscription,
+    futures::{self, SinkExt, StreamExt, channel::mpsc},
+    stream,
 };
 use cosmic_protocols::workspace::v2::client::zcosmic_workspace_handle_v2::TilingState;
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 use tokio::sync::Mutex;
 
-pub static WAYLAND_RX: Lazy<Mutex<Option<mpsc::Receiver<TilingState>>>> =
-    Lazy::new(|| Mutex::new(None));
+pub static WAYLAND_RX: LazyLock<Mutex<Option<mpsc::Receiver<TilingState>>>> =
+    LazyLock::new(|| Mutex::new(None));
 
 #[derive(Debug, Clone)]
 pub enum WorkspacesUpdate {
@@ -80,6 +80,6 @@ impl WorkspacesWatcher {
     pub fn new() -> anyhow::Result<Self> {
         let (tx, rx) = mpsc::channel(20);
         let tx = wayland::spawn_workspaces(tx);
-        Ok(Self { tx, rx })
+        Ok(Self { rx, tx })
     }
 }

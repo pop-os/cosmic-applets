@@ -11,13 +11,13 @@ use cosmic::{
     cosmic_config::{self, ConfigSet, CosmicConfigEntry},
     cosmic_theme::Spacing,
     iced::{
+        Task,
         platform_specific::shell::commands::popup::{destroy_popup, get_popup},
         widget::{column, row},
         window::Id,
-        Limits, Task,
     },
     iced_futures::Subscription,
-    iced_runtime::{core::window, Appearance},
+    iced_runtime::{Appearance, core::window},
     prelude::*,
     surface, theme,
     widget::{self, horizontal_space, vertical_space},
@@ -135,7 +135,7 @@ impl cosmic::Application for Window {
                 } else {
                     let new_id = Id::unique();
                     self.popup.replace(new_id);
-                    let mut popup_settings = self.core.applet.get_popup_settings(
+                    let popup_settings = self.core.applet.get_popup_settings(
                         self.core.main_window_id().unwrap(),
                         new_id,
                         None,
@@ -199,7 +199,7 @@ impl cosmic::Application for Window {
         Task::none()
     }
 
-    fn view(&self) -> Element<Self::Message> {
+    fn view(&self) -> Element<'_, Self::Message> {
         let input_source_text = self.core.applet.text(
             self.active_layouts
                 .first()
@@ -233,7 +233,7 @@ impl cosmic::Application for Window {
         .into()
     }
 
-    fn view_window(&self, _id: Id) -> Element<Self::Message> {
+    fn view_window(&self, _id: Id) -> Element<'_, Self::Message> {
         let Spacing {
             space_xxs, space_s, ..
         } = theme::active().cosmic().spacing;
@@ -242,8 +242,8 @@ impl cosmic::Application for Window {
             widget::column::with_capacity(4 + self.active_layouts.len()).padding([8, 0]);
         for (id, layout) in self.active_layouts.iter().enumerate() {
             let group = widget::column::with_capacity(2)
-                .push(widget::text::body(layout.description.clone()))
-                .push(widget::text::caption(layout.layout.clone()));
+                .push(widget::text::body(layout.description.as_str()))
+                .push(widget::text::caption(layout.layout.as_str()));
             content_list = content_list
                 .push(applet::menu_button(group).on_press(Message::SetActiveLayout(id)));
         }
@@ -294,7 +294,7 @@ impl Window {
             .chain(std::iter::repeat(""));
 
         'outer: for (layout, variant) in layouts.zip(variants) {
-            println!("{} : {}", layout, variant);
+            println!("{layout} : {variant}");
             for xkb_layout in &self.layouts {
                 if layout != xkb_layout.name() {
                     continue;
