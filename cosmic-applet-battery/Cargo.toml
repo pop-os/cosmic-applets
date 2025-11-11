@@ -6,10 +6,6 @@ license = "GPL-3.0-only"
 
 [dependencies]
 anyhow.workspace = true
-cosmic-settings-subscriptions = { workspace = true, features = [
-    "upower",
-    "settings_daemon",
-] }
 cosmic-time.workspace = true
 drm = "0.14.1"
 futures.workspace = true
@@ -24,3 +20,9 @@ tracing-subscriber.workspace = true
 tracing.workspace = true
 udev = "0.9"
 zbus.workspace = true
+
+[dependencies.cosmic-settings-upower-subscription]
+git = "https://github.com/pop-os/cosmic-settings"
+
+[dependencies.cosmic-settings-daemon-subscription]
+git = "https://github.com/pop-os/cosmic-settings"
