@@ -4,11 +4,6 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-# cosmic-dbus-a11y = { git = "https://github.com/pop-os/dbus-settings-bindings" }
-cosmic-settings-subscriptions = { workspace = true, features = [
-    "accessibility",
-    "cosmic_a11y_manager",
-] }
 anyhow.workspace = true
 cctk.workspace = true
 cosmic-protocols.workspace = true
@@ -21,3 +16,9 @@ tokio.workspace = true
 tracing-log.workspace = true
 tracing-subscriber.workspace = true
 tracing.workspace = true
+
+[dependencies.cosmic-settings-a11y-manager-subscription]
+git = "https://github.com/pop-os/cosmic-settings"
+
+[dependencies.cosmic-settings-accessibility-subscription]
+git = "https://github.com/pop-os/cosmic-settings"
