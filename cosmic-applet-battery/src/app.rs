@@ -29,15 +29,12 @@ use cosmic::{
     surface, theme,
     widget::{divider, horizontal_space, icon, scrollable, slider, text, vertical_space},
 };
-use cosmic_settings_subscriptions::{
-    settings_daemon,
-    upower::{
-        device::{DeviceDbusEvent, device_subscription},
-        kbdbacklight::{
-            KeyboardBacklightRequest, KeyboardBacklightUpdate, kbd_backlight_subscription,
-        },
-    },
+use cosmic_settings_daemon_subscription as settings_daemon;
+use cosmic_settings_upower_subscription::{
+    device::{DeviceDbusEvent, device_subscription},
+    kbdbacklight::{KeyboardBacklightRequest, KeyboardBacklightUpdate, kbd_backlight_subscription},
 };
+
 use cosmic_time::{Instant, Timeline, anim, chain, id};
 
 use rustc_hash::FxHashMap;
