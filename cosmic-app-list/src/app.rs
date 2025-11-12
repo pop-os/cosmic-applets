@@ -2041,7 +2041,7 @@ impl cosmic::Application for CosmicAppList {
                                     .iter()
                                     .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
                                 dot_radius,
-                                self.core.main_window_id().unwrap(),
+                                id,
                             ),
                             dock_item
                                 .desktop_info
