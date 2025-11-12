@@ -2015,44 +2015,46 @@ impl cosmic::Application for CosmicAppList {
             let focused_item = self.currently_active_toplevel();
             let dot_radius = theme.cosmic().radius_xs();
             // show the overflow popup for active list
-            let active: Vec<_> =
-                self.active_list[..active_popup_cutoff.map_or(self.active_list.len(), |n| {
+            let active: Vec<_> = self
+                .active_list
+                .iter()
+                .rev()
+                .take(active_popup_cutoff.map_or(self.active_list.len(), |n| {
                     if n < self.active_list.len() {
-                        n.saturating_sub(1)
+                        self.active_list.len() - n + 1
                     } else {
-                        n - 1
+                        0
                     }
-                })]
-                    .iter()
-                    .map(|dock_item| {
-                        self.core
-                            .applet
-                            .applet_tooltip(
-                                dock_item.as_icon(
-                                    &self.core.applet,
-                                    self.rectangle_tracker.as_ref(),
-                                    self.popup.is_none(),
-                                    self.config.enable_drag_source,
-                                    self.gpus.as_deref(),
-                                    dock_item
-                                        .toplevels
-                                        .iter()
-                                        .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
-                                    dot_radius,
-                                    self.core.main_window_id().unwrap(),
-                                ),
+                }))
+                .map(|dock_item| {
+                    self.core
+                        .applet
+                        .applet_tooltip(
+                            dock_item.as_icon(
+                                &self.core.applet,
+                                self.rectangle_tracker.as_ref(),
+                                self.popup.is_none(),
+                                self.config.enable_drag_source,
+                                self.gpus.as_deref(),
                                 dock_item
-                                    .desktop_info
-                                    .full_name(&self.locales)
-                                    .unwrap_or_default()
-                                    .into_owned(),
-                                self.popup.is_some(),
-                                Message::Surface,
-                                None,
-                            )
-                            .into()
-                    })
-                    .collect();
+                                    .toplevels
+                                    .iter()
+                                    .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
+                                dot_radius,
+                                self.core.main_window_id().unwrap(),
+                            ),
+                            dock_item
+                                .desktop_info
+                                .full_name(&self.locales)
+                                .unwrap_or_default()
+                                .into_owned(),
+                            self.popup.is_some(),
+                            Message::Surface,
+                            Some(id),
+                        )
+                        .into()
+                })
+                .collect();
             let content = match &self.core.applet.anchor {
                 PanelAnchor::Left | PanelAnchor::Right => container(
                     Column::with_children(active)
