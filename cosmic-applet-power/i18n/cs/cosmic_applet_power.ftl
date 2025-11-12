@@ -23,7 +23,7 @@ confirm-title =
         [suspend] { suspend }
         [shutdown] { shutdown }
         [log-out] Ukončit všechny aplikace a odhlásit se
-       *[other] Použít vybranou akci
+       *[other] Vykonat vybranou akci
     } nyní?
 confirm-body =
     Systém { $action ->
@@ -36,6 +36,5 @@ confirm-body =
     } automaticky za { $countdown } { $countdown ->
         [one] sekundu.
         [few] sekundy.
-        [many] sekund.
        *[other] sekund.
     }
