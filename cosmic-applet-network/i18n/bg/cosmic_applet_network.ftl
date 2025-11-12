@@ -19,3 +19,4 @@ router-wps-button = Може да се свържете и чрез натиск
 unable-to-connect = Свързването към мрежата е неуспешно
 check-wifi-connection = Уверете се, че Wi-Fi е свързан с Интернет и паролата е правилна
 reset = Връщане на настройките
+vpn-connections = ВЧМ връзки
