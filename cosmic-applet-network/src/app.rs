@@ -759,9 +759,19 @@ impl cosmic::Application for CosmicNetworkApplet {
                     // Only show speed if it's greater than 0
                     if *speed > 0 {
                         let speed_text = if *speed >= 1_000_000 {
-                            format!("{} {}", speed / 1_000_000, fl!("terabits-per-second"))
+                            let tbps = *speed as f64 / 1_000_000.0;
+                            if tbps.fract() == 0.0 {
+                                format!("{} {}", tbps as u32, fl!("terabits-per-second"))
+                            } else {
+                                format!("{:.1} {}", tbps, fl!("terabits-per-second"))
+                            }
                         } else if *speed >= 1_000 {
-                            format!("{} {}", speed / 1_000, fl!("gigabits-per-second"))
+                            let gbps = *speed as f64 / 1_000.0;
+                            if gbps.fract() == 0.0 {
+                                format!("{} {}", gbps as u32, fl!("gigabits-per-second"))
+                            } else {
+                                format!("{:.1} {}", gbps, fl!("gigabits-per-second"))
+                            }
                         } else {
                             format!("{speed} {}", fl!("megabits-per-second"))
                         };
