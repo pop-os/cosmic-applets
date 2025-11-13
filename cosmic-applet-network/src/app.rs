@@ -754,6 +754,20 @@ impl cosmic::Application for CosmicNetworkApplet {
                         ipv4.push(text(format!("{}: {}", fl!("ipv4"), addr)).size(12).into());
                     }
 
+                    let mut right_column = vec![text::body(fl!("connected")).into()];
+
+                    // Only show speed if it's greater than 0
+                    if *speed > 0 {
+                        let speed_text = if *speed >= 1_000_000 {
+                            format!("{} {}", speed / 1_000_000, fl!("terabits-per-second"))
+                        } else if *speed >= 1_000 {
+                            format!("{} {}", speed / 1_000, fl!("gigabits-per-second"))
+                        } else {
+                            format!("{speed} {}", fl!("megabits-per-second"))
+                        };
+                        right_column.push(text(speed_text).size(12).into());
+                    }
+
                     vpn_ethernet_col = vpn_ethernet_col.push(column![
                         row![
                             icon::icon(
@@ -763,13 +777,9 @@ impl cosmic::Application for CosmicNetworkApplet {
                             )
                             .size(40),
                             Column::with_children(ipv4),
-                            text::body(format!(
-                                "{} - {speed} {}",
-                                fl!("connected"),
-                                fl!("megabits-per-second")
-                            ))
-                            .width(Length::Fill)
-                            .align_x(Alignment::End),
+                            Column::with_children(right_column)
+                                .width(Length::Fill)
+                                .align_x(Alignment::End),
                         ]
                         .align_y(Alignment::Center)
                         .spacing(8)
