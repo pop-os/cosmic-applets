@@ -8,6 +8,16 @@ use std::net::Ipv4Addr;
 
 use super::hw_address::HwAddress;
 
+/// Read network interface speed from sysfs
+/// Returns speed in Mbps, or None if unable to read
+fn read_speed_from_sysfs(interface: &str) -> Option<u32> {
+    let path = format!("/sys/class/net/{}/speed", interface);
+    std::fs::read_to_string(path)
+        .ok()
+        .and_then(|content| content.trim().parse::<i32>().ok())
+        .and_then(|speed| if speed > 0 { Some(speed as u32) } else { None })
+}
+
 pub async fn active_connections(
     active_connections: Vec<ActiveConnection<'_>>,
 ) -> zbus::Result<Vec<ActiveConnectionInfo>> {
@@ -33,6 +43,8 @@ pub async fn active_connections(
             continue;
         }
         for device in connection.devices().await.unwrap_or_default() {
+            let interface_name = device.interface().await.ok();
+
             match device
                 .downcast_to_device()
                 .await
@@ -40,11 +52,20 @@ pub async fn active_connections(
                 .and_then(|inner| inner)
             {
                 Some(SpecificDevice::Wired(wired_device)) => {
+                    let mut speed = wired_device.speed().await?;
+
+                    // If NetworkManager returns 0, try to read from sysfs
+                    if speed == 0 {
+                        if let Some(interface) = interface_name.as_ref() {
+                            speed = read_speed_from_sysfs(interface).unwrap_or(0);
+                        }
+                    }
+
                     info.push(ActiveConnectionInfo::Wired {
                         name: connection.id().await?,
                         hw_address: HwAddress::from_str(&wired_device.hw_address().await?)
                             .unwrap_or_default(),
-                        speed: wired_device.speed().await?,
+                        speed,
                         ip_addresses: addresses.clone(),
                     });
                 }
