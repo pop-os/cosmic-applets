@@ -136,10 +136,16 @@ impl CosmicBatteryApplet {
     }
 
     fn screen_brightness_percent(&self) -> Option<f64> {
-        Some(
-            (self.screen_brightness? as f64 / self.max_screen_brightness?.max(1) as f64)
-                .clamp(0.01, 1.0),
-        )
+        let raw = self.screen_brightness? as i64;
+        let max = self.max_screen_brightness?.max(1) as i64;
+        if max <= 20 {
+            // Coarse panels (<=20 brightness levels)
+            let rung = (raw.saturating_add(1)).min(20);
+            Some((5 * rung) as f64 / 100.0)
+        } else {
+            let p = ((raw * 100 + max / 2) / max).clamp(1, 100) as f64;
+            Some(p / 100.0)
+        }
     }
 
     fn update_display(&mut self) {
@@ -242,8 +248,20 @@ impl cosmic::Application for CosmicBatteryApplet {
                     return cosmic::task::message(Message::SetKbdBrightnessDebounced);
                 }
             }
+            // Matching brightness calculation logic from cosmic-osd and cosmic-settings-daemon
             Message::SetScreenBrightness(brightness) => {
-                self.screen_brightness = Some(brightness);
+                let snapped = if let Some(max) = self.max_screen_brightness {
+                    if max > 0 && max <= 20 {
+                        // Coarse: map raw→k by round, then back to raw setpoint round(k*max/20)
+                        let k = ((brightness as i64 * 20 + (max as i64)/2) / (max as i64)).clamp(0, 20);
+                        (((k * (max as i64)) + 10) / 20) as i32
+                    } else {
+                        brightness
+                    }
+                } else {
+                    brightness
+                };
+                self.screen_brightness = Some(snapped);
                 if !self.dragging_screen_brightness {
                     self.dragging_screen_brightness = true;
                     self.update_display();
@@ -663,7 +681,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                                 .size(24)
                                 .symbolic(true),
                             slider(
-                                1..=max_screen_brightness,
+                                0..=max_screen_brightness,
                                 screen_brightness,
                                 Message::SetScreenBrightness
                             )
