@@ -163,13 +163,27 @@ impl Window {
         calendar
     }
 
+    /// Format with strftime if non-empty and ignore errors.
+    ///
+    /// Do not use to_string(). The formatter panics on invalid specifiers.
+    fn maybe_strftime(&self) -> Option<String> {
+        // strftime may override locale specific elements so it stands alone rather
+        // than using ICU.
+        (!self.config.format_strftime.is_empty())
+            .then(|| {
+                let mut s = String::new();
+                self.now
+                    .format(&self.config.format_strftime)
+                    .write_to(&mut s)
+                    .map(|_| s)
+                    .ok()
+            })
+            .flatten()
+    }
+
     fn vertical_layout(&self) -> Element<'_, Message> {
-        let elements: Vec<Element<'_, Message>> = if !self.config.format_strftime.is_empty() {
-            // strftime formatter may override locale specific elements so it stands alone rather
-            // than using ICU to determine a format.
-            self.now
-                .format(&self.config.format_strftime)
-                .to_string()
+        let elements: Vec<Element<'_, Message>> = if let Some(strftime) = self.maybe_strftime() {
+            strftime
                 .split_whitespace()
                 .map(|piece| self.core.applet.text(piece.to_owned()).into())
                 .collect()
@@ -235,8 +249,8 @@ impl Window {
     }
 
     fn horizontal_layout(&self) -> Element<'_, Message> {
-        let formatted_date = if !self.config.format_strftime.is_empty() {
-            self.now.format(&self.config.format_strftime).to_string()
+        let formatted_date = if let Some(strftime) = self.maybe_strftime() {
+            strftime
         } else {
             let datetime = self.create_datetime(&self.now);
             let mut prefs = DateTimeFormatterPreferences::from(self.locale.clone());
