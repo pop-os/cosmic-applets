@@ -219,11 +219,16 @@ impl cosmic::Application for Window {
     }
 
     fn view(&self) -> Element<'_, Self::Message> {
-        let input_source_text = self.core.applet.text(
-            self.active_layouts
-                .first()
-                .map_or("", |l| l.layout.as_str()),
-        );
+        let applet_text = if let Some(l) = self.active_layouts.first() {
+            if !l.variant.is_empty() {
+                format!("{} ({})", l.layout, l.variant)
+            } else {
+                l.layout.clone()
+            }
+        } else {
+            String::new()
+        };
+        let input_source_text = self.core.applet.text(applet_text);
         let button = self
             .core
             .applet
