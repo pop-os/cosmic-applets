@@ -20,3 +20,5 @@ unable-to-connect = Nepodařilo se připojit k síti
 check-wifi-connection = Ujistěte se, že Wi-Fi má připojení k internetu a heslo je správné
 reset = Obnovit
 vpn-connections = Připojení VPN
+gigabits-per-second = Gbps
+terabits-per-second = Tbps
