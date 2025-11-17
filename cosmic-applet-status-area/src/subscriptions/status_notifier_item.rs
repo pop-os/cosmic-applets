@@ -48,7 +48,7 @@ impl StatusNotifierItem {
         let menu_path = item_proxy.menu().await;
 
         // Why would an item say it has no menu but provide a menu path? Slack does this.
-        let mut is_menu = menu_path.is_ok() || is_menu.unwrap_or(false);
+        let is_menu = menu_path.is_ok() || is_menu.unwrap_or(false);
 
         if !is_menu {
             return Ok(Self {
@@ -95,10 +95,12 @@ impl StatusNotifierItem {
     pub fn icon_subscription(&self) -> iced::Subscription<IconUpdate> {
         fn icon_events(
             item_proxy: StatusNotifierItemProxy<'static>,
+            _name: String,
         ) -> impl futures::Stream<Item = IconUpdate> + 'static {
             async move {
                 let icon_name = item_proxy.icon_name().await;
                 let icon_pixmap = item_proxy.icon_pixmap().await;
+
                 futures::stream::iter(
                     [
                         icon_name.map(IconUpdate::Name),
@@ -112,13 +114,14 @@ impl StatusNotifierItem {
         }
 
         let item_proxy = self.item_proxy.clone();
+        let name = self.name.clone();
         Subscription::run_with_id(
             format!("status-notifier-item-icon-{}", &self.name),
             async move {
                 let new_icon_stream = item_proxy.receive_new_icon().await.unwrap();
                 futures::stream::once(async {})
-                    .chain(new_icon_stream.map(|_| ()))
-                    .flat_map(move |()| icon_events(item_proxy.clone()))
+                    .chain(new_icon_stream.map(move |_| {}))
+                    .flat_map(move |()| icon_events(item_proxy.clone(), name.clone()))
             }
             .flatten_stream(),
         )

@@ -14,7 +14,8 @@ use cosmic::{
     surface,
     widget::{container, mouse_area},
 };
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap, HashSet};
+use std::sync::{Mutex, OnceLock};
 
 use crate::{components::status_menu, subscriptions::status_notifier_watcher};
 
@@ -44,7 +45,143 @@ pub(crate) struct App {
     token_tx: Option<calloop::channel::Sender<TokenRequest>>,
 }
 
+static ICON_NAME_CACHE: OnceLock<Mutex<HashMap<String, Option<String>>>> = OnceLock::new();
+
 impl App {
+    fn find_flatpak_icon(search_term: &str) -> Option<String> {
+        let search_lower = search_term.to_lowercase();
+
+        let flatpak_dirs = [
+            format!(
+                "{}/.local/share/flatpak/exports/share/icons",
+                std::env::var("HOME").ok()?
+            ),
+            "/var/lib/flatpak/exports/share/icons".to_string(),
+        ];
+
+        const ICON_EXTENSIONS: &[&str] = &[".png", ".svg", ".jpg", ".xpm"];
+
+        for dir in &flatpak_dirs {
+            if let Ok(entries) = std::fs::read_dir(format!("{}/hicolor", dir)) {
+                for entry in entries.flatten() {
+                    let size_dir = entry.path();
+                    if !size_dir.is_dir() {
+                        continue;
+                    }
+
+                    let apps_dir = size_dir.join("apps");
+                    if let Ok(app_icons) = std::fs::read_dir(&apps_dir) {
+                        for app_icon in app_icons.flatten() {
+                            let file_name = app_icon.file_name();
+                            let name_str = file_name.to_string_lossy();
+
+                            let mut app_id = name_str.as_ref();
+                            for ext in ICON_EXTENSIONS {
+                                if let Some(stripped) = app_id.strip_suffix(ext) {
+                                    app_id = stripped;
+                                    break;
+                                }
+                            }
+
+                            if app_id.to_lowercase().contains(&search_lower) {
+                                return Some(app_id.to_string());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        None
+    }
+
+    fn try_flatpak_fallback(icon_name: &str, service_name: &str) -> Option<String> {
+        let mut search_terms = HashSet::new();
+
+        search_terms.insert(icon_name.trim_end_matches("_tray_mono"));
+        search_terms.insert(icon_name.trim_end_matches("_tray"));
+        search_terms.insert(icon_name.trim_end_matches("_mono"));
+        search_terms.insert(icon_name.trim_end_matches("-tray"));
+        search_terms.insert(icon_name.trim_end_matches("-mono"));
+
+        if let Some(last_component) = service_name.split('/').last() {
+            if !last_component.is_empty() {
+                search_terms.insert(last_component);
+            }
+        }
+
+        for term in search_terms {
+            if !term.is_empty() && term != icon_name {
+                if let Some(flatpak_id) = Self::find_flatpak_icon(term) {
+                    return Some(flatpak_id);
+                }
+            }
+        }
+
+        None
+    }
+
+    fn map_icon_name(icon_name: &str, service_name: &str) -> String {
+        let cache = ICON_NAME_CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+
+        if let Ok(cache_lock) = cache.lock() {
+            if let Some(cached) = cache_lock.get(icon_name) {
+                return cached
+                    .as_ref()
+                    .map(|s| s.clone())
+                    .unwrap_or_else(|| icon_name.to_string());
+            }
+        }
+
+        let mapped_icon = Self::try_flatpak_fallback(icon_name, service_name);
+        // placeholders in case they are needed in the future
+        // .or_else(|| Self::try_snap_fallback(icon_name, service_name))
+        // .or_else(|| Self::try_appimage_fallback(icon_name, service_name))
+
+        if let Some(fallback_id) = mapped_icon {
+            if let Ok(mut cache_lock) = cache.lock() {
+                cache_lock.insert(icon_name.to_string(), Some(fallback_id.clone()));
+            }
+            return fallback_id;
+        }
+
+        if let Ok(mut cache_lock) = cache.lock() {
+            cache_lock.insert(icon_name.to_string(), None);
+        }
+
+        icon_name.to_string()
+    }
+
+    fn get_mapped_icon_name(menu: &status_menu::State) -> Option<&'static str> {
+        if menu.icon_name().is_empty() {
+            None
+        } else {
+            let mapped = Self::map_icon_name(menu.icon_name(), menu.name());
+            Some(Box::leak(mapped.into_boxed_str()))
+        }
+    }
+
+    fn create_menu_icon_button(
+        &self,
+        menu: &status_menu::State,
+    ) -> cosmic::widget::Button<'_, Msg> {
+        let mapped_icon_name = Self::get_mapped_icon_name(menu);
+
+        match menu.icon_pixmap() {
+            Some(icon) if menu.icon_name().is_empty() => self
+                .core
+                .applet
+                .icon_button_from_handle(icon.clone().symbolic(true)),
+            _ if mapped_icon_name.is_some() => {
+                self.core.applet.icon_button(mapped_icon_name.unwrap())
+            }
+            _ => self
+                .core
+                .applet
+                .icon_button("application-x-executable-symbolic"),
+        }
+    }
+
     fn next_menu_id(&mut self) -> usize {
         self.max_menu_id += 1;
         self.max_menu_id
@@ -95,22 +232,15 @@ impl App {
         let overflow_index = self.overflow_index().unwrap_or(0);
         let children = self.menus.iter().skip(overflow_index).map(|(id, menu)| {
             mouse_area(
-                match menu.icon_pixmap() {
-                    Some(icon) if menu.icon_name() == "" => self
-                        .core
-                        .applet
-                        .icon_button_from_handle(icon.clone().symbolic(true)),
-                    _ => self.core.applet.icon_button(menu.icon_name()),
-                }
-                .on_press_down(Msg::TogglePopup(*id)),
+                self.create_menu_icon_button(menu)
+                    .on_press_down(Msg::TogglePopup(*id)),
             )
             .on_enter(Msg::Hovered(*id))
             .into()
         });
         let theme = self.core.system_theme();
         let cosmic = theme.cosmic();
-        let corners = cosmic.corner_radii;
-        let pad = corners.radius_m[0];
+        let _corners = cosmic.corner_radii;
 
         self.core
             .applet
@@ -195,7 +325,8 @@ impl cosmic::Application for App {
                     ])
                 }
                 status_notifier_watcher::Event::Unregistered(name) => {
-                    if let Some((id, _)) = self.menus.iter().find(|(_id, menu)| menu.name() == name)
+                    if let Some((id, _menu)) =
+                        self.menus.iter().find(|(_id, menu)| menu.name() == name)
                     {
                         let id = *id;
                         self.menus.remove(&id);
@@ -452,20 +583,13 @@ impl cosmic::Application for App {
             .iter()
             .take(overflow_index.unwrap_or(self.menus.len()))
             .map(|(id, menu)| {
-                mouse_area(
-                    match menu.icon_pixmap() {
-                        Some(icon) if menu.icon_name() == "" => self
-                            .core
-                            .applet
-                            .icon_button_from_handle(icon.clone().symbolic(true)),
-                        _ => self.core.applet.icon_button(menu.icon_name()),
-                    }
-                    .on_press_down(if menu.item.menu_proxy().is_some() {
+                mouse_area(self.create_menu_icon_button(menu).on_press_down(
+                    if menu.item.menu_proxy().is_some() {
                         Msg::TogglePopup(*id)
                     } else {
                         Msg::StatusMenu((*id, status_menu::Msg::Click(0, true)))
-                    }),
-                )
+                    },
+                ))
                 .on_enter(Msg::Hovered(*id))
                 .into()
             });
@@ -512,7 +636,7 @@ impl cosmic::Application for App {
         let theme = self.core.system_theme();
         let cosmic = theme.cosmic();
         let corners = cosmic.corner_radii;
-        let pad = corners.radius_m[0];
+        let _pad = corners.radius_m[0];
         match self.open_menu {
             Some(id) => match self.menus.get(&id) {
                 Some(menu) => self
@@ -520,7 +644,7 @@ impl cosmic::Application for App {
                     .applet
                     .popup_container(
                         container(menu.popup_view().map(move |msg| Msg::StatusMenu((id, msg))))
-                            .padding([pad, 0.]),
+                            .padding([_pad, 0.]),
                     )
                     .into(),
                 None => unreachable!(),
