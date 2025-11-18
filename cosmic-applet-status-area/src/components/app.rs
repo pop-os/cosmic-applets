@@ -14,7 +14,8 @@ use cosmic::{
     surface,
     widget::{container, mouse_area},
 };
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap};
+use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
 
 use crate::{components::status_menu, subscriptions::status_notifier_watcher};
@@ -48,21 +49,61 @@ pub(crate) struct App {
 static ICON_NAME_CACHE: OnceLock<Mutex<HashMap<String, Option<String>>>> = OnceLock::new();
 
 impl App {
-    fn find_flatpak_icon(search_term: &str) -> Option<String> {
+    /// Get icon theme directories from XDG base directories.
+    /// This respects XDG_DATA_DIRS and includes flatpak directories if they're configured.
+    /// Implements the XDG Base Directory specification without external dependencies.
+    fn get_icon_directories() -> Vec<PathBuf> {
+        let mut dirs = Vec::new();
+
+        // XDG_DATA_HOME/icons (defaults to ~/.local/share/icons)
+        let data_home = std::env::var("XDG_DATA_HOME")
+            .ok()
+            .map(PathBuf::from)
+            .or_else(|| {
+                std::env::var("HOME")
+                    .ok()
+                    .map(|h| PathBuf::from(h).join(".local/share"))
+            });
+
+        if let Some(data_home) = data_home {
+            let icons_dir = data_home.join("icons");
+            if icons_dir.exists() {
+                dirs.push(icons_dir);
+            }
+        }
+
+        // XDG_DATA_DIRS/icons (defaults to /usr/local/share:/usr/share)
+        let data_dirs = std::env::var("XDG_DATA_DIRS")
+            .unwrap_or_else(|_| "/usr/local/share:/usr/share".to_string());
+
+        for data_dir in data_dirs.split(':') {
+            let icons_dir = PathBuf::from(data_dir).join("icons");
+            if icons_dir.exists() {
+                dirs.push(icons_dir);
+            }
+        }
+
+        // ~/.icons for backwards compatibility
+        if let Ok(home) = std::env::var("HOME") {
+            let home_icons = PathBuf::from(home).join(".icons");
+            if home_icons.exists() {
+                dirs.push(home_icons);
+            }
+        }
+
+        dirs
+    }
+
+    /// Search for an app icon that matches the search term (case-insensitive).
+    /// This searches through XDG icon directories to find app IDs.
+    fn find_app_icon_fuzzy(search_term: &str) -> Option<String> {
         let search_lower = search_term.to_lowercase();
-
-        let flatpak_dirs = [
-            format!(
-                "{}/.local/share/flatpak/exports/share/icons",
-                std::env::var("HOME").ok()?
-            ),
-            "/var/lib/flatpak/exports/share/icons".to_string(),
-        ];
-
         const ICON_EXTENSIONS: &[&str] = &[".png", ".svg", ".jpg", ".xpm"];
 
-        for dir in &flatpak_dirs {
-            if let Ok(entries) = std::fs::read_dir(format!("{}/hicolor", dir)) {
+        for icon_dir in Self::get_icon_directories() {
+            // Check hicolor theme apps directory (most common location)
+            let hicolor_dir = icon_dir.join("hicolor");
+            if let Ok(entries) = std::fs::read_dir(&hicolor_dir) {
                 for entry in entries.flatten() {
                     let size_dir = entry.path();
                     if !size_dir.is_dir() {
@@ -95,26 +136,33 @@ impl App {
         None
     }
 
-    fn try_flatpak_fallback(icon_name: &str, service_name: &str) -> Option<String> {
-        let mut search_terms = HashSet::new();
+    /// Try icon name variants and fuzzy search through XDG icon directories.
+    /// This respects XDG_DATA_DIRS and properly searches all icon theme paths
+    /// including flatpak directories if they're in the XDG paths.
+    fn try_icon_name_variants(icon_name: &str, service_name: &str) -> Option<String> {
+        let mut variants = Vec::new();
 
-        search_terms.insert(icon_name.trim_end_matches("_tray_mono"));
-        search_terms.insert(icon_name.trim_end_matches("_tray"));
-        search_terms.insert(icon_name.trim_end_matches("_mono"));
-        search_terms.insert(icon_name.trim_end_matches("-tray"));
-        search_terms.insert(icon_name.trim_end_matches("-mono"));
-
-        if let Some(last_component) = service_name.split('/').last() {
-            if !last_component.is_empty() {
-                search_terms.insert(last_component);
+        for suffix in ["_tray_mono", "_tray", "_mono", "-tray", "-mono"] {
+            if let Some(stripped) = icon_name.strip_suffix(suffix) {
+                if !stripped.is_empty() && !variants.contains(&stripped.to_string()) {
+                    variants.push(stripped.to_string());
+                }
             }
         }
 
-        for term in search_terms {
-            if !term.is_empty() && term != icon_name {
-                if let Some(flatpak_id) = Self::find_flatpak_icon(term) {
-                    return Some(flatpak_id);
-                }
+        // Try the last component of the service name (often the app ID)
+        if let Some(last_component) = service_name.split('/').last() {
+            if !last_component.is_empty() && !variants.contains(&last_component.to_string()) {
+                variants.push(last_component.to_string());
+            }
+        }
+
+        // Try fuzzy searching for app icons using each variant
+        // This helps find icons like "com.valvesoftware.Steam" when searching for "steam"
+        // We trust libcosmic's icon system to handle the actual icon lookup
+        for variant in &variants {
+            if let Some(app_id) = Self::find_app_icon_fuzzy(variant) {
+                return Some(app_id);
             }
         }
 
@@ -133,10 +181,7 @@ impl App {
             }
         }
 
-        let mapped_icon = Self::try_flatpak_fallback(icon_name, service_name);
-        // placeholders in case they are needed in the future
-        // .or_else(|| Self::try_snap_fallback(icon_name, service_name))
-        // .or_else(|| Self::try_appimage_fallback(icon_name, service_name))
+        let mapped_icon = Self::try_icon_name_variants(icon_name, service_name);
 
         if let Some(fallback_id) = mapped_icon {
             if let Ok(mut cache_lock) = cache.lock() {
