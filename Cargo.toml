@@ -30,8 +30,6 @@ cosmic-applets-config = { path = "cosmic-applets-config" }
 cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols", default-features = false, features = [
     "client",
 ], rev = "d0e95be" }
-cosmic-settings-subscriptions = { git = "https://github.com/pop-os/cosmic-settings-subscriptions" }
-
 cosmic-time = { git = "https://github.com/pop-os/cosmic-time", default-features = false }
 # cosmic-time = { path = "../cosmic-time", default-features = false ] }
 

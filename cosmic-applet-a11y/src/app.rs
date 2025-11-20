@@ -24,10 +24,11 @@ use cosmic::{
     theme::{self, CosmicTheme},
     widget::{Column, divider, text},
 };
-use cosmic_settings_subscriptions::{
-    accessibility::{self, DBusRequest, DBusUpdate},
-    cosmic_a11y_manager::{AccessibilityEvent, AccessibilityRequest, ColorFilter},
+
+use cosmic_settings_a11y_manager_subscription::{
+    self as cosmic_a11y_manager, AccessibilityEvent, AccessibilityRequest, ColorFilter,
 };
+use cosmic_settings_accessibility_subscription::{self as accessibility, DBusRequest, DBusUpdate};
 use cosmic_time::{Instant, Timeline, anim, chain, id};
 use std::sync::LazyLock;
 use tokio::sync::mpsc::UnboundedSender;
