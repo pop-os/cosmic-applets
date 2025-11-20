@@ -15,3 +15,4 @@ tracing-log.workspace = true
 tracing-subscriber.workspace = true
 tracing.workspace = true
 zbus.workspace = true
+notify = "6.1"

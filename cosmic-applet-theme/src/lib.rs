@@ -1,4 +1,4 @@
-// Copyright 2023 System76 <info@system76.com>
+// Copyright 2025 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
 use cosmic::{
@@ -6,21 +6,18 @@ use cosmic::{
     cosmic_theme::Spacing,
     iced::{
         Alignment, Length,
-        platform_specific::shell::commands::popup::{destroy_popup, get_popup},
         widget::{self, column, row},
         window,
     },
-    surface, theme,
+    theme,
     widget::{icon, text},
 };
-use std::{fs, path::PathBuf, sync::LazyLock};
+use std::{fs, path::PathBuf};
 
 use crate::localize::localize;
 
 pub mod localize;
-
-static SUBSURFACE_ID: LazyLock<cosmic::widget::Id> =
-    LazyLock::new(|| cosmic::widget::Id::new("subsurface"));
+mod theme_subscription;
 
 pub fn run() -> cosmic::iced::Result {
     localize();
@@ -32,7 +29,6 @@ struct Theme {
     core: cosmic::app::Core,
     icon_name: String,
     popup: Option<window::Id>,
-    subsurface_id: window::Id,
     is_dark: bool,
     theme_file: PathBuf,
 }
@@ -45,9 +41,8 @@ enum ThemeAction {
 #[derive(Debug, Clone)]
 enum Message {
     Action(ThemeAction),
-    TogglePopup,
     Closed(window::Id),
-    Surface(surface::Action),
+    ThemeUpdate(theme_subscription::ThemeUpdate),
 }
 
 impl cosmic::Application for Theme {
@@ -78,20 +73,21 @@ impl cosmic::Application for Theme {
             if let Some(parent) = theme_file.parent() {
                 fs::create_dir_all(parent).expect("Failed to create theme config directory");
             }
-            fs::write(&theme_file, is_dark.to_string()).expect("Failed to write initial theme state");
+            fs::write(&theme_file, is_dark.to_string())
+                .expect("Failed to write initial theme state");
         }
 
         let icon_name = if is_dark {
             "weather-clear-night-symbolic"
         } else {
             "weather-sunny-symbolic"
-        }.to_string();
+        }
+        .to_string();
 
         (
             Self {
                 core,
                 icon_name,
-                subsurface_id: window::Id::unique(),
                 popup: Option::default(),
                 is_dark,
                 theme_file,
@@ -106,38 +102,20 @@ impl cosmic::Application for Theme {
 
     fn update(&mut self, message: Message) -> app::Task<Message> {
         match message {
-            Message::TogglePopup => {
-                if let Some(p) = self.popup.take() {
-                    destroy_popup(p)
-                } else {
-                    let new_id = window::Id::unique();
-                    self.popup.replace(new_id);
-
-                    let popup_settings = self.core.applet.get_popup_settings(
-                        self.core.main_window_id().unwrap(),
-                        new_id,
-                        None,
-                        None,
-                        None,
-                    );
-
-                    get_popup(popup_settings)
-                }
-            }
-            Message::Action(action) => {
-                match action {
-                    ThemeAction::ToggleTheme => {
-                        self.is_dark = !self.is_dark;
-                        fs::write(&self.theme_file, self.is_dark.to_string()).expect("Failed to write theme state");
-                        self.icon_name = if self.is_dark {
-                            "weather-clear-night-symbolic"
-                        } else {
-                            "weather-sunny-symbolic"
-                        }.to_string();
-                        Task::none()
+            Message::Action(action) => match action {
+                ThemeAction::ToggleTheme => {
+                    self.is_dark = !self.is_dark;
+                    fs::write(&self.theme_file, self.is_dark.to_string())
+                        .expect("Failed to write theme state");
+                    self.icon_name = if self.is_dark {
+                        "weather-clear-night-symbolic"
+                    } else {
+                        "weather-sunny-symbolic"
                     }
+                    .to_string();
+                    Task::none()
                 }
-            }
+            },
 
             Message::Closed(id) => {
                 if self.popup == Some(id) {
@@ -145,11 +123,19 @@ impl cosmic::Application for Theme {
                 }
                 Task::none()
             }
-            Message::Surface(a) => {
-                return cosmic::task::message(cosmic::Action::Cosmic(
-                    cosmic::app::Action::Surface(a),
-                ));
-            }
+
+            Message::ThemeUpdate(update) => match update {
+                theme_subscription::ThemeUpdate::Changed(is_dark) => {
+                    self.is_dark = is_dark;
+                    self.icon_name = if is_dark {
+                        "weather-clear-night-symbolic"
+                    } else {
+                        "weather-sunny-symbolic"
+                    }
+                    .to_string();
+                    Task::none()
+                }
+            },
         }
     }
 
@@ -162,22 +148,24 @@ impl cosmic::Application for Theme {
     }
 
     fn view_window(&self, id: window::Id) -> Element<'_, Message> {
-        let Spacing {
-            space_xxs,
-            space_s,
-            space_m,
-            ..
-        } = theme::active().cosmic().spacing;
+        let Spacing { space_xxs, .. } = theme::active().cosmic().spacing;
 
         if matches!(self.popup, Some(p) if p == id) {
             let toggle = cosmic::widget::button::custom(
                 widget::container(
                     row![
-                        icon::from_name(if self.is_dark { "weather-sunny-symbolic" } else { "weather-clear-night-symbolic" }).size(24).symbolic(true).icon(),
+                        icon::from_name(if self.is_dark {
+                            "weather-sunny-symbolic"
+                        } else {
+                            "weather-clear-night-symbolic"
+                        })
+                        .size(24)
+                        .symbolic(true)
+                        .icon(),
                         text::body(fl!("toggle-theme")),
                     ]
                     .align_y(Alignment::Center)
-                    .spacing(space_xxs)
+                    .spacing(space_xxs),
                 )
                 .center(Length::Fill),
             )
@@ -185,9 +173,7 @@ impl cosmic::Application for Theme {
             .height(Length::Fixed(40.0))
             .class(theme::Button::Text);
 
-            let content = column![toggle]
-                .align_x(Alignment::Start)
-                .padding([8, 0]);
+            let content = column![toggle].align_x(Alignment::Start).padding([8, 0]);
 
             self.core.applet.popup_container(content).into()
         } else {
@@ -198,6 +184,11 @@ impl cosmic::Application for Theme {
     fn style(&self) -> Option<cosmic::iced_runtime::Appearance> {
         Some(cosmic::applet::style())
     }
+
+    fn subscription(&self) -> cosmic::iced::Subscription<Message> {
+        cosmic::iced::Subscription::batch(vec![
+            theme_subscription::theme_subscription(self.theme_file.clone())
+                .map(Message::ThemeUpdate),
+        ])
+    }
 }
-
-
