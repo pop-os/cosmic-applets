@@ -1,5 +1,5 @@
 cosmic-app-list = Barre des applications
-pin = Fixer à la barre d'applis
+pin = Épingler à la barre d'applis
 quit = Quitter
 quit-all = Tout quitter
 new-window = Nouvelle fenêtre
