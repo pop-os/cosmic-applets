@@ -1,5 +1,5 @@
-tile-windows = Ajuster automatiquement les fenêtres
-tile-current = Ajuster automatiquement le bureau actuel
+tile-windows = Agencer automatiquement les fenêtres
+tile-current = Agencer automatiquement l'espace de travail actuel
 shortcuts = Raccourcis
 navigate-windows = Naviguer les fenêtres
 move-window = Déplacer la fenêtre

@@ -7,6 +7,6 @@ confirm = تأكيد
 cancel = إلغاء
 unsuccessful = فشل الاقتران
 check-device = تأكد من أن { $deviceName } قيد التشغيل، وفي النطاق، وجاهز للاقتران.
-try-again = حاول مرة أخرى
+try-again = حاول مجددًا
 discoverable = قابل للاكتشاف
 pairable = قابل للاقتران
