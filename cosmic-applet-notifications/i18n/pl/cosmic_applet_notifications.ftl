@@ -1,15 +1,17 @@
 hours-ago =
-    { $duration } { $duration ->
-        [one] godzinę
-        [few] godziny
-       *[other] godzin
-    } temu
+    { $duration ->
+        [0] Przed chwilą
+        [one] 1 godzinę temu
+        [few] { $duration }  godziny temu
+       *[other] { $duration } godzin temu
+    }
 minutes-ago =
-    { $duration } { $duration ->
-        [one] minuta
-        [few] minuty
-       *[other] minut
-    } temu
+    { $duration ->
+        [0] Przed chwilą
+        [one] 1 minutę temu
+        [few] { $duration } minuty temu
+       *[other] { $duration } minut temu
+    }
 show-less = Pokaż mniej
 show-more = Pokaż { $more } więcej
 clear-group = Wyczyść grupę

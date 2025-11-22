@@ -1,13 +1,15 @@
 hours-ago =
-    { $duration } { $duration ->
-        [one] timma
-       *[other] timmar
-    } sedan
+    { $duration ->
+        [0] Alldeles nyss
+        [one] timma sedan
+       *[other] { $duration } timmar sedan
+    }
 minutes-ago =
-    { $duration } { $duration ->
-        [one] minut
-       *[other] minuter
-    } sedan
+    { $duration ->
+        [0] Alldeles nyss
+        [one] 1 minut sedan
+       *[other] { $duration } minuter sedan
+    }
 show-less = Visa mindre
 show-more = Visa { $more } till
 clear-group = Töm grupp
