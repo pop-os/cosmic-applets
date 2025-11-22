@@ -19,6 +19,7 @@ cosmic-applet-tiling = { path = "../cosmic-applet-tiling" }
 cosmic-applet-time = { path = "../cosmic-applet-time" }
 cosmic-applet-workspaces = { path = "../cosmic-applet-workspaces" }
 cosmic-applet-input-sources = { path = "../cosmic-applet-input-sources" }
+cosmic-applet-theme = { path = "../cosmic-applet-theme" }
 cosmic-panel-button = { path = "../cosmic-panel-button" }
 libcosmic.workspace = true
 tracing.workspace = true

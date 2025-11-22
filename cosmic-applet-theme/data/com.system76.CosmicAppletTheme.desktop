@@ -1,0 +1,16 @@
+[Desktop Entry]
+Type=Application
+Name=Theme Toggle Applet
+Comment=Toggle system light/dark theme
+Exec=cosmic-applet-theme
+Icon=com.system76.CosmicAppletTheme-symbolic
+Terminal=false
+Categories=COSMIC;
+Keywords=COSMIC;Iced;
+# Translators: Do NOT translate or transliterate this text (this is an icon file name)!
+StartupNotify=true
+NoDisplay=true
+X-CosmicApplet=true
+X-CosmicShrinkable=true
+X-CosmicHoverPopup=Auto
+X-OverflowPriority=10
