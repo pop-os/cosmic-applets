@@ -1,6 +1,6 @@
 tile-windows = Automatikus ablakcsempézés
 tile-current = Az aktuális munkaterület automatikus csempézése
-shortcuts = Parancsikonok
+shortcuts = Billentyűparancsok
 navigate-windows = Ablakok navigálása
 move-window = Ablak mozgatása
 toggle-floating-window = Az ablakok lebegtetésének be- és kikapcsolása
