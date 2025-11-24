@@ -98,6 +98,7 @@ struct CosmicBatteryApplet {
     zbus_connection: Option<zbus::Connection>,
     dragging_screen_brightness: bool,
     dragging_kbd_brightness: bool,
+    config: config::PowerAppletConfig,
 }
 
 impl CosmicBatteryApplet {
@@ -201,6 +202,7 @@ enum Message {
     SettingsDaemon(settings_daemon::Event),
     ZbusConnection(zbus::Result<zbus::Connection>),
     Surface(surface::Action),
+    ConfigChanged(config::PowerAppletConfig),
 }
 
 impl cosmic::Application for CosmicBatteryApplet {
@@ -497,18 +499,28 @@ impl cosmic::Application for CosmicBatteryApplet {
                     cosmic::app::Action::Surface(a),
                 ));
             }
+            Message::ConfigChanged(v) => self.config = v,
         }
         Task::none()
     }
 
     fn view(&self) -> Element<'_, Message> {
-        let btn: Element<'_, Message> = self
-            .core
-            .applet
-            .icon_button(&self.icon_name)
+        let btn: Element<'_, Message> = if self.config.display_as_percentage {
+            cosmic::widget::button::custom(cosmic::widget::text(format!(
+                "{}{}%",
+                if self.on_battery { "" } else { "⚡" },
+                self.battery_percent
+            )))
             .on_press_down(Message::TogglePopup)
-            .into();
-
+            .class(cosmic::style::Button::AppletIcon)
+            .into()
+        } else {
+            self.core
+                .applet
+                .icon_button(&self.icon_name)
+                .on_press_down(Message::TogglePopup)
+                .into()
+        };
         let content = if self.gpus.is_empty() {
             btn
         } else {
@@ -886,6 +898,12 @@ impl cosmic::Application for CosmicBatteryApplet {
                 .as_subscription()
                 .map(|(_, now)| Message::Frame(now)),
             activation_token_subscription(0).map(Message::Token),
+            self.core.watch_config(Self::APP_ID).map(|u| {
+                for err in u.errors {
+                    tracing::error!(?err, "Error watching config");
+                }
+                Message::ConfigChanged(u.config)
+            }),
         ];
         if let Some(conn) = self.zbus_connection.clone() {
             subscriptions.push(settings_daemon::subscription(conn).map(Message::SettingsDaemon));

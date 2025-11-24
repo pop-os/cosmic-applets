@@ -24,3 +24,4 @@ tracing-subscriber.workspace = true
 tracing.workspace = true
 udev = "0.9"
 zbus.workspace = true
+serde.workspace = true
