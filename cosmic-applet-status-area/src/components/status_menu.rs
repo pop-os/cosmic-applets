@@ -8,10 +8,7 @@ use cosmic::{
     iced,
     widget::icon,
 };
-use std::{
-    cell::RefCell,
-    path::PathBuf,
-};
+use std::{cell::RefCell, path::PathBuf};
 use tracing::warn;
 
 use crate::subscriptions::status_notifier_item::{IconUpdate, Layout, StatusNotifierItem};

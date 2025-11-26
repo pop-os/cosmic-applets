@@ -51,6 +51,7 @@ use cosmic::{
     },
 };
 use cosmic_app_list_config::{APP_ID, AppListConfig};
+use cosmic_freedesktop_icons::lookup_chromium_pwa_icon;
 use cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::State;
 use futures::future::pending;
 use iced::{Alignment, Background, Length};
@@ -58,153 +59,16 @@ use rustc_hash::FxHashMap;
 use std::{
     borrow::Cow,
     cell::RefCell,
-    collections::HashMap,
     path::{Path, PathBuf},
     rc::Rc,
     str::FromStr,
     time::Duration,
 };
-use std::sync::{Mutex, OnceLock};
 use switcheroo_control::Gpu;
 use tokio::time::sleep;
 use url::Url;
 
 static MIME_TYPE: &str = "text/uri-list";
-
-// Helper: search common hicolor paths for a PNG named `<name>.png`, preferring larger sizes.
-static ICON_FALLBACK_CACHE: OnceLock<Mutex<HashMap<(String, bool, u16), PathBuf>>> = OnceLock::new();
-
-fn find_hicolor_png(name: &str, requested_px: u16, prefer_dark: bool) -> Option<PathBuf> {
-    const SIZES: &[&str] = &[
-        "512x512",
-        "256x256",
-        "192x192",
-        "128x128",
-        "96x96",
-        "64x64",
-        "48x48",
-        "32x32",
-        "24x24",
-        "22x22",
-        "16x16",
-    ];
-
-    fn is_crx_id(s: &str) -> bool {
-        s.len() == 32 && s.chars().all(|c| matches!(c, 'a'..='p'))
-    }
-
-
-    fn base_dirs() -> Vec<PathBuf> {
-        let mut dirs = Vec::new();
-        if let Ok(home) = std::env::var("HOME") {
-            dirs.push(PathBuf::from(&home).join(".local/share/icons/hicolor"));
-            // User flatpak exports
-            dirs.push(PathBuf::from(&home).join(".local/share/flatpak/exports/share/icons/hicolor"));
-            // Per-app sandboxes under ~/.var/app/*/data/icons/hicolor
-            let var_app = PathBuf::from(&home).join(".var/app");
-            if var_app.exists() {
-                if let Ok(read) = std::fs::read_dir(&var_app) {
-                    for ent in read.flatten() {
-                        let p = ent.path().join("data/icons/hicolor");
-                        if p.exists() {
-                            dirs.push(p);
-                        }
-                    }
-                }
-            }
-        }
-        // System locations
-        dirs.push(PathBuf::from("/usr/share/icons/hicolor"));
-        dirs.push(PathBuf::from("/usr/local/share/icons/hicolor"));
-        dirs.push(PathBuf::from("/var/lib/flatpak/exports/share/icons/hicolor"));
-        dirs.push(PathBuf::from("/usr/share/flatpak/exports/share/icons/hicolor"));
-        dirs
-    }
-
-    // Check cache first
-    let cache_key = (name.to_string(), prefer_dark, requested_px);
-    if let Some(hit) = ICON_FALLBACK_CACHE
-        .get_or_init(|| Mutex::new(HashMap::new()))
-        .lock()
-        .ok()
-        .and_then(|map| map.get(&cache_key).cloned())
-    {
-        return Some(hit);
-    }
-
-    // 1) Try exact name first (fast path) — use requested size as a hint by ordering sizes
-    let mut sizes = SIZES.to_vec();
-    if let Some(pos) = sizes.iter().position(|s| s.starts_with(&format!("{}x{}", requested_px, requested_px))) {
-        let preferred = sizes.remove(pos);
-        sizes.insert(0, preferred);
-    }
-    for base in base_dirs() {
-        for size in &sizes {
-            let candidate = base.join(size).join("apps").join(format!("{name}.png"));
-            if candidate.exists() {
-                ICON_FALLBACK_CACHE
-                    .get_or_init(|| Mutex::new(HashMap::new()))
-                    .lock()
-                    .ok()
-                    .and_then(|mut map| Some(map.insert(cache_key.clone(), candidate.clone())));
-                return Some(candidate);
-            }
-        }
-    }
-
-    // 2) If it looks like a Chromium app name, search for any browser prefix
-    if let Some(crx) = cosmic::desktop::extract_crx_id(name) {
-        // Prefer larger sizes and PNG; bias to -dark/-light based on current theme.
-        let prefer_dark = cosmic::theme::is_dark();
-        for base in base_dirs() {
-            for size in &sizes {
-                let apps_dir = base.join(size).join("apps");
-                if !apps_dir.exists() { continue; }
-                if let Ok(read) = std::fs::read_dir(&apps_dir) {
-                    let mut best: Option<(PathBuf, i32)> = None;
-                    for ent in read.flatten() {
-                        let p = ent.path();
-                        let Some(fname) = p.file_name().and_then(|s| s.to_str()) else { continue };
-                        if !fname.contains(&crx) { continue; }
-
-                        let lower = fname.to_ascii_lowercase();
-                        let is_dark_tag = lower.contains("dark");
-                        let is_light_tag = lower.contains("light");
-                        let is_maskable = lower.contains("maskable");
-                        let is_monochrome = lower.contains("monochrome");
-
-                        let theme_score = if prefer_dark {
-                            if is_dark_tag { 2 } else if is_light_tag { 0 } else { 1 }
-                        } else {
-                            if is_light_tag { 2 } else if is_dark_tag { 0 } else { 1 }
-                        };
-                        let mask_score = if is_maskable { 2 } else if is_monochrome { 0 } else { 1 };
-
-                        let Some(ext) = p.extension().and_then(|e| e.to_str()) else { continue };
-                        let ext_score = if ext.eq_ignore_ascii_case("png") { 2 } else if ext.eq_ignore_ascii_case("svg") { 1 } else { 0 };
-                        if ext_score == 0 { continue; }
-
-                        // Composite score: theme > maskable > format
-                        let score = theme_score * 100 + mask_score * 10 + ext_score;
-                        if best.as_ref().map_or(true, |(_, s)| score > *s) {
-                            best = Some((p, score));
-                        }
-                    }
-                    if let Some((picked, _)) = best {
-                        ICON_FALLBACK_CACHE
-                            .get_or_init(|| Mutex::new(HashMap::new()))
-                            .lock()
-                            .ok()
-                            .and_then(|mut map| Some(map.insert(cache_key.clone(), picked.clone())));
-                        return Some(picked);
-                    }
-                }
-            }
-        }
-    }
-
-    None
-}
 
 pub fn run() -> cosmic::iced::Result {
     cosmic::applet::run::<CosmicAppList>(())
@@ -507,8 +371,10 @@ impl DockItem {
 
                 // If theme lookup failed and this looks like a Chromium PWA icon name,
                 // try a direct hicolor fallback to avoid a missing dock icon.
-                if icon_result.is_none() && cosmic::desktop::extract_crx_id(name).is_some() {
-                    if let Some(fallback_path) = find_hicolor_png(name, requested_px, cosmic::theme::is_dark()) {
+                if icon_result.is_none() {
+                    if let Some(fallback_path) =
+                        lookup_chromium_pwa_icon(name, requested_px, cosmic::theme::is_dark(), true)
+                    {
                         let msg = format!(
                             "Theme lookup failed; using direct hicolor PNG fallback: app_id={} desktop_id={} icon_candidate={} path={}",
                             self.original_app_id,
@@ -567,12 +433,12 @@ impl DockItem {
     #[allow(clippy::too_many_arguments)]
     fn log_icon_state(
         &self,
-        icon_source: &fde::IconSource,
+        _icon_source: &fde::IconSource,
         raw_icon_field: Option<&str>,
         icon_name: &str,
         icon_result: Option<PathBuf>,
-        toplevels: &[(ToplevelInfo, Option<WaylandImage>)],
-        fallback: Option<&icon::IconFallback>,
+        _toplevels: &[(ToplevelInfo, Option<WaylandImage>)],
+        _fallback: Option<&icon::IconFallback>,
         prefer_svg: bool,
         requested_size: Option<u16>,
     ) {
@@ -588,20 +454,7 @@ impl DockItem {
             return;
         }
 
-        let toplevel_count = toplevels.len();
-        let toplevel_titles: Vec<&str> = toplevels
-            .iter()
-            .map(|(info, _)| info.title.as_str())
-            .collect();
-        let toplevel_identifiers: Vec<&str> = toplevels
-            .iter()
-            .map(|(info, _)| info.identifier.as_str())
-            .collect();
-        let toplevel_app_ids: Vec<&str> = toplevels
-            .iter()
-            .map(|(info, _)| info.app_id.as_str())
-            .collect();
-        let raw_icon_trimmed = raw_icon_field
+        let _raw_icon_trimmed = raw_icon_field
             .map(str::trim)
             .filter(|trimmed| !trimmed.is_empty());
 
@@ -611,7 +464,9 @@ impl DockItem {
                 // details directly in the message so journald shows them without
                 // needing structured-field support.
                 if let Some(fname) = path.file_name().and_then(|f| f.to_str()) {
-                    if fname.contains("application-default") || fname.contains("application-x-executable") {
+                    if fname.contains("application-default")
+                        || fname.contains("application-x-executable")
+                    {
                         let msg = format!(
                             "Dock icon fallback in use (generic icon resolved): app_id={} desktop_id={} icon_candidate={} resolved_path={} prefer_svg={} requested_size={:?}",
                             self.original_app_id,
@@ -2133,9 +1988,14 @@ impl cosmic::Application for CosmicAppList {
                 .unwrap_or_else(|| fde::IconSource::Name(String::new()));
             {
                 let app_icon = AppletIconData::new(&self.core.applet);
-                item.icon_with_logging(&icon_source, raw_icon_field, &item.toplevels, app_icon.icon_size)
-                    .size(app_icon.icon_size)
-                    .into()
+                item.icon_with_logging(
+                    &icon_source,
+                    raw_icon_field,
+                    &item.toplevels,
+                    app_icon.icon_size,
+                )
+                .size(app_icon.icon_size)
+                .into()
             }
         } else if let Some(Popup {
             dock_item: DockItem { id, .. },

@@ -46,6 +46,7 @@ libcosmic = { git = "https://github.com/pop-os/libcosmic", default-features = fa
     "applet",
     "applet-token",
     "dbus-config",
+    "desktop",
     "multi-window",
     "tokio",
     "wayland",
@@ -83,3 +84,22 @@ sctk = { package = "smithay-client-toolkit", version = "0.20.0" }
 [patch."https://github.com/pop-os/cosmic-protocols"]
 cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols//", branch = "main" }
 cosmic-client-toolkit = { git = "https://github.com/pop-os/cosmic-protocols//", branch = "main" }
+
+[patch."https://github.com/pop-os/freedesktop-icons"]
+cosmic-freedesktop-icons = { path = "../freedesktop-icons" }
+
+[patch."https://github.com/pop-os/libcosmic"]
+libcosmic = { path = "../libcosmic" }
+cosmic-config = { path = "../libcosmic/cosmic-config" }
+cosmic-config-derive = { path = "../libcosmic/cosmic-config-derive" }
+cosmic-theme = { path = "../libcosmic/cosmic-theme" }
+iced = { path = "../libcosmic/iced" }
+iced_core = { path = "../libcosmic/iced/core" }
+iced_futures = { path = "../libcosmic/iced/futures" }
+iced_graphics = { path = "../libcosmic/iced/graphics" }
+iced_runtime = { path = "../libcosmic/iced/runtime" }
+iced_renderer = { path = "../libcosmic/iced/renderer" }
+iced_widget = { path = "../libcosmic/iced/widget" }
+iced_tiny_skia = { path = "../libcosmic/iced/tiny_skia" }
+iced_wgpu = { path = "../libcosmic/iced/wgpu" }
+iced_winit = { path = "../libcosmic/iced/winit" }
