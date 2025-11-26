@@ -46,6 +46,7 @@ libcosmic = { git = "https://github.com/pop-os/libcosmic", default-features = fa
     "applet",
     "applet-token",
     "dbus-config",
+    "desktop",
     "multi-window",
     "tokio",
     "wayland",
@@ -60,6 +61,7 @@ zbus = { version = "5.11.0", default-features = false, features = ["tokio"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
 tracing-log = "0.2.0"
+tracing-journald = "0.3"
 tokio = { version = "1.47.1", features = ["full"] }
 cosmic-config = { git = "https://github.com/pop-os/libcosmic" }
 serde = { version = "1.0.228", features = ["derive"] }
@@ -72,14 +74,6 @@ lto = "thin"
 [workspace.metadata.cargo-machete]
 ignored = ["libcosmic"]
 
-# [patch."https://github.com/pop-os/libcosmic"]
-# cosmic-config = { git = "https://github.com/pop-os/libcosmic//", branch = "" }
-# libcosmic = { git = "https://github.com/pop-os/libcosmic//", branch = "" }
-# iced_futures = { git = "https://github.com/pop-os/libcosmic//", branch = "" }
-# cosmic-config = { path = "../libcosmic/cosmic-config" }
-# libcosmic = { path = "../libcosmic" }
-# iced_futures = { path = "../libcosmic/iced/futures" }
-
 # [patch."https://github.com/pop-os/winit.git"]
 # winit = { git = "https://github.com/rust-windowing/winit.git", rev = "241b7a80bba96c91fa3901729cd5dec66abb9be4" }
 # winit = { path = "../winit" }
@@ -90,3 +84,22 @@ sctk = { package = "smithay-client-toolkit", version = "0.20.0" }
 [patch."https://github.com/pop-os/cosmic-protocols"]
 cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols//", branch = "main" }
 cosmic-client-toolkit = { git = "https://github.com/pop-os/cosmic-protocols//", branch = "main" }
+
+[patch."https://github.com/pop-os/freedesktop-icons"]
+cosmic-freedesktop-icons = { path = "../freedesktop-icons" }
+
+[patch."https://github.com/pop-os/libcosmic"]
+libcosmic = { path = "../libcosmic" }
+cosmic-config = { path = "../libcosmic/cosmic-config" }
+cosmic-config-derive = { path = "../libcosmic/cosmic-config-derive" }
+cosmic-theme = { path = "../libcosmic/cosmic-theme" }
+iced = { path = "../libcosmic/iced" }
+iced_core = { path = "../libcosmic/iced/core" }
+iced_futures = { path = "../libcosmic/iced/futures" }
+iced_graphics = { path = "../libcosmic/iced/graphics" }
+iced_runtime = { path = "../libcosmic/iced/runtime" }
+iced_renderer = { path = "../libcosmic/iced/renderer" }
+iced_widget = { path = "../libcosmic/iced/widget" }
+iced_tiny_skia = { path = "../libcosmic/iced/tiny_skia" }
+iced_wgpu = { path = "../libcosmic/iced/wgpu" }
+iced_winit = { path = "../libcosmic/iced/winit" }

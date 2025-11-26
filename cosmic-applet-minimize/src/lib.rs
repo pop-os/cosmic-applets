@@ -16,7 +16,9 @@ use cosmic::{
         sctk::reexports::calloop, toplevel_info::ToplevelInfo,
         wayland_protocols::ext::foreign_toplevel_list::v1::client::ext_foreign_toplevel_handle_v1::ExtForeignToplevelHandleV1,
     },
-    desktop::fde,
+    desktop::{
+        DesktopEntryCache, DesktopLookupContext, DesktopResolveOptions, fde, resolve_desktop_entry,
+    },
     iced::{
         self, Length, Limits, Subscription,
         id::Id as WidgetId,
@@ -55,7 +57,7 @@ pub struct App {
 struct Minimize {
     core: cosmic::app::Core,
     locales: Vec<String>,
-    desktop_entries: Vec<fde::DesktopEntry>,
+    desktop_entries: DesktopEntryCache,
     apps: Vec<App>,
     tx: Option<calloop::channel::Sender<WaylandRequest>>,
     overflow_popup: Option<window::Id>,
@@ -85,37 +87,26 @@ impl Minimize {
         index
     }
 
-    fn find_new_desktop_entry(&mut self, appid: &str) -> fde::DesktopEntry {
-        let unicase_appid = fde::unicase::Ascii::new(appid);
-
-        let de = if let Some(de) = fde::find_app_by_id(&self.desktop_entries, unicase_appid) {
-            de
-        } else {
-            // Update desktop entries in case it was not found.
-            self.update_desktop_entries();
-            if let Some(appid) = fde::find_app_by_id(&self.desktop_entries, unicase_appid) {
-                appid
-            } else {
-                tracing::warn!(appid, "could not find desktop entry for app");
-                let mut entry = fde::DesktopEntry {
-                    appid: appid.to_owned(),
-                    groups: Default::default(),
-                    path: Default::default(),
-                    ubuntu_gettext_domain: None,
-                };
-                entry.add_desktop_entry("Name".to_string(), appid.to_owned());
-                return entry;
-            }
-        };
-
-        de.clone()
+    // Proton/Wine behavior: see dock applet notes — shared resolver in libcosmic
+    // applies the Proton/Wine title matching and Game-category restriction.
+    fn find_new_desktop_entry(&mut self, info: &ToplevelInfo) -> fde::DesktopEntry {
+        let mut ctx = DesktopLookupContext::new(info.app_id.clone());
+        if !info.identifier.is_empty() {
+            ctx = ctx.with_identifier(info.identifier.clone());
+        }
+        if !info.title.is_empty() {
+            ctx = ctx.with_title(info.title.clone());
+        }
+        resolve_desktop_entry(
+            &mut self.desktop_entries,
+            &ctx,
+            &DesktopResolveOptions::default(),
+        )
     }
 
     // Cache all desktop entries to use when new apps are added to the dock.
     fn update_desktop_entries(&mut self) {
-        self.desktop_entries = fde::Iter::new(fde::default_paths())
-            .filter_map(|p| fde::DesktopEntry::from_path(p, Some(&self.locales)).ok())
-            .collect::<Vec<_>>();
+        self.desktop_entries.refresh();
     }
 }
 
@@ -136,9 +127,11 @@ impl cosmic::Application for Minimize {
     const APP_ID: &'static str = "com.system76.CosmicAppletMinimize";
 
     fn init(core: cosmic::app::Core, _flags: ()) -> (Self, app::Task<Message>) {
+        let locales = fde::get_languages_from_env();
         let mut app = Self {
             core,
-            locales: fde::get_languages_from_env(),
+            desktop_entries: DesktopEntryCache::new(locales.clone()),
+            locales,
             ..Default::default()
         };
 
@@ -181,7 +174,7 @@ impl cosmic::Application for Minimize {
                         }) {
                             if apps[pos].toplevel_info.app_id != toplevel_info.app_id {
                                 apps[pos].desktop_entry =
-                                    self.find_new_desktop_entry(&toplevel_info.app_id);
+                                    self.find_new_desktop_entry(&toplevel_info);
                                 apps[pos].icon_source = fde::IconSource::from_unknown(
                                     apps[pos]
                                         .desktop_entry
@@ -191,7 +184,7 @@ impl cosmic::Application for Minimize {
                             }
                             apps[pos].toplevel_info = toplevel_info;
                         } else {
-                            let desktop_entry = self.find_new_desktop_entry(&toplevel_info.app_id);
+                            let desktop_entry = self.find_new_desktop_entry(&toplevel_info);
 
                             apps.push(App {
                                 name: desktop_entry

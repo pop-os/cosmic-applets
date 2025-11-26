@@ -19,8 +19,10 @@ use cctk::{
         workspace::v1::client::ext_workspace_handle_v1::ExtWorkspaceHandleV1,
     },
 };
-use cosmic::desktop::fde::unicase::Ascii;
 use cosmic::desktop::fde::{self, DesktopEntry, get_languages_from_env};
+use cosmic::desktop::{
+    DesktopEntryCache, DesktopLookupContext, DesktopResolveOptions, resolve_desktop_entry,
+};
 use cosmic::{
     Apply, Element, Task, app,
     applet::{
@@ -28,7 +30,6 @@ use cosmic::{
         cosmic_panel_config::{PanelAnchor, PanelSize},
     },
     cosmic_config::{Config, CosmicConfigEntry},
-    desktop::IconSourceExt,
     iced::{
         self, Limits, Subscription,
         clipboard::mime::{AllowedMimeTypes, AsMimeTypes},
@@ -50,11 +51,19 @@ use cosmic::{
     },
 };
 use cosmic_app_list_config::{APP_ID, AppListConfig};
+use cosmic_freedesktop_icons::lookup_chromium_pwa_icon;
 use cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::State;
 use futures::future::pending;
 use iced::{Alignment, Background, Length};
 use rustc_hash::FxHashMap;
-use std::{borrow::Cow, path::PathBuf, rc::Rc, str::FromStr, time::Duration};
+use std::{
+    borrow::Cow,
+    cell::RefCell,
+    path::{Path, PathBuf},
+    rc::Rc,
+    str::FromStr,
+    time::Duration,
+};
 use switcheroo_control::Gpu;
 use tokio::time::sleep;
 use url::Url;
@@ -158,6 +167,12 @@ impl From<usize> for DockItemId {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum IconLogState {
+    Missing,
+    Resolved(PathBuf),
+}
+
 #[derive(Debug, Clone)]
 struct DockItem {
     // ID used internally in the applet. Each dock item
@@ -169,6 +184,7 @@ struct DockItem {
     // We must use this because the id in `DesktopEntry` is an estimation.
     // Thus, if we unpin an item, we want to be sure to use the real id
     original_app_id: String,
+    icon_log: RefCell<Option<IconLogState>>,
 }
 
 impl DockItem {
@@ -192,10 +208,16 @@ impl DockItem {
 
         let app_icon = AppletIconData::new(applet);
 
-        let cosmic_icon = fde::IconSource::from_unknown(desktop_info.icon().unwrap_or_default())
-            .as_cosmic_icon()
-            // sets the preferred icon size variant
-            .size(128)
+        let raw_icon_field = desktop_info.icon();
+        let icon_source = raw_icon_field
+            .map(str::trim)
+            .filter(|icon| !icon.is_empty())
+            .map(fde::IconSource::from_unknown)
+            .unwrap_or_else(|| fde::IconSource::Name(String::new()));
+
+        let cosmic_icon = self
+            .icon_with_logging(&icon_source, raw_icon_field, toplevels, app_icon.icon_size)
+            .size(app_icon.icon_size)
             .width(app_icon.icon_size.into())
             .height(app_icon.icon_size.into());
 
@@ -320,6 +342,178 @@ impl DockItem {
             icon_button.into()
         }
     }
+
+    fn icon_with_logging(
+        &self,
+        icon_source: &fde::IconSource,
+        raw_icon_field: Option<&str>,
+        toplevels: &[(ToplevelInfo, Option<WaylandImage>)],
+        requested_px: u16,
+    ) -> icon::Icon {
+        match icon_source {
+            fde::IconSource::Name(name) => {
+                // Prefer SVG only for symbolic icons; otherwise let the theme resolver
+                // choose raster assets to avoid small-size SVG rendering issues. Also
+                // request the dock icon size so the themed lookup chooses the best match.
+                let mut named = icon::from_name(name.as_str())
+                    .size(requested_px)
+                    .fallback(Some(icon::IconFallback::Names(vec![
+                        "application-default".into(),
+                        "application-x-executable".into(),
+                    ])));
+                if name.ends_with("-symbolic") {
+                    named = named.prefer_svg(true);
+                }
+                let fallback = named.fallback.clone();
+                let prefer_svg = named.prefer_svg;
+                let requested_size = named.size;
+                let mut icon_result = named.clone().path();
+
+                // If theme lookup failed and this looks like a Chromium PWA icon name,
+                // try a direct hicolor fallback to avoid a missing dock icon.
+                if icon_result.is_none() {
+                    if let Some(fallback_path) =
+                        lookup_chromium_pwa_icon(name, requested_px, cosmic::theme::is_dark(), true)
+                    {
+                        let msg = format!(
+                            "Theme lookup failed; using direct hicolor PNG fallback: app_id={} desktop_id={} icon_candidate={} path={}",
+                            self.original_app_id,
+                            self.desktop_info.id(),
+                            name,
+                            fallback_path.display()
+                        );
+                        tracing::warn!(
+                            target: "cosmic_panel::dock::icon",
+                            app_id = %self.original_app_id,
+                            desktop_id = %self.desktop_info.id(),
+                            icon_candidate = %name,
+                            fallback_path = %fallback_path.display(),
+                            prefer_svg,
+                            requested_size,
+                            "{}",
+                            msg
+                        );
+                        return icon::icon(icon::from_path(fallback_path));
+                    }
+                }
+                self.log_icon_state(
+                    icon_source,
+                    raw_icon_field,
+                    name.as_str(),
+                    icon_result,
+                    toplevels,
+                    fallback.as_ref(),
+                    prefer_svg,
+                    requested_size,
+                );
+                named.into()
+            }
+            fde::IconSource::Path(path_buf) => {
+                let path_buf = path_buf.clone();
+                let icon_result = if Path::new(&path_buf).exists() {
+                    Some(path_buf.clone())
+                } else {
+                    None
+                };
+                self.log_icon_state(
+                    icon_source,
+                    raw_icon_field,
+                    path_buf.to_string_lossy().as_ref(),
+                    icon_result,
+                    toplevels,
+                    None,
+                    false,
+                    None,
+                );
+                icon::icon(icon::from_path(path_buf))
+            }
+        }
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn log_icon_state(
+        &self,
+        _icon_source: &fde::IconSource,
+        raw_icon_field: Option<&str>,
+        icon_name: &str,
+        icon_result: Option<PathBuf>,
+        _toplevels: &[(ToplevelInfo, Option<WaylandImage>)],
+        _fallback: Option<&icon::IconFallback>,
+        prefer_svg: bool,
+        requested_size: Option<u16>,
+    ) {
+        let new_state = match icon_result.as_ref() {
+            Some(path) => IconLogState::Resolved(path.clone()),
+            None => IconLogState::Missing,
+        };
+
+        if {
+            let state = self.icon_log.borrow();
+            state.as_ref() == Some(&new_state)
+        } {
+            return;
+        }
+
+        let _raw_icon_trimmed = raw_icon_field
+            .map(str::trim)
+            .filter(|trimmed| !trimmed.is_empty());
+
+        match &new_state {
+            IconLogState::Resolved(path) => {
+                // Only warn when the resolved icon is a generic fallback. Include key
+                // details directly in the message so journald shows them without
+                // needing structured-field support.
+                if let Some(fname) = path.file_name().and_then(|f| f.to_str()) {
+                    if fname.contains("application-default")
+                        || fname.contains("application-x-executable")
+                    {
+                        let msg = format!(
+                            "Dock icon fallback in use (generic icon resolved): app_id={} desktop_id={} icon_candidate={} resolved_path={} prefer_svg={} requested_size={:?}",
+                            self.original_app_id,
+                            self.desktop_info.id(),
+                            icon_name,
+                            path.display(),
+                            prefer_svg,
+                            requested_size
+                        );
+                        tracing::warn!(
+                            target: "cosmic_panel::dock::icon",
+                            app_id = %self.original_app_id,
+                            desktop_id = %self.desktop_info.id(),
+                            icon_candidate = %icon_name,
+                            resolved_path = %path.display(),
+                            prefer_svg,
+                            requested_size,
+                            "{}",
+                            msg
+                        );
+                    }
+                }
+            }
+            IconLogState::Missing => {
+                let msg = format!(
+                    "Dock icon asset missing; using widget fallback: app_id={} desktop_id={} icon_candidate={} prefer_svg={} requested_size={:?}",
+                    self.original_app_id,
+                    self.desktop_info.id(),
+                    icon_name,
+                    prefer_svg,
+                    requested_size
+                );
+                tracing::warn!(
+                    target: "cosmic_panel::dock::icon",
+                    app_id = %self.original_app_id,
+                    desktop_id = %self.desktop_info.id(),
+                    icon_candidate = %icon_name,
+                    prefer_svg,
+                    requested_size,
+                    "{}",
+                    msg
+                );
+            }
+        }
+
+        *self.icon_log.borrow_mut() = Some(new_state);
+    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -342,7 +536,7 @@ struct CosmicAppList {
     popup: Option<Popup>,
     subscription_ctr: u32,
     item_ctr: u32,
-    desktop_entries: Vec<DesktopEntry>,
+    desktop_entries: DesktopEntryCache,
     active_list: Vec<DockItem>,
     pinned_list: Vec<DockItem>,
     dnd_source: Option<(window::Id, DockItem, DndAction, Option<usize>)>,
@@ -593,30 +787,34 @@ pub fn menu_control_padding() -> Padding {
     [spacing.space_xxs, spacing.space_s].into()
 }
 
-fn find_desktop_entries<'a>(
-    desktop_entries: &'a [fde::DesktopEntry],
-    app_ids: &'a [String],
-) -> impl Iterator<Item = fde::DesktopEntry> + 'a {
-    app_ids.iter().map(|fav| {
-        let unicase_fav = fde::unicase::Ascii::new(fav.as_str());
-        fde::find_app_by_id(desktop_entries, unicase_fav).map_or_else(
-            || fde::DesktopEntry::from_appid(fav.clone()),
-            ToOwned::to_owned,
-        )
-    })
+// Intentionally no icon summary helper: we avoid logging success cases to keep
+// journald output lean; only warnings are emitted elsewhere.
+
+fn find_desktop_entries(
+    cache: &mut DesktopEntryCache,
+    app_ids: &[String],
+) -> Vec<fde::DesktopEntry> {
+    let options = DesktopResolveOptions::default();
+    app_ids
+        .iter()
+        .map(|fav| {
+            let ctx = DesktopLookupContext::new(fav.clone());
+            resolve_desktop_entry(cache, &ctx, &options)
+        })
+        .collect()
 }
 
 impl CosmicAppList {
     // Cache all desktop entries to use when new apps are added to the dock.
     fn update_desktop_entries(&mut self) {
-        self.desktop_entries = fde::Iter::new(fde::default_paths())
-            .filter_map(|p| fde::DesktopEntry::from_path(p, Some(&self.locales)).ok())
-            .collect::<Vec<_>>();
+        self.desktop_entries.refresh();
     }
 
     // Update pinned items using the cached desktop entries as a source.
     fn update_pinned_list(&mut self) {
-        self.pinned_list = find_desktop_entries(&self.desktop_entries, &self.config.favorites)
+        let entries = find_desktop_entries(&mut self.desktop_entries, &self.config.favorites);
+        self.pinned_list = entries
+            .into_iter()
             .zip(&self.config.favorites)
             .enumerate()
             .map(|(pinned_ctr, (e, original_id))| DockItem {
@@ -624,6 +822,7 @@ impl CosmicAppList {
                 toplevels: Vec::new(),
                 desktop_info: e,
                 original_app_id: original_id.clone(),
+                icon_log: RefCell::new(None),
             })
             .collect();
     }
@@ -641,10 +840,12 @@ impl cosmic::Application for CosmicAppList {
             .and_then(|c| AppListConfig::get_entry(&c).ok())
             .unwrap_or_default();
 
+        let locales = get_languages_from_env();
         let mut app_list = Self {
             core,
             config,
-            locales: get_languages_from_env(),
+            desktop_entries: DesktopEntryCache::new(locales.clone()),
+            locales,
             ..Default::default()
         };
 
@@ -1009,6 +1210,7 @@ impl cosmic::Application for CosmicAppList {
                             toplevels: Vec::new(),
                             original_app_id: de.id().to_string(),
                             desktop_info: de,
+                            icon_log: RefCell::new(None),
                         });
                     }
                 }
@@ -1107,9 +1309,7 @@ impl cosmic::Application for CosmicAppList {
                     }
                     WaylandUpdate::Toplevel(event) => match event {
                         ToplevelUpdate::Add(mut info) => {
-                            let unicase_appid = fde::unicase::Ascii::new(&*info.app_id);
-                            let new_desktop_info =
-                                self.find_desktop_entry_for_toplevel(&info, unicase_appid);
+                            let new_desktop_info = self.find_desktop_entry_for_toplevel(&info);
 
                             if let Some(t) = self
                                 .active_list
@@ -1131,6 +1331,7 @@ impl cosmic::Application for CosmicAppList {
                                     original_app_id: info.app_id.clone(),
                                     toplevels: vec![(info, None)],
                                     desktop_info: new_desktop_info,
+                                    icon_log: RefCell::new(None),
                                 });
                             }
                         }
@@ -1182,10 +1383,7 @@ impl cosmic::Application for CosmicAppList {
                                 self.active_list.retain(|t| !t.toplevels.is_empty());
 
                                 // find a new one for it
-                                let new_desktop_entry = self.find_desktop_entry_for_toplevel(
-                                    &info,
-                                    Ascii::new(&info.app_id),
-                                );
+                                let new_desktop_entry = self.find_desktop_entry_for_toplevel(&info);
 
                                 if let Some(t) = self
                                     .active_list
@@ -1204,6 +1402,7 @@ impl cosmic::Application for CosmicAppList {
                                         original_app_id: info.app_id.clone(),
                                         toplevels: vec![(info, None)],
                                         desktop_info: new_desktop_entry,
+                                        icon_log: RefCell::new(None),
                                     });
                                 }
                             }
@@ -1301,31 +1500,34 @@ impl cosmic::Application for CosmicAppList {
                 }
 
                 // pull back configured items into the favorites list
-                self.pinned_list =
-                    find_desktop_entries(&self.desktop_entries, &self.config.favorites)
-                        .zip(&self.config.favorites)
-                        .map(|(de, original_id)| {
-                            if let Some(p) = self
-                                .active_list
-                                .iter()
-                                // match using heuristic id
-                                .position(|dock_item| dock_item.desktop_info.id() == de.id())
-                            {
-                                let mut d = self.active_list.remove(p);
-                                // but use the id from the config
-                                d.original_app_id.clone_from(original_id);
-                                d
-                            } else {
-                                self.item_ctr += 1;
-                                DockItem {
-                                    id: self.item_ctr,
-                                    toplevels: Vec::new(),
-                                    desktop_info: de.clone(),
-                                    original_app_id: original_id.clone(),
-                                }
+                let entries =
+                    find_desktop_entries(&mut self.desktop_entries, &self.config.favorites);
+                self.pinned_list = entries
+                    .into_iter()
+                    .zip(&self.config.favorites)
+                    .map(|(de, original_id)| {
+                        if let Some(p) = self
+                            .active_list
+                            .iter()
+                            // match using heuristic id
+                            .position(|dock_item| dock_item.desktop_info.id() == de.id())
+                        {
+                            let mut d = self.active_list.remove(p);
+                            // but use the id from the config
+                            d.original_app_id.clone_from(original_id);
+                            d
+                        } else {
+                            self.item_ctr += 1;
+                            DockItem {
+                                id: self.item_ctr,
+                                toplevels: Vec::new(),
+                                desktop_info: de.clone(),
+                                original_app_id: original_id.clone(),
+                                icon_log: RefCell::new(None),
                             }
-                        })
-                        .collect();
+                        }
+                    })
+                    .collect();
             }
             Message::CloseRequested(id) => {
                 if Some(id) == self.popup.as_ref().map(|p| p.id) {
@@ -1778,10 +1980,23 @@ impl cosmic::Application for CosmicAppList {
         let theme = self.core.system_theme();
 
         if let Some((_, item, _, _)) = self.dnd_source.as_ref().filter(|s| s.0 == id) {
-            fde::IconSource::from_unknown(item.desktop_info.icon().unwrap_or_default())
-                .as_cosmic_icon()
-                .size(self.core.applet.suggested_size(false).0)
+            let raw_icon_field = item.desktop_info.icon();
+            let icon_source = raw_icon_field
+                .map(str::trim)
+                .filter(|icon| !icon.is_empty())
+                .map(fde::IconSource::from_unknown)
+                .unwrap_or_else(|| fde::IconSource::Name(String::new()));
+            {
+                let app_icon = AppletIconData::new(&self.core.applet);
+                item.icon_with_logging(
+                    &icon_source,
+                    raw_icon_field,
+                    &item.toplevels,
+                    app_icon.icon_size,
+                )
+                .size(app_icon.icon_size)
                 .into()
+            }
         } else if let Some(Popup {
             dock_item: DockItem { id, .. },
             popup_type,
@@ -2334,54 +2549,25 @@ impl CosmicAppList {
         focused_toplevels
     }
 
-    fn find_desktop_entry_for_toplevel(
-        &mut self,
-        info: &ToplevelInfo,
-        unicase_appid: Ascii<&str>,
-    ) -> DesktopEntry {
-        if let Some(appid) = fde::find_app_by_id(&self.desktop_entries, unicase_appid) {
-            appid.clone()
-        } else {
-            // Update desktop entries in case it was not found.
-
-            self.update_desktop_entries();
-            if let Some(appid) = fde::find_app_by_id(&self.desktop_entries, unicase_appid) {
-                appid.clone()
-            } else {
-                tracing::error!(id = info.app_id, "could not find desktop entry for app");
-
-                let mut fallback_entry = fde::DesktopEntry::from_appid(info.app_id.clone());
-
-                // proton opens games as steam_app_X, where X is either
-                // the steam appid or "default". games with a steam appid
-                // can have a desktop entry generated elsewhere; this
-                // specifically handles non-steam games opened
-                // under proton
-                // in addition, try to match WINE entries who have its
-                // appid = the full name of the executable (incl. .exe)
-                let is_proton_game = info.app_id == "steam_app_default";
-                if is_proton_game || info.app_id.ends_with(".exe") {
-                    for entry in &self.desktop_entries {
-                        let localised_name = entry.name(&self.locales).unwrap_or_default();
-
-                        if localised_name == info.title {
-                            // if this is a proton game, we only want
-                            // to look for game entries
-                            if is_proton_game
-                                && !entry.categories().unwrap_or_default().contains(&"Game")
-                            {
-                                continue;
-                            }
-
-                            fallback_entry = entry.clone();
-                            break;
-                        }
-                    }
-                }
-
-                fallback_entry
-            }
+    // Proton/Wine behavior: proton opens games as steam_app_X (X = appid or "default").
+    // Non-Steam/WINE windows may use an app_id ending in .exe. The resolver in libcosmic
+    // handles these cases by matching localized title and (for steam_app_default) limiting
+    // matches to entries categorized as Game. Keeping this here as a pointer so future
+    // readers know where the logic lives.
+    fn find_desktop_entry_for_toplevel(&mut self, info: &ToplevelInfo) -> DesktopEntry {
+        let mut ctx = DesktopLookupContext::new(info.app_id.clone());
+        if !info.identifier.is_empty() {
+            ctx = ctx.with_identifier(info.identifier.clone());
         }
+        if !info.title.is_empty() {
+            ctx = ctx.with_title(info.title.clone());
+        }
+        let entry = resolve_desktop_entry(
+            &mut self.desktop_entries,
+            &ctx,
+            &DesktopResolveOptions::default(),
+        );
+        entry
     }
 }
 
