@@ -54,7 +54,13 @@ use cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::Sta
 use futures::future::pending;
 use iced::{Alignment, Background, Length};
 use rustc_hash::FxHashMap;
-use std::{borrow::Cow, path::PathBuf, rc::Rc, str::FromStr, time::Duration};
+use std::{
+    borrow::Cow,
+    path::{Path, PathBuf},
+    rc::Rc,
+    str::FromStr,
+    time::Duration,
+};
 use switcheroo_control::Gpu;
 use tokio::time::sleep;
 use url::Url;
@@ -75,6 +81,76 @@ struct AppletIconData {
 }
 
 static DND_FAVORITES: u64 = u64::MAX;
+
+fn icon_source_with_flatpak_fallback(icon_name: &str) -> fde::IconSource {
+    if !icon_name.is_empty() && !icon_name.starts_with('/') {
+        if let Some(flatpak_icon_path) = find_flatpak_appstream_icon(icon_name) {
+            return fde::IconSource::from_unknown(&flatpak_icon_path.to_string_lossy());
+        }
+    }
+
+    fde::IconSource::from_unknown(icon_name)
+}
+
+fn try_icon_sizes(hash_path: &Path, icon_name: &str) -> Option<PathBuf> {
+    const SIZES: &[&str] = &["128x128", "64x64", "48x48", "32x32", "scalable"];
+
+    for size in SIZES {
+        let icon_path = if *size == "scalable" {
+            hash_path
+                .join("icons")
+                .join(*size)
+                .join("apps")
+                .join(format!("{}.svg", icon_name))
+        } else {
+            hash_path
+                .join("icons")
+                .join(*size)
+                .join(format!("{}.png", icon_name))
+        };
+
+        if icon_path.exists() {
+            return Some(icon_path);
+        }
+    }
+
+    None
+}
+
+fn find_flatpak_appstream_icon(icon_name: &str) -> Option<PathBuf> {
+    let home = std::env::var("HOME").ok()?;
+
+    let search_paths = [
+        format!("{}/.local/share/flatpak/appstream", home),
+        "/var/lib/flatpak/appstream".to_string(),
+    ];
+
+    for base_path in &search_paths {
+        let Ok(repos) = std::fs::read_dir(base_path) else {
+            continue;
+        };
+
+        for repo in repos.flatten().filter(|e| e.path().is_dir()) {
+            let Ok(arches) = std::fs::read_dir(repo.path()) else {
+                continue;
+            };
+
+            for arch in arches.flatten().filter(|e| e.path().is_dir()) {
+                let Ok(hashes) = std::fs::read_dir(arch.path()) else {
+                    continue;
+                };
+
+                for hash in hashes.flatten().filter(|e| e.path().is_dir()) {
+                    if let Some(icon_path) = try_icon_sizes(&hash.path(), icon_name) {
+                        return Some(icon_path);
+                    }
+                }
+            }
+        }
+    }
+
+    None
+}
 
 impl AppletIconData {
     fn new(applet: &Context) -> Self {
@@ -192,7 +268,14 @@ impl DockItem {
 
         let app_icon = AppletIconData::new(applet);
 
-        let cosmic_icon = fde::IconSource::from_unknown(desktop_info.icon().unwrap_or_default())
+        let icon_name = desktop_info.icon().unwrap_or_default();
+        if icon_name.is_empty() {
+            tracing::warn!("App (id: {}) has no icon specified in desktop file", id);
+        } else {
+            tracing::debug!("Loading icon '{}' for app id {}", icon_name, id);
+        }
+
+        let cosmic_icon = icon_source_with_flatpak_fallback(&icon_name)
             .as_cosmic_icon()
             // sets the preferred icon size variant
             .size(128)
@@ -480,7 +563,10 @@ where
                         img.img.clone(),
                     )))
                 } else {
-                    Image::new(Handle::from_rgba(1, 1, [0u8, 0u8, 0u8, 255u8].as_slice())).into()
+                    // Use a visible fallback icon instead of invisible 1x1 black pixel
+                    icon::icon(from_name("application-x-executable").into())
+                        .size(64)
+                        .into()
                 })
                 .class(Container::Custom(Box::new(move |theme| {
                     container::Style {
@@ -1778,7 +1864,7 @@ impl cosmic::Application for CosmicAppList {
         let theme = self.core.system_theme();
 
         if let Some((_, item, _, _)) = self.dnd_source.as_ref().filter(|s| s.0 == id) {
-            fde::IconSource::from_unknown(item.desktop_info.icon().unwrap_or_default())
+            icon_source_with_flatpak_fallback(item.desktop_info.icon().unwrap_or_default())
                 .as_cosmic_icon()
                 .size(self.core.applet.suggested_size(false).0)
                 .into()
