@@ -1573,7 +1573,7 @@ dependencies = [
 [[package]]
 name = "cosmic-pipewire"
 version = "1.0.0-beta6"
-source = "git+https://github.com/pop-os/cosmic-settings#9aefd9b9d36ae988aba5f79ded22c6d8903a758a"
+source = "git+https://github.com/pop-os/cosmic-settings?branch=sound#07ae9647e6ae57ad572c978e0ecfa15f78c45f11"
 dependencies = [
  "intmap",
  "libspa",
@@ -1662,7 +1662,7 @@ dependencies = [
 [[package]]
 name = "cosmic-settings-sound-subscription"
 version = "1.0.0-beta6"
-source = "git+https://github.com/pop-os/cosmic-settings#9aefd9b9d36ae988aba5f79ded22c6d8903a758a"
+source = "git+https://github.com/pop-os/cosmic-settings?branch=sound#07ae9647e6ae57ad572c978e0ecfa15f78c45f11"
 dependencies = [
  "cosmic-pipewire",
  "crossbeam-queue",
