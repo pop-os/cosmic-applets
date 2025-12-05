@@ -25,7 +25,6 @@ pub enum Msg {
     StatusMenu((usize, status_menu::Msg)),
     StatusNotifier(status_notifier_watcher::Event),
     TogglePopup(usize),
-    Hovered(usize),
     Surface(surface::Action),
     ToggleOverflow,
     HoveredOverflow,
@@ -104,7 +103,6 @@ impl App {
                 }
                 .on_press_down(Msg::TogglePopup(*id)),
             )
-            .on_enter(Msg::Hovered(*id))
             .into()
         });
         let theme = self.core.system_theme();
@@ -237,7 +235,7 @@ impl cosmic::Application for App {
                                 Some((i, self.core.main_window_id().unwrap()))
                             }
                         })
-                        .unwrap_or((0, self.core.main_window_id().unwrap()));
+                        .unwrap_or((i, self.core.main_window_id().unwrap()));
 
                     let mut popup_settings = self
                         .core
@@ -292,56 +290,6 @@ impl cosmic::Application for App {
                     return Task::none();
                 }
             },
-            Msg::Hovered(id) => {
-                let mut cmds = Vec::new();
-                if let Some(old_id) = self.open_menu.take() {
-                    if old_id != id {
-                        if let Some(popup_id) = self.popup.take() {
-                            cmds.push(destroy_popup(popup_id));
-                        }
-                        self.open_menu = Some(id);
-                    } else {
-                        self.open_menu = Some(old_id);
-                        return Task::none();
-                    }
-                } else {
-                    return Task::none();
-                }
-                let popup_id = self.next_popup_id();
-                let i = self.menus.keys().position(|&i| i == id).unwrap();
-
-                let (i, parent) = self
-                    .overflow_index()
-                    .and_then(|overflow_i| {
-                        if overflow_i <= i {
-                            Some(i - overflow_i).zip(self.overflow_popup)
-                        } else {
-                            Some((i, self.core.main_window_id().unwrap()))
-                        }
-                    })
-                    .unwrap_or((0, self.core.main_window_id().unwrap()));
-
-                let mut popup_settings = self
-                    .core
-                    .applet
-                    .get_popup_settings(parent, popup_id, None, None, None);
-                self.popup = Some(popup_id);
-
-                if matches!(
-                    self.core.applet.anchor,
-                    PanelAnchor::Left | PanelAnchor::Right
-                ) {
-                    let suggested_size = self.core.applet.suggested_size(false).1
-                        + 2 * self.core.applet.suggested_padding(false).1;
-                    popup_settings.positioner.anchor_rect.y = i as i32 * suggested_size as i32;
-                } else {
-                    let suggested_size = self.core.applet.suggested_size(false).0
-                        + 2 * self.core.applet.suggested_padding(false).1;
-                    popup_settings.positioner.anchor_rect.x = i as i32 * suggested_size as i32;
-                }
-                cmds.push(get_popup(popup_settings));
-                Task::batch(cmds)
-            }
             Msg::Surface(a) => {
                 return cosmic::task::message(cosmic::Action::Cosmic(
                     cosmic::app::Action::Surface(a),
@@ -466,7 +414,6 @@ impl cosmic::Application for App {
                         Msg::StatusMenu((*id, status_menu::Msg::Click(0, true)))
                     }),
                 )
-                .on_enter(Msg::Hovered(*id))
                 .into()
             });
 
