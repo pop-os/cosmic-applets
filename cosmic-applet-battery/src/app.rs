@@ -250,7 +250,8 @@ impl cosmic::Application for CosmicBatteryApplet {
                 let snapped = if let Some(max) = self.max_screen_brightness {
                     if max > 0 && max <= 20 {
                         // Coarse: map raw→k by round, then back to raw setpoint round(k*max/20)
-                        let k = ((brightness as i64 * 20 + (max as i64)/2) / (max as i64)).clamp(0, 20);
+                        let k = ((brightness as i64 * 20 + (max as i64) / 2) / (max as i64))
+                            .clamp(0, 20);
                         (((k * (max as i64)) + 10) / 20) as i32
                     } else {
                         brightness
