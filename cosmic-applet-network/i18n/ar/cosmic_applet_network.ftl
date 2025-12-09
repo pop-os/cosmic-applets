@@ -7,7 +7,7 @@ identity = الهوية
 ipv4 = عنوان IPv4
 ipv6 = عنوان IPv6
 mac = MAC
-megabits-per-second = ميغابت/ثانية
+megabits-per-second = م.بت/ث
 connected = متصل
 connecting = جارٍ الاتصال
 connect = اتصل
@@ -19,3 +19,5 @@ router-wps-button = يمكنك أيضًا الاتصال بالضغط على ز�
 unable-to-connect = لا يمكن الاتصال بالشبكة
 check-wifi-connection = تأكد من اتصال الواي فاي بالإنترنت وصحة كلمة المرور
 reset = صفّر
+gigabits-per-second = ج.بت/ث
+terabits-per-second = ت.بت/ث
