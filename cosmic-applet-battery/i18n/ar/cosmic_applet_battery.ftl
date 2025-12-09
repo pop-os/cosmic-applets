@@ -1,5 +1,5 @@
 battery = المُدَّخرة
-battery-desc = الأداء وخفض استهلاك الطاقة.
+battery-desc = أداء واستهلاك طاقة مخفض.
 balanced = متوازن
 balanced-desc = أداء واستهلاك المُدَّخرة قياسي.
 performance = أداء عالي
@@ -11,4 +11,4 @@ hours = س
 until-empty = حتى النفاد
 power-settings = إعدادات الطاقة والمُدَّخرة...
 dgpu-running = وحدة معالجة رسوميات مُنفردة نشطة قد تقلل من عمر المُدَّخرة
-dgpu-applications = التطبيقات التي تستخدم معالج الرسوميات { $gpu_name } المنفردة
+dgpu-applications = التطبيقات التي تستخدم معالج الرسوميات { $gpu_name } المُنفردة

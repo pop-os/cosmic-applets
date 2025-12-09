@@ -1,5 +1,5 @@
 show-less = أظهر أقل
-show-more = أظهر ({ $more }) أكثر
+show-more = أظهر { $more } أكثر
 clear-group = امحُ المجموعة
 clear-all = امحُ كل الإشعارات
 do-not-disturb = عدم الإزعاج

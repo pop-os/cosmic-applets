@@ -11,4 +11,4 @@ hours = u
 until-empty = go dtí go mbeidh sé folamh
 power-settings = Socruithe Cumhachta & Ceallraí...
 dgpu-running = Tá an GPU ar leith gníomhach agus féadfaidh sé saol ceallraí a laghdú
-dgpu-applications = Aipeanna ag úsáid {$gpu_name} GPU ar leith
+dgpu-applications = Aipeanna ag úsáid { $gpu_name } GPU ar leith
