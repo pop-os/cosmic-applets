@@ -24,3 +24,6 @@ debian/*
 !debian/links
 !debian/rules
 !debian/source
+
+cosmic-applet-status-area/data/com.system76.CosmicStatusNotifierWatcher.service
+cosmic-applet-status-area/data/dbus-1/com.system76.CosmicStatusNotifierWatcher.service

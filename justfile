@@ -13,6 +13,7 @@ sharedir := rootdir + prefix + '/share'
 iconsdir := sharedir + '/icons/hicolor'
 prefixdir := prefix + '/bin'
 bindir := rootdir + prefixdir
+libdir := rootdir + prefix + '/lib'
 default-schema-target := sharedir / 'cosmic'
 
 cosmic-applets-bin := prefixdir / 'cosmic-applets'
@@ -57,8 +58,14 @@ _install_button id name: (_install_icons name) (_install_desktop name + '/data/'
 _install_metainfo:
     install -Dm0644 {{metainfo-src}} {{metainfo-dst}}
 
+_install_status_notifier_watcher:
+    sed "s|@bindir@|{{prefixdir}}|" cosmic-applet-status-area/data/dbus-1/com.system76.CosmicStatusNotifierWatcher.service.in > cosmic-applet-status-area/data/dbus-1/com.system76.CosmicStatusNotifierWatcher.service
+    install -Dm0644 cosmic-applet-status-area/data/dbus-1/com.system76.CosmicStatusNotifierWatcher.service {{sharedir}}/dbus-1/services/com.system76.CosmicStatusNotifierWatcher.service
+    sed "s|@bindir@|{{prefixdir}}|" cosmic-applet-status-area/data/com.system76.CosmicStatusNotifierWatcher.service.in > cosmic-applet-status-area/data/com.system76.CosmicStatusNotifierWatcher.service
+    install -Dm0644 cosmic-applet-status-area/data/com.system76.CosmicStatusNotifierWatcher.service {{libdir}}/systemd/user/com.system76.CosmicStatusNotifierWatcher.service
+
 # Installs files into the system
-install: (_install_bin 'cosmic-applets') (_link_applet 'cosmic-panel-button') (_install_applet 'com.system76.CosmicAppList' 'cosmic-app-list') (_install_default_schema 'cosmic-app-list') (_install_applet 'com.system76.CosmicAppletA11y' 'cosmic-applet-a11y') (_install_applet 'com.system76.CosmicAppletAudio' 'cosmic-applet-audio') (_install_applet 'com.system76.CosmicAppletInputSources' 'cosmic-applet-input-sources') (_install_applet 'com.system76.CosmicAppletBattery' 'cosmic-applet-battery') (_install_applet 'com.system76.CosmicAppletBluetooth' 'cosmic-applet-bluetooth') (_install_applet 'com.system76.CosmicAppletMinimize' 'cosmic-applet-minimize') (_install_applet 'com.system76.CosmicAppletNetwork' 'cosmic-applet-network') (_install_applet 'com.system76.CosmicAppletNotifications' 'cosmic-applet-notifications') (_install_applet 'com.system76.CosmicAppletPower' 'cosmic-applet-power') (_install_applet 'com.system76.CosmicAppletStatusArea' 'cosmic-applet-status-area') (_install_applet 'com.system76.CosmicAppletTiling' 'cosmic-applet-tiling') (_install_applet 'com.system76.CosmicAppletTime' 'cosmic-applet-time') (_install_applet 'com.system76.CosmicAppletWorkspaces' 'cosmic-applet-workspaces') (_install_button 'com.system76.CosmicPanelAppButton' 'cosmic-panel-app-button') (_install_button 'com.system76.CosmicPanelLauncherButton' 'cosmic-panel-launcher-button') (_install_button 'com.system76.CosmicPanelWorkspacesButton' 'cosmic-panel-workspaces-button') (_install_metainfo)
+install: (_install_bin 'cosmic-applets') (_link_applet 'cosmic-panel-button') (_install_applet 'com.system76.CosmicAppList' 'cosmic-app-list') (_install_default_schema 'cosmic-app-list') (_install_applet 'com.system76.CosmicAppletA11y' 'cosmic-applet-a11y') (_install_applet 'com.system76.CosmicAppletAudio' 'cosmic-applet-audio') (_install_applet 'com.system76.CosmicAppletInputSources' 'cosmic-applet-input-sources') (_install_applet 'com.system76.CosmicAppletBattery' 'cosmic-applet-battery') (_install_applet 'com.system76.CosmicAppletBluetooth' 'cosmic-applet-bluetooth') (_install_applet 'com.system76.CosmicAppletMinimize' 'cosmic-applet-minimize') (_install_applet 'com.system76.CosmicAppletNetwork' 'cosmic-applet-network') (_install_applet 'com.system76.CosmicAppletNotifications' 'cosmic-applet-notifications') (_install_applet 'com.system76.CosmicAppletPower' 'cosmic-applet-power') (_install_applet 'com.system76.CosmicAppletStatusArea' 'cosmic-applet-status-area') (_install_applet 'com.system76.CosmicAppletTiling' 'cosmic-applet-tiling') (_install_applet 'com.system76.CosmicAppletTime' 'cosmic-applet-time') (_install_applet 'com.system76.CosmicAppletWorkspaces' 'cosmic-applet-workspaces') (_install_button 'com.system76.CosmicPanelAppButton' 'cosmic-panel-app-button') (_install_button 'com.system76.CosmicPanelLauncherButton' 'cosmic-panel-launcher-button') (_install_button 'com.system76.CosmicPanelWorkspacesButton' 'cosmic-panel-workspaces-button') (_install_metainfo) (_install_status_notifier_watcher)
 
 # Vendor Cargo dependencies locally
 vendor:
