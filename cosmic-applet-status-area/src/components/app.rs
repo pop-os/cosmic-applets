@@ -529,7 +529,11 @@ fn menu_icon_button<'a>(
         (_, name, Some(theme_path)) if name != "" => {
             let mut path = theme_path.to_owned();
             // XXX right way to lookup icon in dir?
-            path.push(name.to_owned() + ".png");
+            path.push(name.to_owned() + ".svg");
+            if !path.exists() {
+                path.pop();
+                path.push(name.to_owned() + ".png");
+            }
             let icon = cosmic::widget::icon::from_path(path).symbolic(true);
             applet.icon_button_from_handle(icon)
         }
