@@ -14,7 +14,9 @@ use cosmic::{
     surface,
     widget::{container, mouse_area},
 };
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
+use std::path::PathBuf;
+use std::sync::{Mutex, OnceLock};
 
 use crate::{components::status_menu, subscriptions::status_notifier_watcher};
 
@@ -44,7 +46,187 @@ pub(crate) struct App {
     token_tx: Option<calloop::channel::Sender<TokenRequest>>,
 }
 
+static ICON_NAME_CACHE: OnceLock<Mutex<HashMap<String, Option<String>>>> = OnceLock::new();
+
 impl App {
+    /// Get icon theme directories from XDG base directories.
+    /// This respects XDG_DATA_DIRS and includes flatpak directories if they're configured.
+    /// Implements the XDG Base Directory specification without external dependencies.
+    fn get_icon_directories() -> Vec<PathBuf> {
+        let mut dirs = Vec::new();
+
+        // XDG_DATA_HOME/icons (defaults to ~/.local/share/icons)
+        let data_home = std::env::var("XDG_DATA_HOME")
+            .ok()
+            .map(PathBuf::from)
+            .or_else(|| {
+                std::env::var("HOME")
+                    .ok()
+                    .map(|h| PathBuf::from(h).join(".local/share"))
+            });
+
+        if let Some(data_home) = data_home {
+            let icons_dir = data_home.join("icons");
+            if icons_dir.exists() {
+                dirs.push(icons_dir);
+            }
+        }
+
+        // XDG_DATA_DIRS/icons (defaults to /usr/local/share:/usr/share)
+        let data_dirs = std::env::var("XDG_DATA_DIRS")
+            .unwrap_or_else(|_| "/usr/local/share:/usr/share".to_string());
+
+        for data_dir in data_dirs.split(':') {
+            let icons_dir = PathBuf::from(data_dir).join("icons");
+            if icons_dir.exists() {
+                dirs.push(icons_dir);
+            }
+        }
+
+        // ~/.icons for backwards compatibility
+        if let Ok(home) = std::env::var("HOME") {
+            let home_icons = PathBuf::from(home).join(".icons");
+            if home_icons.exists() {
+                dirs.push(home_icons);
+            }
+        }
+
+        dirs
+    }
+
+    /// Search for an app icon that matches the search term (case-insensitive).
+    /// This searches through XDG icon directories to find app IDs.
+    fn find_app_icon_fuzzy(search_term: &str) -> Option<String> {
+        let search_lower = search_term.to_lowercase();
+        const ICON_EXTENSIONS: &[&str] = &[".png", ".svg", ".jpg", ".xpm"];
+
+        for icon_dir in Self::get_icon_directories() {
+            // Check hicolor theme apps directory (most common location)
+            let hicolor_dir = icon_dir.join("hicolor");
+            if let Ok(entries) = std::fs::read_dir(&hicolor_dir) {
+                for entry in entries.flatten() {
+                    let size_dir = entry.path();
+                    if !size_dir.is_dir() {
+                        continue;
+                    }
+
+                    let apps_dir = size_dir.join("apps");
+                    if let Ok(app_icons) = std::fs::read_dir(&apps_dir) {
+                        for app_icon in app_icons.flatten() {
+                            let file_name = app_icon.file_name();
+                            let name_str = file_name.to_string_lossy();
+
+                            let mut app_id = name_str.as_ref();
+                            for ext in ICON_EXTENSIONS {
+                                if let Some(stripped) = app_id.strip_suffix(ext) {
+                                    app_id = stripped;
+                                    break;
+                                }
+                            }
+
+                            if app_id.to_lowercase().contains(&search_lower) {
+                                return Some(app_id.to_string());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        None
+    }
+
+    /// Try icon name variants and fuzzy search through XDG icon directories.
+    /// This respects XDG_DATA_DIRS and properly searches all icon theme paths
+    /// including flatpak directories if they're in the XDG paths.
+    fn try_icon_name_variants(icon_name: &str, service_name: &str) -> Option<String> {
+        let mut variants = Vec::new();
+
+        for suffix in ["_tray_mono", "_tray", "_mono", "-tray", "-mono"] {
+            if let Some(stripped) = icon_name.strip_suffix(suffix) {
+                if !stripped.is_empty() && !variants.contains(&stripped.to_string()) {
+                    variants.push(stripped.to_string());
+                }
+            }
+        }
+
+        // Try the last component of the service name (often the app ID)
+        if let Some(last_component) = service_name.split('/').last() {
+            if !last_component.is_empty() && !variants.contains(&last_component.to_string()) {
+                variants.push(last_component.to_string());
+            }
+        }
+
+        // Try fuzzy searching for app icons using each variant
+        // This helps find icons like "com.valvesoftware.Steam" when searching for "steam"
+        // We trust libcosmic's icon system to handle the actual icon lookup
+        for variant in &variants {
+            if let Some(app_id) = Self::find_app_icon_fuzzy(variant) {
+                return Some(app_id);
+            }
+        }
+
+        None
+    }
+
+    fn map_icon_name(icon_name: &str, service_name: &str) -> String {
+        let cache = ICON_NAME_CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+
+        if let Ok(cache_lock) = cache.lock() {
+            if let Some(cached) = cache_lock.get(icon_name) {
+                return cached
+                    .as_ref()
+                    .map(|s| s.clone())
+                    .unwrap_or_else(|| icon_name.to_string());
+            }
+        }
+
+        let mapped_icon = Self::try_icon_name_variants(icon_name, service_name);
+
+        if let Some(fallback_id) = mapped_icon {
+            if let Ok(mut cache_lock) = cache.lock() {
+                cache_lock.insert(icon_name.to_string(), Some(fallback_id.clone()));
+            }
+            return fallback_id;
+        }
+
+        if let Ok(mut cache_lock) = cache.lock() {
+            cache_lock.insert(icon_name.to_string(), None);
+        }
+
+        icon_name.to_string()
+    }
+
+    fn get_mapped_icon_name(menu: &status_menu::State) -> Option<&'static str> {
+        if menu.icon_name().is_empty() {
+            None
+        } else {
+            let mapped = Self::map_icon_name(menu.icon_name(), menu.name());
+            Some(Box::leak(mapped.into_boxed_str()))
+        }
+    }
+
+    fn create_menu_icon_button(
+        &self,
+        menu: &status_menu::State,
+    ) -> cosmic::widget::Button<'_, Msg> {
+        let mapped_icon_name = Self::get_mapped_icon_name(menu);
+
+        match menu.icon_pixmap() {
+            Some(icon) if menu.icon_name().is_empty() => self
+                .core
+                .applet
+                .icon_button_from_handle(icon.clone().symbolic(true)),
+            _ if mapped_icon_name.is_some() => {
+                self.core.applet.icon_button(mapped_icon_name.unwrap())
+            }
+            _ => self
+                .core
+                .applet
+                .icon_button("application-x-executable-symbolic"),
+        }
+    }
+
     fn next_menu_id(&mut self) -> usize {
         self.max_menu_id += 1;
         self.max_menu_id
@@ -95,22 +277,15 @@ impl App {
         let overflow_index = self.overflow_index().unwrap_or(0);
         let children = self.menus.iter().skip(overflow_index).map(|(id, menu)| {
             mouse_area(
-                match menu.icon_pixmap() {
-                    Some(icon) if menu.icon_name() == "" => self
-                        .core
-                        .applet
-                        .icon_button_from_handle(icon.clone().symbolic(true)),
-                    _ => self.core.applet.icon_button(menu.icon_name()),
-                }
-                .on_press_down(Msg::TogglePopup(*id)),
+                self.create_menu_icon_button(menu)
+                    .on_press_down(Msg::TogglePopup(*id)),
             )
             .on_enter(Msg::Hovered(*id))
             .into()
         });
         let theme = self.core.system_theme();
         let cosmic = theme.cosmic();
-        let corners = cosmic.corner_radii;
-        let pad = corners.radius_m[0];
+        let _corners = cosmic.corner_radii;
 
         self.core
             .applet
@@ -195,7 +370,8 @@ impl cosmic::Application for App {
                     ])
                 }
                 status_notifier_watcher::Event::Unregistered(name) => {
-                    if let Some((id, _)) = self.menus.iter().find(|(_id, menu)| menu.name() == name)
+                    if let Some((id, _menu)) =
+                        self.menus.iter().find(|(_id, menu)| menu.name() == name)
                     {
                         let id = *id;
                         self.menus.remove(&id);
@@ -452,20 +628,13 @@ impl cosmic::Application for App {
             .iter()
             .take(overflow_index.unwrap_or(self.menus.len()))
             .map(|(id, menu)| {
-                mouse_area(
-                    match menu.icon_pixmap() {
-                        Some(icon) if menu.icon_name() == "" => self
-                            .core
-                            .applet
-                            .icon_button_from_handle(icon.clone().symbolic(true)),
-                        _ => self.core.applet.icon_button(menu.icon_name()),
-                    }
-                    .on_press_down(if menu.item.menu_proxy().is_some() {
+                mouse_area(self.create_menu_icon_button(menu).on_press_down(
+                    if menu.item.menu_proxy().is_some() {
                         Msg::TogglePopup(*id)
                     } else {
                         Msg::StatusMenu((*id, status_menu::Msg::Click(0, true)))
-                    }),
-                )
+                    },
+                ))
                 .on_enter(Msg::Hovered(*id))
                 .into()
             });
@@ -512,7 +681,7 @@ impl cosmic::Application for App {
         let theme = self.core.system_theme();
         let cosmic = theme.cosmic();
         let corners = cosmic.corner_radii;
-        let pad = corners.radius_m[0];
+        let _pad = corners.radius_m[0];
         match self.open_menu {
             Some(id) => match self.menus.get(&id) {
                 Some(menu) => self
@@ -520,7 +689,7 @@ impl cosmic::Application for App {
                     .applet
                     .popup_container(
                         container(menu.popup_view().map(move |msg| Msg::StatusMenu((id, msg))))
-                            .padding([pad, 0.]),
+                            .padding([_pad, 0.]),
                     )
                     .into(),
                 None => unreachable!(),
