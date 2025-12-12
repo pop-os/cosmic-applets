@@ -95,23 +95,12 @@ impl App {
         let overflow_index = self.overflow_index().unwrap_or(0);
         let children = self.menus.iter().skip(overflow_index).map(|(id, menu)| {
             mouse_area(
-                match menu.icon_pixmap() {
-                    Some(icon) if menu.icon_name() == "" => self
-                        .core
-                        .applet
-                        .icon_button_from_handle(icon.clone().symbolic(true)),
-                    _ => self.core.applet.icon_button(menu.icon_name()),
-                }
-                .on_press_down(Msg::TogglePopup(*id)),
+                self.icon_button_for_menu(menu)
+                    .on_press_down(Msg::TogglePopup(*id)),
             )
             .on_enter(Msg::Hovered(*id))
             .into()
         });
-        let theme = self.core.system_theme();
-        let cosmic = theme.cosmic();
-        let corners = cosmic.corner_radii;
-        let pad = corners.radius_m[0];
-
         self.core
             .applet
             .popup_container(container(
@@ -125,6 +114,23 @@ impl App {
                 },
             ))
             .into()
+    }
+
+    fn icon_button_for_menu<'a>(
+        &self,
+        menu: &'a status_menu::State,
+    ) -> cosmic::widget::Button<'a, Msg> {
+        if let Some(icon) = menu.icon_pixmap() {
+            if menu.icon_name().is_empty() {
+                self.core
+                    .applet
+                    .icon_button_from_handle(icon.clone().symbolic(true))
+            } else {
+                self.core.applet.icon_button_from_handle(icon.clone())
+            }
+        } else {
+            self.core.applet.icon_button(menu.icon_name())
+        }
     }
 }
 
@@ -453,14 +459,8 @@ impl cosmic::Application for App {
             .take(overflow_index.unwrap_or(self.menus.len()))
             .map(|(id, menu)| {
                 mouse_area(
-                    match menu.icon_pixmap() {
-                        Some(icon) if menu.icon_name() == "" => self
-                            .core
-                            .applet
-                            .icon_button_from_handle(icon.clone().symbolic(true)),
-                        _ => self.core.applet.icon_button(menu.icon_name()),
-                    }
-                    .on_press_down(if menu.item.menu_proxy().is_some() {
+                    self.icon_button_for_menu(menu).on_press_down(if menu.item.menu_proxy().is_some()
+                    {
                         Msg::TogglePopup(*id)
                     } else {
                         Msg::StatusMenu((*id, status_menu::Msg::Click(0, true)))
