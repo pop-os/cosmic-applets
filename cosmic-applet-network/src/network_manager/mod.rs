@@ -396,7 +396,10 @@ async fn start_listening(
                             if let Ok(conn_id) = active_conn.id().await {
                                 if conn_id == name
                                     && (active_conn.vpn().await.unwrap_or(false)
-                                        || active_conn.type_().await.unwrap_or("unknown")
+                                        || active_conn
+                                            .type_()
+                                            .await
+                                            .unwrap_or("unknown".to_string())
                                             == "wireguard")
                                 {
                                     match network_manager.deactivate_connection(&active_conn).await
