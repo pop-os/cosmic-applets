@@ -7,6 +7,6 @@ confirm = Deimhnigh
 cancel = Cealaigh
 unsuccessful = Níor éirigh leis an bpéireáil
 check-device = Cinntigh go bhfuil { $deviceName } ar siúl, laistigh den raon, agus réidh le péireáil.
-try-again = Bain triail eile as
+try-again = Bain triail arís
 discoverable = Infheicthe
 pairable = Péireálach
