@@ -1,7 +1,7 @@
 network = الشبكة
 airplane-mode = وضع الطيران
 airplane-mode-on = وضع الطيران مُفعّل
-turn-off-airplane-mode = عطّله لتفعيل الواي فاي، البلوتوث، شبكة هاتف محمول.
+turn-off-airplane-mode = عطّله لتفعيل الواي فاي والبلوتوث وشبكة هاتف محمول.
 wifi = واي فاي
 identity = الهوية
 ipv4 = عنوان IPv4
@@ -11,7 +11,7 @@ megabits-per-second = م.بت/ث
 connected = متصل
 connecting = جارٍ الاتصال
 connect = اتصل
-cancel = إلغاء
+cancel = ألغِ
 settings = إعدادات الشبكة...
 visible-wireless-networks = الشبكات اللاسلكية الظاهرة
 enter-password = أدخل كلمة السر أو مفتاح التعمية

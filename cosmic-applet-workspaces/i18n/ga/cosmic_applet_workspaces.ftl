@@ -1,1 +1,1 @@
-cosmic-applet-workspaces = COSMIC Spásanna Oibre
+cosmic-applet-workspaces = COSMIC spásanna oibre
