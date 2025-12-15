@@ -8,7 +8,7 @@ suspend = علِّق
 restart = أعد التشغيل
 shutdown = أطفئ
 confirm = أكِّد
-cancel = إلغاء
+cancel = ألغِ
 confirm-button =
     { $action ->
         [restart] { restart }
