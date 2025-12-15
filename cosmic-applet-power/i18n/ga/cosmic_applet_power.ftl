@@ -13,7 +13,7 @@ confirm-button =
     { $action ->
         [restart] { restart }
         [suspend] { suspend }
-        [shutdown] Múch an córas
+        [shutdown] Múchadh
         [log-out] { log-out }
        *[other] { confirm }
     }

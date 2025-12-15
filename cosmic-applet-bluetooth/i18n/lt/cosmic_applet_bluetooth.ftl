@@ -1,0 +1,12 @@
+confirm-pin = Patvirtinkite, kad nurodytas PIN sutampa su PIN pavaizduotu { $deviceName } įrenginyje
+bluetooth = Bluetooth
+unsuccessful = Nepavyko Susieti
+pairable = Suporuojamas
+try-again = Pabandyti iš naujo
+check-device = Įsitikinkite, kad { $deviceName } yra įjungtas, yra pasiekiame atstume ir paruoštas susiejimui.
+other-devices = Kiti Bluetooth įrenginiai
+cancel = Atšaukti
+connected = Prisijungta
+confirm = Patvirtinti
+settings = Bluetooth nustatymai...
+discoverable = Aptinkamas

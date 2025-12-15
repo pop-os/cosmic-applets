@@ -1,4 +1,4 @@
-tile-windows = بلّط النوافذ تلقائيًا
+tile-windows = بلّط النوافذ آليًا
 tile-current = بلّط مساحة العمل الحالية
 shortcuts = اختصارات
 navigate-windows = تنقل بين النوافذ
