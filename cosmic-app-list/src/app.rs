@@ -54,7 +54,16 @@ use cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::Sta
 use futures::future::pending;
 use iced::{Alignment, Background, Length};
 use rustc_hash::FxHashMap;
-use std::{borrow::Cow, path::PathBuf, rc::Rc, str::FromStr, time::Duration};
+use std::{
+    borrow::Cow,
+    cell::RefCell,
+    collections::HashMap,
+    path::{Path, PathBuf},
+    rc::Rc,
+    str::FromStr,
+    time::Duration,
+    sync::{Mutex, OnceLock},
+};
 use switcheroo_control::Gpu;
 use tokio::time::sleep;
 use url::Url;

@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use config::{CosmicPanelButtonConfig, IndividualConfig, Override};
-use cosmic::desktop::fde::{self, DesktopEntry, get_languages_from_env};
+use cosmic::desktop::{
+    DesktopEntryData,
+    fde::{self, DesktopEntry, IconSource, get_languages_from_env},
+};
 use cosmic::{
     Task, app,
     applet::{
@@ -12,7 +15,7 @@ use cosmic::{
     iced::{self, Length},
     iced_widget::row,
     surface,
-    widget::{Id, autosize, vertical_space},
+    widget::{self, Id, autosize, vertical_space},
 };
 use cosmic_config::{Config, CosmicConfigEntry};
 use std::{env, fs, process::Command, sync::LazyLock};
@@ -24,7 +27,7 @@ static AUTOSIZE_MAIN_ID: LazyLock<Id> = LazyLock::new(|| Id::new("autosize-main"
 #[derive(Debug, Clone, Default)]
 struct Desktop {
     name: String,
-    icon: Option<String>,
+    icon: Option<widget::icon::Handle>,
     exec: String,
 }
 
@@ -165,11 +168,8 @@ impl cosmic::Application for Button {
             {
                 cosmic::Element::from(
                     self.core.applet.applet_tooltip::<Msg>(
-                        self.icon_button_from_handle(
-                            cosmic::widget::icon::from_name(self.desktop.icon.clone().unwrap())
-                                .handle(),
-                        )
-                        .on_press_down(Msg::Press),
+                        self.icon_button_from_handle(self.desktop.icon.clone().unwrap())
+                            .on_press_down(Msg::Press),
                         self.desktop.name.clone(),
                         false,
                         Msg::Surface,
@@ -219,16 +219,18 @@ pub fn run() -> iced::Result {
         path.push(&filename);
         if let Ok(bytes) = fs::read_to_string(&path) {
             if let Ok(entry) = DesktopEntry::from_str(&path, &bytes, Some(&locales)) {
+                let data = DesktopEntryData::from_desktop_entry(&locales, entry);
+                let icon = match data.icon {
+                    IconSource::Name(name) => Some(widget::icon::from_name(name).handle()),
+                    IconSource::Path(path) => Some(widget::icon::from_path(path)),
+                };
+                let exec = data
+                    .exec
+                    .unwrap_or_else(|| panic!("Desktop file '{filename}' doesn't have `Exec`"));
                 desktop = Some(Desktop {
-                    name: entry.name(&locales).map_or_else(
-                        || panic!("Desktop file '{filename}' doesn't have `Name`"),
-                        |x| x.to_string(),
-                    ),
-                    icon: entry.icon().map(|x| x.to_string()),
-                    exec: entry.exec().map_or_else(
-                        || panic!("Desktop file '{filename}' doesn't have `Exec`"),
-                        |x| x.to_string(),
-                    ),
+                    name: data.name,
+                    icon,
+                    exec,
                 });
                 break;
             }
