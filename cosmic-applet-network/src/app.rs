@@ -940,6 +940,17 @@ impl cosmic::Application for CosmicNetworkApplet {
                 .align_x(Alignment::Center)
                 .width(Length::Fill),
             );
+
+            // Show VPN connections even in airplane mode
+            if !self.nm_state.available_vpns.is_empty() {
+                content = content.push(vpn_section(
+                    &self.nm_state,
+                    self.show_available_vpns,
+                    space_xxs,
+                    space_s,
+                ));
+            }
+
             return self.view_window_return(content);
         }
 
