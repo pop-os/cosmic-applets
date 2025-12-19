@@ -1385,7 +1385,7 @@ dependencies = [
 
 [[package]]
 name = "cosmic-applet-workspaces"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "cosmic-client-toolkit",
@@ -1394,6 +1394,7 @@ dependencies = [
  "i18n-embed-fl",
  "libcosmic",
  "rust-embed",
+ "serde",
  "tokio",
  "tracing",
  "tracing-log",

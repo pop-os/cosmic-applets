@@ -1,6 +1,6 @@
 [package]
 name = "cosmic-applet-workspaces"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Ashley Wulber <ashley@system76.com>"]
 edition = "2024"
 license = "GPL-3.0-only"
@@ -17,3 +17,4 @@ tokio.workspace = true
 i18n-embed.workspace = true
 i18n-embed-fl.workspace = true
 rust-embed.workspace = true
+serde.workspace = true
