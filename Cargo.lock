@@ -1114,7 +1114,7 @@ dependencies = [
 
 [[package]]
 name = "cosmic-app-list"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "anyhow",
  "cosmic-app-list-config",
@@ -1142,7 +1142,7 @@ dependencies = [
 
 [[package]]
 name = "cosmic-app-list-config"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "libcosmic",
  "serde",
@@ -1150,7 +1150,7 @@ dependencies = [
 
 [[package]]
 name = "cosmic-applet-a11y"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "anyhow",
  "cosmic-client-toolkit",
@@ -1170,7 +1170,7 @@ dependencies = [
 
 [[package]]
 name = "cosmic-applet-audio"
-version = "0.1.1"
+version = "1.0.0"
 dependencies = [
  "cosmic-settings-sound-subscription",
  "cosmic-time",
@@ -1192,7 +1192,7 @@ dependencies = [
 
 [[package]]
 name = "cosmic-applet-battery"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "anyhow",
  "cosmic-settings-daemon-subscription",
@@ -1215,7 +1215,7 @@ dependencies = [
 
 [[package]]
 name = "cosmic-applet-bluetooth"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "anyhow",
  "bluer",
@@ -1235,7 +1235,7 @@ dependencies = [
 
 [[package]]
 name = "cosmic-applet-input-sources"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "cosmic-comp-config",
  "i18n-embed",
@@ -1251,7 +1251,7 @@ dependencies = [
 
 [[package]]
 name = "cosmic-applet-minimize"
-version = "0.1.1"
+version = "1.0.0"
 dependencies = [
  "anyhow",
  "i18n-embed",
@@ -1269,7 +1269,7 @@ dependencies = [
 
 [[package]]
 name = "cosmic-applet-network"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "anyhow",
  "cosmic-dbus-networkmanager",
@@ -1291,7 +1291,7 @@ dependencies = [
 
 [[package]]
 name = "cosmic-applet-notifications"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "anyhow",
  "cosmic-notifications-config",
@@ -1312,7 +1312,7 @@ dependencies = [
 
 [[package]]
 name = "cosmic-applet-power"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "i18n-embed",
  "i18n-embed-fl",
@@ -1329,7 +1329,7 @@ dependencies = [
 
 [[package]]
 name = "cosmic-applet-status-area"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "futures",
  "libcosmic",
@@ -1344,7 +1344,7 @@ dependencies = [
 
 [[package]]
 name = "cosmic-applet-tiling"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "anyhow",
  "cosmic-client-toolkit",
@@ -1364,7 +1364,7 @@ dependencies = [
 
 [[package]]
 name = "cosmic-applet-time"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "chrono",
  "chrono-tz",
@@ -1385,7 +1385,7 @@ dependencies = [
 
 [[package]]
 name = "cosmic-applet-workspaces"
-version = "0.1.1"
+version = "1.0.0"
 dependencies = [
  "anyhow",
  "cosmic-client-toolkit",
@@ -1402,7 +1402,7 @@ dependencies = [
 
 [[package]]
 name = "cosmic-applets"
-version = "0.1.1"
+version = "1.0.0"
 dependencies = [
  "cosmic-app-list",
  "cosmic-applet-a11y",
@@ -1427,7 +1427,7 @@ dependencies = [
 
 [[package]]
 name = "cosmic-applets-config"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "cosmic-config",
  "serde",
@@ -1545,7 +1545,7 @@ dependencies = [
 
 [[package]]
 name = "cosmic-panel-button"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "cosmic-config",
  "libcosmic",
