@@ -9,7 +9,7 @@ use std::fmt::Debug;
 pub const APP_ID: &str = "com.system76.CosmicAppList";
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq)]
-pub enum TopLevelFilter {
+pub enum ToplevelFilter {
     #[default]
     ActiveWorkspace,
     ConfiguredOutput,
@@ -18,7 +18,7 @@ pub enum TopLevelFilter {
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, CosmicConfigEntry)]
 #[version = 1]
 pub struct AppListConfig {
-    pub filter_top_levels: Option<TopLevelFilter>,
+    pub filter_top_levels: Option<ToplevelFilter>,
     pub favorites: Vec<String>,
     pub enable_drag_source: bool,
 }

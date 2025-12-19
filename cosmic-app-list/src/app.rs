@@ -19,8 +19,7 @@ use cctk::{
         workspace::v1::client::ext_workspace_handle_v1::ExtWorkspaceHandleV1,
     },
 };
-use cosmic::desktop::fde::unicase::Ascii;
-use cosmic::desktop::fde::{self, DesktopEntry, get_languages_from_env};
+use cosmic::desktop::fde::{self, DesktopEntry, get_languages_from_env, unicase::Ascii};
 use cosmic::{
     Apply, Element, Task, app,
     applet::{
@@ -30,14 +29,16 @@ use cosmic::{
     cosmic_config::{Config, CosmicConfigEntry},
     desktop::IconSourceExt,
     iced::{
-        self, Limits, Subscription,
+        self, Alignment, Background, Border, Length, Limits, Padding, Subscription,
         clipboard::mime::{AllowedMimeTypes, AsMimeTypes},
         event::listen_with,
         platform_specific::shell::commands::popup::{destroy_popup, get_popup},
-        widget::{Column, Row, column, mouse_area, row, vertical_rule, vertical_space},
+        widget::{
+            Column, Row, column, mouse_area, row, stack, text::Wrapping, vertical_rule,
+            vertical_space,
+        },
         window,
     },
-    iced_core::{Border, Padding},
     iced_runtime::{core::event, dnd::peek_dnd},
     surface,
     theme::{self, Button, Container},
@@ -52,7 +53,6 @@ use cosmic::{
 use cosmic_app_list_config::{APP_ID, AppListConfig};
 use cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::State;
 use futures::future::pending;
-use iced::{Alignment, Background, Length};
 use rustc_hash::FxHashMap;
 use std::{borrow::Cow, path::PathBuf, rc::Rc, str::FromStr, time::Duration};
 use switcheroo_control::Gpu;
@@ -279,7 +279,7 @@ impl DockItem {
                             .first()
                             .map(|t| Message::Toggle(t.0.foreign_toplevel.clone()))
                     } else {
-                        Some(Message::TopLevelListPopup(*id, window_id))
+                        Some(Message::ToplevelListPopup(*id, window_id))
                     })
                     .width(Length::Shrink)
                     .height(Length::Shrink),
@@ -357,6 +357,7 @@ struct CosmicAppList {
     active_workspaces: Vec<ExtWorkspaceHandleV1>,
     output_list: FxHashMap<WlOutput, OutputInfo>,
     locales: Vec<String>,
+    hovered_toplevel: Option<ExtForeignToplevelHandleV1>,
     overflow_favorites_popup: Option<window::Id>,
     overflow_active_popup: Option<window::Id>,
 }
@@ -364,7 +365,7 @@ struct CosmicAppList {
 #[derive(Debug, Clone, PartialEq)]
 pub enum PopupType {
     RightClickMenu,
-    TopLevelList,
+    ToplevelList,
 }
 
 #[derive(Debug, Clone)]
@@ -374,13 +375,15 @@ enum Message {
     UnpinApp(u32),
     Popup(u32, window::Id),
     Pressed(window::Id),
-    TopLevelListPopup(u32, window::Id),
+    ToplevelListPopup(u32, window::Id),
+    ToplevelHoverChanged(ExtForeignToplevelHandleV1, bool),
     GpuRequest(Option<Vec<Gpu>>),
     CloseRequested(window::Id),
     ClosePopup,
     Activate(ExtForeignToplevelHandleV1),
     Toggle(ExtForeignToplevelHandleV1),
     Exec(String, Option<usize>, bool),
+    CloseToplevel(ExtForeignToplevelHandleV1),
     Quit(String),
     NewSeat(WlSeat),
     RemovedSeat,
@@ -457,58 +460,76 @@ async fn try_get_gpus() -> Option<Vec<Gpu>> {
     Some(gpus)
 }
 
-const TOPLEVEL_BUTTON_WIDTH: f32 = 160.0;
-const TOPLEVEL_BUTTON_HEIGHT: f32 = 130.0;
+const TOPLEVEL_BUTTON_WIDTH: f32 = 192.0;
+const TOPLEVEL_BUTTON_HEIGHT: f32 = 156.0;
 
-pub fn toplevel_button<'a, Msg>(
+fn toplevel_button<'a>(
     img: Option<WaylandImage>,
-    on_press: Msg,
     title: String,
+    handle: ExtForeignToplevelHandleV1,
     is_focused: bool,
-) -> cosmic::widget::Button<'a, Msg>
-where
-    Msg: 'static + Clone,
-{
+    is_hovered: bool,
+) -> Element<'a, Message> {
+    let title = if title.len() > 22 {
+        format!("{:.20}...", title)
+    } else {
+        title
+    };
     let border = 1.0;
-    button::custom(
-        container(
-            column![
-                container(if let Some(img) = img {
-                    Element::from(Image::new(Handle::from_rgba(
-                        img.width,
-                        img.height,
-                        img.img.clone(),
-                    )))
-                } else {
-                    Image::new(Handle::from_rgba(1, 1, [0u8, 0u8, 0u8, 255u8].as_slice())).into()
-                })
-                .class(Container::Custom(Box::new(move |theme| {
-                    container::Style {
-                        border: Border {
-                            color: theme.cosmic().bg_divider().into(),
-                            width: border,
-                            radius: 0.0.into(),
-                        },
-                        ..Default::default()
-                    }
-                })))
-                .padding(border as u16)
-                .height(Length::Shrink)
-                .width(Length::Shrink)
-                .apply(container)
-                .center_y(Length::Fixed(90.0)),
-                text::body(title),
-            ]
-            .spacing(4)
-            .align_x(Alignment::Center),
-        )
+    let preview = column![
+        container(if let Some(img) = img {
+            Element::from(Image::new(Handle::from_rgba(
+                img.width,
+                img.height,
+                img.img.clone(),
+            )))
+        } else {
+            Image::new(Handle::from_rgba(1, 1, [0u8, 0u8, 0u8, 255u8].as_slice())).into()
+        })
+        .class(Container::custom(move |theme| container::Style {
+            border: Border {
+                color: theme.cosmic().bg_divider().into(),
+                width: border,
+                radius: 1.0.into(),
+            },
+            ..Default::default()
+        }))
+        .padding(border as u16)
+        .apply(container)
         .center(Length::Fill),
-    )
-    .on_press(on_press)
-    .class(window_menu_style(is_focused))
-    .width(Length::Fixed(TOPLEVEL_BUTTON_WIDTH))
-    .height(Length::Fixed(TOPLEVEL_BUTTON_HEIGHT))
-    .selected(is_focused)
+        text::body(title)
+            .wrapping(Wrapping::None)
+            .width(Length::Fill)
+            .center()
+    ]
+    .spacing(4)
+    .padding([4, 4, 0, 4]);
+    let close_button_overlay = if is_hovered {
+        row![
+            horizontal_space(),
+            button::custom(icon::from_name("window-close-symbolic").size(16))
+                .class(Button::Destructive)
+                .on_press(Message::CloseToplevel(handle.clone()))
+                .padding(4)
+        ]
+    } else {
+        row![]
+    }
+    .width(Length::Fill)
+    .height(Length::Fill);
+
+    stack![preview, close_button_overlay]
+        .apply(button::custom)
+        .on_press(Message::Toggle(handle.clone()))
+        .class(window_menu_style(is_focused))
+        .width(Length::Fixed(TOPLEVEL_BUTTON_WIDTH))
+        .height(Length::Fixed(TOPLEVEL_BUTTON_HEIGHT))
+        .padding(4)
+        .selected(is_focused)
+        .apply(mouse_area)
+        .on_enter(Message::ToplevelHoverChanged(handle.clone(), true))
+        .on_exit(Message::ToplevelHoverChanged(handle, false))
+        .apply(Element::from)
 }
 
 fn window_menu_style(selected: bool) -> cosmic::theme::Button {
@@ -589,7 +610,7 @@ fn app_list_icon_style(selected: bool) -> cosmic::theme::Button {
 
 #[inline]
 pub fn menu_control_padding() -> Padding {
-    let spacing = cosmic::theme::spacing();
+    let spacing = theme::spacing();
     [spacing.space_xxs, spacing.space_s].into()
 }
 
@@ -626,6 +647,158 @@ impl CosmicAppList {
                 original_app_id: original_id.clone(),
             })
             .collect();
+    }
+
+    /// Close any open popups.
+    fn close_popups(&mut self) -> Task<cosmic::Action<Message>> {
+        let mut commands = Vec::new();
+        if let Some(popup) = self.popup.take() {
+            commands.push(destroy_popup(popup.id));
+        }
+        if let Some(popup) = self.overflow_active_popup.take() {
+            commands.push(destroy_popup(popup));
+        }
+        if let Some(popup) = self.overflow_favorites_popup.take() {
+            commands.push(destroy_popup(popup));
+        }
+        Task::batch(commands)
+    }
+
+    /// Returns the length of the group in the favorite list after which items are displayed in a popup.
+    /// Shrink the favorite list until it only has active windows, or until it fits in the length provided.
+    fn panel_overflow_lengths(&self) -> (Option<usize>, Option<usize>) {
+        let mut favorite_index;
+        let mut active_index = None;
+        let Some(mut max_major_axis_len) = self.core.applet.suggested_bounds.as_ref().map(|c| {
+            // if we have a configure for width and height, we're in a overflow popup
+            match self.core.applet.anchor {
+                PanelAnchor::Top | PanelAnchor::Bottom => c.width as u32,
+                PanelAnchor::Left | PanelAnchor::Right => c.height as u32,
+            }
+        }) else {
+            return (None, active_index);
+        };
+        // tracing::error!("{} {}", max_major_axis_len, self.pinned_list.len());
+        // subtract the divider width
+        max_major_axis_len -= 1;
+        let applet_icon = AppletIconData::new(&self.core.applet);
+
+        let button_total_size = self.core.applet.suggested_size(true).0
+            + self.core.applet.suggested_padding(true).0 * 2
+            + applet_icon.icon_spacing as u16;
+
+        let favorite_active_cnt = self
+            .pinned_list
+            .iter()
+            .filter(|t| !t.toplevels.is_empty())
+            .count();
+
+        // initial calculation of favorite_index
+        let btn_count = max_major_axis_len / button_total_size as u32;
+        if btn_count >= self.pinned_list.len() as u32 + self.active_list.len() as u32 {
+            return (None, active_index);
+        } else {
+            favorite_index = (btn_count as usize).min(favorite_active_cnt).max(2);
+        }
+
+        // calculation of active_index based on favorite_index if there is still not enough space
+        let active_index_max = (btn_count as i32)
+            - (self.pinned_list.len() as i32).saturating_sub(favorite_index as i32);
+        if active_index_max >= self.active_list.len() as i32 {
+            active_index = Some(self.active_list.len());
+        } else {
+            active_index = Some((active_index_max.max(2) as usize).min(self.active_list.len()));
+        }
+
+        // final calculation of favorite_index if there is still not enough space
+        if let Some(active_index) = active_index {
+            let favorite_index_max = (btn_count as i32) - active_index as i32;
+            favorite_index = favorite_index_max.max(2) as usize;
+        } else {
+            favorite_index = (btn_count as usize).min(self.pinned_list.len());
+        }
+        // tracing::error!("{} {} {:?}", btn_count, favorite_index, active_index);
+        (Some(favorite_index), active_index)
+    }
+
+    fn currently_active_toplevel(&self) -> Vec<ExtForeignToplevelHandleV1> {
+        if self.active_workspaces.is_empty() {
+            return Vec::new();
+        }
+        let current_output = &self.core.applet.output_name;
+        let mut focused_toplevels: Vec<ExtForeignToplevelHandleV1> = Vec::new();
+        let active_workspaces = &self.active_workspaces;
+        for toplevel_list in self.active_list.iter().chain(self.pinned_list.iter()) {
+            for (t_info, _) in &toplevel_list.toplevels {
+                if t_info.state.contains(&State::Activated)
+                    && active_workspaces
+                        .iter()
+                        .any(|workspace| t_info.workspace.contains(workspace))
+                    && t_info.output.iter().any(|x| {
+                        self.output_list.get(x).is_some_and(|val| {
+                            val.name.as_ref().is_some_and(|n| n == current_output)
+                        })
+                    })
+                {
+                    focused_toplevels.push(t_info.foreign_toplevel.clone());
+                }
+            }
+        }
+        focused_toplevels
+    }
+
+    fn find_desktop_entry_for_toplevel(
+        &mut self,
+        info: &ToplevelInfo,
+        unicase_appid: Ascii<&str>,
+    ) -> DesktopEntry {
+        if let Some(appid) = fde::find_app_by_id(&self.desktop_entries, unicase_appid) {
+            appid.clone()
+        } else {
+            // Update desktop entries in case it was not found.
+            self.update_desktop_entries();
+            if let Some(appid) = fde::find_app_by_id(&self.desktop_entries, unicase_appid) {
+                appid.clone()
+            } else {
+                tracing::error!(id = info.app_id, "could not find desktop entry for app");
+                let mut fallback_entry = fde::DesktopEntry::from_appid(info.app_id.clone());
+                // proton opens games as steam_app_X, where X is either
+                // the steam appid or "default". games with a steam appid
+                // can have a desktop entry generated elsewhere; this
+                // specifically handles non-steam games opened
+                // under proton
+                // in addition, try to match WINE entries who have its
+                // appid = the full name of the executable (incl. .exe)
+                let is_proton_game = info.app_id == "steam_app_default";
+                if is_proton_game || info.app_id.ends_with(".exe") {
+                    for entry in &self.desktop_entries {
+                        let localised_name = entry.name(&self.locales).unwrap_or_default();
+                        if localised_name == info.title {
+                            // if this is a proton game, we only want
+                            // to look for game entries
+                            if is_proton_game
+                                && !entry.categories().unwrap_or_default().contains(&"Game")
+                            {
+                                continue;
+                            }
+                            fallback_entry = entry.clone();
+                            break;
+                        }
+                    }
+                }
+                fallback_entry
+            }
+        }
+    }
+
+    // Check if a specific toplevel is focused
+    fn is_focused(&self, handle: &ExtForeignToplevelHandleV1) -> bool {
+        self.currently_active_toplevel().contains(handle)
+    }
+
+    // Check if a specific toplevel button is currently hovered
+    fn is_hovered(&self, handle: &ExtForeignToplevelHandleV1) -> bool {
+        self.hovered_toplevel.as_ref() == Some(handle)
     }
 }
 
@@ -731,7 +904,7 @@ impl cosmic::Application for CosmicAppList {
                     return Task::batch([gpu_update, get_popup(popup_settings)]);
                 }
             }
-            Message::TopLevelListPopup(id, parent_window_id) => {
+            Message::ToplevelListPopup(id, parent_window_id) => {
                 if let Some(Popup {
                     parent,
                     id: popup_id,
@@ -768,7 +941,7 @@ impl cosmic::Application for CosmicAppList {
                         parent: parent_window_id,
                         id: new_id,
                         dock_item: toplevel_group.clone(),
-                        popup_type: PopupType::TopLevelList,
+                        popup_type: PopupType::ToplevelList,
                     });
 
                     let mut popup_settings = self.core.applet.get_popup_settings(
@@ -814,6 +987,14 @@ impl cosmic::Application for CosmicAppList {
                     return get_popup(popup_settings);
                 }
             }
+            Message::ToplevelHoverChanged(handle, entering) => {
+                match (entering, &self.hovered_toplevel) {
+                    (true, _) => self.hovered_toplevel = Some(handle),
+                    // prevents race condition
+                    (false, Some(h)) if h == &handle => self.hovered_toplevel = None,
+                    _ => {}
+                }
+            }
             Message::PinApp(id) => {
                 if let Some(i) = self.active_list.iter().position(|t| t.id == id) {
                     let entry = self.active_list.remove(i);
@@ -855,16 +1036,19 @@ impl cosmic::Application for CosmicAppList {
             }
             Message::Toggle(handle) => {
                 if let Some(tx) = self.wayland_sender.as_ref() {
-                    let _ = tx.send(WaylandRequest::Toplevel(
-                        if self.currently_active_toplevel().contains(&handle) {
-                            ToplevelRequest::Minimize(handle)
-                        } else {
-                            ToplevelRequest::Activate(handle)
-                        },
-                    ));
+                    let _ = tx.send(WaylandRequest::Toplevel(if self.is_focused(&handle) {
+                        ToplevelRequest::Minimize(handle)
+                    } else {
+                        ToplevelRequest::Activate(handle)
+                    }));
                 }
                 if let Some(p) = self.popup.take() {
                     return destroy_popup(p.id);
+                }
+            }
+            Message::CloseToplevel(handle) => {
+                if let Some(tx) = self.wayland_sender.as_ref() {
+                    let _ = tx.send(WaylandRequest::Toplevel(ToplevelRequest::Quit(handle)));
                 }
             }
             Message::Quit(id) => {
@@ -1144,6 +1328,21 @@ impl cosmic::Application for CosmicAppList {
                                     .retain(|(info, _)| info.foreign_toplevel != handle);
                             }
                             self.active_list.retain(|t| !t.toplevels.is_empty());
+
+                            if let Some(popup) = &mut self.popup
+                                && popup.popup_type == PopupType::ToplevelList
+                            {
+                                popup
+                                    .dock_item
+                                    .toplevels
+                                    .retain(|(info, _)| info.foreign_toplevel != handle);
+
+                                if popup.dock_item.toplevels.is_empty() {
+                                    let id = popup.id;
+                                    self.popup = None;
+                                    return destroy_popup(id);
+                                }
+                            }
                         }
                         ToplevelUpdate::Update(info) => {
                             // TODO probably want to make sure it is removed
@@ -1809,7 +2008,7 @@ impl cosmic::Application for CosmicAppList {
                         content: impl Into<Element<'a, Message>>,
                     ) -> cosmic::widget::Button<'a, Message> {
                         button::custom(content)
-                            .height(20 + 2 * theme::active().cosmic().space_xxs())
+                            .height(20 + 2 * theme::spacing().space_xxs)
                             .class(Button::MenuItem)
                             .padding(menu_control_padding())
                             .width(Length::Fill)
@@ -1957,22 +2156,17 @@ impl cosmic::Application for CosmicAppList {
                         )
                         .into()
                 }
-                PopupType::TopLevelList => match self.core.applet.anchor {
+                PopupType::ToplevelList => match self.core.applet.anchor {
                     PanelAnchor::Left | PanelAnchor::Right => {
                         let mut content =
                             column![].padding(8).align_x(Alignment::Center).spacing(8);
                         for (info, img) in toplevels {
-                            let title = if info.title.len() > 18 {
-                                format!("{:.16}...", &info.title)
-                            } else {
-                                info.title.clone()
-                            };
                             content = content.push(toplevel_button(
                                 img.clone(),
-                                Message::Toggle(info.foreign_toplevel.clone()),
-                                title,
-                                self.currently_active_toplevel()
-                                    .contains(&info.foreign_toplevel),
+                                info.title.clone(),
+                                info.foreign_toplevel.clone(),
+                                self.is_focused(&info.foreign_toplevel),
+                                self.is_hovered(&info.foreign_toplevel),
                             ));
                         }
                         self.core
@@ -1984,17 +2178,12 @@ impl cosmic::Application for CosmicAppList {
                     PanelAnchor::Bottom | PanelAnchor::Top => {
                         let mut content = row![].padding(8).align_y(Alignment::Center).spacing(8);
                         for (info, img) in toplevels {
-                            let title = if info.title.len() > 18 {
-                                format!("{:.16}...", &info.title)
-                            } else {
-                                info.title.clone()
-                            };
                             content = content.push(toplevel_button(
                                 img.clone(),
-                                Message::Toggle(info.foreign_toplevel.clone()),
-                                title,
-                                self.currently_active_toplevel()
-                                    .contains(&info.foreign_toplevel),
+                                info.title.clone(),
+                                info.foreign_toplevel.clone(),
+                                self.is_focused(&info.foreign_toplevel),
+                                self.is_hovered(&info.foreign_toplevel),
                             ));
                         }
                         self.core
@@ -2233,155 +2422,6 @@ impl cosmic::Application for CosmicAppList {
 
     fn on_close_requested(&self, id: window::Id) -> Option<Message> {
         Some(Message::CloseRequested(id))
-    }
-}
-
-impl CosmicAppList {
-    /// Close any open popups.
-    fn close_popups(&mut self) -> Task<cosmic::Action<Message>> {
-        let mut commands = Vec::new();
-        if let Some(popup) = self.popup.take() {
-            commands.push(destroy_popup(popup.id));
-        }
-        if let Some(popup) = self.overflow_active_popup.take() {
-            commands.push(destroy_popup(popup));
-        }
-        if let Some(popup) = self.overflow_favorites_popup.take() {
-            commands.push(destroy_popup(popup));
-        }
-        Task::batch(commands)
-    }
-    /// Returns the length of the group in the favorite list after which items are displayed in a popup.
-    /// Shrink the favorite list until it only has active windows, or until it fits in the length provided.
-    fn panel_overflow_lengths(&self) -> (Option<usize>, Option<usize>) {
-        let mut favorite_index;
-        let mut active_index = None;
-        let Some(mut max_major_axis_len) = self.core.applet.suggested_bounds.as_ref().map(|c| {
-            // if we have a configure for width and height, we're in a overflow popup
-            match self.core.applet.anchor {
-                PanelAnchor::Top | PanelAnchor::Bottom => c.width as u32,
-                PanelAnchor::Left | PanelAnchor::Right => c.height as u32,
-            }
-        }) else {
-            return (None, active_index);
-        };
-        // tracing::error!("{} {}", max_major_axis_len, self.pinned_list.len());
-        // subtract the divider width
-        max_major_axis_len -= 1;
-        let applet_icon = AppletIconData::new(&self.core.applet);
-
-        let button_total_size = self.core.applet.suggested_size(true).0
-            + self.core.applet.suggested_padding(true).0 * 2
-            + applet_icon.icon_spacing as u16;
-
-        let favorite_active_cnt = self
-            .pinned_list
-            .iter()
-            .filter(|t| !t.toplevels.is_empty())
-            .count();
-
-        // initial calculation of favorite_index
-        let btn_count = max_major_axis_len / button_total_size as u32;
-        if btn_count >= self.pinned_list.len() as u32 + self.active_list.len() as u32 {
-            return (None, active_index);
-        } else {
-            favorite_index = (btn_count as usize).min(favorite_active_cnt).max(2);
-        }
-
-        // calculation of active_index based on favorite_index if there is still not enough space
-        let active_index_max = (btn_count as i32)
-            - (self.pinned_list.len() as i32).saturating_sub(favorite_index as i32);
-        if active_index_max >= self.active_list.len() as i32 {
-            active_index = Some(self.active_list.len());
-        } else {
-            active_index = Some((active_index_max.max(2) as usize).min(self.active_list.len()));
-        }
-
-        // final calculation of favorite_index if there is still not enough space
-        if let Some(active_index) = active_index {
-            let favorite_index_max = (btn_count as i32) - active_index as i32;
-            favorite_index = favorite_index_max.max(2) as usize;
-        } else {
-            favorite_index = (btn_count as usize).min(self.pinned_list.len());
-        }
-        // tracing::error!("{} {} {:?}", btn_count, favorite_index, active_index);
-        (Some(favorite_index), active_index)
-    }
-
-    fn currently_active_toplevel(&self) -> Vec<ExtForeignToplevelHandleV1> {
-        if self.active_workspaces.is_empty() {
-            return Vec::new();
-        }
-        let current_output = &self.core.applet.output_name;
-        let mut focused_toplevels: Vec<ExtForeignToplevelHandleV1> = Vec::new();
-        let active_workspaces = &self.active_workspaces;
-        for toplevel_list in self.active_list.iter().chain(self.pinned_list.iter()) {
-            for (t_info, _) in &toplevel_list.toplevels {
-                if t_info.state.contains(&State::Activated)
-                    && active_workspaces
-                        .iter()
-                        .any(|workspace| t_info.workspace.contains(workspace))
-                    && t_info.output.iter().any(|x| {
-                        self.output_list.get(x).is_some_and(|val| {
-                            val.name.as_ref().is_some_and(|n| n == current_output)
-                        })
-                    })
-                {
-                    focused_toplevels.push(t_info.foreign_toplevel.clone());
-                }
-            }
-        }
-        focused_toplevels
-    }
-
-    fn find_desktop_entry_for_toplevel(
-        &mut self,
-        info: &ToplevelInfo,
-        unicase_appid: Ascii<&str>,
-    ) -> DesktopEntry {
-        if let Some(appid) = fde::find_app_by_id(&self.desktop_entries, unicase_appid) {
-            appid.clone()
-        } else {
-            // Update desktop entries in case it was not found.
-
-            self.update_desktop_entries();
-            if let Some(appid) = fde::find_app_by_id(&self.desktop_entries, unicase_appid) {
-                appid.clone()
-            } else {
-                tracing::error!(id = info.app_id, "could not find desktop entry for app");
-
-                let mut fallback_entry = fde::DesktopEntry::from_appid(info.app_id.clone());
-
-                // proton opens games as steam_app_X, where X is either
-                // the steam appid or "default". games with a steam appid
-                // can have a desktop entry generated elsewhere; this
-                // specifically handles non-steam games opened
-                // under proton
-                // in addition, try to match WINE entries who have its
-                // appid = the full name of the executable (incl. .exe)
-                let is_proton_game = info.app_id == "steam_app_default";
-                if is_proton_game || info.app_id.ends_with(".exe") {
-                    for entry in &self.desktop_entries {
-                        let localised_name = entry.name(&self.locales).unwrap_or_default();
-
-                        if localised_name == info.title {
-                            // if this is a proton game, we only want
-                            // to look for game entries
-                            if is_proton_game
-                                && !entry.categories().unwrap_or_default().contains(&"Game")
-                            {
-                                continue;
-                            }
-
-                            fallback_entry = entry.clone();
-                            break;
-                        }
-                    }
-                }
-
-                fallback_entry
-            }
-        }
     }
 }
 

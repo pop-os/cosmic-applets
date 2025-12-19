@@ -506,9 +506,9 @@ impl AppData {
                     return;
                 };
 
-                // resize to 128x128
+                // resize to 256x256
                 let max = img.width().max(img.height());
-                let ratio = max as f32 / 128.0;
+                let ratio = max as f32 / 256.0;
 
                 let img = if ratio > 1.0 {
                     let new_width = (img.width() as f32 / ratio).round();
