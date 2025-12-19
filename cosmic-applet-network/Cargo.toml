@@ -6,6 +6,7 @@ license = "GPL-3.0-or-later"
 
 [dependencies]
 anyhow.workspace = true
+async-fn-stream = "0.3"
 cosmic-dbus-networkmanager = { git = "https://github.com/pop-os/dbus-settings-bindings" }
 cosmic-time.workspace = true
 futures.workspace = true
@@ -26,3 +27,17 @@ tracing-log.workspace = true
 tracing-subscriber.workspace = true
 tracing.workspace = true
 zbus.workspace = true
+nm-secret-agent-manager = { git = "https://github.com/pop-os/dbus-settings-bindings/", branch = "nm-secret-agent" }
+indexmap = "2.12.1"
+secure-string = "0.3.0"
+uuid = { version = "1.19.0", features = ["v4"] }
+
+
+[dependencies.cosmic-settings-network-manager-subscription]
+git = "https://github.com/pop-os/cosmic-settings/"
+branch = "nm-secret-agent"
+
+
+[dependencies.cosmic-settings-airplane-mode-subscription]
+git = "https://github.com/pop-os/cosmic-settings/"
+branch = "nm-secret-agent"
