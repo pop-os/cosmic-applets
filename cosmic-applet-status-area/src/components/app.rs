@@ -230,7 +230,7 @@ impl cosmic::Application for App {
                                 Some((i, self.core.main_window_id().unwrap()))
                             }
                         })
-                        .unwrap_or((0, self.core.main_window_id().unwrap()));
+                        .unwrap_or((i, self.core.main_window_id().unwrap()));
 
                     let mut popup_settings = self
                         .core
@@ -312,7 +312,7 @@ impl cosmic::Application for App {
                             Some((i, self.core.main_window_id().unwrap()))
                         }
                     })
-                    .unwrap_or((0, self.core.main_window_id().unwrap()));
+                    .unwrap_or((i, self.core.main_window_id().unwrap()));
 
                 let mut popup_settings = self
                     .core
