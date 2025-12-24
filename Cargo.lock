@@ -1573,7 +1573,7 @@ dependencies = [
 [[package]]
 name = "cosmic-pipewire"
 version = "1.0.0-beta6"
-source = "git+https://github.com/pop-os/cosmic-settings#6c4204710beb6333f1463037d46e8f6c6a486bad"
+source = "git+https://github.com/pop-os/cosmic-settings?branch=headsets#3a9163a3f0ae5046c66f4286be6342c3def7c593"
 dependencies = [
  "intmap",
  "libspa",
@@ -1662,10 +1662,9 @@ dependencies = [
 [[package]]
 name = "cosmic-settings-sound-subscription"
 version = "1.0.0-beta6"
-source = "git+https://github.com/pop-os/cosmic-settings#6c4204710beb6333f1463037d46e8f6c6a486bad"
+source = "git+https://github.com/pop-os/cosmic-settings?branch=headsets#3a9163a3f0ae5046c66f4286be6342c3def7c593"
 dependencies = [
  "cosmic-pipewire",
- "crossbeam-queue",
  "futures",
  "intmap",
  "libcosmic",
@@ -1753,15 +1752,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9481c1c90cbf2ac953f07c8d4a58aa3945c425b7185c9154d67a65e4230da511"
 dependencies = [
  "cfg-if",
-]
-
-[[package]]
-name = "crossbeam-queue"
-version = "0.3.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f58bbc28f91df819d0aa2a2c00cd19754769c2fad90579b3592b1c9ba7a3115"
-dependencies = [
- "crossbeam-utils",
 ]
 
 [[package]]
