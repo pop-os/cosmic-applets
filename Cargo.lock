@@ -1573,7 +1573,7 @@ dependencies = [
 [[package]]
 name = "cosmic-pipewire"
 version = "1.0.0-beta6"
-source = "git+https://github.com/pop-os/cosmic-settings?branch=headsets#3a9163a3f0ae5046c66f4286be6342c3def7c593"
+source = "git+https://github.com/pop-os/cosmic-settings#079a1fbb55caace89f274d63063392f761edbf60"
 dependencies = [
  "intmap",
  "libspa",
@@ -1662,7 +1662,7 @@ dependencies = [
 [[package]]
 name = "cosmic-settings-sound-subscription"
 version = "1.0.0-beta6"
-source = "git+https://github.com/pop-os/cosmic-settings?branch=headsets#3a9163a3f0ae5046c66f4286be6342c3def7c593"
+source = "git+https://github.com/pop-os/cosmic-settings#079a1fbb55caace89f274d63063392f761edbf60"
 dependencies = [
  "cosmic-pipewire",
  "futures",
