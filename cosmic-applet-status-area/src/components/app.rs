@@ -94,14 +94,7 @@ impl App {
         let overflow_index = self.overflow_index().unwrap_or(0);
         let children = self.menus.iter().skip(overflow_index).map(|(id, menu)| {
             mouse_area(
-                match menu.icon_pixmap() {
-                    Some(icon) if menu.icon_name() == "" => self
-                        .core
-                        .applet
-                        .icon_button_from_handle(icon.clone().symbolic(true)),
-                    _ => self.core.applet.icon_button(menu.icon_name()),
-                }
-                .on_press_down(Msg::TogglePopup(*id)),
+                menu_icon_button(&self.core.applet, &menu).on_press_down(Msg::TogglePopup(*id)),
             )
             .into()
         });
@@ -400,20 +393,14 @@ impl cosmic::Application for App {
             .iter()
             .take(overflow_index.unwrap_or(self.menus.len()))
             .map(|(id, menu)| {
-                mouse_area(
-                    match menu.icon_pixmap() {
-                        Some(icon) if menu.icon_name() == "" => self
-                            .core
-                            .applet
-                            .icon_button_from_handle(icon.clone().symbolic(true)),
-                        _ => self.core.applet.icon_button(menu.icon_name()),
-                    }
-                    .on_press_down(if menu.item.menu_proxy().is_some() {
+                mouse_area(menu_icon_button(&self.core.applet, &menu).on_press_down(
+                    if menu.item.menu_proxy().is_some() {
                         Msg::TogglePopup(*id)
                     } else {
                         Msg::StatusMenu((*id, status_menu::Msg::Click(0, true)))
-                    }),
-                )
+                    },
+                ))
+                .on_enter(Msg::Hovered(*id))
                 .into()
             });
 
@@ -478,6 +465,27 @@ impl cosmic::Application for App {
 
     fn on_close_requested(&self, id: window::Id) -> Option<Msg> {
         Some(Msg::Closed(id))
+    }
+}
+
+fn menu_icon_button<'a>(
+    applet: &'a cosmic::applet::Context,
+    menu: &'a status_menu::State,
+) -> cosmic::widget::Button<'a, Msg> {
+    match (menu.icon_pixmap(), menu.icon_name(), menu.icon_theme_path()) {
+        (Some(icon), "", _) => applet.icon_button_from_handle(icon.clone().symbolic(true)),
+        (_, name, Some(theme_path)) if name != "" => {
+            let mut path = theme_path.to_owned();
+            // XXX right way to lookup icon in dir?
+            path.push(name.to_owned() + ".svg");
+            if !path.exists() {
+                path.pop();
+                path.push(name.to_owned() + ".png");
+            }
+            let icon = cosmic::widget::icon::from_path(path).symbolic(true);
+            applet.icon_button_from_handle(icon)
+        }
+        (_, name, _) => applet.icon_button(name),
     }
 }
 

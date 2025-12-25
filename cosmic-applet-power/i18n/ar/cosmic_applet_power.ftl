@@ -7,8 +7,8 @@ log-out-shortcut = سوبر + Shift + Escape
 suspend = علِّق
 restart = أعد التشغيل
 shutdown = أطفئ
-confirm = تأكيد
-cancel = إلغاء
+confirm = أكِّد
+cancel = ألغِ
 confirm-button =
     { $action ->
         [restart] { restart }
