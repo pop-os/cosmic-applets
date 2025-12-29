@@ -1,0 +1,14 @@
+power-settings = Energijos ir Baterijos nustatymai...
+hours = val
+until-empty = kol bus iškrauta
+battery-desc = Sumažintas energijos vartojimas ir našumas.
+max-charge = Padidinti baterijo gyvavimo trukmę nustatydami 80% pakrovimo ribą
+balanced = Subalansuotas
+battery = Baterija
+seconds = sek
+dgpu-running = Dedikuotas GPU yra aktyvus ir gali sumažinti baterijos gyvavimo trukmę
+performance = Didelis Našumas
+performance-desc = Didelis našumas ir energijos vartojimas.
+minutes = min
+balanced-desc = Įprastas našumas ir baterijos naudojimas.
+dgpu-applications = Aplikacijos naudojančios { $gpu_name } dedikuotą GPU
