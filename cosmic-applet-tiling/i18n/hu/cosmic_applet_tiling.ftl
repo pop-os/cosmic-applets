@@ -1,10 +1,10 @@
 tile-windows = Automatikus ablakcsempézés
 tile-current = Az aktuális munkaterület automatikus csempézése
-shortcuts = Billentyűparancsok
+shortcuts = Gyorsbillentyűk
 navigate-windows = Ablakok navigálása
 move-window = Ablak mozgatása
 toggle-floating-window = Az ablakok lebegtetésének be- és kikapcsolása
-view-all-shortcuts = Az összes billentyűparancs megtekintése...
+view-all-shortcuts = Az összes gyorsbillentyű megtekintése...
 active-hint = Aktív ablak kiemelése
 gaps = Hézagok
 floating-window-exceptions = Lebegő ablak kivételek...

@@ -32,3 +32,4 @@ confirm-title =
         [log-out] Uždaryti visas aplikacijas ir atsijungti
        *[other] Taikyti pasirinktą veiksmą
     } now?
+shutdown = Išjungti
