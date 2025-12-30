@@ -192,7 +192,7 @@ impl DockItem {
 
         let app_icon = AppletIconData::new(applet);
 
-        let cosmic_icon = fde::IconSource::from_unknown(desktop_info.icon().unwrap_or_default())
+        let cosmic_icon = resolve_icon(desktop_info.icon().unwrap_or_default())
             .as_cosmic_icon()
             // sets the preferred icon size variant
             .size(128)
@@ -2442,4 +2442,54 @@ impl AsMimeTypes for DndPathBuf {
     fn as_bytes(&self, _mime_type: &str) -> Option<std::borrow::Cow<'static, [u8]>> {
         Some(Cow::Owned(self.0.to_str()?.as_bytes().to_vec()))
     }
+}
+
+pub(crate) fn resolve_icon(name: &str) -> fde::IconSource {
+    if name.is_empty() {
+        return fde::IconSource::from_unknown(name);
+    }
+
+    let mut path = std::path::PathBuf::from(name);
+    if name.starts_with("~/") {
+        if let Ok(home) = std::env::var("HOME") {
+            let home = std::path::Path::new(&home);
+            path = home.join(&name[2..]);
+        }
+    }
+
+    if path.is_absolute() && path.exists() {
+        return fde::IconSource::from_unknown(&path.to_string_lossy());
+    }
+
+    // Check standard pixmap paths and user local paths
+    let mut search_dirs = Vec::new();
+
+    if let Ok(home) = std::env::var("HOME") {
+        let home = std::path::PathBuf::from(home);
+        search_dirs.push(home.join(".local/share/icons"));
+        search_dirs.push(home.join(".local/share/pixmaps"));
+        search_dirs.push(home.join(".icons"));
+    }
+
+    search_dirs.push(std::path::PathBuf::from("/usr/share/pixmaps"));
+    search_dirs.push(std::path::PathBuf::from("/usr/local/share/pixmaps"));
+
+    for dir in search_dirs {
+        let p = dir.join(name);
+        if p.exists() {
+            return fde::IconSource::from_unknown(&p.to_string_lossy());
+        }
+
+        // Try adding extensions if missing
+        if !name.contains('.') {
+            for ext in [".png", ".svg", ".xpm"] {
+                let p = dir.join(format!("{}{}", name, ext));
+                if p.exists() {
+                    return fde::IconSource::from_unknown(&p.to_string_lossy());
+                }
+            }
+        }
+    }
+
+    fde::IconSource::from_unknown(name)
 }
