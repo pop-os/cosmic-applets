@@ -940,10 +940,29 @@ impl cosmic::Application for CosmicNetworkApplet {
                 .align_x(Alignment::Center)
                 .width(Length::Fill),
             );
+
+            // Show VPN connections even in airplane mode
+            if !self.nm_state.available_vpns.is_empty() {
+                content = content.push(vpn_section(
+                    &self.nm_state,
+                    self.show_available_vpns,
+                    space_xxs,
+                    space_s,
+                ));
+            }
+
             return self.view_window_return(content);
         }
 
-        if !self.nm_state.wifi_enabled {
+        if !self.nm_state.wifi_enabled && !self.nm_state.available_vpns.is_empty() {
+            // Add VPN connections section when WiFi is disabled
+            content = content.push(vpn_section(
+                &self.nm_state,
+                self.show_available_vpns,
+                space_xxs,
+                space_s,
+            ));
+
             return self.view_window_return(content);
         }
 
@@ -1251,7 +1270,7 @@ impl cosmic::Application for CosmicNetworkApplet {
         }
 
         // Add VPN connections section after wireless networks when they are expanded
-        if !self.nm_state.available_vpns.is_empty() {
+        if !self.nm_state.available_vpns.is_empty() && self.nm_state.wifi_enabled {
             content = content.push(vpn_section(
                 &self.nm_state,
                 self.show_available_vpns,
