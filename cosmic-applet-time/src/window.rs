@@ -262,7 +262,7 @@ impl Window {
 
             if self.config.show_date_in_top_panel {
                 if self.config.show_weekday {
-                    let mut fs = fieldsets::MDET::long();
+                    let mut fs = fieldsets::MDET::medium();
                     if !self.config.show_seconds {
                         fs = fs.with_time_precision(TimePrecision::Minute);
                     }
@@ -271,7 +271,7 @@ impl Window {
                         .format(&datetime)
                         .to_string()
                 } else {
-                    let mut fs = fieldsets::MDT::long();
+                    let mut fs = fieldsets::MDT::medium();
                     if !self.config.show_seconds {
                         fs = fs.with_time_precision(TimePrecision::Minute);
                     }
