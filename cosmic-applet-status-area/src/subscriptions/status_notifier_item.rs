@@ -50,7 +50,7 @@ impl StatusNotifierItem {
         let menu_path = item_proxy.menu().await;
 
         // Why would an item say it has no menu but provide a menu path? Slack does this.
-        let mut is_menu = menu_path.is_ok() || is_menu.unwrap_or(false);
+        let is_menu = menu_path.is_ok() || is_menu.unwrap_or(false);
 
         if !is_menu {
             return Ok(Self {
