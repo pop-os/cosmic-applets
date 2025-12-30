@@ -24,4 +24,3 @@ zbus.workspace = true
 
 [dependencies.cosmic-settings-sound-subscription]
 git = "https://github.com/pop-os/cosmic-settings"
-branch = "headsets"
