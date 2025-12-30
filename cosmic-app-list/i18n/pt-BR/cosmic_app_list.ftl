@@ -1,5 +1,5 @@
 cosmic-app-list = Bandeja de Aplicativos
-pin = Fixar em aplicativos favoritos
+pin = Fixar no painel
 quit = Sair
 quit-all = Sair de Todos
 new-window = Nova Janela
