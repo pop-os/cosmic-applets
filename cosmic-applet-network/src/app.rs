@@ -111,7 +111,26 @@ struct CosmicNetworkApplet {
     hw_device_to_show: Option<HwAddress>,
 }
 
-fn wifi_icon(strength: u8) -> &'static str {
+fn wifi_icon(strength: u8, network_type: NetworkType) -> &'static str {
+    match network_type {
+        NetworkType::Open => wifi_icon_open(strength),
+        _ => wifi_icon_secure(strength),
+    }
+}
+
+fn wifi_icon_secure(strength: u8) -> &'static str {
+    if strength < 25 {
+        "network-wireless-secure-signal-weak-symbolic"
+    } else if strength < 50 {
+        "network-wireless-secure-signal-ok-symbolic"
+    } else if strength < 75 {
+        "network-wireless-secure-signal-good-symbolic"
+    } else {
+        "network-wireless-secure-signal-excellent-symbolic"
+    }
+}
+
+fn wifi_icon_open(strength: u8) -> &'static str {
     if strength < 25 {
         "network-wireless-signal-weak-symbolic"
     } else if strength < 50 {
@@ -239,7 +258,7 @@ impl CosmicNetworkApplet {
                     (
                         "network-wired-disconnected-symbolic",
                         ActiveConnectionInfo::WiFi { strength, .. },
-                    ) => wifi_icon(*strength),
+                    ) => wifi_icon(*strength, NetworkType::Open), // Use Open icon for clarity
                     (_, ActiveConnectionInfo::Wired { .. })
                         if icon_name != "network-vpn-symbolic" =>
                     {
@@ -804,6 +823,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                     state,
                     strength,
                     hw_address,
+                    network_type,
                 } => {
                     if self.hw_device_to_show.is_some()
                         && hw_address != self.hw_device_to_show.as_ref().unwrap()
@@ -815,10 +835,13 @@ impl cosmic::Application for CosmicNetworkApplet {
                         ipv4.push(text(format!("{}: {}", fl!("ipv4"), addr)).size(12).into());
                     }
                     let mut btn_content = vec![
-                        icon::from_name(wifi_icon(*strength))
-                            .size(24)
-                            .symbolic(true)
-                            .into(),
+                        icon::from_name(wifi_icon(
+                            *strength,
+                            network_type.unwrap_or(NetworkType::Open),
+                        ))
+                        .size(24)
+                        .symbolic(true)
+                        .into(),
                         column![text::body(name), Column::with_children(ipv4)]
                             .width(Length::Fill)
                             .into(),
@@ -1052,7 +1075,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                 btn_content.push(ssid.into());
             } else {
                 btn_content.push(
-                    icon::from_name(wifi_icon(known.strength))
+                    icon::from_name(wifi_icon(known.strength, known.network_type))
                         .size(24)
                         .symbolic(true)
                         .into(),
@@ -1254,7 +1277,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                 }
                 let button = menu_button(
                     row![
-                        icon::from_name(wifi_icon(ap.strength))
+                        icon::from_name(wifi_icon(ap.strength, ap.network_type))
                             .size(16)
                             .symbolic(true),
                         text::body(&ap.ssid).align_y(Alignment::Center)

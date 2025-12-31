@@ -6,6 +6,7 @@ use cosmic_dbus_networkmanager::{
 };
 use std::net::Ipv4Addr;
 
+use super::available_wifi::{get_network_type, NetworkType};
 use super::hw_address::HwAddress;
 
 /// Read network interface speed from sysfs
@@ -78,6 +79,7 @@ pub async fn active_connections(
                                 .unwrap_or_default(),
                             state,
                             strength: access_point.strength().await.unwrap_or_default(),
+                            network_type: get_network_type(&access_point).await,
                         });
                     }
                 }
@@ -110,6 +112,7 @@ pub enum ActiveConnectionInfo {
         hw_address: HwAddress,
         state: ActiveConnectionState,
         strength: u8,
+        network_type: Option<NetworkType>,
     },
     Vpn {
         name: String,
