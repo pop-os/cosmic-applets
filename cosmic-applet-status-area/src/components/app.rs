@@ -563,25 +563,61 @@ impl cosmic::Application for App {
     }
 }
 
+fn resolve_icon_in_directory(icon_name: &str, dir: &std::path::Path) -> Option<std::path::PathBuf> {
+    // TODO: Is this the right way to do this?
+    let mut path = dir.to_owned();
+
+    path.push(icon_name.to_owned() + ".svg");
+    if path.exists() {
+        return Some(path);
+    }
+    path.pop();
+
+    path.push(icon_name.to_owned() + ".png");
+    if path.exists() {
+        return Some(path);
+    }
+    path.pop();
+
+    None
+}
+
 fn menu_icon_button<'a>(
     applet: &'a cosmic::applet::Context,
     menu: &'a status_menu::State,
 ) -> cosmic::widget::Button<'a, Msg> {
-    match (menu.icon_pixmap(), menu.icon_name(), menu.icon_theme_path()) {
-        (Some(icon), "", _) => applet.icon_button_from_handle(icon.clone().symbolic(true)),
-        (_, name, Some(theme_path)) if name != "" => {
-            let mut path = theme_path.to_owned();
-            // XXX right way to lookup icon in dir?
-            path.push(name.to_owned() + ".svg");
-            if !path.exists() {
-                path.pop();
-                path.push(name.to_owned() + ".png");
-            }
-            let icon = cosmic::widget::icon::from_path(path).symbolic(true);
-            applet.icon_button_from_handle(icon)
-        }
-        (_, name, _) => applet.icon_button(name),
+    let icon_name = menu.icon_name();
+
+    // Try to resolve the icon name using the system icon theme
+    // TODO: It would be nice if `applet` exposed this, this is largely copied from the
+    // `applet.icon_button` implementation
+    let suggested_size = applet.suggested_size(true);
+    let system_icon = cosmic::widget::icon::from_name(icon_name)
+        .symbolic(true)
+        .size(suggested_size.0);
+    if system_icon.clone().path().is_some() {
+        return applet.icon_button_from_handle(system_icon.into());
     }
+
+    // Try to resolve the icon name using the provided icon theme
+    if let Some(icon_theme_path) = menu.icon_theme_path() && let Some(themed_icon) = resolve_icon_in_directory(icon_name, icon_theme_path) {
+        return applet.icon_button_from_handle(cosmic::widget::icon::from_path(themed_icon).symbolic(true));
+    }
+
+    // If the icon name itself is a path, try resolving that
+    let icon_name_as_path = std::path::PathBuf::from(icon_name);
+    if icon_name_as_path.exists() {
+        let icon = cosmic::widget::icon::from_path(icon_name_as_path).symbolic(true);
+        return applet.icon_button_from_handle(icon);
+    }
+
+    // If we've got a pixmap, use it as a last resort
+    if let Some(pixmap) = menu.icon_pixmap() {
+        return applet.icon_button_from_handle(pixmap.clone().symbolic(true));
+    }
+
+    // Fallback to the "missing image" icon
+    applet.icon_button("image-missing")
 }
 
 pub fn main() -> iced::Result {
