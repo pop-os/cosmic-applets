@@ -27,7 +27,7 @@ tracing-log.workspace = true
 tracing-subscriber.workspace = true
 tracing.workspace = true
 zbus.workspace = true
-nm-secret-agent-manager = { git = "https://github.com/pop-os/dbus-settings-bindings/", branch = "nm-secret-agent" }
+nm-secret-agent-manager = { git = "https://github.com/pop-os/dbus-settings-bindings/" }
 indexmap = "2.12.1"
 secure-string = "0.3.0"
 uuid = { version = "1.19.0", features = ["v4"] }

@@ -1685,7 +1685,7 @@ dependencies = [
 [[package]]
 name = "cosmic-settings-airplane-mode-subscription"
 version = "1.0.0-beta6"
-source = "git+https://github.com/pop-os/cosmic-settings/?branch=nm-secret-agent#8bcec57132e0610cd7630b04c9be5e0661863b73"
+source = "git+https://github.com/pop-os/cosmic-settings/?branch=nm-secret-agent#4009d6c6a9ba86e689919b377bd99cc70841e949"
 dependencies = [
  "futures",
  "iced_futures",
@@ -1731,7 +1731,7 @@ dependencies = [
 [[package]]
 name = "cosmic-settings-network-manager-subscription"
 version = "1.0.0-beta6"
-source = "git+https://github.com/pop-os/cosmic-settings/?branch=nm-secret-agent#8bcec57132e0610cd7630b04c9be5e0661863b73"
+source = "git+https://github.com/pop-os/cosmic-settings/?branch=nm-secret-agent#4009d6c6a9ba86e689919b377bd99cc70841e949"
 dependencies = [
  "bitflags 2.10.0",
  "cosmic-dbus-networkmanager",
