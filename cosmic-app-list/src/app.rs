@@ -182,6 +182,7 @@ impl DockItem {
         is_focused: bool,
         dot_border_radius: [f32; 4],
         window_id: window::Id,
+        filter: Option<&dyn Fn(&ToplevelInfo) -> bool>,
     ) -> Element<'_, Message> {
         let Self {
             toplevels,
@@ -189,6 +190,16 @@ impl DockItem {
             id,
             ..
         } = self;
+
+        let filtered_toplevels: Vec<_> = if let Some(filter_fn) = filter {
+            toplevels
+                .iter()
+                .filter(|(info, _)| filter_fn(info))
+                .collect()
+        } else {
+            toplevels.iter().collect()
+        };
+        let toplevel_count = filtered_toplevels.len();
 
         let app_icon = AppletIconData::new(applet);
 
@@ -200,7 +211,7 @@ impl DockItem {
             .height(app_icon.icon_size.into());
 
         let indicator = {
-            let container = if toplevels.len() <= 1 {
+            let container = if toplevel_count <= 1 {
                 vertical_space().height(Length::Fixed(0.0))
             } else {
                 match applet.anchor {
@@ -215,7 +226,7 @@ impl DockItem {
             .apply(container)
             .padding(app_icon.dot_radius);
 
-            if toplevels.is_empty() {
+            if toplevel_count == 0 {
                 container
             } else {
                 container.class(theme::Container::custom(move |theme| container::Style {
@@ -272,10 +283,10 @@ impl DockItem {
         let icon_button: Element<_> = if interaction_enabled {
             mouse_area(
                 icon_button
-                    .on_press_maybe(if toplevels.is_empty() {
+                    .on_press_maybe(if toplevel_count == 0 {
                         launch_on_preferred_gpu(desktop_info, gpus)
-                    } else if toplevels.len() == 1 {
-                        toplevels
+                    } else if toplevel_count == 1 {
+                        filtered_toplevels
                             .first()
                             .map(|t| Message::Toggle(t.0.foreign_toplevel.clone()))
                     } else {
@@ -633,6 +644,32 @@ impl CosmicAppList {
         self.desktop_entries = fde::Iter::new(fde::default_paths())
             .filter_map(|p| fde::DesktopEntry::from_path(p, Some(&self.locales)).ok())
             .collect::<Vec<_>>();
+    }
+
+    fn is_on_current_monitor_and_workspace(&self, toplevel_info: &ToplevelInfo) -> bool {
+        use cosmic_app_list_config::ToplevelFilter;
+
+        let on_active_workspace = self.active_workspaces.is_empty()
+            || toplevel_info.workspace.is_empty()
+            || self.active_workspaces
+                .iter()
+                .any(|workspace| toplevel_info.workspace.contains(workspace));
+
+        match &self.config.filter_top_levels {
+            None => true,
+            Some(ToplevelFilter::ActiveWorkspace) => on_active_workspace,
+            Some(ToplevelFilter::ConfiguredOutput) => {
+                let on_active_output = self
+                    .output_list
+                    .iter()
+                    .find(|(_, info)| info.name.as_ref() == Some(&self.core.applet.output_name))
+                    .map_or(true, |(active_output, _)| {
+                        toplevel_info.output.iter().any(|output| output == active_output)
+                    });
+
+                on_active_output && on_active_workspace
+            }
+        }
     }
 
     // Update pinned items using the cached desktop entries as a source.
@@ -1715,6 +1752,12 @@ impl cosmic::Application for CosmicAppList {
             .iter()
             .rev()
             .map(|dock_item| {
+                let filtered_is_focused = dock_item
+                    .toplevels
+                    .iter()
+                    .filter(|(info, _)| self.is_on_current_monitor_and_workspace(info))
+                    .any(|y| focused_item.contains(&y.0.foreign_toplevel));
+
                 self.core
                     .applet
                     .applet_tooltip::<Message>(
@@ -1724,12 +1767,10 @@ impl cosmic::Application for CosmicAppList {
                             self.popup.is_none(),
                             self.config.enable_drag_source,
                             self.gpus.as_deref(),
-                            dock_item
-                                .toplevels
-                                .iter()
-                                .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
+                            filtered_is_focused,
                             dot_radius,
                             self.core.main_window_id().unwrap(),
+                            Some(&|info| self.is_on_current_monitor_and_workspace(info)),
                         ),
                         dock_item
                             .desktop_info
@@ -1772,6 +1813,12 @@ impl cosmic::Application for CosmicAppList {
             .as_ref()
             .and_then(|o| o.dock_item.as_ref().map(|item| (item, o.preview_index)))
         {
+            let filtered_is_focused = item
+                .toplevels
+                .iter()
+                .filter(|(info, _)| self.is_on_current_monitor_and_workspace(info))
+                .any(|y| focused_item.contains(&y.0.foreign_toplevel));
+
             favorites.insert(
                 index.min(favorites.len()),
                 item.as_icon(
@@ -1780,11 +1827,10 @@ impl cosmic::Application for CosmicAppList {
                     false,
                     self.config.enable_drag_source,
                     self.gpus.as_deref(),
-                    item.toplevels
-                        .iter()
-                        .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
+                    filtered_is_focused,
                     dot_radius,
                     self.core.main_window_id().unwrap(),
+                    Some(&|info| self.is_on_current_monitor_and_workspace(info)),
                 ),
             );
         } else if self.is_listening_for_dnd && self.pinned_list.is_empty() {
@@ -1799,9 +1845,19 @@ impl cosmic::Application for CosmicAppList {
             );
         }
 
+        let filtered_active_list: Vec<_> = self
+            .active_list
+            .iter()
+            .filter(|dock_item| {
+                dock_item.toplevels.iter().any(|(toplevel_info, _)| {
+                    self.is_on_current_monitor_and_workspace(toplevel_info)
+                })
+            })
+            .collect();
+
         let mut active: Vec<_> =
-            self.active_list[..active_popup_cutoff.map_or(self.active_list.len(), |n| {
-                if n < self.active_list.len() {
+            filtered_active_list[..active_popup_cutoff.map_or(filtered_active_list.len(), |n| {
+                if n < filtered_active_list.len() {
                     n.saturating_sub(1)
                 } else {
                     n
@@ -1809,6 +1865,12 @@ impl cosmic::Application for CosmicAppList {
             })]
                 .iter()
                 .map(|dock_item| {
+                    let filtered_is_focused = dock_item
+                        .toplevels
+                        .iter()
+                        .filter(|(info, _)| self.is_on_current_monitor_and_workspace(info))
+                        .any(|y| focused_item.contains(&y.0.foreign_toplevel));
+
                     self.core
                         .applet
                         .applet_tooltip(
@@ -1818,12 +1880,10 @@ impl cosmic::Application for CosmicAppList {
                                 self.popup.is_none(),
                                 self.config.enable_drag_source,
                                 self.gpus.as_deref(),
-                                dock_item
-                                    .toplevels
-                                    .iter()
-                                    .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
+                                filtered_is_focused,
                                 dot_radius,
                                 self.core.main_window_id().unwrap(),
+                                Some(&|info| self.is_on_current_monitor_and_workspace(info)),
                             ),
                             dock_item
                                 .desktop_info
@@ -1838,7 +1898,7 @@ impl cosmic::Application for CosmicAppList {
                 })
                 .collect();
 
-        if active_popup_cutoff.is_some_and(|n| n < self.active_list.len()) {
+        if active_popup_cutoff.is_some_and(|n| n < filtered_active_list.len()) {
             // button to show more active
             let icon = match self.core.applet.anchor {
                 PanelAnchor::Bottom => "go-up-symbolic",
@@ -1987,20 +2047,25 @@ impl cosmic::Application for CosmicAppList {
             ..
         }) = self.popup.as_ref().filter(|p| id == p.id)
         {
-            let (
-                DockItem {
-                    toplevels,
-                    desktop_info,
-                    ..
-                },
-                is_pinned,
-            ) = match self.pinned_list.iter().find(|i| i.id == *id) {
+            let (dock_item, is_pinned) = match self.pinned_list.iter().find(|i| i.id == *id) {
                 Some(e) => (e, true),
                 None => match self.active_list.iter().find(|i| i.id == *id) {
                     Some(e) => (e, false),
                     None => return text::body("").into(),
                 },
             };
+
+            // Filter toplevels to only show windows on current monitor and workspace
+            let filtered_toplevels: Vec<_> = dock_item
+                .toplevels
+                .iter()
+                .filter(|(toplevel_info, _)| {
+                    self.is_on_current_monitor_and_workspace(toplevel_info)
+                })
+                .collect();
+
+            let toplevels = &filtered_toplevels;
+            let desktop_info = &dock_item.desktop_info;
 
             match popup_type {
                 PopupType::RightClickMenu => {
@@ -2203,19 +2268,34 @@ impl cosmic::Application for CosmicAppList {
 
             let focused_item = self.currently_active_toplevel();
             let dot_radius = theme.cosmic().radius_xs();
-            // show the overflow popup for active list
-            let active: Vec<_> = self
+
+            let filtered_active_list: Vec<_> = self
                 .active_list
                 .iter()
+                .filter(|dock_item| {
+                    dock_item.toplevels.iter().any(|(toplevel_info, _)| {
+                        self.is_on_current_monitor_and_workspace(toplevel_info)
+                    })
+                })
+                .collect();
+
+            let active: Vec<_> = filtered_active_list
+                .iter()
                 .rev()
-                .take(active_popup_cutoff.map_or(self.active_list.len(), |n| {
-                    if n < self.active_list.len() {
-                        self.active_list.len() - n + 1
+                .take(active_popup_cutoff.map_or(filtered_active_list.len(), |n| {
+                    if n < filtered_active_list.len() {
+                        filtered_active_list.len() - n + 1
                     } else {
                         0
                     }
                 }))
                 .map(|dock_item| {
+                    let filtered_is_focused = dock_item
+                        .toplevels
+                        .iter()
+                        .filter(|(info, _)| self.is_on_current_monitor_and_workspace(info))
+                        .any(|y| focused_item.contains(&y.0.foreign_toplevel));
+
                     self.core
                         .applet
                         .applet_tooltip(
@@ -2225,12 +2305,10 @@ impl cosmic::Application for CosmicAppList {
                                 self.popup.is_none(),
                                 self.config.enable_drag_source,
                                 self.gpus.as_deref(),
-                                dock_item
-                                    .toplevels
-                                    .iter()
-                                    .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
+                                filtered_is_focused,
                                 dot_radius,
                                 id,
+                                Some(&|info| self.is_on_current_monitor_and_workspace(info)),
                             ),
                             dock_item
                                 .desktop_info
@@ -2290,6 +2368,7 @@ impl cosmic::Application for CosmicAppList {
             let focused_item = self.currently_active_toplevel();
             let dot_radius = theme.cosmic().radius_xs();
             // show the overflow popup for favorites list
+
             let mut favorite_to_remove = if let Some(cutoff) = favorite_popup_cutoff {
                 if cutoff < self.pinned_list.len() {
                     self.pinned_list.len() - cutoff + 1
@@ -2319,6 +2398,12 @@ impl cosmic::Application for CosmicAppList {
                 .iter()
                 .rev()
                 .map(|dock_item| {
+                    let filtered_is_focused = dock_item
+                        .toplevels
+                        .iter()
+                        .filter(|(info, _)| self.is_on_current_monitor_and_workspace(info))
+                        .any(|y| focused_item.contains(&y.0.foreign_toplevel));
+
                     self.core
                         .applet
                         .applet_tooltip(
@@ -2328,12 +2413,10 @@ impl cosmic::Application for CosmicAppList {
                                 self.popup.is_none(),
                                 self.config.enable_drag_source,
                                 self.gpus.as_deref(),
-                                dock_item
-                                    .toplevels
-                                    .iter()
-                                    .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
+                                filtered_is_focused,
                                 dot_radius,
                                 id,
+                                Some(&|info| self.is_on_current_monitor_and_workspace(info)),
                             ),
                             dock_item
                                 .desktop_info
