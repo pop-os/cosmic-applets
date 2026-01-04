@@ -1,5 +1,5 @@
 power = Főkapcsoló
-settings = Beállítások...
+settings = Beállítások…
 lock-screen = Képernyő zárolása
 lock-screen-shortcut = Super + Escape
 log-out = Kijelentkezés
@@ -33,4 +33,4 @@ confirm-body =
         [lock-screen] zárolni fogja a képernyőt
         [log-out] kijelentkezik
        *[other] alkalmazni fogja a kiválasztott műveletet
-    } { $countdown } másodperc múlva.
+    } { $countdown } másodperc múlva
