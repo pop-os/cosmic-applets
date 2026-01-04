@@ -1,7 +1,7 @@
 bluetooth = Bluetooth
 other-devices = Egyéb Bluetooth-eszközök
-settings = Bluetooth beállítások...
-connected = Csatlakoztatva
+settings = Bluetooth beállítások…
+connected = Csatlakozva
 confirm-pin = Ellenőrizd, hogy a következő PIN-kód megegyezik-e a(z) { $deviceName } eszközön megjelenő PIN-kóddal
 confirm = Megerősítés
 cancel = Mégse
