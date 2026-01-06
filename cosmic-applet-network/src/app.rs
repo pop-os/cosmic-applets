@@ -44,7 +44,7 @@ use cosmic_dbus_networkmanager::interface::{
 };
 use cosmic_time::{Instant, Timeline, anim, chain, id};
 
-use futures::StreamExt;
+use futures::{StreamExt, channel::mpsc::TrySendError};
 use zbus::{Connection, zvariant::ObjectPath};
 
 use crate::{config, fl};
@@ -414,11 +414,26 @@ impl CosmicNetworkApplet {
                                         conn_uuid.as_str() == uuid.as_ref()
                                     }) {
                                         let path = connection.inner().path().clone().to_owned();
-                                        let _ =
+                                        if let Err(err) =
                                             tx.unbounded_send(network_manager::Request::Activate(
                                                 ObjectPath::try_from("/").unwrap(),
                                                 path,
-                                            ));
+                                            ))
+                                        {
+                                            if err.is_disconnected() {
+                                                return zbus::Connection::system()
+                                                    .await
+                                                    .context(
+                                                        "failed to create system dbus connection",
+                                                    )
+                                                    .map_or_else(
+                                                        |why| Message::Error(why.to_string()),
+                                                        Message::NetworkManagerConnect,
+                                                    );
+                                            }
+
+                                            tracing::error!("{err:?}");
+                                        }
                                         break;
                                     }
                                 }
@@ -710,6 +725,18 @@ fn load_vpns(conn: zbus::Connection) -> Task<crate::app::Message> {
     })
 }
 
+fn system_conn() -> Task<Message> {
+    cosmic::Task::future(async move {
+        zbus::Connection::system()
+            .await
+            .context("failed to create system dbus connection")
+            .map_or_else(
+                |why| Message::Error(why.to_string()),
+                Message::NetworkManagerConnect,
+            )
+    })
+}
+
 impl cosmic::Application for CosmicNetworkApplet {
     type Message = Message;
     type Executor = cosmic::SingleThreadExecutor;
@@ -724,19 +751,7 @@ impl cosmic::Application for CosmicNetworkApplet {
             ..Default::default()
         };
 
-        (
-            applet,
-            Task::batch(vec![cosmic::Task::future(async move {
-                zbus::Connection::system()
-                    .await
-                    .context("failed to create system dbus connection")
-                    .map_or_else(
-                        |why| Message::Error(why.to_string()),
-                        Message::NetworkManagerConnect,
-                    )
-            })])
-            .map(cosmic::Action::App),
-        )
+        (applet, system_conn().map(cosmic::Action::App))
     }
 
     fn core(&self) -> &cosmic::app::Core {
@@ -788,7 +803,13 @@ impl cosmic::Application for CosmicNetworkApplet {
                     );
 
                     if let Some(tx) = self.nm_sender.as_mut() {
-                        let _ = tx.unbounded_send(network_manager::Request::Reload);
+                        if let Err(err) = tx.unbounded_send(network_manager::Request::Reload) {
+                            if err.is_disconnected() {
+                                return system_conn().map(cosmic::Action::App);
+                            }
+
+                            tracing::error!("{err:?}");
+                        }
                     }
                     tasks.push(get_popup(popup_settings));
 
@@ -798,7 +819,15 @@ impl cosmic::Application for CosmicNetworkApplet {
             Message::ToggleAirplaneMode(enabled) => {
                 self.toggle_wifi_ctr += 1;
                 if let Some(tx) = self.nm_sender.as_mut() {
-                    let _ = tx.unbounded_send(network_manager::Request::SetAirplaneMode(enabled));
+                    if let Err(err) =
+                        tx.unbounded_send(network_manager::Request::SetAirplaneMode(enabled))
+                    {
+                        if err.is_disconnected() {
+                            return system_conn().map(cosmic::Action::App);
+                        }
+
+                        tracing::error!("{err:?}");
+                    }
                 }
             }
             Message::SelectWirelessAccessPoint(access_point) => {
@@ -807,12 +836,20 @@ impl cosmic::Application for CosmicNetworkApplet {
                 };
 
                 if matches!(access_point.network_type, NetworkType::Open) {
-                    let _ = tx.unbounded_send(network_manager::Request::SelectAccessPoint(
-                        access_point.ssid.clone(),
-                        access_point.hw_address,
-                        access_point.network_type,
-                        self.secret_tx.clone(),
-                    ));
+                    if let Err(err) =
+                        tx.unbounded_send(network_manager::Request::SelectAccessPoint(
+                            access_point.ssid.clone(),
+                            access_point.hw_address,
+                            access_point.network_type,
+                            self.secret_tx.clone(),
+                        ))
+                    {
+                        if err.is_disconnected() {
+                            return system_conn().map(cosmic::Action::App);
+                        }
+
+                        tracing::error!("{err:?}");
+                    }
                     self.new_connection = Some(NewConnectionState::Waiting(access_point));
                 } else {
                     if self
@@ -821,12 +858,20 @@ impl cosmic::Application for CosmicNetworkApplet {
                         .known_access_points
                         .contains(&access_point)
                     {
-                        let _ = tx.unbounded_send(network_manager::Request::SelectAccessPoint(
-                            access_point.ssid.clone(),
-                            access_point.hw_address,
-                            access_point.network_type,
-                            self.secret_tx.clone(),
-                        ));
+                        if let Err(err) =
+                            tx.unbounded_send(network_manager::Request::SelectAccessPoint(
+                                access_point.ssid.clone(),
+                                access_point.hw_address,
+                                access_point.network_type,
+                                self.secret_tx.clone(),
+                            ))
+                        {
+                            if err.is_disconnected() {
+                                return system_conn().map(cosmic::Action::App);
+                            }
+
+                            tracing::error!("{err:?}");
+                        }
                     }
                     self.new_connection = Some(NewConnectionState::EnterPassword {
                         access_point,
@@ -922,7 +967,15 @@ impl cosmic::Application for CosmicNetworkApplet {
                     return Task::none();
                 };
                 if let Some(tx) = self.nm_sender.as_ref() {
-                    let _ = tx.unbounded_send(network_manager::Request::Forget(ssid.into()));
+                    if let Err(err) =
+                        tx.unbounded_send(network_manager::Request::Forget(ssid.into()))
+                    {
+                        if err.is_disconnected() {
+                            return system_conn().map(cosmic::Action::App);
+                        }
+
+                        tracing::error!("{err:?}");
+                    }
                     self.show_visible_networks = true;
                     return self.update(Message::SelectWirelessAccessPoint(ap));
                 }
@@ -937,7 +990,14 @@ impl cosmic::Application for CosmicNetworkApplet {
             }
             Message::DeactivateVpn(name) => {
                 if let Some(tx) = self.nm_sender.as_ref() {
-                    let _ = tx.unbounded_send(network_manager::Request::Deactivate(name));
+                    if let Err(err) = tx.unbounded_send(network_manager::Request::Deactivate(name))
+                    {
+                        if err.is_disconnected() {
+                            return system_conn().map(cosmic::Action::App);
+                        }
+
+                        tracing::error!("{err:?}");
+                    }
                 }
             }
             Message::ToggleVpnList => {
@@ -960,12 +1020,18 @@ impl cosmic::Application for CosmicNetworkApplet {
                 } else {
                     return Task::none();
                 };
-                let _ = tx.unbounded_send(network_manager::Request::SelectAccessPoint(
+                if let Err(err) = tx.unbounded_send(network_manager::Request::SelectAccessPoint(
                     ssid,
                     hw_address,
                     network_type,
                     self.secret_tx.clone(),
-                ));
+                )) {
+                    if err.is_disconnected() {
+                        return system_conn().map(cosmic::Action::App);
+                    }
+
+                    tracing::error!("{err:?}");
+                }
             }
             Message::ConnectWithPassword => {
                 // save password
@@ -989,6 +1055,9 @@ impl cosmic::Application for CosmicNetworkApplet {
                         hw_address: access_point.hw_address,
                         secret_tx: self.secret_tx.clone(),
                     }) {
+                        if err.is_disconnected() {
+                            return system_conn().map(cosmic::Action::App);
+                        }
                         tracing::error!("Failed to authenticate with network manager");
                     }
                     self.new_connection
@@ -1019,7 +1088,13 @@ impl cosmic::Application for CosmicNetworkApplet {
                 } else {
                     return Task::none();
                 };
-                let _ = tx.unbounded_send(network_manager::Request::Disconnect(ssid));
+                if let Err(err) = tx.unbounded_send(network_manager::Request::Disconnect(ssid)) {
+                    if err.is_disconnected() {
+                        return system_conn().map(cosmic::Action::App);
+                    }
+
+                    tracing::error!("{err:?}");
+                }
             }
             Message::Error(error) => {
                 tracing::error!("error: {error:?}")
@@ -1183,8 +1258,22 @@ impl cosmic::Application for CosmicNetworkApplet {
             }
             Message::WiFiEnable(enable) => {
                 if let Some(sender) = self.nm_sender.as_mut() {
-                    _ = sender.unbounded_send(network_manager::Request::SetWiFi(enable));
-                    _ = sender.unbounded_send(network_manager::Request::Reload);
+                    if let Err(err) =
+                        sender.unbounded_send(network_manager::Request::SetWiFi(enable))
+                    {
+                        if err.is_disconnected() {
+                            return system_conn().map(cosmic::Action::App);
+                        }
+
+                        tracing::error!("{err:?}");
+                    }
+                    if let Err(err) = sender.unbounded_send(network_manager::Request::Reload) {
+                        if err.is_disconnected() {
+                            return system_conn().map(cosmic::Action::App);
+                        }
+
+                        tracing::error!("{err:?}");
+                    }
                 }
             }
             Message::SecretAgent(agent_event) => match agent_event {
