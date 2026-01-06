@@ -15,6 +15,7 @@ use std::{
     borrow::Cow,
     collections::{BTreeMap, BTreeSet},
     sync::{Arc, LazyLock},
+    time::Duration,
 };
 
 use cosmic::{
@@ -590,25 +591,42 @@ pub fn update_devices(conn: zbus::Connection) -> Task<Message> {
 impl CosmicNetworkApplet {
     fn connect(&mut self, conn: zbus::Connection) -> Task<Message> {
         if self.nm_task.is_none() {
+            let popup = self.popup;
             let (canceller, task) = crate::utils::forward_event_loop(move |emitter| async move {
                 let (tx, mut rx) = futures::channel::mpsc::channel(1);
 
-                let watchers = std::pin::pin!(async move {
-                    futures::join!(
-                        network_manager::watch(conn.clone(), tx.clone()),
-                        network_manager::active_conns::watch(conn.clone(), tx.clone()),
-                        network_manager::wireless_enabled::watch(conn.clone(), tx.clone()),
-                        network_manager::watch_connections_changed(conn, tx)
-                    );
-                });
+                if popup.is_some() {
+                    let watchers = std::pin::pin!(async move {
+                        futures::join!(
+                            network_manager::watch(conn.clone(), tx.clone()),
+                            network_manager::active_conns::watch(conn.clone(), tx.clone(),),
+                            network_manager::wireless_enabled::watch(conn.clone(), tx.clone()),
+                            network_manager::watch_connections_changed(conn, tx,)
+                        );
+                    });
+                    let forwarder = std::pin::pin!(async move {
+                        while let Some(message) = rx.next().await {
+                            _ = emitter.emit(Message::NetworkManager(message)).await;
+                        }
+                    });
 
-                let forwarder = std::pin::pin!(async move {
-                    while let Some(message) = rx.next().await {
-                        _ = emitter.emit(Message::NetworkManager(message)).await;
-                    }
-                });
+                    futures::future::select(watchers, forwarder).await;
+                } else {
+                    let watchers = std::pin::pin!(async move {
+                        futures::join!(
+                            network_manager::watch(conn.clone(), tx.clone()),
+                            network_manager::active_conns::watch(conn.clone(), tx.clone(),),
+                            network_manager::wireless_enabled::watch(conn.clone(), tx.clone()),
+                        );
+                    });
+                    let forwarder = std::pin::pin!(async move {
+                        while let Some(message) = rx.next().await {
+                            _ = emitter.emit(Message::NetworkManager(message)).await;
+                        }
+                    });
 
-                futures::future::select(watchers, forwarder).await;
+                    futures::future::select(watchers, forwarder).await;
+                };
             });
 
             self.nm_task = Some(canceller);
@@ -802,15 +820,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                         None,
                     );
 
-                    if let Some(tx) = self.nm_sender.as_mut() {
-                        if let Err(err) = tx.unbounded_send(network_manager::Request::Reload) {
-                            if err.is_disconnected() {
-                                return system_conn().map(cosmic::Action::App);
-                            }
-
-                            tracing::error!("{err:?}");
-                        }
-                    }
+                    tasks.push(system_conn());
                     tasks.push(get_popup(popup_settings));
 
                     return Task::batch(tasks).map(cosmic::Action::App);
@@ -898,13 +908,15 @@ impl cosmic::Application for CosmicNetworkApplet {
                 self.new_connection = None;
             }
             Message::CloseRequested(id) => {
-                if let Some(cancel) = self.nm_task.take() {
-                    _ = cancel.send(());
-                }
                 if Some(id) == self.popup {
                     self.popup = None;
+                    if let Some(cancel) = self.nm_task.take() {
+                        _ = cancel.send(());
+                    }
+
+                    self.secret_tx = None;
+                    return system_conn().map(cosmic::Action::App);
                 }
-                self.secret_tx = None;
             }
             Message::OpenSettings => {
                 let exec = "cosmic-settings network".to_string();
@@ -1972,15 +1984,8 @@ impl cosmic::Application for CosmicNetworkApplet {
             .as_subscription()
             .map(|(_, now)| Message::Frame(now));
         let token_sub = activation_token_subscription(0).map(Message::Token);
-        if let Some((conn, id)) = self.conn.clone().zip(self.popup.as_ref()) {
-            Subscription::batch([
-                active_conns_subscription(*id, conn).map(|e| Message::NetworkManager(e)),
-                timeline,
-                token_sub,
-            ])
-        } else {
-            Subscription::batch([timeline, token_sub])
-        }
+
+        Subscription::batch([timeline, token_sub])
     }
 
     fn style(&self) -> Option<cosmic::iced_runtime::Appearance> {
