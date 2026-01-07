@@ -8,6 +8,7 @@ use cosmic::{
     iced,
     widget::icon,
 };
+use std::path::{Path, PathBuf};
 
 use crate::subscriptions::status_notifier_item::{IconUpdate, Layout, StatusNotifierItem};
 
@@ -20,12 +21,13 @@ pub enum Msg {
 }
 
 pub struct State {
-    item: StatusNotifierItem,
+    pub item: StatusNotifierItem,
     layout: Option<Layout>,
     expanded: Option<i32>,
     icon_name: String,
     // TODO handle icon with multiple sizes?
     icon_pixmap: Option<icon::Handle>,
+    icon_theme_path: Option<PathBuf>,
     click_event: Option<(i32, bool)>,
 }
 
@@ -38,6 +40,7 @@ impl State {
                 expanded: None,
                 icon_name: String::new(),
                 icon_pixmap: None,
+                icon_theme_path: None,
                 click_event: None,
             },
             iced::Task::none(),
@@ -61,29 +64,24 @@ impl State {
                 iced::Task::none()
             }
             Msg::Icon(update) => {
-                match update {
-                    IconUpdate::Name(name) => {
-                        self.icon_name = name;
-                    }
-                    IconUpdate::Pixmap(icons) => {
-                        self.icon_pixmap = icons
-                            .into_iter()
-                            .max_by_key(|i| (i.width, i.height))
-                            .map(|mut i| {
-                                if i.width <= 0 || i.height <= 0 || i.bytes.is_empty() {
-                                    // App sent invalid icon data during initialization - show placeholder until NewIcon signal
-                                    eprintln!("Skipping invalid icon: {}x{} with {} bytes, app may still be initializing",
-                                            i.width, i.height, i.bytes.len());
-                                    return icon::from_name("dialog-question").symbolic(true).handle();
-                                }
-                                // Convert ARGB to RGBA
-                                for pixel in i.bytes.chunks_exact_mut(4) {
-                                    pixel.rotate_left(1);
-                                }
-                                icon::from_raster_pixels(i.width as u32, i.height as u32, i.bytes)
-                            });
-                    }
-                }
+                self.icon_name = update.name.unwrap_or_default();
+                self.icon_pixmap = update.pixmap.and_then(|icons| icons
+                    .into_iter()
+                    .max_by_key(|i| (i.width, i.height))
+                    .map(|mut i| {
+                        if i.width <= 0 || i.height <= 0 || i.bytes.is_empty() {
+                            // App sent invalid icon data during initialization - show placeholder until NewIcon signal
+                            eprintln!("Skipping invalid icon: {}x{} with {} bytes, app may still be initializing",
+                                    i.width, i.height, i.bytes.len());
+                            return icon::from_name("dialog-question").symbolic(true).handle();
+                        }
+                        // Convert ARGB to RGBA
+                        for pixel in i.bytes.chunks_exact_mut(4) {
+                            pixel.rotate_left(1);
+                        }
+                        icon::from_raster_pixels(i.width as u32, i.height as u32, i.bytes)
+                    }));
+                self.icon_theme_path = update.theme_path;
 
                 iced::Task::none()
             }
@@ -101,9 +99,19 @@ impl State {
                 let Some((id, is_submenu)) = self.click_event else {
                     return iced::Task::none();
                 };
-
-                let menu_proxy = self.item.menu_proxy().clone();
                 let item_proxy = self.item.item_proxy().clone();
+
+                let Some(menu_proxy) = self.item.menu_proxy().cloned() else {
+                    tokio::spawn(async move {
+                        let _ = item_proxy.provide_xdg_activation_token(token).await;
+                        if let Err(err) = item_proxy.activate(0, 0).await {
+                            tracing::error!(
+                                "Error activating status notifier item without menu proxy: {err:?}"
+                            );
+                        }
+                    });
+                    return iced::Task::none();
+                };
                 tokio::spawn(async move {
                     let _ = item_proxy.provide_xdg_activation_token(token).await;
                     let _ = menu_proxy.event(id, "clicked", &0.into(), 0).await;
@@ -134,6 +142,10 @@ impl State {
         self.icon_pixmap.as_ref()
     }
 
+    pub fn icon_theme_path(&self) -> Option<&Path> {
+        self.icon_theme_path.as_deref()
+    }
+
     pub fn popup_view(&self) -> cosmic::Element<'_, Msg> {
         if let Some(layout) = self.layout.as_ref() {
             layout_view(layout, self.expanded)
@@ -150,7 +162,9 @@ impl State {
     }
 
     pub fn opened(&self) {
-        let menu_proxy = self.item.menu_proxy().clone();
+        let Some(menu_proxy) = self.item.menu_proxy().cloned() else {
+            return;
+        };
         tokio::spawn(async move {
             let _ = menu_proxy.event(0, "opened", &0i32.into(), 0).await;
             let _ = menu_proxy.about_to_show(0).await;
@@ -158,7 +172,9 @@ impl State {
     }
 
     pub fn closed(&self) {
-        let menu_proxy = self.item.menu_proxy().clone();
+        let Some(menu_proxy) = self.item.menu_proxy().cloned() else {
+            return;
+        };
         tokio::spawn(async move {
             let _ = menu_proxy.event(0, "closed", &0i32.into(), 0).await;
         });

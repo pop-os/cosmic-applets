@@ -1,4 +1,4 @@
-tile-windows = بلّط النوافذ تلقائيًا
+tile-windows = بلّط النوافذ آليًا
 tile-current = بلّط مساحة العمل الحالية
 shortcuts = اختصارات
 navigate-windows = تنقل بين النوافذ
@@ -11,7 +11,7 @@ floating-window-exceptions = استثناءات النوافذ العائمة...
 window-management-settings = إعدادات إدارة النوافذ...
 all-workspaces = كل مساحات العمل
 per-workspace = حسب مساحة العمل
-super = Super
+super = سوبر
 shift = Shift
 arrow-keys = مفاتيح الأسهم
 tiled = مبلّطة

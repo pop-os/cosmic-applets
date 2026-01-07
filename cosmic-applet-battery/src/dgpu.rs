@@ -205,17 +205,17 @@ impl Gpu {
             // figure out bus path for calling nvidia-smi
             let mut sys_path = PathBuf::from("/sys/class/drm");
             sys_path.push(self.path.components().next_back()?.as_os_str());
-            let buslink = std::fs::read_link(sys_path)
-                .ok()?
-                .components()
-                .rev()
-                .nth(2)?
-                .as_os_str()
-                .to_string_lossy()
-                .into_owned();
+            let buslink = std::fs::read_link(sys_path).ok()?;
+            let buslink = buslink.components().nth_back(2)?.as_os_str();
 
             let smi_output = match tokio::process::Command::new("nvidia-smi")
-                .args(["pmon", "--id", &buslink, "--count", "1"])
+                .args([
+                    "pmon".as_ref(),
+                    "--id".as_ref(),
+                    buslink,
+                    "--count".as_ref(),
+                    "1".as_ref(),
+                ])
                 .output()
                 .await
             {

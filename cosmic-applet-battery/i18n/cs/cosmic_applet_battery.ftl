@@ -11,4 +11,4 @@ hours = h
 until-empty = do vybití
 power-settings = Nastavení napájení a baterie...
 dgpu-running = Diskrétní GPU je aktivní a může snížit výdrž baterie
-dgpu-applications = Aplikace používající diskrétní GPU {$gpu_name}
+dgpu-applications = Aplikace používající diskrétní GPU { $gpu_name }

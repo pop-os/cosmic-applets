@@ -80,7 +80,7 @@ pub fn notifications(proxy: NotificationsAppletProxy<'static>) -> Subscription<O
                         cosmic::iced::futures::select! {
                             v = next_signal => {
                                 if let Some(msg) = v {
-                                    let Some(args) = msg.args().into_iter().next() else {
+                                    let Ok(args) = msg.args() else {
                                         break;
                                     };
                                     let notification = Notification::new(

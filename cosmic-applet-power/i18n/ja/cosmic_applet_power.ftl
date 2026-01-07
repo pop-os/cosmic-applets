@@ -33,3 +33,4 @@ confirm-body =
         [log-out] ログアウト
        *[other] 選択した処理を実行
     }します。
+log-out-shortcut = Super + Shift + Escape

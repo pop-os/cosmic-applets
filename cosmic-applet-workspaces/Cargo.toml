@@ -1,6 +1,6 @@
 [package]
 name = "cosmic-applet-workspaces"
-version = "0.1.1"
+version = "1.0.0"
 authors = ["Ashley Wulber <ashley@system76.com>"]
 edition = "2024"
 license = "GPL-3.0-only"

@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use rustc_hash::FxHashSet;
 use std::sync::LazyLock;
 
 use cosmic::{
@@ -101,12 +101,13 @@ struct CosmicNetworkApplet {
     // UI state
     nm_sender: Option<UnboundedSender<NetworkManagerRequest>>,
     show_visible_networks: bool,
+    show_available_vpns: bool,
     new_connection: Option<NewConnectionState>,
     conn: Option<Connection>,
     timeline: Timeline,
     toggle_wifi_ctr: u128,
     token_tx: Option<calloop::channel::Sender<TokenRequest>>,
-    failed_known_ssids: HashSet<String>,
+    failed_known_ssids: FxHashSet<String>,
     hw_device_to_show: Option<HwAddress>,
 }
 
@@ -120,6 +121,75 @@ fn wifi_icon(strength: u8) -> &'static str {
     } else {
         "network-wireless-signal-excellent-symbolic"
     }
+}
+
+fn vpn_section<'a>(
+    nm_state: &'a NetworkManagerState,
+    show_available_vpns: bool,
+    space_xxs: u16,
+    space_s: u16,
+) -> Column<'a, Message> {
+    let mut vpn_col = column![];
+
+    if !nm_state.available_vpns.is_empty() {
+        let dropdown_icon = if show_available_vpns {
+            "go-up-symbolic"
+        } else {
+            "go-down-symbolic"
+        };
+
+        vpn_col = vpn_col
+            .push(padded_control(divider::horizontal::default()).padding([space_xxs, space_s]));
+
+        let vpn_toggle_btn = menu_button(row![
+            text::body(fl!("vpn-connections"))
+                .width(Length::Fill)
+                .height(Length::Fixed(24.0))
+                .align_y(Alignment::Center),
+            container(icon::from_name(dropdown_icon).size(16).symbolic(true))
+                .center(Length::Fixed(24.0))
+        ])
+        .on_press(Message::ToggleVpnList);
+
+        vpn_col = vpn_col.push(vpn_toggle_btn);
+
+        if show_available_vpns {
+            for vpn in &nm_state.available_vpns {
+                // Check if this VPN is currently active
+                let is_active = nm_state.active_conns.iter().any(|conn| {
+                    matches!(conn, ActiveConnectionInfo::Vpn { name, .. } if name == &vpn.name)
+                });
+
+                let mut btn_content = vec![
+                    icon::from_name("network-vpn-symbolic")
+                        .size(24)
+                        .symbolic(true)
+                        .into(),
+                    text::body(&vpn.name).width(Length::Fill).into(),
+                ];
+
+                if is_active {
+                    btn_content.push(text::body(fl!("connected")).align_x(Alignment::End).into());
+                }
+
+                let mut btn = menu_button(
+                    Row::with_children(btn_content)
+                        .align_y(Alignment::Center)
+                        .spacing(8),
+                );
+
+                btn = if is_active {
+                    btn.on_press(Message::DeactivateVpn(vpn.name.clone()))
+                } else {
+                    btn.on_press(Message::ActivateVpn(vpn.uuid.clone()))
+                };
+
+                vpn_col = vpn_col.push(btn);
+            }
+        }
+    }
+
+    vpn_col
 }
 
 impl CosmicNetworkApplet {
@@ -245,7 +315,10 @@ pub(crate) enum Message {
     ResetFailedKnownSsid(String, HwAddress),
     OpenHwDevice(Option<HwAddress>),
     TogglePasswordVisibility,
-    Surface(surface::Action), // Errored(String),
+    Surface(surface::Action),
+    ActivateVpn(String),   // UUID of VPN to activate
+    DeactivateVpn(String), // Name of VPN to deactivate
+    ToggleVpnList,         // Show/hide available VPNs
 }
 
 impl cosmic::Application for CosmicNetworkApplet {
@@ -370,7 +443,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                     } = &req
                     {
                         if let Some(NewConnectionState::Waiting(access_point)) =
-                            self.new_connection.clone()
+                            self.new_connection.as_ref()
                         {
                             if !success
                                 && ssid == &access_point.ssid
@@ -384,7 +457,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                                     }
                                 } else if let Some(NewConnectionState::EnterPassword {
                                     access_point, ..
-                                }) = self.new_connection.clone()
+                                }) = self.new_connection.as_ref()
                                 {
                                     if success && ssid == &access_point.ssid && *hw_address == access_point.hw_address {
                                         self.new_connection = None;
@@ -601,6 +674,19 @@ impl cosmic::Application for CosmicNetworkApplet {
                     *identity = new_identity;
                 }
             }
+            Message::ActivateVpn(uuid) => {
+                if let Some(tx) = self.nm_sender.as_ref() {
+                    let _ = tx.unbounded_send(NetworkManagerRequest::ActivateVpn(uuid));
+                }
+            }
+            Message::DeactivateVpn(name) => {
+                if let Some(tx) = self.nm_sender.as_ref() {
+                    let _ = tx.unbounded_send(NetworkManagerRequest::DeactivateVpn(name));
+                }
+            }
+            Message::ToggleVpnList => {
+                self.show_available_vpns = !self.show_available_vpns;
+            }
         }
         Task::none()
     }
@@ -668,6 +754,30 @@ impl cosmic::Application for CosmicNetworkApplet {
                         ipv4.push(text(format!("{}: {}", fl!("ipv4"), addr)).size(12).into());
                     }
 
+                    let mut right_column = vec![text::body(fl!("connected")).into()];
+
+                    // Only show speed if it's greater than 0
+                    if *speed > 0 {
+                        let speed_text = if *speed >= 1_000_000 {
+                            let tbps = *speed as f64 / 1_000_000.0;
+                            if tbps.fract() == 0.0 {
+                                format!("{} {}", tbps as u32, fl!("terabits-per-second"))
+                            } else {
+                                format!("{:.1} {}", tbps, fl!("terabits-per-second"))
+                            }
+                        } else if *speed >= 1_000 {
+                            let gbps = *speed as f64 / 1_000.0;
+                            if gbps.fract() == 0.0 {
+                                format!("{} {}", gbps as u32, fl!("gigabits-per-second"))
+                            } else {
+                                format!("{:.1} {}", gbps, fl!("gigabits-per-second"))
+                            }
+                        } else {
+                            format!("{speed} {}", fl!("megabits-per-second"))
+                        };
+                        right_column.push(text(speed_text).size(12).into());
+                    }
+
                     vpn_ethernet_col = vpn_ethernet_col.push(column![
                         row![
                             icon::icon(
@@ -677,13 +787,9 @@ impl cosmic::Application for CosmicNetworkApplet {
                             )
                             .size(40),
                             Column::with_children(ipv4),
-                            text::body(format!(
-                                "{} - {speed} {}",
-                                fl!("connected"),
-                                fl!("megabits-per-second")
-                            ))
-                            .width(Length::Fill)
-                            .align_x(Alignment::End),
+                            Column::with_children(right_column)
+                                .width(Length::Fill)
+                                .align_x(Alignment::End),
                         ]
                         .align_y(Alignment::Center)
                         .spacing(8)
@@ -834,10 +940,29 @@ impl cosmic::Application for CosmicNetworkApplet {
                 .align_x(Alignment::Center)
                 .width(Length::Fill),
             );
+
+            // Show VPN connections even in airplane mode
+            if !self.nm_state.available_vpns.is_empty() {
+                content = content.push(vpn_section(
+                    &self.nm_state,
+                    self.show_available_vpns,
+                    space_xxs,
+                    space_s,
+                ));
+            }
+
             return self.view_window_return(content);
         }
 
-        if !self.nm_state.wifi_enabled {
+        if !self.nm_state.wifi_enabled && !self.nm_state.available_vpns.is_empty() {
+            // Add VPN connections section when WiFi is disabled
+            content = content.push(vpn_section(
+                &self.nm_state,
+                self.show_available_vpns,
+                space_xxs,
+                space_s,
+            ));
+
             return self.view_window_return(content);
         }
 
@@ -863,7 +988,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                 let mut btn_content = vec![
                     column![
                         text::body(display_name),
-                        Column::with_children(vec![text("Adapter").size(10).into()])
+                        Column::with_children([text("Adapter").size(10).into()])
                     ]
                     .width(Length::Fill)
                     .into(),
@@ -992,6 +1117,14 @@ impl cosmic::Application for CosmicNetworkApplet {
         content = content.push(available_connections_btn);
 
         if !self.show_visible_networks {
+            if !self.nm_state.available_vpns.is_empty() {
+                content = content.push(vpn_section(
+                    &self.nm_state,
+                    self.show_available_vpns,
+                    space_xxs,
+                    space_s,
+                ));
+            }
             return self.view_window_return(content);
         }
 
@@ -1136,6 +1269,16 @@ impl cosmic::Application for CosmicNetworkApplet {
                 .push(scrollable(Column::with_children(list_col)).height(Length::Fixed(300.0)));
         }
 
+        // Add VPN connections section after wireless networks when they are expanded
+        if !self.nm_state.available_vpns.is_empty() && self.nm_state.wifi_enabled {
+            content = content.push(vpn_section(
+                &self.nm_state,
+                self.show_available_vpns,
+                space_xxs,
+                space_s,
+            ));
+        }
+
         self.view_window_return(content)
     }
 
@@ -1149,7 +1292,7 @@ impl cosmic::Application for CosmicNetworkApplet {
 
         if let Some(conn) = self.conn.as_ref() {
             let has_popup = self.popup.is_some();
-            Subscription::batch(vec![
+            Subscription::batch([
                 timeline,
                 network_sub,
                 token_sub,
@@ -1161,7 +1304,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                     .map(Message::NetworkManagerEvent),
             ])
         } else {
-            Subscription::batch(vec![timeline, network_sub, token_sub])
+            Subscription::batch([timeline, network_sub, token_sub])
         }
     }
 

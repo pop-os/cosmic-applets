@@ -1,6 +1,6 @@
 [package]
 name = "cosmic-applet-network"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2024"
 license = "GPL-3.0-or-later"
 
@@ -12,7 +12,6 @@ futures.workspace = true
 futures-util.workspace = true
 i18n-embed-fl.workspace = true
 i18n-embed.workspace = true
-itertools = "0.14.0"
 libcosmic = { workspace = true, features = [
     "applet",
     "applet-token",
@@ -21,6 +20,7 @@ libcosmic = { workspace = true, features = [
     "desktop",
 ] }
 rust-embed.workspace = true
+rustc-hash.workspace = true
 tokio.workspace = true
 tracing-log.workspace = true
 tracing-subscriber.workspace = true

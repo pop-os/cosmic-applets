@@ -7,13 +7,13 @@ suspend = Stanje spavanja
 restart = Ponovo pokreni
 shutdown = Isključi
 confirm = Potvrdi
-cancel = Otkaži
-confirm-body = 
+cancel = Poništi
+confirm-body =
     { $action ->
         [restart] Ponovno pokretanje
         [suspend] Stanje spavanja
         [shutdown] Isključivanje
         [lock-screen] Zaključavanje ekrana
         [log-out] Odjavljivanje
-        *[other] Izabrani postupak
+       *[other] Izabrani postupak
     } će početi za { $countdown } sekundi.

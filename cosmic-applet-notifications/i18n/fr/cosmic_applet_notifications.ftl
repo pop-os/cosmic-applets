@@ -1,15 +1,17 @@
-hours-ago = Il y a { $duration } { $duration ->
-    [one] heure
-    [many] de heures
-    *[other] heures
-}
-minutes-ago = Il y a { $duration } { $duration ->
-    [one] minute
-    [many] de minutes
-    *[other] minutes
-}
+hours-ago =
+    { $duration ->
+        [0] À l'instant
+        [one] Il y a 1 heure
+       *[other] Il y a { $duration } heures
+    }
+minutes-ago =
+    { $duration ->
+        [0] À l'instant
+        [one] Il y a 1 minute
+       *[other] Il y a { $duration } minutes
+    }
 show-less = Afficher moins
-show-more = Afficher {$more} de plus
+show-more = Afficher { $more } de plus
 clear-group = Effacer le groupe
 clear-all = Effacer toutes les notifications
 do-not-disturb = Ne pas déranger

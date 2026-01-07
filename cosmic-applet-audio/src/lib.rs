@@ -4,16 +4,14 @@
 mod localize;
 mod mouse_area;
 
-use std::sync::LazyLock;
-use std::time::Duration;
-
-use crate::{localize::localize, pulse::DeviceInfo};
+use crate::localize::localize;
 use config::{AudioAppletConfig, amplification_sink, amplification_source};
 use cosmic::{
     Element, Renderer, Task, Theme, app,
     applet::{
+        column as applet_column,
         cosmic_panel_config::PanelAnchor,
-        menu_button, menu_control_padding, padded_control,
+        menu_button, menu_control_padding, padded_control, row as applet_row,
         token::subscription::{TokenRequest, TokenUpdate, activation_token_subscription},
     },
     cctk::sctk::reexports::calloop,
@@ -21,28 +19,22 @@ use cosmic::{
     cosmic_theme::Spacing,
     iced::{
         self, Alignment, Length, Subscription,
+        futures::StreamExt,
         widget::{self, column, row, slider},
         window,
     },
     surface, theme,
-    widget::{Column, Row, button, container, divider, horizontal_space, icon, text},
+    widget::{Row, button, container, divider, horizontal_space, icon, text},
 };
-use cosmic_settings_subscriptions::pulse as sub_pulse;
+use cosmic_settings_sound_subscription as css;
 use cosmic_time::{Instant, Timeline, anim, chain, id};
 use iced::platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup};
-use libpulse_binding::volume::Volume;
 use mpris_subscription::{MprisRequest, MprisUpdate};
 use mpris2_zbus::player::PlaybackStatus;
+use std::sync::LazyLock;
 
 mod config;
 mod mpris_subscription;
-mod pulse;
-
-// Full, in this case, means 100%.
-static FULL_VOLUME: f64 = Volume::NORMAL.0 as f64;
-
-// Max volume is 150% volume.
-static MAX_VOLUME: f64 = FULL_VOLUME + (FULL_VOLUME * 0.5);
 
 static SHOW_MEDIA_CONTROLS: LazyLock<id::Toggler> = LazyLock::new(id::Toggler::unique);
 
@@ -58,72 +50,57 @@ pub fn run() -> cosmic::iced::Result {
 
 #[derive(Default)]
 pub struct Audio {
+    /// For interfacing with libcosmic.
     core: cosmic::app::Core,
-    is_open: IsOpen,
-    output_volume: f64,
-    output_volume_debounce: bool,
-    output_volume_text: String,
-    output_amplification: bool,
-    input_volume: f64,
-    input_volume_debounce: bool,
-    input_volume_text: String,
-    input_amplification: bool,
-    current_output: Option<DeviceInfo>,
-    current_input: Option<DeviceInfo>,
-    outputs: Vec<DeviceInfo>,
-    inputs: Vec<DeviceInfo>,
-    pulse_state: PulseState,
+    /// Track the applet's popup window.
     popup: Option<window::Id>,
+    /// The model from cosmic-settings for managing pipewire devices.
+    model: css::Model,
+    /// Whether to expand the revealer of a source or sink device.
+    is_open: IsOpen,
+    /// Max slider volume for the sink device, as determined by the amplification property.
+    max_sink_volume: u32,
+    /// Max slider volume for the source device, as determined by the amplification property.
+    max_source_volume: u32,
+    /// Breakpoints for the sink volume slider.
+    sink_breakpoints: &'static [u32],
+    /// Breakpoitns for the source volume slider.
+    source_breakpoints: &'static [u32],
+    /// Track animations used by the revealers.
     timeline: Timeline,
+    /// Config file specific to this applet.
     config: AudioAppletConfig,
+    /// mpris player status
     player_status: Option<mpris_subscription::PlayerStatus>,
+    /// Used to request an activation token for opening cosmic-settings.
     token_tx: Option<calloop::channel::Sender<TokenRequest>>,
-    channels: Option<sub_pulse::PulseChannels>,
 }
 
 impl Audio {
-    fn update_output(&mut self, output: Option<DeviceInfo>) {
-        self.current_output = output;
-
-        if let Some(device) = self.current_output.as_ref() {
-            self.output_volume = volume_to_percent(device.volume.avg());
-            self.output_volume_text = format!("{}%", self.output_volume.round());
-        }
-    }
-
     fn output_icon_name(&self) -> &'static str {
-        let volume = self.output_volume;
-        let mute = self.current_output_mute();
-        if mute || volume == 0. {
+        let volume = self.model.sink_volume;
+        let mute = self.model.sink_mute;
+        if mute || volume == 0 {
             "audio-volume-muted-symbolic"
-        } else if volume < 33. {
+        } else if volume < 33 {
             "audio-volume-low-symbolic"
-        } else if volume < 66. {
+        } else if volume < 66 {
             "audio-volume-medium-symbolic"
-        } else if volume <= 100. {
+        } else if volume <= 100 {
             "audio-volume-high-symbolic"
         } else {
             "audio-volume-overamplified-symbolic"
         }
     }
 
-    fn update_input(&mut self, input: Option<DeviceInfo>) {
-        self.current_input = input;
-
-        if let Some(device) = self.current_input.as_ref() {
-            self.input_volume = volume_to_percent(device.volume.avg());
-            self.input_volume_text = format!("{}%", self.input_volume.round());
-        }
-    }
-
     fn input_icon_name(&self) -> &'static str {
-        let volume = self.input_volume;
-        let mute = self.current_input_mute();
-        if mute || volume == 0. {
+        let volume = self.model.source_volume;
+        let mute = self.model.source_mute;
+        if mute || volume == 0 {
             "microphone-sensitivity-muted-symbolic"
-        } else if volume < 33. {
+        } else if volume < 33 {
             "microphone-sensitivity-low-symbolic"
-        } else if volume < 66. {
+        } else if volume < 66 {
             "microphone-sensitivity-medium-symbolic"
         } else {
             "microphone-sensitivity-high-symbolic"
@@ -131,8 +108,9 @@ impl Audio {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Default)]
 enum IsOpen {
+    #[default]
     None,
     Output,
     Input,
@@ -141,17 +119,14 @@ enum IsOpen {
 #[derive(Debug, Clone)]
 pub enum Message {
     Ignore,
-    ApplyOutputVolume,
-    ApplyInputVolume,
-    SetOutputVolume(f64),
-    SetInputVolume(f64),
-    SetOutputMute(bool),
-    SetInputMute(bool),
+    SetSinkVolume(u32),
+    SetSourceVolume(u32),
+    ToggleSinkMute,
+    ToggleSourceMute,
+    SetDefaultSink(usize),
+    SetDefaultSource(usize),
     OutputToggle,
     InputToggle,
-    OutputChanged(String),
-    InputChanged(String),
-    Pulse(pulse::Event),
     TogglePopup,
     CloseRequested(window::Id),
     ToggleMediaControlsInTopPanel(chain::Toggler, bool),
@@ -161,14 +136,20 @@ pub enum Message {
     MprisRequest(MprisRequest),
     Token(TokenUpdate),
     OpenSettings,
-    PulseSub(sub_pulse::Event),
+    Subscription(css::Message),
     Surface(surface::Action),
 }
 
+// TODO
+// mouse area with on enter and a stack widget for all buttons
+// most recently entered button is on top
+// position is a multiple of button size
+// on leave of applet, popup button is on top again
+
 impl Audio {
-    fn playback_buttons(&self) -> Option<Element<'_, Message>> {
+    fn playback_buttons(&self) -> Vec<Element<'_, Message>> {
+        let mut elements: Vec<Element<'_, Message>> = Vec::new();
         if self.player_status.is_some() && self.config.show_media_controls_in_top_panel {
-            let mut elements = Vec::with_capacity(3);
             if self
                 .player_status
                 .as_ref()
@@ -204,18 +185,8 @@ impl Audio {
                         .into(),
                 )
             }
-
-            Some(match self.core.applet.anchor {
-                PanelAnchor::Left | PanelAnchor::Right => Column::with_children(elements)
-                    .align_x(Alignment::Center)
-                    .into(),
-                PanelAnchor::Top | PanelAnchor::Bottom => Row::with_children(elements)
-                    .align_y(Alignment::Center)
-                    .into(),
-            })
-        } else {
-            None
         }
+        elements
     }
 
     fn go_previous(&self, icon_size: u16) -> Option<Element<'_, Message>> {
@@ -269,14 +240,6 @@ impl Audio {
             }
         })
     }
-
-    fn current_output_mute(&self) -> bool {
-        self.current_output.as_ref().is_some_and(|o| o.mute)
-    }
-
-    fn current_input_mute(&self) -> bool {
-        self.current_input.as_ref().is_some_and(|o| o.mute)
-    }
 }
 
 impl cosmic::Application for Audio {
@@ -286,15 +249,15 @@ impl cosmic::Application for Audio {
     const APP_ID: &'static str = "com.system76.CosmicAppletAudio";
 
     fn init(core: cosmic::app::Core, _flags: ()) -> (Self, app::Task<Message>) {
+        let mut model = css::Model::default();
+        model.unplugged_text = "Unplugged".into();
+        model.hd_audio_text = "HD Audio".into();
+        model.usb_audio_text = "USB Audio".into();
+
         (
             Self {
                 core,
-                is_open: IsOpen::None,
-                current_output: None,
-                current_input: None,
-                outputs: vec![],
-                inputs: vec![],
-                token_tx: None,
+                model,
                 ..Default::default()
             },
             Task::none(),
@@ -321,15 +284,21 @@ impl cosmic::Application for Audio {
                 if let Some(p) = self.popup.take() {
                     return destroy_popup(p);
                 } else {
-                    if let Some(conn) = self.pulse_state.connection() {
-                        conn.send(pulse::Message::UpdateConnection);
-                    }
                     let new_id = window::Id::unique();
                     self.popup.replace(new_id);
                     self.timeline = Timeline::new();
 
-                    self.output_amplification = amplification_sink();
-                    self.input_amplification = amplification_source();
+                    (self.max_sink_volume, self.sink_breakpoints) = if amplification_sink() {
+                        (150, &[100][..])
+                    } else {
+                        (100, &[][..])
+                    };
+
+                    (self.max_source_volume, self.source_breakpoints) = if amplification_source() {
+                        (150, &[100][..])
+                    } else {
+                        (100, &[][..])
+                    };
 
                     let popup_settings = self.core.applet.get_popup_settings(
                         self.core.main_window_id().unwrap(),
@@ -339,130 +308,14 @@ impl cosmic::Application for Audio {
                         None,
                     );
 
-                    if let Some(conn) = self.pulse_state.connection() {
-                        conn.send(pulse::Message::GetDefaultSink);
-                        conn.send(pulse::Message::GetDefaultSource);
-                        conn.send(pulse::Message::GetSinks);
-                        conn.send(pulse::Message::GetSources);
-                    }
-
                     return get_popup(popup_settings);
                 }
             }
-            Message::SetOutputVolume(vol) => {
-                if self.output_volume == vol {
-                    return Task::none();
-                }
 
-                self.output_volume = vol;
-                self.output_volume_text = format!("{}%", self.output_volume.round());
-
-                if self.output_volume_debounce {
-                    return Task::none();
-                }
-
-                self.output_volume_debounce = true;
-
-                return cosmic::task::future(async move {
-                    tokio::time::sleep(Duration::from_millis(64)).await;
-                    Message::ApplyOutputVolume
-                });
-            }
-            Message::SetInputVolume(vol) => {
-                if self.input_volume == vol {
-                    return Task::none();
-                }
-
-                self.input_volume = vol;
-                self.input_volume_text = format!("{}%", self.input_volume.round());
-
-                if self.input_volume_debounce {
-                    return Task::none();
-                }
-
-                self.input_volume_debounce = true;
-
-                return cosmic::task::future(async move {
-                    tokio::time::sleep(Duration::from_millis(64)).await;
-                    Message::ApplyInputVolume
-                });
-            }
-            Message::ApplyOutputVolume => {
-                self.output_volume_debounce = false;
-
-                if let Some(channel) = self.channels.as_mut() {
-                    channel.set_volume(self.output_volume as f32 / 100.);
-                }
-            }
-            Message::ApplyInputVolume => {
-                self.input_volume_debounce = false;
-
-                self.current_input.as_mut().map(|i| {
-                    i.volume
-                        .set(i.volume.len(), percent_to_volume(self.input_volume))
-                });
-
-                if let PulseState::Connected(connection) = &mut self.pulse_state {
-                    if let Some(device) = &self.current_input {
-                        if let Some(name) = &device.name {
-                            tracing::info!("increasing volume of {}", name);
-                            connection.send(pulse::Message::SetSourceVolumeByName(
-                                name.clone(),
-                                device.volume,
-                            ));
-                        }
-                    }
-                }
-            }
-            Message::SetOutputMute(mute) => {
-                if let Some(output) = self.current_output.as_mut() {
-                    output.mute = mute;
-                }
-                if let PulseState::Connected(connection) = &mut self.pulse_state {
-                    if let Some(device) = &self.current_output {
-                        if let Some(name) = &device.name {
-                            connection
-                                .send(pulse::Message::SetSinkMuteByName(name.clone(), device.mute));
-                        }
-                    }
-                }
-            }
-            Message::SetInputMute(mute) => {
-                if let Some(input) = self.current_input.as_mut() {
-                    input.mute = mute;
-                }
-                if let PulseState::Connected(connection) = &mut self.pulse_state {
-                    if let Some(device) = &self.current_input {
-                        if let Some(name) = &device.name {
-                            connection.send(pulse::Message::SetSourceMuteByName(
-                                name.clone(),
-                                device.mute,
-                            ))
-                        }
-                    }
-                }
-            }
-            Message::OutputChanged(val) => {
-                if let Some(conn) = self.pulse_state.connection() {
-                    if let Some(val) = self.outputs.iter().find(|o| o.name.as_ref() == Some(&val)) {
-                        conn.send(pulse::Message::SetDefaultSink(val.clone()));
-                    }
-                }
-            }
-            Message::InputChanged(val) => {
-                if let Some(conn) = self.pulse_state.connection() {
-                    if let Some(val) = self.inputs.iter().find(|i| i.name.as_ref() == Some(&val)) {
-                        conn.send(pulse::Message::SetDefaultSource(val.clone()));
-                    }
-                }
-            }
             Message::OutputToggle => {
                 self.is_open = if self.is_open == IsOpen::Output {
                     IsOpen::None
                 } else {
-                    if let Some(conn) = self.pulse_state.connection() {
-                        conn.send(pulse::Message::GetSinks);
-                    }
                     IsOpen::Output
                 }
             }
@@ -470,67 +323,48 @@ impl cosmic::Application for Audio {
                 self.is_open = if self.is_open == IsOpen::Input {
                     IsOpen::None
                 } else {
-                    if let Some(conn) = self.pulse_state.connection() {
-                        conn.send(pulse::Message::GetSources);
-                    }
                     IsOpen::Input
                 }
             }
-            Message::Pulse(event) => match event {
-                pulse::Event::Init(mut conn) => {
-                    conn.send(pulse::Message::UpdateConnection);
-                    self.pulse_state = PulseState::Disconnected(conn);
-                }
-                pulse::Event::Connected => {
-                    self.pulse_state.connected();
+            Message::Subscription(message) => {
+                return self
+                    .model
+                    .update(message)
+                    .map(|message| Message::Subscription(message).into());
+            }
 
-                    if let Some(conn) = self.pulse_state.connection() {
-                        conn.send(pulse::Message::GetSinks);
-                        conn.send(pulse::Message::GetSources);
-                        conn.send(pulse::Message::GetDefaultSink);
-                        conn.send(pulse::Message::GetDefaultSource);
-                    }
-                }
-                pulse::Event::MessageReceived(msg) => {
-                    match msg {
-                        // This is where we match messages from the subscription to app state
-                        pulse::Message::SetSinks(sinks) => self.outputs = sinks,
-                        pulse::Message::SetSources(sources) => {
-                            self.inputs = sources
-                                .into_iter()
-                                .filter(|source| {
-                                    !source
-                                        .name
-                                        .as_ref()
-                                        .unwrap_or(&String::from("Generic"))
-                                        .contains("monitor")
-                                })
-                                .collect()
-                        }
-                        pulse::Message::SetDefaultSink(sink) => {
-                            self.update_output(Some(sink));
-                        }
-                        pulse::Message::SetDefaultSource(source) => {
-                            self.update_input(Some(source));
-                        }
-                        pulse::Message::Disconnected => {
-                            panic!("Subscription error handling is bad. This should never happen.")
-                        }
-                        _ => {
-                            tracing::trace!("Received misc message")
-                        }
-                    }
-                }
-                pulse::Event::Disconnected => {
-                    self.pulse_state.disconnected();
-                    if let Some(mut conn) = self.pulse_state.connection().cloned() {
-                        _ = tokio::spawn(async move {
-                            tokio::time::sleep(tokio::time::Duration::from_secs(30)).await;
-                            conn.send(pulse::Message::UpdateConnection);
-                        });
-                    }
-                }
-            },
+            Message::SetDefaultSink(pos) => {
+                return self
+                    .model
+                    .set_default_sink(pos)
+                    .map(|message| Message::Subscription(message).into());
+            }
+
+            Message::SetDefaultSource(pos) => {
+                return self
+                    .model
+                    .set_default_source(pos)
+                    .map(|message| Message::Subscription(message).into());
+            }
+
+            Message::ToggleSinkMute => self.model.toggle_sink_mute(),
+
+            Message::ToggleSourceMute => self.model.toggle_source_mute(),
+
+            Message::SetSinkVolume(volume) => {
+                return self
+                    .model
+                    .set_sink_volume(volume)
+                    .map(|message| Message::Subscription(message).into());
+            }
+
+            Message::SetSourceVolume(volume) => {
+                return self
+                    .model
+                    .set_source_volume(volume)
+                    .map(|message| Message::Subscription(message).into());
+            }
+
             Message::ToggleMediaControlsInTopPanel(chain, enabled) => {
                 self.timeline.set_chain(chain).start();
                 self.config.show_media_controls_in_top_panel = enabled;
@@ -632,45 +466,6 @@ impl cosmic::Application for Audio {
                     tokio::spawn(cosmic::process::spawn(cmd));
                 }
             },
-            Message::PulseSub(event) => match event {
-                sub_pulse::Event::SinkVolume(value) => {
-                    self.current_output.as_mut().map(|output| {
-                        output
-                            .volume
-                            .set(output.volume.len(), percent_to_volume(value as f64))
-                    });
-
-                    self.output_volume = value as f64;
-                    self.output_volume_text = format!("{}%", self.output_volume.round());
-                }
-                sub_pulse::Event::SinkMute(value) => {
-                    if let Some(output) = self.current_output.as_mut() {
-                        output.mute = value;
-                    }
-                }
-                sub_pulse::Event::SourceVolume(value) => {
-                    self.current_input.as_mut().map(|input| {
-                        input
-                            .volume
-                            .set(input.volume.len(), percent_to_volume(value as f64))
-                    });
-
-                    self.input_volume = value as f64;
-                    self.input_volume_text = format!("{}%", self.input_volume.round());
-                }
-                sub_pulse::Event::SourceMute(value) => {
-                    if let Some(input) = self.current_input.as_mut() {
-                        input.mute = value;
-                    }
-                }
-                sub_pulse::Event::Channels(c) => {
-                    self.channels = Some(c);
-                }
-                sub_pulse::Event::DefaultSink(_) => {}
-                sub_pulse::Event::DefaultSource(_) => {}
-                sub_pulse::Event::CardInfo(_) => {}
-                sub_pulse::Event::Balance(_) => {}
-            },
             Message::Surface(a) => {
                 return cosmic::task::message(cosmic::Action::Cosmic(
                     cosmic::app::Action::Surface(a),
@@ -682,8 +477,7 @@ impl cosmic::Application for Audio {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        Subscription::batch(vec![
-            pulse::connect().map(Message::Pulse),
+        Subscription::batch([
             self.timeline
                 .as_subscription()
                 .map(|(_, now)| Message::Frame(now)),
@@ -695,7 +489,7 @@ impl cosmic::Application for Audio {
             }),
             mpris_subscription::mpris_subscription(0).map(Message::Mpris),
             activation_token_subscription(0).map(Message::Token),
-            sub_pulse::subscription().map(Message::PulseSub),
+            Subscription::run(|| css::watch().map(Message::Subscription)),
         ])
     }
 
@@ -716,15 +510,9 @@ impl cosmic::Application for Audio {
                 return Message::Ignore;
             }
 
-            let new_volume = (self.output_volume + (scroll_vector as f64)).clamp(
-                0.0,
-                if self.output_amplification {
-                    150.0
-                } else {
-                    100.0
-                },
-            );
-            Message::SetOutputVolume(new_volume)
+            let new_volume = (self.model.sink_volume as f64 + (scroll_vector as f64))
+                .clamp(0.0, self.max_sink_volume as f64);
+            Message::SetSinkVolume(new_volume as u32)
         });
 
         let playback_buttons = (!self.core.applet.suggested_bounds.as_ref().is_some_and(|c| {
@@ -735,21 +523,37 @@ impl cosmic::Application for Audio {
 
         self.core
             .applet
-            .autosize_window(if let Some(Some(playback_buttons)) = playback_buttons {
-                match self.core.applet.anchor {
-                    PanelAnchor::Left | PanelAnchor::Right => Element::from(
-                        Column::with_children(vec![playback_buttons, btn.into()])
-                            .align_x(Alignment::Center),
-                    ),
-                    PanelAnchor::Top | PanelAnchor::Bottom => {
-                        Row::with_children(vec![playback_buttons, btn.into()])
-                            .align_y(Alignment::Center)
-                            .into()
+            .autosize_window(
+                if let Some(playback_buttons) = playback_buttons
+                    && !playback_buttons.is_empty()
+                {
+                    match self.core.applet.anchor {
+                        PanelAnchor::Left | PanelAnchor::Right => Element::from(
+                            applet_column::Column::with_children(playback_buttons)
+                                .push(btn)
+                                .align_x(Alignment::Center)
+                                // TODO configurable variable from the panel?
+                                .spacing(
+                                    -(self.core.applet.suggested_padding(true).0 as f32)
+                                        * self.core.applet.padding_overlap,
+                                ),
+                        ),
+                        PanelAnchor::Top | PanelAnchor::Bottom => {
+                            applet_row::Row::with_children(playback_buttons)
+                                .push(btn)
+                                .align_y(Alignment::Center)
+                                // TODO configurable variable from the panel?
+                                .spacing(
+                                    -(self.core.applet.suggested_padding(true).0 as f32)
+                                        * self.core.applet.padding_overlap,
+                                )
+                                .into()
+                        }
                     }
-                }
-            } else {
-                btn.into()
-            })
+                } else {
+                    btn.into()
+                },
+            )
             .into()
     }
 
@@ -758,33 +562,31 @@ impl cosmic::Application for Audio {
             space_xxs, space_s, ..
         } = theme::active().cosmic().spacing;
 
-        let audio_disabled = matches!(self.pulse_state, PulseState::Disconnected(_));
-        let out_mute = self.current_output_mute();
-        let in_mute = self.current_input_mute();
+        let sink = self
+            .model
+            .active_sink()
+            .and_then(|pos| self.model.sinks().get(pos));
+        let source = self
+            .model
+            .active_source()
+            .and_then(|pos| self.model.sources().get(pos));
 
-        let mut audio_content = if audio_disabled {
-            column![padded_control(
-                text::title3(fl!("disconnected"))
-                    .width(Length::Fill)
-                    .align_x(Alignment::Center)
-            )]
-        } else {
-            let output_slider = if self.output_amplification {
-                slider(0.0..=150.0, self.output_volume, Message::SetOutputVolume)
-                    .width(Length::FillPortion(5))
-                    .breakpoints(&[100.])
-            } else {
-                slider(0.0..=100.0, self.output_volume, Message::SetOutputVolume)
-                    .width(Length::FillPortion(5))
-            };
-            let input_slider = if self.input_amplification {
-                slider(0.0..=150.0, self.input_volume, Message::SetInputVolume)
-                    .width(Length::FillPortion(5))
-                    .breakpoints(&[100.])
-            } else {
-                slider(0.0..=100.0, self.input_volume, Message::SetInputVolume)
-                    .width(Length::FillPortion(5))
-            };
+        let mut audio_content = {
+            let output_slider = slider(
+                0..=self.max_sink_volume,
+                self.model.sink_volume,
+                Message::SetSinkVolume,
+            )
+            .width(Length::FillPortion(5))
+            .breakpoints(self.sink_breakpoints);
+
+            let input_slider = slider(
+                0..=self.max_source_volume,
+                self.model.source_volume,
+                Message::SetSourceVolume,
+            )
+            .width(Length::FillPortion(5))
+            .breakpoints(self.source_breakpoints);
 
             column![
                 padded_control(
@@ -797,9 +599,9 @@ impl cosmic::Application for Audio {
                         .class(cosmic::theme::Button::Icon)
                         .icon_size(24)
                         .line_height(24)
-                        .on_press(Message::SetOutputMute(!out_mute)),
+                        .on_press(Message::ToggleSinkMute),
                         output_slider,
-                        container(text(&self.output_volume_text).size(16))
+                        container(text(&self.model.sink_volume_text).size(16))
                             .width(Length::FillPortion(1))
                             .align_x(Alignment::End)
                     ]
@@ -816,9 +618,9 @@ impl cosmic::Application for Audio {
                         .class(cosmic::theme::Button::Icon)
                         .icon_size(24)
                         .line_height(24)
-                        .on_press(Message::SetInputMute(!in_mute)),
+                        .on_press(Message::ToggleSourceMute),
                         input_slider,
-                        container(text(&self.input_volume_text).size(16))
+                        container(text(&self.model.source_volume_text).size(16))
                             .width(Length::FillPortion(1))
                             .align_x(Alignment::End)
                     ]
@@ -829,38 +631,24 @@ impl cosmic::Application for Audio {
                 revealer(
                     self.is_open == IsOpen::Output,
                     fl!("output"),
-                    match &self.current_output {
-                        Some(output) => pretty_name(output.description.clone()),
+                    match sink {
+                        Some(sink) => sink.to_owned(),
                         None => String::from("No device selected"),
                     },
-                    self.outputs
-                        .clone()
-                        .into_iter()
-                        .map(|output| (
-                            output.name.clone().unwrap_or_default(),
-                            pretty_name(output.description)
-                        ))
-                        .collect(),
+                    self.model.sinks(),
                     Message::OutputToggle,
-                    Message::OutputChanged,
+                    Message::SetDefaultSink,
                 ),
                 revealer(
                     self.is_open == IsOpen::Input,
                     fl!("input"),
-                    match &self.current_input {
-                        Some(input) => pretty_name(input.description.clone()),
+                    match source {
+                        Some(source) => source.to_owned(),
                         None => fl!("no-device"),
                     },
-                    self.inputs
-                        .clone()
-                        .into_iter()
-                        .map(|input| (
-                            input.name.clone().unwrap_or_default(),
-                            pretty_name(input.description)
-                        ))
-                        .collect(),
+                    self.model.sources(),
                     Message::InputToggle,
-                    Message::InputChanged,
+                    Message::SetDefaultSource,
                 )
             ]
             .align_x(Alignment::Start)
@@ -986,17 +774,17 @@ fn revealer(
     open: bool,
     title: String,
     selected: String,
-    options: Vec<(String, String)>,
+    devices: &[String],
     toggle: Message,
-    mut change: impl FnMut(String) -> Message + 'static,
+    mut change: impl FnMut(usize) -> Message + 'static,
 ) -> widget::Column<'static, Message, crate::Theme, Renderer> {
     if open {
-        options.iter().fold(
+        devices.iter().cloned().enumerate().fold(
             column![revealer_head(open, title, selected, toggle)].width(Length::Fill),
             |col, (id, name)| {
                 col.push(
-                    menu_button(text::body(name.clone()))
-                        .on_press(change(id.clone()))
+                    menu_button(text::body(name))
+                        .on_press(change(id))
                         .width(Length::Fill)
                         .padding([8, 48]),
                 )
@@ -1018,55 +806,4 @@ fn revealer_head(
         text::caption(selected),
     ])
     .on_press(toggle)
-}
-
-fn pretty_name(name: Option<String>) -> String {
-    match name {
-        Some(n) => n,
-        None => String::from("Generic"),
-    }
-}
-
-#[derive(Default)]
-enum PulseState {
-    #[default]
-    Init,
-    Disconnected(pulse::Connection),
-    Connected(pulse::Connection),
-}
-
-impl PulseState {
-    fn connection(&mut self) -> Option<&mut pulse::Connection> {
-        match self {
-            Self::Disconnected(c) => Some(c),
-            Self::Connected(c) => Some(c),
-            Self::Init => None,
-        }
-    }
-
-    fn connected(&mut self) {
-        if let Self::Disconnected(c) = self {
-            *self = Self::Connected(c.clone());
-        }
-    }
-
-    fn disconnected(&mut self) {
-        if let Self::Connected(c) = self {
-            *self = Self::Disconnected(c.clone());
-        }
-    }
-}
-
-impl Default for IsOpen {
-    fn default() -> Self {
-        Self::None
-    }
-}
-
-fn volume_to_percent(volume: Volume) -> f64 {
-    volume.0 as f64 * 100. / FULL_VOLUME
-}
-
-fn percent_to_volume(percent: f64) -> Volume {
-    Volume((percent / 100. * FULL_VOLUME).clamp(0., MAX_VOLUME).round() as u32)
 }

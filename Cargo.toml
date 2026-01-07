@@ -24,14 +24,12 @@ members = [
 resolver = "3"
 
 [workspace.dependencies]
-anyhow = "1.0.99"
-cctk = { git = "https://github.com/pop-os/cosmic-protocols", package = "cosmic-client-toolkit", rev = "6254f50" }
+anyhow = "1.0.100"
+cctk = { git = "https://github.com/pop-os/cosmic-protocols", package = "cosmic-client-toolkit", rev = "d0e95be" }
 cosmic-applets-config = { path = "cosmic-applets-config" }
 cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols", default-features = false, features = [
     "client",
-], rev = "6254f50" }
-cosmic-settings-subscriptions = { git = "https://github.com/pop-os/cosmic-settings-subscriptions" }
-
+], rev = "d0e95be" }
 cosmic-time = { git = "https://github.com/pop-os/cosmic-time", default-features = false }
 # cosmic-time = { path = "../cosmic-time", default-features = false ] }
 
@@ -52,16 +50,17 @@ libcosmic = { git = "https://github.com/pop-os/libcosmic", default-features = fa
     "desktop-systemd-scope",
     "winit",
 ] }
-rust-embed = "8.7.2"
-rust-embed-utils = "8.7.2"
-rustix = { version = "1.0", features = ["fs", "process"] }
-zbus = { version = "5.10.0", default-features = false, features = ["tokio"] }
+rust-embed = "8.9.0"
+rust-embed-utils = "8.9.0"
+rustc-hash = "2.1"
+rustix = { version = "1.1", features = ["fs", "process"] }
+zbus = { version = "5.12.0", default-features = false, features = ["tokio"] }
 tracing = "0.1"
-tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
 tracing-log = "0.2.0"
-tokio = { version = "1.47.1", features = ["full"] }
+tokio = { version = "1.48.0", features = ["full"] }
 cosmic-config = { git = "https://github.com/pop-os/libcosmic" }
-serde = { version = "1.0.219", features = ["derive"] }
+serde = { version = "1.0.228", features = ["derive"] }
 
 [profile.release]
 opt-level = 3
@@ -72,6 +71,9 @@ lto = "thin"
 ignored = ["libcosmic"]
 
 # [patch."https://github.com/pop-os/libcosmic"]
+# cosmic-config = { git = "https://github.com/pop-os/libcosmic//", branch = "" }
+# libcosmic = { git = "https://github.com/pop-os/libcosmic//", branch = "" }
+# iced_futures = { git = "https://github.com/pop-os/libcosmic//", branch = "" }
 # cosmic-config = { path = "../libcosmic/cosmic-config" }
 # libcosmic = { path = "../libcosmic" }
 # iced_futures = { path = "../libcosmic/iced/futures" }

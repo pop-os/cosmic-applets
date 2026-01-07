@@ -19,3 +19,4 @@ router-wps-button = También se puede conectar al pulsar el botón "WPS" en el e
 unable-to-connect = No se ha podido conectar al red
 check-wifi-connection = Verifique que el Wi-Fi esté conectado al internet y que la contraseña sea válida
 reset = Reiniciar
+vpn-connections = Conexiones VPN

@@ -20,6 +20,8 @@ use crate::{components::status_menu, subscriptions::status_notifier_watcher};
 
 #[derive(Clone, Debug)]
 pub enum Msg {
+    None,
+    Activate(usize),
     Closed(window::Id),
     // XXX don't use index (unique window id? or I guess that's created and destroyed)
     StatusMenu((usize, status_menu::Msg)),
@@ -56,7 +58,7 @@ impl App {
 
     fn resize_window(&self) -> app::Task<Msg> {
         let icon_size = self.core.applet.suggested_size(true).0 as u32
-            + self.core.applet.suggested_padding(true) as u32 * 2;
+            + self.core.applet.suggested_padding(true).1 as u32 * 2;
         let n = self.menus.len() as u32;
         window::resize(
             self.core.main_window_id().unwrap(),
@@ -73,8 +75,8 @@ impl App {
             }
         })?;
 
-        let button_total_size =
-            self.core.applet.suggested_size(true).0 + self.core.applet.suggested_padding(true) * 2;
+        let button_total_size = self.core.applet.suggested_size(true).0
+            + self.core.applet.suggested_padding(true).1 * 2;
 
         let menu_count = self.menus.len();
 
@@ -95,22 +97,11 @@ impl App {
         let overflow_index = self.overflow_index().unwrap_or(0);
         let children = self.menus.iter().skip(overflow_index).map(|(id, menu)| {
             mouse_area(
-                match menu.icon_pixmap() {
-                    Some(icon) if menu.icon_name() == "" => self
-                        .core
-                        .applet
-                        .icon_button_from_handle(icon.clone().symbolic(true)),
-                    _ => self.core.applet.icon_button(menu.icon_name()),
-                }
-                .on_press_down(Msg::TogglePopup(*id)),
+                menu_icon_button(&self.core.applet, &menu).on_press_down(Msg::TogglePopup(*id)),
             )
             .on_enter(Msg::Hovered(*id))
             .into()
         });
-        let theme = self.core.system_theme();
-        let cosmic = theme.cosmic();
-        let corners = cosmic.corner_radii;
-        let pad = corners.radius_m[0];
 
         self.core
             .applet
@@ -158,6 +149,26 @@ impl cosmic::Application for App {
 
     fn update(&mut self, message: Msg) -> app::Task<Msg> {
         match message {
+            Msg::None => Task::none(),
+            Msg::Activate(id) => {
+                if let Some(token_tx) = self.token_tx.as_ref() {
+                    let _ = token_tx.send(TokenRequest {
+                        app_id: Self::APP_ID.to_string(),
+                        exec: format!("activate:{}", id),
+                    });
+                } else {
+                    if let Some(menu) = self.menus.get(&id) {
+                        let item_proxy = menu.item.item_proxy().clone();
+                        return Task::future(async move {
+                            match item_proxy.activate(0, 0).await {
+                                Ok(_) => cosmic::action::app(Msg::None),
+                                Err(_) => cosmic::action::app(Msg::TogglePopup(id)),
+                            }
+                        });
+                    }
+                }
+                Task::none()
+            }
             Msg::Closed(surface) => {
                 if self.popup == Some(surface) {
                     self.popup = None;
@@ -237,7 +248,7 @@ impl cosmic::Application for App {
                                 Some((i, self.core.main_window_id().unwrap()))
                             }
                         })
-                        .unwrap_or((0, self.core.main_window_id().unwrap()));
+                        .unwrap_or((i, self.core.main_window_id().unwrap()));
 
                     let mut popup_settings = self
                         .core
@@ -250,11 +261,11 @@ impl cosmic::Application for App {
                         PanelAnchor::Left | PanelAnchor::Right
                     ) {
                         let suggested_size = self.core.applet.suggested_size(false).1
-                            + 2 * self.core.applet.suggested_padding(false);
+                            + 2 * self.core.applet.suggested_padding(false).1;
                         popup_settings.positioner.anchor_rect.y = i as i32 * suggested_size as i32;
                     } else {
                         let suggested_size = self.core.applet.suggested_size(false).0
-                            + 2 * self.core.applet.suggested_padding(false);
+                            + 2 * self.core.applet.suggested_padding(false).1;
                         popup_settings.positioner.anchor_rect.x = i as i32 * suggested_size as i32;
                     }
                     cmds.push(get_popup(popup_settings));
@@ -276,6 +287,36 @@ impl cosmic::Application for App {
                     return Task::none();
                 }
                 TokenUpdate::ActivationToken { token, exec: id } => {
+                    if let Some(id_str) = id.strip_prefix("activate:") {
+                        if let Ok(real_id) = id_str.parse::<usize>() {
+                            if let Some(menu) = self.menus.get(&real_id) {
+                                let item_proxy = menu.item.item_proxy().clone();
+                                let token = token.clone();
+                                let id = real_id;
+                                return Task::future(async move {
+                                    if let Some(t) = token {
+                                        match item_proxy.provide_xdg_activation_token(t).await {
+                                            Ok(_) => {
+                                                println!("Token provided successfully to {}", id)
+                                            }
+                                            Err(e) => eprintln!(
+                                                "Failed to provide token to {}: {}",
+                                                id, e
+                                            ),
+                                        }
+                                    }
+                                    match item_proxy.activate(0, 0).await {
+                                        Ok(_) => cosmic::action::app(Msg::None),
+                                        Err(err) => {
+                                            eprintln!("Activate failed: {}", err);
+                                            cosmic::action::app(Msg::TogglePopup(id))
+                                        }
+                                    }
+                                });
+                            }
+                        }
+                        return Task::none();
+                    }
                     if let Some(((state, id), token)) = str::parse(&id)
                         .ok()
                         .and_then(|id: usize| self.menus.get_mut(&id).map(|m| (m, id)))
@@ -319,7 +360,7 @@ impl cosmic::Application for App {
                             Some((i, self.core.main_window_id().unwrap()))
                         }
                     })
-                    .unwrap_or((0, self.core.main_window_id().unwrap()));
+                    .unwrap_or((i, self.core.main_window_id().unwrap()));
 
                 let mut popup_settings = self
                     .core
@@ -331,12 +372,12 @@ impl cosmic::Application for App {
                     self.core.applet.anchor,
                     PanelAnchor::Left | PanelAnchor::Right
                 ) {
-                    let suggested_size = self.core.applet.suggested_size(false).1
-                        + 2 * self.core.applet.suggested_padding(false);
+                    let suggested_size = self.core.applet.suggested_size(true).1
+                        + 2 * self.core.applet.suggested_padding(true).1;
                     popup_settings.positioner.anchor_rect.y = i as i32 * suggested_size as i32;
                 } else {
-                    let suggested_size = self.core.applet.suggested_size(false).0
-                        + 2 * self.core.applet.suggested_padding(false);
+                    let suggested_size = self.core.applet.suggested_size(true).0
+                        + 2 * self.core.applet.suggested_padding(true).0;
                     popup_settings.positioner.anchor_rect.x = i as i32 * suggested_size as i32;
                 }
                 cmds.push(get_popup(popup_settings));
@@ -368,20 +409,19 @@ impl cosmic::Application for App {
                         self.core.applet.anchor,
                         PanelAnchor::Left | PanelAnchor::Right
                     ) {
-                        let suggested_size = self.core.applet.suggested_size(false).1
-                            + 2 * self.core.applet.suggested_padding(false);
+                        let suggested_size = self.core.applet.suggested_size(true).1
+                            + 2 * self.core.applet.suggested_padding(true).1;
                         popup_settings.positioner.anchor_rect.y =
                             overflow_index as i32 * suggested_size as i32;
                     } else {
-                        let suggested_size = self.core.applet.suggested_size(false).0
-                            + 2 * self.core.applet.suggested_padding(false);
+                        let suggested_size = self.core.applet.suggested_size(true).0
+                            + 2 * self.core.applet.suggested_padding(true).0;
                         popup_settings.positioner.anchor_rect.x =
                             overflow_index as i32 * suggested_size as i32;
                     }
 
                     self.overflow_popup = Some(popup_id);
-                    let cmds = vec![get_popup(popup_settings)];
-                    return Task::batch(cmds);
+                    return get_popup(popup_settings);
                 } else {
                     return Task::none();
                 }
@@ -419,11 +459,11 @@ impl cosmic::Application for App {
                     PanelAnchor::Left | PanelAnchor::Right
                 ) {
                     let suggested_size = self.core.applet.suggested_size(false).1
-                        + 2 * self.core.applet.suggested_padding(false);
+                        + 2 * self.core.applet.suggested_padding(false).1;
                     popup_settings.positioner.anchor_rect.y = i as i32 * suggested_size as i32;
                 } else {
                     let suggested_size = self.core.applet.suggested_size(false).0
-                        + 2 * self.core.applet.suggested_padding(false);
+                        + 2 * self.core.applet.suggested_padding(false).1;
                     popup_settings.positioner.anchor_rect.x = i as i32 * suggested_size as i32;
                 }
                 cmds.push(get_popup(popup_settings));
@@ -453,18 +493,10 @@ impl cosmic::Application for App {
             .iter()
             .take(overflow_index.unwrap_or(self.menus.len()))
             .map(|(id, menu)| {
-                mouse_area(
-                    match menu.icon_pixmap() {
-                        Some(icon) if menu.icon_name() == "" => self
-                            .core
-                            .applet
-                            .icon_button_from_handle(icon.clone().symbolic(true)),
-                        _ => self.core.applet.icon_button(menu.icon_name()),
-                    }
-                    .on_press_down(Msg::TogglePopup(*id)),
-                )
-                .on_enter(Msg::Hovered(*id))
-                .into()
+                mouse_area(menu_icon_button(&self.core.applet, &menu).on_press(Msg::Activate(*id)))
+                    .on_right_press(Msg::TogglePopup(*id))
+                    .on_enter(Msg::Hovered(*id))
+                    .into()
             });
 
         self.core
@@ -528,6 +560,27 @@ impl cosmic::Application for App {
 
     fn on_close_requested(&self, id: window::Id) -> Option<Msg> {
         Some(Msg::Closed(id))
+    }
+}
+
+fn menu_icon_button<'a>(
+    applet: &'a cosmic::applet::Context,
+    menu: &'a status_menu::State,
+) -> cosmic::widget::Button<'a, Msg> {
+    match (menu.icon_pixmap(), menu.icon_name(), menu.icon_theme_path()) {
+        (Some(icon), "", _) => applet.icon_button_from_handle(icon.clone().symbolic(true)),
+        (_, name, Some(theme_path)) if name != "" => {
+            let mut path = theme_path.to_owned();
+            // XXX right way to lookup icon in dir?
+            path.push(name.to_owned() + ".svg");
+            if !path.exists() {
+                path.pop();
+                path.push(name.to_owned() + ".png");
+            }
+            let icon = cosmic::widget::icon::from_path(path).symbolic(true);
+            applet.icon_button_from_handle(icon)
+        }
+        (_, name, _) => applet.icon_button(name),
     }
 }
 

@@ -1,6 +1,6 @@
 [package]
 name = "cosmic-applet-bluetooth"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2024"
 license = "GPL-3.0-only"
 
@@ -14,6 +14,7 @@ i18n-embed.workspace = true
 libcosmic.workspace = true
 fastrand = "2.3.0"
 rust-embed.workspace = true
+rustc-hash.workspace = true
 tokio.workspace = true
 tracing-log.workspace = true
 tracing-subscriber.workspace = true

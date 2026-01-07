@@ -1,5 +1,5 @@
-battery = Batterijbesparing
-battery-desc = Batterijbesparing met verlaagde prestaties.
+battery = Batterij
+battery-desc = Verminderd energieverbruik en prestaties.
 balanced = Gebalanceerd
 balanced-desc = Normale prestaties en batterijverbruik.
 performance = Verhoogde prestaties
@@ -9,6 +9,6 @@ seconds = s
 minutes = m
 hours = u
 until-empty = tot leeg
-power-settings = Energie- en batterijbeheer...
+power-settings = Energie- en batterijbeheer…
 dgpu-running = De discrete GPU is actief en kan de batterijduur verkorten
-dgpu-applications = Toepassingen die de {$gpu_name} discrete GPU gebruiken
+dgpu-applications = Toepassingen die de { $gpu_name } discrete GPU gebruiken

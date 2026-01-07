@@ -1,11 +1,12 @@
 [package]
 name = "cosmic-panel-button"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2024"
 license = "GPL-3.0-only"
 
 [dependencies]
 libcosmic.workspace = true
+rustc-hash.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 tracing-log.workspace = true

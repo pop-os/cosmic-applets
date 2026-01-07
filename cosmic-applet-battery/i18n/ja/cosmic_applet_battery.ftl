@@ -10,3 +10,5 @@ minutes = 分
 hours = 時間
 until-empty = 後に切れます
 power-settings = 電源設定...
+dgpu-running = ディスクリートGPU が有効で、バッテリー持続時間を短くする可能性があります
+dgpu-applications = { $gpu_name }ディスクリートGPUを使用中のアプリケーション

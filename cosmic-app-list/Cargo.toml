@@ -1,6 +1,6 @@
 [package]
 name = "cosmic-app-list"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2024"
 license = "GPL-3.0-only"
 
@@ -12,13 +12,13 @@ cosmic-protocols.workspace = true
 futures.workspace = true
 i18n-embed.workspace = true
 i18n-embed-fl.workspace = true
-image = { version = "0.25.8", default-features = false }
-itertools = "0.14.0"
+image = { version = "0.25.9", default-features = false }
 libcosmic.workspace = true
-memmap2 = "0.9.8"
+memmap2 = "0.9.9"
 fastrand = "2.3.0"
 rust-embed.workspace = true
 rustix.workspace = true
+rustc-hash.workspace = true
 switcheroo-control = { git = "https://github.com/pop-os/dbus-settings-bindings" }
 tokio.workspace = true
 tracing-log.workspace = true

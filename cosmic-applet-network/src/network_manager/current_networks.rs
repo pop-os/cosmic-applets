@@ -8,6 +8,16 @@ use std::net::Ipv4Addr;
 
 use super::hw_address::HwAddress;
 
+/// Read network interface speed from sysfs
+/// Returns speed in Mbps, or None if unable to read
+fn read_speed_from_sysfs(interface: &str) -> Option<u32> {
+    let path = format!("/sys/class/net/{}/speed", interface);
+    std::fs::read_to_string(path)
+        .ok()
+        .and_then(|content| content.trim().parse::<i32>().ok())
+        .and_then(|speed| if speed > 0 { Some(speed as u32) } else { None })
+}
+
 pub async fn active_connections(
     active_connections: Vec<ActiveConnection<'_>>,
 ) -> zbus::Result<Vec<ActiveConnectionInfo>> {
@@ -33,6 +43,8 @@ pub async fn active_connections(
             continue;
         }
         for device in connection.devices().await.unwrap_or_default() {
+            let interface_name = device.interface().await.ok();
+
             match device
                 .downcast_to_device()
                 .await
@@ -40,11 +52,20 @@ pub async fn active_connections(
                 .and_then(|inner| inner)
             {
                 Some(SpecificDevice::Wired(wired_device)) => {
+                    let mut speed = wired_device.speed().await?;
+
+                    // If NetworkManager returns 0, try to read from sysfs
+                    if speed == 0 {
+                        if let Some(interface) = interface_name.as_ref() {
+                            speed = read_speed_from_sysfs(interface).unwrap_or(0);
+                        }
+                    }
+
                     info.push(ActiveConnectionInfo::Wired {
                         name: connection.id().await?,
                         hw_address: HwAddress::from_str(&wired_device.hw_address().await?)
                             .unwrap_or_default(),
-                        speed: wired_device.speed().await?,
+                        speed,
                         ip_addresses: addresses.clone(),
                     });
                 }
@@ -71,15 +92,7 @@ pub async fn active_connections(
         }
     }
 
-    info.sort_by(|a, b| {
-        let helper = |conn: &ActiveConnectionInfo| match conn {
-            ActiveConnectionInfo::Vpn { name, .. } => format!("0{name}"),
-            ActiveConnectionInfo::Wired { name, .. } => format!("1{name}"),
-            ActiveConnectionInfo::WiFi { name, .. } => format!("2{name}"),
-        };
-        helper(a).cmp(&helper(b))
-    });
-
+    info.sort_unstable();
     Ok(info)
 }
 
@@ -107,16 +120,74 @@ pub enum ActiveConnectionInfo {
 impl ActiveConnectionInfo {
     pub fn name(&self) -> String {
         match &self {
-            Self::Wired { name, .. } => name.clone(),
-            Self::WiFi { name, .. } => name.clone(),
-            Self::Vpn { name, .. } => name.clone(),
+            Self::Wired { name, .. } | Self::WiFi { name, .. } | Self::Vpn { name, .. } => {
+                name.clone()
+            }
         }
     }
     pub fn hw_address(&self) -> HwAddress {
         match &self {
-            Self::Wired { hw_address, .. } => *hw_address,
-            Self::WiFi { hw_address, .. } => *hw_address,
+            Self::Wired { hw_address, .. } | Self::WiFi { hw_address, .. } => *hw_address,
             Self::Vpn { .. } => HwAddress::default(),
+        }
+    }
+}
+
+impl std::cmp::Ord for ActiveConnectionInfo {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        match (self, other) {
+            (Self::Vpn { .. }, Self::Wired { .. } | Self::WiFi { .. })
+            | (Self::Wired { .. }, Self::WiFi { .. }) => std::cmp::Ordering::Less,
+
+            (Self::WiFi { .. }, Self::Wired { .. } | Self::Vpn { .. })
+            | (Self::Wired { .. }, Self::Vpn { .. }) => std::cmp::Ordering::Greater,
+
+            (Self::Vpn { name: n1, .. }, Self::Vpn { name: n2, .. })
+            | (Self::Wired { name: n1, .. }, Self::Wired { name: n2, .. })
+            | (Self::WiFi { name: n1, .. }, Self::WiFi { name: n2, .. }) => n1.cmp(n2),
+        }
+    }
+}
+
+impl std::cmp::Eq for ActiveConnectionInfo {}
+
+impl std::cmp::PartialOrd for ActiveConnectionInfo {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl std::cmp::PartialEq for ActiveConnectionInfo {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (
+                Self::Wired {
+                    name: n1,
+                    hw_address: a1,
+                    ..
+                },
+                Self::Wired {
+                    name: n2,
+                    hw_address: a2,
+                    ..
+                },
+            )
+            | (
+                Self::WiFi {
+                    name: n1,
+                    hw_address: a1,
+                    ..
+                },
+                Self::WiFi {
+                    name: n2,
+                    hw_address: a2,
+                    ..
+                },
+            ) => n1 == n2 && a1 == a2,
+
+            (Self::Vpn { name: n1, .. }, Self::Vpn { name: n2, .. }) => n1 == n2,
+
+            _ => false,
         }
     }
 }

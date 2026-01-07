@@ -24,7 +24,7 @@
 
         pkgDef = {
           pname = "cosmic-applets";
-          version = "0.1.0";
+          version = "1.0.0";
           src = nix-filter.lib.filter {
             root = ./.;
             exclude = [

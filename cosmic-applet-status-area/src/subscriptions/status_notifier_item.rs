@@ -3,14 +3,15 @@
 
 use cosmic::iced::{self, Subscription};
 use futures::{FutureExt, StreamExt};
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
+use std::path::PathBuf;
 use zbus::zvariant::{self, OwnedValue};
 
 #[derive(Clone, Debug)]
 pub struct StatusNotifierItem {
     name: String,
     item_proxy: StatusNotifierItemProxy<'static>,
-    menu_proxy: DBusMenuProxy<'static>,
+    menu_proxy: Option<DBusMenuProxy<'static>>,
 }
 
 #[derive(Clone, Debug, zvariant::Value)]
@@ -21,9 +22,10 @@ pub struct Icon {
 }
 
 #[derive(Clone, Debug)]
-pub enum IconUpdate {
-    Name(String),
-    Pixmap(Vec<Icon>),
+pub struct IconUpdate {
+    pub name: Option<String>,
+    pub pixmap: Option<Vec<Icon>>,
+    pub theme_path: Option<PathBuf>,
 }
 
 impl StatusNotifierItem {
@@ -42,7 +44,22 @@ impl StatusNotifierItem {
             .build()
             .await?;
 
-        let menu_path = item_proxy.menu().await?;
+        // XX: some items will not implement this but have a menu anyway
+        let is_menu = item_proxy.item_is_menu().await;
+
+        let menu_path = item_proxy.menu().await;
+
+        // Why would an item say it has no menu but provide a menu path? Slack does this.
+        let is_menu = menu_path.is_ok() || is_menu.unwrap_or(false);
+
+        if !is_menu {
+            return Ok(Self {
+                name,
+                item_proxy,
+                menu_proxy: None,
+            });
+        }
+        let menu_path = menu_path?;
         let menu_proxy = DBusMenuProxy::builder(connection)
             .destination(dest.to_string())?
             .path(menu_path)?
@@ -52,7 +69,7 @@ impl StatusNotifierItem {
         Ok(Self {
             name,
             item_proxy,
-            menu_proxy,
+            menu_proxy: Some(menu_proxy),
         })
     }
 
@@ -62,7 +79,9 @@ impl StatusNotifierItem {
 
     // TODO: Only fetch changed part of layout, if that's any faster
     pub fn layout_subscription(&self) -> iced::Subscription<Result<Layout, String>> {
-        let menu_proxy = self.menu_proxy.clone();
+        let Some(menu_proxy) = self.menu_proxy.clone() else {
+            return Subscription::none();
+        };
         Subscription::run_with_id(
             format!("status-notifier-item-layout-{}", &self.name),
             async move {
@@ -76,22 +95,15 @@ impl StatusNotifierItem {
     }
 
     pub fn icon_subscription(&self) -> iced::Subscription<IconUpdate> {
-        fn icon_events(
-            item_proxy: StatusNotifierItemProxy<'static>,
-        ) -> impl futures::Stream<Item = IconUpdate> + 'static {
-            async move {
-                let icon_name = item_proxy.icon_name().await;
-                let icon_pixmap = item_proxy.icon_pixmap().await;
-                futures::stream::iter(
-                    [
-                        icon_name.map(IconUpdate::Name),
-                        icon_pixmap.map(IconUpdate::Pixmap),
-                    ]
-                    .into_iter()
-                    .filter_map(Result::ok),
-                )
+        async fn icon_events(item_proxy: StatusNotifierItemProxy<'static>) -> IconUpdate {
+            let icon_name = item_proxy.icon_name().await;
+            let icon_pixmap = item_proxy.icon_pixmap().await;
+            let icon_theme_path = item_proxy.icon_theme_path().await.map(PathBuf::from);
+            IconUpdate {
+                name: icon_name.ok(),
+                pixmap: icon_pixmap.ok(),
+                theme_path: icon_theme_path.ok().filter(|x| !x.as_os_str().is_empty()),
             }
-            .flatten_stream()
         }
 
         let item_proxy = self.item_proxy.clone();
@@ -101,14 +113,14 @@ impl StatusNotifierItem {
                 let new_icon_stream = item_proxy.receive_new_icon().await.unwrap();
                 futures::stream::once(async {})
                     .chain(new_icon_stream.map(|_| ()))
-                    .flat_map(move |()| icon_events(item_proxy.clone()))
+                    .then(move |()| icon_events(item_proxy.clone()))
             }
             .flatten_stream(),
         )
     }
 
-    pub fn menu_proxy(&self) -> &DBusMenuProxy<'static> {
-        &self.menu_proxy
+    pub fn menu_proxy(&self) -> Option<&DBusMenuProxy<'static>> {
+        self.menu_proxy.as_ref()
     }
 
     pub fn item_proxy(&self) -> &StatusNotifierItemProxy<'static> {
@@ -128,6 +140,9 @@ pub trait StatusNotifierItem {
     #[zbus(property)]
     fn icon_name(&self) -> zbus::Result<String>;
 
+    #[zbus(property)]
+    fn icon_theme_path(&self) -> zbus::Result<String>;
+
     // https://www.freedesktop.org/wiki/Specifications/StatusNotifierItem/Icons
     #[zbus(property)]
     fn icon_pixmap(&self) -> zbus::Result<Vec<Icon>>;
@@ -135,10 +150,17 @@ pub trait StatusNotifierItem {
     #[zbus(property)]
     fn menu(&self) -> zbus::Result<zvariant::OwnedObjectPath>;
 
+    #[zbus(property)]
+    fn item_is_menu(&self) -> zbus::Result<bool>;
+
     #[zbus(signal)]
     fn new_icon(&self) -> zbus::Result<()>;
 
     fn provide_xdg_activation_token(&self, token: String) -> zbus::Result<()>;
+
+    fn activate(&self, x: i32, y: i32) -> zbus::Result<()>;
+
+    fn secondary_activate(&self, x: i32, y: i32) -> zbus::Result<()>;
 }
 
 #[derive(Clone, Debug)]
@@ -153,8 +175,11 @@ impl<'a> serde::Deserialize<'a> for Layout {
 }
 
 impl zvariant::Type for Layout {
-    const SIGNATURE: &'static zvariant::Signature =
-        <(i32, HashMap<String, zvariant::Value>, Vec<zvariant::Value>)>::SIGNATURE;
+    const SIGNATURE: &zvariant::Signature = <(
+        i32,
+        FxHashMap<String, zvariant::Value>,
+        Vec<zvariant::Value>,
+    )>::SIGNATURE;
 }
 
 #[derive(Clone, Debug, zvariant::DeserializeDict)]
@@ -184,7 +209,7 @@ pub struct LayoutProps {
 }
 
 impl zvariant::Type for LayoutProps {
-    const SIGNATURE: &'static zvariant::Signature = <HashMap<String, zvariant::Value>>::SIGNATURE;
+    const SIGNATURE: &zvariant::Signature = <FxHashMap<String, zvariant::Value>>::SIGNATURE;
 }
 
 #[allow(dead_code)]

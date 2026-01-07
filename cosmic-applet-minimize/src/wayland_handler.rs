@@ -20,7 +20,7 @@ use cctk::{
     },
     toplevel_info::{ToplevelInfoHandler, ToplevelInfoState},
     toplevel_management::{ToplevelManagerHandler, ToplevelManagerState},
-    wayland_client::{self, WEnum, protocol::wl_seat::WlSeat},
+    wayland_client::{self, WEnum, delegate_noop, protocol::wl_seat::WlSeat},
 };
 use cosmic::{
     cctk::{
@@ -237,7 +237,7 @@ impl<T: AsFd> ShmImage<T> {
     pub fn image(&self) -> anyhow::Result<image::RgbaImage> {
         let mmap = unsafe { memmap2::Mmap::map(&self.fd.as_fd())? };
         image::RgbaImage::from_raw(self.width, self.height, mmap.to_vec())
-            .ok_or(anyhow::anyhow!("ShmImage had incorrect size"))
+            .ok_or_else(|| anyhow::anyhow!("ShmImage had incorrect size"))
     }
 }
 
@@ -475,12 +475,12 @@ pub(crate) fn wayland_handler(
         exit: false,
         tx,
         conn,
-        queue_handle: qh.clone(),
         shm_state,
         screencopy_state,
         seat_state: SeatState::new(&globals, &qh),
         toplevel_info_state: ToplevelInfoState::new(&registry_state, &qh),
         toplevel_manager_state: ToplevelManagerState::new(&registry_state, &qh),
+        queue_handle: qh,
         registry_state,
     };
 
@@ -557,21 +557,10 @@ impl Dispatch<wl_shm_pool::WlShmPool, ()> for AppData {
     }
 }
 
-impl Dispatch<wl_buffer::WlBuffer, ()> for AppData {
-    fn event(
-        _app_data: &mut Self,
-        _buffer: &wl_buffer::WlBuffer,
-        _event: wl_buffer::Event,
-        (): &(),
-        _: &Connection,
-        _qh: &QueueHandle<Self>,
-    ) {
-    }
-}
-
 sctk::delegate_shm!(AppData);
 sctk::delegate_seat!(AppData);
 sctk::delegate_registry!(AppData);
 cctk::delegate_toplevel_info!(AppData);
 cctk::delegate_toplevel_manager!(AppData);
-cctk::delegate_screencopy!(AppData, session: [SessionData], frame: [FrameData]);
+cctk::delegate_screencopy!(AppData);
+delegate_noop!(AppData: ignore wl_buffer::WlBuffer);
