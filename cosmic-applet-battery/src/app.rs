@@ -728,27 +728,6 @@ impl cosmic::Application for CosmicBatteryApplet {
             );
         }
 
-        content.push(
-            padded_control(
-                anim!(
-                    //toggler
-                    SHOW_PERCENTAGE,
-                    &self.timeline,
-                    fl!("show-percentage"),
-                    self.config.show_percentage,
-                    Message::ShowBatteryPercentage,
-                )
-                .text_size(14)
-                .width(Length::Fill),
-            )
-            .into(),
-        );
-        content.push(
-            padded_control(divider::horizontal::default())
-                .padding([space_xxs, space_s])
-                .into(),
-        );
-
         if let Some(max_screen_brightness) = self.max_screen_brightness {
             if let Some(screen_brightness) = self.screen_brightness {
                 content.push(

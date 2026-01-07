@@ -5,7 +5,6 @@ balanced-desc = Standard performance and battery usage.
 performance = High Performance
 performance-desc = High performance and power usage.
 max-charge = Increase the lifespan of your battery by setting a maximum charge value of 80%
-show-percentage = Show battery percentage on panel
 seconds = s
 minutes = m
 hours = h
