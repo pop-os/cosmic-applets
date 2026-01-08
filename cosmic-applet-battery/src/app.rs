@@ -29,7 +29,7 @@ use cosmic::{
     theme::{self, Button},
     widget::{button, divider, horizontal_space, icon, scrollable, slider, text, vertical_space},
 };
-use cosmic_applets_config::battery::BatteryConfig;
+use cosmic_applets_config::battery::BatteryAppletConfig;
 use cosmic_config::{Config, CosmicConfigEntry};
 use cosmic_settings_daemon_subscription as settings_daemon;
 use cosmic_settings_upower_subscription::{
@@ -75,7 +75,7 @@ struct GPUData {
 #[derive(Clone, Default)]
 struct CosmicBatteryApplet {
     core: cosmic::app::Core,
-    config: BatteryConfig,
+    config: BatteryAppletConfig,
     icon_name: String,
     display_icon_name: String,
     charging_limit: Option<bool>,
@@ -196,6 +196,7 @@ enum Message {
     Profile(Power),
     SelectProfile(Power),
     Frame(Instant),
+    ConfigChanged(BatteryAppletConfig),
     Token(TokenUpdate),
     OpenSettings,
     SettingsDaemon(settings_daemon::Event),
@@ -210,9 +211,9 @@ impl cosmic::Application for CosmicBatteryApplet {
     const APP_ID: &'static str = "com.system76.CosmicAppletButton";
 
     fn init(core: cosmic::app::Core, _flags: Self::Flags) -> (Self, app::Task<Self::Message>) {
-        let config = Config::new(Self::APP_ID, BatteryConfig::VERSION)
+        let config = Config::new(Self::APP_ID, BatteryAppletConfig::VERSION)
             .ok()
-            .and_then(|c| BatteryConfig::get_entry(&c).ok())
+            .and_then(|c| BatteryAppletConfig::get_entry(&c).ok())
             .unwrap_or_default();
 
         let zbus_session_cmd = Task::perform(zbus::Connection::session(), |res| {
@@ -429,6 +430,9 @@ impl cosmic::Application for CosmicBatteryApplet {
                 if Some(id) == self.popup {
                     self.popup = None;
                 }
+            }
+            Message::ConfigChanged(config) => {
+                self.config = config;
             }
             Message::OpenSettings => {
                 let exec = "cosmic-settings power".to_string();
@@ -929,6 +933,12 @@ impl cosmic::Application for CosmicBatteryApplet {
                 .as_subscription()
                 .map(|(_, now)| Message::Frame(now)),
             activation_token_subscription(0).map(Message::Token),
+            self.core.watch_config(Self::APP_ID).map(|u| {
+                for err in u.errors {
+                    tracing::error!(?err, "Error watching config");
+                }
+                Message::ConfigChanged(u.config)
+            }),
         ];
         if let Some(conn) = self.zbus_connection.clone() {
             subscriptions.push(settings_daemon::subscription(conn).map(Message::SettingsDaemon));

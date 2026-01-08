@@ -6,6 +6,6 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, CosmicConfigEntry, Default)]
 #[version = 1]
-pub struct BatteryConfig {
+pub struct BatteryAppletConfig {
     pub show_percentage: bool,
 }
