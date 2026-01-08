@@ -6,6 +6,7 @@ use crate::{
         Power, PowerProfileRequest, PowerProfileUpdate, get_charging_limit,
         power_profile_subscription, set_charging_limit, unset_charging_limit,
     },
+    config,
     dgpu::{Entry, GpuUpdate, dgpu_subscription},
     fl,
 };
@@ -208,7 +209,7 @@ impl cosmic::Application for CosmicBatteryApplet {
     type Message = Message;
     type Executor = cosmic::SingleThreadExecutor;
     type Flags = ();
-    const APP_ID: &'static str = "com.system76.CosmicAppletButton";
+    const APP_ID: &'static str = config::APP_ID;
 
     fn init(core: cosmic::app::Core, _flags: Self::Flags) -> (Self, app::Task<Self::Message>) {
         let config = Config::new(Self::APP_ID, BatteryAppletConfig::VERSION)
