@@ -1,35 +1,36 @@
 power = ಪವರ್
-settings = ಸೆಟಿಂಗ್‌ಗಳು...
-lock-screen = ಲಾಕ್ ಸ್ಕ್ರೀನ್
-lock-screen-shortcut = ಸೂಪರ್ + ಎಸ್ಕೇಪ್
+settings = ಸೆಟ್ಟಿಂಗ್‌ಗಳು...
+lock-screen = ಸ್ಕ್ರೀನ್ ಲಾಕ್ ಮಾಡಿ
+lock-screen-shortcut = Super + Escape
 log-out = ಲಾಗ್ ಔಟ್
-suspend = ಅಮಾನತುಗೊಳಿಸಿ
-restart = ಪುನಾರಂಭಿಸಿ
-shutdown = ಸ್ಥಗಿತಗೊಳಿಸಿ
-confirm = ದೃಢೀಕರಿಸಿ
-cancel = ರದ್ದುಗೊಳಿಸಿ
+log-out-shortcut = Super + Shift + Escape
+suspend = ಸಸ್ಪೆಂಡ್
+restart = ರೀಸ್ಟಾರ್ಟ್
+shutdown = ಶಟ್‌ಡೌನ್
+confirm = ದೃಢಪಡಿಸಿ
+cancel = ರದ್ದುಮಾಡಿ
 confirm-button = {
-    $action -> 
+    $action ->
         [restart] { restart }
-        [suspend] { suspend}
+        [suspend] { suspend }
         [shutdown] ಪವರ್ ಆಫ್
         [log-out] { log-out }
-        *[other] { confirm}
+        *[other] { confirm }
 }
-confirm-title = 
-    { $action -> 
+confirm-title =
+    { $action ->
         [restart] { restart }
         [suspend] { suspend }
         [shutdown] { shutdown }
-        [log-out] ಎಲ್ಲಾ ಅಪ್ಲಿಕೇಶನ್‌ಗಳನ್ನು ಬಿಟ್ಟು ಲಾಗ್ ಔಟ್ ಆಗಿ
-        *[other] ಆಯ್ಕೆ ಮಾಡಿದ ಕ್ರಿಯೆಯನ್ನು ಕಾರ್ಯಗತಗೊಳಿಸಿ
-    } now?
-confirm-body = 
-    ಈ ಸಿಸ್ಟಮ್ { $action ->
-        [restart] ಪುನಾರಂಭಿಸುತ್ತಿದೆ
-        [suspend] ಅಮಾನತುಗೊಳಿಸುತ್ತದೆ
-        [shutdown] ಸ್ಥಗಿತಗೊಳಿಸುತ್ತಿದೆ
-        [lock-screen] ಸ್ಕ್ರೀನನ್ನು ಲಾಕ್ ಮಾಡುತ್ತದೆ
-        [log-out] ಲಾಗ್ ಔಟ್ ಆಗುತ್ತದೆ
-        *[other] ಆಯ್ಕೆ ಮಾಡಿದ ಕ್ರಿಯೆಯನ್ನು ಕಾರ್ಯಗತಗೊಳಿಸಿ
-    } ಸ್ವಯಂಚಾಲಿತವಾಗಿ { $countdown } ಸೆಕೆಂಡುಗಳಲ್ಲಿ.
+        [log-out] ಎಲ್ಲಾ ಅಪ್ಲಿಕೇಶನ್‌ಗಳನ್ನು ಮುಚ್ಚಿ ಲಾಗ್ ಔಟ್ ಮಾಡಿ
+        *[other] ಆಯ್ಕೆಮಾಡಿದ ಕ್ರಿಯೆಯನ್ನು ಅನ್ವಯಿಸಿ
+    } ಈಗ?
+confirm-body =
+    ಸಿಸ್ಟಮ್ { $action ->
+        [restart] ರೀಸ್ಟಾರ್ಟ್ ಮಾಡುತ್ತದೆ
+        [suspend] ಸಸ್ಪೆಂಡ್ ಮಾಡುತ್ತದೆ
+        [shutdown] ಪವರ್ ಆಫ್ ಮಾಡುತ್ತದೆ
+        [lock-screen] ಸ್ಕ್ರೀನ್ ಲಾಕ್ ಮಾಡುತ್ತದೆ
+        [log-out] ಲಾಗ್ ಔಟ್ ಮಾಡುತ್ತದೆ
+        *[other] ಆಯ್ಕೆಮಾಡಿದ ಕ್ರಿಯೆಯನ್ನು ಅನ್ವಯಿಸುತ್ತದೆ
+    } ಸ್ವಯಂಚಾಲಿತವಾಗಿ { $countdown } ಸೆಕೆಂಡುಗಳಲ್ಲಿ

@@ -1,1 +1,1 @@
-cosmic-applet-workspaces = ಕಾಸ್ಮಿಕ ಕಾರ್ಯಕ್ಷೇತ್ರಗಳು
+cosmic-applet-workspaces = COSMIC ವರ್ಕ್‌ಸ್ಪೇಸ್‌ಗಳು
