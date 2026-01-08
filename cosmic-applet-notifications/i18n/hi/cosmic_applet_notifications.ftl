@@ -1,13 +1,15 @@
-hours-ago = { $duration } { $duration ->
-    [one] घंटे पहले
-    *[other] घंटे पहले
+hours-ago = { $duration ->
+    [0] अभी-अभी
+    [one] 1 घंटे पहले
+    *[other] { $duration } घंटे पहले
 }
-minutes-ago = { $duration } { $duration ->
-    [one] मिनट पहले
-    *[other] मिनट पहले
+minutes-ago = { $duration ->
+    [0] अभी-अभी
+    [one] 1 मिनट पहले
+    *[other] { $duration } मिनट पहले
 }
 show-less = कम दिखाएँ
-show-more = और {$more} दिखाएँ
+show-more = {$more} और दिखाएँ
 clear-group = समूह हटाएँ
 clear-all = सभी सूचनाएँ हटाएँ
 do-not-disturb = डिस्टर्ब न करें

@@ -1,36 +1,36 @@
 power = पावर
 settings = सेटिंग्स...
-lock-screen = लॉक स्क्रीन
-lock-screen-shortcut = सुपर + एस्केप
+lock-screen = स्क्रीन लॉक करें
+lock-screen-shortcut = Super + Escape
 log-out = लॉग आउट
-suspend = निलंबित करें
-restart = पुनः आरंभ करें
-shutdown = बंद करें
+log-out-shortcut = Super + Shift + Escape
+suspend = सस्पेंड
+restart = रिस्टार्ट
+shutdown = शटडाउन
 confirm = पुष्टि करें
 cancel = रद्द करें
-confirm-button =
-    { $action ->
+confirm-button = {
+    $action ->
         [restart] { restart }
         [suspend] { suspend }
-        [shutdown] बंद करें
+        [shutdown] पावर ऑफ
         [log-out] { log-out }
-       *[other] { confirm }
-    }
+        *[other] { confirm }
+}
 confirm-title =
     { $action ->
         [restart] { restart }
         [suspend] { suspend }
         [shutdown] { shutdown }
-        [log-out] सभी अनुप्रयोगों को बंद करें और लॉग आउट करें
-       *[other] चयनित क्रिया लागू करें
+        [log-out] सभी एप्लिकेशन बंद करें और लॉग आउट करें
+        *[other] चयनित क्रिया लागू करें
     } अब?
 confirm-body =
-    प्रणाली { $action ->
-        [restart] पुनः आरंभ करेगी
-        [suspend] निलंबित करेगी
-        [shutdown] पावर ऑफ करेगी
-        [lock-screen] स्क्रीन लॉक करेगी
-        [log-out] लॉग आउट करेगी
-       *[other] चयनित क्रिया लागू करेगी
-    } स्वचालित रूप से { $countdown } सेकंड में.
-log-out-shortcut = सुपर + शिफ़्ट + एस्केप
+    सिस्टम { $action ->
+        [restart] रिस्टार्ट करेगा
+        [suspend] सस्पेंड करेगा
+        [shutdown] पावर ऑफ करेगा
+        [lock-screen] स्क्रीन लॉक करेगा
+        [log-out] लॉग आउट करेगा
+        *[other] चयनित क्रिया लागू करेगा
+    } स्वतः { $countdown } सेकंड में
