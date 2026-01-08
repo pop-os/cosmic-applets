@@ -6,7 +6,6 @@ use crate::{
         Power, PowerProfileRequest, PowerProfileUpdate, get_charging_limit,
         power_profile_subscription, set_charging_limit, unset_charging_limit,
     },
-    config::{self, BatteryConfig},
     dgpu::{Entry, GpuUpdate, dgpu_subscription},
     fl,
 };
@@ -30,6 +29,7 @@ use cosmic::{
     theme::{self, Button},
     widget::{button, divider, horizontal_space, icon, scrollable, slider, text, vertical_space},
 };
+use cosmic_applets_config::battery::BatteryConfig;
 use cosmic_config::{Config, CosmicConfigEntry};
 use cosmic_settings_daemon_subscription as settings_daemon;
 use cosmic_settings_upower_subscription::{
@@ -64,7 +64,6 @@ pub fn run() -> cosmic::iced::Result {
 }
 
 static MAX_CHARGE: LazyLock<id::Toggler> = LazyLock::new(id::Toggler::unique);
-static SHOW_PERCENTAGE: LazyLock<id::Toggler> = LazyLock::new(id::Toggler::unique);
 
 #[derive(Clone, Default)]
 struct GPUData {
@@ -186,7 +185,6 @@ enum Message {
     ReleaseScreenBrightness,
     InitChargingLimit(Option<bool>),
     SetChargingLimit(chain::Toggler, bool),
-    ShowBatteryPercentage(chain::Toggler, bool),
     KeyboardBacklight(KeyboardBacklightUpdate),
     UpowerDevice(DeviceDbusEvent),
     GpuInit(UnboundedSender<()>),
@@ -209,10 +207,10 @@ impl cosmic::Application for CosmicBatteryApplet {
     type Message = Message;
     type Executor = cosmic::SingleThreadExecutor;
     type Flags = ();
-    const APP_ID: &'static str = config::APP_ID;
+    const APP_ID: &'static str = "com.system76.CosmicAppletButton";
 
     fn init(core: cosmic::app::Core, _flags: Self::Flags) -> (Self, app::Task<Self::Message>) {
-        let config = Config::new(config::APP_ID, BatteryConfig::VERSION)
+        let config = Config::new(Self::APP_ID, BatteryConfig::VERSION)
             .ok()
             .and_then(|c| BatteryConfig::get_entry(&c).ok())
             .unwrap_or_default();
@@ -341,17 +339,6 @@ impl cosmic::Application for CosmicBatteryApplet {
                     return cosmic::iced::Task::perform(unset_charging_limit(), |_| {
                         cosmic::Action::None
                     });
-                }
-            }
-            Message::ShowBatteryPercentage(chain, show) => {
-                self.timeline.set_chain(chain).start();
-
-                if let Ok(helper) =
-                    cosmic::cosmic_config::Config::new(Self::APP_ID, BatteryConfig::VERSION)
-                {
-                    if let Err(err) = self.config.set_show_percentage(&helper, show) {
-                        tracing::error!(?err, "Error writing config");
-                    }
                 }
             }
             Message::Errored(why) => {

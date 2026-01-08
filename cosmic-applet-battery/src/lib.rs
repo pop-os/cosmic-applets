@@ -3,7 +3,6 @@
 
 mod app;
 mod backend;
-mod config;
 mod dgpu;
 mod localize;
 

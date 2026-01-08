@@ -8,6 +8,7 @@ license = "GPL-3.0-only"
 anyhow.workspace = true
 cosmic-time.workspace = true
 cosmic-config.workspace = true
+cosmic-applets-config.workspace = true
 drm = "0.14.1"
 futures.workspace = true
 i18n-embed-fl.workspace = true

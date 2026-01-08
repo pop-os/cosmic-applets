@@ -1196,6 +1196,7 @@ name = "cosmic-applet-battery"
 version = "1.0.0"
 dependencies = [
  "anyhow",
+ "cosmic-applets-config",
  "cosmic-config",
  "cosmic-settings-daemon-subscription",
  "cosmic-settings-upower-subscription",
