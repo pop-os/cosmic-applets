@@ -521,10 +521,14 @@ impl cosmic::Application for CosmicBatteryApplet {
             PanelAnchor::Left | PanelAnchor::Right => false,
         };
 
-        let mut children = vec![icon::from_name(self.icon_name.as_str()).into()];
-
         let suggested_size = self.core.applet.suggested_size(true);
         let applet_padding = self.core.applet.suggested_padding(true);
+
+        let mut children = vec![
+            icon::from_name(self.icon_name.as_str())
+                .size(suggested_size.0)
+                .into(),
+        ];
 
         if self.config.show_percentage {
             children.push(
