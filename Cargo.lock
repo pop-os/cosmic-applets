@@ -1246,6 +1246,8 @@ name = "cosmic-applet-battery"
 version = "1.0.0"
 dependencies = [
  "anyhow",
+ "cosmic-applets-config",
+ "cosmic-config",
  "cosmic-settings-daemon-subscription",
  "cosmic-settings-upower-subscription",
  "cosmic-time",
@@ -1256,6 +1258,7 @@ dependencies = [
  "libcosmic",
  "rust-embed",
  "rustc-hash 2.1.1",
+ "serde",
  "tokio",
  "tracing",
  "tracing-log",
