@@ -157,11 +157,14 @@ impl State {
         }
     }
 
-    pub fn subscription(&self) -> iced::Subscription<Msg> {
-        iced::Subscription::batch([
-            self.item.layout_subscription().map(Msg::Layout),
-            self.item.icon_subscription().map(Msg::Icon),
-        ])
+    pub fn subscription(&self, is_open: bool) -> iced::Subscription<Msg> {
+        let mut subscriptions = vec![self.item.icon_subscription().map(Msg::Icon)];
+
+        if is_open {
+            subscriptions.push(self.item.layout_subscription().map(Msg::Layout));
+        }
+
+        iced::Subscription::batch(subscriptions)
     }
 
     pub fn opened(&self) {
