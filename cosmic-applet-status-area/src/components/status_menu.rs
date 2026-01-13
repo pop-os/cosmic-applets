@@ -72,7 +72,7 @@ impl State {
                         .map(|mut i| {
                             if i.width <= 0 || i.height <= 0 || i.bytes.is_empty() {
                                 // App sent invalid icon data during initialization - show placeholder until NewIcon signal
-                                eprintln!("Skipping invalid icon: {}x{} with {} bytes, app may still be initializing",
+                                tracing::debug!("Skipping invalid icon: {}x{} with {} bytes, app may still be initializing",
                                         i.width, i.height, i.bytes.len());
                                 return icon::from_name("dialog-question").symbolic(true).handle();
                             }

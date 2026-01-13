@@ -7,7 +7,7 @@ use cosmic::{
     applet::token::subscription::{TokenRequest, TokenUpdate, activation_token_subscription},
     cctk::sctk::reexports::calloop,
     iced::{
-        self, Subscription,
+        self, Length, Subscription,
         platform_specific::shell::commands::popup::{destroy_popup, get_popup},
         window,
     },
@@ -567,7 +567,40 @@ fn menu_icon_button<'a>(
     applet: &'a cosmic::applet::Context,
     menu: &'a status_menu::State,
 ) -> cosmic::widget::Button<'a, Msg> {
-    applet.icon_button_from_handle(menu.icon_handle().clone())
+    let icon = menu.icon_handle().clone();
+
+    let theme = cosmic::theme::active();
+    let theme = theme.cosmic();
+
+    let suggested = applet.suggested_size(true);
+    let (major_padding, applet_padding_minor_axis) = applet.suggested_padding(true);
+    let (horizontal_padding, vertical_padding) = if applet.is_horizontal() {
+        (major_padding, applet_padding_minor_axis)
+    } else {
+        (applet_padding_minor_axis, major_padding)
+    };
+    let symbolic = icon.symbolic;
+
+    cosmic::widget::button::custom(
+        cosmic::widget::layer_container(
+            cosmic::widget::icon(icon)
+                .class(if symbolic {
+                    cosmic::theme::Svg::Custom(std::rc::Rc::new(|theme| {
+                        cosmic::iced_widget::svg::Style {
+                            color: Some(theme.cosmic().background.on.into()),
+                        }
+                    }))
+                } else {
+                    cosmic::theme::Svg::default()
+                })
+                .width(Length::Fixed(suggested.0 as f32))
+                .height(Length::Fixed(suggested.1 as f32)),
+        )
+        .center(Length::Fill),
+    )
+    .width(Length::Fixed((suggested.0 + 2 * horizontal_padding) as f32))
+    .height(Length::Fixed((suggested.1 + 2 * vertical_padding) as f32))
+    .class(cosmic::theme::Button::AppletIcon)
 }
 
 pub fn main() -> iced::Result {
