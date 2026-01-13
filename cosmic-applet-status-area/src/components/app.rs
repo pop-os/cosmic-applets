@@ -573,12 +573,13 @@ fn menu_icon_button<'a>(
     let theme = theme.cosmic();
 
     let suggested = applet.suggested_size(true);
-    let (major_padding, applet_padding_minor_axis) = applet.suggested_padding(true);
-    let (horizontal_padding, vertical_padding) = if applet.is_horizontal() {
-        (major_padding, applet_padding_minor_axis)
-    } else {
-        (applet_padding_minor_axis, major_padding)
-    };
+    let padding = applet.suggested_padding(true).1;
+    // let (major_padding, applet_padding_minor_axis) = applet.suggested_padding(true);
+    // let (horizontal_padding, vertical_padding) = if applet.is_horizontal() {
+    //     (major_padding, applet_padding_minor_axis)
+    // } else {
+    //     (applet_padding_minor_axis, major_padding)
+    // };
     let symbolic = icon.symbolic;
 
     cosmic::widget::button::custom(
@@ -598,8 +599,8 @@ fn menu_icon_button<'a>(
         )
         .center(Length::Fill),
     )
-    .width(Length::Fixed((suggested.0 + 2 * horizontal_padding) as f32))
-    .height(Length::Fixed((suggested.1 + 2 * vertical_padding) as f32))
+    .width(Length::Fixed((suggested.0 + 2 * padding) as f32))
+    .height(Length::Fixed((suggested.1 + 2 * padding) as f32))
     .class(cosmic::theme::Button::AppletIcon)
 }
 
