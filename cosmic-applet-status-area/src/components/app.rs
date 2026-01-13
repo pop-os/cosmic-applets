@@ -567,21 +567,7 @@ fn menu_icon_button<'a>(
     applet: &'a cosmic::applet::Context,
     menu: &'a status_menu::State,
 ) -> cosmic::widget::Button<'a, Msg> {
-    match (menu.icon_pixmap(), menu.icon_name(), menu.icon_theme_path()) {
-        (Some(icon), "", _) => applet.icon_button_from_handle(icon.clone().symbolic(true)),
-        (_, name, Some(theme_path)) if name != "" => {
-            let mut path = theme_path.to_owned();
-            // XXX right way to lookup icon in dir?
-            path.push(name.to_owned() + ".svg");
-            if !path.exists() {
-                path.pop();
-                path.push(name.to_owned() + ".png");
-            }
-            let icon = cosmic::widget::icon::from_path(path).symbolic(true);
-            applet.icon_button_from_handle(icon)
-        }
-        (_, name, _) => applet.icon_button(name),
-    }
+    applet.icon_button_from_handle(menu.icon_handle().clone())
 }
 
 pub fn main() -> iced::Result {

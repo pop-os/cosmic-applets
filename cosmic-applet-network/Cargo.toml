@@ -1,6 +1,6 @@
 [package]
 name = "cosmic-applet-network"
-version = "1.0.0"
+version = "1.0.2"
 edition = "2024"
 license = "GPL-3.0-or-later"
 
@@ -28,7 +28,7 @@ tracing-subscriber.workspace = true
 tracing.workspace = true
 zbus.workspace = true
 nm-secret-agent-manager = { git = "https://github.com/pop-os/dbus-settings-bindings/" }
-indexmap = "2.12.1"
+indexmap = "2.13.0"
 secure-string = "0.3.0"
 uuid = { version = "1.19.0", features = ["v4"] }
 
