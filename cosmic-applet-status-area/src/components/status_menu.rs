@@ -6,7 +6,7 @@ use cosmic::{
     applet::{menu_button, token::subscription::TokenRequest},
     cctk::sctk::reexports::calloop,
     iced,
-    widget::icon,
+    widget::icon::{self, IconFallback},
 };
 use std::path::{Path, PathBuf};
 
@@ -89,15 +89,19 @@ impl State {
                     }
                 }
 
-                // If the defined icon is a path, load the icon by path.
-                if Path::new(&icon_name).exists() {
-                    self.icon_handle =
-                        icon::from_path(Path::new(&icon_name).to_path_buf()).symbolic(true);
-                    return iced::Task::none();
-                }
+                // Load icon by path if the name is a path.
+                self.icon_handle = if Path::new(&icon_name).exists() {
+                    icon::from_path(Path::new(&icon_name).to_path_buf()).symbolic(true)
+                } else {
+                    icon::from_name(icon_name)
+                        .prefer_svg(true)
+                        .fallback(Some(IconFallback::Names(vec![
+                            "application-default".into(),
+                            "application-x-executable".into(),
+                        ])))
+                        .handle()
+                };
 
-                // Load the icon by name from a system icon theme.
-                self.icon_handle = icon::from_name(icon_name).prefer_svg(true).handle();
                 iced::Task::none()
             }
             Msg::Click(id, is_submenu) => {
