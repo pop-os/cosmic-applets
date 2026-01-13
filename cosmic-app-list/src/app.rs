@@ -192,12 +192,13 @@ impl DockItem {
 
         let app_icon = AppletIconData::new(applet);
 
-        let cosmic_icon = fde::IconSource::from_unknown(desktop_info.icon().unwrap_or_default())
-            .as_cosmic_icon()
-            // sets the preferred icon size variant
-            .size(128)
-            .width(app_icon.icon_size.into())
-            .height(app_icon.icon_size.into());
+        let cosmic_icon = cosmic::widget::icon(
+            fde::IconSource::from_unknown(desktop_info.icon().unwrap_or_default()).as_cosmic_icon(),
+        )
+        // sets the preferred icon size variant
+        .size(128)
+        .width(app_icon.icon_size.into())
+        .height(app_icon.icon_size.into());
 
         let indicator = {
             let container = if toplevels.len() <= 1 {
@@ -1977,10 +1978,12 @@ impl cosmic::Application for CosmicAppList {
         let theme = self.core.system_theme();
 
         if let Some((_, item, _, _)) = self.dnd_source.as_ref().filter(|s| s.0 == id) {
-            fde::IconSource::from_unknown(item.desktop_info.icon().unwrap_or_default())
-                .as_cosmic_icon()
-                .size(self.core.applet.suggested_size(false).0)
-                .into()
+            cosmic::widget::icon(
+                fde::IconSource::from_unknown(item.desktop_info.icon().unwrap_or_default())
+                    .as_cosmic_icon(),
+            )
+            .size(self.core.applet.suggested_size(false).0)
+            .into()
         } else if let Some(Popup {
             dock_item: DockItem { id, .. },
             popup_type,

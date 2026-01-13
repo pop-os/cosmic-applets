@@ -3,7 +3,7 @@
 mod app;
 mod config;
 mod localize;
-mod network_manager;
+mod utils;
 
 use crate::localize::localize;
 
