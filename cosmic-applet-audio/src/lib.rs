@@ -633,7 +633,7 @@ impl cosmic::Application for Audio {
                     fl!("output"),
                     match sink {
                         Some(sink) => sink.to_owned(),
-                        None => String::from("No device selected"),
+                        None => fl!("no-device"),
                     },
                     self.model.sinks(),
                     Message::OutputToggle,
