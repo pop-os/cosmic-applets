@@ -11,6 +11,7 @@ use cosmic_settings_network_manager_subscription::{
 use indexmap::IndexMap;
 use rustc_hash::FxHashSet;
 use secure_string::SecureString;
+use nmrs::{ConnectionError, EapMethod, EapOptions, Phase2, WifiSecurity};
 use std::{
     borrow::Cow,
     collections::{BTreeMap, BTreeSet},
@@ -162,6 +163,7 @@ struct CosmicNetworkApplet {
     nm_task: Option<tokio::sync::oneshot::Sender<()>>,
     secret_tx: Option<tokio::sync::mpsc::Sender<nm_secret_agent::Request>>,
     nm_state: MyNetworkState,
+    nm: Option<nmrs::NetworkManager>,
 
     // UI state
     show_visible_networks: bool,
@@ -502,6 +504,7 @@ pub(crate) enum Message {
     ConnectVPNWithPassword,
     VPNPasswordUpdate(SecureString),
     CancelVPNConnection,
+    NmrsReady(Option<nmrs::NetworkManager>),
 }
 
 #[derive(Debug, Clone)]
@@ -841,56 +844,39 @@ impl cosmic::Application for CosmicNetworkApplet {
                 }
             }
             Message::SelectWirelessAccessPoint(access_point) => {
-                let Some(tx) = self.nm_sender.as_ref() else {
-                    return Task::none();
+                let Some(nm) = self.nm.clone() else {
+                    return cosmic::task::message(Message::Error(
+                        "Network manager not initialized".to_string()
+                    )).map(cosmic::Action::App);
                 };
-
+                
+                // Open networks - connect immediately
                 if matches!(access_point.network_type, NetworkType::Open) {
-                    if let Err(err) =
-                        tx.unbounded_send(network_manager::Request::SelectAccessPoint(
-                            access_point.ssid.clone(),
-                            access_point.hw_address,
-                            access_point.network_type,
-                            self.secret_tx.clone(),
-                        ))
-                    {
-                        if err.is_disconnected() {
-                            return system_conn().map(cosmic::Action::App);
-                        }
-
-                        tracing::error!("{err:?}");
-                    }
+                    let ssid = access_point.ssid.to_string();
                     self.new_connection = Some(NewConnectionState::Waiting(access_point));
-                } else {
-                    if self
-                        .nm_state
-                        .nm_state
-                        .known_access_points
-                        .contains(&access_point)
-                    {
-                        if let Err(err) =
-                            tx.unbounded_send(network_manager::Request::SelectAccessPoint(
-                                access_point.ssid.clone(),
-                                access_point.hw_address,
-                                access_point.network_type,
-                                self.secret_tx.clone(),
-                            ))
-                        {
-                            if err.is_disconnected() {
-                                return system_conn().map(cosmic::Action::App);
+                    
+                    return cosmic::task::future(async move {
+                        match nm.connect(&ssid, WifiSecurity::Open).await {
+                            Ok(()) => {
+                                tracing::info!("Connected to open network {}", ssid);
+                                Message::Refresh
                             }
-
-                            tracing::error!("{err:?}");
+                            Err(e) => {
+                                tracing::error!("Failed to connect to {}: {}", ssid, e);
+                                Message::Error(format!("Failed to connect to '{}': {}", ssid, e))
+                            }
                         }
-                    }
-                    self.new_connection = Some(NewConnectionState::EnterPassword {
-                        access_point,
-                        description: None,
-                        identity: String::new(),
-                        password: String::new().into(),
-                        password_hidden: true,
-                    });
+                    }).map(cosmic::Action::App);
                 }
+                
+                // Secured networks - show password dialog
+                self.new_connection = Some(NewConnectionState::EnterPassword {
+                    access_point,
+                    description: None,
+                    identity: String::new(),
+                    password: String::new().into(),
+                    password_hidden: true,
+                });
             }
             Message::ToggleVisibleNetworks => {
                 self.new_connection = None;
@@ -1046,35 +1032,73 @@ impl cosmic::Application for CosmicNetworkApplet {
                 }
             }
             Message::ConnectWithPassword => {
-                // save password
-                let Some(tx) = self.nm_sender.as_ref() else {
-                    return Task::none();
-                };
-
-                if let Some(NewConnectionState::EnterPassword {
+                let Some(NewConnectionState::EnterPassword {
                     password,
                     access_point,
                     identity,
                     ..
-                }) = self.new_connection.take()
-                {
-                    let is_enterprise: bool = matches!(access_point.network_type, NetworkType::EAP);
-
-                    if let Err(err) = tx.unbounded_send(network_manager::Request::Authenticate {
-                        ssid: access_point.ssid.to_string(),
-                        identity: is_enterprise.then(|| identity.clone()),
-                        password,
-                        hw_address: access_point.hw_address,
-                        secret_tx: self.secret_tx.clone(),
-                    }) {
-                        if err.is_disconnected() {
-                            return system_conn().map(cosmic::Action::App);
+                }) = self.new_connection.take() else {
+                    return Task::none();
+                };
+                
+                let Some(nm) = self.nm.clone() else {
+                    return cosmic::task::message(Message::Error(
+                        "Network manager not initialized".to_string()
+                    )).map(cosmic::Action::App);
+                };
+                
+                let ssid = access_point.ssid.to_string();
+                let password_str = password.unsecure().to_string();
+                
+                self.new_connection = Some(NewConnectionState::Waiting(access_point.clone()));
+                
+                return cosmic::task::future(async move {
+                    let security = match access_point.network_type {
+                        NetworkType::Open => WifiSecurity::Open,
+                        NetworkType::EAP => {
+                            WifiSecurity::WpaEap {
+                                opts: EapOptions {
+                                    identity: identity.clone(),
+                                    password: password_str,
+                                    anonymous_identity: None,
+                                    domain_suffix_match: None,
+                                    ca_cert_path: None,
+                                    system_ca_certs: true,
+                                    method: EapMethod::Peap,
+                                    phase2: Phase2::Mschapv2,
+                                }
+                            }
                         }
-                        tracing::error!("Failed to authenticate with network manager");
+                        _ => {
+                            // All other types (including secured networks) use WPA-PSK
+                            WifiSecurity::WpaPsk {
+                                psk: password_str,
+                            }
+                        }
+                    };
+                    
+                    match nm.connect(&ssid, security).await {
+                        Ok(()) => {
+                            tracing::info!("Connected to {}", ssid);
+                            Message::Refresh
+                        }
+                        Err(e) => {
+                            tracing::error!("Connection to {} failed: {}", ssid, e);
+                            let error_msg = match e {
+                                ConnectionError::AuthFailed => 
+                                    format!("Wrong password for '{}'", ssid),
+                                ConnectionError::NotFound => 
+                                    format!("Network '{}' out of range", ssid),
+                                ConnectionError::Timeout => 
+                                    format!("Connection to '{}' timed out", ssid),
+                                ConnectionError::DhcpFailed => 
+                                    format!("Connected but failed to get IP address"),
+                                _ => format!("Failed to connect: {}", e),
+                            };
+                            Message::Error(error_msg)
+                        }
                     }
-                    self.new_connection
-                        .replace(NewConnectionState::Waiting(access_point));
-                }
+                }).map(cosmic::Action::App);
             }
             Message::ConnectionSettings(btree_map) => {
                 self.nm_state.ssid_to_uuid = btree_map;
@@ -1250,9 +1274,24 @@ impl cosmic::Application for CosmicNetworkApplet {
                 } => {}
             },
             Message::NetworkManagerConnect(connection) => {
+                // Initialize nmrs in a separate task
+                let init_task = cosmic::task::future(async {
+                    match nmrs::NetworkManager::new().await {
+                        Ok(nm) => {
+                            tracing::info!("nmrs NetworkManager initialized");
+                            Message::NmrsReady(Some(nm))
+                        }
+                        Err(e) => {
+                            tracing::warn!("Failed to initialize nmrs: {}", e);
+                            Message::NmrsReady(None)
+                        }
+                    }
+                });
+                
                 return cosmic::task::batch(vec![
                     self.connect(connection.clone()),
                     connection_settings(connection),
+                    init_task.map(cosmic::Action::App),
                 ]);
             }
             Message::PasswordUpdate(entered_pw) => {
@@ -1375,6 +1414,12 @@ impl cosmic::Application for CosmicNetworkApplet {
             }
             Message::CancelVPNConnection => {
                 self.nm_state.requested_vpn = None;
+            }
+            Message::NmrsReady(nm) => {
+                self.nm = nm;
+                if self.nm.is_some() {
+                    tracing::info!("nmrs ready for WiFi connections");
+                }
             }
         }
         Task::none()
