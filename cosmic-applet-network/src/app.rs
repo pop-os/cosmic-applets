@@ -964,19 +964,27 @@ impl cosmic::Application for CosmicNetworkApplet {
                     tracing::warn!("Failed to find known access point with ssid: {}", ssid);
                     return Task::none();
                 };
-                if let Some(tx) = self.nm_sender.as_ref() {
-                    if let Err(err) =
-                        tx.unbounded_send(network_manager::Request::Forget(ssid.into()))
-                    {
-                        if err.is_disconnected() {
-                            return system_conn().map(cosmic::Action::App);
+                
+                let Some(nm) = self.nm.clone() else {
+                    tracing::warn!("nmrs not initialized for forget network");
+                    return Task::none();
+                };
+                
+                self.show_visible_networks = true;
+                let ssid_clone = ssid.clone();
+                
+                return cosmic::task::future(async move {
+                    match nm.forget(&ssid_clone).await {
+                        Ok(()) => {
+                            tracing::info!("Forgot network {}", ssid_clone);
+                            Message::SelectWirelessAccessPoint(ap)
                         }
-
-                        tracing::error!("{err:?}");
+                        Err(e) => {
+                            tracing::error!("Failed to forget network {}: {}", ssid_clone, e);
+                            Message::Error(format!("Failed to forget network '{}'", ssid_clone))
+                        }
                     }
-                    self.show_visible_networks = true;
-                    return self.update(Message::SelectWirelessAccessPoint(ap));
-                }
+                }).map(cosmic::Action::App);
             }
             Message::Surface(a) => {
                 return cosmic::task::message(cosmic::Action::Cosmic(
@@ -1291,8 +1299,8 @@ impl cosmic::Application for CosmicNetworkApplet {
                 return cosmic::task::batch(vec![
                     self.connect(connection.clone()),
                     connection_settings(connection),
-                    init_task.map(cosmic::Action::App),
-                ]);
+                    init_task,
+                ]).map(cosmic::Action::App);
             }
             Message::PasswordUpdate(entered_pw) => {
                 if let Some(NewConnectionState::EnterPassword { password, .. }) =
@@ -1308,24 +1316,23 @@ impl cosmic::Application for CosmicNetworkApplet {
                 self.nm_state.devices = device_infos.into_iter().map(Arc::new).collect();
             }
             Message::WiFiEnable(enable) => {
-                if let Some(sender) = self.nm_sender.as_mut() {
-                    if let Err(err) =
-                        sender.unbounded_send(network_manager::Request::SetWiFi(enable))
-                    {
-                        if err.is_disconnected() {
-                            return system_conn().map(cosmic::Action::App);
+                let Some(nm) = self.nm.clone() else {
+                    tracing::warn!("nmrs not initialized for WiFi toggle");
+                    return Task::none();
+                };
+                
+                return cosmic::task::future(async move {
+                    match nm.set_wifi_enabled(enable).await {
+                        Ok(()) => {
+                            tracing::info!("WiFi {}", if enable { "enabled" } else { "disabled" });
+                            Message::Refresh
                         }
-
-                        tracing::error!("{err:?}");
-                    }
-                    if let Err(err) = sender.unbounded_send(network_manager::Request::Reload) {
-                        if err.is_disconnected() {
-                            return system_conn().map(cosmic::Action::App);
+                        Err(e) => {
+                            tracing::error!("Failed to {} WiFi: {}", if enable { "enable" } else { "disable" }, e);
+                            Message::Error(format!("Failed to {} WiFi", if enable { "enable" } else { "disable" }))
                         }
-
-                        tracing::error!("{err:?}");
                     }
-                }
+                }).map(cosmic::Action::App);
             }
             Message::SecretAgent(agent_event) => match agent_event {
                 nm_secret_agent::Event::RequestSecret {
