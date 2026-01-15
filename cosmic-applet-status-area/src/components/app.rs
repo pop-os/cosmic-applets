@@ -20,8 +20,6 @@ use crate::{components::status_menu, subscriptions::status_notifier_watcher};
 
 #[derive(Clone, Debug)]
 pub enum Msg {
-    None,
-    Activate(usize),
     Closed(window::Id),
     // XXX don't use index (unique window id? or I guess that's created and destroyed)
     StatusMenu((usize, status_menu::Msg)),
@@ -102,6 +100,10 @@ impl App {
             .on_enter(Msg::Hovered(*id))
             .into()
         });
+        let theme = self.core.system_theme();
+        let cosmic = theme.cosmic();
+        let corners = cosmic.corner_radii;
+        let pad = corners.radius_m[0];
 
         self.core
             .applet
@@ -149,26 +151,6 @@ impl cosmic::Application for App {
 
     fn update(&mut self, message: Msg) -> app::Task<Msg> {
         match message {
-            Msg::None => Task::none(),
-            Msg::Activate(id) => {
-                if let Some(token_tx) = self.token_tx.as_ref() {
-                    let _ = token_tx.send(TokenRequest {
-                        app_id: Self::APP_ID.to_string(),
-                        exec: format!("activate:{}", id),
-                    });
-                } else {
-                    if let Some(menu) = self.menus.get(&id) {
-                        let item_proxy = menu.item.item_proxy().clone();
-                        return Task::future(async move {
-                            match item_proxy.activate(0, 0).await {
-                                Ok(_) => cosmic::action::app(Msg::None),
-                                Err(_) => cosmic::action::app(Msg::TogglePopup(id)),
-                            }
-                        });
-                    }
-                }
-                Task::none()
-            }
             Msg::Closed(surface) => {
                 if self.popup == Some(surface) {
                     self.popup = None;
@@ -287,36 +269,6 @@ impl cosmic::Application for App {
                     return Task::none();
                 }
                 TokenUpdate::ActivationToken { token, exec: id } => {
-                    if let Some(id_str) = id.strip_prefix("activate:") {
-                        if let Ok(real_id) = id_str.parse::<usize>() {
-                            if let Some(menu) = self.menus.get(&real_id) {
-                                let item_proxy = menu.item.item_proxy().clone();
-                                let token = token.clone();
-                                let id = real_id;
-                                return Task::future(async move {
-                                    if let Some(t) = token {
-                                        match item_proxy.provide_xdg_activation_token(t).await {
-                                            Ok(_) => {
-                                                println!("Token provided successfully to {}", id)
-                                            }
-                                            Err(e) => eprintln!(
-                                                "Failed to provide token to {}: {}",
-                                                id, e
-                                            ),
-                                        }
-                                    }
-                                    match item_proxy.activate(0, 0).await {
-                                        Ok(_) => cosmic::action::app(Msg::None),
-                                        Err(err) => {
-                                            eprintln!("Activate failed: {}", err);
-                                            cosmic::action::app(Msg::TogglePopup(id))
-                                        }
-                                    }
-                                });
-                            }
-                        }
-                        return Task::none();
-                    }
                     if let Some(((state, id), token)) = str::parse(&id)
                         .ok()
                         .and_then(|id: usize| self.menus.get_mut(&id).map(|m| (m, id)))
@@ -493,10 +445,15 @@ impl cosmic::Application for App {
             .iter()
             .take(overflow_index.unwrap_or(self.menus.len()))
             .map(|(id, menu)| {
-                mouse_area(menu_icon_button(&self.core.applet, &menu).on_press(Msg::Activate(*id)))
-                    .on_right_press(Msg::TogglePopup(*id))
-                    .on_enter(Msg::Hovered(*id))
-                    .into()
+                mouse_area(menu_icon_button(&self.core.applet, &menu).on_press_down(
+                    if menu.item.menu_proxy().is_some() {
+                        Msg::TogglePopup(*id)
+                    } else {
+                        Msg::StatusMenu((*id, status_menu::Msg::Click(0, true)))
+                    },
+                ))
+                .on_enter(Msg::Hovered(*id))
+                .into()
             });
 
         self.core
