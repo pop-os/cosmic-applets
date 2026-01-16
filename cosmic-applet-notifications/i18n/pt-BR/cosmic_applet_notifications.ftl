@@ -5,8 +5,9 @@ hours-ago =
        *[other] { $duration } horas atrás
     }
 minutes-ago =
-    { NUMBER($duration) ->
-        [1] 1 minuto atrás
+    { $duration ->
+        [0] Agora mesmo
+        [one] 1 minuto atrás
        *[other] { $duration } minutos atrás
     }
 show-less = Mostrar menos
