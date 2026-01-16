@@ -478,7 +478,8 @@ impl cosmic::Application for App {
         subscriptions.push(status_notifier_watcher::subscription().map(Msg::StatusNotifier));
 
         for (id, menu) in &self.menus {
-            subscriptions.push(menu.subscription().with(*id).map(Msg::StatusMenu));
+            let is_open = self.open_menu == Some(*id);
+            subscriptions.push(menu.subscription(is_open).with(*id).map(Msg::StatusMenu));
         }
         subscriptions.push(activation_token_subscription(0).map(Msg::Token));
 
