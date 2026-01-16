@@ -31,6 +31,7 @@ nm-secret-agent-manager = { git = "https://github.com/pop-os/dbus-settings-bindi
 indexmap = "2.13.0"
 secure-string = "0.3.0"
 uuid = { version = "1.19.0", features = ["v4"] }
+nmrs = "1.3.5"
 
 
 [dependencies.cosmic-settings-network-manager-subscription]
