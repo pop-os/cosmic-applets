@@ -11,4 +11,4 @@ hours = óra
 until-empty = a lemerülésig
 power-settings = Energia- és akkumulátorbeállítások…
 dgpu-running = A dedikált GPU aktív, ami csökkentheti az akkumulátor élettartamát
-dgpu-applications = A { $gpu_name } dedikált GPU-t használó alkalmazások
+dgpu-applications = A(z) { $gpu_name } dedikált GPU-t használó alkalmazások

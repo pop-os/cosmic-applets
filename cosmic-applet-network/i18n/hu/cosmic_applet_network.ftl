@@ -1,11 +1,11 @@
 network = Hálózat
-airplane-mode = Repülőgép üzemmód
-airplane-mode-on = A repülőgép üzemmód be van kapcsolva
+airplane-mode = Repülőgép-üzemmód
+airplane-mode-on = A repülőgép-üzemmód be van kapcsolva
 turn-off-airplane-mode = Kapcsold ki a Wi-Fi, Bluetooth és mobil szélessáv engedélyezéséhez.
 wifi = Wi-Fi
 identity = Azonosító
-ipv4 = IPv4 cím
-ipv6 = IPv6 cím
+ipv4 = IPv4-cím
+ipv6 = IPv6-cím
 mac = MAC
 megabits-per-second = Mbps
 connected = Csatlakozva
