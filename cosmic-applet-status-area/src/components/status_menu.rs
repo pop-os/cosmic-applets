@@ -242,7 +242,11 @@ fn layout_view(layout: &Layout, expanded: Option<i32>) -> cosmic::Element<'_, Ms
                     .symbolic(true);
                 children.push(icon.into());
             }
-            let button = row_button(children).on_press(Msg::Click(i.id(), is_submenu));
+
+            let mut button = row_button(children);
+            if i.enabled() {
+                button = button.on_press(Msg::Click(i.id(), is_submenu));
+            }
 
             if is_submenu && is_expanded {
                 Some(
