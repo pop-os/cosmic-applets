@@ -11,6 +11,7 @@ Name[de]=Netzwerk
 Name[sk]=Sieť
 Name[sv]=Nätverk
 Name[es]=Red
+Name[it]=Rete
 Type=Application
 Exec=cosmic-applet-network
 Terminal=false
