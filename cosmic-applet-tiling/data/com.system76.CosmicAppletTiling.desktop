@@ -11,6 +11,7 @@ Name[nl]=Vensters tegelen
 Name[sk]=Dláždenie okien
 Name[sv]=Kakling
 Name[es]=Ventanas mosaico
+Name[it]=Tiling
 Type=Application
 Exec=cosmic-applet-tiling
 Terminal=false
