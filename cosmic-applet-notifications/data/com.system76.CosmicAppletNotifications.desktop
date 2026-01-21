@@ -11,6 +11,7 @@ Name[de]=Notifizierungszentrum
 Name[sk]=Centrum oznámení
 Name[sv]=Aviseringscenter
 Name[es]=Centro de notificaciones
+Name[it]=Centro notifiche
 Type=Application
 Exec=cosmic-applet-notifications
 Terminal=false
