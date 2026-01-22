@@ -11,6 +11,7 @@ Name[de]= Zugänglichkeit
 Name[sk]=Zjednodušenie ovládania
 Name[sv]=Tillgänglighet
 Name[es]=Accesibilidad
+Name[it]=Accessibilità
 Type=Application
 Exec=cosmic-applet-a11y
 Terminal=false

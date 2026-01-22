@@ -25,7 +25,7 @@ pub struct Icon {
 pub struct IconUpdate {
     pub name: Option<String>,
     pub pixmap: Option<Vec<Icon>>,
-    pub theme_path: Option<PathBuf>,
+    // pub theme_path: Option<PathBuf>,
 }
 
 impl StatusNotifierItem {
@@ -86,8 +86,15 @@ impl StatusNotifierItem {
             format!("status-notifier-item-layout-{}", &self.name),
             async move {
                 let initial = futures::stream::once(get_layout(menu_proxy.clone()));
-                let layout_updated_stream = menu_proxy.receive_layout_updated().await.unwrap();
-                let updates = layout_updated_stream.then(move |_| get_layout(menu_proxy.clone()));
+
+                let layout_updated = menu_proxy.receive_layout_updated().await.unwrap();
+                let props_updated = menu_proxy.receive_items_properties_updated().await.unwrap();
+
+                // Merge both streams - any update triggers a layout refetch
+                let updates =
+                    futures::stream_select!(layout_updated.map(|_| ()), props_updated.map(|_| ()))
+                        .then(move |()| get_layout(menu_proxy.clone()));
+
                 initial.chain(updates)
             }
             .flatten_stream(),
@@ -98,11 +105,11 @@ impl StatusNotifierItem {
         async fn icon_events(item_proxy: StatusNotifierItemProxy<'static>) -> IconUpdate {
             let icon_name = item_proxy.icon_name().await;
             let icon_pixmap = item_proxy.icon_pixmap().await;
-            let icon_theme_path = item_proxy.icon_theme_path().await.map(PathBuf::from);
+            // let icon_theme_path = item_proxy.icon_theme_path().await.map(PathBuf::from);
             IconUpdate {
                 name: icon_name.ok(),
                 pixmap: icon_pixmap.ok(),
-                theme_path: icon_theme_path.ok().filter(|x| !x.as_os_str().is_empty()),
+                // theme_path: icon_theme_path.ok().filter(|x| !x.as_os_str().is_empty()),
             }
         }
 
@@ -283,4 +290,11 @@ pub trait DBusMenu {
 
     #[zbus(signal)]
     fn layout_updated(&self, revision: u32, parent: i32) -> zbus::Result<()>;
+
+    #[zbus(signal)]
+    fn items_properties_updated(
+        &self,
+        updated_props: Vec<(i32, std::collections::HashMap<String, zvariant::OwnedValue>)>,
+        removed_props: Vec<(i32, Vec<String>)>,
+    ) -> zbus::Result<()>;
 }

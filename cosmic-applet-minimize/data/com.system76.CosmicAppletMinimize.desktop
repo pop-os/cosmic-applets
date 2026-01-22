@@ -11,6 +11,7 @@ Name[de]=Minimierte Fenster
 Name[sk]=Minimalizované okná
 Name[es]=Ventanas minimizadas
 Name[sv]=Minimera fönster
+Name[it]=Finestre minimizzate
 Type=Application
 Exec=cosmic-applet-minimize
 Terminal=false

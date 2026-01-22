@@ -11,6 +11,7 @@ Name[nl]=App-Tray
 Name[sk]=Panel aplikácií
 Name[sv]=Programfält
 Name[es]=Bandeja de aplicaciones
+Name[it]=Area applicazioni
 Type=Application
 Exec=cosmic-app-list
 Terminal=false

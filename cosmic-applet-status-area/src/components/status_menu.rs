@@ -6,7 +6,7 @@ use cosmic::{
     applet::{menu_button, token::subscription::TokenRequest},
     cctk::sctk::reexports::calloop,
     iced,
-    widget::icon,
+    widget::icon::{self, IconFallback},
 };
 use std::path::{Path, PathBuf};
 
@@ -24,10 +24,8 @@ pub struct State {
     pub item: StatusNotifierItem,
     layout: Option<Layout>,
     expanded: Option<i32>,
-    icon_name: String,
     // TODO handle icon with multiple sizes?
-    icon_pixmap: Option<icon::Handle>,
-    icon_theme_path: Option<PathBuf>,
+    icon_handle: icon::Handle,
     click_event: Option<(i32, bool)>,
 }
 
@@ -38,9 +36,9 @@ impl State {
                 item,
                 layout: None,
                 expanded: None,
-                icon_name: String::new(),
-                icon_pixmap: None,
-                icon_theme_path: None,
+                icon_handle: icon::from_name("application-default")
+                    .prefer_svg(true)
+                    .handle(),
                 click_event: None,
             },
             iced::Task::none(),
@@ -64,24 +62,45 @@ impl State {
                 iced::Task::none()
             }
             Msg::Icon(update) => {
-                self.icon_name = update.name.unwrap_or_default();
-                self.icon_pixmap = update.pixmap.and_then(|icons| icons
-                    .into_iter()
-                    .max_by_key(|i| (i.width, i.height))
-                    .map(|mut i| {
-                        if i.width <= 0 || i.height <= 0 || i.bytes.is_empty() {
-                            // App sent invalid icon data during initialization - show placeholder until NewIcon signal
-                            eprintln!("Skipping invalid icon: {}x{} with {} bytes, app may still be initializing",
-                                    i.width, i.height, i.bytes.len());
-                            return icon::from_name("dialog-question").symbolic(true).handle();
-                        }
-                        // Convert ARGB to RGBA
-                        for pixel in i.bytes.chunks_exact_mut(4) {
-                            pixel.rotate_left(1);
-                        }
-                        icon::from_raster_pixels(i.width as u32, i.height as u32, i.bytes)
-                    }));
-                self.icon_theme_path = update.theme_path;
+                let icon_name = update.name.unwrap_or_default();
+
+                // Use the icon pixmap if an icon was not defined by name.
+                if icon_name.is_empty() {
+                    let icon_pixmap = update.pixmap.and_then(|icons| icons
+                        .into_iter()
+                        .max_by_key(|i| (i.width, i.height))
+                        .map(|mut i| {
+                            if i.width <= 0 || i.height <= 0 || i.bytes.is_empty() {
+                                // App sent invalid icon data during initialization - show placeholder until NewIcon signal
+                                tracing::debug!("Skipping invalid icon: {}x{} with {} bytes, app may still be initializing",
+                                        i.width, i.height, i.bytes.len());
+                                return icon::from_name("dialog-question").symbolic(true).handle();
+                            }
+                            // Convert ARGB to RGBA
+                            for pixel in i.bytes.chunks_exact_mut(4) {
+                                pixel.rotate_left(1);
+                            }
+                            icon::from_raster_pixels(i.width as u32, i.height as u32, i.bytes)
+                        }));
+
+                    if let Some(icon) = icon_pixmap {
+                        self.icon_handle = icon.clone();
+                        return iced::Task::none();
+                    }
+                }
+
+                // Load icon by path if the name is a path.
+                self.icon_handle = if Path::new(&icon_name).exists() {
+                    icon::from_path(Path::new(&icon_name).to_path_buf()).symbolic(true)
+                } else {
+                    icon::from_name(icon_name)
+                        .prefer_svg(true)
+                        .fallback(Some(IconFallback::Names(vec![
+                            "application-default".into(),
+                            "application-x-executable".into(),
+                        ])))
+                        .handle()
+                };
 
                 iced::Task::none()
             }
@@ -134,16 +153,8 @@ impl State {
         self.item.name()
     }
 
-    pub fn icon_name(&self) -> &str {
-        &self.icon_name
-    }
-
-    pub fn icon_pixmap(&self) -> Option<&icon::Handle> {
-        self.icon_pixmap.as_ref()
-    }
-
-    pub fn icon_theme_path(&self) -> Option<&Path> {
-        self.icon_theme_path.as_deref()
+    pub fn icon_handle(&self) -> &icon::Handle {
+        &self.icon_handle
     }
 
     pub fn popup_view(&self) -> cosmic::Element<'_, Msg> {

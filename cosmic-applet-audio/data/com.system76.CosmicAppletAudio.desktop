@@ -12,6 +12,7 @@ Name[de]=Klang
 Name[sk]=Zvuk
 Name[sv]=Ljud
 Name[es]=Sonido
+Name[it]=Audio
 Type=Application
 Exec=cosmic-applet-audio
 Terminal=false

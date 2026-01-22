@@ -54,11 +54,11 @@ rust-embed = "8.9.0"
 rust-embed-utils = "8.9.0"
 rustc-hash = "2.1"
 rustix = { version = "1.1", features = ["fs", "process"] }
-zbus = { version = "5.12.0", default-features = false, features = ["tokio"] }
+zbus = { version = "5.13.1", default-features = false, features = ["tokio"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
 tracing-log = "0.2.0"
-tokio = { version = "1.48.0", features = ["full"] }
+tokio = { version = "1.49.0", features = ["full"] }
 cosmic-config = { git = "https://github.com/pop-os/libcosmic" }
 serde = { version = "1.0.228", features = ["derive"] }
 
@@ -88,3 +88,8 @@ sctk = { package = "smithay-client-toolkit", version = "0.20.0" }
 [patch."https://github.com/pop-os/cosmic-protocols"]
 cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols//", branch = "main" }
 cosmic-client-toolkit = { git = "https://github.com/pop-os/cosmic-protocols//", branch = "main" }
+
+# [patch.'https://github.com/pop-os/dbus-settings-bindings']
+# cosmic-dbus-networkmanager = { path = "../dbus-settings-bindings/networkmanager" }
+# upower_dbus = { path = "../dbus-settings-bindings/upower" }
+# nm-secret-agent-manager = { path = "../dbus-settings-bindings/nm-secret-agent-manager" }
