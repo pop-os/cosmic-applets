@@ -24,10 +24,11 @@ use cosmic::{
     theme::{self, CosmicTheme},
     widget::{Column, divider, text},
 };
-use cosmic_settings_subscriptions::{
-    accessibility::{self, DBusRequest, DBusUpdate},
-    cosmic_a11y_manager::{AccessibilityEvent, AccessibilityRequest, ColorFilter},
+
+use cosmic_settings_a11y_manager_subscription::{
+    self as cosmic_a11y_manager, AccessibilityEvent, AccessibilityRequest, ColorFilter,
 };
+use cosmic_settings_accessibility_subscription::{self as accessibility};
 use cosmic_time::{Instant, Timeline, anim, chain, id};
 use std::sync::LazyLock;
 use tokio::sync::mpsc::UnboundedSender;
@@ -50,7 +51,7 @@ struct CosmicA11yApplet {
     magnifier_enabled: bool,
     inverted_colors_enabled: bool,
     popup: Option<window::Id>,
-    dbus_sender: Option<UnboundedSender<DBusRequest>>,
+    dbus_sender: Option<UnboundedSender<accessibility::Request>>,
     wayland_sender: Option<calloop::channel::Sender<AccessibilityRequest>>,
     wayland_protocol_version: Option<u32>,
     timeline: Timeline,
@@ -70,7 +71,7 @@ enum Message {
     Frame(Instant),
     Token(TokenUpdate),
     OpenSettings,
-    DBusUpdate(DBusUpdate),
+    DBusUpdate(accessibility::Response),
     WaylandUpdate(WaylandUpdate),
     Surface(surface::Action),
 }
@@ -108,7 +109,7 @@ impl cosmic::Application for CosmicA11yApplet {
                 if let Some(tx) = &self.dbus_sender {
                     self.timeline.set_chain(chain).start();
                     self.reader_enabled = enabled;
-                    let _ = tx.send(DBusRequest::Status(enabled));
+                    let _ = tx.send(accessibility::Request::ScreenReader(enabled));
                 } else {
                     self.reader_enabled = false;
                 }
@@ -255,18 +256,19 @@ impl cosmic::Application for CosmicA11yApplet {
                 }
             },
             Message::DBusUpdate(update) => match update {
-                DBusUpdate::Error(err) => {
+                accessibility::Response::Error(err) => {
                     tracing::error!("{err}");
                     let _ = self.dbus_sender.take();
                     self.reader_enabled = false;
                 }
-                DBusUpdate::Status(enabled) => {
+                accessibility::Response::ScreenReader(enabled) => {
                     self.reader_enabled = enabled;
                 }
-                DBusUpdate::Init(enabled, tx) => {
+                accessibility::Response::Init(enabled, tx) => {
                     self.reader_enabled = enabled;
                     self.dbus_sender = Some(tx);
                 }
+                _ => (),
             },
             Message::WaylandUpdate(update) => match update {
                 WaylandUpdate::Errored => {

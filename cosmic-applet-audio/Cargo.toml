@@ -1,17 +1,15 @@
 [package]
 name = "cosmic-applet-audio"
-version = "0.1.1"
+version = "1.0.2"
 edition = "2024"
 license = "GPL-3.0-only"
 
 [dependencies]
-cosmic-settings-subscriptions.workspace = true
 cosmic-time.workspace = true
 i18n-embed-fl.workspace = true
 i18n-embed.workspace = true
 libcosmic.workspace = true
-libpulse-binding = "2.30.1"
-mpris2-zbus = { git = "https://github.com/pop-os/dbus-settings-bindings", branch = "precise-capturing" }
+mpris2-zbus = { git = "https://github.com/pop-os/dbus-settings-bindings" }
 # mpris2-zbus = { path = "../../dbus-settings-bindings/mpris2" }
 rust-embed.workspace = true
 serde.workspace = true
@@ -22,3 +20,6 @@ tracing.workspace = true
 url = "2"
 urlencoding = "2.1.3"
 zbus.workspace = true
+
+[dependencies.cosmic-settings-sound-subscription]
+git = "https://github.com/pop-os/cosmic-settings"

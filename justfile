@@ -73,3 +73,11 @@ vendor:
 vendor-extract:
     rm -rf vendor
     tar pxf vendor.tar
+
+# Bump cargo version, create git commit, and create tag
+tag version:
+    find -type f -name Cargo.toml -exec sed -i '0,/^version/s/^version.*/version = "{{version}}"/' '{}' \; -exec git add '{}' \;
+    cargo check
+    cargo clean
+    dch -D noble -v {{version}}
+    git add Cargo.lock debian/changelog

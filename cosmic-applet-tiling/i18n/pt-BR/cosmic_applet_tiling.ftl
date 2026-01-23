@@ -1,5 +1,5 @@
 tile-windows = Organizar janelas lado a lado automaticamente
-tile-current = Modo de janelas lado a lado
+tile-current = Organizar janelas lado a lado na área de trabalho atual
 shortcuts = Atalhos
 navigate-windows = Navegar pelas janelas
 move-window = Mover janela

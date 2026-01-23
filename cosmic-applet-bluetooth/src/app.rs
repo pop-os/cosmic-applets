@@ -267,6 +267,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
             Message::CloseRequested(id) => {
                 if Some(id) == self.popup {
                     self.popup = None;
+                    set_discovery(false);
                 }
                 return cosmic::task::future(
                     set_tick(Duration::from_secs(10))

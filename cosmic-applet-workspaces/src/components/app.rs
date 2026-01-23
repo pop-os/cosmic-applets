@@ -21,6 +21,7 @@ use cosmic::{
         widget::{button, column, row},
     },
     iced_core::{Background, Border},
+    scroll::DiscreteScrollState,
     surface,
     widget::{Id, autosize, container, horizontal_space, vertical_space},
 };
@@ -31,13 +32,11 @@ use crate::{
     wayland_subscription::{WorkspacesUpdate, workspaces},
 };
 
-use std::{
-    process::Command as ShellCommand,
-    sync::LazyLock,
-    time::{Duration, Instant},
-};
+use std::{process::Command as ShellCommand, sync::LazyLock, time::Duration};
 
 static AUTOSIZE_MAIN_ID: LazyLock<Id> = LazyLock::new(|| Id::new("autosize-main"));
+
+const SCROLL_RATE_LIMIT: Duration = Duration::from_millis(200);
 
 pub fn run() -> cosmic::iced::Result {
     cosmic::applet::run::<IcedWorkspacesApplet>(())
@@ -54,9 +53,7 @@ struct IcedWorkspacesApplet {
     workspaces: Vec<Workspace>,
     workspace_tx: Option<SyncSender<WorkspaceEvent>>,
     layout: Layout,
-    scroll: f64,
-    next_scroll: Option<Instant>,
-    last_scroll: Instant,
+    scroll: DiscreteScrollState,
 }
 
 impl IcedWorkspacesApplet {
@@ -111,9 +108,7 @@ impl cosmic::Application for IcedWorkspacesApplet {
                 core,
                 workspaces: Vec::new(),
                 workspace_tx: Option::default(),
-                scroll: 0.0,
-                next_scroll: None,
-                last_scroll: Instant::now(),
+                scroll: DiscreteScrollState::default().rate_limit(Some(SCROLL_RATE_LIMIT)),
             },
             Task::none(),
         )
@@ -148,53 +143,21 @@ impl cosmic::Application for IcedWorkspacesApplet {
                 }
             }
             Message::WheelScrolled(delta) => {
-                let (delta, debounce) = match delta {
-                    ScrollDelta::Lines { x, y } => ((x + y) as f64, false),
-                    ScrollDelta::Pixels { x, y } => ((x + y) as f64, true),
-                };
+                let discrete_delta = self.scroll.update(delta);
+                if discrete_delta.y != 0 {
+                    if let Some(w_i) = self
+                        .workspaces
+                        .iter()
+                        .position(|w| w.state.contains(ext_workspace_handle_v1::State::Active))
+                    {
+                        let d_i = (w_i as isize - discrete_delta.y)
+                            .rem_euclid(self.workspaces.len() as isize)
+                            as usize;
 
-                let dur = if debounce {
-                    Duration::from_millis(350)
-                } else {
-                    Duration::from_millis(200)
-                };
-                if self.last_scroll.elapsed() > Duration::from_millis(100)
-                    || self.scroll * delta < 0.0
-                {
-                    self.next_scroll = None;
-                    self.scroll = 0.0;
-                }
-                self.last_scroll = Instant::now();
-
-                self.scroll += delta;
-                if let Some(next) = self.next_scroll {
-                    if next > Instant::now() {
-                        return cosmic::iced::Task::none();
-                    }
-                    self.next_scroll = None;
-                }
-
-                if self.scroll.abs() < 1.0 {
-                    return cosmic::iced::Task::none();
-                }
-                self.next_scroll = Some(Instant::now() + dur);
-                if let Some(w_i) = self
-                    .workspaces
-                    .iter()
-                    .position(|w| w.state.contains(ext_workspace_handle_v1::State::Active))
-                {
-                    let max_w = self.workspaces.len().wrapping_sub(1);
-                    let d_i = if self.scroll > 0.0 {
-                        if w_i == 0 { max_w } else { w_i.wrapping_sub(1) }
-                    } else if w_i == max_w {
-                        0
-                    } else {
-                        w_i.wrapping_add(1)
-                    };
-                    self.scroll = 0.0;
-                    if let Some(w) = self.workspaces.get(d_i) {
                         if let Some(tx) = self.workspace_tx.as_mut() {
-                            let _ = tx.try_send(WorkspaceEvent::Activate(w.handle.clone()));
+                            let _ = tx.try_send(WorkspaceEvent::Activate(
+                                self.workspaces[d_i].handle.clone(),
+                            ));
                         }
                     }
                 }

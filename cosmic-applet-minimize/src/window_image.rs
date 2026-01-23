@@ -46,7 +46,7 @@ where
                         )
                     } else {
                         Element::from(
-                            icon.as_cosmic_icon()
+                            cosmic::widget::icon(icon.as_cosmic_icon())
                                 .width(Length::Fixed((size - border * 2.0).max(0.)))
                                 .height(Length::Fixed((size - border * 2.0).max(0.))),
                         )
@@ -73,8 +73,7 @@ where
             .class(Button::AppletIcon)
             .padding(0)
             .into(),
-            icon: icon
-                .as_cosmic_icon()
+            icon: cosmic::widget::icon(icon.as_cosmic_icon())
                 .width(Length::Fixed(size / 3.0))
                 .height(Length::Fixed(size / 3.0))
                 .into(),

@@ -1,6 +1,6 @@
 [package]
 name = "cosmic-applet-minimize"
-version = "0.1.1"
+version = "1.0.2"
 edition = "2024"
 license = "GPL-3.0-only"
 
@@ -8,9 +8,9 @@ license = "GPL-3.0-only"
 anyhow.workspace = true
 i18n-embed-fl.workspace = true
 i18n-embed.workspace = true
-image = { version = "0.25.8", default-features = false }
+image = { version = "0.25.9", default-features = false }
 libcosmic.workspace = true
-memmap2 = "0.9.8"
+memmap2 = "0.9.9"
 rust-embed.workspace = true
 rustix.workspace = true
 tokio.workspace = true

@@ -4,6 +4,7 @@
 use cosmic::iced::{self, Subscription};
 use futures::{FutureExt, StreamExt};
 use rustc_hash::FxHashMap;
+use std::path::PathBuf;
 use zbus::zvariant::{self, OwnedValue};
 
 #[derive(Clone, Debug)]
@@ -21,9 +22,10 @@ pub struct Icon {
 }
 
 #[derive(Clone, Debug)]
-pub enum IconUpdate {
-    Name(String),
-    Pixmap(Vec<Icon>),
+pub struct IconUpdate {
+    pub name: Option<String>,
+    pub pixmap: Option<Vec<Icon>>,
+    // pub theme_path: Option<PathBuf>,
 }
 
 impl StatusNotifierItem {
@@ -48,7 +50,7 @@ impl StatusNotifierItem {
         let menu_path = item_proxy.menu().await;
 
         // Why would an item say it has no menu but provide a menu path? Slack does this.
-        let mut is_menu = menu_path.is_ok() || is_menu.unwrap_or(false);
+        let is_menu = menu_path.is_ok() || is_menu.unwrap_or(false);
 
         if !is_menu {
             return Ok(Self {
@@ -84,8 +86,15 @@ impl StatusNotifierItem {
             format!("status-notifier-item-layout-{}", &self.name),
             async move {
                 let initial = futures::stream::once(get_layout(menu_proxy.clone()));
-                let layout_updated_stream = menu_proxy.receive_layout_updated().await.unwrap();
-                let updates = layout_updated_stream.then(move |_| get_layout(menu_proxy.clone()));
+
+                let layout_updated = menu_proxy.receive_layout_updated().await.unwrap();
+                let props_updated = menu_proxy.receive_items_properties_updated().await.unwrap();
+
+                // Merge both streams - any update triggers a layout refetch
+                let updates =
+                    futures::stream_select!(layout_updated.map(|_| ()), props_updated.map(|_| ()))
+                        .then(move |()| get_layout(menu_proxy.clone()));
+
                 initial.chain(updates)
             }
             .flatten_stream(),
@@ -93,22 +102,15 @@ impl StatusNotifierItem {
     }
 
     pub fn icon_subscription(&self) -> iced::Subscription<IconUpdate> {
-        fn icon_events(
-            item_proxy: StatusNotifierItemProxy<'static>,
-        ) -> impl futures::Stream<Item = IconUpdate> + 'static {
-            async move {
-                let icon_name = item_proxy.icon_name().await;
-                let icon_pixmap = item_proxy.icon_pixmap().await;
-                futures::stream::iter(
-                    [
-                        icon_name.map(IconUpdate::Name),
-                        icon_pixmap.map(IconUpdate::Pixmap),
-                    ]
-                    .into_iter()
-                    .filter_map(Result::ok),
-                )
+        async fn icon_events(item_proxy: StatusNotifierItemProxy<'static>) -> IconUpdate {
+            let icon_name = item_proxy.icon_name().await;
+            let icon_pixmap = item_proxy.icon_pixmap().await;
+            // let icon_theme_path = item_proxy.icon_theme_path().await.map(PathBuf::from);
+            IconUpdate {
+                name: icon_name.ok(),
+                pixmap: icon_pixmap.ok(),
+                // theme_path: icon_theme_path.ok().filter(|x| !x.as_os_str().is_empty()),
             }
-            .flatten_stream()
         }
 
         let item_proxy = self.item_proxy.clone();
@@ -118,7 +120,7 @@ impl StatusNotifierItem {
                 let new_icon_stream = item_proxy.receive_new_icon().await.unwrap();
                 futures::stream::once(async {})
                     .chain(new_icon_stream.map(|_| ()))
-                    .flat_map(move |()| icon_events(item_proxy.clone()))
+                    .then(move |()| icon_events(item_proxy.clone()))
             }
             .flatten_stream(),
         )
@@ -144,6 +146,9 @@ async fn get_layout(menu_proxy: DBusMenuProxy<'static>) -> Result<Layout, String
 pub trait StatusNotifierItem {
     #[zbus(property)]
     fn icon_name(&self) -> zbus::Result<String>;
+
+    #[zbus(property)]
+    fn icon_theme_path(&self) -> zbus::Result<String>;
 
     // https://www.freedesktop.org/wiki/Specifications/StatusNotifierItem/Icons
     #[zbus(property)]
@@ -285,4 +290,11 @@ pub trait DBusMenu {
 
     #[zbus(signal)]
     fn layout_updated(&self, revision: u32, parent: i32) -> zbus::Result<()>;
+
+    #[zbus(signal)]
+    fn items_properties_updated(
+        &self,
+        updated_props: Vec<(i32, std::collections::HashMap<String, zvariant::OwnedValue>)>,
+        removed_props: Vec<(i32, Vec<String>)>,
+    ) -> zbus::Result<()>;
 }

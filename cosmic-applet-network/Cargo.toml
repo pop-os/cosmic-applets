@@ -1,18 +1,18 @@
 [package]
 name = "cosmic-applet-network"
-version = "0.1.0"
+version = "1.0.2"
 edition = "2024"
 license = "GPL-3.0-or-later"
 
 [dependencies]
 anyhow.workspace = true
+async-fn-stream = "0.3"
 cosmic-dbus-networkmanager = { git = "https://github.com/pop-os/dbus-settings-bindings" }
 cosmic-time.workspace = true
 futures.workspace = true
 futures-util.workspace = true
 i18n-embed-fl.workspace = true
 i18n-embed.workspace = true
-itertools = "0.14.0"
 libcosmic = { workspace = true, features = [
     "applet",
     "applet-token",
@@ -27,3 +27,15 @@ tracing-log.workspace = true
 tracing-subscriber.workspace = true
 tracing.workspace = true
 zbus.workspace = true
+nm-secret-agent-manager = { git = "https://github.com/pop-os/dbus-settings-bindings/" }
+indexmap = "2.13.0"
+secure-string = "0.3.0"
+uuid = { version = "1.19.0", features = ["v4"] }
+
+
+[dependencies.cosmic-settings-network-manager-subscription]
+git = "https://github.com/pop-os/cosmic-settings/"
+
+[dependencies.cosmic-settings-airplane-mode-subscription]
+git = "https://github.com/pop-os/cosmic-settings/"
+

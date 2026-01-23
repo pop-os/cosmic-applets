@@ -1,6 +1,6 @@
 [package]
 name = "cosmic-applet-notifications"
-version = "0.1.0"
+version = "1.0.2"
 edition = "2024"
 license = "GPL-3.0-only"
 
@@ -25,4 +25,4 @@ i18n-embed = { workspace = true, features = [
 i18n-embed-fl.workspace = true
 rust-embed.workspace = true
 zbus = { workspace = true, features = ["tokio", "p2p"] }
-url = "2.5.7"
+url = "2.5.8"
