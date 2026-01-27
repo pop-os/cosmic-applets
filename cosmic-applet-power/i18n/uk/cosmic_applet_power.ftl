@@ -32,9 +32,5 @@ confirm-body =
         [lock-screen] заблокує екран
         [log-out] завершить сеанс
        *[other] виконає обрану дію
-    } автоматично за { $countdown } { $countdown ->
-        [one] секунду
-        [few] секунди
-       *[other] секунд
-    }.
+    } автоматично через { $countdown } секунд.
 log-out-shortcut = Super + Shift + Escape

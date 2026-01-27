@@ -1,9 +1,9 @@
 power = 电源
 settings = 设置...
 lock-screen = 锁定屏幕
-lock-screen-shortcut = 超级键 + 退出键
+lock-screen-shortcut = Super + Escape
 log-out = 登出
-log-out-shortcut = 超级键 + 换档键 + 退出键
+log-out-shortcut = Super + Shift + Escape
 suspend = 待机
 restart = 重启
 shutdown = 关机
