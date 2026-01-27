@@ -11,6 +11,7 @@ Name[nl]=Knop werkbladenoverzicht
 Name[sk]=Tlačidlo pracovných plôch
 Name[es]=Botón de espacios de trabajo
 Name[sv]=Knapp för arbetsytor
+Name[it]=Tasto Spazi di lavoro
 Type=Application
 Exec=cosmic-panel-button com.system76.CosmicWorkspaces
 Terminal=false

@@ -1,12 +1,12 @@
 bluetooth = Bluetooth
 other-devices = Egyéb Bluetooth-eszközök
-settings = Bluetooth beállítások...
-connected = Csatlakoztatva
-confirm-pin = Ellenőrizd, hogy a következő PIN-kód megegyezik-e a(z) {$deviceName} eszközön megjelenő PIN-kóddal
+settings = Bluetooth-beállítások…
+connected = Csatlakozva
+confirm-pin = Ellenőrizd, hogy a következő PIN-kód megegyezik-e a(z) { $deviceName } eszközön megjelenő PIN-kóddal
 confirm = Megerősítés
 cancel = Mégse
-unsuccessful = A párosítás sikertelen
-check-device = Győződj meg arról, hogy a(z) {$deviceName} be van kapcsolva, hatótávolságon belül van, és készen áll a párosításra.
+unsuccessful = Nem sikerült a párosítás
+check-device = Győződj meg arról, hogy a(z) { $deviceName } be van kapcsolva, hatótávolságon belül van, és készen áll a párosításra.
 try-again = Próbáld újra
 discoverable = Felfedezhető
 pairable = Párosítható

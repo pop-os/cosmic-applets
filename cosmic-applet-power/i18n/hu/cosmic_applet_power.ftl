@@ -1,5 +1,5 @@
 power = Főkapcsoló
-settings = Beállítások...
+settings = Beállítások…
 lock-screen = Képernyő zárolása
 lock-screen-shortcut = Super + Escape
 log-out = Kijelentkezés
@@ -9,28 +9,28 @@ restart = Újraindítás
 shutdown = Leállítás
 confirm = Megerősítés
 cancel = Mégse
-confirm-button = {
-    $action -> 
+confirm-button =
+    { $action ->
         [restart] { restart }
-        [suspend] { suspend}
+        [suspend] { suspend }
         [shutdown] Leállítás
         [log-out] { log-out }
-        *[other] { confirm}
-}
-confirm-title = 
-    { $action -> 
+       *[other] { confirm }
+    }
+confirm-title =
+    { $action ->
         [restart] { restart }
         [suspend] { suspend }
         [shutdown] { shutdown }
         [log-out] Minden alkalmazás bezárása és kijelentkezés
-        *[other] Alkalmazzuk a kiválasztott műveletet
+       *[other] Alkalmazzuk a kiválasztott műveletet
     } most?
-confirm-body = 
+confirm-body =
     A rendszer automatikusan { $action ->
         [restart] újra fog indulni
         [suspend] felfüggesztésre kerül
         [shutdown] leáll
         [lock-screen] zárolni fogja a képernyőt
         [log-out] kijelentkezik
-        *[other] alkalmazni fogja a kiválasztott műveletet
-    } { $countdown } másodperc múlva.
+       *[other] alkalmazni fogja a kiválasztott műveletet
+    } { $countdown } másodperc múlva

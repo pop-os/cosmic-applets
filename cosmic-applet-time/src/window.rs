@@ -163,13 +163,27 @@ impl Window {
         calendar
     }
 
+    /// Format with strftime if non-empty and ignore errors.
+    ///
+    /// Do not use to_string(). The formatter panics on invalid specifiers.
+    fn maybe_strftime(&self) -> Option<String> {
+        // strftime may override locale specific elements so it stands alone rather
+        // than using ICU.
+        (!self.config.format_strftime.is_empty())
+            .then(|| {
+                let mut s = String::new();
+                self.now
+                    .format(&self.config.format_strftime)
+                    .write_to(&mut s)
+                    .map(|_| s)
+                    .ok()
+            })
+            .flatten()
+    }
+
     fn vertical_layout(&self) -> Element<'_, Message> {
-        let elements: Vec<Element<'_, Message>> = if !self.config.format_strftime.is_empty() {
-            // strftime formatter may override locale specific elements so it stands alone rather
-            // than using ICU to determine a format.
-            self.now
-                .format(&self.config.format_strftime)
-                .to_string()
+        let elements: Vec<Element<'_, Message>> = if let Some(strftime) = self.maybe_strftime() {
+            strftime
                 .split_whitespace()
                 .map(|piece| self.core.applet.text(piece.to_owned()).into())
                 .collect()
@@ -226,7 +240,8 @@ impl Window {
                 date_time_col,
                 horizontal_space().width(Length::Fixed(
                     (self.core.applet.suggested_size(true).0
-                        + 2 * self.core.applet.suggested_padding(true)) as f32
+                        + 2 * self.core.applet.suggested_padding(true).1)
+                        as f32
                 ))
             )
             .align_x(Alignment::Center),
@@ -234,8 +249,8 @@ impl Window {
     }
 
     fn horizontal_layout(&self) -> Element<'_, Message> {
-        let formatted_date = if !self.config.format_strftime.is_empty() {
-            self.now.format(&self.config.format_strftime).to_string()
+        let formatted_date = if let Some(strftime) = self.maybe_strftime() {
+            strftime
         } else {
             let datetime = self.create_datetime(&self.now);
             let mut prefs = DateTimeFormatterPreferences::from(self.locale.clone());
@@ -247,7 +262,7 @@ impl Window {
 
             if self.config.show_date_in_top_panel {
                 if self.config.show_weekday {
-                    let mut fs = fieldsets::MDET::long();
+                    let mut fs = fieldsets::MDET::medium();
                     if !self.config.show_seconds {
                         fs = fs.with_time_precision(TimePrecision::Minute);
                     }
@@ -256,7 +271,7 @@ impl Window {
                         .format(&datetime)
                         .to_string()
                 } else {
-                    let mut fs = fieldsets::MDT::long();
+                    let mut fs = fieldsets::MDT::medium();
                     if !self.config.show_seconds {
                         fs = fs.with_time_precision(TimePrecision::Minute);
                     }
@@ -282,7 +297,8 @@ impl Window {
                 self.core.applet.text(formatted_date),
                 container(vertical_space().height(Length::Fixed(
                     (self.core.applet.suggested_size(true).1
-                        + 2 * self.core.applet.suggested_padding(true)) as f32
+                        + 2 * self.core.applet.suggested_padding(true).1)
+                        as f32
                 )))
             )
             .align_y(Alignment::Center),
@@ -662,9 +678,9 @@ impl cosmic::Application for Window {
             self.vertical_layout()
         })
         .padding(if horizontal {
-            [0, self.core.applet.suggested_padding(true)]
+            [0, self.core.applet.suggested_padding(true).0]
         } else {
-            [self.core.applet.suggested_padding(true), 0]
+            [self.core.applet.suggested_padding(true).0, 0]
         })
         .on_press_down(Message::TogglePopup)
         .class(cosmic::theme::Button::AppletIcon);

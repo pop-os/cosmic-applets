@@ -1,5 +1,6 @@
-cosmic-applets (0.1.0) UNRELEASED; urgency=medium
+cosmic-applets (1.0.2) noble; urgency=medium
 
+  [ Ashley Wulber ]
   * Initial release.
 
- -- Ashley Wulber <ashley@system76.com>  Thu, 07 Apr 2022 09:39:19 -0700
+ -- Michael Murphy <michael@mmurphy.dev>  Tue, 13 Jan 2026 17:20:30 +0100

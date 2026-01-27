@@ -26,7 +26,7 @@ where
         icon: &fde::IconSource,
         size: f32,
         on_press: Msg,
-        padding: u16,
+        padding: (u16, u16),
     ) -> Self {
         let border = 1.0;
         Self {
@@ -46,7 +46,7 @@ where
                         )
                     } else {
                         Element::from(
-                            icon.as_cosmic_icon()
+                            cosmic::widget::icon(icon.as_cosmic_icon())
                                 .width(Length::Fixed((size - border * 2.0).max(0.)))
                                 .height(Length::Fixed((size - border * 2.0).max(0.))),
                         )
@@ -63,8 +63,9 @@ where
                     .height(Length::Shrink)
                     .width(Length::Shrink),
                 )
-                .center(Length::Fixed(size + padding as f32 * 2.0))
-                .padding(padding),
+                .center_x(Length::Fixed(size + padding.0 as f32 * 2.0))
+                .center_y(Length::Fixed(size + padding.1 as f32 * 2.0))
+                .padding([padding.0 as f32, padding.1 as f32]),
             )
             .on_press(on_press)
             .width(Length::Shrink)
@@ -72,8 +73,7 @@ where
             .class(Button::AppletIcon)
             .padding(0)
             .into(),
-            icon: icon
-                .as_cosmic_icon()
+            icon: cosmic::widget::icon(icon.as_cosmic_icon())
                 .width(Length::Fixed(size / 3.0))
                 .height(Length::Fixed(size / 3.0))
                 .into(),

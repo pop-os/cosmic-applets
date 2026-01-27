@@ -11,6 +11,7 @@ Name[nl]=Datum, tijd en agenda
 Name[sk]=Dátum, čas a kalendár
 Name[es]=Fecha, hora y calendario
 Name[sv]=Datum, Tid & Kalender
+Name[it]=Data, ora e calendario
 Type=Application
 Exec=cosmic-applet-time
 Terminal=false
@@ -20,6 +21,7 @@ Keywords=COSMIC;Iced;
 Icon=com.system76.CosmicAppletTime-symbolic
 NoDisplay=true
 X-CosmicApplet=true
+X-CosmicShrinkable=true
 X-HostWaylandDisplay=true
 X-CosmicHoverPopup=Auto
 # No shrink priority, as this applet is always visible when configured

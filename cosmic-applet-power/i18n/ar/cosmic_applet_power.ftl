@@ -2,13 +2,13 @@ power = الطاقة
 settings = الإعدادات...
 lock-screen = قفل الشاشة
 lock-screen-shortcut = سوبر + Escape
-log-out = تسجيل الخروج
+log-out = سجِّل الخروج
 log-out-shortcut = سوبر + Shift + Escape
-suspend = عَلِّق
-restart = إعادة التشغيل
-shutdown = إيقاف التشغيل
-confirm = تأكيد
-cancel = إلغاء
+suspend = علِّق
+restart = أعد التشغيل
+shutdown = أطفئ
+confirm = أكِّد
+cancel = ألغِ
 confirm-button =
     { $action ->
         [restart] { restart }

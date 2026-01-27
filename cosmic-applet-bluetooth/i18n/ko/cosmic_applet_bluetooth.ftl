@@ -1,12 +1,12 @@
 bluetooth = 블루투스
-other-devices = Other Bluetooth Devices
+other-devices = 기타 블루투스 장치
 settings = 블루투스 설정...
 connected = 연결됨
-confirm-pin = {$deviceName}에 표시되는 PIN과 화면에 표시되는 PIN이 일치하는지 확인하십시오
+confirm-pin = 다음 PIN이 { $deviceName }에 표시된 것과 일치하는지 확인해 주세요
 confirm = 확인
 cancel = 취소
 unsuccessful = 페어링 실패
-check-device = {$deviceName}(이)가 켜저 있는지 확인하십시오. 만약 범위에 있다면 페어링 준비를 하십시오.
+check-device = { $deviceName }(이)가 켜져 있고, 범위 내에 있으며, 페어링 준비가 되어있는지 확인하세요.
 try-again = 다시 시도
-discoverable = 찾을 수 있음
+discoverable = 검색 가능
 pairable = 페어링 가능

@@ -1,7 +1,7 @@
 output = Sortie
 input = Entrée
-show-media-controls = Afficher les contrôles média sur le panel supérieur
-sound-settings = Paramètres sonores...
+show-media-controls = Afficher les contrôles média sur le panneau
+sound-settings = Paramètres audio...
 disconnected = PulseAudio est déconnecté
-no-device = Pas de périphérique sélectionné 
+no-device = Aucun périphérique sélectionné
 unknown-artist = Inconnu(e)

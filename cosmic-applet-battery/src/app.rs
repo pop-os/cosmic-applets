@@ -29,15 +29,12 @@ use cosmic::{
     surface, theme,
     widget::{divider, horizontal_space, icon, scrollable, slider, text, vertical_space},
 };
-use cosmic_settings_subscriptions::{
-    settings_daemon,
-    upower::{
-        device::{DeviceDbusEvent, device_subscription},
-        kbdbacklight::{
-            KeyboardBacklightRequest, KeyboardBacklightUpdate, kbd_backlight_subscription,
-        },
-    },
+use cosmic_settings_daemon_subscription as settings_daemon;
+use cosmic_settings_upower_subscription::{
+    device::{DeviceDbusEvent, device_subscription},
+    kbdbacklight::{KeyboardBacklightRequest, KeyboardBacklightUpdate, kbd_backlight_subscription},
 };
+
 use cosmic_time::{Instant, Timeline, anim, chain, id};
 
 use rustc_hash::FxHashMap;
@@ -136,10 +133,16 @@ impl CosmicBatteryApplet {
     }
 
     fn screen_brightness_percent(&self) -> Option<f64> {
-        Some(
-            (self.screen_brightness? as f64 / self.max_screen_brightness?.max(1) as f64)
-                .clamp(0.01, 1.0),
-        )
+        let raw = self.screen_brightness? as i64;
+        let max = self.max_screen_brightness?.max(1) as i64;
+        if max <= 20 {
+            // Coarse panels (<=20 brightness levels)
+            let rung = (raw.saturating_add(1)).min(20);
+            Some((5 * rung) as f64 / 100.0)
+        } else {
+            let p = ((raw * 100 + max / 2) / max).clamp(1, 100) as f64;
+            Some(p / 100.0)
+        }
     }
 
     fn update_display(&mut self) {
@@ -242,8 +245,21 @@ impl cosmic::Application for CosmicBatteryApplet {
                     return cosmic::task::message(Message::SetKbdBrightnessDebounced);
                 }
             }
+            // Matching brightness calculation logic from cosmic-osd and cosmic-settings-daemon
             Message::SetScreenBrightness(brightness) => {
-                self.screen_brightness = Some(brightness);
+                let snapped = if let Some(max) = self.max_screen_brightness {
+                    if max > 0 && max <= 20 {
+                        // Coarse: map raw→k by round, then back to raw setpoint round(k*max/20)
+                        let k = ((brightness as i64 * 20 + (max as i64) / 2) / (max as i64))
+                            .clamp(0, 20);
+                        (((k * (max as i64)) + 10) / 20) as i32
+                    } else {
+                        brightness
+                    }
+                } else {
+                    brightness
+                };
+                self.screen_brightness = Some(snapped);
                 if !self.dragging_screen_brightness {
                     self.dragging_screen_brightness = true;
                     self.update_display();
@@ -484,7 +500,7 @@ impl cosmic::Application for CosmicBatteryApplet {
     }
 
     fn view(&self) -> Element<'_, Message> {
-        let btn = self
+        let btn: Element<'_, Message> = self
             .core
             .applet
             .icon_button(&self.icon_name)
@@ -508,17 +524,24 @@ impl cosmic::Application for CosmicBatteryApplet {
                         shadow: Shadow::default(),
                         icon_color: Some(Color::TRANSPARENT),
                     }
-                })))
-                .into();
+                })));
+            let (dot_align_x, dot_align_y) = match self.core.applet.anchor {
+                PanelAnchor::Left => (Alignment::Start, Alignment::Center),
+                PanelAnchor::Right => (Alignment::End, Alignment::Center),
+                PanelAnchor::Top => (Alignment::Center, Alignment::Start),
+                PanelAnchor::Bottom => (Alignment::Center, Alignment::End),
+            };
 
-            match self.core.applet.anchor {
-                PanelAnchor::Left | PanelAnchor::Right => Column::with_children([btn, dot])
-                    .align_x(Alignment::Center)
-                    .into(),
-                PanelAnchor::Top | PanelAnchor::Bottom => Row::with_children([btn, dot])
-                    .align_y(Alignment::Center)
-                    .into(),
-            }
+            cosmic::iced::widget::stack![
+                btn,
+                container(dot)
+                    .width(Length::Fill)
+                    .height(Length::Fill)
+                    .align_y(dot_align_y)
+                    .align_x(dot_align_x)
+                    .padding(2.0)
+            ]
+            .into()
         };
 
         self.core.applet.autosize_window(content).into()
@@ -656,7 +679,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                                 .size(24)
                                 .symbolic(true),
                             slider(
-                                1..=max_screen_brightness,
+                                0..=max_screen_brightness,
                                 screen_brightness,
                                 Message::SetScreenBrightness
                             )
@@ -790,7 +813,7 @@ impl cosmic::Application for CosmicBatteryApplet {
             if gpu.toggled
                 && !self.core.applet.suggested_bounds.as_ref().is_some_and(|c| {
                     let suggested_size = self.core.applet.suggested_size(true);
-                    let padding = self.core.applet.suggested_padding(true);
+                    let padding = self.core.applet.suggested_padding(true).1;
                     let w = suggested_size.0 + 2 * padding;
                     let h = suggested_size.1 + 2 * padding;
                     // if we have a configure for width and height, we're in a overflow popup

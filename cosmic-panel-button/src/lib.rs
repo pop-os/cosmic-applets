@@ -41,6 +41,47 @@ enum Msg {
     Surface(surface::Action),
 }
 
+impl Button {
+    pub fn icon_button_from_handle<'a, Message: Clone + 'static>(
+        &self,
+        icon: cosmic::widget::icon::Handle,
+    ) -> cosmic::widget::Button<'a, Message> {
+        let theme = cosmic::theme::active();
+        let theme = theme.cosmic();
+
+        let suggested = self.core.applet.suggested_size(icon.symbolic);
+        let (major_padding, applet_padding_minor_axis) =
+            self.core.applet.suggested_padding(icon.symbolic);
+        let (horizontal_padding, vertical_padding) = if self.core.applet.is_horizontal() {
+            (major_padding, applet_padding_minor_axis)
+        } else {
+            (applet_padding_minor_axis, major_padding)
+        };
+        let symbolic = icon.symbolic;
+
+        cosmic::widget::button::custom(
+            cosmic::widget::layer_container(
+                cosmic::widget::icon(icon)
+                    .class(if symbolic {
+                        cosmic::theme::Svg::Custom(std::rc::Rc::new(|theme| {
+                            cosmic::iced_widget::svg::Style {
+                                color: Some(theme.cosmic().background.on.into()),
+                            }
+                        }))
+                    } else {
+                        cosmic::theme::Svg::default()
+                    })
+                    .width(Length::Fixed(suggested.0 as f32))
+                    .height(Length::Fixed(suggested.1 as f32)),
+            )
+            .center(Length::Fill),
+        )
+        .width(Length::Fixed((suggested.0 + 2 * horizontal_padding) as f32))
+        .height(Length::Fixed((suggested.1 + 2 * vertical_padding) as f32))
+        .class(cosmic::theme::Button::AppletIcon)
+    }
+}
+
 impl cosmic::Application for Button {
     type Message = Msg;
     type Executor = cosmic::SingleThreadExecutor;
@@ -124,13 +165,11 @@ impl cosmic::Application for Button {
             {
                 cosmic::Element::from(
                     self.core.applet.applet_tooltip::<Msg>(
-                        self.core
-                            .applet
-                            .icon_button_from_handle(
-                                cosmic::widget::icon::from_name(self.desktop.icon.clone().unwrap())
-                                    .handle(),
-                            )
-                            .on_press_down(Msg::Press),
+                        self.icon_button_from_handle(
+                            cosmic::widget::icon::from_name(self.desktop.icon.clone().unwrap())
+                                .handle(),
+                        )
+                        .on_press_down(Msg::Press),
                         self.desktop.name.clone(),
                         false,
                         Msg::Surface,
@@ -142,13 +181,13 @@ impl cosmic::Application for Button {
                     self.core.applet.text(&self.desktop.name),
                     vertical_space().height(Length::Fixed(
                         (self.core.applet.suggested_size(true).1
-                            + 2 * self.core.applet.suggested_padding(true))
+                            + 2 * self.core.applet.suggested_padding(true).1)
                             as f32
                     ))
                 )
                 .align_y(iced::Alignment::Center);
                 cosmic::widget::button::custom(content)
-                    .padding([0, self.core.applet.suggested_padding(true)])
+                    .padding([0, self.core.applet.suggested_padding(true).0])
                     .class(cosmic::theme::Button::AppletIcon)
                     .on_press_down(Msg::Press)
                     .into()

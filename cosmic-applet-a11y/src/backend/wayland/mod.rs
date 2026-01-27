@@ -9,7 +9,7 @@ use cosmic::iced::{
     stream,
 };
 use cosmic_protocols::a11y::v1::client::cosmic_a11y_manager_v1::Filter;
-use cosmic_settings_subscriptions::cosmic_a11y_manager::{
+use cosmic_settings_a11y_manager_subscription::{
     self as thread, AccessibilityEvent, AccessibilityRequest,
 };
 use std::sync::LazyLock;
