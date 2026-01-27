@@ -11,7 +11,7 @@ minutes-ago =
        *[other] { $duration } minutos atrás
     }
 show-less = Mostrar menos
-show-more = Mostrar { $more } mais
+show-more = Mostrar mais { $more }
 clear-group = Limpar grupo
 clear-all = Limpar todas as notificações
 do-not-disturb = Não Perturbe

@@ -1,4 +1,4 @@
-battery = 省电
+battery = 电池
 battery-desc = 降低功耗和性能。
 balanced = 平衡
 balanced-desc = 标准性能和电池使用。

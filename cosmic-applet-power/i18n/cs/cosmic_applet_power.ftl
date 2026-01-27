@@ -33,8 +33,9 @@ confirm-body =
         [lock-screen] se uzamkne
         [log-out] odhlásí uživatele
        *[other] vykoná vybranou akci
-    } automaticky za { $countdown } { $countdown ->
-        [one] sekundu.
-        [few] sekundy.
-       *[other] sekund.
+    } automaticky { $countdown ->
+        [0] nyní.
+        [one] za 1 sekundu.
+        [few] za { $countdown } sekundy.
+       *[other] za { $countdown } sekund.
     }

@@ -1,4 +1,4 @@
-screen-reader = Schermverteller
+screen-reader = Schermlezer
 magnifier = Vergrootglas
 invert-colors = Keer kleuren om
 settings = Toegankelijkheidsinstellingen...
