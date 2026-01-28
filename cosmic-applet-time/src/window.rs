@@ -262,23 +262,46 @@ impl Window {
 
             if self.config.show_date_in_top_panel {
                 if self.config.show_weekday {
-                    let mut fs = fieldsets::MDET::medium();
-                    if !self.config.show_seconds {
-                        fs = fs.with_time_precision(TimePrecision::Minute);
+                    if self.config.show_year {
+                        let mut fs = fieldsets::YMDET::medium();
+                        if !self.config.show_seconds {
+                            fs = fs.with_time_precision(TimePrecision::Minute);
+                        }
+                        DateTimeFormatter::try_new(prefs, fs)
+                            .unwrap()
+                            .format(&datetime)
+                            .to_string()
+                    } else {
+                        let mut fs = fieldsets::MDET::medium();
+                        if !self.config.show_seconds {
+                            fs = fs.with_time_precision(TimePrecision::Minute);
+                        }
+                        DateTimeFormatter::try_new(prefs, fs)
+                            .unwrap()
+                            .format(&datetime)
+                            .to_string()
                     }
-                    DateTimeFormatter::try_new(prefs, fs)
-                        .unwrap()
-                        .format(&datetime)
-                        .to_string()
                 } else {
-                    let mut fs = fieldsets::MDT::medium();
-                    if !self.config.show_seconds {
-                        fs = fs.with_time_precision(TimePrecision::Minute);
+                    if self.config.show_year {
+                        let mut fs = fieldsets::YMDT::medium();
+                        if !self.config.show_seconds {
+                            fs = fs.with_time_precision(TimePrecision::Minute);
+                        }
+                        DateTimeFormatter::try_new(prefs, fs)
+                            .unwrap()
+                            .format(&datetime)
+                            .to_string()
+                    } else {
+                        let mut fs = fieldsets::MDT::medium();
+                        if !self.config.show_seconds {
+                            fs = fs.with_time_precision(TimePrecision::Minute);
+                        }
+                        DateTimeFormatter::try_new(prefs, fs)
+                            .unwrap()
+                            .format(&datetime)
+                            .to_string()
                     }
-                    DateTimeFormatter::try_new(prefs, fs)
-                        .unwrap()
-                        .format(&datetime)
-                        .to_string()
+                    
                 }
             } else {
                 let mut fs = fieldsets::T::medium();
