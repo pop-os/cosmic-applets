@@ -16,7 +16,10 @@ use cosmic::{
 };
 use std::collections::BTreeMap;
 
-use crate::{components::status_menu, subscriptions::status_notifier_watcher};
+use crate::{
+    components::status_menu,
+    subscriptions::{status_notifier_item::StatusNotifierItem, status_notifier_watcher},
+};
 
 #[derive(Clone, Debug)]
 pub enum Msg {
@@ -158,13 +161,7 @@ impl cosmic::Application for App {
                     });
                 } else {
                     if let Some(menu) = self.menus.get(&id) {
-                        let item_proxy = menu.item.item_proxy().clone();
-                        return Task::future(async move {
-                            match item_proxy.activate(0, 0).await {
-                                Ok(_) => cosmic::action::app(Msg::None),
-                                Err(_) => cosmic::action::app(Msg::TogglePopup(id)),
-                            }
-                        });
+                        return activate(id, &menu.item, None);
                     }
                 }
                 Task::none()
@@ -290,29 +287,7 @@ impl cosmic::Application for App {
                     if let Some(id_str) = id.strip_prefix("activate:") {
                         if let Ok(real_id) = id_str.parse::<usize>() {
                             if let Some(menu) = self.menus.get(&real_id) {
-                                let item_proxy = menu.item.item_proxy().clone();
-                                let token = token.clone();
-                                let id = real_id;
-                                return Task::future(async move {
-                                    if let Some(t) = token {
-                                        match item_proxy.provide_xdg_activation_token(t).await {
-                                            Ok(_) => {
-                                                println!("Token provided successfully to {}", id)
-                                            }
-                                            Err(e) => eprintln!(
-                                                "Failed to provide token to {}: {}",
-                                                id, e
-                                            ),
-                                        }
-                                    }
-                                    match item_proxy.activate(0, 0).await {
-                                        Ok(_) => cosmic::action::app(Msg::None),
-                                        Err(err) => {
-                                            eprintln!("Activate failed: {}", err);
-                                            cosmic::action::app(Msg::TogglePopup(id))
-                                        }
-                                    }
-                                });
+                                return activate(real_id, &menu.item, token.clone());
                             }
                         }
                         return Task::none();
@@ -561,6 +536,31 @@ impl cosmic::Application for App {
     fn on_close_requested(&self, id: window::Id) -> Option<Msg> {
         Some(Msg::Closed(id))
     }
+}
+
+fn activate(
+    id: usize,
+    item: &StatusNotifierItem,
+    activation_token: Option<String>,
+) -> Task<cosmic::Action<Msg>> {
+    let item_proxy = item.item_proxy().clone();
+    Task::future(async move {
+        if let Some(t) = activation_token {
+            match item_proxy.provide_xdg_activation_token(t).await {
+                Ok(_) => {
+                    tracing::debug!("Token provided successfully to {}", id)
+                }
+                Err(e) => tracing::error!("Failed to provide token to {}: {}", id, e),
+            }
+        }
+        match item_proxy.activate(0, 0).await {
+            Ok(_) => cosmic::action::app(Msg::None),
+            Err(err) => {
+                tracing::error!("Activate failed: {}", err);
+                cosmic::action::app(Msg::TogglePopup(id))
+            }
+        }
+    })
 }
 
 fn menu_icon_button<'a>(
