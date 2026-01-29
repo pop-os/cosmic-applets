@@ -1,0 +1,14 @@
+power-settings = 전원 & 배터리 설정...
+hours = 시간
+until-empty = 남음
+battery-desc = 감소된 성능과 전력 사용량.
+max-charge = 배터리 최대 충전값을 80%로 설정하여 배터리 수명을 연장합니다
+balanced = 균형
+battery = 배터리
+seconds = 초
+dgpu-running = 외장 GPU가 활성화되어 배터리 사용 시간이 단축될 수 있습니다
+performance = 고성능
+performance-desc = 높은 성능과 전력 사용량.
+minutes = 분
+balanced-desc = 표준적인 성능과 배터리 사용량.
+dgpu-applications = { $gpu_name } 외장 GPU를 사용하는 앱

@@ -1,5 +1,5 @@
 tile-windows = Automatikus ablakcsempézés
-tile-current = Az aktuális munkaterület automatikus csempézése
+tile-current = Jelenlegi munkaterület csempézése
 shortcuts = Gyorsbillentyűk
 navigate-windows = Ablakok navigálása
 move-window = Ablak mozgatása

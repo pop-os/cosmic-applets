@@ -1,6 +1,7 @@
 [Desktop Entry]
 Name=Power & Battery
 Name[ar]=الطاقة والبطارية
+Name[bg]=Захранване и батерия
 Name[cs]=Napájení a baterie
 Name[zh_CN]=电源与电池
 Name[ko]=코스믹 배터리 애플릿
@@ -11,6 +12,7 @@ Name[nl]=Energie en batterij
 Name[de]=Energie und Akku
 Name[sk]=Napájanie a batéria
 Name[sv]=Ström & batteri
+Name[it]=Alimentazione e batteria
 Type=Application
 Exec=cosmic-applet-battery
 Terminal=false

@@ -1,0 +1,12 @@
+cancel = Бас тарту
+connected = Қосылды
+confirm = Растау
+bluetooth = Bluetooth
+other-devices = Басқа Bluetooth құрылғылары
+settings = Bluetooth баптаулары...
+confirm-pin = Келесі PIN коды { $deviceName } құрылғысында көрсетілген кодқа сәйкес келетінін растаңыз
+unsuccessful = Жұптастыру сәтсіз аяқталды
+check-device = { $deviceName } қосулы екенін, ауқым ішінде екенін және жұптастыруға дайын екенін тексеріңіз.
+try-again = Қайтадан көру
+discoverable = Көрінетін
+pairable = Жұптастыруға болады
