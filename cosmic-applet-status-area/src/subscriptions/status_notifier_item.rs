@@ -10,6 +10,7 @@ use zbus::zvariant::{self, OwnedValue};
 #[derive(Clone, Debug)]
 pub struct StatusNotifierItem {
     name: String,
+    is_menu: bool,
     item_proxy: StatusNotifierItemProxy<'static>,
     menu_proxy: Option<DBusMenuProxy<'static>>,
 }
@@ -44,32 +45,25 @@ impl StatusNotifierItem {
             .build()
             .await?;
 
-        // XX: some items will not implement this but have a menu anyway
-        let is_menu = item_proxy.item_is_menu().await;
+        let is_menu = item_proxy.item_is_menu().await.unwrap_or(false);
 
-        let menu_path = item_proxy.menu().await;
-
-        // Why would an item say it has no menu but provide a menu path? Slack does this.
-        let is_menu = menu_path.is_ok() || is_menu.unwrap_or(false);
-
-        if !is_menu {
-            return Ok(Self {
-                name,
-                item_proxy,
-                menu_proxy: None,
-            });
-        }
-        let menu_path = menu_path?;
-        let menu_proxy = DBusMenuProxy::builder(connection)
-            .destination(dest.to_string())?
-            .path(menu_path)?
-            .build()
-            .await?;
+        let menu_proxy = if let Ok(menu_path) = item_proxy.menu().await {
+            Some(
+                DBusMenuProxy::builder(connection)
+                    .destination(dest.to_string())?
+                    .path(menu_path)?
+                    .build()
+                    .await?,
+            )
+        } else {
+            None
+        };
 
         Ok(Self {
             name,
+            is_menu,
             item_proxy,
-            menu_proxy: Some(menu_proxy),
+            menu_proxy,
         })
     }
 
@@ -124,6 +118,11 @@ impl StatusNotifierItem {
             }
             .flatten_stream(),
         )
+    }
+
+    /// Item is only a menu, with no `Activate` action
+    pub fn is_menu(&self) -> bool {
+        self.is_menu
     }
 
     pub fn menu_proxy(&self) -> Option<&DBusMenuProxy<'static>> {

@@ -1,0 +1,4 @@
+[D-BUS Service]
+Name=com.system76.CosmicStatusNotifierWatcher
+Exec=@bindir@/cosmic-applet-status-area --status-notifier-watcher
+SystemdService=com.system76.CosmicStatusNotifierWatcher.service

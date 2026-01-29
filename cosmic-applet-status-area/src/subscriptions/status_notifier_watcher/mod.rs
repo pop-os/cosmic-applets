@@ -9,7 +9,7 @@ use futures::{StreamExt, stream};
 use crate::subscriptions::status_notifier_item::StatusNotifierItem;
 
 mod client;
-mod server;
+pub(crate) mod server;
 
 #[derive(Clone, Debug)]
 pub enum Event {
@@ -51,7 +51,9 @@ async fn connect() -> zbus::Result<(zbus::Connection, client::EventStream)> {
     let connection = zbus::Connection::session().await?;
 
     // Start `StatusNotifierWatcher` service, if there isn't one running already
-    server::create_service(&connection).await?;
+    if let Err(err) = crate::status_notifier_watcher::cosmic_register(&connection).await {
+        eprintln!("Failed to start status notifier watcher: {}", err);
+    }
 
     // Connect client and listen for registered/unregistered
     let stream = client::watch(&connection).await?;
