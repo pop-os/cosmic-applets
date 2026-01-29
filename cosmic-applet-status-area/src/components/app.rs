@@ -543,6 +543,9 @@ fn activate(
     item: &StatusNotifierItem,
     activation_token: Option<String>,
 ) -> Task<cosmic::Action<Msg>> {
+    if item.is_menu() {
+        return Task::done(cosmic::action::app(Msg::TogglePopup(id)));
+    }
     let item_proxy = item.item_proxy().clone();
     Task::future(async move {
         if let Some(t) = activation_token {
