@@ -121,14 +121,6 @@ impl State {
                 let item_proxy = self.item.item_proxy().clone();
 
                 let Some(menu_proxy) = self.item.menu_proxy().cloned() else {
-                    tokio::spawn(async move {
-                        let _ = item_proxy.provide_xdg_activation_token(token).await;
-                        if let Err(err) = item_proxy.activate(0, 0).await {
-                            tracing::error!(
-                                "Error activating status notifier item without menu proxy: {err:?}"
-                            );
-                        }
-                    });
                     return iced::Task::none();
                 };
                 tokio::spawn(async move {
@@ -242,7 +234,11 @@ fn layout_view(layout: &Layout, expanded: Option<i32>) -> cosmic::Element<'_, Ms
                     .symbolic(true);
                 children.push(icon.into());
             }
-            let button = row_button(children).on_press(Msg::Click(i.id(), is_submenu));
+
+            let mut button = row_button(children);
+            if i.enabled() {
+                button = button.on_press(Msg::Click(i.id(), is_submenu));
+            }
 
             if is_submenu && is_expanded {
                 Some(
