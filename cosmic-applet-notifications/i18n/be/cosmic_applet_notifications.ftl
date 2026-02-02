@@ -1,9 +1,10 @@
 hours-ago =
-    { $duration } { $duration ->
-        [one] гадзіну
-        [few] гадзіны
-       *[other] гадзін
-    } таму
+    { $duration ->
+        [0] толькі што
+        [one] { $duration } гадзіну таму
+        [few] { $duration } гадзіны таму
+       *[other] { $duration } гадзін таму
+    }
 minutes-ago =
     { $duration } { $duration ->
         [one] хвіліну
