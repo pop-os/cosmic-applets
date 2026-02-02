@@ -3,3 +3,4 @@ magnifier = Лупа
 invert-colors = Інвертаваць колеры
 settings = Налады даступнасці...
 high-contrast = Высокая кантраснасць
+filter-colors = Колеравыя фільтры
