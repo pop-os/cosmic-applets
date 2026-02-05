@@ -37,11 +37,15 @@ impl StatusNotifierWatcher {
         } else {
             service.to_string()
         };
-        Self::status_notifier_item_registered(&ctxt, &service)
-            .await
-            .unwrap();
 
-        self.items.push((sender.to_owned(), service));
+        // Ignore duplicate
+        if !self.items.iter().any(|(a, b)| (a, b) == (sender, &service)) {
+            Self::status_notifier_item_registered(&ctxt, &service)
+                .await
+                .unwrap();
+
+            self.items.push((sender.to_owned(), service));
+        }
     }
 
     fn register_status_notifier_host(&self, _service: &str) {
