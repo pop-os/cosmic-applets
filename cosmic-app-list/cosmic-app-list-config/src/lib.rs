@@ -21,6 +21,12 @@ pub struct AppListConfig {
     pub filter_top_levels: Option<ToplevelFilter>,
     pub favorites: Vec<String>,
     pub enable_drag_source: bool,
+    #[serde(default)]
+    pub ungroup_windows: bool,
+    #[serde(default)]
+    pub show_on_active_output: bool,
+    #[serde(default)]
+    pub show_window_titles: bool,
 }
 
 impl Default for AppListConfig {
@@ -29,6 +35,9 @@ impl Default for AppListConfig {
             filter_top_levels: None,
             favorites: Vec::new(),
             enable_drag_source: true,
+            ungroup_windows: false,
+            show_on_active_output: false,
+            show_window_titles: false,
         }
     }
 }
