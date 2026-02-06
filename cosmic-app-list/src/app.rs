@@ -182,6 +182,7 @@ impl DockItem {
         is_focused: bool,
         dot_border_radius: [f32; 4],
         window_id: window::Id,
+        window_title: Option<&str>,
     ) -> Element<'_, Message> {
         let Self {
             toplevels,
@@ -192,16 +193,37 @@ impl DockItem {
 
         let app_icon = AppletIconData::new(applet);
 
+        // Use smaller icon when showing window title
+        let (icon_size, icon_padding): (u16, Padding) = if window_title.is_some() {
+            // Reduce icon size by ~35% when title is shown
+            let reduced_size = (app_icon.icon_size as f32 * 0.65) as u16;
+            // Reduce padding proportionally
+            let p = app_icon.padding;
+            let reduced_padding: Padding = [
+                p.top * 0.5,
+                p.right * 0.5,
+                p.bottom * 0.5,
+                p.left * 0.5,
+            ]
+            .into();
+            (reduced_size, reduced_padding)
+        } else {
+            (app_icon.icon_size, app_icon.padding)
+        };
+
         let cosmic_icon = cosmic::widget::icon(
             fde::IconSource::from_unknown(desktop_info.icon().unwrap_or_default()).as_cosmic_icon(),
         )
         // sets the preferred icon size variant
         .size(128)
-        .width(app_icon.icon_size.into())
-        .height(app_icon.icon_size.into());
+        .width(icon_size.into())
+        .height(icon_size.into());
+
+        // Skip indicator when showing window title (the title itself indicates the window is open)
+        let show_indicator = window_title.is_none();
 
         let indicator = {
-            let container = if toplevels.len() <= 1 {
+            let container = if !show_indicator || toplevels.len() <= 1 {
                 vertical_space().height(Length::Fixed(0.0))
             } else {
                 match applet.anchor {
@@ -214,9 +236,9 @@ impl DockItem {
                 }
             }
             .apply(container)
-            .padding(app_icon.dot_radius);
+            .padding(if show_indicator { app_icon.dot_radius } else { 0.0 });
 
-            if toplevels.is_empty() {
+            if toplevels.is_empty() || !show_indicator {
                 container
             } else {
                 container.class(theme::Container::custom(move |theme| container::Style {
@@ -265,10 +287,45 @@ impl DockItem {
             .into(),
         };
 
-        let icon_button = button::custom(icon_wrapper)
-            .padding(app_icon.padding)
+        // Add window title if provided (only for horizontal panels)
+        let icon_with_title: Element<_> = if let Some(title) = window_title {
+            // Truncate title to max characters (char-safe for UTF-8)
+            let max_title_len = 11;
+            let truncated_title: String = if title.chars().count() > max_title_len {
+                let mut s: String = title.chars().take(max_title_len).collect();
+                s.push_str("...");
+                s
+            } else {
+                title.to_string()
+            };
+
+            match applet.anchor {
+                PanelAnchor::Top | PanelAnchor::Bottom => {
+                    // Horizontal panel: show title to the right of the icon
+                    row![
+                        icon_wrapper,
+                        text::body(truncated_title)
+                            .wrapping(Wrapping::None)
+                            .width(Length::Shrink)
+                    ]
+                    .align_y(Alignment::Center)
+                    .spacing(4)
+                    .into()
+                }
+                PanelAnchor::Left | PanelAnchor::Right => {
+                    // Vertical panel: just show the icon (no space for title)
+                    icon_wrapper
+                }
+            }
+        } else {
+            icon_wrapper
+        };
+
+        let show_title = window_title.is_some();
+        let icon_button = button::custom(icon_with_title)
+            .padding(icon_padding)
             .selected(is_focused)
-            .class(app_list_icon_style(is_focused));
+            .class(app_list_icon_style(is_focused, show_title));
 
         let icon_button: Element<_> = if interaction_enabled {
             mouse_area(
@@ -367,6 +424,7 @@ struct CosmicAppList {
 pub enum PopupType {
     RightClickMenu,
     ToplevelList,
+    Settings,
 }
 
 #[derive(Debug, Clone)]
@@ -400,6 +458,10 @@ enum Message {
     StopListeningForDnd,
     IncrementSubscriptionCtr,
     ConfigUpdated(AppListConfig),
+    OpenSettings,
+    ToggleUngroupWindows(bool),
+    ToggleShowOnActiveOutput(bool),
+    ToggleShowWindowTitles(bool),
     OpenFavorites,
     OpenActive,
     Surface(surface::Action),
@@ -584,10 +646,16 @@ fn window_menu_style(selected: bool) -> cosmic::theme::Button {
     }
 }
 
-fn app_list_icon_style(selected: bool) -> cosmic::theme::Button {
+fn app_list_icon_style(selected: bool, show_title: bool) -> cosmic::theme::Button {
     Button::Custom {
         active: Box::new(move |focused, theme| {
             let a = button::Catalog::active(theme, focused, selected, &Button::AppletIcon);
+            let border_radius = if show_title {
+                // Less rounded when showing title (use small radius)
+                theme.cosmic().radius_xs().into()
+            } else {
+                a.border_radius
+            };
             button::Style {
                 background: if selected {
                     Some(Background::Color(
@@ -596,15 +664,32 @@ fn app_list_icon_style(selected: bool) -> cosmic::theme::Button {
                 } else {
                     a.background
                 },
+                border_radius,
                 ..a
             }
         }),
         hovered: Box::new(move |focused, theme| {
-            button::Catalog::hovered(theme, focused, selected, &Button::AppletIcon)
+            let h = button::Catalog::hovered(theme, focused, selected, &Button::AppletIcon);
+            if show_title {
+                button::Style {
+                    border_radius: theme.cosmic().radius_xs().into(),
+                    ..h
+                }
+            } else {
+                h
+            }
         }),
         disabled: Box::new(|theme| button::Catalog::disabled(theme, &Button::AppletIcon)),
         pressed: Box::new(move |focused, theme| {
-            button::Catalog::pressed(theme, focused, selected, &Button::AppletIcon)
+            let p = button::Catalog::pressed(theme, focused, selected, &Button::AppletIcon);
+            if show_title {
+                button::Style {
+                    border_radius: theme.cosmic().radius_xs().into(),
+                    ..p
+                }
+            } else {
+                p
+            }
         }),
     }
 }
@@ -613,6 +698,22 @@ fn app_list_icon_style(selected: bool) -> cosmic::theme::Button {
 pub fn menu_control_padding() -> Padding {
     let spacing = theme::spacing();
     [spacing.space_xxs, spacing.space_s].into()
+}
+
+fn popup_menu_container_style(theme: &cosmic::Theme) -> container::Style {
+    let cosmic = theme.cosmic();
+    let component = &cosmic.background.component;
+    container::Style {
+        icon_color: Some(component.on.into()),
+        text_color: Some(component.on.into()),
+        background: Some(Background::Color(component.base.into())),
+        border: Border {
+            radius: cosmic.radius_s().into(),
+            width: 1.0,
+            color: component.divider.into(),
+        },
+        ..Default::default()
+    }
 }
 
 fn find_desktop_entries<'a>(
@@ -800,6 +901,100 @@ impl CosmicAppList {
     // Check if a specific toplevel button is currently hovered
     fn is_hovered(&self, handle: &ExtForeignToplevelHandleV1) -> bool {
         self.hovered_toplevel.as_ref() == Some(handle)
+    }
+
+    /// Check if a dock item has any toplevel on the current output.
+    /// Returns true if the item should be visible (has toplevels on this output,
+    /// or has no toplevels at all — pinned with no windows).
+    fn is_on_current_output(&self, item: &DockItem) -> bool {
+        if !self.config.show_on_active_output {
+            return true;
+        }
+        // Pinned items with no toplevels should always show
+        if item.toplevels.is_empty() {
+            return true;
+        }
+        let current_output = &self.core.applet.output_name;
+        item.toplevels.iter().any(|(t_info, _)| {
+            t_info.output.iter().any(|x| {
+                self.output_list
+                    .get(x)
+                    .is_some_and(|val| val.name.as_ref().is_some_and(|n| n == current_output))
+            })
+        })
+    }
+
+    /// Rebuild active_list and pinned_list toplevel grouping based on the
+    /// current `ungroup_windows` setting. Collects all toplevels, then
+    /// re-distributes them — grouped or ungrouped.
+    fn rebuild_toplevel_lists(&mut self) {
+        // Collect all toplevels from both lists
+        let mut all_toplevels: Vec<(ToplevelInfo, Option<WaylandImage>, DesktopEntry)> = Vec::new();
+
+        for item in self.pinned_list.iter_mut() {
+            for (info, img) in item.toplevels.drain(..) {
+                all_toplevels.push((info, img, item.desktop_info.clone()));
+            }
+        }
+        for item in self.active_list.drain(..) {
+            for (info, img) in item.toplevels {
+                all_toplevels.push((info, img, item.desktop_info.clone()));
+            }
+        }
+
+        // Re-add each toplevel
+        for (info, img, desktop_info) in all_toplevels {
+            if self.config.ungroup_windows {
+                // In ungrouped mode: group into pinned items, separate for active
+                if let Some(t) = self
+                    .pinned_list
+                    .iter_mut()
+                    .find(|d| d.desktop_info.id() == desktop_info.id())
+                {
+                    t.toplevels.push((info, img));
+                } else {
+                    self.item_ctr += 1;
+                    self.active_list.push(DockItem {
+                        id: self.item_ctr,
+                        original_app_id: info.app_id.clone(),
+                        toplevels: vec![(info, img)],
+                        desktop_info,
+                    });
+                }
+            } else {
+                // Grouped mode: merge by desktop_info id
+                if let Some(t) = self
+                    .active_list
+                    .iter_mut()
+                    .chain(self.pinned_list.iter_mut())
+                    .find(|d| d.desktop_info.id() == desktop_info.id())
+                {
+                    t.toplevels.push((info, img));
+                } else {
+                    self.item_ctr += 1;
+                    self.active_list.push(DockItem {
+                        id: self.item_ctr,
+                        original_app_id: info.app_id.clone(),
+                        toplevels: vec![(info, img)],
+                        desktop_info,
+                    });
+                }
+            }
+        }
+
+        // Update popup's dock_item if popup is open — the old DockItem.id is now stale,
+        // so we need to find the corresponding new DockItem by desktop_info.id()
+        if let Some(popup) = self.popup.as_mut() {
+            let desktop_id = popup.dock_item.desktop_info.id();
+            if let Some(new_item) = self
+                .pinned_list
+                .iter()
+                .chain(self.active_list.iter())
+                .find(|d| d.desktop_info.id() == desktop_id)
+            {
+                popup.dock_item = new_item.clone();
+            }
+        }
     }
 }
 
@@ -1296,7 +1491,33 @@ impl cosmic::Application for CosmicAppList {
                             let new_desktop_info =
                                 self.find_desktop_entry_for_toplevel(&info, unicase_appid);
 
-                            if let Some(t) = self
+                            // When ungrouped: still group into pinned items, but create
+                            // separate DockItems for each unpinned toplevel window.
+                            if self.config.ungroup_windows {
+                                // Try to add to a pinned item first
+                                if let Some(t) = self
+                                    .pinned_list
+                                    .iter_mut()
+                                    .find(|DockItem { desktop_info, .. }| {
+                                        desktop_info.id() == new_desktop_info.id()
+                                    })
+                                {
+                                    t.toplevels.push((info, None));
+                                } else {
+                                    // Create a separate DockItem for this toplevel
+                                    if info.app_id.is_empty() {
+                                        info.app_id =
+                                            format!("Unknown Application {}", self.item_ctr);
+                                    }
+                                    self.item_ctr += 1;
+                                    self.active_list.push(DockItem {
+                                        id: self.item_ctr,
+                                        original_app_id: info.app_id.clone(),
+                                        toplevels: vec![(info, None)],
+                                        desktop_info: new_desktop_info,
+                                    });
+                                }
+                            } else if let Some(t) = self
                                 .active_list
                                 .iter_mut()
                                 .chain(self.pinned_list.iter_mut())
@@ -1387,7 +1608,26 @@ impl cosmic::Application for CosmicAppList {
                                     Ascii::new(&info.app_id),
                                 );
 
-                                if let Some(t) = self
+                                if self.config.ungroup_windows {
+                                    // In ungrouped mode: only group into pinned
+                                    if let Some(t) = self
+                                        .pinned_list
+                                        .iter_mut()
+                                        .find(|DockItem { desktop_info, .. }| {
+                                            desktop_info.id() == new_desktop_entry.id()
+                                        })
+                                    {
+                                        t.toplevels.push((info, None));
+                                    } else {
+                                        self.item_ctr += 1;
+                                        self.active_list.push(DockItem {
+                                            id: self.item_ctr,
+                                            original_app_id: info.app_id.clone(),
+                                            toplevels: vec![(info, None)],
+                                            desktop_info: new_desktop_entry,
+                                        });
+                                    }
+                                } else if let Some(t) = self
                                     .active_list
                                     .iter_mut()
                                     .chain(self.pinned_list.iter_mut())
@@ -1492,6 +1732,7 @@ impl cosmic::Application for CosmicAppList {
                 self.subscription_ctr += 1;
             }
             Message::ConfigUpdated(config) => {
+                let ungroup_changed = self.config.ungroup_windows != config.ungroup_windows;
                 self.config = config;
                 // drain to active list
                 for item in self.pinned_list.drain(..) {
@@ -1526,6 +1767,11 @@ impl cosmic::Application for CosmicAppList {
                             }
                         })
                         .collect();
+
+                // If ungroup setting changed, rebuild toplevel organization
+                if ungroup_changed {
+                    self.rebuild_toplevel_lists();
+                }
             }
             Message::CloseRequested(id) => {
                 if Some(id) == self.popup.as_ref().map(|p| p.id) {
@@ -1540,6 +1786,52 @@ impl cosmic::Application for CosmicAppList {
             }
             Message::GpuRequest(gpus) => {
                 self.gpus = gpus;
+            }
+            Message::OpenSettings => {
+                // Reuse the existing popup and just switch its type to Settings.
+                // This avoids a race condition where closing and reopening
+                // a popup in the same batch can fail intermittently.
+                if let Some(popup) = self.popup.as_mut() {
+                    popup.popup_type = PopupType::Settings;
+                }
+            }
+            Message::ToggleUngroupWindows(enabled) => {
+                self.config.ungroup_windows = enabled;
+                // If ungrouping is disabled, also disable dependent options
+                if !enabled {
+                    self.config.show_on_active_output = false;
+                    self.config.show_window_titles = false;
+                }
+                if let Ok(config) = Config::new(APP_ID, AppListConfig::VERSION) {
+                    let _ = self.config.write_entry(&config);
+                }
+                self.rebuild_toplevel_lists();
+            }
+            Message::ToggleShowOnActiveOutput(enabled) => {
+                self.config.show_on_active_output = enabled;
+                // Auto-enable ungroup when show_on_active_output is enabled
+                if enabled {
+                    self.config.ungroup_windows = true;
+                    self.rebuild_toplevel_lists();
+                }
+                if let Ok(config) = Config::new(APP_ID, AppListConfig::VERSION) {
+                    let _ = self.config.write_entry(&config);
+                }
+            }
+            Message::ToggleShowWindowTitles(enabled) => {
+                self.config.show_window_titles = enabled;
+                // Auto-enable ungroup when show_window_titles is enabled
+                if enabled {
+                    self.config.ungroup_windows = true;
+                    self.rebuild_toplevel_lists();
+                }
+                // If ungroup is disabled, also disable show_window_titles
+                if !self.config.ungroup_windows {
+                    self.config.show_window_titles = false;
+                }
+                if let Ok(config) = Config::new(APP_ID, AppListConfig::VERSION) {
+                    let _ = self.config.write_entry(&config);
+                }
             }
             Message::OpenActive => {
                 let create_new = self.overflow_active_popup.is_none();
@@ -1715,7 +2007,17 @@ impl cosmic::Application for CosmicAppList {
         let mut favorites: Vec<_> = favorites[favorite_to_remove..]
             .iter()
             .rev()
+            .filter(|dock_item| self.is_on_current_output(dock_item))
             .map(|dock_item| {
+                // Get window title if show_window_titles is enabled and item has exactly one toplevel
+                let window_title = if self.config.show_window_titles
+                    && self.config.ungroup_windows
+                    && dock_item.toplevels.len() == 1
+                {
+                    dock_item.toplevels.first().map(|(info, _)| info.title.as_str())
+                } else {
+                    None
+                };
                 self.core
                     .applet
                     .applet_tooltip::<Message>(
@@ -1731,6 +2033,7 @@ impl cosmic::Application for CosmicAppList {
                                 .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
                             dot_radius,
                             self.core.main_window_id().unwrap(),
+                            window_title,
                         ),
                         dock_item
                             .desktop_info
@@ -1786,6 +2089,7 @@ impl cosmic::Application for CosmicAppList {
                         .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
                     dot_radius,
                     self.core.main_window_id().unwrap(),
+                    None, // No title for drag preview
                 ),
             );
         } else if self.is_listening_for_dnd && self.pinned_list.is_empty() {
@@ -1809,7 +2113,17 @@ impl cosmic::Application for CosmicAppList {
                 }
             })]
                 .iter()
+                .filter(|dock_item| self.is_on_current_output(dock_item))
                 .map(|dock_item| {
+                    // Get window title if show_window_titles is enabled and item has exactly one toplevel
+                    let window_title = if self.config.show_window_titles
+                        && self.config.ungroup_windows
+                        && dock_item.toplevels.len() == 1
+                    {
+                        dock_item.toplevels.first().map(|(info, _)| info.title.as_str())
+                    } else {
+                        None
+                    };
                     self.core
                         .applet
                         .applet_tooltip(
@@ -1825,6 +2139,7 @@ impl cosmic::Application for CosmicAppList {
                                     .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
                                 dot_radius,
                                 self.core.main_window_id().unwrap(),
+                                window_title,
                             ),
                             dock_item
                                 .desktop_info
@@ -2113,6 +2428,12 @@ impl cosmic::Application for CosmicAppList {
                         }),
                     );
 
+                    content = content.push(divider::horizontal::light());
+                    content = content.push(
+                        menu_button(text::body(fl!("app-tray-settings")))
+                            .on_press(Message::OpenSettings),
+                    );
+
                     if !toplevels.is_empty() {
                         content = content.push(divider::horizontal::light());
                         content = match toplevels.len() {
@@ -2132,21 +2453,7 @@ impl cosmic::Application for CosmicAppList {
                             container(content)
                                 .padding(1)
                                 //TODO: move style to libcosmic
-                                .class(theme::Container::custom(|theme| {
-                                    let cosmic = theme.cosmic();
-                                    let component = &cosmic.background.component;
-                                    container::Style {
-                                        icon_color: Some(component.on.into()),
-                                        text_color: Some(component.on.into()),
-                                        background: Some(Background::Color(component.base.into())),
-                                        border: Border {
-                                            radius: cosmic.radius_s().into(),
-                                            width: 1.0,
-                                            color: component.divider.into(),
-                                        },
-                                        ..Default::default()
-                                    }
-                                }))
+                                .class(theme::Container::custom(popup_menu_container_style))
                                 .height(Length::Shrink)
                                 .width(Length::Fill),
                         )
@@ -2156,6 +2463,91 @@ impl cosmic::Application for CosmicAppList {
                                 .min_height(1.)
                                 .max_width(300.)
                                 .max_height(1000.),
+                        )
+                        .into()
+                }
+                PopupType::Settings => {
+                    let content = column![]
+                        .push(
+                            text::title4(fl!("app-tray-settings"))
+                                .width(Length::Fill)
+                        )
+                        .push(vertical_space().height(Length::Fixed(8.0)))
+                        .push(
+                            row![]
+                                .push(
+                                    column![]
+                                        .push(text::body(fl!("ungroup-windows")))
+                                        .push(
+                                            text::caption(fl!("ungroup-windows-description"))
+                                        )
+                                        .spacing(2)
+                                        .width(Length::Fill)
+                                )
+                                .push(
+                                    cosmic::widget::toggler(self.config.ungroup_windows)
+                                        .on_toggle(Message::ToggleUngroupWindows)
+                                )
+                                .align_y(Alignment::Center)
+                                .spacing(8)
+                        )
+                        .push(divider::horizontal::light())
+                        .push(
+                            row![]
+                                .push(
+                                    column![]
+                                        .push(text::body(fl!("show-on-active-output")))
+                                        .push(
+                                            text::caption(fl!("show-on-active-output-description"))
+                                        )
+                                        .spacing(2)
+                                        .width(Length::Fill)
+                                )
+                                .push(
+                                    cosmic::widget::toggler(self.config.show_on_active_output)
+                                        .on_toggle(Message::ToggleShowOnActiveOutput)
+                                )
+                                .align_y(Alignment::Center)
+                                .spacing(8)
+                        )
+                        .push(divider::horizontal::light())
+                        .push(
+                            row![]
+                                .push(
+                                    column![]
+                                        .push(text::body(fl!("show-window-titles")))
+                                        .push(
+                                            text::caption(fl!("show-window-titles-description"))
+                                        )
+                                        .spacing(2)
+                                        .width(Length::Fill)
+                                )
+                                .push(
+                                    cosmic::widget::toggler(self.config.show_window_titles)
+                                        .on_toggle(Message::ToggleShowWindowTitles)
+                                )
+                                .align_y(Alignment::Center)
+                                .spacing(8)
+                        )
+                        .align_x(Alignment::Start)
+                        .spacing(12)
+                        .padding(16);
+
+                    self.core
+                        .applet
+                        .popup_container(
+                            container(content)
+                                .padding(1)
+                                .class(theme::Container::custom(popup_menu_container_style))
+                                .height(Length::Shrink)
+                                .width(Length::Fill),
+                        )
+                        .limits(
+                            Limits::NONE
+                                .min_width(200.)
+                                .min_height(100.)
+                                .max_width(350.)
+                                .max_height(500.),
                         )
                         .into()
                 }
@@ -2219,6 +2611,15 @@ impl cosmic::Application for CosmicAppList {
                     }
                 }))
                 .map(|dock_item| {
+                    // Get window title if show_window_titles is enabled and item has exactly one toplevel
+                    let window_title = if self.config.show_window_titles
+                        && self.config.ungroup_windows
+                        && dock_item.toplevels.len() == 1
+                    {
+                        dock_item.toplevels.first().map(|(info, _)| info.title.as_str())
+                    } else {
+                        None
+                    };
                     self.core
                         .applet
                         .applet_tooltip(
@@ -2234,6 +2635,7 @@ impl cosmic::Application for CosmicAppList {
                                     .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
                                 dot_radius,
                                 id,
+                                window_title,
                             ),
                             dock_item
                                 .desktop_info
@@ -2322,6 +2724,15 @@ impl cosmic::Application for CosmicAppList {
                 .iter()
                 .rev()
                 .map(|dock_item| {
+                    // Get window title if show_window_titles is enabled and item has exactly one toplevel
+                    let window_title = if self.config.show_window_titles
+                        && self.config.ungroup_windows
+                        && dock_item.toplevels.len() == 1
+                    {
+                        dock_item.toplevels.first().map(|(info, _)| info.title.as_str())
+                    } else {
+                        None
+                    };
                     self.core
                         .applet
                         .applet_tooltip(
@@ -2337,6 +2748,7 @@ impl cosmic::Application for CosmicAppList {
                                     .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
                                 dot_radius,
                                 id,
+                                window_title,
                             ),
                             dock_item
                                 .desktop_info
