@@ -7,7 +7,7 @@ log-out-shortcut = Super + Shift + Escape
 suspend = Hentikan
 restart = Mulai ulang
 shutdown = Matikan
-confirm = Konfirmasi
+confirm = Konfirmasikan
 cancel = Batalkan
 confirm-button =
     { $action ->
@@ -29,7 +29,7 @@ confirm-body =
     Sistem akan { $action ->
         [restart] memulai ulang
         [suspend] menghentikan
-        [shutdown] mematikan
+        [shutdown] mematikan daya
         [lock-screen] mengunci layar
         [log-out] keluar
        *[other] menerapkan tindakan yang dipilih

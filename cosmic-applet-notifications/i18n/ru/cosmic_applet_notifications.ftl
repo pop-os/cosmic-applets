@@ -1,5 +1,6 @@
 hours-ago =
-    { NUMBER($duration) ->
+    { $duration ->
+        [0] Только что
         [1] 1 час назад
        *[other] { $duration } ч. назад
     }
