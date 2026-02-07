@@ -8,7 +8,7 @@ suspend = Slaapstand
 restart = Herstart
 shutdown = Sluit af
 confirm = Bevestig
-cancel = Annuleer
+cancel = Annuleren
 confirm-button =
     { $action ->
         [restart] { restart }

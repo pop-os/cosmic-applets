@@ -16,4 +16,4 @@ clear-group = Effacer le groupe
 clear-all = Effacer toutes les notifications
 do-not-disturb = Ne pas déranger
 notification-settings = Paramètres des notifications...
-no-notifications = Pas de notification
+no-notifications = Aucune notification
