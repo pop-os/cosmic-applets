@@ -38,10 +38,10 @@ _link_applet name:
     ln -sf {{cosmic-applets-bin}} {{bindir}}/{{name}}
 
 _install_icons name:
-    find {{name}}/'data'/'icons' -type f -exec echo {} \; | rev | cut -d'/' -f-3 | rev | xargs -d '\n' -I {} install -Dm0644 {{name}}/'data'/'icons'/{} {{iconsdir}}/{}
+    find {{name}}/'data'/'icons' -type f -exec echo {} \; | rev | cut -d'/' -f-3 | rev | xargs -L1 -I {} install -Dm0644 {{name}}/'data'/'icons'/{} {{iconsdir}}/{}
 
 _install_default_schema name:
-    find {{name}}/'data'/'default_schema' -type f -exec echo {} \; | rev | cut -d'/' -f-3 | rev | xargs -d '\n' -I {} install -Dm0644 {{name}}/'data'/'default_schema'/{} {{default-schema-target}}/{}
+    find {{name}}/'data'/'default_schema' -type f -exec echo {} \; | rev | cut -d'/' -f-3 | rev | xargs -L1 -I {} install -Dm0644 {{name}}/'data'/'default_schema'/{} {{default-schema-target}}/{}
 
 _install_desktop path:
     install -Dm0644 {{path}} {{sharedir}}/applications/{{file_name(path)}}
