@@ -3,10 +3,14 @@
 
 use cosmic::{
     Element, Task, app,
-    applet::{menu_button, padded_control},
+    applet::{
+        menu_button, padded_control,
+        token::subscription::{TokenRequest, TokenUpdate, activation_token_subscription},
+    },
+    cctk::sctk::reexports::calloop,
     cosmic_theme::Spacing,
     iced::{
-        self, Alignment, Length,
+        self, Alignment, Length, Subscription,
         platform_specific::shell::commands::popup::{destroy_popup, get_popup},
         widget::{self, column, row},
         window,
@@ -44,6 +48,7 @@ struct Power {
     core: cosmic::app::Core,
     icon_name: String,
     popup: Option<window::Id>,
+    token_tx: Option<calloop::channel::Sender<TokenRequest>>,
     subsurface_id: window::Id,
 }
 
@@ -73,9 +78,10 @@ impl PowerAction {
 enum Message {
     Action(PowerAction),
     TogglePopup,
-    Settings,
+    OpenSettings,
     Zbus(Result<(), zbus::Error>),
     Closed(window::Id),
+    Token(TokenUpdate),
     Surface(surface::Action),
 }
 
@@ -93,12 +99,13 @@ impl cosmic::Application for Power {
         &mut self.core
     }
 
-    fn init(core: cosmic::app::Core, _flags: ()) -> (Self, app::Task<Message>) {
+    fn init(core: cosmic::app::Core, _flags: ()) -> (Self, app::Task<Self::Message>) {
         (
             Self {
                 core,
                 icon_name: "system-shutdown-symbolic".to_string(),
                 subsurface_id: window::Id::unique(),
+                token_tx: None,
                 popup: Option::default(),
             },
             Task::none(),
@@ -109,11 +116,11 @@ impl cosmic::Application for Power {
         Some(Message::Closed(id))
     }
 
-    fn update(&mut self, message: Message) -> app::Task<Message> {
+    fn update(&mut self, message: Self::Message) -> app::Task<Self::Message> {
         match message {
             Message::TogglePopup => {
                 if let Some(p) = self.popup.take() {
-                    destroy_popup(p)
+                    return destroy_popup(p);
                 } else {
                     let new_id = window::Id::unique();
                     self.popup.replace(new_id);
@@ -126,12 +133,19 @@ impl cosmic::Application for Power {
                         None,
                     );
 
-                    get_popup(popup_settings)
+                    return get_popup(popup_settings);
                 }
             }
-            Message::Settings => {
-                let _ = process::Command::new("cosmic-settings").spawn();
-                Task::none()
+            Message::OpenSettings => {
+                let exec = "cosmic-settings".to_string();
+                if let Some(tx) = self.token_tx.as_ref() {
+                    let _ = tx.send(TokenRequest {
+                        app_id: Self::APP_ID.to_string(),
+                        exec,
+                    });
+                } else {
+                    tracing::error!("Wayland tx is None");
+                }
             }
             Message::Action(action) => {
                 match action {
@@ -159,26 +173,40 @@ impl cosmic::Application for Power {
                     }
                     a => return a.perform(),
                 }
-                Task::none()
             }
             Message::Zbus(result) => {
                 if let Err(e) = result {
                     eprintln!("cosmic-applet-power ERROR: '{e}'");
                 }
-                Task::none()
             }
             Message::Closed(id) => {
                 if self.popup == Some(id) {
                     self.popup = None;
                 }
-                Task::none()
             }
+            Message::Token(u) => match u {
+                TokenUpdate::Init(tx) => {
+                    self.token_tx = Some(tx);
+                }
+                TokenUpdate::Finished => {
+                    self.token_tx = None;
+                }
+                TokenUpdate::ActivationToken { token, .. } => {
+                    let mut cmd = std::process::Command::new("cosmic-settings");
+                    if let Some(token) = token {
+                        cmd.env("XDG_ACTIVATION_TOKEN", &token);
+                        cmd.env("DESKTOP_STARTUP_ID", &token);
+                    }
+                    tokio::spawn(cosmic::process::spawn(cmd));
+                }
+            },
             Message::Surface(a) => {
                 return cosmic::task::message(cosmic::Action::Cosmic(
                     cosmic::app::Action::Surface(a),
                 ));
             }
         }
+        Task::none()
     }
 
     fn view(&self) -> Element<'_, Message> {
@@ -198,7 +226,7 @@ impl cosmic::Application for Power {
         } = theme::active().cosmic().spacing;
 
         if matches!(self.popup, Some(p) if p == id) {
-            let settings = menu_button(text::body(fl!("settings"))).on_press(Message::Settings);
+            let settings = menu_button(text::body(fl!("settings"))).on_press(Message::OpenSettings);
 
             let session = column![
                 menu_button(
@@ -257,6 +285,10 @@ impl cosmic::Application for Power {
             //panic!("no view for window {}", id.0)
             widget::text("").into()
         }
+    }
+
+    fn subscription(&self) -> Subscription<Message> {
+        activation_token_subscription(0).map(Message::Token)
     }
 
     fn style(&self) -> Option<cosmic::iced_runtime::Appearance> {
