@@ -12,6 +12,7 @@ Name[sk]=Používateľská relácia
 Name[sv]=Användarsession
 Name[es]=Sesión de usuario
 Name[it]=Sessione utente
+Name[uk]=Сеанс користувача
 Type=Application
 Exec=cosmic-applet-power
 Terminal=false
