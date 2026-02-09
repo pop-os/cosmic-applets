@@ -1,6 +1,6 @@
 screen-reader = Schermlezer
 magnifier = Vergrootglas
-invert-colors = Keer kleuren om
+invert-colors = Kleuren omkeren
 settings = Toegankelijkheidsinstellingen...
-filter-colors = filterkleuren
+filter-colors = Kleurenfilters
 high-contrast = Hoog contrast

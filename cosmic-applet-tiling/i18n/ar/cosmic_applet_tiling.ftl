@@ -1,6 +1,6 @@
 tile-windows = بلّط النوافذ آليًا
 tile-current = بلّط مساحة العمل الحالية
-shortcuts = اختصارات
+shortcuts = الاختصارات
 navigate-windows = تنقل بين النوافذ
 move-window = تحريك النافذة
 toggle-floating-window = بدِّل النافذة العائمة
