@@ -1,4 +1,4 @@
-output = الإخراج
+output = الخرج
 input = الإدخال
 show-media-controls = أظهِر عناصر التحكم بالوسائط على اللوحة
 sound-settings = إعدادات الصوت...

@@ -7,8 +7,8 @@ log-out-shortcut = Super + Shift + Esc
 suspend = Slaapstand
 restart = Herstart
 shutdown = Sluit af
-confirm = Bevestig
-cancel = Annuleer
+confirm = Bevestigen
+cancel = Annuleren
 confirm-button =
     { $action ->
         [restart] { restart }
