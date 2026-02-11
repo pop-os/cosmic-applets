@@ -13,6 +13,7 @@ Name[sk]=Minimalizované okná
 Name[es]=Ventanas minimizadas
 Name[sv]=Minimera fönster
 Name[it]=Finestre minimizzate
+Name[uk]=Згорнуті вікна
 Type=Application
 Exec=cosmic-applet-minimize
 Terminal=false
