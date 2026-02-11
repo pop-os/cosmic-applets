@@ -14,6 +14,7 @@ Name[sk]=Zvuk
 Name[sv]=Ljud
 Name[es]=Sonido
 Name[it]=Audio
+Name[uk]=Звук
 Type=Application
 Exec=cosmic-applet-audio
 Terminal=false
