@@ -12,6 +12,7 @@ Name[sk]=Číslované pracovné plochy
 Name[sv]=Numrerade arbetsytor
 Name[es]=Espacios de trabajo numerados
 Name[it]=Spazi di lavoro numerati
+Name[uk]=Нумеровані робочі простори
 Type=Application
 Exec=cosmic-applet-workspaces
 Terminal=false
