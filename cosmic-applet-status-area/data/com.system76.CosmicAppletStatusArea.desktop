@@ -12,6 +12,7 @@ Name[sk]=Panel oznámení
 Name[sv]=Fält för programikoner
 Name[es]=Bandeja de notificaciones
 Name[it]=Area notifiche
+Name[uk]=Область сповіщень
 Type=Application
 Exec=cosmic-applet-status-area
 Terminal=false
