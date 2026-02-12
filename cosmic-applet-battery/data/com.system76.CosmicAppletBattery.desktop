@@ -13,6 +13,7 @@ Name[de]=Energie und Akku
 Name[sk]=Napájanie a batéria
 Name[sv]=Ström & batteri
 Name[it]=Alimentazione e batteria
+Name[uk]=Живлення та акумулятор
 Type=Application
 Exec=cosmic-applet-battery
 Terminal=false
