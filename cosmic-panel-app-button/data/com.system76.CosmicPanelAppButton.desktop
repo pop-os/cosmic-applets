@@ -15,6 +15,7 @@ Name[pt]=Botão da Biblioteca de Aplicativos
 Name[nl]=Knop appbibliotheek
 Name[sk]=Tlačidlo knižnice aplikácií
 Name[sv]=Knapp för programbibliotek
+Name[uk]=Бібліотека застосунків
 Type=Application
 Exec=cosmic-panel-button com.system76.CosmicAppLibrary
 Terminal=false
