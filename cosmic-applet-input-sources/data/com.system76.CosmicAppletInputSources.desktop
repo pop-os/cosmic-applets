@@ -13,6 +13,7 @@ Name[sk]=Vstupné zdroje
 Name[es]=Fuentes de entrada de teclado
 Name[sv]=Inmatningskällor
 Name[it]=Sorgenti di immissione
+Name[uk]=Джерела введення
 Type=Application
 Exec=cosmic-applet-input-sources
 Terminal=false
