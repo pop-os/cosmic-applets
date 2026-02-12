@@ -12,6 +12,7 @@ Name[sk]=Tlačidlo spúšťača
 Name[es]=Botón del lanzador
 Name[sv]=Knapp för programstartare
 Name[it]=Tasto Launcher
+Name[uk]=Запускач
 Type=Application
 Exec=cosmic-panel-button com.system76.CosmicLauncher
 Terminal=false
