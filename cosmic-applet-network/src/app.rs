@@ -34,7 +34,7 @@ use cosmic::{
     iced_runtime::core::window,
     surface, theme,
     widget::{
-        Column, Row, button, container, divider,
+        Column, Id, Row, button, container, divider,
         icon::{self, from_name},
         scrollable, secure_input, text, text_input,
     },
@@ -98,6 +98,8 @@ impl From<NewConnectionState> for AccessPoint {
 
 static WIFI: LazyLock<id::Toggler> = LazyLock::new(id::Toggler::unique);
 static AIRPLANE_MODE: LazyLock<id::Toggler> = LazyLock::new(id::Toggler::unique);
+
+pub static SECURE_INPUT_WIFI: LazyLock<Id> = LazyLock::new(Id::unique);
 
 #[derive(Default, Debug, Clone)]
 pub struct MyNetworkState {
@@ -466,6 +468,8 @@ pub(crate) enum Message {
     OpenSettings,
     ResetFailedKnownSsid(String, HwAddress),
     TogglePasswordVisibility,
+    FocusSecureInput,
+    NoOp,
     Surface(surface::Action),
     ActivateVpn(Arc<str>),   // UUID of VPN to activate
     DeactivateVpn(Arc<str>), // UUID of VPN to deactivate
@@ -893,6 +897,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                         password: String::new().into(),
                         password_hidden: true,
                     });
+                    return cosmic::task::message(cosmic::Action::App(Message::FocusSecureInput));
                 }
             }
             Message::ToggleVisibleNetworks => {
@@ -907,6 +912,11 @@ impl cosmic::Application for CosmicNetworkApplet {
                     *password_hidden = !*password_hidden;
                 }
             }
+            Message::FocusSecureInput => {
+                return text_input::focus(SECURE_INPUT_WIFI.clone())
+                    .map(|_: ()| cosmic::Action::App(Message::NoOp));
+            }
+            Message::NoOp => {}
             Message::CancelNewConnection => {
                 self.new_connection = None;
             }
@@ -1866,6 +1876,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                                     Some(Message::TogglePasswordVisibility),
                                     *password_hidden,
                                 )
+                                .id(SECURE_INPUT_WIFI.clone())
                                 .on_input(|s| Message::PasswordUpdate(SecureString::from(s)))
                                 .on_paste(|s| Message::PasswordUpdate(SecureString::from(s)))
                                 .on_submit(|_| Message::ConnectWithPassword),
