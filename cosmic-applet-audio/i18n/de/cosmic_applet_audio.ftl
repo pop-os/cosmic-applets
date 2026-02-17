@@ -1,5 +1,5 @@
 output = Ausgabe
-input = Eingang
+input = Eingabe
 show-media-controls = Mediensteuerung im Panel anzeigen
 sound-settings = Klang-Einstellungen...
 disconnected = PulseAudio getrennt
