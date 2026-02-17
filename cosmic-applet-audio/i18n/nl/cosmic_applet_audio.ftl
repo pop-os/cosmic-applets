@@ -1,7 +1,7 @@
 output = Uitvoer
 input = Invoer
-show-media-controls = Mediabeheerder op het paneel tonen
+show-media-controls = Mediabeheerder aan het paneel vastmaken
 sound-settings = Geluidsinstellingen…
 disconnected = Verbinding met PulseAudio is verbroken
-no-device = Geen apparaat geselecteerd
+no-device = Geen apparaten geselecteerd
 unknown-artist = Onbekend
