@@ -1,8 +1,8 @@
-cosmic-app-list = Toepassingsbalk
-pin = Aan de toepassingsbalk vastmaken
-quit = Beëindig
-quit-all = Sluit alles
+cosmic-app-list = Taakbalk
+pin = Aan taakbalk vastmaken
+quit = Sluiten
+quit-all = Alles sluiten
 new-window = Nieuw venster
-run = Voer uit
-run-on = Voer uit op { $gpu }
+run = Starten
+run-on = Starten op { $gpu }
 run-on-default = (Standaard)
