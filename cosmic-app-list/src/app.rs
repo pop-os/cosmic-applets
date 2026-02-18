@@ -529,6 +529,7 @@ fn toplevel_button<'a>(
         .selected(is_focused)
         .apply(mouse_area)
         .on_enter(Message::ToplevelHoverChanged(handle.clone(), true))
+        .on_middle_press(Message::CloseToplevel(handle.clone()))
         .on_exit(Message::ToplevelHoverChanged(handle, false))
         .apply(Element::from)
 }
