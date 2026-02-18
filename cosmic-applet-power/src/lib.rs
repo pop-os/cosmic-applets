@@ -147,33 +147,27 @@ impl cosmic::Application for Power {
                     tracing::error!("Wayland tx is None");
                 }
             }
-            Message::Action(action) => {
-                match action {
-                    PowerAction::LogOut => {
-                        if let Err(err) = process::Command::new("cosmic-osd").arg("log-out").spawn()
-                        {
-                            tracing::error!("Failed to spawn cosmic-osd. {err:?}");
-                            return PowerAction::LogOut.perform();
-                        }
+            Message::Action(action) => match action {
+                PowerAction::LogOut => {
+                    if let Err(err) = process::Command::new("cosmic-osd").arg("log-out").spawn() {
+                        tracing::error!("Failed to spawn cosmic-osd. {err:?}");
+                        return PowerAction::LogOut.perform();
                     }
-                    PowerAction::Restart => {
-                        if let Err(err) = process::Command::new("cosmic-osd").arg("restart").spawn()
-                        {
-                            tracing::error!("Failed to spawn cosmic-osd. {err:?}");
-                            return PowerAction::Restart.perform();
-                        }
-                    }
-                    PowerAction::Shutdown => {
-                        if let Err(err) =
-                            process::Command::new("cosmic-osd").arg("shutdown").spawn()
-                        {
-                            tracing::error!("Failed to spawn cosmic-osd. {err:?}");
-                            return PowerAction::Shutdown.perform();
-                        }
-                    }
-                    a => return a.perform(),
                 }
-            }
+                PowerAction::Restart => {
+                    if let Err(err) = process::Command::new("cosmic-osd").arg("restart").spawn() {
+                        tracing::error!("Failed to spawn cosmic-osd. {err:?}");
+                        return PowerAction::Restart.perform();
+                    }
+                }
+                PowerAction::Shutdown => {
+                    if let Err(err) = process::Command::new("cosmic-osd").arg("shutdown").spawn() {
+                        tracing::error!("Failed to spawn cosmic-osd. {err:?}");
+                        return PowerAction::Shutdown.perform();
+                    }
+                }
+                a => return a.perform(),
+            },
             Message::Zbus(result) => {
                 if let Err(e) = result {
                     eprintln!("cosmic-applet-power ERROR: '{e}'");
