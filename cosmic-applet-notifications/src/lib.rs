@@ -14,6 +14,7 @@ use cosmic::{
     cosmic_theme::Spacing,
     iced::{
         Alignment, Length, Subscription,
+        advanced::text::{Ellipsize, EllipsizeHeightLimit},
         platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
         widget::{column, row},
         window,
@@ -457,15 +458,9 @@ impl cosmic::Application for Notifications {
                     .iter()
                     .rev()
                     .map(|n| {
-                        let app_name = text::caption(if n.app_name.len() > 24 {
-                            Cow::from(format!(
-                                "{:.26}...",
-                                n.app_name.lines().next().unwrap_or_default()
-                            ))
-                        } else {
-                            Cow::from(&n.app_name)
-                        })
-                        .width(Length::Fill);
+                        let app_name = text::caption(Cow::from(&n.app_name))
+                            .ellipsize(Ellipsize::End(EllipsizeHeightLimit::Lines(1)))
+                            .width(Length::Fill);
 
                         let duration_since = text::caption(duration_ago_msg(n));
 

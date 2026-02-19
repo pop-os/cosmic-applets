@@ -10,7 +10,7 @@ i18n-embed-fl.workspace = true
 i18n-embed.workspace = true
 image = { version = "0.25.9", default-features = false }
 libcosmic.workspace = true
-memmap2 = "0.9.9"
+memmap2 = "0.9.10"
 rust-embed.workspace = true
 rustix.workspace = true
 tokio.workspace = true

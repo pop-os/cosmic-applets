@@ -30,13 +30,11 @@ use cosmic::{
     desktop::IconSourceExt,
     iced::{
         self, Alignment, Background, Border, Length, Limits, Padding, Subscription,
+        advanced::text::{Ellipsize, EllipsizeHeightLimit},
         clipboard::mime::{AllowedMimeTypes, AsMimeTypes},
         event::listen_with,
         platform_specific::shell::commands::popup::{destroy_popup, get_popup},
-        widget::{
-            Column, Row, column, mouse_area, row, stack, text::Wrapping, vertical_rule,
-            vertical_space,
-        },
+        widget::{Column, Row, column, mouse_area, row, stack, vertical_rule, vertical_space},
         window,
     },
     iced_runtime::{core::event, dnd::peek_dnd},
@@ -471,11 +469,6 @@ fn toplevel_button<'a>(
     is_focused: bool,
     is_hovered: bool,
 ) -> Element<'a, Message> {
-    let title = if title.len() > 22 {
-        format!("{:.20}...", title)
-    } else {
-        title
-    };
     let border = 1.0;
     let preview = column![
         container(if let Some(img) = img {
@@ -499,7 +492,7 @@ fn toplevel_button<'a>(
         .apply(container)
         .center(Length::Fill),
         text::body(title)
-            .wrapping(Wrapping::None)
+            .ellipsize(Ellipsize::End(EllipsizeHeightLimit::Lines(1)))
             .width(Length::Fill)
             .center()
     ]
@@ -2073,16 +2066,13 @@ impl cosmic::Application for CosmicAppList {
                     if !toplevels.is_empty() {
                         let mut list_col = column![];
                         for (info, _) in toplevels {
-                            let title = if info.title.len() > 34 {
-                                format!("{:.32}...", &info.title)
-                            } else {
-                                info.title.clone()
-                            };
-                            list_col =
-                                list_col
-                                    .push(menu_button(text::body(title)).on_press(
-                                        Message::Activate(info.foreign_toplevel.clone()),
-                                    ));
+                            list_col = list_col.push(
+                                menu_button(
+                                    text::body(&info.title)
+                                        .ellipsize(Ellipsize::End(EllipsizeHeightLimit::Lines(1))),
+                                )
+                                .on_press(Message::Activate(info.foreign_toplevel.clone())),
+                            );
                         }
                         content = content.push(list_col);
                         content = content.push(divider::horizontal::light());
