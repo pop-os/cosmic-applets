@@ -30,7 +30,7 @@ use cosmic::{
     desktop::IconSourceExt,
     iced::{
         self, Alignment, Background, Border, Length, Limits, Padding, Subscription,
-        advanced::text::{Ellipsize, EllipsizeHeightLimit, Wrapping},
+        advanced::text::{Ellipsize, EllipsizeHeightLimit},
         clipboard::mime::{AllowedMimeTypes, AsMimeTypes},
         event::listen_with,
         platform_specific::shell::commands::popup::{destroy_popup, get_popup},
