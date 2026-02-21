@@ -29,7 +29,7 @@ use cosmic::{
     cosmic_config::{Config, CosmicConfigEntry},
     desktop::IconSourceExt,
     iced::{
-        self, Alignment, Background, Border, Length, Limits, Padding, Subscription,
+        self, Alignment, Background, Border, Length, Limits, Padding, Subscription, stream,
         clipboard::mime::{AllowedMimeTypes, AsMimeTypes},
         event::listen_with,
         platform_specific::shell::commands::popup::{destroy_popup, get_popup},
@@ -182,6 +182,7 @@ impl DockItem {
         is_focused: bool,
         dot_border_radius: [f32; 4],
         window_id: window::Id,
+        icon_generation: u64,
     ) -> Element<'_, Message> {
         let Self {
             toplevels,
@@ -265,8 +266,15 @@ impl DockItem {
             .into(),
         };
 
+        // Sub-pixel padding tweak forces iced to detect a layout change when
+        // icon_generation bumps, triggering a redraw of SVG widgets so the
+        // renderer's mtime check picks up on-disk icon file changes.
+        let mut btn_padding = app_icon.padding;
+        if icon_generation % 2 == 1 {
+            btn_padding.top += 0.001;
+        }
         let icon_button = button::custom(icon_wrapper)
-            .padding(app_icon.padding)
+            .padding(btn_padding)
             .selected(is_focused)
             .class(app_list_icon_style(is_focused));
 
@@ -361,6 +369,8 @@ struct CosmicAppList {
     hovered_toplevel: Option<ExtForeignToplevelHandleV1>,
     overflow_favorites_popup: Option<window::Id>,
     overflow_active_popup: Option<window::Id>,
+    /// Bumped on each icon file change to force iced to detect a view diff.
+    icon_generation: u64,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -403,6 +413,7 @@ enum Message {
     OpenFavorites,
     OpenActive,
     Surface(surface::Action),
+    IconsChanged,
 }
 
 fn index_in_list(
@@ -1527,6 +1538,15 @@ impl cosmic::Application for CosmicAppList {
                         })
                         .collect();
             }
+            Message::IconsChanged => {
+                self.icon_generation = self.icon_generation.wrapping_add(1);
+                self.update_desktop_entries();
+                // Note: We intentionally don't call update_pinned_list() here
+                // because it resets toplevel associations for running apps.
+                // The icon_generation bump forces iced to detect a view diff
+                // via a sub-pixel padding change, triggering a redraw that
+                // lets the iced SVG cache's mtime check pick up the new file.
+            }
             Message::CloseRequested(id) => {
                 if Some(id) == self.popup.as_ref().map(|p| p.id) {
                     self.popup = None;
@@ -1731,6 +1751,7 @@ impl cosmic::Application for CosmicAppList {
                                 .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
                             dot_radius,
                             self.core.main_window_id().unwrap(),
+                            self.icon_generation,
                         ),
                         dock_item
                             .desktop_info
@@ -1786,6 +1807,7 @@ impl cosmic::Application for CosmicAppList {
                         .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
                     dot_radius,
                     self.core.main_window_id().unwrap(),
+                    self.icon_generation,
                 ),
             );
         } else if self.is_listening_for_dnd && self.pinned_list.is_empty() {
@@ -1825,6 +1847,7 @@ impl cosmic::Application for CosmicAppList {
                                     .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
                                 dot_radius,
                                 self.core.main_window_id().unwrap(),
+                                self.icon_generation,
                             ),
                             dock_item
                                 .desktop_info
@@ -2234,6 +2257,7 @@ impl cosmic::Application for CosmicAppList {
                                     .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
                                 dot_radius,
                                 id,
+                                self.icon_generation,
                             ),
                             dock_item
                                 .desktop_info
@@ -2337,6 +2361,7 @@ impl cosmic::Application for CosmicAppList {
                                     .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
                                 dot_radius,
                                 id,
+                                self.icon_generation,
                             ),
                             dock_item
                                 .desktop_info
@@ -2416,6 +2441,7 @@ impl cosmic::Application for CosmicAppList {
                 }
                 Message::ConfigUpdated(u.config)
             }),
+            icon_watcher_subscription().map(|_| Message::IconsChanged),
         ])
     }
 
@@ -2426,6 +2452,136 @@ impl cosmic::Application for CosmicAppList {
     fn on_close_requested(&self, id: window::Id) -> Option<Message> {
         Some(Message::CloseRequested(id))
     }
+}
+
+/// Subscription that watches icon theme directories for file changes via inotify.
+/// Emits a unit value when any icon file is created or modified, debounced to 500ms.
+fn icon_watcher_subscription() -> Subscription<()> {
+    Subscription::run_with_id(
+        std::any::TypeId::of::<IconWatcherMarker>(),
+        stream::channel(4, |mut output| async move {
+            use futures::SinkExt;
+            use notify::{EventKind, RecursiveMode, Watcher};
+
+            let (tx, mut rx) = tokio::sync::mpsc::channel(32);
+
+            let mut watcher = match notify::recommended_watcher(move |event: Result<notify::Event, notify::Error>| {
+                if let Ok(event) = event {
+                    match event.kind {
+                        EventKind::Create(_) | EventKind::Modify(_) => {
+                            let _ = tx.blocking_send(());
+                        }
+                        _ => {}
+                    }
+                }
+            }) {
+                Ok(w) => w,
+                Err(e) => {
+                    tracing::warn!("Failed to create icon file watcher: {e}");
+                    pending::<()>().await;
+                    return;
+                }
+            };
+
+            for dir in icon_watch_dirs() {
+                if dir.is_dir() {
+                    if let Err(e) = watcher.watch(&dir, RecursiveMode::Recursive) {
+                        tracing::debug!("Failed to watch icon dir {}: {e}", dir.display());
+                    }
+                }
+            }
+
+            loop {
+                // Wait for first event
+                if rx.recv().await.is_none() {
+                    break;
+                }
+                // Debounce: wait 500ms, drain any queued events
+                tokio::time::sleep(Duration::from_millis(500)).await;
+                while rx.try_recv().is_ok() {}
+                let _ = output.send(()).await;
+            }
+        }),
+    )
+}
+
+struct IconWatcherMarker;
+
+/// Returns icon directories to watch for changes.
+///
+/// Discovers `apps/` subdirectories under all icon themes found in
+/// XDG_DATA_HOME, XDG_DATA_DIRS, and ~/.icons, plus /usr/share/pixmaps.
+fn icon_watch_dirs() -> Vec<std::path::PathBuf> {
+    let mut bases = Vec::new();
+
+    // XDG_DATA_HOME (default: ~/.local/share)
+    if let Some(data_home) = std::env::var_os("XDG_DATA_HOME") {
+        bases.push(std::path::PathBuf::from(data_home));
+    } else if let Some(home) = std::env::var_os("HOME") {
+        bases.push(std::path::PathBuf::from(home).join(".local/share"));
+    }
+
+    // XDG_DATA_DIRS (default: /usr/local/share:/usr/share)
+    if let Some(data_dirs) = std::env::var_os("XDG_DATA_DIRS") {
+        for dir in std::env::split_paths(&data_dirs) {
+            bases.push(dir);
+        }
+    } else {
+        bases.push(std::path::PathBuf::from("/usr/local/share"));
+        bases.push(std::path::PathBuf::from("/usr/share"));
+    }
+
+    let mut dirs = Vec::new();
+
+    // For each base, scan icons/<theme>/<size>/apps/
+    for base in &bases {
+        let icons_dir = base.join("icons");
+        if let Ok(themes) = std::fs::read_dir(&icons_dir) {
+            for theme in themes.filter_map(|e| e.ok()) {
+                if !theme.path().is_dir() {
+                    continue;
+                }
+                if let Ok(sizes) = std::fs::read_dir(theme.path()) {
+                    for size in sizes.filter_map(|e| e.ok()) {
+                        let apps = size.path().join("apps");
+                        if apps.is_dir() {
+                            dirs.push(apps);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // ~/.icons/<theme>/<size>/apps/
+    if let Some(home) = std::env::var_os("HOME") {
+        let home_icons = std::path::PathBuf::from(home).join(".icons");
+        if let Ok(themes) = std::fs::read_dir(&home_icons) {
+            for theme in themes.filter_map(|e| e.ok()) {
+                if !theme.path().is_dir() {
+                    continue;
+                }
+                if let Ok(sizes) = std::fs::read_dir(theme.path()) {
+                    for size in sizes.filter_map(|e| e.ok()) {
+                        let apps = size.path().join("apps");
+                        if apps.is_dir() {
+                            dirs.push(apps);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // /usr/share/pixmaps (legacy fallback, not under icon themes)
+    let pixmaps = std::path::PathBuf::from("/usr/share/pixmaps");
+    if pixmaps.is_dir() {
+        dirs.push(pixmaps);
+    }
+
+    dirs.sort();
+    dirs.dedup();
+    dirs
 }
 
 fn launch_on_preferred_gpu(desktop_info: &DesktopEntry, gpus: Option<&[Gpu]>) -> Option<Message> {
