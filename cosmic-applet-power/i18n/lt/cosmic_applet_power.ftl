@@ -33,3 +33,4 @@ confirm-title =
        *[other] Taikyti pasirinktą veiksmą
     } now?
 shutdown = Išjungti
+suspend = Miego režimas

@@ -20,3 +20,5 @@ unable-to-connect = Kon niet met netwerk verbinden
 check-wifi-connection = Controleer of de wifi met het internet verbonden is en of het wachtwoord juist is
 reset = Reset
 vpn-connections = VPN-verbindingen
+terabits-per-second = Tbit/s
+gigabits-per-second = Gbit/s
