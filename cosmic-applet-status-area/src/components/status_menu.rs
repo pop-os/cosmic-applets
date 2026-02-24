@@ -192,7 +192,7 @@ fn layout_view(layout: &Layout, expanded: Option<i32>) -> cosmic::Element<'_, Ms
         if !i.visible() {
             None
         } else if i.type_() == Some("separator") {
-            Some(iced::widget::horizontal_rule(2).into())
+            Some(iced::widget::rule::horizontal(2).into())
         } else if let Some(label) = i.label() {
             // Strip _ when not doubled
             // TODO: interpret as "access key"? And label with underline.

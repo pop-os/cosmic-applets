@@ -33,73 +33,75 @@ pub enum Output {
 pub fn proxy() -> Subscription<Output> {
     struct SomeWorker;
 
-    Subscription::run_with_id(
-        std::any::TypeId::of::<SomeWorker>(),
-        stream::channel(50, |mut output| async move {
-            let mut state = State::Ready;
+    Subscription::run_with(std::any::TypeId::of::<SomeWorker>(), |_| {
+        stream::channel(
+            50,
+            |mut output: futures::channel::mpsc::Sender<Output>| async move {
+                let mut state = State::Ready;
 
-            loop {
-                match &mut state {
-                    State::Ready => {
-                        let (sender, receiver) = channel(10);
-                        let Ok(conn) = Connection::session().await else {
-                            error!("Failed to connect to session bus");
-                            state = State::Finished;
-                            continue;
-                        };
+                loop {
+                    match &mut state {
+                        State::Ready => {
+                            let (sender, receiver) = channel(10);
+                            let Ok(conn) = Connection::session().await else {
+                                error!("Failed to connect to session bus");
+                                state = State::Finished;
+                                continue;
+                            };
 
-                        let Ok(proxy) = NotificationsProxy::new(&conn).await else {
-                            error!("Failed to create proxy from session connection");
-                            state = State::Finished;
-                            continue;
-                        };
-                        let tx = sender.clone();
-                        if let Err(err) = output.send(Output::Ready(sender)).await {
-                            error!("Failed to send sender: {}", err);
-                            state = State::Finished;
-                            continue;
-                        }
-                        state = match proxy.receive_notification_closed().await {
-                            Ok(mut s) => {
-                                tokio::spawn(async move {
-                                    while let Some(msg) = s.next().await {
-                                        let Ok(id) = msg.args().map(|args| args.id) else {
-                                            continue;
-                                        };
-                                        _ = tx.send(Input::CloseEvent(id)).await;
-                                    }
-                                });
-                                State::WaitingForNotificationEvent(proxy, receiver)
+                            let Ok(proxy) = NotificationsProxy::new(&conn).await else {
+                                error!("Failed to create proxy from session connection");
+                                state = State::Finished;
+                                continue;
+                            };
+                            let tx = sender.clone();
+                            if let Err(err) = output.send(Output::Ready(sender)).await {
+                                error!("Failed to send sender: {}", err);
+                                state = State::Finished;
+                                continue;
                             }
-                            Err(err) => {
-                                error!(
-                                    "failed to get a stream of signals for notifications. {}",
-                                    err
-                                );
-                                State::Finished
+                            state = match proxy.receive_notification_closed().await {
+                                Ok(mut s) => {
+                                    tokio::spawn(async move {
+                                        while let Some(msg) = s.next().await {
+                                            let Ok(id) = msg.args().map(|args| args.id) else {
+                                                continue;
+                                            };
+                                            _ = tx.send(Input::CloseEvent(id)).await;
+                                        }
+                                    });
+                                    State::WaitingForNotificationEvent(proxy, receiver)
+                                }
+                                Err(err) => {
+                                    error!(
+                                        "failed to get a stream of signals for notifications. {}",
+                                        err
+                                    );
+                                    State::Finished
+                                }
+                            };
+                        }
+                        State::WaitingForNotificationEvent(proxy, rx) => match rx.recv().await {
+                            Some(Input::Dismiss(id)) => {
+                                if let Err(err) = proxy.close_notification(id).await {
+                                    error!("Failed to close notification: {}", err);
+                                }
                             }
-                        };
-                    }
-                    State::WaitingForNotificationEvent(proxy, rx) => match rx.recv().await {
-                        Some(Input::Dismiss(id)) => {
-                            if let Err(err) = proxy.close_notification(id).await {
-                                error!("Failed to close notification: {}", err);
+                            Some(Input::CloseEvent(id)) => {
+                                _ = output.send(Output::CloseEvent(id)).await;
                             }
+                            None => {
+                                warn!("Notification event channel closed");
+                                state = State::Finished;
+                                continue;
+                            }
+                        },
+                        State::Finished => {
+                            let () = futures::future::pending().await;
                         }
-                        Some(Input::CloseEvent(id)) => {
-                            _ = output.send(Output::CloseEvent(id)).await;
-                        }
-                        None => {
-                            warn!("Notification event channel closed");
-                            state = State::Finished;
-                            continue;
-                        }
-                    },
-                    State::Finished => {
-                        let () = futures::future::pending().await;
                     }
                 }
-            }
-        }),
-    )
+            },
+        )
+    })
 }

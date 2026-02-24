@@ -23,7 +23,7 @@ use cosmic::{
     iced_core::{Background, Border},
     scroll::DiscreteScrollState,
     surface,
-    widget::{Id, autosize, container, horizontal_space, vertical_space},
+    widget::{Id, autosize, container, space},
 };
 
 use crate::{
@@ -196,10 +196,10 @@ impl cosmic::Application for IcedWorkspacesApplet {
                 (suggested_window_size.0.get() as f32, suggested_total as f32)
             };
 
-            let content = row!(content, vertical_space().height(Length::Fixed(height)))
+            let content = row!(content, space::vertical().height(Length::Fixed(height)))
                 .align_y(Alignment::Center);
 
-            let content = column!(content, horizontal_space().width(Length::Fixed(width)))
+            let content = column!(content, space::horizontal().width(Length::Fixed(width)))
                 .align_x(Alignment::Center);
 
             let btn = button(
@@ -323,7 +323,7 @@ impl cosmic::Application for IcedWorkspacesApplet {
         ])
     }
 
-    fn style(&self) -> Option<cosmic::iced_runtime::Appearance> {
+    fn style(&self) -> Option<cosmic::iced::theme::Style> {
         Some(cosmic::applet::style())
     }
 }

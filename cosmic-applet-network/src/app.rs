@@ -36,14 +36,13 @@ use cosmic::{
     widget::{
         Column, Id, Row, button, container, divider,
         icon::{self, from_name},
-        scrollable, secure_input, text, text_input,
+        scrollable, secure_input, text, text_input, toggler,
     },
 };
 use cosmic_dbus_networkmanager::interface::{
     access_point,
     enums::{ActiveConnectionState, DeviceState, NmConnectivityState, NmState},
 };
-use cosmic_time::{Instant, Timeline, anim, chain, id};
 
 use futures::{StreamExt, channel::mpsc::TrySendError};
 use zbus::{Connection, zvariant::ObjectPath};
@@ -95,9 +94,6 @@ impl From<NewConnectionState> for AccessPoint {
         }
     }
 }
-
-static WIFI: LazyLock<id::Toggler> = LazyLock::new(id::Toggler::unique);
-static AIRPLANE_MODE: LazyLock<id::Toggler> = LazyLock::new(id::Toggler::unique);
 
 pub static SECURE_INPUT_WIFI: LazyLock<Id> = LazyLock::new(Id::unique);
 
@@ -170,7 +166,6 @@ struct CosmicNetworkApplet {
     show_available_vpns: bool,
     new_connection: Option<NewConnectionState>,
     conn: Option<Connection>,
-    timeline: Timeline,
     toggle_wifi_ctr: u128,
     token_tx: Option<calloop::channel::Sender<TokenRequest>>,
     failed_known_ssids: FxHashSet<Arc<str>>,
@@ -363,31 +358,15 @@ impl CosmicNetworkApplet {
     }
 
     fn update_togglers(&mut self, state: &NetworkManagerState) {
-        let timeline = &mut self.timeline;
         let mut changed = false;
         if self.nm_state.nm_state.wifi_enabled != state.wifi_enabled {
             self.nm_state.nm_state.wifi_enabled = state.wifi_enabled;
             changed = true;
-            let chain = if state.wifi_enabled {
-                chain::Toggler::on(WIFI.clone(), 1.)
-            } else {
-                chain::Toggler::off(WIFI.clone(), 1.)
-            };
-            timeline.set_chain(chain);
         }
 
         if self.nm_state.nm_state.airplane_mode != state.airplane_mode {
             self.nm_state.nm_state.airplane_mode = state.airplane_mode;
             changed = true;
-            let chain = if state.airplane_mode {
-                chain::Toggler::on(AIRPLANE_MODE.clone(), 1.)
-            } else {
-                chain::Toggler::off(AIRPLANE_MODE.clone(), 1.)
-            };
-            timeline.set_chain(chain);
-        }
-        if changed {
-            timeline.start();
         }
     }
     fn view_window_return<'a>(&self, mut content: Column<'a, Message>) -> Element<'a, Message> {
@@ -463,7 +442,6 @@ pub(crate) enum Message {
     ToggleVisibleNetworks,
     SelectWirelessAccessPoint(AccessPoint),
     CancelNewConnection,
-    Frame(Instant),
     Token(TokenUpdate),
     OpenSettings,
     ResetFailedKnownSsid(String, HwAddress),
@@ -789,7 +767,6 @@ impl cosmic::Application for CosmicNetworkApplet {
 
     fn update(&mut self, message: Message) -> app::Task<Message> {
         match message {
-            Message::Frame(now) => self.timeline.now(now),
             Message::TogglePopup => {
                 if let Some(p) = self.popup.take() {
                     self.show_visible_networks = false;
@@ -817,7 +794,6 @@ impl cosmic::Application for CosmicNetworkApplet {
                     // TODO request update of state maybe
                     let new_id = window::Id::unique();
                     self.popup.replace(new_id);
-                    self.timeline = Timeline::new();
 
                     let popup_settings = self.core.applet.get_popup_settings(
                         self.core.main_window_id().unwrap(),
@@ -1604,16 +1580,11 @@ impl cosmic::Application for CosmicNetworkApplet {
                     column![
                         vpn_ethernet_col,
                         padded_control(
-                            anim!(
-                                //toggler
-                                AIRPLANE_MODE,
-                                &self.timeline,
-                                fl!("airplane-mode"),
-                                self.nm_state.nm_state.airplane_mode,
-                                |_chain, enable| { Message::ToggleAirplaneMode(enable) },
-                            )
-                            .text_size(14)
-                            .width(Length::Fill)
+                            toggler(self.nm_state.nm_state.airplane_mode,)
+                                .label(fl!("airplane-mode"))
+                                .on_toggle(Message::ToggleAirplaneMode)
+                                .text_size(14)
+                                .width(Length::Fill)
                         ),
                         padded_control(divider::horizontal::default())
                             .padding([space_xxs, space_s]),
@@ -1621,16 +1592,11 @@ impl cosmic::Application for CosmicNetworkApplet {
                     .align_x(Alignment::Center)
                 ),
                 padded_control(
-                    anim!(
-                        //toggler
-                        WIFI,
-                        &self.timeline,
-                        fl!("wifi"),
-                        self.nm_state.nm_state.wifi_enabled,
-                        |_chain, enable| { Message::WiFiEnable(enable) },
-                    )
-                    .text_size(14)
-                    .width(Length::Fill)
+                    toggler(self.nm_state.nm_state.wifi_enabled,)
+                        .label(fl!("wifi"))
+                        .on_toggle(Message::WiFiEnable)
+                        .text_size(14)
+                        .width(Length::Fill)
                 ),
             ]
             .align_x(Alignment::Center)
@@ -1993,16 +1959,10 @@ impl cosmic::Application for CosmicNetworkApplet {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        let timeline = self
-            .timeline
-            .as_subscription()
-            .map(|(_, now)| Message::Frame(now));
-        let token_sub = activation_token_subscription(0).map(Message::Token);
-
-        Subscription::batch([timeline, token_sub])
+        activation_token_subscription(0).map(Message::Token)
     }
 
-    fn style(&self) -> Option<cosmic::iced_runtime::Appearance> {
+    fn style(&self) -> Option<cosmic::iced::theme::Style> {
         Some(cosmic::applet::style())
     }
 

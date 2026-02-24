@@ -6,11 +6,10 @@ license = "GPL-3.0-only"
 
 [dependencies]
 anyhow.workspace = true
-cosmic-time.workspace = true
 libcosmic.workspace = true
 tokio.workspace = true
-cosmic-notifications-util = { git = "https://github.com/pop-os/cosmic-notifications" }
-cosmic-notifications-config = { git = "https://github.com/pop-os/cosmic-notifications" }
+cosmic-notifications-util = { git = "https://github.com/pop-os/cosmic-notifications", branch = "iced-rebase" }
+cosmic-notifications-config = { git = "https://github.com/pop-os/cosmic-notifications", branch = "iced-rebase" }
 # cosmic-notifications-util = { path = "../../cosmic-notifications-daemon/cosmic-notifications-util" }
 # cosmic-notifications-config = { path = "../../cosmic-notifications-daemon/cosmic-notifications-config" }
 futures-util = { workspace = true, features = ["sink"] }

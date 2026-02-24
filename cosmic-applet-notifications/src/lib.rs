@@ -15,18 +15,17 @@ use cosmic::{
     iced::{
         Alignment, Length, Subscription,
         platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
-        widget::{column, row},
+        widget::{self, column, row},
         window,
     },
     surface, theme,
-    widget::{Column, button, container, divider, icon, scrollable, text},
+    widget::{Column, button, cards, container, divider, icon, scrollable, space, text, toggler},
 };
 
 use cosmic::iced_futures::futures::executor::block_on;
 
 use cosmic_notifications_config::NotificationsConfig;
 use cosmic_notifications_util::{ActionId, Image, Notification};
-use cosmic_time::{Instant, Timeline, anim, chain, id};
 use std::{borrow::Cow, collections::HashMap, path::PathBuf, sync::LazyLock};
 use subscriptions::notifications::{self, NotificationsAppletProxy};
 use tokio::sync::mpsc::Sender;
@@ -37,8 +36,6 @@ pub fn run() -> cosmic::iced::Result {
     cosmic::applet::run::<Notifications>(())
 }
 
-static DO_NOT_DISTURB: LazyLock<id::Toggler> = LazyLock::new(id::Toggler::unique);
-
 struct Notifications {
     core: cosmic::app::Core,
     config: NotificationsConfig,
@@ -46,27 +43,14 @@ struct Notifications {
     icon_name: String,
     popup: Option<window::Id>,
     // notifications: Vec<Notification>,
-    timeline: Timeline,
     dbus_sender: Option<Sender<subscriptions::dbus::Input>>,
-    cards: Vec<(id::Cards, Vec<Notification>, bool, String, String, String)>,
+    cards: Vec<(widget::Id, Vec<Notification>, bool, String, String, String)>,
     token_tx: Option<calloop::channel::Sender<TokenRequest>>,
     proxy: NotificationsAppletProxy<'static>,
     notifications_tx: Option<Sender<notifications::Input>>,
 }
 
 impl Notifications {
-    fn update_cards(&mut self, id: id::Cards) {
-        if let Some((id, _, card_value, ..)) = self.cards.iter().find(|c| c.0 == id) {
-            let chain = if *card_value {
-                chain::Cards::on(id.clone(), 1.)
-            } else {
-                chain::Cards::off(id.clone(), 1.)
-            };
-            self.timeline.set_chain(chain);
-            self.timeline.start();
-        }
-    }
-
     fn update_icon(&mut self) {
         self.icon_name = if self.config.do_not_disturb {
             "cosmic-applet-notification-disabled-symbolic"
@@ -83,8 +67,7 @@ impl Notifications {
 enum Message {
     TogglePopup,
     CloseRequested(window::Id),
-    DoNotDisturb(chain::Toggler, bool),
-    Frame(Instant),
+    DoNotDisturb(bool),
     NotificationEvent(notifications::Output),
     Config(NotificationsConfig),
     DbusEvent(subscriptions::dbus::Output),
@@ -127,7 +110,6 @@ impl cosmic::Application for Notifications {
             config,
             icon_name: String::default(),
             popup: None,
-            timeline: Timeline::default(),
             dbus_sender: Option::default(),
             cards: Vec::new(),
             token_tx: Option::default(),
@@ -147,7 +129,7 @@ impl cosmic::Application for Notifications {
         &mut self.core
     }
 
-    fn style(&self) -> Option<cosmic::iced_runtime::Appearance> {
+    fn style(&self) -> Option<cosmic::iced::theme::Style> {
         Some(cosmic::applet::style())
     }
 
@@ -161,9 +143,6 @@ impl cosmic::Application for Notifications {
                     }
                     Message::Config(res.config)
                 }),
-            self.timeline
-                .as_subscription()
-                .map(|(_, now)| Message::Frame(now)),
             subscriptions::dbus::proxy().map(Message::DbusEvent),
             subscriptions::notifications::notifications(self.proxy.clone())
                 .map(Message::NotificationEvent),
@@ -173,16 +152,12 @@ impl cosmic::Application for Notifications {
 
     fn update(&mut self, message: Self::Message) -> app::Task<Self::Message> {
         match message {
-            Message::Frame(now) => {
-                self.timeline.now(now);
-            }
             Message::TogglePopup => {
                 if let Some(p) = self.popup.take() {
                     return destroy_popup(p);
                 } else {
                     let new_id = window::Id::unique();
                     self.popup.replace(new_id);
-                    self.timeline = Timeline::new();
 
                     let popup_settings = self.core.applet.get_popup_settings(
                         self.core.main_window_id().unwrap(),
@@ -195,8 +170,7 @@ impl cosmic::Application for Notifications {
                     return get_popup(popup_settings);
                 }
             }
-            Message::DoNotDisturb(chain, b) => {
-                self.timeline.set_chain(chain).start();
+            Message::DoNotDisturb(b) => {
                 self.config.do_not_disturb = b;
                 if let Some(helper) = &self.config_helper {
                     if let Err(err) = self.config.write_entry(helper) {
@@ -222,7 +196,7 @@ impl cosmic::Application for Notifications {
                         }
                     } else {
                         self.cards.push((
-                            id::Cards::new(n.app_name.clone()),
+                            widget::Id::new(n.app_name.clone()),
                             vec![n],
                             false,
                             fl!("show-more", HashMap::from([("more", "1")])),
@@ -314,7 +288,6 @@ impl cosmic::Application for Notifications {
                 } else {
                     return Task::none();
                 };
-                self.update_cards(id);
             }
             Message::CloseRequested(id) => {
                 if Some(id) == self.popup {
@@ -411,15 +384,11 @@ impl cosmic::Application for Notifications {
         } = theme::active().cosmic().spacing;
 
         let do_not_disturb = padded_control(row![
-            anim!(
-                DO_NOT_DISTURB,
-                &self.timeline,
-                fl!("do-not-disturb"),
-                self.config.do_not_disturb,
-                Message::DoNotDisturb
-            )
-            .text_size(14)
-            .width(Length::Fill)
+            toggler(self.config.do_not_disturb)
+                .on_toggle(Message::DoNotDisturb)
+                .text_size(14)
+                .width(Length::Fill)
+                .label(fl!("do-not-disturb"))
         ]);
 
         let notifications = if self.cards.is_empty() {
@@ -527,13 +496,12 @@ impl cosmic::Application for Notifications {
                         Some(cosmic::widget::icon::from_name(n.app_icon.as_str()).handle())
                     }
                 });
-                let card_list = anim!(
+                let card_list = cards(
                     //cards
                     c.0.clone(),
-                    &self.timeline,
                     notif_elems,
                     Message::ClearAll(Some(name.clone())),
-                    Some(move |_, e| Message::CardsToggled(name.clone(), e)),
+                    Some(move |e| Message::CardsToggled(name.clone(), e)),
                     Some(move |id| Message::ActivateNotification(ids[id])),
                     &c.3,
                     &c.4,
@@ -541,6 +509,7 @@ impl cosmic::Application for Notifications {
                     show_more_icon,
                     c.2,
                 );
+                // let card_list = space::horizontal().width(Length::Fixed(10.));
                 notifs.push(card_list.into());
             }
 

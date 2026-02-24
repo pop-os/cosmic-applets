@@ -23,16 +23,15 @@ pub enum WorkspacesUpdate {
 }
 
 pub fn workspaces() -> iced::Subscription<WorkspacesUpdate> {
-    Subscription::run_with_id(
-        std::any::TypeId::of::<WorkspacesUpdate>(),
+    Subscription::run_with(std::any::TypeId::of::<WorkspacesUpdate>(), |_| {
         stream::channel(50, move |mut output| async move {
             let mut state = State::Waiting;
 
             loop {
                 state = start_listening(state, &mut output).await;
             }
-        }),
-    )
+        })
+    })
 }
 
 async fn start_listening(

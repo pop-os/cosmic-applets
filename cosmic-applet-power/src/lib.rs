@@ -16,7 +16,7 @@ use cosmic::{
         window,
     },
     surface, theme,
-    widget::{Space, button, divider, icon, text},
+    widget::{Space, button, divider, icon, space, text},
 };
 use std::sync::LazyLock;
 
@@ -227,7 +227,7 @@ impl cosmic::Application for Power {
                     row![
                         text_icon("system-lock-screen-symbolic", 24),
                         text::body(fl!("lock-screen")),
-                        Space::with_width(Length::Fill),
+                        space::horizontal().width(Length::Fill),
                         text::body(fl!("lock-screen-shortcut")),
                     ]
                     .align_y(Alignment::Center)
@@ -238,7 +238,7 @@ impl cosmic::Application for Power {
                     row![
                         text_icon("system-log-out-symbolic", 24),
                         text::body(fl!("log-out")),
-                        Space::with_width(Length::Fill),
+                        space::horizontal().width(Length::Fill),
                         text::body(fl!("log-out-shortcut")),
                     ]
                     .align_y(Alignment::Center)
@@ -285,7 +285,7 @@ impl cosmic::Application for Power {
         activation_token_subscription(0).map(Message::Token)
     }
 
-    fn style(&self) -> Option<cosmic::iced_runtime::Appearance> {
+    fn style(&self) -> Option<iced::theme::Style> {
         Some(cosmic::applet::style())
     }
 }
