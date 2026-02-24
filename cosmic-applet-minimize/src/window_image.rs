@@ -93,8 +93,9 @@ impl<Msg> Widget<Msg, cosmic::Theme, cosmic::Renderer> for WindowImage<'_, Msg> 
     fn overlay<'b>(
         &'b mut self,
         state: &'b mut Tree,
-        layout: Layout<'_>,
+        layout: Layout<'b>,
         renderer: &cosmic::Renderer,
+        viewport: &cosmic::iced_core::Rectangle,
         translation: Vector,
     ) -> Option<cosmic::iced_core::overlay::Element<'b, Msg, cosmic::Theme, cosmic::Renderer>> {
         let children = [&mut self.image_button, &mut self.icon]
@@ -104,7 +105,7 @@ impl<Msg> Widget<Msg, cosmic::Theme, cosmic::Renderer> for WindowImage<'_, Msg> 
             .filter_map(|((child, state), layout)| {
                 child
                     .as_widget_mut()
-                    .overlay(state, layout, renderer, translation)
+                    .overlay(state, layout, renderer, viewport, translation)
             })
             .collect::<Vec<_>>();
 
@@ -116,7 +117,7 @@ impl<Msg> Widget<Msg, cosmic::Theme, cosmic::Renderer> for WindowImage<'_, Msg> 
     }
 
     fn layout(
-        &self,
+        &mut self,
         tree: &mut cosmic::iced_core::widget::Tree,
         renderer: &cosmic::Renderer,
         limits: &cosmic::iced_core::layout::Limits,
@@ -125,7 +126,7 @@ impl<Msg> Widget<Msg, cosmic::Theme, cosmic::Renderer> for WindowImage<'_, Msg> 
         let button = &mut children[0];
         let button_node = self
             .image_button
-            .as_widget()
+            .as_widget_mut()
             .layout(button, renderer, limits);
         let img_node = &button_node.children()[0].children()[0];
 
@@ -135,7 +136,7 @@ impl<Msg> Widget<Msg, cosmic::Theme, cosmic::Renderer> for WindowImage<'_, Msg> 
         let icon = &mut children[1];
         let icon_node = self
             .icon
-            .as_widget()
+            .as_widget_mut()
             .layout(
                 icon,
                 renderer,
@@ -185,14 +186,14 @@ impl<Msg> Widget<Msg, cosmic::Theme, cosmic::Renderer> for WindowImage<'_, Msg> 
     }
 
     fn operate(
-        &self,
+        &mut self,
         tree: &mut cosmic::iced_core::widget::Tree,
         layout: cosmic::iced_core::Layout<'_>,
         renderer: &cosmic::Renderer,
         operation: &mut dyn cosmic::widget::Operation<()>,
     ) {
         let layout = layout.children().collect::<Vec<_>>();
-        let children = [&self.image_button, &self.icon];
+        let children = [&mut self.image_button, &mut self.icon];
         for (i, (layout, child)) in layout
             .into_iter()
             .zip(children.into_iter())
@@ -200,26 +201,27 @@ impl<Msg> Widget<Msg, cosmic::Theme, cosmic::Renderer> for WindowImage<'_, Msg> 
             .rev()
         {
             let tree = &mut tree.children[i];
-            child.as_widget().operate(tree, layout, renderer, operation);
+            child
+                .as_widget_mut()
+                .operate(tree, layout, renderer, operation);
         }
     }
 
-    fn on_event(
+    fn update(
         &mut self,
         state: &mut cosmic::iced_core::widget::Tree,
-        event: cosmic::iced_core::Event,
+        event: &cosmic::iced_core::Event,
         layout: cosmic::iced_core::Layout<'_>,
         cursor: cosmic::iced_core::mouse::Cursor,
         renderer: &cosmic::Renderer,
         clipboard: &mut dyn cosmic::iced_core::Clipboard,
         shell: &mut cosmic::iced_core::Shell<'_, Msg>,
         viewport: &cosmic::iced_core::Rectangle,
-    ) -> cosmic::iced_core::event::Status {
+    ) {
         let children = [&mut self.image_button, &mut self.icon];
 
         let layout = layout.children().collect::<Vec<_>>();
         // draw children in order
-        let mut status = cosmic::iced_core::event::Status::Ignored;
         for (i, (layout, child)) in layout
             .into_iter()
             .zip(children.into_iter())
@@ -228,21 +230,13 @@ impl<Msg> Widget<Msg, cosmic::Theme, cosmic::Renderer> for WindowImage<'_, Msg> 
         {
             let tree = &mut state.children[i];
 
-            status = child.as_widget_mut().on_event(
-                tree,
-                event.clone(),
-                layout,
-                cursor,
-                renderer,
-                clipboard,
-                shell,
-                viewport,
+            child.as_widget_mut().update(
+                tree, event, layout, cursor, renderer, clipboard, shell, viewport,
             );
-            if matches!(status, cosmic::iced_core::event::Status::Captured) {
-                return status;
+            if shell.is_event_captured() {
+                return;
             }
         }
-        status
     }
 
     fn mouse_interaction(

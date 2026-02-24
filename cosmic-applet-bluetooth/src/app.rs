@@ -7,6 +7,7 @@ use cosmic::{
     applet::token::subscription::{TokenRequest, TokenUpdate, activation_token_subscription},
     cctk::sctk::reexports::calloop,
     surface,
+    widget::toggler,
 };
 
 use cosmic::{
@@ -22,7 +23,6 @@ use cosmic::{
     theme,
     widget::{button, divider, icon, scrollable, text},
 };
-use cosmic_time::{Instant, Timeline, anim, chain, id};
 use futures::FutureExt;
 use std::{collections::HashMap, sync::LazyLock, time::Duration};
 use tokio::sync::mpsc::Sender;
@@ -31,8 +31,6 @@ use crate::{
     bluetooth::{BluerDevice, BluerEvent, bluetooth_subscription},
     config, fl,
 };
-
-static BLUETOOTH_ENABLED: LazyLock<id::Toggler> = LazyLock::new(id::Toggler::unique);
 
 #[inline]
 pub fn run() -> cosmic::iced::Result {
@@ -50,7 +48,6 @@ struct CosmicBluetoothApplet {
     show_visible_devices: bool,
     request_confirmation: Option<(BluerDevice, String, Sender<bool>)>,
     token_tx: Option<calloop::channel::Sender<TokenRequest>>,
-    timeline: Timeline,
 }
 
 impl CosmicBluetoothApplet {
@@ -77,8 +74,7 @@ enum Message {
     Confirm,
     Token(TokenUpdate),
     OpenSettings,
-    Frame(Instant),
-    ToggleBluetooth(chain::Toggler, bool),
+    ToggleBluetooth(bool),
     Surface(surface::Action),
 }
 
@@ -127,7 +123,6 @@ impl cosmic::Application for CosmicBluetoothApplet {
                     // TODO request update of state maybe
                     let new_id = window::Id::unique();
                     self.popup.replace(new_id);
-                    self.timeline = Timeline::new();
 
                     let popup_settings = self.core.applet.get_popup_settings(
                         self.core.main_window_id().unwrap(),
@@ -156,15 +151,6 @@ impl cosmic::Application for CosmicBluetoothApplet {
                 } => {
                     if let Some(err_msg) = err_msg {
                         eprintln!("bluetooth request error: {err_msg}");
-                    }
-                    if self.bluer_state.bluetooth_enabled != state.bluetooth_enabled {
-                        self.timeline
-                            .set_chain(if state.bluetooth_enabled {
-                                chain::Toggler::on(BLUETOOTH_ENABLED.clone(), 1.0)
-                            } else {
-                                chain::Toggler::off(BLUETOOTH_ENABLED.clone(), 1.0)
-                            })
-                            .start();
                     }
 
                     self.bluer_state = state;
@@ -300,12 +286,10 @@ impl cosmic::Application for CosmicBluetoothApplet {
                     tokio::spawn(cosmic::process::spawn(cmd));
                 }
             },
-            Message::Frame(instant) => self.timeline.now(instant),
-            Message::ToggleBluetooth(chain, enabled) => {
+            Message::ToggleBluetooth(enabled) => {
                 if self.bluer_state.bluetooth_enabled == enabled {
                     return Task::none();
                 }
-                self.timeline.set_chain(chain).start();
                 self.bluer_state.bluetooth_enabled = enabled;
                 if let Some(tx) = self.bluer_sender.clone() {
                     tokio::spawn(async move {
@@ -416,16 +400,11 @@ impl cosmic::Application for CosmicBluetoothApplet {
         }
 
         let mut content = column![column![padded_control(
-            anim!(
-                //toggler
-                BLUETOOTH_ENABLED,
-                &self.timeline,
-                fl!("bluetooth"),
-                self.bluer_state.bluetooth_enabled,
-                Message::ToggleBluetooth,
-            )
-            .text_size(14)
-            .width(Length::Fill)
+            toggler(self.bluer_state.bluetooth_enabled)
+                .label(fl!("bluetooth"))
+                .on_toggle(Message::ToggleBluetooth)
+                .width(Length::Fill)
+                .text_size(14)
         ),],]
         .align_x(Alignment::Center)
         .padding([8, 0]);
@@ -549,13 +528,10 @@ impl cosmic::Application for CosmicBluetoothApplet {
         Subscription::batch([
             activation_token_subscription(0).map(Message::Token),
             bluetooth_subscription(0).map(Message::BluetoothEvent),
-            self.timeline
-                .as_subscription()
-                .map(|(_, now)| Message::Frame(now)),
         ])
     }
 
-    fn style(&self) -> Option<cosmic::iced_runtime::Appearance> {
+    fn style(&self) -> Option<iced::theme::Style> {
         Some(cosmic::applet::style())
     }
 

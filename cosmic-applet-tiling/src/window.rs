@@ -6,8 +6,8 @@ use crate::{
 };
 use cctk::sctk::reexports::calloop::channel::SyncSender;
 use cosmic::{
-    Element, Task, app,
-    app::Core,
+    Element, Task,
+    app::{self, Core},
     applet::{menu_button, padded_control},
     cosmic_config::{Config, ConfigSet, CosmicConfigEntry},
     cosmic_theme::Spacing,
@@ -21,12 +21,11 @@ use cosmic::{
     widget::{
         container, divider,
         segmented_button::{self, Entity, SingleSelectModel},
-        segmented_control, text,
+        segmented_control, text, toggler,
     },
 };
 use cosmic_comp_config::{CosmicCompConfig, TileBehavior};
 use cosmic_protocols::workspace::v2::client::zcosmic_workspace_handle_v2::TilingState;
-use cosmic_time::{Timeline, anim, chain, id};
 use std::{thread, time::Instant};
 use tracing::error;
 
@@ -37,7 +36,6 @@ const OFF: &str = "com.system76.CosmicAppletTiling.Off";
 pub struct Window {
     core: Core,
     popup: Option<Id>,
-    timeline: Timeline,
     config: CosmicCompConfig,
     config_helper: Config,
     new_workspace_behavior_model: segmented_button::SingleSelectModel,
@@ -45,17 +43,14 @@ pub struct Window {
     /// may not match the config value if behavior is per-workspace
     autotiled: bool,
     workspace_tx: Option<SyncSender<AppRequest>>,
-    tile_windows: id::Toggler,
-    active_hint: id::Toggler,
 }
 
 #[derive(Clone, Debug)]
 pub enum Message {
     TogglePopup,
     PopupClosed(Id),
-    Frame(Instant),
-    ToggleTileWindows(chain::Toggler, bool),
-    ToggleActiveHint(chain::Toggler, bool),
+    ToggleTileWindows(bool),
+    ToggleActiveHint(bool),
     MyConfigUpdate(Box<CosmicCompConfig>),
     WorkspaceUpdate(WorkspacesUpdate),
     NewWorkspace(Entity),
@@ -110,15 +105,12 @@ impl cosmic::Application for Window {
         let window = Self {
             core,
             popup: None,
-            timeline: Timeline::default(),
             autotiled: config.autotile,
             config,
             config_helper,
             new_workspace_behavior_model,
             new_workspace_entity,
             workspace_tx: None,
-            tile_windows: id::Toggler::unique(),
-            active_hint: id::Toggler::unique(),
         };
         (window, Task::none())
     }
@@ -128,12 +120,7 @@ impl cosmic::Application for Window {
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {
-        let timeline = self
-            .timeline
-            .as_subscription()
-            .map(|(_, now)| Message::Frame(now));
         Subscription::batch([
-            timeline,
             self.core
                 .watch_config::<CosmicCompConfig>("com.system76.CosmicComp")
                 .map(|u| Message::MyConfigUpdate(Box::new(u.config))),
@@ -146,15 +133,7 @@ impl cosmic::Application for Window {
             Message::WorkspaceUpdate(msg) => match msg {
                 WorkspacesUpdate::State(state) => {
                     self.autotiled = matches!(state, TilingState::TilingEnabled);
-                    if self.popup.is_some() {
-                        self.timeline
-                            .set_chain(if self.autotiled {
-                                cosmic_time::chain::Toggler::on(self.tile_windows.clone(), 1.0)
-                            } else {
-                                cosmic_time::chain::Toggler::off(self.tile_windows.clone(), 1.0)
-                            })
-                            .start();
-                    }
+                    if self.popup.is_some() {}
                 }
                 WorkspacesUpdate::Started(tx) => {
                     self.workspace_tx = Some(tx);
@@ -167,9 +146,6 @@ impl cosmic::Application for Window {
                 return if let Some(p) = self.popup.take() {
                     destroy_popup(p)
                 } else {
-                    self.timeline = Timeline::default();
-                    self.tile_windows = id::Toggler::unique();
-                    self.active_hint = id::Toggler::unique();
                     let new_id = Id::unique();
                     self.popup = Some(new_id);
                     let popup_settings = self.core.applet.get_popup_settings(
@@ -188,9 +164,7 @@ impl cosmic::Application for Window {
                     self.popup = None;
                 }
             }
-            Message::Frame(now) => self.timeline.now(now),
-            Message::ToggleTileWindows(chain, toggled) => {
-                self.timeline.set_chain(chain).start();
+            Message::ToggleTileWindows(toggled) => {
                 self.autotiled = toggled;
 
                 // set via protocol
@@ -206,8 +180,7 @@ impl cosmic::Application for Window {
                     }
                 }
             }
-            Message::ToggleActiveHint(chain, toggled) => {
-                self.timeline.set_chain(chain).start();
+            Message::ToggleActiveHint(toggled) => {
                 self.config.active_hint = toggled;
 
                 let helper = self.config_helper.clone();
@@ -221,16 +194,6 @@ impl cosmic::Application for Window {
                 if c.autotile != self.config.autotile {
                     self.new_workspace_behavior_model
                         .activate_position(if c.autotile { 0 } else { 1 });
-                }
-
-                if c.active_hint != self.config.active_hint && self.popup.is_some() {
-                    self.timeline
-                        .set_chain(if c.active_hint {
-                            cosmic_time::chain::Toggler::on(self.active_hint.clone(), 1.0)
-                        } else {
-                            cosmic_time::chain::Toggler::off(self.active_hint.clone(), 1.0)
-                        })
-                        .start();
                 }
 
                 self.config = *c;
@@ -295,17 +258,12 @@ impl cosmic::Application for Window {
                 .on_activate(Message::NewWorkspace);
         let content_list = column![
             padded_control(container(
-                anim!(
-                    self.tile_windows,
-                    &self.timeline,
-                    fl!("tile-current"),
-                    self.autotiled,
-                    |chain, enable| { Message::ToggleTileWindows(chain, enable) },
-                )
-                .text_size(14)
-                .width(Length::Fill),
-            ))
-            .width(Length::Fill),
+                toggler(self.autotiled)
+                    .on_toggle(Message::ToggleTileWindows)
+                    .text_size(14)
+                    .width(Length::Fill)
+                    .label(fl!("tile-current"))
+            )),
             padded_control(divider::horizontal::default()).padding([space_xxs, space_s]),
             padded_control(
                 column![
@@ -334,15 +292,11 @@ impl cosmic::Application for Window {
             )),
             padded_control(divider::horizontal::default()).padding([space_xxs, space_s]),
             padded_control(
-                anim!(
-                    self.active_hint,
-                    &self.timeline,
-                    fl!("active-hint"),
-                    self.config.active_hint,
-                    |chain, enable| { Message::ToggleActiveHint(chain, enable) },
-                )
-                .text_size(14)
-                .width(Length::Fill),
+                toggler(self.config.active_hint)
+                    .on_toggle(Message::ToggleActiveHint)
+                    .label(fl!("active-hint"))
+                    .text_size(14)
+                    .width(Length::Fill),
             ),
             padded_control(divider::horizontal::default()).padding([space_xxs, space_s]),
             menu_button(text::body(fl!("window-management-settings")))
@@ -353,7 +307,7 @@ impl cosmic::Application for Window {
         self.core.applet.popup_container(content_list).into()
     }
 
-    fn style(&self) -> Option<cosmic::iced_runtime::Appearance> {
+    fn style(&self) -> Option<cosmic::iced::theme::Style> {
         Some(cosmic::applet::style())
     }
 }

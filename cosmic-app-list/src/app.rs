@@ -19,7 +19,6 @@ use cctk::{
         workspace::v1::client::ext_workspace_handle_v1::ExtWorkspaceHandleV1,
     },
 };
-use cosmic::desktop::fde::{self, DesktopEntry, get_languages_from_env, unicase::Ascii};
 use cosmic::{
     Apply, Element, Task, app,
     applet::{
@@ -34,8 +33,9 @@ use cosmic::{
         event::listen_with,
         platform_specific::shell::commands::popup::{destroy_popup, get_popup},
         widget::{
-            Column, Row, column, mouse_area, row, stack, text::Wrapping, vertical_rule,
-            vertical_space,
+            Column, Row, column, mouse_area, row, rule::vertical as vertical_rule,
+            space::horizontal as horizontal_space, space::vertical as vertical_space, stack,
+            text::Wrapping,
         },
         window,
     },
@@ -43,12 +43,16 @@ use cosmic::{
     surface,
     theme::{self, Button, Container},
     widget::{
-        DndDestination, Image, button, container, divider, dnd_source, horizontal_space,
+        DndDestination, Image, button, container, divider, dnd_source,
         icon::{self, from_name},
         image::Handle,
         rectangle_tracker::{RectangleTracker, RectangleUpdate, rectangle_tracker_subscription},
         svg, text,
     },
+};
+use cosmic::{
+    desktop::fde::{self, DesktopEntry, get_languages_from_env, unicase::Ascii},
+    widget::DndSource,
 };
 use cosmic_app_list_config::{APP_ID, AppListConfig};
 use cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::State;
@@ -297,7 +301,7 @@ impl DockItem {
 
         let path = desktop_info.path.clone();
         let icon_button = if dnd_source_enabled && interaction_enabled {
-            dnd_source(icon_button)
+            DndSource::with_id(icon_button, cosmic::widget::Id::new("asdfasdfadfs"))
                 .window(window_id)
                 .drag_icon(move |_| {
                     (
@@ -2419,7 +2423,7 @@ impl cosmic::Application for CosmicAppList {
         ])
     }
 
-    fn style(&self) -> Option<cosmic::iced_runtime::Appearance> {
+    fn style(&self) -> Option<iced::theme::Style> {
         Some(cosmic::applet::style())
     }
 
