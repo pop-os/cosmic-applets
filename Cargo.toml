@@ -68,7 +68,7 @@ tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
 tracing-log = "0.2.0"
 tokio = { version = "1.49.0", features = ["full"] }
 # cosmic-config = { path = "../libcosmic/cosmic-config" }
-cosmic-config = { git = "https://github.com/pop-os/libcosmic" }
+cosmic-config = { git = "https://github.com/pop-os/libcosmic", branch = "iced-rebase" }
 serde = { version = "1.0.228", features = ["derive"] }
 
 [profile.release]
