@@ -5,7 +5,6 @@ edition = "2024"
 license = "GPL-3.0-only"
 
 [dependencies]
-# cosmic-time.workspace = true
 cosmic-comp-config = { git = "https://github.com/pop-os/cosmic-comp.git", rev = "5eb5af4" }
 i18n-embed-fl.workspace = true
 i18n-embed.workspace = true

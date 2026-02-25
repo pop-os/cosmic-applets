@@ -3,12 +3,15 @@
 
 use cosmic::{
     Element, Task, app,
-    applet::cosmic_panel_config::PanelAnchor,
-    applet::token::subscription::{TokenRequest, TokenUpdate, activation_token_subscription},
+    applet::{
+        cosmic_panel_config::PanelAnchor,
+        token::subscription::{TokenRequest, TokenUpdate, activation_token_subscription},
+    },
     cctk::sctk::reexports::calloop,
     iced::{
         self, Length, Subscription,
         platform_specific::shell::commands::popup::{destroy_popup, get_popup},
+        theme::Style,
         window,
     },
     surface,
@@ -146,7 +149,7 @@ impl cosmic::Application for App {
         &mut self.core
     }
 
-    fn style(&self) -> Option<cosmic::iced_runtime::Appearance> {
+    fn style(&self) -> Option<iced::theme::Style> {
         Some(cosmic::applet::style())
     }
 

@@ -29,7 +29,7 @@ use cosmic::{
     iced_core::{Alignment, Background, Border, Color, Shadow},
     surface,
     theme::{self, Button},
-    widget::{button, divider, horizontal_space, icon, scrollable, slider, text, vertical_space},
+    widget::{button, divider, icon, scrollable, slider, space, text, toggler},
 };
 use cosmic_applets_config::battery::BatteryAppletConfig;
 use cosmic_config::{Config, CosmicConfigEntry};
@@ -38,8 +38,6 @@ use cosmic_settings_upower_subscription::{
     device::{DeviceDbusEvent, device_subscription},
     kbdbacklight::{KeyboardBacklightRequest, KeyboardBacklightUpdate, kbd_backlight_subscription},
 };
-
-use cosmic_time::{Instant, Timeline, anim, chain, id};
 
 use rustc_hash::FxHashMap;
 use std::{path::PathBuf, sync::LazyLock, time::Duration};
@@ -64,8 +62,6 @@ fn format_duration(duration: Duration) -> String {
 pub fn run() -> cosmic::iced::Result {
     cosmic::applet::run::<CosmicBatteryApplet>(())
 }
-
-static MAX_CHARGE: LazyLock<id::Toggler> = LazyLock::new(id::Toggler::unique);
 
 #[derive(Clone, Default)]
 struct GPUData {
@@ -95,7 +91,6 @@ struct CosmicBatteryApplet {
     kbd_sender: Option<UnboundedSender<KeyboardBacklightRequest>>,
     power_profile: Power,
     power_profile_sender: Option<UnboundedSender<PowerProfileRequest>>,
-    timeline: Timeline,
     token_tx: Option<calloop::channel::Sender<TokenRequest>>,
     zbus_connection: Option<zbus::Connection>,
     dragging_screen_brightness: bool,
@@ -186,7 +181,7 @@ enum Message {
     SetScreenBrightnessDebounced,
     ReleaseScreenBrightness,
     InitChargingLimit(Option<bool>),
-    SetChargingLimit(chain::Toggler, bool),
+    SetChargingLimit(bool),
     KeyboardBacklight(KeyboardBacklightUpdate),
     UpowerDevice(DeviceDbusEvent),
     GpuInit(UnboundedSender<()>),
@@ -197,7 +192,6 @@ enum Message {
     InitProfile(UnboundedSender<PowerProfileRequest>, Power),
     Profile(Power),
     SelectProfile(Power),
-    Frame(Instant),
     ConfigChanged(BatteryAppletConfig),
     Token(TokenUpdate),
     OpenSettings,
@@ -248,7 +242,6 @@ impl cosmic::Application for CosmicBatteryApplet {
 
     fn update(&mut self, message: Self::Message) -> app::Task<Self::Message> {
         match message {
-            Message::Frame(now) => self.timeline.now(now),
             Message::SetKbdBrightness(brightness) => {
                 self.kbd_brightness = Some(brightness);
 
@@ -330,8 +323,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                     self.set_charging_limit(enable);
                 }
             }
-            Message::SetChargingLimit(chain, enable) => {
-                self.timeline.set_chain(chain).start();
+            Message::SetChargingLimit(enable) => {
                 self.set_charging_limit(enable);
 
                 if enable {
@@ -357,7 +349,6 @@ impl cosmic::Application for CosmicBatteryApplet {
                     if let Some(tx) = &self.kbd_sender {
                         let _ = tx.send(KeyboardBacklightRequest::Get);
                     }
-                    self.timeline = Timeline::new();
 
                     let new_id = window::Id::unique();
                     self.popup.replace(new_id);
@@ -582,7 +573,7 @@ impl cosmic::Application for CosmicBatteryApplet {
         let content = if self.gpus.is_empty() {
             btn
         } else {
-            let dot = container(vertical_space().height(Length::Fixed(0.0)))
+            let dot = container(space::vertical().height(Length::Fixed(0.0)))
                 .padding(2.0)
                 .class(cosmic::style::Container::Custom(Box::new(|theme| {
                     container::Style {
@@ -595,6 +586,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                         },
                         shadow: Shadow::default(),
                         icon_color: Some(Color::TRANSPARENT),
+                        snap: true,
                     }
                 })));
             let (dot_align_x, dot_align_y) = match self.core.applet.anchor {
@@ -638,7 +630,7 @@ impl cosmic::Application for CosmicBatteryApplet {
             },
         );
 
-        let mut content = vec![
+        let mut content: Vec<Element<'_, Message>> = vec![
             padded_control(
                 row![
                     icon::from_name(&*self.icon_name).size(24).symbolic(true),
@@ -665,7 +657,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                                 .symbolic(true),
                         )
                     } else {
-                        container(horizontal_space().width(1.0))
+                        container(space::horizontal().width(1.0))
                     }
                 ]
                 .align_y(Alignment::Center),
@@ -686,7 +678,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                                 .symbolic(true),
                         )
                     } else {
-                        container(horizontal_space().width(1.0))
+                        container(space::horizontal().width(1.0))
                     }
                 ]
                 .align_y(Alignment::Center),
@@ -707,7 +699,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                                 .symbolic(true),
                         )
                     } else {
-                        container(horizontal_space().width(1.0))
+                        container(space::horizontal().width(1.0))
                     }
                 ]
                 .align_y(Alignment::Center),
@@ -722,16 +714,11 @@ impl cosmic::Application for CosmicBatteryApplet {
         if let Some(charging_limit) = self.charging_limit {
             content.push(
                 padded_control(
-                    anim!(
-                        //toggler
-                        MAX_CHARGE,
-                        &self.timeline,
-                        fl!("max-charge"),
-                        charging_limit,
-                        Message::SetChargingLimit,
-                    )
-                    .text_size(14)
-                    .width(Length::Fill),
+                    toggler(charging_limit)
+                        .on_toggle(Message::SetChargingLimit)
+                        .label(fl!("max-charge"))
+                        .text_size(14)
+                        .width(Length::Fill),
                 )
                 .into(),
             );
@@ -819,7 +806,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                             .width(Length::Fill)
                             .align_x(Alignment::Start),
                         container(
-                            vertical_space()
+                            space::vertical()
                                 .width(Length::Fixed(0.0))
                                 .height(Length::Fixed(0.0))
                         )
@@ -837,6 +824,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                                 },
                                 shadow: Shadow::default(),
                                 icon_color: Some(Color::TRANSPARENT),
+                                snap: true,
                             }
                         },))),
                     ]
@@ -902,7 +890,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                                 if let Some(icon) = &app.icon {
                                     container(icon::from_name(&**icon).size(12).symbolic(true))
                                 } else {
-                                    container(horizontal_space().width(12.0))
+                                    container(space::horizontal().width(12.0))
                                 },
                                 column![text::body(&app.name), text::caption(&app.secondary)]
                                     .width(Length::Fill),
@@ -952,9 +940,6 @@ impl cosmic::Application for CosmicBatteryApplet {
                 GpuUpdate::On(path, name, list) => Message::GpuOn(path, name, list),
                 GpuUpdate::Off(path) => Message::GpuOff(path),
             }),
-            self.timeline
-                .as_subscription()
-                .map(|(_, now)| Message::Frame(now)),
             activation_token_subscription(0).map(Message::Token),
             self.core.watch_config(Self::APP_ID).map(|u| {
                 for err in u.errors {
@@ -973,7 +958,7 @@ impl cosmic::Application for CosmicBatteryApplet {
         Some(Message::CloseRequested(id))
     }
 
-    fn style(&self) -> Option<cosmic::iced_runtime::Appearance> {
+    fn style(&self) -> Option<cosmic::iced::theme::Style> {
         Some(cosmic::applet::style())
     }
 }

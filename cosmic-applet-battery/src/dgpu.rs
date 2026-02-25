@@ -418,16 +418,15 @@ fn all_gpus<S: AsRef<str>>(seat: S) -> io::Result<Vec<Gpu>> {
 pub fn dgpu_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
     id: I,
 ) -> iced::Subscription<GpuUpdate> {
-    Subscription::run_with_id(
-        id,
+    Subscription::run_with(id, |_| {
         stream::channel(50, move |mut output| async move {
             let mut state = State::Ready;
 
             loop {
                 state = start_listening(state, &mut output).await;
             }
-        }),
-    )
+        })
+    })
 }
 
 #[derive(Debug)]

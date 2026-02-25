@@ -24,19 +24,15 @@ use cosmic::{
         window,
     },
     surface, theme,
-    widget::{Row, button, container, divider, horizontal_space, icon, text},
+    widget::{Row, button, container, divider, icon, space, text, toggler},
 };
 use cosmic_settings_sound_subscription as css;
-use cosmic_time::{Instant, Timeline, anim, chain, id};
 use iced::platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup};
 use mpris_subscription::{MprisRequest, MprisUpdate};
 use mpris2_zbus::player::PlaybackStatus;
-use std::sync::LazyLock;
 
 mod config;
 mod mpris_subscription;
-
-static SHOW_MEDIA_CONTROLS: LazyLock<id::Toggler> = LazyLock::new(id::Toggler::unique);
 
 const GO_BACK: &str = "media-skip-backward-symbolic";
 const GO_NEXT: &str = "media-skip-forward-symbolic";
@@ -66,8 +62,6 @@ pub struct Audio {
     sink_breakpoints: &'static [u32],
     /// Breakpoitns for the source volume slider.
     source_breakpoints: &'static [u32],
-    /// Track animations used by the revealers.
-    timeline: Timeline,
     /// Config file specific to this applet.
     config: AudioAppletConfig,
     /// mpris player status
@@ -129,8 +123,7 @@ pub enum Message {
     InputToggle,
     TogglePopup,
     CloseRequested(window::Id),
-    ToggleMediaControlsInTopPanel(chain::Toggler, bool),
-    Frame(Instant),
+    ToggleMediaControlsInTopPanel(bool),
     ConfigChanged(AudioAppletConfig),
     Mpris(mpris_subscription::MprisUpdate),
     MprisRequest(MprisRequest),
@@ -272,13 +265,12 @@ impl cosmic::Application for Audio {
         &mut self.core
     }
 
-    fn style(&self) -> Option<cosmic::iced_runtime::Appearance> {
+    fn style(&self) -> Option<iced::theme::Style> {
         Some(cosmic::applet::style())
     }
 
     fn update(&mut self, message: Message) -> app::Task<Message> {
         match message {
-            Message::Frame(now) => self.timeline.now(now),
             Message::Ignore => {}
             Message::TogglePopup => {
                 if let Some(p) = self.popup.take() {
@@ -286,7 +278,6 @@ impl cosmic::Application for Audio {
                 } else {
                     let new_id = window::Id::unique();
                     self.popup.replace(new_id);
-                    self.timeline = Timeline::new();
 
                     (self.max_sink_volume, self.sink_breakpoints) = if amplification_sink() {
                         (150, &[100][..])
@@ -365,8 +356,7 @@ impl cosmic::Application for Audio {
                     .map(|message| Message::Subscription(message).into());
             }
 
-            Message::ToggleMediaControlsInTopPanel(chain, enabled) => {
-                self.timeline.set_chain(chain).start();
+            Message::ToggleMediaControlsInTopPanel(enabled) => {
                 self.config.show_media_controls_in_top_panel = enabled;
                 if let Ok(helper) =
                     cosmic::cosmic_config::Config::new(Self::APP_ID, AudioAppletConfig::VERSION)
@@ -478,9 +468,6 @@ impl cosmic::Application for Audio {
 
     fn subscription(&self) -> Subscription<Message> {
         Subscription::batch([
-            self.timeline
-                .as_subscription()
-                .map(|(_, now)| Message::Frame(now)),
             self.core.watch_config(Self::APP_ID).map(|u| {
                 for err in u.errors {
                     tracing::error!(?err, "Error watching config");
@@ -532,6 +519,7 @@ impl cosmic::Application for Audio {
                             applet_column::Column::with_children(playback_buttons)
                                 .push(btn)
                                 .align_x(Alignment::Center)
+                                .height(Length::Shrink)
                                 // TODO configurable variable from the panel?
                                 .spacing(
                                     -(self.core.applet.suggested_padding(true).0 as f32)
@@ -542,6 +530,7 @@ impl cosmic::Application for Audio {
                             applet_row::Row::with_children(playback_buttons)
                                 .push(btn)
                                 .align_y(Alignment::Center)
+                                .width(Length::Shrink)
                                 // TODO configurable variable from the panel?
                                 .spacing(
                                     -(self.core.applet.suggested_padding(true).0 as f32)
@@ -696,7 +685,7 @@ impl cosmic::Application for Audio {
             );
 
             let mut control_elements = Vec::with_capacity(4);
-            control_elements.push(horizontal_space().width(Length::Fill).into());
+            control_elements.push(space::horizontal().width(Length::Fill).into());
             if let Some(go_prev) = self.go_previous(32) {
                 control_elements.push(go_prev);
             }
@@ -745,16 +734,11 @@ impl cosmic::Application for Audio {
             audio_content,
             padded_control(divider::horizontal::default()).padding([space_xxs, space_s]),
             padded_control(
-                anim!(
-                    // toggler
-                    SHOW_MEDIA_CONTROLS,
-                    &self.timeline,
-                    Some(fl!("show-media-controls")),
-                    self.config.show_media_controls_in_top_panel,
-                    Message::ToggleMediaControlsInTopPanel,
-                )
-                .text_size(14)
-                .width(Length::Fill)
+                toggler(self.config.show_media_controls_in_top_panel)
+                    .on_toggle(Message::ToggleMediaControlsInTopPanel)
+                    .label(fl!("show-media-controls"))
+                    .text_size(14)
+                    .width(Length::Fill)
             ),
             padded_control(divider::horizontal::default()).padding([space_xxs, space_s]),
             menu_button(text::body(fl!("sound-settings"))).on_press(Message::OpenSettings)

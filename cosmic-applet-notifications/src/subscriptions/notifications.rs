@@ -12,6 +12,7 @@ use cosmic_notifications_util::Notification;
 use futures_util::{SinkExt, StreamExt};
 use std::{
     collections::HashMap,
+    hash::Hash,
     os::unix::io::{FromRawFd, RawFd},
     pin::pin,
 };
@@ -37,89 +38,97 @@ pub enum Output {
 }
 
 pub fn notifications(proxy: NotificationsAppletProxy<'static>) -> Subscription<Output> {
-    struct SomeWorker;
+    struct Wrapper(NotificationsAppletProxy<'static>);
 
-    Subscription::run_with_id(
-        std::any::TypeId::of::<SomeWorker>(),
-        stream::channel(50, |mut output| async move {
-            let mut state = State::WaitingForNotificationEvent;
-            let (sender, mut receiver) = mpsc::channel(10);
-            _ = output.send(Output::Ready(sender)).await;
+    impl Hash for Wrapper {
+        fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+            std::any::TypeId::of::<NotificationsAppletProxy<'static>>().hash(state);
+        }
+    }
+    Subscription::run_with(Wrapper(proxy), |Wrapper(proxy)| {
+        let proxy = proxy.clone();
+        stream::channel(
+            50,
+            move |mut output: futures::channel::mpsc::Sender<Output>| async move {
+                let mut state = State::WaitingForNotificationEvent;
+                let (sender, mut receiver) = mpsc::channel(10);
+                _ = output.send(Output::Ready(sender)).await;
 
-            let mut signal;
-            let mut fail_count: u8 = 0;
-            loop {
-                match proxy.receive_notify().await {
-                    Ok(s) => {
-                        signal = s;
-                        break;
-                    }
-                    Err(err) => {
-                        error!(
-                            "failed to get a stream of signals for notifications. {}",
-                            err
-                        );
-                        fail_count = fail_count.saturating_add(1);
-                        if fail_count > 5 {
-                            error!("Failed to receive notification events");
-                            // exit because the applet needs the notifications daemon in order to work properly
-                            std::process::exit(0);
-                        } else {
-                            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                let mut signal;
+                let mut fail_count: u8 = 0;
+                loop {
+                    match proxy.receive_notify().await {
+                        Ok(s) => {
+                            signal = s;
+                            break;
                         }
-                        continue;
+                        Err(err) => {
+                            error!(
+                                "failed to get a stream of signals for notifications. {}",
+                                err
+                            );
+                            fail_count = fail_count.saturating_add(1);
+                            if fail_count > 5 {
+                                error!("Failed to receive notification events");
+                                // exit because the applet needs the notifications daemon in order to work properly
+                                std::process::exit(0);
+                            } else {
+                                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                            }
+                            continue;
+                        }
                     }
                 }
-            }
-            loop {
-                match &mut state {
-                    State::WaitingForNotificationEvent => {
-                        trace!("Waiting for notification events...");
-                        let mut next_signal = signal.next();
-                        let mut next_input = pin!(receiver.recv().fuse());
-                        cosmic::iced::futures::select! {
-                            v = next_signal => {
-                                if let Some(msg) = v {
-                                    let Ok(args) = msg.args() else {
-                                        break;
-                                    };
-                                    let notification = Notification::new(
-                                        args.app_name,
-                                        args.id,
-                                        args.app_icon,
-                                        args.summary,
-                                        args.body,
-                                        args.actions,
-                                        args.hints,
-                                        args.expire_timeout,
-                                    );
-                                    _ = output.send(Output::Notification(notification)).await;
-                                } else {
-                                    tracing::error!("Signal stream closed, ending notifications subscription");
-                                    state = State::Finished;
-                                }
-                            }
-                            v = next_input => {
-                                if let Some(Input::Activated(id, action)) = v {
-                                    if proxy.invoke_action(id, action.clone()).await.is_err() {
-                                        tracing::error!("Failed to invoke action {id} {action}");
+                loop {
+                    match &mut state {
+                        State::WaitingForNotificationEvent => {
+                            trace!("Waiting for notification events...");
+                            let mut next_signal = signal.next();
+                            let mut next_input = pin!(receiver.recv().fuse());
+                            cosmic::iced::futures::select! {
+                                v = next_signal => {
+                                    if let Some(msg) = v {
+                                        let Ok(args) = msg.args() else {
+                                            break;
+                                        };
+                                        let notification = Notification::new(
+                                            args.app_name,
+                                            args.id,
+                                            args.app_icon,
+                                            args.summary,
+                                            args.body,
+                                            args.actions,
+                                            args.hints,
+                                            args.expire_timeout,
+                                        );
+                                        _ = output.send(Output::Notification(notification)).await;
                                     } else {
-                                        tracing::error!("Invoked {action} for {id}");
+                                        tracing::error!("Signal stream closed, ending notifications subscription");
+                                        state = State::Finished;
                                     }
-                                } else {
-                                    tracing::error!("Channel closed, ending notifications subscription");
-                                    state = State::Finished;
+                                }
+                                v = next_input => {
+                                    if let Some(Input::Activated(id, action)) = v {
+                                        if proxy.invoke_action(id, action.clone()).await.is_err() {
+                                            tracing::error!("Failed to invoke action {id} {action}");
+                                        } else {
+                                            tracing::error!("Invoked {action} for {id}");
+                                        }
+                                    } else {
+                                        tracing::error!("Channel closed, ending notifications subscription");
+                                        state = State::Finished;
+                                    }
                                 }
                             }
                         }
-                    }
-                    State::Finished => {
-                        let () = futures::future::pending().await;
+                        State::Finished => {
+                            let () = futures::future::pending().await;
+                        }
                     }
                 }
-            }
-        }),
-    )
+            },
+        )
+    })
 }
 
 #[proxy(
