@@ -1,25 +1,11 @@
 [Desktop Entry]
 Name=Minimized Windows
-Name[ar]=النوافذ المصغّرة
-Name[bg]=Минимизирани прозорци
-Name[cs]=Minimalizovaná okna
-Name[zh_CN]=最小化窗口
-Name[hu]=Kis méretű ablakok
-Name[pl]=Zminimalizowane okna
-Name[pt]=Janelas Minimizadas
-Name[nl]=Geminimaliseerde vensters
-Name[de]=Minimierte Fenster
-Name[sk]=Minimalizované okná
-Name[es]=Ventanas minimizadas
-Name[sv]=Minimera fönster
-Name[it]=Finestre minimizzate
-Name[uk]=Згорнуті вікна
+Comment=Manage minimized windows
 Type=Application
 Exec=cosmic-applet-minimize
 Terminal=false
 Categories=COSMIC;
-Keywords=COSMIC;Iced;
-# Translators: Do NOT translate or transliterate this text (this is an icon file name)!
+Keywords=COSMIC;Applet;Minimize;
 Icon=com.system76.CosmicAppletMinimize
 StartupNotify=true
 NoDisplay=true

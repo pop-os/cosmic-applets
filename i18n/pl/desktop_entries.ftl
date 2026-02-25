@@ -1,0 +1,17 @@
+cosmic-app-list = Zasobnik aplikacji
+cosmic-applet-a11y = Dostępność
+cosmic-applet-audio = Dźwięk
+cosmic-applet-battery = Zasilanie i bateria
+cosmic-applet-bluetooth = Bluetooth
+cosmic-applet-input-sources = Źródła wprowadzdania danych
+cosmic-applet-minimize = Zminimalizowane okna
+cosmic-applet-network = Sieć
+cosmic-applet-notifications = Centrum powiadomień
+cosmic-applet-power = Sesja użytkownika
+cosmic-applet-status-area = Zasobnik powiadomień
+cosmic-applet-tiling = Kafelkowanie
+cosmic-applet-time = Data, godzina i kalendarz
+cosmic-applet-workspaces = Obszary robocze według numeru
+cosmic-panel-app-button = Przycisk biblioteki aplikacji
+cosmic-panel-launcher-button = Przycisk programu uruchamiającego
+cosmic-panel-workspaces-button = Przycisk przestrzeni roboczych

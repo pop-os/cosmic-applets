@@ -1,0 +1,17 @@
+cosmic-app-list = 应用托盘
+cosmic-applet-a11y = 无障碍
+cosmic-applet-audio = 音频
+cosmic-applet-battery = 电源与电池
+cosmic-applet-bluetooth = 蓝牙
+cosmic-applet-input-sources = 输入源
+cosmic-applet-minimize = 最小化窗口
+cosmic-applet-network = 网络
+cosmic-applet-notifications = 通知中心
+cosmic-applet-power = 用户会话
+cosmic-applet-status-area = 通知托盘
+cosmic-applet-tiling = 平铺
+cosmic-applet-time = 日期、时间和日历
+cosmic-applet-workspaces = 工作区编号
+cosmic-panel-app-button = 应用程序库按钮
+cosmic-panel-launcher-button = 启动器按钮
+cosmic-panel-workspaces-button = 工作区按钮
