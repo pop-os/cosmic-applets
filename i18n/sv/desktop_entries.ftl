@@ -1,0 +1,17 @@
+cosmic-app-list = Programfält
+cosmic-applet-a11y = Tillgänglighet
+cosmic-applet-audio = Ljud
+cosmic-applet-battery = Ström & batteri
+cosmic-applet-bluetooth = Bluetooth
+cosmic-applet-input-sources = Input Sources
+cosmic-applet-minimize = Minimized Windows
+cosmic-applet-network = Network
+cosmic-applet-notifications = Notifications Center
+cosmic-applet-power = Power & Battery
+cosmic-applet-status-area = Notifications Tray
+cosmic-applet-tiling = Tiling
+cosmic-applet-time = Date, Time & Calendar
+cosmic-applet-workspaces = Numbered Workspaces
+cosmic-panel-app-button = App Library Button
+cosmic-panel-launcher-button = Launcher Button
+cosmic-panel-workspaces-button = Workspaces Button

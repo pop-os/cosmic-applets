@@ -1,0 +1,17 @@
+cosmic-app-list = Panel aplikácií
+cosmic-applet-a11y = Zjednodušenie ovládania
+cosmic-applet-audio = Zvuk
+cosmic-applet-battery = Napájanie a batéria
+cosmic-applet-bluetooth = Bluetooth
+cosmic-applet-input-sources = Vstupné zdroje
+cosmic-applet-minimize = Minimalizované okná
+cosmic-applet-network = Sieť
+cosmic-applet-notifications = Centrum oznámení
+cosmic-applet-power = Používateľská relácia
+cosmic-applet-status-area = Panel oznámení
+cosmic-applet-tiling = Dláždenie okien
+cosmic-applet-time = Dátum, čas a kalendár
+cosmic-applet-workspaces = Číslované pracovné plochy
+cosmic-panel-app-button = Tlačidlo knižnice aplikácií
+cosmic-panel-launcher-button = Tlačidlo spúšťača
+cosmic-panel-workspaces-button = Tlačidlo pracovných plôch

@@ -1,0 +1,17 @@
+cosmic-app-list = Панель застосунків
+cosmic-applet-a11y = Доступність
+cosmic-applet-audio = Звук
+cosmic-applet-battery = Живлення та акумулятор
+cosmic-applet-bluetooth = Bluetooth
+cosmic-applet-input-sources = Джерела введення
+cosmic-applet-minimize = Згорнуті вікна
+cosmic-applet-network = Мережа
+cosmic-applet-notifications = Центр сповіщень
+cosmic-applet-power = Сеанс користувача
+cosmic-applet-status-area = Область сповіщень
+cosmic-applet-tiling = Укладання
+cosmic-applet-time = Дата, час і календар
+cosmic-applet-workspaces = Нумеровані робочі простори
+cosmic-panel-app-button = Бібліотека застосунків
+cosmic-panel-launcher-button = Запускач
+cosmic-panel-workspaces-button = Робочі простори

@@ -1,24 +1,11 @@
 [Desktop Entry]
 Name=Date, Time & Calendar
-Name[ar]=التاريخ والوقت والتقويم
-Name[bg]=Дата, час и календар
-Name[cs]=Datum, čas a kalendář
-Name[zh_CN]=日期、时间和日历
-Name[hu]=Dátum, Idő és Naptár
-Name[pl]=Data, godzina i kalendarz
-Name[pt]=Data, Hora e Calendário
-Name[nl]=Datum, tijd en agenda
-Name[sk]=Dátum, čas a kalendár
-Name[es]=Fecha, hora y calendario
-Name[sv]=Datum, Tid & Kalender
-Name[it]=Data, ora e calendario
-Name[uk]=Дата, час і календар
+Comment=Display the current time in the panel with a calendar popup
 Type=Application
 Exec=cosmic-applet-time
 Terminal=false
 Categories=COSMIC;
-Keywords=COSMIC;Iced;
-# Translators: Do NOT translate or transliterate this text (this is an icon file name)!
+Keywords=COSMIC;Applet;Date;Time;Calendar;
 Icon=com.system76.CosmicAppletTime-symbolic
 NoDisplay=true
 X-CosmicApplet=true
