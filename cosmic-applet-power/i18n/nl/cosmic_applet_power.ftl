@@ -1,5 +1,5 @@
 power = Energie
-settings = Instellingen...
+settings = Instellingen…
 lock-screen = Vergrendel scherm
 lock-screen-shortcut = Super + Esc
 log-out = Afmelden

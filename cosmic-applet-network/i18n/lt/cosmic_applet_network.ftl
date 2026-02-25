@@ -1,4 +1,4 @@
-connect = Prijungti
+connect = Prisijungti
 check-wifi-connection = Įsitikinkite, kad Wi-Fi yra prijungtas prie interneto ir slaptažodis yra teisingas
 reset = Atkurti
 visible-wireless-networks = Matomi bevieliai ryšiai
