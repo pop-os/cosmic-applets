@@ -14,7 +14,7 @@ i18n-embed.workspace = true
 i18n-embed-fl.workspace = true
 image = { version = "0.25.9", default-features = false }
 libcosmic.workspace = true
-memmap2 = "0.9.9"
+memmap2 = "0.9.10"
 fastrand = "2.3.0"
 rust-embed.workspace = true
 rustix.workspace = true
