@@ -267,8 +267,9 @@ impl DockItem {
         };
 
         // Sub-pixel padding tweak forces iced to detect a layout change when
-        // icon_generation bumps, triggering a redraw of SVG widgets so the
-        // renderer's mtime check picks up on-disk icon file changes.
+        // icon_generation bumps, triggering a redraw of SVG widgets. With
+        // pop-os/iced#264, draw() then re-stats the file and reloads on
+        // mtime change.
         let mut btn_padding = app_icon.padding;
         if icon_generation % 2 == 1 {
             btn_padding.top += 0.001;
@@ -1540,12 +1541,14 @@ impl cosmic::Application for CosmicAppList {
             }
             Message::IconsChanged => {
                 self.icon_generation = self.icon_generation.wrapping_add(1);
-                self.update_desktop_entries();
-                // Note: We intentionally don't call update_pinned_list() here
-                // because it resets toplevel associations for running apps.
                 // The icon_generation bump forces iced to detect a view diff
                 // via a sub-pixel padding change, triggering a redraw that
-                // lets the iced SVG cache's mtime check pick up the new file.
+                // lets the renderer re-stat the SVG file. With pop-os/iced#264,
+                // the draw() call checks mtime and reloads changed files.
+                //
+                // We don't call update_desktop_entries() or update_pinned_list()
+                // here — the icon file path hasn't changed, just its content,
+                // and update_pinned_list() would reset toplevel associations.
             }
             Message::CloseRequested(id) => {
                 if Some(id) == self.popup.as_ref().map(|p| p.id) {
