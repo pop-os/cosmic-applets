@@ -13,5 +13,5 @@ show-more = { $more } weitere anzeigen
 clear-group = Gruppe leeren
 clear-all = Alle Benachrichtigungen leeren
 do-not-disturb = Nicht stören
-notification-settings = Benachrichtigungs-Einstellungen...
+notification-settings = Benachrichtigungseinstellungen...
 no-notifications = Keine Benachrichtigungen
