@@ -1,5 +1,8 @@
 cosmic-app-list = Telakoitu Cosmic sovellusluettelo
 pin = Suosikki
-quit = Sulje
-quit-all = Sulje Kaikki
-new-window = Uusi Ikkuna
+quit = Lopeta
+quit-all = Lopeta kaikki
+new-window = Uusi ikkuna
+run = Suorita
+run-on = Suorita käyttäen { $gpu }
+run-on-default = (Oletus)
