@@ -1,0 +1,17 @@
+cosmic-app-list = درج التطبيقات
+cosmic-applet-a11y = الإتاحة
+cosmic-applet-audio = الصوت
+cosmic-applet-battery = الطاقة والبطارية
+cosmic-applet-bluetooth = بلوتوث
+cosmic-applet-input-sources = مصادر الإدخال
+cosmic-applet-minimize = النوافذ المصغّرة
+cosmic-applet-network = الشبكة
+cosmic-applet-notifications = مركز الإشعارات
+cosmic-applet-power = جلسة المستخدم
+cosmic-applet-status-area = درج الإشعارا
+cosmic-applet-tiling = تبليط
+cosmic-applet-time = التاريخ والوقت والتقويم
+cosmic-applet-workspaces = مساحات عمل مرقمة
+cosmic-panel-app-button = زر مكتبة التطبيقات
+cosmic-panel-launcher-button = زر المشغل
+cosmic-panel-workspaces-button = زر مساحات العمل

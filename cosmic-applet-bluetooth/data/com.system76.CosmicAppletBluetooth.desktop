@@ -1,13 +1,11 @@
 [Desktop Entry]
 Name=Bluetooth
-Name[ar]=بلوتوث
-Name[zh_CN]=蓝牙
+Comment=Manage Bluetooth devices
 Type=Application
 Exec=cosmic-applet-bluetooth
 Terminal=false
 Categories=COSMIC;
-Keywords=COSMIC;Iced;
-# Translators: Do NOT translate or transliterate this text (this is an icon file name)!
+Keywords=COSMIC;Applet;Bluetooth;
 Icon=com.system76.CosmicAppletBluetooth-symbolic
 StartupNotify=true
 NoDisplay=true

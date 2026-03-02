@@ -1,27 +1,11 @@
 [Desktop Entry]
 Name=App Library Button
-Name[ar]=زر مكتبة التطبيقات
-Name[bg]=Бутон за библиотеката с програми
-Name[cs]=Tlačítko knihovny aplikací
-Name[zh_CN]=应用程序库按钮
-Name[es]=Botón de biblioteca de aplicaciones
-Name[ja]=Cosmicパネルのアップライブラリーボタン
-Name[ko]=코스믹 패널 앱 라이브러리 단추
-Name[pl]=Przycisk biblioteki aplikacji
-Name[ru]=Кнопка библиотеки приложений на панели Cosmic
-Name[hu]=Alkalmazáskönyvtár gomb
-Name[pt_BR]=Botão da Biblioteca de Aplicativos
-Name[pt]=Botão da Biblioteca de Aplicativos
-Name[nl]=Knop appbibliotheek
-Name[sk]=Tlačidlo knižnice aplikácií
-Name[sv]=Knapp för programbibliotek
-Name[uk]=Бібліотека застосунків
+Comment=Open the application library for launching installed applications
 Type=Application
 Exec=cosmic-panel-button com.system76.CosmicAppLibrary
 Terminal=false
 Categories=COSMIC;
-Keywords=COSMIC;Iced;
-# Translators: Do NOT translate or transliterate this text (this is an icon file name)!
+Keywords=COSMIC;Applet;App;Library;Tray;
 Icon=com.system76.CosmicPanelAppButton
 StartupNotify=true
 NoDisplay=true

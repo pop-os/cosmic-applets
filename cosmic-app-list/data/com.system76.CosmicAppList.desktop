@@ -1,31 +1,16 @@
 [Desktop Entry]
 Name=App Tray
-Name[ar]=درج التطبيقات
-Name[bg]=Меню за програми
-Name[cs]=Panel aplikací
-Name[zh_CN]=应用托盘
-Name[hu]=Alkalmazástálca
-Name[pl]=Zasobnik aplikacji
-Name[pt]=Bandeja de Aplicativos
-Name[de]=App-Tray
-Name[nl]=App-Tray
-Name[sk]=Panel aplikácií
-Name[sv]=Programfält
-Name[es]=Bandeja de aplicaciones
-Name[it]=Area applicazioni
-Name[uk]=Панель застосунків
+Comment=Launch pinned apps and manage open windows
 Type=Application
 Exec=cosmic-app-list
 Terminal=false
 Categories=COSMIC;
-Keywords=COSMIC;Iced;
-# Translators: Do NOT translate or transliterate this text (this is an icon file name)!
+Keywords=COSMIC;Applet;App;Tray;List;Task;Bar;
 Icon=com.system76.CosmicAppList
 StartupNotify=true
 NoDisplay=true
 X-CosmicApplet=true
 X-MinimizeApplet=5
-# Indicate that the applet should be shrunk if the panel is too small to fit it
 X-OverflowPriority=100
 X-OverflowMinSize=4
 X-HostWaylandDisplay=true

@@ -1,25 +1,11 @@
 [Desktop Entry]
 Name=Network
-Name[ar]=الشبكة
-Name[bg]=Мрежа
-Name[cs]=Síť
-Name[zh_CN]=网络
-Name[hu]=Hálózat
-Name[pl]=Sieć
-Name[pt]=Rede
-Name[nl]=Netwerk
-Name[de]=Netzwerk
-Name[sk]=Sieť
-Name[sv]=Nätverk
-Name[es]=Red
-Name[it]=Rete
-Name[uk]=Мережа
+Comment=Manage network connections
 Type=Application
 Exec=cosmic-applet-network
 Terminal=false
 Categories=COSMIC;
-Keywords=COSMIC;Iced;
-# Translators: Do NOT translate or transliterate this text (this is an icon file name)!
+Keywords=COSMIC;Applet;Network;
 Icon=com.system76.CosmicAppletNetwork-symbolic
 StartupNotify=true
 NoDisplay=true

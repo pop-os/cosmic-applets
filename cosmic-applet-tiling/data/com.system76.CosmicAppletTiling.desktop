@@ -1,25 +1,11 @@
 [Desktop Entry]
 Name=Tiling
-Name[ar]=تبليط
-Name[bg]=Прилепване на прозорци
-Name[cs]=Dlaždicový režim oken
-Name[zh_CN]=平铺
-Name[hu]=Csempézés
-Name[pl]=Kafelkowanie
-Name[pt_BR]=Janelas Lado a Lado
-Name[pt]=Janelas Lado a Lado
-Name[nl]=Vensters tegelen
-Name[sk]=Dláždenie okien
-Name[sv]=Kakling
-Name[es]=Ventanas mosaico
-Name[it]=Tiling
-Name[uk]=Укладання
+Comment=Manage the active hint, current & per-workspace auto-tiling
 Type=Application
 Exec=cosmic-applet-tiling
 Terminal=false
 Categories=COSMIC;
-Keywords=COSMIC;Iced;
-# Translators: Do NOT translate or transliterate this text (this is an icon file name)!
+Keywords=COSMIC;Applet;Tiling;Hint;Workspace;
 Icon=com.system76.CosmicAppletTiling-symbolic
 StartupNotify=true
 NoDisplay=true

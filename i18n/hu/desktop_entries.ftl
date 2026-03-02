@@ -1,0 +1,17 @@
+cosmic-app-list = Alkalmazástálca
+cosmic-applet-a11y = Akadálymentesség
+cosmic-applet-audio = Hang
+cosmic-applet-battery = Energia és Akkumulátor
+cosmic-applet-bluetooth = Bluetooth
+cosmic-applet-input-sources = Beviteli Források
+cosmic-applet-minimize = Kis méretű ablakok
+cosmic-applet-network = Hálózat
+cosmic-applet-notifications = Értesítési központ
+cosmic-applet-power = Felhasználói Munkamenet
+cosmic-applet-status-area = Értesítési terület
+cosmic-applet-tiling = Csempézés
+cosmic-applet-time = Dátum, Idő és Naptár
+cosmic-applet-workspaces = Számozott Munkaterületek
+cosmic-panel-app-button = Alkalmazáskönyvtár gomb
+cosmic-panel-launcher-button = Indító gomb
+cosmic-panel-workspaces-button = Munkaterületek gomb

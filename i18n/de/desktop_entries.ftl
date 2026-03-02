@@ -1,0 +1,9 @@
+cosmic-app-list = Taskleiste
+cosmic-applet-a11y = Zugänglichkeit
+cosmic-applet-audio = Klang
+cosmic-applet-battery = Energie und Akku
+cosmic-applet-bluetooth = Bluetooth
+cosmic-applet-input-sources = Eigangsquellen
+cosmic-applet-minimize = Minimierte Fenster
+cosmic-applet-network = Netzwerk
+cosmic-applet-notifications = Notifizierungszentrum
