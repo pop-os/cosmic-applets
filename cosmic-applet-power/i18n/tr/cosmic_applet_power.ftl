@@ -2,12 +2,12 @@ power = Güç
 settings = Ayarlar...
 lock-screen = Ekranı kilitle
 lock-screen-shortcut = Super + Escape
-log-out = Oturumu kapat
-suspend = Askıya al
-restart = Yeniden başlat
+log-out = Oturumu Kapat
+suspend = Askıya Al
+restart = Yeniden Başlat
 shutdown = Kapat
 confirm = Onayla
-cancel = İptal
+cancel = Vazgeç
 confirm-button =
     { $action ->
         [restart] { restart }
@@ -23,14 +23,14 @@ confirm-title =
         [shutdown] { shutdown }
         [log-out] Tüm uygulamalardan çık ve oturumu kapat
        *[other] Seçilen eylemi uygula
-    } now?
+    } işlemi uygulansın mı?
 confirm-body =
     Sistem { $countdown } saniye içinde { $action ->
-        [restart] yeniden başlatılacaktır.
-        [suspend] askıya alınacaktır.
-        [shutdown] kapatılacaktır.
-        [lock-screen] ekranı kitleyecektir.
-        [log-out] çıkış yapacaktır.
-       *[other] seçilen eylemi uygulayacaktır.
+        [restart] yeniden başlatılacak.
+        [suspend] askıya alınacak.
+        [shutdown] kapatılacak.
+        [lock-screen] ekranı kitleyecek.
+        [log-out] çıkış yapacak.
+       *[other] seçilen eylemi uygulayacak.
     }
-log-out-shortcut = Super + Shift + Escape
+log-out-shortcut = Süper + Shift + Escape

@@ -22,7 +22,7 @@ confirm-title =
         [restart] { restart }
         [suspend] { suspend }
         [shutdown] { shutdown }
-        [log-out] Dún gach aipeanna agus logáil amach
+        [log-out] Scoir gach feidhmchlár agus logáil amach
        *[other] Cuir an gníomh roghnaithe i bhfeidhm
     } anois?
 confirm-body =
