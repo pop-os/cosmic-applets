@@ -60,6 +60,7 @@ tokio = { version = "1.49.0", features = ["full"] }
 # cosmic-config = { path = "../libcosmic/cosmic-config" }
 cosmic-config = { git = "https://github.com/pop-os/libcosmic" }
 serde = { version = "1.0.228", features = ["derive"] }
+zlink = "0.4.1"
 
 [profile.release]
 # opt-level = 3
