@@ -15,3 +15,4 @@ cosmic-applet-workspaces = Нумеровані робочі простори
 cosmic-panel-app-button = Бібліотека застосунків
 cosmic-panel-launcher-button = Запускач
 cosmic-panel-workspaces-button = Робочі простори
+cosmic-panel-launcher-button-comment = Пошук застосунків і виконання команд
