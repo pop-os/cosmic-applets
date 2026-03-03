@@ -7,7 +7,6 @@ edition = "2024"
 anyhow.workspace = true
 cctk.workspace = true
 cosmic-protocols.workspace = true
-cosmic-time.workspace = true
 i18n-embed-fl.workspace = true
 i18n-embed.workspace = true
 libcosmic.workspace = true
@@ -19,6 +18,10 @@ tracing.workspace = true
 
 [dependencies.cosmic-settings-a11y-manager-subscription]
 git = "https://github.com/pop-os/cosmic-settings"
+branch = "iced-rebase"
+# path = "../../cosmic-settings/subscriptions/a11y-manager"
 
 [dependencies.cosmic-settings-accessibility-subscription]
 git = "https://github.com/pop-os/cosmic-settings"
+branch = "iced-rebase"
+# path = "../../cosmic-settings/subscriptions/accessibility"

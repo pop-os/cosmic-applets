@@ -8,7 +8,6 @@ license = "GPL-3.0-or-later"
 anyhow.workspace = true
 async-fn-stream = "0.3"
 cosmic-dbus-networkmanager = { git = "https://github.com/pop-os/dbus-settings-bindings" }
-cosmic-time.workspace = true
 futures.workspace = true
 futures-util.workspace = true
 i18n-embed-fl.workspace = true
@@ -35,7 +34,10 @@ uuid = { version = "1.19.0", features = ["v4"] }
 
 [dependencies.cosmic-settings-network-manager-subscription]
 git = "https://github.com/pop-os/cosmic-settings/"
+branch = "iced-rebase"
+# path = "../../cosmic-settings/subscriptions/network-manager"
 
 [dependencies.cosmic-settings-airplane-mode-subscription]
 git = "https://github.com/pop-os/cosmic-settings/"
-
+branch = "iced-rebase"
+# path = "../../cosmic-settings/subscriptions/airplane-mode"

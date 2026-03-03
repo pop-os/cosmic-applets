@@ -1,10 +1,11 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
+use std::hash::Hash;
+
 use cosmic::iced::{self, Subscription};
 use futures::{FutureExt, StreamExt};
 use rustc_hash::FxHashMap;
-use std::path::PathBuf;
 use zbus::zvariant::{self, OwnedValue};
 
 #[derive(Clone, Debug)]
@@ -76,22 +77,40 @@ impl StatusNotifierItem {
         let Some(menu_proxy) = self.menu_proxy.clone() else {
             return Subscription::none();
         };
-        Subscription::run_with_id(
-            format!("status-notifier-item-layout-{}", &self.name),
-            async move {
-                let initial = futures::stream::once(get_layout(menu_proxy.clone()));
-
-                let layout_updated = menu_proxy.receive_layout_updated().await.unwrap();
-                let props_updated = menu_proxy.receive_items_properties_updated().await.unwrap();
-
-                // Merge both streams - any update triggers a layout refetch
-                let updates =
-                    futures::stream_select!(layout_updated.map(|_| ()), props_updated.map(|_| ()))
-                        .then(move |()| get_layout(menu_proxy.clone()));
-
-                initial.chain(updates)
+        struct Wrapper {
+            menu_proxy: DBusMenuProxy<'static>,
+            name: String,
+        }
+        impl Hash for Wrapper {
+            fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+                self.name.hash(state);
             }
-            .flatten_stream(),
+        }
+        Subscription::run_with(
+            Wrapper {
+                menu_proxy,
+                name: format!("status-notifier-item-layout-{}", &self.name),
+            },
+            |Wrapper { menu_proxy, .. }| {
+                let menu_proxy = menu_proxy.clone();
+                async move {
+                    let initial = futures::stream::once(get_layout(menu_proxy.clone()));
+
+                    let layout_updated = menu_proxy.receive_layout_updated().await.unwrap();
+                    let props_updated =
+                        menu_proxy.receive_items_properties_updated().await.unwrap();
+
+                    // Merge both streams - any update triggers a layout refetch
+                    let updates = futures::stream_select!(
+                        layout_updated.map(|_| ()),
+                        props_updated.map(|_| ())
+                    )
+                    .then(move |()| get_layout(menu_proxy.clone()));
+
+                    initial.chain(updates)
+                }
+                .flatten_stream()
+            },
         )
     }
 
@@ -108,15 +127,30 @@ impl StatusNotifierItem {
         }
 
         let item_proxy = self.item_proxy.clone();
-        Subscription::run_with_id(
-            format!("status-notifier-item-icon-{}", &self.name),
-            async move {
-                let new_icon_stream = item_proxy.receive_new_icon().await.unwrap();
-                futures::stream::once(async {})
-                    .chain(new_icon_stream.map(|_| ()))
-                    .then(move |()| icon_events(item_proxy.clone()))
+        struct Wrapper {
+            item_proxy: StatusNotifierItemProxy<'static>,
+            name: String,
+        }
+        impl Hash for Wrapper {
+            fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+                self.name.hash(state);
             }
-            .flatten_stream(),
+        }
+        Subscription::run_with(
+            Wrapper {
+                item_proxy,
+                name: format!("status-notifier-item-icon-{}", &self.name),
+            },
+            |Wrapper { item_proxy, .. }| {
+                let item_proxy = item_proxy.clone();
+                async move {
+                    let new_icon_stream = item_proxy.receive_new_icon().await.unwrap();
+                    futures::stream::once(async {})
+                        .chain(new_icon_stream.map(|_| ()))
+                        .then(move |()| icon_events(item_proxy.clone()))
+                }
+                .flatten_stream()
+            },
         )
     }
 

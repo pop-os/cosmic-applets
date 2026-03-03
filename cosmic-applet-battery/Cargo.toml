@@ -6,7 +6,6 @@ license = "GPL-3.0-only"
 
 [dependencies]
 anyhow.workspace = true
-cosmic-time.workspace = true
 cosmic-config.workspace = true
 cosmic-applets-config.workspace = true
 drm = "0.14.1"
@@ -26,6 +25,10 @@ serde.workspace = true
 
 [dependencies.cosmic-settings-upower-subscription]
 git = "https://github.com/pop-os/cosmic-settings"
+branch = "iced-rebase"
+# path = "../../cosmic-settings/subscriptions/upower"
 
 [dependencies.cosmic-settings-daemon-subscription]
 git = "https://github.com/pop-os/cosmic-settings"
+branch = "iced-rebase"
+# path = "../../cosmic-settings/subscriptions/settings-daemon"
