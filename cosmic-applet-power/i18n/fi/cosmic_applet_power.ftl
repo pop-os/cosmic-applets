@@ -1,7 +1,7 @@
 power = Virta
 settings = Asetukset...
 lock-screen = Lukitusnäyttö
-lock-screen-shortcut = Super + Escape
+lock-screen-shortcut = Super + Esc
 log-out = Kirjaudu ulos
 suspend = Lepotila
 restart = Käynnistä uudelleen
@@ -9,11 +9,11 @@ shutdown = Sammuta
 confirm = Vahvista
 cancel = Peru
 confirm-body =
-    { $action ->
-        [restart] { restart }
-        [suspend] { suspend }
-        [shutdown] { shutdown }
-        [lock-screen] Lukitaan näyttö
-        [log-out] Kirjaudutaan Ulos
-       *[other] Valittu Toiminta
-    } jatketaan { $countdown } sekunnin kuluttua.
+    Järjestelmä { $action ->
+        [restart] käynnistyy uudelleen
+        [suspend] siirtyy lepotilaan
+        [shutdown] sammuttaa virran
+        [lock-screen] lukitsee näytön
+        [log-out] kirjautuu ulos
+       *[other] aikoo tehdä valitun toimen
+    } { $countdown } sekunnin kuluttua.
