@@ -5,7 +5,7 @@ use cosmic::iced::core::Point;
 
 use cosmic::iced::core::{
     Clipboard, Element, Layout, Length, Rectangle, Shell, Size, Widget,
-    event::{self, Event},
+    event::Event,
     layout, mouse, overlay, renderer, touch,
     widget::{Operation, Tree, tree},
 };
