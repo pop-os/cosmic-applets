@@ -192,7 +192,13 @@ impl Window {
         let elements: Vec<Element<'_, Message>> = if let Some(strftime) = self.maybe_strftime() {
             strftime
                 .split_whitespace()
-                .map(|piece| self.core.applet.text(piece.to_owned()).into())
+                .map(|piece| {
+                    self.core
+                        .applet
+                        .text(piece.to_owned())
+                        .font(cosmic::font::bold())
+                        .into()
+                })
                 .collect()
         } else {
             let mut elements = Vec::new();
@@ -212,7 +218,13 @@ impl Window {
                     .to_string();
 
                 for p in formatted_date.split_whitespace() {
-                    elements.push(self.core.applet.text(p.to_owned()).into());
+                    elements.push(
+                        self.core
+                            .applet
+                            .text(p.to_owned())
+                            .font(cosmic::font::bold())
+                            .into(),
+                    );
                 }
                 elements.push(
                     horizontal_rule(2)
@@ -232,7 +244,13 @@ impl Window {
             // todo: split using formatToParts when it is implemented
             // https://github.com/unicode-org/icu4x/issues/4936#issuecomment-2128812667
             for p in formatted_time.split_whitespace().flat_map(|s| s.split(':')) {
-                elements.push(self.core.applet.text(p.to_owned()).into());
+                elements.push(
+                    self.core
+                        .applet
+                        .text(p.to_owned())
+                        .font(cosmic::font::bold())
+                        .into(),
+                );
             }
 
             elements
@@ -301,7 +319,10 @@ impl Window {
 
         Element::from(
             row!(
-                self.core.applet.text(formatted_date),
+                self.core
+                    .applet
+                    .text(formatted_date)
+                    .font(cosmic::font::bold()),
                 container(vertical_space().height(Length::Fixed(
                     (self.core.applet.suggested_size(true).1
                         + 2 * self.core.applet.suggested_padding(true).1)
