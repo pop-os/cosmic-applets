@@ -21,7 +21,7 @@ confirm-title =
     { $action -> 
         [restart] { restart }
         [suspend] { suspend }
-        [shutdown] { shutdown }
+        [shutdown] { shut down }
         [log-out] Quit all applications and log out
         *[other] Apply the selected action
     } now?
