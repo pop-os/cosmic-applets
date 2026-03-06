@@ -1177,6 +1177,7 @@ dependencies = [
  "image",
  "libcosmic",
  "memmap2 0.9.9",
+ "notify",
  "rust-embed",
  "rustc-hash 2.1.1",
  "rustix 1.1.3",
