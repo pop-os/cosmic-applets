@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use cosmic::{
-    iced::{self, Subscription, futures::SinkExt},
+    iced::{self, Subscription, futures::{SinkExt, StreamExt}},
     iced_futures::stream,
 };
 use std::{fmt::Debug, hash::Hash};
@@ -170,30 +170,122 @@ async fn start_listening(
             State::Waiting(conn, rx, backend_type)
         }
         State::Waiting(conn, mut rx, backend_type) => {
-            let backend = match get_power_backend(&conn, &backend_type)
-                .await
-                .map_err(|e| e.to_string())
-            {
-                Ok(b) => b,
-                Err(e) => {
-                    _ = output.send(PowerProfileUpdate::Error(e)).await;
-                    return State::Connecting(backend_type, conn);
-                }
-            };
+            match backend_type {
+                BackendType::S76PowerDaemon => {
+                    let proxy = match PowerDaemonProxy::new(&conn).await {
+                        Ok(p) => p,
+                        Err(e) => {
+                            _ = output
+                                .send(PowerProfileUpdate::Error(e.to_string()))
+                                .await;
+                            return State::Connecting(BackendType::PowerProfilesDaemon, conn);
+                        }
+                    };
 
-            match rx.recv().await {
-                Some(PowerProfileRequest::Get) => {
-                    if let Ok(profile) = get_power_profile(backend).await {
-                        _ = output.send(PowerProfileUpdate::Update { profile }).await;
+                    let mut signals = proxy.receive_power_profile_switch().await.ok();
+
+                    loop {
+                        tokio::select! {
+                            biased;
+                            req = rx.recv() => {
+                                match req {
+                                    Some(PowerProfileRequest::Get) => {
+                                        match proxy.get_profile().await {
+                                            Ok(p) => {
+                                                if let Some(profile) = parse_s76_profile(&p) {
+                                                    _ = output.send(PowerProfileUpdate::Update { profile }).await;
+                                                }
+                                            }
+                                            Err(e) => {
+                                                _ = output.send(PowerProfileUpdate::Error(e.to_string())).await;
+                                                return State::Connecting(BackendType::S76PowerDaemon, conn);
+                                            }
+                                        }
+                                    }
+                                    Some(PowerProfileRequest::Set(profile)) => {
+                                        let result = match profile {
+                                            Power::Battery => proxy.battery().await,
+                                            Power::Balanced => proxy.balanced().await,
+                                            Power::Performance => proxy.performance().await,
+                                        };
+                                        if let Err(e) = result {
+                                            _ = output.send(PowerProfileUpdate::Error(e.to_string())).await;
+                                            return State::Connecting(BackendType::S76PowerDaemon, conn);
+                                        }
+                                        _ = output.send(PowerProfileUpdate::Update { profile }).await;
+                                    }
+                                    None => return State::Finished,
+                                }
+                            }
+                            Some(_signal) = async {
+                                match &mut signals {
+                                    Some(s) => s.next().await,
+                                    None => std::future::pending().await,
+                                }
+                            } => {
+                                if let Ok(profile_str) = proxy.get_profile().await {
+                                    if let Some(profile) = parse_s76_profile(&profile_str) {
+                                        _ = output.send(PowerProfileUpdate::Update { profile }).await;
+                                    }
+                                }
+                            }
+                        }
                     }
-                    State::Waiting(conn, rx, backend_type)
                 }
-                Some(PowerProfileRequest::Set(profile)) => {
-                    let _ = set_power_profile(backend, profile).await;
-                    _ = output.send(PowerProfileUpdate::Update { profile }).await;
-                    State::Waiting(conn, rx, backend_type)
+                BackendType::PowerProfilesDaemon => {
+                    let proxy = match PowerProfilesProxy::new(&conn).await {
+                        Ok(p) => p,
+                        Err(e) => {
+                            _ = output
+                                .send(PowerProfileUpdate::Error(e.to_string()))
+                                .await;
+                            return State::Finished;
+                        }
+                    };
+
+                    let mut changes = proxy.receive_active_profile_changed().await;
+
+                    loop {
+                        tokio::select! {
+                            biased;
+                            req = rx.recv() => {
+                                match req {
+                                    Some(PowerProfileRequest::Get) => {
+                                        match proxy.active_profile().await {
+                                            Ok(p) => {
+                                                let profile = parse_ppd_profile(&p);
+                                                _ = output.send(PowerProfileUpdate::Update { profile }).await;
+                                            }
+                                            Err(e) => {
+                                                _ = output.send(PowerProfileUpdate::Error(e.to_string())).await;
+                                                return State::Finished;
+                                            }
+                                        }
+                                    }
+                                    Some(PowerProfileRequest::Set(profile)) => {
+                                        let profile_str = match profile {
+                                            Power::Battery => "power-saver",
+                                            Power::Balanced => "balanced",
+                                            Power::Performance => "performance",
+                                        };
+                                        if let Err(e) = proxy.set_active_profile(profile_str).await {
+                                            _ = output.send(PowerProfileUpdate::Error(e.to_string())).await;
+                                            return State::Finished;
+                                        }
+                                        _ = output.send(PowerProfileUpdate::Update { profile }).await;
+                                    }
+                                    None => return State::Finished,
+                                }
+                            }
+                            Some(change) = changes.next() => {
+                                if let Ok(profile_str) = change.get().await {
+                                    let profile = parse_ppd_profile(&profile_str);
+                                    _ = output.send(PowerProfileUpdate::Update { profile }).await;
+                                }
+                            }
+                        }
+                    }
                 }
-                None => State::Finished,
             }
         }
         State::Finished => iced::futures::future::pending().await,
@@ -211,6 +303,23 @@ pub enum PowerProfileUpdate {
     Init(Power, UnboundedSender<PowerProfileRequest>),
     Update { profile: Power },
     Error(String),
+}
+
+fn parse_s76_profile(s: &str) -> Option<Power> {
+    match s {
+        "Battery" => Some(Power::Battery),
+        "Balanced" => Some(Power::Balanced),
+        "Performance" => Some(Power::Performance),
+        _ => None,
+    }
+}
+
+fn parse_ppd_profile(s: &str) -> Power {
+    match s {
+        "power-saver" => Power::Battery,
+        "performance" => Power::Performance,
+        _ => Power::Balanced,
+    }
 }
 
 // check if battery charging thresholds is set
