@@ -286,8 +286,9 @@ impl BluerDevice {
                 .map(|res| device_type_to_icon(&res.ok().flatten().unwrap_or_default()))
         );
 
-        if name.is_empty() {
-            name = device.address().to_string();
+        let addr_str = device.address().to_string();
+        if name.is_empty() || name.replace('-', ":") == addr_str {
+            name = addr_str;
         }
 
         let status = if is_connected {
