@@ -66,7 +66,10 @@ pub async fn get_power_profile(daemon: Backend<'_>) -> Result<Power> {
                 "Battery" => Ok(Power::Battery),
                 "Balanced" => Ok(Power::Balanced),
                 "Performance" => Ok(Power::Performance),
-                _ => panic!("Unknown power profile: {power}"),
+                _ => {
+                    tracing::warn!("Unknown power profile: {power}");
+                    Ok(Power::Balanced)
+                }
             }
         }
         Backend::PowerProfilesDaemon(ppd) => {
