@@ -392,7 +392,7 @@ impl cosmic::Application for CosmicBatteryApplet {
                     time_to_empty,
                 } => {
                     self.update_battery(percent, on_battery);
-                    self.time_remaining = Duration::from_secs(time_to_empty as u64);
+                    self.time_remaining = Duration::from_secs(time_to_empty.max(0) as u64);
                 }
                 DeviceDbusEvent::NoBattery => {
                     std::process::exit(0);
