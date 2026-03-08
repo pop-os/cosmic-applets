@@ -1,0 +1,13 @@
+tile-windows = ਵਿੰਡੋਆਂ ਨੂੰ ਆਪਣੇ-ਆਪ ਟਾਈਲ ਕਰੋ
+tile-current = ਮੌਜੂਦਾ ਵਰਕਸਪੇਸ ਨੂੰ ਟਾਈਲ ਕਰੋ
+shortcuts = ਸ਼ਾਰਟਕੱਟ
+navigate-windows = ਵਿੰਡੋਆਂ ਨੂੰ ਨੇਵੀਗੇਟ ਕਰੋ
+move-window = ਵਿੰਡੋਆਂ ਨੂੰ ਹਿਲਾਓ
+view-all-shortcuts = ਸਾਰੇ ਸ਼ਾਰਕੱਟਾਂ ਨੂੰ ਵੇਖੋ...
+gaps = ਫ਼ਰਕ
+window-management-settings = ਵਿੰਡੋ ਪਰਬੰਧ ਸੈਟਿੰਗਾਂ...
+all-workspaces = ਸਾਰੇ ਵਰਕਸਪੇਸ
+per-workspace = ਹਰੇਕ ਵਰਕਸਪੇਸ
+super = ਸੁਪਰ
+shift = ਸ਼ਿਫ਼ਟ
+arrow-keys = ਤੀਰ

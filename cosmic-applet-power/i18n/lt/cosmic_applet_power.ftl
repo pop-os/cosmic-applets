@@ -6,7 +6,7 @@ confirm-button =
         [log-out] { log-out }
        *[other] { confirm }
     }
-power = Maitinimas
+power = Energija
 confirm-body =
     Sistema { $action ->
         [restart] įsijungs iš naujo
