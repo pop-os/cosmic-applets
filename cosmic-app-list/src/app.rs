@@ -189,6 +189,10 @@ impl DockItem {
         } = self;
 
         let app_icon = AppletIconData::new(applet);
+        let drag_icon_offset = iced::Vector::new(
+            -(app_icon.icon_size as f32 / 2.0),
+            -(app_icon.icon_size as f32 / 2.0),
+        );
 
         let cosmic_icon = cosmic::widget::icon(
             fde::IconSource::from_unknown(desktop_info.icon().unwrap_or_default()).as_cosmic_icon(),
@@ -301,7 +305,7 @@ impl DockItem {
                     (
                         cosmic_icon.clone().into(),
                         iced::core::widget::tree::State::None,
-                        iced::Vector::ZERO,
+                        drag_icon_offset,
                     )
                 })
                 .drag_threshold(16.)
@@ -1085,6 +1089,13 @@ impl cosmic::Application for CosmicAppList {
                     let icon_id = window::Id::unique();
                     self.dnd_source =
                         Some((icon_id, toplevel_group.clone(), DndAction::empty(), pos));
+
+                    if let Some(pos) = pos {
+                        self.dnd_offer = Some(DndOffer {
+                            dock_item: Some(toplevel_group),
+                            preview_index: pos,
+                        });
+                    }
                 }
             }
             Message::DragFinished => {
@@ -1124,13 +1135,26 @@ impl cosmic::Application for CosmicAppList {
                     PanelAnchor::Left | PanelAnchor::Right => y as f32,
                 };
                 let num_pinned = self.pinned_list.len();
-                let index = index_in_list(num_pinned, item_size as f32, 4.0, None, pos_in_list);
+                let index = index_in_list(
+                    num_pinned,
+                    item_size as f32,
+                    AppletIconData::new(&self.core.applet).icon_spacing,
+                    None,
+                    pos_in_list,
+                );
                 self.dnd_offer = Some(DndOffer {
                     preview_index: index,
                     ..DndOffer::default()
                 });
                 if let Some(dnd_source) = self.dnd_source.as_ref() {
-                    self.dnd_offer.as_mut().unwrap().dock_item = Some(dnd_source.1.clone());
+                    if self
+                        .dnd_offer
+                        .as_ref()
+                        .and_then(|o| o.dock_item.as_ref())
+                        .is_none()
+                    {
+                        self.dnd_offer.as_mut().unwrap().dock_item = Some(dnd_source.1.clone());
+                    }
                 } else {
                     // TODO dnd
                     return peek_dnd::<DndPathBuf>()
@@ -1149,7 +1173,7 @@ impl cosmic::Application for CosmicAppList {
                 let index = index_in_list(
                     num_pinned,
                     item_size as f32,
-                    4.0,
+                    AppletIconData::new(&self.core.applet).icon_spacing,
                     self.dnd_offer.as_ref().map(|o| o.preview_index),
                     pos_in_list,
                 );
@@ -1703,15 +1727,15 @@ impl cosmic::Application for CosmicAppList {
                 }
             })
             .collect();
-        let dragged_pinned_id = self
+        let dragged_item_id = self
             .dnd_source
             .as_ref()
-            .and_then(|(_, dock_item, _, pinned_pos)| pinned_pos.map(|_| dock_item.id));
+            .map(|(_, dock_item, _, _)| dock_item.id);
 
         let mut favorites: Vec<_> = favorites[favorite_to_remove..]
             .iter()
             .rev()
-            .filter(|dock_item| Some(dock_item.id) != dragged_pinned_id)
+            .filter(|dock_item| Some(dock_item.id) != dragged_item_id)
             .map(|dock_item| {
                 self.core
                     .applet
@@ -1765,27 +1789,46 @@ impl cosmic::Application for CosmicAppList {
             favorites.push(btn);
         }
 
-        if let Some((item, index)) = self
-            .dnd_offer
-            .as_ref()
-            .and_then(|o| o.dock_item.as_ref().map(|item| (item, o.preview_index)))
+        if let Some(index) = self.dnd_offer.as_ref().map(|o| o.preview_index) {
+            if self.dnd_source.is_none() {
+                if let Some(item) = self.dnd_offer.as_ref().and_then(|o| o.dock_item.as_ref()) {
+                    favorites.insert(
+                        index.min(favorites.len()),
+                        item.as_icon(
+                            &self.core.applet,
+                            None,
+                            false,
+                            self.config.enable_drag_source,
+                            self.gpus.as_deref(),
+                            item.toplevels
+                                .iter()
+                                .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
+                            dot_radius,
+                            self.core.main_window_id().unwrap(),
+                        ),
+                    );
+                }
+            } else {
+                favorites.insert(
+                    index.min(favorites.len()),
+                    container(horizontal_space())
+                        .width(Length::Fixed(
+                            app_icon.icon_size as f32
+                                + app_icon.padding.left
+                                + app_icon.padding.right,
+                        ))
+                        .height(Length::Fixed(
+                            app_icon.icon_size as f32
+                                + app_icon.padding.top
+                                + app_icon.padding.bottom,
+                        ))
+                        .into(),
+                );
+            }
+        } else if dragged_item_id.is_none()
+            && self.is_listening_for_dnd
+            && self.pinned_list.is_empty()
         {
-            favorites.insert(
-                index.min(favorites.len()),
-                item.as_icon(
-                    &self.core.applet,
-                    None,
-                    false,
-                    self.config.enable_drag_source,
-                    self.gpus.as_deref(),
-                    item.toplevels
-                        .iter()
-                        .any(|y| focused_item.contains(&y.0.foreign_toplevel)),
-                    dot_radius,
-                    self.core.main_window_id().unwrap(),
-                ),
-            );
-        } else if self.is_listening_for_dnd && self.pinned_list.is_empty() {
             // show star indicating pinned_list is drag target
             favorites.push(
                 container(
@@ -1806,6 +1849,7 @@ impl cosmic::Application for CosmicAppList {
                 }
             })]
                 .iter()
+                .filter(|dock_item| Some(dock_item.id) != dragged_item_id)
                 .map(|dock_item| {
                     self.core
                         .applet
