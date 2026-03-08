@@ -435,7 +435,7 @@ fn index_in_list(
     };
 
     if let Some(existing_preview) = existing_preview {
-        if index >= existing_preview {
+        if index > existing_preview {
             index.saturating_sub(1)
         } else {
             index
