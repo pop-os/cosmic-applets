@@ -417,7 +417,6 @@ fn index_in_list(
     if existing_preview.is_some() {
         list_len += 1;
     }
-
     let index = if (list_len == 0) || (pos_in_list < item_size / 2.0) {
         0
     } else {
@@ -1135,10 +1134,17 @@ impl cosmic::Application for CosmicAppList {
                     PanelAnchor::Left | PanelAnchor::Right => y as f32,
                 };
                 let num_pinned = self.pinned_list.len();
+                let divider_size = AppletIconData::new(&self.core.applet).icon_spacing;
+                let drag_threshold = 10.0_f32.min(item_size as f32 / 4.0);
+                let pos_in_list = if pos_in_list >= item_size as f32 / 2.0 {
+                    pos_in_list + drag_threshold
+                } else {
+                    pos_in_list
+                };
                 let index = index_in_list(
                     num_pinned,
                     item_size as f32,
-                    AppletIconData::new(&self.core.applet).icon_spacing,
+                    divider_size,
                     None,
                     pos_in_list,
                 );
@@ -1170,10 +1176,27 @@ impl cosmic::Application for CosmicAppList {
                     PanelAnchor::Left | PanelAnchor::Right => y as f32,
                 };
                 let num_pinned = self.pinned_list.len();
+                let divider_size = AppletIconData::new(&self.core.applet).icon_spacing;
+                let drag_threshold = 10.0_f32.min(item_size as f32 / 4.0);
+                let pos_in_list = if let Some(existing_preview) =
+                    self.dnd_offer.as_ref().map(|o| o.preview_index)
+                {
+                    let midpoint = item_size as f32 / 2.0
+                        + existing_preview as f32 * (item_size as f32 + divider_size);
+                    if pos_in_list > midpoint {
+                        pos_in_list + drag_threshold
+                    } else if pos_in_list < midpoint {
+                        (pos_in_list - drag_threshold).max(0.0)
+                    } else {
+                        pos_in_list
+                    }
+                } else {
+                    pos_in_list
+                };
                 let index = index_in_list(
                     num_pinned,
                     item_size as f32,
-                    AppletIconData::new(&self.core.applet).icon_spacing,
+                    divider_size,
                     self.dnd_offer.as_ref().map(|o| o.preview_index),
                     pos_in_list,
                 );
