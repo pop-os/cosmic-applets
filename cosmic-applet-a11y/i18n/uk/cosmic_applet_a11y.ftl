@@ -1,4 +1,4 @@
-screen-reader = Зчитувач з екрана
+screen-reader = Екранний читач
 magnifier = Лупа
 invert-colors = Інверсія кольорів
 settings = Налаштування доступності...

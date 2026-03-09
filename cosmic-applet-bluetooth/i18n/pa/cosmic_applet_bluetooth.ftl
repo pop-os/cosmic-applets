@@ -1,0 +1,12 @@
+connected = ਕਨੈਕਟ ਹੈ
+confirm = ਤਸਦੀਕ
+cancel = ਰੱਦ ਕਰੋ
+bluetooth = ਬਲੁਟੁੱਥ
+other-devices = ਹੋਰ ਬਲੁਟੁੱਥ ਡਿਵਾਈਸ
+settings = ਬਲੁਟੁੱਥ ਸੈਟਿੰਗਾਂ...
+try-again = ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕਰੋ
+discoverable = ਖੋਜਣਯੋਗ
+pairable = ਪੇਅਰ-ਯੋਗ
+unsuccessful = ਪੇਅਰ ਕਰਨ ਨਾ-ਕਾਮਯਾਬ ਹੈ
+check-device = ਪੱਕਾ ਕਰੋ ਕਿ { $deviceName } ਚਾਲੂ ਹੈ, ਰੇਜ਼ ਵਿੱਚ ਹੈ ਅਤੇ ਪੇਅਰ ਕਰਨ ਲਈ ਤਿਆਰ ਹੈ।
+confirm-pin = ਤਸਦੀਕ ਕਰੋ ਕਿ ਅੱਗੇ ਦਿੱਤਾ ਪਿੰਨ { $deviceName } ਉੱਤੇ ਦਿਖਾਏ ਨਾਲ ਮਿਲਦਾ ਹੈ

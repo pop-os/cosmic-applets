@@ -1,5 +1,5 @@
 cosmic-app-list = Panel aplikací
-pin = Připnout na panel aplikací
+pin = Připnout do panelu aplikací
 quit = Ukončit
 quit-all = Ukončit vše
 new-window = Nové okno
