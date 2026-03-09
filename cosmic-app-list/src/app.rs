@@ -189,10 +189,7 @@ impl DockItem {
         } = self;
 
         let app_icon = AppletIconData::new(applet);
-        let drag_icon_offset = iced::Vector::new(
-            -(app_icon.icon_size as f32 / 2.0),
-            -(app_icon.icon_size as f32 / 2.0),
-        );
+        let icon_origin = iced::Vector::new(app_icon.padding.left, app_icon.padding.top);
 
         let cosmic_icon = cosmic::widget::icon(
             fde::IconSource::from_unknown(desktop_info.icon().unwrap_or_default()).as_cosmic_icon(),
@@ -301,11 +298,11 @@ impl DockItem {
         let icon_button = if dnd_source_enabled && interaction_enabled {
             dnd_source(icon_button)
                 .window(window_id)
-                .drag_icon(move |_| {
+                .drag_icon(move |pointer_offset| {
                     (
                         cosmic_icon.clone().into(),
                         iced::core::widget::tree::State::None,
-                        drag_icon_offset,
+                        icon_origin - pointer_offset,
                     )
                 })
                 .drag_threshold(16.)
