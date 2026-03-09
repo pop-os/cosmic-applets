@@ -305,7 +305,7 @@ impl DockItem {
                         icon_origin - pointer_offset,
                     )
                 })
-                .drag_threshold(16.)
+                .drag_threshold(8.)
                 .drag_content(move || DndPathBuf(path.clone()))
                 .on_start(Some(Message::StartDrag(*id)))
                 .on_cancel(Some(Message::DragFinished))
