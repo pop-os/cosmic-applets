@@ -20,3 +20,5 @@ vpn-connections = VPN-yhteydet
 settings = Verkkoasetukset...
 gigabits-per-second = Gbps
 terabits-per-second = Tbps
+reset = Nollaa
+identity = Identiteetti
