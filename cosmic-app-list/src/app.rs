@@ -1076,28 +1076,28 @@ impl cosmic::Application for CosmicAppList {
                     return Task::none();
                 }
 
-                match (entering, already_hovered, &self.hovered_toplevel) {
-                    (true, true, _) => {}
-                    (true, false, _) => self.hovered_toplevel = Some(handle.clone()),
-                    // prevents race condition
-                    (false, _, Some(h)) if h == &handle => self.hovered_toplevel = None,
-                    _ => {}
-                }
+                if entering {
+                    if already_hovered {
+                        return Task::none();
+                    }
 
-                if entering
-                    && !already_hovered
-                    && let Some(source) = self
+                    self.hovered_toplevel = Some(handle.clone());
+
+                    if let Some(source) = self
                         .popup_toplevel_drag
                         .as_ref()
                         .map(|drag| drag.source.clone())
                         .filter(|source| source != &handle)
-                    && self.reorder_popup_toplevels(&source, &handle)
-                {
-                    if let Some(drag) = self.popup_toplevel_drag.as_mut() {
-                        drag.reordered = true;
-                        drag.skip_next_enter = Some(handle.clone());
+                        && self.reorder_popup_toplevels(&source, &handle)
+                    {
+                        if let Some(drag) = self.popup_toplevel_drag.as_mut() {
+                            drag.reordered = true;
+                            drag.skip_next_enter = Some(handle.clone());
+                        }
+                        self.hovered_toplevel = Some(source);
                     }
-                    self.hovered_toplevel = Some(source);
+                } else if self.hovered_toplevel.as_ref() == Some(&handle) {
+                    self.hovered_toplevel = None;
                 }
             }
             Message::PinApp(id) => {
@@ -1140,18 +1140,8 @@ impl cosmic::Application for CosmicAppList {
                 }
             }
             Message::Toggle(handle) => {
-                let drag_state = self.popup_toplevel_drag.as_ref().map(|drag| {
-                    (
-                        drag.source == handle,
-                        drag.reordered,
-                        format!("{:?}", drag.source),
-                    )
-                });
-
-                if let Some((drag_matches_handle, drag_reordered, _)) = drag_state {
-                    self.popup_toplevel_drag = None;
-
-                    if drag_matches_handle && drag_reordered {
+                if let Some(drag) = self.popup_toplevel_drag.take() {
+                    if drag.source == handle && drag.reordered {
                         return Task::none();
                     }
                 }
