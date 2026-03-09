@@ -52,7 +52,13 @@ use cosmic_app_list_config::{APP_ID, AppListConfig};
 use cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::State;
 use futures::future::pending;
 use rustc_hash::FxHashMap;
-use std::{borrow::Cow, path::PathBuf, rc::Rc, str::FromStr, time::Duration};
+use std::{
+    borrow::Cow,
+    path::PathBuf,
+    rc::Rc,
+    str::FromStr,
+    time::Duration,
+};
 use switcheroo_control::Gpu;
 use tokio::time::sleep;
 use url::Url;
@@ -335,6 +341,13 @@ pub struct Popup {
     popup_type: PopupType,
 }
 
+#[derive(Debug, Clone)]
+struct PopupToplevelDrag {
+    source: ExtForeignToplevelHandleV1,
+    reordered: bool,
+    skip_next_enter: Option<ExtForeignToplevelHandleV1>,
+}
+
 #[derive(Clone, Default)]
 struct CosmicAppList {
     core: cosmic::app::Core,
@@ -357,6 +370,7 @@ struct CosmicAppList {
     output_list: FxHashMap<WlOutput, OutputInfo>,
     locales: Vec<String>,
     hovered_toplevel: Option<ExtForeignToplevelHandleV1>,
+    popup_toplevel_drag: Option<PopupToplevelDrag>,
     overflow_favorites_popup: Option<window::Id>,
     overflow_active_popup: Option<window::Id>,
 }
@@ -374,7 +388,9 @@ enum Message {
     UnpinApp(u32),
     Popup(u32, window::Id),
     Pressed(window::Id),
+    Released(window::Id),
     ToplevelListPopup(u32, window::Id),
+    ToplevelDragPressed(ExtForeignToplevelHandleV1),
     ToplevelHoverChanged(ExtForeignToplevelHandleV1, bool),
     GpuRequest(Option<Vec<Gpu>>),
     CloseRequested(window::Id),
@@ -470,6 +486,9 @@ fn toplevel_button<'a>(
     is_hovered: bool,
 ) -> Element<'a, Message> {
     let border = 1.0;
+    let toggle_handle = handle.clone();
+    let drag_handle = handle.clone();
+    let hover_enter_handle = handle.clone();
     let preview = column![
         container(if let Some(img) = img {
             Element::from(Image::new(Handle::from_rgba(
@@ -514,14 +533,15 @@ fn toplevel_button<'a>(
 
     stack![preview, close_button_overlay]
         .apply(button::custom)
-        .on_press(Message::Toggle(handle.clone()))
+        .on_press_down(Message::ToplevelDragPressed(drag_handle))
+        .on_press(Message::Toggle(toggle_handle))
         .class(window_menu_style(is_focused))
         .width(Length::Fixed(TOPLEVEL_BUTTON_WIDTH))
         .height(Length::Fixed(TOPLEVEL_BUTTON_HEIGHT))
         .padding(4)
         .selected(is_focused)
         .apply(mouse_area)
-        .on_enter(Message::ToplevelHoverChanged(handle.clone(), true))
+        .on_enter(Message::ToplevelHoverChanged(hover_enter_handle, true))
         .on_exit(Message::ToplevelHoverChanged(handle, false))
         .apply(Element::from)
 }
@@ -622,6 +642,65 @@ fn find_desktop_entries<'a>(
 }
 
 impl CosmicAppList {
+    fn dock_item_mut(&mut self, id: u32) -> Option<&mut DockItem> {
+        if let Some(dock_item) = self.pinned_list.iter_mut().find(|item| item.id == id) {
+            Some(dock_item)
+        } else {
+            self.active_list.iter_mut().find(|item| item.id == id)
+        }
+    }
+
+    fn reorder_popup_toplevels(
+        &mut self,
+        source: &ExtForeignToplevelHandleV1,
+        target: &ExtForeignToplevelHandleV1,
+    ) -> bool {
+        let Some(dock_item_id) = self
+            .popup
+            .as_ref()
+            .filter(|popup| popup.popup_type == PopupType::ToplevelList)
+            .map(|popup| popup.dock_item.id)
+        else {
+            return false;
+        };
+
+        let reordered_toplevels = {
+            let Some(dock_item) = self.dock_item_mut(dock_item_id) else {
+                return false;
+            };
+
+            let Some(source_index) = dock_item
+                .toplevels
+                .iter()
+                .position(|(info, _)| info.foreign_toplevel == *source)
+            else {
+                return false;
+            };
+
+            let Some(target_index) = dock_item
+                .toplevels
+                .iter()
+                .position(|(info, _)| info.foreign_toplevel == *target)
+            else {
+                return false;
+            };
+
+            if source_index == target_index {
+                return false;
+            }
+
+            let toplevel = dock_item.toplevels.remove(source_index);
+            dock_item.toplevels.insert(target_index, toplevel);
+            dock_item.toplevels.clone()
+        };
+
+        if let Some(popup) = self.popup.as_mut().filter(|popup| popup.dock_item.id == dock_item_id) {
+            popup.dock_item.toplevels = reordered_toplevels;
+        }
+
+        true
+    }
+
     // Cache all desktop entries to use when new apps are added to the dock.
     fn update_desktop_entries(&mut self) {
         self.desktop_entries = fde::Iter::new(fde::default_paths())
@@ -982,11 +1061,43 @@ impl cosmic::Application for CosmicAppList {
                 }
             }
             Message::ToplevelHoverChanged(handle, entering) => {
-                match (entering, &self.hovered_toplevel) {
-                    (true, _) => self.hovered_toplevel = Some(handle),
+                let already_hovered = self.hovered_toplevel.as_ref() == Some(&handle);
+                let skip_next_enter = self
+                    .popup_toplevel_drag
+                    .as_ref()
+                    .and_then(|drag| drag.skip_next_enter.as_ref())
+                    == Some(&handle);
+
+                if entering && skip_next_enter {
+                    if let Some(drag) = self.popup_toplevel_drag.as_mut() {
+                        drag.skip_next_enter = None;
+                    }
+
+                    return Task::none();
+                }
+
+                match (entering, already_hovered, &self.hovered_toplevel) {
+                    (true, true, _) => {}
+                    (true, false, _) => self.hovered_toplevel = Some(handle.clone()),
                     // prevents race condition
-                    (false, Some(h)) if h == &handle => self.hovered_toplevel = None,
+                    (false, _, Some(h)) if h == &handle => self.hovered_toplevel = None,
                     _ => {}
+                }
+
+                if entering
+                    && !already_hovered
+                    && let Some(source) = self
+                        .popup_toplevel_drag
+                        .as_ref()
+                        .map(|drag| drag.source.clone())
+                        .filter(|source| source != &handle)
+                    && self.reorder_popup_toplevels(&source, &handle)
+                {
+                    if let Some(drag) = self.popup_toplevel_drag.as_mut() {
+                        drag.reordered = true;
+                        drag.skip_next_enter = Some(handle.clone());
+                    }
+                    self.hovered_toplevel = Some(source);
                 }
             }
             Message::PinApp(id) => {
@@ -1029,6 +1140,22 @@ impl cosmic::Application for CosmicAppList {
                 }
             }
             Message::Toggle(handle) => {
+                let drag_state = self.popup_toplevel_drag.as_ref().map(|drag| {
+                    (
+                        drag.source == handle,
+                        drag.reordered,
+                        format!("{:?}", drag.source),
+                    )
+                });
+
+                if let Some((drag_matches_handle, drag_reordered, _)) = drag_state {
+                    self.popup_toplevel_drag = None;
+
+                    if drag_matches_handle && drag_reordered {
+                        return Task::none();
+                    }
+                }
+
                 if let Some(tx) = self.wayland_sender.as_ref() {
                     let _ = tx.send(WaylandRequest::Toplevel(if self.is_focused(&handle) {
                         ToplevelRequest::Minimize(handle)
@@ -1652,6 +1779,26 @@ impl cosmic::Application for CosmicAppList {
                 if self.popup.is_some() && self.core.main_window_id() == Some(id) {
                     return self.close_popups();
                 }
+            }
+            Message::Released(id) => {
+                if self
+                    .popup
+                    .as_ref()
+                    .is_some_and(|popup| popup.id == id && popup.popup_type == PopupType::ToplevelList)
+                {
+                    self.popup_toplevel_drag = None;
+                }
+            }
+            Message::ToplevelDragPressed(handle) => {
+                self.popup_toplevel_drag = self
+                    .popup
+                    .as_ref()
+                    .filter(|popup| popup.popup_type == PopupType::ToplevelList)
+                    .map(|_| PopupToplevelDrag {
+                        source: handle,
+                        reordered: false,
+                        skip_next_enter: None,
+                    });
             }
             Message::Surface(a) => {
                 return cosmic::task::message(cosmic::Action::Cosmic(
@@ -2397,6 +2544,9 @@ impl cosmic::Application for CosmicAppList {
                 cosmic::iced_core::Event::Mouse(
                     cosmic::iced_core::mouse::Event::ButtonPressed(_),
                 ) => Some(Message::Pressed(id)),
+                cosmic::iced_core::Event::Mouse(
+                    cosmic::iced_core::mouse::Event::ButtonReleased(_),
+                ) => Some(Message::Released(id)),
                 _ => None,
             }),
             rectangle_tracker_subscription(0).map(|update| Message::Rectangle(update.1)),
