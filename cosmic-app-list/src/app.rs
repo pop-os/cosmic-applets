@@ -321,7 +321,7 @@ impl DockItem {
         }
     }
 
-    fn as_draged_item(&self, applet: &Context) -> Element<'_, Message> {
+    fn as_dragged_item(&self, applet: &Context) -> Element<'_, Message> {
         let app_icon = AppletIconData::new(applet);
 
         container(horizontal_space())
@@ -1768,7 +1768,7 @@ impl cosmic::Application for CosmicAppList {
         {
             favorites.insert(
                 index.min(favorites.len()),
-                item.as_draged_item(&self.core.applet),
+                item.as_dragged_item(&self.core.applet),
             );
         } else if self.is_listening_for_dnd && self.pinned_list.is_empty() {
             // show star indicating pinned_list is drag target
