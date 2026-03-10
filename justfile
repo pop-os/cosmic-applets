@@ -46,7 +46,7 @@ _install_desktop path:
 _install_bin name:
     install -Dm0755 {{ targetdir }}/{{ target }}/{{ name }} {{ bindir }}/{{ name }}
 
-_install_applet id name: (_install_icons name) (_install_desktop name + '/data/' + id + '.desktop') (_link_applet name)
+_install_applet id name: (_install_icons name) (_install_desktop 'target/xdgen/' + id + '.desktop') (_link_applet name)
 
 _install_button id name: (_install_icons name) (_install_desktop 'target/xdgen/' + id + '.desktop')
 
