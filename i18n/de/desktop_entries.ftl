@@ -32,3 +32,4 @@ cosmic-panel-app-button = App-Bibliothek-Schaltfläche
 cosmic-panel-launcher-button = Starter-Schaltfläche
 cosmic-panel-workspaces-button = Arbeitsflächen-Schaltfläche
 cosmic-panel-workspaces-button-keywords = COSMIC;Applet;Arbeitsfläche;Übersicht;
+cosmic-applet-tiling-keywords = COSMIC;Applet;Kachelung;Hinweis;Arbeitsfläche;
