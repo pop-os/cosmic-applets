@@ -6,6 +6,7 @@ license = "GPL-3.0-only"
 
 [dependencies]
 cosmic-time.workspace = true
+futures.workspace = true
 i18n-embed-fl.workspace = true
 i18n-embed.workspace = true
 libcosmic.workspace = true
@@ -20,6 +21,14 @@ tracing.workspace = true
 url = "2"
 urlencoding = "2.1.3"
 zbus.workspace = true
+zlink.workspace = true
+intmap = "3.1.3"
 
-[dependencies.cosmic-settings-sound-subscription]
-git = "https://github.com/pop-os/cosmic-settings"
+[dependencies.cosmic-settings-audio-client]
+# path = "../../cosmic-settings-daemon/audio-client"
+git = "https://github.com/pop-os/cosmic-settings-daemon"
+branch = "varlink"
+features = ["codec"]
+
+# [dependencies.cosmic-settings-sound-subscription]
+# git = "https://github.com/pop-os/cosmic-settings"

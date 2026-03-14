@@ -2,12 +2,13 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 mod localize;
+mod model;
 mod mouse_area;
 
 use crate::localize::localize;
 use config::{AudioAppletConfig, amplification_sink, amplification_source};
 use cosmic::{
-    Element, Renderer, Task, Theme, app,
+    Apply, Element, Renderer, Task, Theme, app,
     applet::{
         column as applet_column,
         cosmic_panel_config::PanelAnchor,
@@ -23,15 +24,22 @@ use cosmic::{
         widget::{self, column, row, slider},
         window,
     },
-    surface, theme,
+    iced_futures, surface, theme,
     widget::{Row, button, container, divider, horizontal_space, icon, text},
 };
-use cosmic_settings_sound_subscription as css;
+use cosmic_settings_audio_client::{self as audio_client, CosmicAudioProxy};
 use cosmic_time::{Instant, Timeline, anim, chain, id};
+use futures::executor::block_on;
+use futures::sink::SinkExt;
 use iced::platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup};
+
 use mpris_subscription::{MprisRequest, MprisUpdate};
 use mpris2_zbus::player::PlaybackStatus;
-use std::sync::LazyLock;
+use std::{
+    cell::RefCell,
+    rc::Rc,
+    sync::{Arc, LazyLock},
+};
 
 mod config;
 mod mpris_subscription;
@@ -54,8 +62,10 @@ pub struct Audio {
     core: cosmic::app::Core,
     /// Track the applet's popup window.
     popup: Option<window::Id>,
-    /// The model from cosmic-settings for managing pipewire devices.
-    model: css::Model,
+    /// Varlink connection to `com.system76.CosmicSettings.Audio`.
+    audio_client: Option<Rc<RefCell<audio_client::Client>>>,
+    /// Known audio device state
+    model: model::Model,
     /// Whether to expand the revealer of a source or sink device.
     is_open: IsOpen,
     /// Max slider volume for the sink device, as determined by the amplification property.
@@ -78,8 +88,8 @@ pub struct Audio {
 
 impl Audio {
     fn output_icon_name(&self) -> &'static str {
-        let volume = self.model.sink_volume;
-        let mute = self.model.sink_mute;
+        let volume = self.model.active_sink.volume;
+        let mute = self.model.active_sink.mute;
         if mute || volume == 0 {
             "audio-volume-muted-symbolic"
         } else if volume < 33 {
@@ -94,8 +104,8 @@ impl Audio {
     }
 
     fn input_icon_name(&self) -> &'static str {
-        let volume = self.model.source_volume;
-        let mute = self.model.source_mute;
+        let volume = self.model.active_source.volume;
+        let mute = self.model.active_source.mute;
         if mute || volume == 0 {
             "microphone-sensitivity-muted-symbolic"
         } else if volume < 33 {
@@ -116,8 +126,10 @@ enum IsOpen {
     Input,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub enum Message {
+    /// Connection to `com.system76.CosmicSettings`.
+    Client(Arc<audio_client::Client>),
     Ignore,
     SetSinkVolume(u32),
     SetSourceVolume(u32),
@@ -136,7 +148,7 @@ pub enum Message {
     MprisRequest(MprisRequest),
     Token(TokenUpdate),
     OpenSettings,
-    Subscription(css::Message),
+    Subscription(audio_client::Event),
     Surface(surface::Action),
 }
 
@@ -249,15 +261,9 @@ impl cosmic::Application for Audio {
     const APP_ID: &'static str = "com.system76.CosmicAppletAudio";
 
     fn init(core: cosmic::app::Core, _flags: ()) -> (Self, app::Task<Message>) {
-        let mut model = css::Model::default();
-        model.unplugged_text = "Unplugged".into();
-        model.hd_audio_text = "HD Audio".into();
-        model.usb_audio_text = "USB Audio".into();
-
         (
             Self {
                 core,
-                model,
                 ..Default::default()
             },
             Task::none(),
@@ -327,42 +333,63 @@ impl cosmic::Application for Audio {
                 }
             }
             Message::Subscription(message) => {
-                return self
-                    .model
-                    .update(message)
-                    .map(|message| Message::Subscription(message).into());
+                self.model.update(message);
             }
 
             Message::SetDefaultSink(pos) => {
-                return self
-                    .model
-                    .set_default_sink(pos)
-                    .map(|message| Message::Subscription(message).into());
+                if let Some(&node_id) = self.model.sinks.id.get(pos) {
+                    if let Some(client) = self.audio_client.as_mut() {
+                        block_on(async {
+                            _ = client.borrow_mut().conn.set_default(node_id).await;
+                        });
+                    }
+                }
             }
 
             Message::SetDefaultSource(pos) => {
-                return self
-                    .model
-                    .set_default_source(pos)
-                    .map(|message| Message::Subscription(message).into());
+                if let Some(&node_id) = self.model.sources.id.get(pos) {
+                    if let Some(client) = self.audio_client.as_mut() {
+                        block_on(async {
+                            _ = client.borrow_mut().conn.set_default(node_id).await;
+                        });
+                    }
+                }
             }
 
-            Message::ToggleSinkMute => self.model.toggle_sink_mute(),
+            Message::ToggleSinkMute => {
+                if let Some(ref mut client) = self.audio_client {
+                    futures::executor::block_on(async {
+                        _ = client.borrow_mut().conn.sink_mute_toggle().await;
+                    });
+                }
+            }
 
-            Message::ToggleSourceMute => self.model.toggle_source_mute(),
+            Message::ToggleSourceMute => {
+                if let Some(ref mut client) = self.audio_client {
+                    futures::executor::block_on(async {
+                        _ = client.borrow_mut().conn.source_mute_toggle().await;
+                    });
+                }
+            }
 
             Message::SetSinkVolume(volume) => {
-                return self
-                    .model
-                    .set_sink_volume(volume)
-                    .map(|message| Message::Subscription(message).into());
+                if let Some(ref mut client) = self.audio_client {
+                    self.model.active_sink.volume = volume;
+                    self.model.active_sink.volume_text = volume.to_string();
+                    futures::executor::block_on(async {
+                        _ = client.borrow_mut().conn.set_sink_volume(volume).await;
+                    });
+                }
             }
 
             Message::SetSourceVolume(volume) => {
-                return self
-                    .model
-                    .set_source_volume(volume)
-                    .map(|message| Message::Subscription(message).into());
+                if let Some(ref mut client) = self.audio_client {
+                    self.model.active_source.volume = volume;
+                    self.model.active_source.volume_text = volume.to_string();
+                    futures::executor::block_on(async {
+                        _ = client.borrow_mut().conn.set_source_volume(volume).await;
+                    });
+                }
             }
 
             Message::ToggleMediaControlsInTopPanel(chain, enabled) => {
@@ -471,13 +498,19 @@ impl cosmic::Application for Audio {
                     cosmic::app::Action::Surface(a),
                 ));
             }
+            Message::Client(client) => {
+                if let Some(client) = Arc::into_inner(client) {
+                    self.audio_client = Some(Rc::new(RefCell::new(client)));
+                    self.model = model::Model::default();
+                }
+            }
         }
 
         Task::none()
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        Subscription::batch([
+        let subscriptions = vec![
             self.timeline
                 .as_subscription()
                 .map(|(_, now)| Message::Frame(now)),
@@ -489,8 +522,52 @@ impl cosmic::Application for Audio {
             }),
             mpris_subscription::mpris_subscription(0).map(Message::Mpris),
             activation_token_subscription(0).map(Message::Token),
-            Subscription::run(|| css::watch().map(Message::Subscription)),
-        ])
+            Subscription::run(|| {
+                iced_futures::stream::channel(1, move |mut emitter| async move {
+                    loop {
+                        let mut client = match audio_client::connect().await {
+                            Ok(client) => client,
+                            Err(why) => {
+                                if let zlink::Error::Io(ref why) = why
+                                    && why.kind() == std::io::ErrorKind::NotFound
+                                {
+                                    tracing::error!(
+                                        "cosmic-settings-daemon varlink service not found. Restarting cosmic-settings-daemon"
+                                    );
+                                    _ = std::process::Command::new("killall")
+                                        .args(&["-2", "cosmic-settings-daemon"])
+                                        .status();
+                                } else {
+                                    tracing::error!(
+                                        ?why,
+                                        "failed to connect to cosmic-settings's varlink service"
+                                    );
+                                }
+
+                                tokio::time::sleep(std::time::Duration::from_secs(3)).await;
+                                continue;
+                            }
+                        };
+
+                        if let Ok(Ok(mut stream)) = client.recv_events().await {
+                            _ = emitter.send(Message::Client(Arc::new(client))).await;
+                            while let Some(message) = stream.next().await {
+                                match message {
+                                    Ok(event) => {
+                                        _ = emitter.send(Message::Subscription(event)).await;
+                                    }
+                                    Err(why) => {
+                                        tracing::error!(?why, "event error");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                })
+            }),
+        ];
+
+        Subscription::batch(subscriptions)
     }
 
     fn view(&self) -> Element<'_, Message> {
@@ -510,7 +587,7 @@ impl cosmic::Application for Audio {
                 return Message::Ignore;
             }
 
-            let new_volume = (self.model.sink_volume as f64 + (scroll_vector as f64))
+            let new_volume = (self.model.active_sink.volume as f64 + (scroll_vector as f64))
                 .clamp(0.0, self.max_sink_volume as f64);
             Message::SetSinkVolume(new_volume as u32)
         });
@@ -564,17 +641,19 @@ impl cosmic::Application for Audio {
 
         let sink = self
             .model
-            .active_sink()
-            .and_then(|pos| self.model.sinks().get(pos));
+            .sinks
+            .active
+            .map(|pos| self.model.sinks.display[pos].as_str());
         let source = self
             .model
-            .active_source()
-            .and_then(|pos| self.model.sources().get(pos));
+            .sources
+            .active
+            .map(|pos| self.model.sources.display[pos].as_str());
 
         let mut audio_content = {
             let output_slider = slider(
                 0..=self.max_sink_volume,
-                self.model.sink_volume,
+                self.model.active_sink.volume,
                 Message::SetSinkVolume,
             )
             .width(Length::FillPortion(5))
@@ -582,7 +661,7 @@ impl cosmic::Application for Audio {
 
             let input_slider = slider(
                 0..=self.max_source_volume,
-                self.model.source_volume,
+                self.model.active_source.volume,
                 Message::SetSourceVolume,
             )
             .width(Length::FillPortion(5))
@@ -601,7 +680,7 @@ impl cosmic::Application for Audio {
                         .line_height(24)
                         .on_press(Message::ToggleSinkMute),
                         output_slider,
-                        container(text(&self.model.sink_volume_text).size(16))
+                        container(text(&self.model.active_sink.volume_text).size(16))
                             .width(Length::FillPortion(1))
                             .align_x(Alignment::End)
                     ]
@@ -620,7 +699,7 @@ impl cosmic::Application for Audio {
                         .line_height(24)
                         .on_press(Message::ToggleSourceMute),
                         input_slider,
-                        container(text(&self.model.source_volume_text).size(16))
+                        container(text(&self.model.active_source.volume_text).size(16))
                             .width(Length::FillPortion(1))
                             .align_x(Alignment::End)
                     ]
@@ -635,7 +714,7 @@ impl cosmic::Application for Audio {
                         Some(sink) => sink.to_owned(),
                         None => fl!("no-device"),
                     },
-                    self.model.sinks(),
+                    &self.model.sinks.display,
                     Message::OutputToggle,
                     Message::SetDefaultSink,
                 ),
@@ -646,7 +725,7 @@ impl cosmic::Application for Audio {
                         Some(source) => source.to_owned(),
                         None => fl!("no-device"),
                     },
-                    self.model.sources(),
+                    &self.model.sources.display,
                     Message::InputToggle,
                     Message::SetDefaultSource,
                 )
@@ -702,19 +781,15 @@ impl cosmic::Application for Audio {
             }
             if let Some(play) = self.is_play() {
                 control_elements.push(
-                    button::icon(
-                        icon::from_name(if play { PLAY } else { PAUSE })
-                            .size(32)
-                            .symbolic(true),
-                    )
-                    .extra_small()
-                    .class(cosmic::theme::Button::AppletIcon)
-                    .on_press(if play {
-                        Message::MprisRequest(MprisRequest::Play)
-                    } else {
-                        Message::MprisRequest(MprisRequest::Pause)
-                    })
-                    .into(),
+                    button::icon(icon::from_name(if play { PLAY } else { PAUSE }).symbolic(true))
+                        .extra_small()
+                        .class(cosmic::theme::Button::AppletIcon)
+                        .on_press(if play {
+                            Message::MprisRequest(MprisRequest::Play)
+                        } else {
+                            Message::MprisRequest(MprisRequest::Pause)
+                        })
+                        .into(),
                 );
             }
             if let Some(go_next) = self.go_next(32) {
@@ -783,7 +858,8 @@ fn revealer(
             column![revealer_head(open, title, selected, toggle)].width(Length::Fill),
             |col, (id, name)| {
                 col.push(
-                    menu_button(text::body(name))
+                    text::body(name)
+                        .apply(menu_button)
                         .on_press(change(id))
                         .width(Length::Fill)
                         .padding([8, 48]),
@@ -801,9 +877,9 @@ fn revealer_head(
     selected: String,
     toggle: Message,
 ) -> cosmic::widget::Button<'static, Message> {
-    menu_button(column![
-        text::body(title).width(Length::Fill),
-        text::caption(selected),
-    ])
-    .on_press(toggle)
+    cosmic::widget::column::with_capacity(2)
+        .push(text::body(title).width(Length::Fill))
+        .push(text::caption(selected))
+        .apply(menu_button)
+        .on_press(toggle)
 }
