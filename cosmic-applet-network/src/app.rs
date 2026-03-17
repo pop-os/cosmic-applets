@@ -1919,28 +1919,42 @@ impl cosmic::Application for CosmicNetworkApplet {
                 }
             }
         } else {
-            let mut list_col =
-                Vec::with_capacity(self.nm_state.nm_state.wireless_access_points.len());
-            for ap in &self.nm_state.nm_state.wireless_access_points {
-                if self.nm_state.nm_state.active_conns.iter().any(|a| {
-                    let hw_address = active_conn_hw_address(a);
-                    ap.ssid.as_ref() == &a.name() && ap.hw_address == hw_address
-                }) {
-                    continue;
-                }
-                let button = menu_button(
-                    row![
-                        icon::from_name(wifi_icon(ap.strength))
-                            .size(16)
-                            .symbolic(true),
-                        text::body(ap.ssid.as_ref()).align_y(Alignment::Center)
-                    ]
-                    .align_y(Alignment::Center)
-                    .spacing(12),
-                )
-                .on_press(Message::SelectWirelessAccessPoint(ap.clone()));
-                list_col.push(button.into());
-            }
+            let list_col = self
+                .nm_state
+                .nm_state
+                .wireless_access_points
+                .iter()
+                .filter(|ap| {
+                    let among_active = self.nm_state.nm_state.active_conns.iter().any(|a| {
+                        let hw_address = active_conn_hw_address(a);
+                        ap.ssid.as_ref() == &a.name() && ap.hw_address == hw_address
+                    });
+                    let among_known =
+                        self.nm_state
+                            .nm_state
+                            .known_access_points
+                            .iter()
+                            .any(|known_ap| {
+                                ap.network_type == known_ap.network_type
+                                    && ap.hw_address == known_ap.hw_address
+                                    && ap.ssid == known_ap.ssid
+                            });
+                    !among_active && !among_known
+                })
+                .map(|ap| {
+                    let button = menu_button(
+                        row![
+                            icon::from_name(wifi_icon(ap.strength))
+                                .size(16)
+                                .symbolic(true),
+                            text::body(ap.ssid.as_ref()).align_y(Alignment::Center)
+                        ]
+                        .align_y(Alignment::Center)
+                        .spacing(12),
+                    )
+                    .on_press(Message::SelectWirelessAccessPoint(ap.clone()));
+                    button.into()
+                });
             content = content
                 .push(scrollable(Column::with_children(list_col)).height(Length::Fixed(300.0)));
         }
