@@ -26,16 +26,15 @@ pub enum WaylandUpdate {
 }
 
 pub fn a11y_subscription() -> iced::Subscription<WaylandUpdate> {
-    Subscription::run_with_id(
-        std::any::TypeId::of::<WaylandUpdate>(),
+    Subscription::run_with(std::any::TypeId::of::<WaylandUpdate>(), |_| {
         stream::channel(50, move |mut output| async move {
             let mut state = State::Waiting;
 
             loop {
                 state = start_listening(state, &mut output).await;
             }
-        }),
-    )
+        })
+    })
 }
 
 async fn start_listening(

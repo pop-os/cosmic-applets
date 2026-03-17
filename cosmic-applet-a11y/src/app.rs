@@ -22,22 +22,15 @@ use cosmic::{
     },
     surface,
     theme::{self, CosmicTheme},
-    widget::{Column, divider, text},
+    widget::{Column, divider, text, toggler},
 };
 
 use cosmic_settings_a11y_manager_subscription::{
     self as cosmic_a11y_manager, AccessibilityEvent, AccessibilityRequest, ColorFilter,
 };
 use cosmic_settings_accessibility_subscription::{self as accessibility};
-use cosmic_time::{Instant, Timeline, anim, chain, id};
 use std::sync::LazyLock;
 use tokio::sync::mpsc::UnboundedSender;
-
-static READER_TOGGLE: LazyLock<id::Toggler> = LazyLock::new(id::Toggler::unique);
-static FILTER_TOGGLE: LazyLock<id::Toggler> = LazyLock::new(id::Toggler::unique);
-static HC_TOGGLE: LazyLock<id::Toggler> = LazyLock::new(id::Toggler::unique);
-static MAGNIFIER_TOGGLE: LazyLock<id::Toggler> = LazyLock::new(id::Toggler::unique);
-static INVERT_COLORS_TOGGLE: LazyLock<id::Toggler> = LazyLock::new(id::Toggler::unique);
 
 pub fn run() -> cosmic::iced::Result {
     cosmic::applet::run::<CosmicA11yApplet>(())
@@ -54,7 +47,6 @@ struct CosmicA11yApplet {
     dbus_sender: Option<UnboundedSender<accessibility::Request>>,
     wayland_sender: Option<calloop::channel::Sender<AccessibilityRequest>>,
     wayland_protocol_version: Option<u32>,
-    timeline: Timeline,
     token_tx: Option<channel::Sender<TokenRequest>>,
     screen_filter_active: bool,
 }
@@ -63,12 +55,11 @@ struct CosmicA11yApplet {
 enum Message {
     TogglePopup,
     CloseRequested(window::Id),
-    HighContrastEnabled(chain::Toggler, bool),
-    ScreenReaderEnabled(chain::Toggler, bool),
-    MagnifierEnabled(chain::Toggler, bool),
-    InvertedColorsEnabled(chain::Toggler, bool),
-    FilterColorsEnabled(chain::Toggler, bool),
-    Frame(Instant),
+    HighContrastEnabled(bool),
+    ScreenReaderEnabled(bool),
+    MagnifierEnabled(bool),
+    InvertedColorsEnabled(bool),
+    FilterColorsEnabled(bool),
     Token(TokenUpdate),
     OpenSettings,
     DBusUpdate(accessibility::Response),
@@ -104,28 +95,24 @@ impl cosmic::Application for CosmicA11yApplet {
 
     fn update(&mut self, message: Self::Message) -> app::Task<Self::Message> {
         match message {
-            Message::Frame(now) => self.timeline.now(now),
-            Message::ScreenReaderEnabled(chain, enabled) => {
+            Message::ScreenReaderEnabled(enabled) => {
                 if let Some(tx) = &self.dbus_sender {
-                    self.timeline.set_chain(chain).start();
                     self.reader_enabled = enabled;
                     let _ = tx.send(accessibility::Request::ScreenReader(enabled));
                 } else {
                     self.reader_enabled = false;
                 }
             }
-            Message::MagnifierEnabled(chain, enabled) => {
+            Message::MagnifierEnabled(enabled) => {
                 if let Some(tx) = &self.wayland_sender {
-                    self.timeline.set_chain(chain).start();
                     self.magnifier_enabled = enabled;
                     let _ = tx.send(AccessibilityRequest::Magnifier(enabled));
                 } else {
                     self.magnifier_enabled = false;
                 }
             }
-            Message::InvertedColorsEnabled(chain, enabled) => {
+            Message::InvertedColorsEnabled(enabled) => {
                 if let Some(tx) = &self.wayland_sender {
-                    self.timeline.set_chain(chain).start();
                     self.inverted_colors_enabled = enabled;
                     let _ = tx.send(AccessibilityRequest::ScreenFilter {
                         inverted: enabled,
@@ -135,9 +122,8 @@ impl cosmic::Application for CosmicA11yApplet {
                     self.inverted_colors_enabled = false;
                 }
             }
-            Message::FilterColorsEnabled(chain, enabled) => {
+            Message::FilterColorsEnabled(enabled) => {
                 if let Some(sender) = self.wayland_sender.as_ref() {
-                    self.timeline.set_chain(chain).start();
                     self.screen_filter_active = enabled;
                     let _ = sender.send(AccessibilityRequest::ScreenFilter {
                         inverted: self.inverted_colors_enabled,
@@ -149,8 +135,6 @@ impl cosmic::Application for CosmicA11yApplet {
                 if let Some(p) = self.popup.take() {
                     return destroy_popup(p);
                 } else {
-                    self.timeline = Timeline::new();
-
                     let new_id = window::Id::unique();
                     self.popup.replace(new_id);
 
@@ -170,13 +154,13 @@ impl cosmic::Application for CosmicA11yApplet {
                     self.popup = None;
                 }
             }
-            Message::HighContrastEnabled(chain, enabled) => {
+            Message::HighContrastEnabled(enabled) => {
                 if self.core.system_theme().cosmic().is_high_contrast == enabled
                     || self.high_contrast.is_some_and(|hc| hc == enabled)
                 {
                     return Task::none();
                 }
-                self.timeline.set_chain(chain).start();
+
                 self.high_contrast = Some(enabled);
 
                 _ = std::thread::spawn(move || {
@@ -319,62 +303,44 @@ impl cosmic::Application for CosmicA11yApplet {
         } = theme::active().cosmic().spacing;
 
         let reader_toggle = padded_control(
-            anim!(
-                READER_TOGGLE,
-                &self.timeline,
-                fl!("screen-reader"),
-                self.reader_enabled,
-                Message::ScreenReaderEnabled,
-            )
-            .text_size(14)
-            .width(Length::Fill),
+            toggler(self.reader_enabled)
+                .on_toggle(Message::ScreenReaderEnabled)
+                .text_size(14)
+                .width(Length::Fill)
+                .label(fl!("screen-reader")),
         );
         let magnifier_toggle = padded_control(
-            anim!(
-                MAGNIFIER_TOGGLE,
-                &self.timeline,
-                fl!("magnifier"),
-                self.magnifier_enabled,
-                Message::MagnifierEnabled,
-            )
-            .text_size(14)
-            .width(Length::Fill),
+            toggler(self.magnifier_enabled)
+                .on_toggle(Message::MagnifierEnabled)
+                .text_size(14)
+                .width(Length::Fill)
+                .label(fl!("magnifier")),
         );
         let invert_colors_toggle = padded_control(
-            anim!(
-                INVERT_COLORS_TOGGLE,
-                &self.timeline,
-                fl!("invert-colors"),
-                self.inverted_colors_enabled,
-                Message::InvertedColorsEnabled,
-            )
-            .text_size(14)
-            .width(Length::Fill),
+            toggler(self.inverted_colors_enabled)
+                .on_toggle(Message::InvertedColorsEnabled)
+                .text_size(14)
+                .width(Length::Fill)
+                .label(fl!("invert-colors")),
         );
 
         let hc_colors_toggle = padded_control(
-            anim!(
-                HC_TOGGLE,
-                &self.timeline,
-                fl!("high-contrast"),
+            toggler(
                 self.high_contrast
                     .unwrap_or(self.core.system_theme().cosmic().is_high_contrast),
-                Message::HighContrastEnabled,
             )
+            .on_toggle(Message::HighContrastEnabled)
+            .label(fl!("high-contrast"))
             .text_size(14)
             .width(Length::Fill),
         );
 
         let filter_colors_toggle = padded_control(
-            anim!(
-                FILTER_TOGGLE,
-                &self.timeline,
-                fl!("filter-colors"),
-                self.screen_filter_active,
-                Message::FilterColorsEnabled,
-            )
-            .text_size(14)
-            .width(Length::Fill),
+            toggler(self.screen_filter_active)
+                .on_toggle(Message::FilterColorsEnabled)
+                .label(fl!("filter-colors"))
+                .width(Length::Fill)
+                .text_size(14),
         );
 
         let content_list = Column::with_capacity(5)
@@ -406,9 +372,6 @@ impl cosmic::Application for CosmicA11yApplet {
         Subscription::batch([
             accessibility::subscription().map(Message::DBusUpdate),
             backend::wayland::a11y_subscription().map(Message::WaylandUpdate),
-            self.timeline
-                .as_subscription()
-                .map(|(_, now)| Message::Frame(now)),
             activation_token_subscription(0).map(Message::Token),
         ])
     }
@@ -417,7 +380,7 @@ impl cosmic::Application for CosmicA11yApplet {
         Some(Message::CloseRequested(id))
     }
 
-    fn style(&self) -> Option<cosmic::iced_runtime::Appearance> {
+    fn style(&self) -> Option<cosmic::iced::theme::Style> {
         Some(cosmic::applet::style())
     }
 }

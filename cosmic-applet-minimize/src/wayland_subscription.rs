@@ -12,7 +12,7 @@ use cosmic::{
         wayland_protocols::ext::foreign_toplevel_list::v1::client::ext_foreign_toplevel_handle_v1::ExtForeignToplevelHandleV1,
     },
     iced::{self, Subscription},
-    iced_core::image::Bytes,
+    iced_core::Bytes,
     iced_futures::{futures, stream},
 };
 use futures::SinkExt;
@@ -22,24 +22,26 @@ use std::fmt::Debug;
 use crate::wayland_handler::wayland_handler;
 
 pub fn wayland_subscription() -> iced::Subscription<WaylandUpdate> {
-    Subscription::run_with_id(
-        std::any::TypeId::of::<WaylandUpdate>(),
-        stream::channel(1, move |mut output| async move {
-            let (calloop_tx, calloop_rx) = calloop::channel::channel();
-            let runtime = tokio::runtime::Handle::current();
+    Subscription::run_with(std::any::TypeId::of::<WaylandUpdate>(), |_| {
+        stream::channel(
+            1,
+            move |mut output: futures::channel::mpsc::Sender<WaylandUpdate>| async move {
+                let (calloop_tx, calloop_rx) = calloop::channel::channel();
+                let runtime = tokio::runtime::Handle::current();
 
-            let _ = std::thread::spawn(move || {
-                runtime.block_on(async move {
-                    _ = output.send(WaylandUpdate::Init(calloop_tx)).await;
-                    wayland_handler(output.clone(), calloop_rx);
-                    tracing::error!("Wayland handler thread died");
-                    _ = output.send(WaylandUpdate::Finished).await;
+                let _ = std::thread::spawn(move || {
+                    runtime.block_on(async move {
+                        _ = output.send(WaylandUpdate::Init(calloop_tx)).await;
+                        wayland_handler(output.clone(), calloop_rx);
+                        tracing::error!("Wayland handler thread died");
+                        _ = output.send(WaylandUpdate::Finished).await;
+                    });
                 });
-            });
 
-            futures::future::pending().await
-        }),
-    )
+                futures::future::pending().await
+            },
+        )
+    })
 }
 
 #[derive(Clone, Debug)]
