@@ -1,0 +1,14 @@
+battery = Aẓru
+battery-desc = Asenqes n useqdec n tezmart d tmellit.
+balanced = Awliwal
+balanced-desc = Tamellit tizeɣt akked useqdec n uẓru.
+performance = Timellit tafellayt
+performance-desc = Timellit tafellayt akked useqdec n tezmart.
+max-charge = Snerni tudert n uẓru-inek·inem s uɣewwaṛ n wazal afellay ɣer 80%
+seconds = sn
+minutes = sd
+hours = sr
+until-empty = alamma ifuk
+power-settings = Iɣewwaṛen n tezmart akked uẓru...
+dgpu-running = Asqerdec GPU yermed, yezmer ad issenqes tanzagt n uẓru
+dgpu-applications = Isnasen sseqdacen asqerdec GPU { $gpu_name }

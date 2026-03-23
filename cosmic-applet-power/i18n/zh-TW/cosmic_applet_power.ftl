@@ -6,7 +6,7 @@ log-out = 登出
 log-out-shortcut = Super + Shift + Escape
 suspend = 暫停
 restart = 重新啟動
-shutdown = 關閉電源
+shutdown = 關機
 confirm = 確認
 cancel = 取消
 confirm-button =
@@ -23,8 +23,8 @@ confirm-title =
         [suspend] { suspend }
         [shutdown] { shutdown }
         [log-out] 結束所有應用程式並登出
-       *[other] 套用選定的操作
-    } 嗎？
+       *[other] 套用所選操作
+    }嗎？
 confirm-body =
     系統將在 { $countdown } 秒後自動 { $action ->
         [restart] 重新啟動

@@ -14,6 +14,6 @@ show-less = Mostrar menos
 show-more = Mostrar mais { $more }
 clear-group = Limpar grupo
 clear-all = Limpar todas as notificações
-do-not-disturb = Não Perturbe
+do-not-disturb = Não perturbe
 notification-settings = Configurações de notificações...
 no-notifications = Sem notificações

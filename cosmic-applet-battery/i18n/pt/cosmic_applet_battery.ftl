@@ -11,4 +11,4 @@ hours = h
 until-empty = até ficar descarregada
 power-settings = Definições de Energia e Bateria...
 dgpu-running = A GPU discreta está ativa e pode reduzir a vida útil da bateria
-dgpu-applications = Aplicações usando a GPU discreta {$gpu_name}
+dgpu-applications = Aplicações usando a GPU discreta { $gpu_name }

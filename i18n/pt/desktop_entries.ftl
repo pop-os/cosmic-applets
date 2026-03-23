@@ -1,4 +1,4 @@
-cosmic-app-list = Bandeja de Aplicativos
+cosmic-app-list = Área de notificação das aplicações
 cosmic-applet-a11y = Acessibilidade
 cosmic-applet-audio = Som
 cosmic-applet-bluetooth = Energia e Bateria
