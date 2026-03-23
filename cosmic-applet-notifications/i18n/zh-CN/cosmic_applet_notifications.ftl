@@ -15,5 +15,5 @@ show-more = 显示剩余 { $more } 项
 clear-group = 清除群组
 clear-all = 清除所有通知
 do-not-disturb = 勿扰模式
-notification-settings = 通知设置...
+notification-settings = 通知设置…
 no-notifications = 无通知

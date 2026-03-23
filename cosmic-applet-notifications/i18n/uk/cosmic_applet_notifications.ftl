@@ -1,7 +1,7 @@
 hours-ago =
     { $duration ->
         [0] Щойно
-        [one] 1 годину тому
+        [one] годину тому
        *[other] { $duration } годин тому
     }
 minutes-ago =

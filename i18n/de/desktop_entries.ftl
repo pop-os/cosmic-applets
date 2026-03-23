@@ -1,9 +1,9 @@
 cosmic-app-list = Taskleiste
 cosmic-applet-a11y = Barrierefreiheit
 cosmic-applet-audio = Klang
-cosmic-applet-battery = Energie und Akku
+cosmic-applet-battery = Energie & Akku
 cosmic-applet-bluetooth = Bluetooth
-cosmic-applet-input-sources = Eigangsquellen
+cosmic-applet-input-sources = Eingangsquellen
 cosmic-applet-minimize = Minimierte Fenster
 cosmic-applet-network = Netzwerk
 cosmic-applet-notifications = Benachrichtigungszentrum
@@ -32,3 +32,4 @@ cosmic-panel-app-button = App-Bibliothek-Schaltfläche
 cosmic-panel-launcher-button = Starter-Schaltfläche
 cosmic-panel-workspaces-button = Arbeitsflächen-Schaltfläche
 cosmic-panel-workspaces-button-keywords = COSMIC;Applet;Arbeitsfläche;Übersicht;
+cosmic-applet-tiling-keywords = COSMIC;Applet;Kachelung;Hinweis;Arbeitsfläche;

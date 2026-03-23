@@ -17,4 +17,4 @@ arrow-keys = setas
 tiled = Lado a lado
 floating = Flutuante
 autotile-behavior = Organizar janelas lado a lado nas áreas de trabalho
-new-workspace = Novo comportamento de área de trabalho
+new-workspace = Comportamento de novas áreas de trabalho

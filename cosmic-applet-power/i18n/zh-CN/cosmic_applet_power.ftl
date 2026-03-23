@@ -1,5 +1,5 @@
 power = 电源
-settings = 设置...
+settings = 设置…
 lock-screen = 锁定屏幕
 lock-screen-shortcut = Super + Escape
 log-out = 登出

@@ -1,6 +1,6 @@
 power = Virta
-settings = Asetukset...
-lock-screen = Lukitusnäyttö
+settings = Asetukset…
+lock-screen = Lukitse näyttö
 lock-screen-shortcut = Super + Esc
 log-out = Kirjaudu ulos
 suspend = Lepotila
@@ -17,3 +17,20 @@ confirm-body =
         [log-out] kirjautuu ulos
        *[other] aikoo tehdä valitun toimen
     } { $countdown } sekunnin kuluttua.
+confirm-button =
+    { $action ->
+        [restart] { restart }
+        [suspend] { suspend }
+        [shutdown] Sammuta
+        [log-out] { log-out }
+       *[other] { confirm }
+    }
+log-out-shortcut = Super + Vaihto + Esc
+confirm-title =
+    { $action ->
+        [restart] { restart }
+        [suspend] { suspend }
+        [shutdown] { shutdown }
+        [log-out] Lopeta kaikki sovellukset ja kirjaudu ulos
+       *[other] Toteuta valittu toiminto
+    } nyt?

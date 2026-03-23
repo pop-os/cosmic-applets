@@ -9,4 +9,4 @@ unsuccessful = Laiteparin muodostaminen ei onnistunut
 check-device = Varmista, että { $deviceName } on päällä, lähelläsi ja valmis muodostamaan laiteparin.
 try-again = Yritä uudelleen
 discoverable = Löydettävissä
-pairable = Yhdistettävissä
+pairable = Laitepari muodostettavissa
