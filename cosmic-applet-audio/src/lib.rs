@@ -31,17 +31,20 @@ use cosmic_time::{Instant, Timeline, anim, chain, id};
 use iced::platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup};
 use mpris_subscription::{MprisRequest, MprisUpdate};
 use mpris2_zbus::player::PlaybackStatus;
-use std::sync::LazyLock;
+use std::{sync::LazyLock, time::Duration};
 
 mod config;
 mod mpris_subscription;
 
 static SHOW_MEDIA_CONTROLS: LazyLock<id::Toggler> = LazyLock::new(id::Toggler::unique);
+static SHOW_MEDIA_TITLE: LazyLock<id::Toggler> = LazyLock::new(id::Toggler::unique);
 
 const GO_BACK: &str = "media-skip-backward-symbolic";
 const GO_NEXT: &str = "media-skip-forward-symbolic";
 const PAUSE: &str = "media-playback-pause-symbolic";
 const PLAY: &str = "media-playback-start-symbolic";
+const TITLE_SCROLL_VISIBLE_CHARS: usize = 18;
+const TITLE_SCROLL_TICK_MS: u64 = 150;
 
 pub fn run() -> cosmic::iced::Result {
     localize();
@@ -74,6 +77,8 @@ pub struct Audio {
     player_status: Option<mpris_subscription::PlayerStatus>,
     /// Used to request an activation token for opening cosmic-settings.
     token_tx: Option<calloop::channel::Sender<TokenRequest>>,
+    /// Track scrolling animation for media title
+    title_scroll_offset: u32,
 }
 
 impl Audio {
@@ -130,7 +135,9 @@ pub enum Message {
     TogglePopup,
     CloseRequested(window::Id),
     ToggleMediaControlsInTopPanel(chain::Toggler, bool),
+    ToggleMediaTitleInTopPanel(chain::Toggler, bool),
     Frame(Instant),
+    UpdateTitleScroll,
     ConfigChanged(AudioAppletConfig),
     Mpris(mpris_subscription::MprisUpdate),
     MprisRequest(MprisRequest),
@@ -240,6 +247,65 @@ impl Audio {
             }
         })
     }
+
+    fn get_scrolling_title(&self) -> Option<String> {
+        let player_status = self.player_status.as_ref()?;
+        let title = player_status.title.as_ref()?.as_ref();
+
+        if title.chars().count() <= TITLE_SCROLL_VISIBLE_CHARS {
+            return Some(title.to_string());
+        }
+
+        // Scroll through the title using the offset
+        let chars: Vec<char> = title.chars().collect();
+        let total_chars = chars.len();
+
+        // Add spacing to the cycle length for smoother looping
+        let cycle_length = total_chars + 5;
+        let normalized_offset = self.title_scroll_offset as usize;
+        let window_pos = normalized_offset % cycle_length;
+
+        if window_pos + TITLE_SCROLL_VISIBLE_CHARS <= total_chars {
+            // Show a window of TITLE_SCROLL_VISIBLE_CHARS starting at window_pos
+            Some(
+                chars[window_pos..window_pos + TITLE_SCROLL_VISIBLE_CHARS]
+                    .iter()
+                    .collect::<String>(),
+            )
+        } else if window_pos < total_chars {
+            // Show the rest + padding
+            let mut result: String = chars[window_pos..].iter().collect();
+            while result.chars().count() < TITLE_SCROLL_VISIBLE_CHARS {
+                result.push(' ');
+            }
+            Some(result)
+        } else {
+            // Show padding + start of title
+            let padding = window_pos - total_chars;
+            let mut result = String::new();
+            for _ in 0..padding.min(TITLE_SCROLL_VISIBLE_CHARS) {
+                result.push(' ');
+            }
+            let remaining = TITLE_SCROLL_VISIBLE_CHARS - result.len();
+            if remaining > 0 {
+                result.push_str(
+                    &chars[0..remaining.min(total_chars)]
+                        .iter()
+                        .collect::<String>(),
+                );
+            }
+            Some(result)
+        }
+    }
+
+    fn should_scroll_title(&self) -> bool {
+        self.config.show_media_title_in_top_panel
+            && self
+                .player_status
+                .as_ref()
+                .and_then(|status| status.title.as_ref())
+                .is_some_and(|title| title.chars().count() > TITLE_SCROLL_VISIBLE_CHARS)
+    }
 }
 
 impl cosmic::Application for Audio {
@@ -278,7 +344,12 @@ impl cosmic::Application for Audio {
 
     fn update(&mut self, message: Message) -> app::Task<Message> {
         match message {
-            Message::Frame(now) => self.timeline.now(now),
+            Message::Frame(now) => {
+                self.timeline.now(now);
+            }
+            Message::UpdateTitleScroll => {
+                self.title_scroll_offset = self.title_scroll_offset.wrapping_add(1);
+            }
             Message::Ignore => {}
             Message::TogglePopup => {
                 if let Some(p) = self.popup.take() {
@@ -376,21 +447,47 @@ impl cosmic::Application for Audio {
                     }
                 }
             }
+            Message::ToggleMediaTitleInTopPanel(chain, enabled) => {
+                self.timeline.set_chain(chain).start();
+                self.config.show_media_title_in_top_panel = enabled;
+                self.title_scroll_offset = 0;
+                if let Ok(helper) =
+                    cosmic::cosmic_config::Config::new(Self::APP_ID, AudioAppletConfig::VERSION)
+                {
+                    if let Err(err) = self.config.write_entry(&helper) {
+                        tracing::error!(?err, "Error writing config");
+                    }
+                }
+            }
             Message::CloseRequested(id) => {
                 if Some(id) == self.popup {
                     self.popup = None;
                 }
             }
             Message::ConfigChanged(c) => {
+                if self.config.show_media_title_in_top_panel != c.show_media_title_in_top_panel {
+                    self.title_scroll_offset = 0;
+                }
                 self.config = c;
             }
             Message::Mpris(mpris_subscription::MprisUpdate::Player(p)) => {
+                let previous_title = self
+                    .player_status
+                    .as_ref()
+                    .and_then(|status| status.title.as_deref())
+                    .map(str::to_owned);
+                let new_title = p.title.as_deref().map(str::to_owned);
+                if previous_title != new_title {
+                    self.title_scroll_offset = 0;
+                }
                 self.player_status = Some(p);
             }
             Message::Mpris(MprisUpdate::Finished) => {
+                self.title_scroll_offset = 0;
                 self.player_status = None;
             }
             Message::Mpris(MprisUpdate::Setup) => {
+                self.title_scroll_offset = 0;
                 self.player_status = None;
             }
             Message::MprisRequest(r) => {
@@ -481,6 +578,12 @@ impl cosmic::Application for Audio {
             self.timeline
                 .as_subscription()
                 .map(|(_, now)| Message::Frame(now)),
+            if self.should_scroll_title() {
+                iced::time::every(Duration::from_millis(TITLE_SCROLL_TICK_MS))
+                    .map(|_| Message::UpdateTitleScroll)
+            } else {
+                Subscription::none()
+            },
             self.core.watch_config(Self::APP_ID).map(|u| {
                 for err in u.errors {
                     tracing::error!(?err, "Error watching config");
@@ -515,6 +618,57 @@ impl cosmic::Application for Audio {
             Message::SetSinkVolume(new_volume as u32)
         });
 
+        // Create media title button if enabled
+        let media_title_btn = if self.config.show_media_title_in_top_panel {
+            self.player_status.as_ref().and_then(|player_status| {
+                if let Some(scrolling_title) = self.get_scrolling_title() {
+                    // Try to use the player's album art
+                    let title_display = if let Some(icon_path) = &player_status.icon {
+                        row![
+                            icon(icon::from_path(icon_path.clone())).size(18),
+                            text(scrolling_title).size(12).width(Length::Shrink)
+                        ]
+                        .spacing(6)
+                        .align_y(Alignment::Center)
+                    } else {
+                        // Fallback: just show the title without icon
+                        row![text(scrolling_title).size(12).width(Length::Shrink)]
+                            .spacing(6)
+                            .align_y(Alignment::Center)
+                    };
+
+                    let btn_widget = container(title_display).padding([4, 6]);
+
+                    let btn = crate::mouse_area::MouseArea::new(btn_widget)
+                        .on_press(Message::TogglePopup)
+                        .on_mouse_wheel(|delta| {
+                            let scroll_vector = match delta {
+                                iced::mouse::ScrollDelta::Lines { y, .. } => {
+                                    y.signum() * WHEEL_STEP
+                                }
+                                iced::mouse::ScrollDelta::Pixels { y, .. } => y.signum(),
+                            };
+                            if scroll_vector == 0.0 {
+                                return Message::Ignore;
+                            }
+
+                            let new_volume = (self.model.sink_volume as f64
+                                + (scroll_vector as f64))
+                                .clamp(0.0, self.max_sink_volume as f64);
+                            Message::SetSinkVolume(new_volume as u32)
+                        });
+
+                    Some(Element::from(btn))
+                } else {
+                    None
+                }
+            })
+        } else {
+            None
+        };
+
+        let main_btn = media_title_btn.unwrap_or_else(|| Element::from(btn));
+
         let playback_buttons = (!self.core.applet.suggested_bounds.as_ref().is_some_and(|c| {
             // if we have a configure for width and height, we're in a overflow popup
             c.width > 0. && c.height > 0.
@@ -530,7 +684,7 @@ impl cosmic::Application for Audio {
                     match self.core.applet.anchor {
                         PanelAnchor::Left | PanelAnchor::Right => Element::from(
                             applet_column::Column::with_children(playback_buttons)
-                                .push(btn)
+                                .push(main_btn)
                                 .align_x(Alignment::Center)
                                 // TODO configurable variable from the panel?
                                 .spacing(
@@ -540,7 +694,7 @@ impl cosmic::Application for Audio {
                         ),
                         PanelAnchor::Top | PanelAnchor::Bottom => {
                             applet_row::Row::with_children(playback_buttons)
-                                .push(btn)
+                                .push(main_btn)
                                 .align_y(Alignment::Center)
                                 // TODO configurable variable from the panel?
                                 .spacing(
@@ -551,7 +705,7 @@ impl cosmic::Application for Audio {
                         }
                     }
                 } else {
-                    btn.into()
+                    main_btn.into()
                 },
             )
             .into()
@@ -654,7 +808,9 @@ impl cosmic::Application for Audio {
             .align_x(Alignment::Start)
         };
 
-        if let Some(s) = self.player_status.as_ref() {
+        if let Some(s) = self.player_status.as_ref()
+            && !self.config.show_media_title_in_top_panel
+        {
             let mut elements = Vec::with_capacity(5);
 
             if let Some(icon_path) = s.icon.clone() {
@@ -720,6 +876,7 @@ impl cosmic::Application for Audio {
             if let Some(go_next) = self.go_next(32) {
                 control_elements.push(go_next);
             }
+
             let control_cnt = control_elements.len() as u16;
             elements.push(
                 Row::with_children(control_elements)
@@ -752,6 +909,18 @@ impl cosmic::Application for Audio {
                     Some(fl!("show-media-controls")),
                     self.config.show_media_controls_in_top_panel,
                     Message::ToggleMediaControlsInTopPanel,
+                )
+                .text_size(14)
+                .width(Length::Fill)
+            ),
+            padded_control(
+                anim!(
+                    // toggler
+                    SHOW_MEDIA_TITLE,
+                    &self.timeline,
+                    Some(fl!("show-media-title")),
+                    self.config.show_media_title_in_top_panel,
+                    Message::ToggleMediaTitleInTopPanel,
                 )
                 .text_size(14)
                 .width(Length::Fill)
