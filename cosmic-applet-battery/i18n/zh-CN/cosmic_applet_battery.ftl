@@ -9,6 +9,6 @@ seconds = 秒
 minutes = 分钟
 hours = 小时
 until-empty = 直到电池耗尽
-power-settings = 电源和电池设置...
+power-settings = 电源与电池设置…
 dgpu-running = 独立显卡正在运行，可能会降低电池寿命
 dgpu-applications = 使用独立显卡 { $gpu_name } 的应用

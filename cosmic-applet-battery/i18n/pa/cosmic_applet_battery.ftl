@@ -1,0 +1,14 @@
+battery = ਬੈਟਰੀ
+battery-desc = ਪਾਵਰ ਦੀ ਖ਼ਪਤ ਅਤੇ ਕਾਰਗੁਜ਼ਾਰੀ ਨੂੰ ਘਟਾਉਂਦਾ ਹੈ।
+balanced = ਸੰਤੁਲਤ
+balanced-desc = ਮਿਆਰੀ ਕਾਰਗੁਜ਼ਾਰੀ ਅਤੇ ਬੈਟਰੀ ਦੀ ਖ਼ਪਤ।
+performance = ਵੱਧ ਕਾਰਗੁਜ਼ਾਰੀ
+performance-desc = ਕਾਰਗੁਜ਼ਾਰੀ ਵਧਾਉਂਦਾ ਅਤੇ ਊਰਜਾ ਦੀ ਖ਼ਪਤ ਵੱਧ ਕਰਦਾ ਹੈ।
+max-charge = ਚਾਰਜ ਹੋਣ ਦੀ ਵੱਧ ਤੋਂ ਵੱਧ ਹੱਦ 80% ਸੈੱਟ ਕਰਕੇ ਆਪਣੀ ਬੈਟਰੀ ਦੀ ਲਾਈਫ਼ ਵਧਾਓ
+seconds = ਸ
+minutes = ਮਿੰ
+hours = ਘੰ
+until-empty = ਖ਼ਾਲੀ ਹੋਣ ਤੱਕ
+power-settings = ਪਾਵਰ ਅਤੇ ਬੈਟਰੀ ਸੈਟਿੰਗਾਂ...
+dgpu-running = ਖਾਸ GPU ਸਰਗਰਮ ਹੈ ਅਤੇ ਬੈਟਰੀ ਉੱਤੇ ਚੱਲਣ ਦਾ ਸਮਾਂ ਘੱਟ ਸਕਦਾ ਹੈ
+dgpu-applications = ਐਪਲੀਕੇਸ਼ਨਾਂ { $gpu_name } ਖਾਸ GPU ਨੂੰ ਵਰਤ ਰਹੀਆਂ ਹਨ

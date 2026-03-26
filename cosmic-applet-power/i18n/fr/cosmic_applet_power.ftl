@@ -1,6 +1,6 @@
 power = Alimentation
 settings = Paramètres...
-lock-screen = Verrouiller la session
+lock-screen = Verrouiller l’écran
 lock-screen-shortcut = Super + Échap
 log-out = Se déconnecter
 suspend = Veille

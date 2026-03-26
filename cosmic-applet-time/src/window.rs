@@ -1,9 +1,6 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
-use chrono::{Datelike, Timelike};
-use cosmic::iced_futures::stream;
-use cosmic::widget::Id;
 use cosmic::{
     Apply, Element, Task, app,
     applet::{cosmic_panel_config::PanelAnchor, menu_button, padded_control},
@@ -16,12 +13,19 @@ use cosmic::{
         widget::{column, row, vertical_space},
         window,
     },
+    iced_futures::stream,
     iced_widget::{Column, horizontal_rule},
     surface, theme,
     widget::{
-        Button, Grid, Space, autosize, button, container, divider, grid, horizontal_space, icon,
-        rectangle_tracker::*, text,
+        Button, Grid, Id, Space, autosize, button, container, divider, grid, horizontal_space,
+        icon, rectangle_tracker::*, text,
     },
+};
+use jiff::{
+    Timestamp, ToSpan, Zoned,
+    civil::{Date, Weekday},
+    fmt::strtime,
+    tz::TimeZone,
 };
 use logind_zbus::manager::ManagerProxy;
 use std::sync::LazyLock;
@@ -35,7 +39,7 @@ use cosmic::applet::token::subscription::{
 use icu::{
     datetime::{
         DateTimeFormatter, DateTimeFormatterPreferences, fieldsets,
-        input::{Date, DateTime, Time},
+        input::{Date as IcuDate, DateTime, Time},
         options::TimePrecision,
     },
     locale::{Locale, preferences::extensions::unicode::keywords::HourCycle},
@@ -76,10 +80,10 @@ fn get_system_locale() -> Locale {
 pub struct Window {
     core: cosmic::app::Core,
     popup: Option<window::Id>,
-    now: chrono::DateTime<chrono::FixedOffset>,
-    timezone: Option<chrono_tz::Tz>,
-    date_today: chrono::NaiveDate,
-    date_selected: chrono::NaiveDate,
+    now: Zoned,
+    timezone: Option<TimeZone>,
+    date_today: Date,
+    date_selected: Date,
     rectangle_tracker: Option<RectangleTracker<u32>>,
     rectangle: Rectangle,
     token_tx: Option<calloop::channel::Sender<TokenRequest>>,
@@ -94,7 +98,7 @@ pub enum Message {
     CloseRequested(window::Id),
     Tick,
     Rectangle(RectangleUpdate<u32>),
-    SelectDay(u32),
+    SelectDay(i8),
     PreviousMonth,
     NextMonth,
     OpenDateTimeSettings,
@@ -105,10 +109,14 @@ pub enum Message {
 }
 
 impl Window {
-    fn create_datetime<D: Datelike>(&self, date: &D) -> DateTime<icu::calendar::Gregorian> {
+    fn create_datetime(&self, date: &Date) -> DateTime<icu::calendar::Gregorian> {
         DateTime {
-            date: Date::try_new_gregorian(date.year(), date.month() as u8, date.day() as u8)
-                .unwrap(),
+            date: IcuDate::try_new_gregorian(
+                date.year() as i32,
+                date.month() as u8,
+                date.day() as u8,
+            )
+            .unwrap(),
             time: Time::try_new(
                 self.now.hour() as u8,
                 self.now.minute() as u8,
@@ -120,9 +128,16 @@ impl Window {
     }
 
     fn calendar_grid(&self) -> Grid<'_, Message> {
-        let mut calendar: Grid<'_, Message> = grid().width(Length::Fill);
-        let mut first_day_of_week = chrono::Weekday::try_from(self.config.first_day_of_week)
-            .unwrap_or(chrono::Weekday::Sun);
+        let mut calendar = grid().width(Length::Fill);
+        let first_day_of_week = match self.config.first_day_of_week {
+            0 => Weekday::Monday,
+            1 => Weekday::Tuesday,
+            2 => Weekday::Wednesday,
+            3 => Weekday::Thursday,
+            4 => Weekday::Friday,
+            5 => Weekday::Saturday,
+            _ => Weekday::Sunday,
+        };
 
         let first_day = get_calendar_first(
             self.date_selected.year(),
@@ -130,31 +145,30 @@ impl Window {
             first_day_of_week,
         );
 
-        let day_iter = first_day.iter_days();
         let prefs = DateTimeFormatterPreferences::from(self.locale.clone());
         let weekday = DateTimeFormatter::try_new(prefs, fieldsets::E::short()).unwrap();
 
-        for date in day_iter.take(7) {
+        for i in 0..7 {
+            let date = first_day.checked_add(i.days()).unwrap();
             let datetime = self.create_datetime(&date);
             calendar = calendar.push(
                 text::caption(weekday.format(&datetime).to_string())
                     .apply(container)
                     .center_x(Length::Fixed(44.0)),
             );
-            first_day_of_week = first_day_of_week.succ();
         }
         calendar = calendar.insert_row();
 
-        let mut day_iter = first_day.iter_days();
         for i in 0..42 {
             if i > 0 && i % 7 == 0 {
                 calendar = calendar.insert_row();
             }
 
-            let date = day_iter.next().unwrap();
-            let is_month = date.month() == self.date_selected.month()
-                && date.year_ce() == self.date_selected.year_ce();
-            let is_day = date.day() == self.date_selected.day() && is_month;
+            let date = first_day
+                .checked_add(i.days())
+                .expect("valid date in calendar range");
+            let is_month = date.first_of_month() == self.date_selected.first_of_month();
+            let is_day = date == self.date_selected;
             let is_today = date == self.date_today;
 
             calendar = calendar.push(date_button(date.day(), is_month, is_day, is_today));
@@ -170,14 +184,7 @@ impl Window {
         // strftime may override locale specific elements so it stands alone rather
         // than using ICU.
         (!self.config.format_strftime.is_empty())
-            .then(|| {
-                let mut s = String::new();
-                self.now
-                    .format(&self.config.format_strftime)
-                    .write_to(&mut s)
-                    .map(|_| s)
-                    .ok()
-            })
+            .then(|| strtime::format(&self.config.format_strftime, &self.now).ok())
             .flatten()
     }
 
@@ -189,7 +196,7 @@ impl Window {
                 .collect()
         } else {
             let mut elements = Vec::new();
-            let date = self.now.naive_local();
+            let date = self.now.date();
             let datetime = self.create_datetime(&date);
             let mut prefs = DateTimeFormatterPreferences::from(self.locale.clone());
             prefs.hour_cycle = Some(if self.config.military_time {
@@ -252,7 +259,7 @@ impl Window {
         let formatted_date = if let Some(strftime) = self.maybe_strftime() {
             strftime
         } else {
-            let datetime = self.create_datetime(&self.now);
+            let datetime = self.create_datetime(&self.now.date());
             let mut prefs = DateTimeFormatterPreferences::from(self.locale.clone());
             prefs.hour_cycle = Some(if self.config.military_time {
                 HourCycle::H23
@@ -310,19 +317,13 @@ impl cosmic::Application for Window {
     type Message = Message;
     type Executor = cosmic::SingleThreadExecutor;
     type Flags = ();
-    const APP_ID: &'static str = "com.system76.CosmicAppletTime";
+    const APP_ID: &str = "com.system76.CosmicAppletTime";
 
     fn init(core: app::Core, _flags: Self::Flags) -> (Self, app::Task<Self::Message>) {
         let locale = get_system_locale();
-
-        // Chrono evaluates the local timezone once whereby it's stored in a thread local
-        // variable but never updated
-        // Instead of using the local timezone, we will store an offset that is updated if the
-        // timezone is ever externally changed
-        let now = chrono::Local::now().fixed_offset();
-
+        let now = Zoned::now();
         // get today's date for highlighting purposes
-        let today = chrono::NaiveDate::from(now.naive_local());
+        let today = now.date();
 
         // Synch `show_seconds` from the config within the time subscription
         let (show_seconds_tx, _) = watch::channel(true);
@@ -383,7 +384,7 @@ impl cosmic::Application for Window {
 
                                 // Calculate a delta if we're ticking per minute to keep ticks stable
                                 // Based on i3status-rust
-                                let current = chrono::Local::now().second() as u64 % period;
+                                let current = Timestamp::now().as_second() as u64 % period;
                                 if current != 0 {
                                     timer.reset_after(time::Duration::from_secs(period - current));
                                 }
@@ -399,7 +400,7 @@ impl cosmic::Application for Window {
                                     timer = time::interval_at(start, period);
                                 } else {
                                     period = 60;
-                                    let delta = time::Duration::from_secs(period - chrono::Utc::now().second() as u64 % period);
+                                    let delta = time::Duration::from_secs(period - Timestamp::now().as_second() as u64 % period);
                                     let now = time::Instant::now();
                                     // Start ticking from the next minute to update the time properly
                                     let start = now + delta;
@@ -505,7 +506,7 @@ impl cosmic::Application for Window {
                 if let Some(p) = self.popup.take() {
                     destroy_popup(p)
                 } else {
-                    self.date_today = chrono::NaiveDate::from(self.now.naive_local());
+                    self.date_today = self.now.date();
                     self.date_selected = self.date_today;
 
                     let new_id = window::Id::unique();
@@ -537,9 +538,9 @@ impl cosmic::Application for Window {
                 }
             }
             Message::Tick => {
-                self.now = self.timezone.map_or_else(
-                    || chrono::Local::now().into(),
-                    |tz| chrono::Local::now().with_timezone(&tz).fixed_offset(),
+                self.now = self.timezone.as_ref().map_or_else(
+                    || Zoned::now(),
+                    |tz| Zoned::now().with_time_zone(tz.clone()),
                 );
                 Task::none()
             }
@@ -561,32 +562,26 @@ impl cosmic::Application for Window {
                 Task::none()
             }
             Message::SelectDay(day) => {
-                if let Some(date) = self.date_selected.with_day(day) {
+                if let Ok(date) = self.date_selected.with().day(day).build() {
                     self.date_selected = date;
                 } else {
-                    tracing::error!("invalid naivedate");
+                    tracing::error!("invalid date");
                 }
                 Task::none()
             }
             Message::PreviousMonth => {
-                if let Some(date) = self
-                    .date_selected
-                    .checked_sub_months(chrono::Months::new(1))
-                {
+                if let Ok(date) = self.date_selected.checked_sub(1.month()) {
                     self.date_selected = date;
                 } else {
-                    tracing::error!("invalid naivedate");
+                    tracing::error!("invalid date");
                 }
                 Task::none()
             }
             Message::NextMonth => {
-                if let Some(date) = self
-                    .date_selected
-                    .checked_add_months(chrono::Months::new(1))
-                {
+                if let Ok(date) = self.date_selected.checked_add(1.month()) {
                     self.date_selected = date;
                 } else {
-                    tracing::error!("invalid naivedate");
+                    tracing::error!("invalid date");
                 }
                 Task::none()
             }
@@ -649,9 +644,9 @@ impl cosmic::Application for Window {
                 Task::none()
             }
             Message::TimezoneUpdate(timezone) => {
-                if let Ok(timezone) = timezone.parse::<chrono_tz::Tz>() {
-                    self.now = chrono::Local::now().with_timezone(&timezone).fixed_offset();
-                    self.date_today = chrono::NaiveDate::from(self.now.naive_local());
+                if let Ok(timezone) = TimeZone::get(&timezone) {
+                    self.now = Zoned::now().with_time_zone(timezone.clone());
+                    self.date_today = self.now.date();
                     self.date_selected = self.date_today;
                     self.timezone = Some(timezone);
                 }
@@ -756,7 +751,7 @@ impl cosmic::Application for Window {
     }
 }
 
-fn date_button(day: u32, is_month: bool, is_day: bool, is_today: bool) -> Button<'static, Message> {
+fn date_button(day: i8, is_month: bool, is_day: bool, is_today: bool) -> Button<'static, Message> {
     let style = if is_day {
         button::ButtonClass::Suggested
     } else if is_today {

@@ -1,24 +1,11 @@
 [Desktop Entry]
 Name=Launcher Button
-Name[ar]=زر المشغل
-Name[bg]=Бутон за стартера
-Name[cs]=Tlačítko spouštěče
-Name[zh_CN]=启动器按钮
-Name[hu]=Indító gomb
-Name[pl]=Przycisk programu uruchamiającego
-Name[pt]=Botão Lançador de Aplicativos
-Name[nl]=Knop snelstarter
-Name[sk]=Tlačidlo spúšťača
-Name[es]=Botón del lanzador
-Name[sv]=Knapp för programstartare
-Name[it]=Tasto Launcher
-Name[uk]=Запускач
+Comment=Open the launcher to search applications and run commands
 Type=Application
 Exec=cosmic-panel-button com.system76.CosmicLauncher
 Terminal=false
 Categories=COSMIC;
-Keywords=COSMIC;Iced;
-# Translators: Do NOT translate or transliterate this text (this is an icon file name)!
+Keywords=COSMIC;Applet;Launcher;Runner;
 Icon=com.system76.CosmicPanelLauncherButton
 StartupNotify=true
 NoDisplay=true

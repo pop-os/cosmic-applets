@@ -1,0 +1,17 @@
+cosmic-app-list = Taakbalk
+cosmic-applet-a11y = Toegankelijkheid
+cosmic-applet-audio = Geluid
+cosmic-applet-battery = Energie en batterij
+cosmic-applet-bluetooth = Bluetooth
+cosmic-applet-input-sources = Invoerbronnen
+cosmic-applet-minimize = Geminimaliseerde vensters
+cosmic-applet-network = Netwerk
+cosmic-applet-notifications = Meldingscentrum
+cosmic-applet-power = Gebruikerssessie
+cosmic-applet-status-area = Meldingsvlak
+cosmic-applet-tiling = Vensters tegelen
+cosmic-applet-time = Datum, tijd en agenda
+cosmic-applet-workspaces = Genummerde werkbladen
+cosmic-panel-app-button = Knop appbibliotheek
+cosmic-panel-launcher-button = Knop snelstarter
+cosmic-panel-workspaces-button = Knop werkbladenoverzicht

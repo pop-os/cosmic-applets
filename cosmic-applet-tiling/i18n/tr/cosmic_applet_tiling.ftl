@@ -1,5 +1,5 @@
 tile-windows = Pencereleri kendiliğinden döşe
-tile-current = Geçerli çalışma alanını kendiliğinden döşe
+tile-current = Geçerli çalışma alanına döşe
 shortcuts = Kısayollar
 navigate-windows = Pencerelerde gezin
 move-window = Pencereyi taşı

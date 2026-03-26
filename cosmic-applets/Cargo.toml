@@ -4,6 +4,9 @@ version = "1.0.2"
 edition = "2024"
 license = "GPL-3.0-only"
 
+[build-dependencies]
+xdgen = "0.1"
+
 [dependencies]
 cosmic-app-list = { path = "../cosmic-app-list" }
 cosmic-applet-audio = { path = "../cosmic-applet-audio" }

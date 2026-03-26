@@ -6,7 +6,7 @@ confirm-button =
         [log-out] { log-out }
        *[other] { confirm }
     }
-power = Maitinimas
+power = Energija
 confirm-body =
     Sistema { $action ->
         [restart] įsijungs iš naujo
@@ -33,3 +33,4 @@ confirm-title =
        *[other] Taikyti pasirinktą veiksmą
     } now?
 shutdown = Išjungti
+suspend = Miego režimas

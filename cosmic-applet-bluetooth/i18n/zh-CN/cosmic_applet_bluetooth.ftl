@@ -1,6 +1,6 @@
 bluetooth = 蓝牙
 other-devices = 其他蓝牙设备
-settings = 蓝牙设置...
+settings = 蓝牙设置…
 connected = 已连接
 confirm-pin = 请确认以下 PIN 码与 { $deviceName } 上显示的 PIN 码匹配
 confirm = 确认

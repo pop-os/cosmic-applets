@@ -1,24 +1,11 @@
 [Desktop Entry]
 Name=User Session
-Name[ar]=جلسة المستخدم
-Name[bg]=Потребителска сесия
-Name[cs]=Uživatelská relace
-Name[zh_CN]=用户会话
-Name[hu]=Felhasználói Munkamenet
-Name[pl]=Sesja użytkownika
-Name[pt]=Sessão de Usuário
-Name[nl]=Gebruikerssessie
-Name[sk]=Používateľská relácia
-Name[sv]=Användarsession
-Name[es]=Sesión de usuario
-Name[it]=Sessione utente
-Name[uk]=Сеанс користувача
+Comment=Lock screen, log out, suspend, reboot, and shutdown
 Type=Application
 Exec=cosmic-applet-power
 Terminal=false
 Categories=COSMIC;
-Keywords=COSMIC;Iced;
-# Translators: Do NOT translate or transliterate this text (this is an icon file name)!
+Keywords=COSMIC;Applet;User;Session;Lock;Log;Reboot;Shutdown;Suspend;
 Icon=com.system76.CosmicAppletPower-symbolic
 StartupNotify=true
 NoDisplay=true

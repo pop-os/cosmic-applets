@@ -1,4 +1,8 @@
-hours-ago = { $duration } uur geleden
+hours-ago =
+    { $duration ->
+        [0] Zojuist
+       *[other] { $duration } uur geleden
+    }
 minutes-ago =
     { $duration } { $duration ->
         [one] minuut
@@ -9,5 +13,5 @@ show-more = { $more } meer weergeven
 clear-group = Groep opschonen
 clear-all = Alle meldingen verwijderen
 do-not-disturb = Niet storen
-notification-settings = Meldingsinstellingen...
+notification-settings = Meldingsinstellingen…
 no-notifications = Geen meldingen

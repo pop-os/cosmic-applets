@@ -1,0 +1,12 @@
+cancel = Sefsex
+connected = Yettwaqqen
+confirm = Sentem
+other-devices = Ibenkan-nniḍen n Bluetooth
+settings = Iɣewwaṛen n Bluetooth…
+confirm-pin = Ma ulac aɣilif, sentem dakken tangalt PIN itteddun temṣada akked d tin i d-yettwaseknen deg { $deviceName }
+unsuccessful = Ayugan ur yeddi ara
+check-device = Ttḥeqqeq belli { $deviceName } yermed, deg uzilal, u yewjed i wayugan.
+try-again = Ɛreḍ tikelt nniḍen
+discoverable = Ad yettwaf
+pairable = Yettwayug
+bluetooth = Bluetooth

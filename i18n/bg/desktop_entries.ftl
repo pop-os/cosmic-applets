@@ -1,0 +1,17 @@
+cosmic-app-list = Меню за програми
+cosmic-applet-a11y = Достъпност
+cosmic-applet-audio = Звук
+cosmic-applet-battery = Захранване и батерия
+cosmic-applet-bluetooth = Bluetooth
+cosmic-applet-input-sources = Входни устройства
+cosmic-applet-minimize = Минимизирани прозорци
+cosmic-applet-network = Мрежа
+cosmic-applet-notifications = Център за известия
+cosmic-applet-power = Потребителска сесия
+cosmic-applet-status-area = Тава за известия
+cosmic-applet-tiling = Прилепване на прозорци
+cosmic-applet-time = Дата, час и календар
+cosmic-applet-workspaces = Номерирани работни пространства
+cosmic-panel-app-button = Бутон за библиотеката с програми
+cosmic-panel-launcher-button = Бутон за стартера
+cosmic-panel-workspaces-button = Бутон за работните пространства

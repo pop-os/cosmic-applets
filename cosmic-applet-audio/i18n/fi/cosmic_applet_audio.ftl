@@ -1,7 +1,7 @@
 output = Ulostulo
 input = Sisääntulo
-show-media-controls = Näytä mediaohjaimet yläpaneelissa
-sound-settings = Ääni Asetukset...
-disconnected = PulseAudio Ei Yhdistetty
+show-media-controls = Näytä mediaohjaimet paneelissa
+sound-settings = Ääniasetukset...
+disconnected = Yhteys PulseAudioon katkaistu
 no-device = Laitetta ei ole valittu
-
+unknown-artist = Tuntematon

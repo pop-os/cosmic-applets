@@ -1,0 +1,16 @@
+cosmic-app-list = Area applicazioni
+cosmic-applet-a11y = Accessibilità
+cosmic-applet-audio = Audio
+cosmic-applet-battery = Alimentazione e batteria
+cosmic-applet-bluetooth = Bluetooth
+cosmic-applet-input-sources = Sorgenti di immissione
+cosmic-applet-minimize = Finestre minimizzate
+cosmic-applet-network = Rete
+cosmic-applet-notifications = Centro notifiche
+cosmic-applet-power = Sessione utente
+cosmic-applet-status-area = Area notifiche
+cosmic-applet-tiling = Tiling
+cosmic-applet-time = Data, ora e calendario
+cosmic-applet-workspaces = Spazi di lavoro numerati
+cosmic-panel-launcher-button = Tasto Launcher
+cosmic-panel-workspaces-button = Tasto Spazi di lavoro

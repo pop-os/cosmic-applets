@@ -1,4 +1,4 @@
-cosmic-app-list = Tráidire aipeanna
+cosmic-app-list = Tráidire na nAipeanna
 pin = Bioráin go tráidire aipeanna
 quit = Scoir
 quit-all = Scoir uile

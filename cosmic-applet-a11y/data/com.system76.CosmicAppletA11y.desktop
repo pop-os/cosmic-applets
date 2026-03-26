@@ -1,30 +1,15 @@
 [Desktop Entry]
 Name=Accessibility
-Name[ar]=الإتاحة
-Name[bg]=Достъпност
-Name[cs]=Přístupnost
-Name[zh_CN]=无障碍
-Name[hu]=Akadálymentesség
-Name[pl]=Dostępność
-Name[pt]=Acessibilidade
-Name[nl]=Toegankelijkheid
-Name[de]= Zugänglichkeit
-Name[sk]=Zjednodušenie ovládania
-Name[sv]=Tillgänglighet
-Name[es]=Accesibilidad
-Name[it]=Accessibilità
-Name[uk]=Доступність
+Comment=Configure accessibility settings from the panel
 Type=Application
 Exec=cosmic-applet-a11y
 Terminal=false
 Categories=COSMIC;
-Keywords=COSMIC;Iced;
-# Translators: Do NOT translate or transliterate this text (this is an icon file name)!
+Keywords=COSMIC;Applet;Accessibility;A11y;Screen;Reader;Magnifier;Contrast;Color;
 Icon=preferences-desktop-accessibility-symbolic
 StartupNotify=true
 NoDisplay=true
 X-CosmicApplet=true
 X-CosmicShrinkable=true
-# Indicates that the auto-hover click should go to the "end" of the hover popup
 X-CosmicHoverPopup=Auto
 X-OverflowPriority=10

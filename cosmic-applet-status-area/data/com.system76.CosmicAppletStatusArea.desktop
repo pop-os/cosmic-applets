@@ -1,24 +1,11 @@
 [Desktop Entry]
 Name=Notifications Tray
-Name[ar]=درج الإشعارات
-Name[bg]=Тава за известия
-Name[cs]=Panel oznámení
-Name[zh_CN]=通知托盘
-Name[hu]=Értesítési terület
-Name[nl]=Meldingsvlak
-Name[pl]=Zasobnik powiadomień
-Name[pt]=Área de Notificações
-Name[sk]=Panel oznámení
-Name[sv]=Fält för programikoner
-Name[es]=Bandeja de notificaciones
-Name[it]=Area notifiche
-Name[uk]=Область сповіщень
+Comment=Application indicators which may export menus to the panel
 Type=Application
 Exec=cosmic-applet-status-area
 Terminal=false
 Categories=COSMIC;
-Keywords=COSMIC;Iced;
-# Translators: Do NOT translate or transliterate this text (this is an icon file name)!
+Keywords=COSMIC;Applet;App;Indicator;Notification;Tray;Status;
 Icon=com.system76.CosmicAppletStatusArea
 StartupNotify=true
 NoDisplay=true
