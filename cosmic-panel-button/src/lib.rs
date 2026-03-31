@@ -3,6 +3,7 @@
 
 use config::{CosmicPanelButtonConfig, IndividualConfig, Override};
 use cosmic::desktop::fde::{self, DesktopEntry, get_languages_from_env};
+use cosmic::widget::space;
 use cosmic::{
     Task, app,
     applet::{
@@ -12,7 +13,7 @@ use cosmic::{
     iced::{self, Length},
     iced_widget::row,
     surface,
-    widget::{Id, autosize, vertical_space},
+    widget::{Id, autosize},
 };
 use cosmic_config::{Config, CosmicConfigEntry};
 use std::{env, fs, process::Command, sync::LazyLock};
@@ -115,7 +116,7 @@ impl cosmic::Application for Button {
         &mut self.core
     }
 
-    fn style(&self) -> Option<cosmic::iced_runtime::Appearance> {
+    fn style(&self) -> Option<iced::theme::Style> {
         Some(cosmic::applet::style())
     }
 
@@ -179,7 +180,7 @@ impl cosmic::Application for Button {
             } else {
                 let content = row!(
                     self.core.applet.text(&self.desktop.name),
-                    vertical_space().height(Length::Fixed(
+                    space::vertical().height(Length::Fixed(
                         (self.core.applet.suggested_size(true).1
                             + 2 * self.core.applet.suggested_padding(true).1)
                             as f32

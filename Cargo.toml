@@ -30,8 +30,6 @@ cosmic-applets-config = { path = "cosmic-applets-config" }
 cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols", default-features = false, features = [
     "client",
 ], rev = "d0e95be" }
-cosmic-time = { git = "https://github.com/pop-os/cosmic-time", default-features = false }
-# cosmic-time = { path = "../cosmic-time", default-features = false ] }
 
 futures = "0.3"
 futures-util = "0.3"
@@ -59,24 +57,26 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
 tracing-log = "0.2.0"
 tokio = { version = "1.49.0", features = ["full"] }
+# cosmic-config = { path = "../libcosmic/cosmic-config" }
 cosmic-config = { git = "https://github.com/pop-os/libcosmic" }
 serde = { version = "1.0.228", features = ["derive"] }
 
 [profile.release]
-opt-level = 3
-panic = "abort"
-lto = "thin"
+# opt-level = 3
+# panic = "abort"
+# lto = "thin"
+opt-level = 1
 
 [workspace.metadata.cargo-machete]
 ignored = ["libcosmic"]
 
 # [patch."https://github.com/pop-os/libcosmic"]
-# cosmic-config = { git = "https://github.com/pop-os/libcosmic//", branch = "" }
-# libcosmic = { git = "https://github.com/pop-os/libcosmic//", branch = "" }
-# iced_futures = { git = "https://github.com/pop-os/libcosmic//", branch = "" }
 # cosmic-config = { path = "../libcosmic/cosmic-config" }
 # libcosmic = { path = "../libcosmic" }
 # iced_futures = { path = "../libcosmic/iced/futures" }
+# cosmic-config = { git = "https://github.com/pop-os/libcosmic//" }
+# libcosmic = { git = "https://github.com/pop-os/libcosmic//" }
+# iced_futures = { git = "https://github.com/pop-os/libcosmic//" }
 
 # [patch."https://github.com/pop-os/winit.git"]
 # winit = { git = "https://github.com/rust-windowing/winit.git", rev = "241b7a80bba96c91fa3901729cd5dec66abb9be4" }

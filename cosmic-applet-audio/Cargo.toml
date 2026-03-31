@@ -5,7 +5,6 @@ edition = "2024"
 license = "GPL-3.0-only"
 
 [dependencies]
-cosmic-time.workspace = true
 i18n-embed-fl.workspace = true
 i18n-embed.workspace = true
 libcosmic.workspace = true
@@ -23,3 +22,4 @@ zbus.workspace = true
 
 [dependencies.cosmic-settings-sound-subscription]
 git = "https://github.com/pop-os/cosmic-settings"
+# path = "../../cosmic-settings/subscriptions/sound"

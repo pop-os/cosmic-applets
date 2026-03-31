@@ -6,7 +6,6 @@ license = "GPL-3.0-only"
 
 [dependencies]
 anyhow.workspace = true
-cosmic-time.workspace = true
 libcosmic.workspace = true
 tokio.workspace = true
 cosmic-notifications-util = { git = "https://github.com/pop-os/cosmic-notifications" }
