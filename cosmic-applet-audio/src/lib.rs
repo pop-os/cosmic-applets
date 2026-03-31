@@ -518,10 +518,6 @@ impl cosmic::Application for Audio {
 
         const WHEEL_STEP: f32 = 5.0; // 5% per wheel event
         let btn = crate::mouse_area::MouseArea::new(btn).on_mouse_wheel(|delta| {
-            if self.max_sink_volume == 0 {
-                return Message::Ignore;
-            }
-
             let scroll_vector = match delta {
                 iced::mouse::ScrollDelta::Lines { y, .. } => y.signum() * WHEEL_STEP, // -1/0/1
                 iced::mouse::ScrollDelta::Pixels { y, .. } => y.signum(),             // -1/0/1
