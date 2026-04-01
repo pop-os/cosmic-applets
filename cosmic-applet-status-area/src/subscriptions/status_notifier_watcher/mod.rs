@@ -3,6 +3,8 @@
 
 // TODO: Both this and server proxy could emit same events, have way to generate stream from either?
 
+use std::any::TypeId;
+
 use cosmic::iced::{self, Subscription};
 use futures::{StreamExt, stream};
 
@@ -26,8 +28,8 @@ enum State {
 }
 
 pub fn subscription() -> iced::Subscription<Event> {
-    Subscription::run_with_id(
-        "status-notifier-watcher",
+    pub struct MyID;
+    Subscription::run_with(TypeId::of::<MyID>(), |_| {
         stream::unfold(State::NotConnected, |state| async move {
             match state {
                 State::NotConnected => match connect().await {
@@ -42,8 +44,8 @@ pub fn subscription() -> iced::Subscription<Event> {
                     .map(|event| (event, State::Connected(stream))),
                 State::Failed => None,
             }
-        }),
-    )
+        })
+    })
 }
 
 async fn connect() -> zbus::Result<(zbus::Connection, client::EventStream)> {

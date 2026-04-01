@@ -10,7 +10,6 @@ anyhow.workspace = true
 cctk.workspace = true
 cosmic-comp-config = { git = "https://github.com/pop-os/cosmic-comp.git", rev = "5eb5af4" }
 cosmic-protocols.workspace = true
-cosmic-time.workspace = true
 i18n-embed-fl.workspace = true
 i18n-embed.workspace = true
 rust-embed.workspace = true

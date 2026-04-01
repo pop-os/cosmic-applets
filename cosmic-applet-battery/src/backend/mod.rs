@@ -98,16 +98,15 @@ pub async fn set_power_profile(daemon: Backend<'_>, power: Power) -> Result<()> 
 pub fn power_profile_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
     id: I,
 ) -> iced::Subscription<PowerProfileUpdate> {
-    Subscription::run_with_id(
-        id,
+    Subscription::run_with(id, |_| {
         stream::channel(50, move |mut output| async move {
             let mut state = State::Ready;
 
             loop {
                 state = start_listening(state, &mut output).await;
             }
-        }),
-    )
+        })
+    })
 }
 
 #[derive(Debug)]

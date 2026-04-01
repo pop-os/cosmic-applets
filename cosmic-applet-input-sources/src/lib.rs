@@ -21,9 +21,9 @@ use cosmic::{
     prelude::*,
     surface, theme,
     widget::{
-        self, autosize, horizontal_space,
+        self, autosize,
         rectangle_tracker::{RectangleTracker, RectangleUpdate, rectangle_tracker_subscription},
-        vertical_space,
+        space,
     },
 };
 use cosmic_comp_config::CosmicCompConfig;
@@ -291,7 +291,7 @@ impl cosmic::Application for Window {
         ])
     }
 
-    fn style(&self) -> Option<Appearance> {
+    fn style(&self) -> Option<cosmic::iced::theme::Style> {
         Some(cosmic::applet::style())
     }
 }

@@ -6,7 +6,6 @@ use rustc_hash::FxHashMap;
 use std::{
     fmt::Debug,
     hash::Hash,
-    mem,
     sync::{
         Arc, LazyLock,
         atomic::{AtomicBool, Ordering},
@@ -90,100 +89,104 @@ fn rfkill_path_var() -> std::ffi::OsString {
 pub fn bluetooth_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
     id: I,
 ) -> iced::Subscription<BluerEvent> {
-    Subscription::run_with_id(
-        id,
-        stream::channel(50, move |mut output| async move {
-            let mut retry_count = 0u32;
+    Subscription::run_with(id, |_| {
+        stream::channel(
+            50,
+            move |mut output: futures::channel::mpsc::Sender<BluerEvent>| async move {
+                let mut retry_count = 0u32;
 
-            // Initialize connection.
-            let mut session_state = loop {
-                if let Ok(session) = Session::new().await {
-                    if let Ok(state) = BluerSessionState::new(session).await {
-                        break state;
-                    }
-                }
-
-                retry_count = retry_count.saturating_add(1);
-                () = tokio::time::sleep(Duration::from_millis(
-                    2_u64.saturating_pow(retry_count).min(68719476734),
-                ))
-                .await;
-            };
-
-            let state = bluer_state(&session_state.adapter).await;
-
-            // reconnect to paired and trusted devices
-            if state.bluetooth_enabled {
-                for d in &state.devices {
-                    if d.paired_and_trusted() && !matches!(d.status, BluerDeviceStatus::Connected) {
-                        _ = session_state
-                            .req_tx
-                            .send(BluerRequest::ConnectDevice(d.address))
-                            .await;
-                    }
-                }
-            }
-            _ = output
-                .send(BluerEvent::Init {
-                    sender: session_state.req_tx.clone(),
-                    state: state.clone(),
-                })
-                .await;
-
-            let mut event_handler = async |event| {
-                let message = match event {
-                    BluerSessionEvent::ChangesProcessed(state) => {
-                        BluerEvent::DevicesChanged { state }
-                    }
-
-                    BluerSessionEvent::RequestResponse {
-                        req,
-                        state,
-                        err_msg,
-                    } => BluerEvent::RequestResponse {
-                        req,
-                        state,
-                        err_msg,
-                    },
-
-                    BluerSessionEvent::AgentEvent(e) => BluerEvent::AgentEvent(e),
-
-                    _ => return,
-                };
-
-                _ = output.send(message).await;
-            };
-
-            let mut interval = tokio::time::interval(Duration::from_secs(10));
-            interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
-            loop {
-                let Some(mut session_rx) = session_state.rx.take() else {
-                    break;
-                };
-
-                if let Some(event) = session_rx.recv().await {
-                    event_handler(event).await;
-                    // Consume any additional available events.
-                    let mut count = 0;
-                    while let Ok(event) = session_rx.try_recv() {
-                        event_handler(event).await;
-                        count += 1;
-                        if count == 100 {
-                            break;
+                // Initialize connection.
+                let mut session_state = loop {
+                    if let Ok(session) = Session::new().await {
+                        if let Ok(state) = BluerSessionState::new(session).await {
+                            break state;
                         }
                     }
-                } else {
-                    break;
+
+                    retry_count = retry_count.saturating_add(1);
+                    () = tokio::time::sleep(Duration::from_millis(
+                        2_u64.saturating_pow(retry_count).min(68719476734),
+                    ))
+                    .await;
+                };
+
+                let state = bluer_state(&session_state.adapter).await;
+
+                // reconnect to paired and trusted devices
+                if state.bluetooth_enabled {
+                    for d in &state.devices {
+                        if d.paired_and_trusted()
+                            && !matches!(d.status, BluerDeviceStatus::Connected)
+                        {
+                            _ = session_state
+                                .req_tx
+                                .send(BluerRequest::ConnectDevice(d.address))
+                                .await;
+                        }
+                    }
+                }
+                _ = output
+                    .send(BluerEvent::Init {
+                        sender: session_state.req_tx.clone(),
+                        state: state.clone(),
+                    })
+                    .await;
+
+                let mut event_handler = async |event| {
+                    let message = match event {
+                        BluerSessionEvent::ChangesProcessed(state) => {
+                            BluerEvent::DevicesChanged { state }
+                        }
+
+                        BluerSessionEvent::RequestResponse {
+                            req,
+                            state,
+                            err_msg,
+                        } => BluerEvent::RequestResponse {
+                            req,
+                            state,
+                            err_msg,
+                        },
+
+                        BluerSessionEvent::AgentEvent(e) => BluerEvent::AgentEvent(e),
+
+                        _ => return,
+                    };
+
+                    _ = output.send(message).await;
+                };
+
+                let mut interval = tokio::time::interval(Duration::from_secs(10));
+                interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+                loop {
+                    let Some(mut session_rx) = session_state.rx.take() else {
+                        break;
+                    };
+
+                    if let Some(event) = session_rx.recv().await {
+                        event_handler(event).await;
+                        // Consume any additional available events.
+                        let mut count = 0;
+                        while let Ok(event) = session_rx.try_recv() {
+                            event_handler(event).await;
+                            count += 1;
+                            if count == 100 {
+                                break;
+                            }
+                        }
+                    } else {
+                        break;
+                    }
+
+                    session_state.rx = Some(session_rx);
+                    interval.tick().await;
                 }
 
-                session_state.rx = Some(session_rx);
-                interval.tick().await;
-            }
-
-            _ = output.send(BluerEvent::Finished).await;
-            futures::future::pending().await
-        }),
-    )
+                _ = output.send(BluerEvent::Finished).await;
+                futures::future::pending().await
+            },
+        )
+    })
 }
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
