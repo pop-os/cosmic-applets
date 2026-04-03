@@ -78,6 +78,7 @@ struct CosmicBatteryApplet {
     display_icon_name: String,
     charging_limit: Option<bool>,
     battery_percent: f64,
+    no_battery: bool,
     on_battery: bool,
     gpus: FxHashMap<PathBuf, GPUData>,
     update_trigger: Option<UnboundedSender<()>>,
@@ -382,11 +383,12 @@ impl cosmic::Application for CosmicBatteryApplet {
                     percent,
                     time_to_empty,
                 } => {
+                    self.no_battery = false;
                     self.update_battery(percent, on_battery);
                     self.time_remaining = Duration::from_secs(time_to_empty as u64);
                 }
                 DeviceDbusEvent::NoBattery => {
-                    std::process::exit(0);
+                    self.no_battery = true;
                 }
             },
             Message::KeyboardBacklight(event) => match event {
@@ -515,12 +517,22 @@ impl cosmic::Application for CosmicBatteryApplet {
         let applet_padding = self.core.applet.suggested_padding(true);
 
         let mut children = vec![
-            icon::from_name(self.icon_name.as_str())
-                .size(suggested_size.0)
-                .into(),
+            icon::from_name(if self.no_battery {
+                if self.screen_brightness.is_some() {
+                    self.display_icon_name.as_str()
+                } else if self.kbd_brightness.is_some() {
+                    "keyboard-brightness-symbolic"
+                } else {
+                    self.icon_name.as_str()
+                }
+            } else {
+                self.icon_name.as_str()
+            })
+            .size(suggested_size.0)
+            .into(),
         ];
 
-        if self.config.show_percentage {
+        if self.config.show_percentage && !self.no_battery {
             let text = format!("{:.0}%", self.battery_percent);
 
             let t = if is_horizontal {
@@ -630,19 +642,25 @@ impl cosmic::Application for CosmicBatteryApplet {
             },
         );
 
-        let mut content: Vec<Element<'_, Message>> = vec![
-            padded_control(
-                row![
-                    icon::from_name(&*self.icon_name).size(24).symbolic(true),
-                    column![name, description]
-                ]
-                .spacing(8)
-                .align_y(Alignment::Center),
-            )
-            .into(),
-            padded_control(divider::horizontal::default())
-                .padding([space_xxs, space_s])
+        let mut content: Vec<Element<'_, Message>> = if self.no_battery {
+            Vec::new()
+        } else {
+            vec![
+                padded_control(
+                    row![
+                        icon::from_name(&*self.icon_name).size(24).symbolic(true),
+                        column![name, description]
+                    ]
+                    .spacing(8)
+                    .align_y(Alignment::Center),
+                )
                 .into(),
+                padded_control(divider::horizontal::default())
+                    .padding([space_xxs, space_s])
+                    .into(),
+            ]
+        };
+        content.extend([
             menu_button(
                 row![
                     column![
@@ -709,9 +727,11 @@ impl cosmic::Application for CosmicBatteryApplet {
             padded_control(divider::horizontal::default())
                 .padding([space_xxs, space_s])
                 .into(),
-        ];
+        ]);
 
-        if let Some(charging_limit) = self.charging_limit {
+        if let Some(charging_limit) = self.charging_limit
+            && !self.no_battery
+        {
             content.push(
                 padded_control(
                     toggler(charging_limit)
