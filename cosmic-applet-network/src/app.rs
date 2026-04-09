@@ -26,17 +26,16 @@ use cosmic::{
     },
     cctk::sctk::reexports::calloop,
     cosmic_theme::Spacing,
+    iced::core::window,
     iced::{
         Alignment, Length, Subscription,
         platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
-        widget::{column, row},
     },
-    iced_runtime::core::window,
     surface, theme,
     widget::{
-        Column, Id, Row, button, container, divider,
+        Column, Id, Row, button, column, container, divider,
         icon::{self, from_name},
-        scrollable, secure_input, text, text_input, toggler,
+        row, scrollable, secure_input, text, text_input, toggler,
     },
 };
 use cosmic_dbus_networkmanager::interface::{
@@ -191,8 +190,8 @@ fn vpn_section<'a>(
     show_available_vpns: bool,
     space_xxs: u16,
     space_s: u16,
-) -> Column<'a, Message> {
-    let mut vpn_col = column![];
+) -> cosmic::iced::widget::Column<'a, Message, cosmic::Theme> {
+    let mut vpn_col = cosmic::widget::column::with_capacity::<'_, Message, cosmic::Theme, _>(4);
 
     if !nm_state.known_vpns.is_empty() {
         let dropdown_icon = if show_available_vpns {
@@ -225,30 +224,39 @@ fn vpn_section<'a>(
                 .on_submit(|_| Message::ConnectVPNWithPassword)
                 .width(Length::Fill)
                 .into(),
-                row![
-                    button::standard(fl!("cancel")).on_press(Message::CancelVPNConnection),
-                    button::suggested(fl!("connect")).on_press(Message::ConnectVPNWithPassword)
-                ]
+                row::with_children([
+                    button::standard(fl!("cancel"))
+                        .on_press(Message::CancelVPNConnection)
+                        .into(),
+                    button::suggested(fl!("connect"))
+                        .on_press(Message::ConnectVPNWithPassword)
+                        .into(),
+                ])
                 .spacing(24)
                 .into(),
             ];
-            let col = padded_control(
-                Column::with_children(column_content)
-                    .spacing(8)
-                    .align_x(Alignment::Center),
-            )
-            .align_x(Alignment::Center);
+            let col: Element<'a, Message> = Element::from(
+                padded_control(
+                    column::with_children(column_content)
+                        .spacing(8)
+                        .align_x(Alignment::Center),
+                )
+                .align_x(Alignment::Center),
+            );
             vpn_col = vpn_col.push(col);
         }
 
-        let vpn_toggle_btn = menu_button(row![
-            text::body(fl!("vpn-connections"))
-                .width(Length::Fill)
-                .height(Length::Fixed(24.0))
-                .align_y(Alignment::Center),
+        let vpn_toggle_btn = menu_button(row::with_children([
+            Element::from(
+                text::body(fl!("vpn-connections"))
+                    .width(Length::Fill)
+                    .height(Length::Fixed(24.0))
+                    .align_y(Alignment::Center),
+            ),
             container(icon::from_name(dropdown_icon).size(16).symbolic(true))
                 .center(Length::Fixed(24.0))
-        ])
+                .into(),
+        ]))
         .on_press(Message::ToggleVpnList);
 
         vpn_col = vpn_col.push(vpn_toggle_btn);
@@ -277,7 +285,7 @@ fn vpn_section<'a>(
                 }
 
                 let mut btn = menu_button(
-                    Row::with_children(btn_content)
+                    row::with_children(btn_content)
                         .align_y(Alignment::Center)
                         .spacing(8),
                 );
@@ -369,7 +377,11 @@ impl CosmicNetworkApplet {
             changed = true;
         }
     }
-    fn view_window_return<'a>(&self, mut content: Column<'a, Message>) -> Element<'a, Message> {
+
+    fn view_window_return<'a>(
+        &self,
+        mut content: cosmic::iced::widget::Column<'a, Message, cosmic::Theme>,
+    ) -> Element<'a, Message> {
         let Spacing {
             space_xxs, space_s, ..
         } = theme::active().cosmic().spacing;
@@ -1383,7 +1395,8 @@ impl cosmic::Application for CosmicNetworkApplet {
             space_xxs, space_s, ..
         } = theme::active().cosmic().spacing;
 
-        let mut vpn_ethernet_col = column![];
+        let mut vpn_ethernet_col: cosmic::iced::widget::Column<Message, cosmic::Theme> =
+            cosmic::widget::column::with_capacity(1);
         let mut known_wifi = Vec::new();
         for conn in &self.nm_state.nm_state.active_conns {
             match conn {
@@ -1398,25 +1411,33 @@ impl cosmic::Application for CosmicNetworkApplet {
                     for addr in ip_addresses {
                         ipv4.push(text::caption(format!("{}: {}", fl!("ipv4"), addr)).into());
                     }
-                    vpn_ethernet_col = vpn_ethernet_col.push(column![
-                        row![
-                            icon::icon(
-                                icon::from_name(self.icon_name.clone())
-                                    .symbolic(true)
-                                    .into()
+                    vpn_ethernet_col = vpn_ethernet_col.push(
+                        column::with_capacity::<Message, cosmic::Theme, _>(2)
+                            .push(
+                                row::with_children([
+                                    Element::from(
+                                        icon::icon(
+                                            icon::from_name(self.icon_name.clone())
+                                                .symbolic(true)
+                                                .into(),
+                                        )
+                                        .size(40),
+                                    ),
+                                    column::with_children(ipv4).into(),
+                                    text::body(fl!("connected"))
+                                        .width(Length::Fill)
+                                        .align_x(Alignment::End)
+                                        .into(),
+                                ])
+                                .align_y(Alignment::Center)
+                                .spacing(8)
+                                .padding(menu_control_padding()),
                             )
-                            .size(40),
-                            Column::with_children(ipv4),
-                            text::body(fl!("connected"))
-                                .width(Length::Fill)
-                                .align_x(Alignment::End),
-                        ]
-                        .align_y(Alignment::Center)
-                        .spacing(8)
-                        .padding(menu_control_padding()),
-                        padded_control(divider::horizontal::default())
-                            .padding([space_xxs, space_s]),
-                    ]);
+                            .push(
+                                padded_control(divider::horizontal::default())
+                                    .padding([space_xxs, space_s]),
+                            ),
+                    );
                 }
                 ActiveConnectionInfo::Wired {
                     name,
@@ -1459,25 +1480,33 @@ impl cosmic::Application for CosmicNetworkApplet {
                         right_column.push(text(speed_text).size(12).into());
                     }
 
-                    vpn_ethernet_col = vpn_ethernet_col.push(column![
-                        row![
-                            icon::icon(
-                                icon::from_name(self.icon_name.clone())
-                                    .symbolic(true)
-                                    .into()
-                            )
-                            .size(40),
-                            Column::with_children(ipv4),
-                            Column::with_children(right_column)
-                                .width(Length::Fill)
-                                .align_x(Alignment::End),
-                        ]
-                        .align_y(Alignment::Center)
-                        .spacing(8)
-                        .padding(menu_control_padding()),
-                        padded_control(divider::horizontal::default())
-                            .padding([space_xxs, space_s]),
-                    ]);
+                    vpn_ethernet_col = vpn_ethernet_col
+                        .push(
+                            column::with_capacity(2).push(
+                                row::with_children([
+                                    Element::from(
+                                        icon::icon(
+                                            icon::from_name(self.icon_name.clone())
+                                                .symbolic(true)
+                                                .into(),
+                                        )
+                                        .size(40),
+                                    ),
+                                    column::with_children(ipv4).into(),
+                                    column::with_children(right_column)
+                                        .width(Length::Fill)
+                                        .align_x(Alignment::End)
+                                        .into(),
+                                ])
+                                .align_y(Alignment::Center)
+                                .spacing(8)
+                                .padding(menu_control_padding()),
+                            ),
+                        )
+                        .push(
+                            padded_control(divider::horizontal::default())
+                                .padding([space_xxs, space_s]),
+                        );
                 }
                 ActiveConnectionInfo::WiFi {
                     name,
@@ -1500,9 +1529,12 @@ impl cosmic::Application for CosmicNetworkApplet {
                             .size(24)
                             .symbolic(true)
                             .into(),
-                        column![text::body(name), Column::with_children(ipv4)]
-                            .width(Length::Fill)
-                            .into(),
+                        column::with_children([
+                            text::body(name).into(),
+                            column::with_children(ipv4).into(),
+                        ])
+                        .width(Length::Fill)
+                        .into(),
                     ];
                     match state {
                         ActiveConnectionState::Activating | ActiveConnectionState::Deactivating => {
@@ -1536,81 +1568,88 @@ impl cosmic::Application for CosmicNetworkApplet {
                     }
 
                     known_wifi.push(Element::from(
-                        column![
+                        column::with_children([Element::from(
                             menu_button(
-                                Row::with_children(btn_content)
+                                row::with_children(btn_content)
                                     .align_y(Alignment::Center)
-                                    .spacing(8)
+                                    .spacing(8),
                             )
                             .on_press(Message::Disconnect(
                                 Arc::from(name.as_str()),
-                                HwAddress::from_str(&hw_address).unwrap()
-                            ))
-                        ]
+                                HwAddress::from_str(&hw_address).unwrap(),
+                            )),
+                        )])
                         .align_x(Alignment::Center),
                     ));
                 }
             }
         }
 
-        let mut content = if let Some(active_device) = self.active_device.as_ref() {
-            column![
-                vpn_ethernet_col,
-                menu_button(row![
+        let mut content = cosmic::widget::column::with_capacity(known_wifi.len() + 1);
+
+        if let Some(active_device) = self.active_device.as_ref() {
+            let menu_row = row::with_children::<'_, Message, cosmic::Theme, _>([
+                Element::<'_, Message>::from(
                     container(
                         icon::from_name("go-previous-symbolic")
                             .size(16)
-                            .symbolic(true)
+                            .symbolic(true),
                     )
                     .align_x(Alignment::Start)
                     .align_y(Alignment::Center)
                     .width(Length::Fixed(24.0))
                     .height(Length::Fixed(24.0)),
-                    text::body(&active_device.interface)
-                        .width(Length::Fill)
-                        .height(Length::Fixed(24.0))
-                        .align_y(Alignment::Center),
-                ])
-                .on_press(Message::SelectDevice(None))
-            ]
-        } else {
-            column![
-                // TODO: remove excesive column!
-                Element::from(
-                    column![
-                        vpn_ethernet_col,
-                        padded_control(
-                            toggler(self.nm_state.nm_state.airplane_mode,)
-                                .label(fl!("airplane-mode"))
-                                .on_toggle(Message::ToggleAirplaneMode)
-                                .text_size(14)
-                                .width(Length::Fill)
-                        ),
-                        padded_control(divider::horizontal::default())
-                            .padding([space_xxs, space_s]),
-                    ]
-                    .align_x(Alignment::Center)
                 ),
+                text::body(&active_device.interface)
+                    .width(Length::Fill)
+                    .height(Length::Fixed(24.0))
+                    .align_y(Alignment::Center)
+                    .into(),
+            ]);
+            content = content
+                .push(vpn_ethernet_col)
+                .push(menu_button(menu_row).on_press(Message::SelectDevice(None)));
+        } else {
+            let menu_column = column::with_children([
+                Element::from(vpn_ethernet_col),
                 padded_control(
-                    toggler(self.nm_state.nm_state.wifi_enabled,)
+                    toggler(self.nm_state.nm_state.airplane_mode)
+                        .label(fl!("airplane-mode"))
+                        .on_toggle(Message::ToggleAirplaneMode)
+                        .text_size(14)
+                        .width(Length::Fill),
+                )
+                .into(),
+                padded_control(divider::horizontal::default())
+                    .padding([space_xxs, space_s])
+                    .into(),
+            ])
+            .align_x(Alignment::Center);
+            content = content
+                .push(Element::from(menu_column))
+                .push(padded_control(
+                    toggler(self.nm_state.nm_state.wifi_enabled)
                         .label(fl!("wifi"))
                         .on_toggle(Message::WiFiEnable)
                         .text_size(14)
-                        .width(Length::Fill)
-                ),
-            ]
-            .align_x(Alignment::Center)
-        };
+                        .width(Length::Fill),
+                ))
+                .align_x(Alignment::Center);
+        }
         if self.nm_state.nm_state.airplane_mode {
             content = content.push(
-                column!(
-                    padded_control(divider::horizontal::default()).padding([space_xxs, space_s]),
+                column::with_children([
+                    Element::from(
+                        padded_control(divider::horizontal::default())
+                            .padding([space_xxs, space_s]),
+                    ),
                     icon::from_name("airplane-mode-symbolic")
                         .size(48)
-                        .symbolic(true),
-                    text::body(fl!("airplane-mode-on")),
-                    text(fl!("turn-off-airplane-mode")).size(12)
-                )
+                        .symbolic(true)
+                        .into(),
+                    text::body(fl!("airplane-mode-on")).into(),
+                    text(fl!("turn-off-airplane-mode")).size(12).into(),
+                ])
                 .spacing(8)
                 .padding([0, 0, 8, 0])
                 .align_x(Alignment::Center)
@@ -1659,10 +1698,10 @@ impl cosmic::Application for CosmicNetworkApplet {
 
                 let is_connected = interface.active_connection.is_some();
                 let mut btn_content = vec![
-                    column![
-                        text::body(display_name),
-                        Column::with_children([text("Adapter").size(10).into()])
-                    ]
+                    column::with_children([
+                        text::body(display_name).into(),
+                        column::with_children([text("Adapter").size(10).into()]).into(),
+                    ])
                     .width(Length::Fill)
                     .into(),
                 ];
@@ -1682,7 +1721,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                 );
                 content = content.push(Element::from(
                     menu_button(
-                        Row::with_children(btn_content)
+                        row::with_children(btn_content)
                             .align_y(Alignment::Center)
                             .spacing(8),
                     )
@@ -1750,7 +1789,7 @@ impl cosmic::Application for CosmicNetworkApplet {
             }
 
             let mut btn = menu_button(
-                Row::with_children(btn_content)
+                row::with_children(btn_content)
                     .align_y(Alignment::Center)
                     .spacing(8),
             );
@@ -1767,10 +1806,12 @@ impl cosmic::Application for CosmicNetworkApplet {
                 }
                 _ => btn,
             };
-            known_wifi.push(Element::from(row![btn].align_y(Alignment::Center)));
+            known_wifi.push(Element::from(
+                row::with_capacity(1).push(btn).align_y(Alignment::Center),
+            ));
         }
         let has_known_wifi = !known_wifi.is_empty();
-        content = content.push(Column::with_children(known_wifi));
+        content = content.push(column::with_children(known_wifi));
         if has_known_wifi {
             content = content
                 .push(padded_control(divider::horizontal::default()).padding([space_xxs, space_s]));
@@ -1781,14 +1822,17 @@ impl cosmic::Application for CosmicNetworkApplet {
         } else {
             "go-down-symbolic"
         };
-        let available_connections_btn = menu_button(row![
-            text::body(fl!("visible-wireless-networks"))
-                .width(Length::Fill)
-                .height(Length::Fixed(24.0))
-                .align_y(Alignment::Center),
+        let available_connections_btn = menu_button(row::with_children([
+            Element::from(
+                text::body(fl!("visible-wireless-networks"))
+                    .width(Length::Fill)
+                    .height(Length::Fixed(24.0))
+                    .align_y(Alignment::Center),
+            ),
             container(icon::from_name(dropdown_icon).size(16).symbolic(true))
                 .center(Length::Fixed(24.0))
-        ])
+                .into(),
+        ]))
         .on_press(Message::ToggleVisibleNetworks);
         content = content.push(available_connections_btn);
 
@@ -1814,12 +1858,14 @@ impl cosmic::Application for CosmicNetworkApplet {
                     password_hidden,
                 } => {
                     let id = padded_control(
-                        row![
-                            icon::from_name("network-wireless-acquiring-symbolic")
-                                .size(24)
-                                .symbolic(true),
-                            text::body(access_point.ssid.as_ref()),
-                        ]
+                        row::with_children([
+                            Element::from(
+                                icon::from_name("network-wireless-acquiring-symbolic")
+                                    .size(24)
+                                    .symbolic(true),
+                            ),
+                            text::body(access_point.ssid.as_ref()).into(),
+                        ])
                         .align_y(Alignment::Center)
                         .spacing(12),
                     );
@@ -1827,7 +1873,7 @@ impl cosmic::Application for CosmicNetworkApplet {
 
                     let is_enterprise = matches!(access_point.network_type, NetworkType::EAP);
                     let enter_password_col =
-                        column![]
+                        cosmic::widget::column::with_capacity(4)
                             .push_maybe(is_enterprise.then(|| text::body(fl!("identity"))))
                             .push_maybe(is_enterprise.then(|| {
                                 text_input::text_input("", identity)
@@ -1851,12 +1897,16 @@ impl cosmic::Application for CosmicNetworkApplet {
                                 container(text::body(fl!("router-wps-button"))).padding(8)
                             }))
                             .push(
-                                row![
-                                    button::standard(fl!("cancel"))
-                                        .on_press(Message::CancelNewConnection),
-                                    button::suggested(fl!("connect"))
-                                        .on_press(Message::ConnectWithPassword)
-                                ]
+                                row::with_children([
+                                    Element::from(
+                                        button::standard(fl!("cancel"))
+                                            .on_press(Message::CancelNewConnection),
+                                    ),
+                                    Element::from(
+                                        button::suggested(fl!("connect"))
+                                            .on_press(Message::ConnectWithPassword),
+                                    ),
+                                ])
                                 .spacing(24),
                             );
                     let col =
@@ -1865,52 +1915,62 @@ impl cosmic::Application for CosmicNetworkApplet {
                     content = content.push(col);
                 }
                 NewConnectionState::Waiting(access_point) => {
-                    let id = row![
-                        icon::from_name("network-wireless-acquiring-symbolic")
-                            .size(24)
-                            .symbolic(true),
-                        text::body(access_point.ssid.as_ref()),
-                    ]
+                    let id = row::with_children([
+                        Element::from(
+                            icon::from_name("network-wireless-acquiring-symbolic")
+                                .size(24)
+                                .symbolic(true),
+                        ),
+                        text::body(access_point.ssid.as_ref()).into(),
+                    ])
                     .align_y(Alignment::Center)
                     .width(Length::Fill)
                     .spacing(12);
                     let connecting = padded_control(
-                        row![
-                            id,
+                        row::with_children([
+                            Element::from(id),
                             icon::from_name("process-working-symbolic")
                                 .size(24)
-                                .symbolic(true),
-                        ]
+                                .symbolic(true)
+                                .into(),
+                        ])
                         .spacing(8),
                     );
                     content = content.push(connecting);
                 }
                 NewConnectionState::Failure(access_point) => {
                     let id = padded_control(
-                        row![
-                            icon::from_name("network-wireless-error-symbolic")
-                                .size(24)
-                                .symbolic(true),
-                            text::body(access_point.ssid.as_ref()),
-                        ]
+                        row::with_children([
+                            Element::from(
+                                icon::from_name("network-wireless-error-symbolic")
+                                    .size(24)
+                                    .symbolic(true),
+                            ),
+                            text::body(access_point.ssid.as_ref()).into(),
+                        ])
                         .align_y(Alignment::Center)
                         .spacing(12),
                     )
                     .align_x(Alignment::Center);
                     content = content.push(id);
                     let col = padded_control(
-                        column![
-                            text(fl!("unable-to-connect")),
-                            text(fl!("check-wifi-connection")),
-                            row![
-                                button::standard(fl!("cancel"))
-                                    .on_press(Message::CancelNewConnection),
-                                button::suggested(fl!("connect")).on_press(
-                                    Message::SelectWirelessAccessPoint(access_point.clone())
-                                )
-                            ]
+                        column::with_children([
+                            Element::from(text(fl!("unable-to-connect"))),
+                            text(fl!("check-wifi-connection")).into(),
+                            row::with_children([
+                                Element::from(
+                                    button::standard(fl!("cancel"))
+                                        .on_press(Message::CancelNewConnection),
+                                ),
+                                button::suggested(fl!("connect"))
+                                    .on_press(Message::SelectWirelessAccessPoint(
+                                        access_point.clone(),
+                                    ))
+                                    .into(),
+                            ])
                             .spacing(24)
-                        ]
+                            .into(),
+                        ])
                         .spacing(16)
                         .align_x(Alignment::Center),
                     )
@@ -1943,20 +2003,26 @@ impl cosmic::Application for CosmicNetworkApplet {
                 })
                 .map(|ap| {
                     let button = menu_button(
-                        row![
-                            icon::from_name(wifi_icon(ap.strength))
-                                .size(16)
-                                .symbolic(true),
-                            text::body(ap.ssid.as_ref()).align_y(Alignment::Center)
-                        ]
+                        row::with_children([
+                            Element::from(
+                                icon::from_name(wifi_icon(ap.strength))
+                                    .size(16)
+                                    .symbolic(true),
+                            ),
+                            text::body(ap.ssid.as_ref())
+                                .align_y(Alignment::Center)
+                                .into(),
+                        ])
                         .align_y(Alignment::Center)
                         .spacing(12),
                     )
                     .on_press(Message::SelectWirelessAccessPoint(ap.clone()));
                     button.into()
                 });
-            content = content
-                .push(scrollable(Column::with_children(list_col)).height(Length::Fixed(300.0)));
+            content = content.push(
+                scrollable::<'_, Message>(column::with_children(list_col))
+                    .height(Length::Fixed(300.0)),
+            );
         }
 
         // Add VPN connections section after wireless networks when they are expanded
