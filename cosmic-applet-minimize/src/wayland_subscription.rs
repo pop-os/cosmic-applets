@@ -11,9 +11,9 @@ use cosmic::{
         self,
         wayland_protocols::ext::foreign_toplevel_list::v1::client::ext_foreign_toplevel_handle_v1::ExtForeignToplevelHandleV1,
     },
+    iced::core::Bytes,
     iced::{self, Subscription},
-    iced_core::Bytes,
-    iced_futures::{futures, stream},
+    iced::{futures, stream},
 };
 use futures::SinkExt;
 use image::EncodableLayout;

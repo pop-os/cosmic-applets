@@ -12,8 +12,8 @@ use cctk::{
     },
 };
 use cosmic::{
+    iced::core::Bytes,
     iced::{self, Subscription, stream},
-    iced_core::Bytes,
 };
 use image::EncodableLayout;
 

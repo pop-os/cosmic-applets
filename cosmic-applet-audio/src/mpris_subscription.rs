@@ -4,8 +4,8 @@
 use std::{borrow::Cow, fmt::Debug, hash::Hash, path::PathBuf};
 
 use cosmic::{
+    iced::futures::{self, SinkExt, StreamExt, future::OptionFuture},
     iced::{self, Subscription, stream},
-    iced_futures::futures::{self, SinkExt, StreamExt, future::OptionFuture},
 };
 use mpris2_zbus::{
     enumerator,

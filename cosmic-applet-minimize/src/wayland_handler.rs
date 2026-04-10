@@ -44,7 +44,7 @@ use cosmic::{
         },
         wayland_protocols::ext::foreign_toplevel_list::v1::client::ext_foreign_toplevel_handle_v1::ExtForeignToplevelHandleV1,
     },
-    iced_futures::futures,
+    iced::futures,
 };
 use cosmic_protocols::{
     toplevel_info::v1::client::zcosmic_toplevel_handle_v1,

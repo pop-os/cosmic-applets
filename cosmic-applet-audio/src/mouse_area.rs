@@ -1,9 +1,9 @@
 //! A container for capturing mouse events.
 
 use cosmic::iced::Vector;
-use cosmic::iced_renderer::core::Point;
+use cosmic::iced::core::Point;
 
-use cosmic::iced_core::{
+use cosmic::iced::core::{
     Clipboard, Element, Layout, Length, Rectangle, Shell, Size, Widget,
     event::{self, Event},
     layout, mouse, overlay, renderer, touch,
@@ -273,7 +273,7 @@ where
         state: &Tree,
         layout: Layout<'_>,
         renderer: &Renderer,
-        dnd_rectangles: &mut cosmic::iced_core::clipboard::DndDestinationRectangles,
+        dnd_rectangles: &mut cosmic::iced::core::clipboard::DndDestinationRectangles,
     ) {
         if let Some(state) = state.children.first() {
             self.content

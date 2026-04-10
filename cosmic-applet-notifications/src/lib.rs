@@ -23,7 +23,7 @@ use cosmic::{
     widget::{Column, button, cards, container, divider, icon, scrollable, space, text, toggler},
 };
 
-use cosmic::iced_futures::futures::executor::block_on;
+use cosmic::iced::futures::executor::block_on;
 
 use cosmic_notifications_config::NotificationsConfig;
 use cosmic_notifications_util::{ActionId, Image, Notification};

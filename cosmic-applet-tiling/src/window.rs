@@ -11,12 +11,12 @@ use cosmic::{
     applet::{menu_button, padded_control},
     cosmic_config::{Config, ConfigSet, CosmicConfigEntry},
     cosmic_theme::Spacing,
+    iced::widget::{column, row},
     iced::{
         Length, Subscription,
         platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
         window::Id,
     },
-    iced_widget::{column, row},
     surface, theme,
     widget::{
         container, divider,

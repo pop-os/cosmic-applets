@@ -778,9 +778,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.2.59"
+version = "1.2.60"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b7a4d3ec6524d28a329fc53654bbadc9bdd7b0431f5d65f1a56ffb28a1ee5283"
+checksum = "43c5703da9466b66a946814e1adf53ea2c90f10063b86290cc9eb67ce3478a20"
 dependencies = [
  "find-msvc-tools",
  "jobserver",
@@ -1459,7 +1459,7 @@ dependencies = [
 [[package]]
 name = "cosmic-notifications-config"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/cosmic-notifications#de57c9ef0e2bd5f5608eb425a736bbe4c815cb76"
+source = "git+https://github.com/pop-os/cosmic-notifications#6046bb29d570161196ab98d60806f6d6489df7a6"
 dependencies = [
  "cosmic-config",
  "serde",
@@ -1468,7 +1468,7 @@ dependencies = [
 [[package]]
 name = "cosmic-notifications-util"
 version = "0.1.0"
-source = "git+https://github.com/pop-os/cosmic-notifications#de57c9ef0e2bd5f5608eb425a736bbe4c815cb76"
+source = "git+https://github.com/pop-os/cosmic-notifications#6046bb29d570161196ab98d60806f6d6489df7a6"
 dependencies = [
  "fast_image_resize",
  "libcosmic",
@@ -1509,7 +1509,7 @@ dependencies = [
 [[package]]
 name = "cosmic-pipewire"
 version = "1.0.7"
-source = "git+https://github.com/pop-os/cosmic-settings#04da80bb904f500ea07ec6ee4ea45d3b50adb9bb"
+source = "git+https://github.com/pop-os/cosmic-settings#3639bafcfa3b27fd6a8a9bca7e77589b903975e8"
 dependencies = [
  "intmap",
  "libspa",
@@ -1537,7 +1537,7 @@ dependencies = [
 [[package]]
 name = "cosmic-settings-a11y-manager-subscription"
 version = "1.0.7"
-source = "git+https://github.com/pop-os/cosmic-settings#04da80bb904f500ea07ec6ee4ea45d3b50adb9bb"
+source = "git+https://github.com/pop-os/cosmic-settings#3639bafcfa3b27fd6a8a9bca7e77589b903975e8"
 dependencies = [
  "cosmic-protocols",
  "iced_futures",
@@ -1551,7 +1551,7 @@ dependencies = [
 [[package]]
 name = "cosmic-settings-accessibility-subscription"
 version = "1.0.7"
-source = "git+https://github.com/pop-os/cosmic-settings#04da80bb904f500ea07ec6ee4ea45d3b50adb9bb"
+source = "git+https://github.com/pop-os/cosmic-settings#3639bafcfa3b27fd6a8a9bca7e77589b903975e8"
 dependencies = [
  "cosmic-dbus-a11y",
  "futures",
@@ -1564,7 +1564,7 @@ dependencies = [
 [[package]]
 name = "cosmic-settings-airplane-mode-subscription"
 version = "1.0.7"
-source = "git+https://github.com/pop-os/cosmic-settings#04da80bb904f500ea07ec6ee4ea45d3b50adb9bb"
+source = "git+https://github.com/pop-os/cosmic-settings#3639bafcfa3b27fd6a8a9bca7e77589b903975e8"
 dependencies = [
  "futures",
  "iced_futures",
@@ -1597,7 +1597,7 @@ dependencies = [
 [[package]]
 name = "cosmic-settings-daemon-subscription"
 version = "1.0.7"
-source = "git+https://github.com/pop-os/cosmic-settings#04da80bb904f500ea07ec6ee4ea45d3b50adb9bb"
+source = "git+https://github.com/pop-os/cosmic-settings#3639bafcfa3b27fd6a8a9bca7e77589b903975e8"
 dependencies = [
  "futures",
  "iced_futures",
@@ -1610,7 +1610,7 @@ dependencies = [
 [[package]]
 name = "cosmic-settings-network-manager-subscription"
 version = "1.0.7"
-source = "git+https://github.com/pop-os/cosmic-settings#04da80bb904f500ea07ec6ee4ea45d3b50adb9bb"
+source = "git+https://github.com/pop-os/cosmic-settings#3639bafcfa3b27fd6a8a9bca7e77589b903975e8"
 dependencies = [
  "bitflags 2.11.0",
  "cosmic-dbus-networkmanager",
@@ -1629,7 +1629,7 @@ dependencies = [
 [[package]]
 name = "cosmic-settings-sound-subscription"
 version = "1.0.7"
-source = "git+https://github.com/pop-os/cosmic-settings#04da80bb904f500ea07ec6ee4ea45d3b50adb9bb"
+source = "git+https://github.com/pop-os/cosmic-settings#3639bafcfa3b27fd6a8a9bca7e77589b903975e8"
 dependencies = [
  "cosmic-pipewire",
  "futures",
@@ -1644,7 +1644,7 @@ dependencies = [
 [[package]]
 name = "cosmic-settings-upower-subscription"
 version = "1.0.7"
-source = "git+https://github.com/pop-os/cosmic-settings#04da80bb904f500ea07ec6ee4ea45d3b50adb9bb"
+source = "git+https://github.com/pop-os/cosmic-settings#3639bafcfa3b27fd6a8a9bca7e77589b903975e8"
 dependencies = [
  "futures",
  "iced_futures",
@@ -1658,7 +1658,7 @@ dependencies = [
 [[package]]
 name = "cosmic-text"
 version = "0.18.2"
-source = "git+https://github.com/pop-os/cosmic-text.git#9a2ab09f06905e91f41d64ac6eee887726e7fd76"
+source = "git+https://github.com/pop-os/cosmic-text.git#4d74f795cc771fdcc7ea0f9cacba63fcf036fad6"
 dependencies = [
  "bitflags 2.11.0",
  "fontdb",
@@ -4169,14 +4169,14 @@ checksum = "b6d2cec3eae94f9f509c767b45932f1ada8350c4bdb85af2fcab4a3c14807981"
 
 [[package]]
 name = "libredox"
-version = "0.1.15"
+version = "0.1.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ddbf48fd451246b1f8c2610bd3b4ac0cc6e149d89832867093ab69a17194f08"
+checksum = "e02f3bb43d335493c96bf3fd3a321600bf6bd07ed34bc64118e9293bdffea46c"
 dependencies = [
  "bitflags 2.11.0",
  "libc",
  "plain",
- "redox_syscall 0.7.3",
+ "redox_syscall 0.7.4",
 ]
 
 [[package]]
@@ -5612,9 +5612,9 @@ dependencies = [
 
 [[package]]
 name = "redox_syscall"
-version = "0.7.3"
+version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6ce70a74e890531977d37e532c34d45e9055d2409ed08ddba14529471ed0be16"
+checksum = "f450ad9c3b1da563fb6948a8e0fb0fb9269711c9c73d9ea1de5058c79c8d643a"
 dependencies = [
  "bitflags 2.11.0",
 ]
@@ -8090,7 +8090,7 @@ dependencies = [
  "libredox",
  "orbclient",
  "raw-window-handle",
- "redox_syscall 0.7.3",
+ "redox_syscall 0.7.4",
  "smol_str",
  "tracing",
  "winit-core",

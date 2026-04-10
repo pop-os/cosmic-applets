@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use cosmic::{
+    iced::Subscription,
     iced::{
         futures::{self, FutureExt},
         stream,
     },
-    iced_futures::Subscription,
 };
 use cosmic_notifications_util::Notification;
 use futures_util::{SinkExt, StreamExt};

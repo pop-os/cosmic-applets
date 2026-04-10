@@ -14,12 +14,12 @@ use cosmic::{
     Element, Task,
     applet::{menu_button, padded_control},
     cosmic_theme::Spacing,
+    iced::core::window,
     iced::{
         self, Alignment, Length, Subscription,
         platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
         widget::{Column, column, container, row},
     },
-    iced_runtime::core::window,
     theme,
     widget::{button, divider, icon, scrollable, text},
 };
