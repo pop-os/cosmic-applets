@@ -5,7 +5,7 @@ use cosmic::{
     Element,
     desktop::{IconSourceExt, fde},
     iced::Limits,
-    iced_core::{Border, Layout, Length, Size, Vector, layout, overlay, widget::Tree},
+    iced::core::{Border, Layout, Length, Size, Vector, layout, overlay, widget::Tree},
     theme::{Button, Container},
     widget::{Image, Widget, button, container, image::Handle},
 };
@@ -42,7 +42,7 @@ where
                             Image::new(Handle::from_rgba(img.width, img.height, img.img))
                                 .width(Length::Fixed(adjusted_width))
                                 .height(Length::Fixed(adjusted_height))
-                                .content_fit(cosmic::iced_core::ContentFit::Contain),
+                                .content_fit(cosmic::iced::core::ContentFit::Contain),
                         )
                     } else {
                         Element::from(
@@ -82,11 +82,11 @@ where
 }
 
 impl<Msg> Widget<Msg, cosmic::Theme, cosmic::Renderer> for WindowImage<'_, Msg> {
-    fn children(&self) -> Vec<cosmic::iced_core::widget::Tree> {
+    fn children(&self) -> Vec<cosmic::iced::core::widget::Tree> {
         vec![Tree::new(&self.image_button), Tree::new(&self.icon)]
     }
 
-    fn diff(&mut self, tree: &mut cosmic::iced_core::widget::Tree) {
+    fn diff(&mut self, tree: &mut cosmic::iced::core::widget::Tree) {
         tree.diff_children(&mut [&mut self.image_button, &mut self.icon]);
     }
 
@@ -95,9 +95,10 @@ impl<Msg> Widget<Msg, cosmic::Theme, cosmic::Renderer> for WindowImage<'_, Msg> 
         state: &'b mut Tree,
         layout: Layout<'b>,
         renderer: &cosmic::Renderer,
-        viewport: &cosmic::iced_core::Rectangle,
+        viewport: &cosmic::iced::core::Rectangle,
         translation: Vector,
-    ) -> Option<cosmic::iced_core::overlay::Element<'b, Msg, cosmic::Theme, cosmic::Renderer>> {
+    ) -> Option<cosmic::iced::core::overlay::Element<'b, Msg, cosmic::Theme, cosmic::Renderer>>
+    {
         let children = [&mut self.image_button, &mut self.icon]
             .into_iter()
             .zip(&mut state.children)
@@ -118,10 +119,10 @@ impl<Msg> Widget<Msg, cosmic::Theme, cosmic::Renderer> for WindowImage<'_, Msg> 
 
     fn layout(
         &mut self,
-        tree: &mut cosmic::iced_core::widget::Tree,
+        tree: &mut cosmic::iced::core::widget::Tree,
         renderer: &cosmic::Renderer,
-        limits: &cosmic::iced_core::layout::Limits,
-    ) -> cosmic::iced_core::layout::Node {
+        limits: &cosmic::iced::core::layout::Limits,
+    ) -> cosmic::iced::core::layout::Node {
         let children = &mut tree.children;
         let button = &mut children[0];
         let button_node = self
@@ -155,13 +156,13 @@ impl<Msg> Widget<Msg, cosmic::Theme, cosmic::Renderer> for WindowImage<'_, Msg> 
 
     fn draw(
         &self,
-        tree: &cosmic::iced_core::widget::Tree,
+        tree: &cosmic::iced::core::widget::Tree,
         renderer: &mut cosmic::Renderer,
         theme: &cosmic::Theme,
-        style: &cosmic::iced_core::renderer::Style,
-        layout: cosmic::iced_core::Layout<'_>,
-        cursor: cosmic::iced_core::mouse::Cursor,
-        viewport: &cosmic::iced_core::Rectangle,
+        style: &cosmic::iced::core::renderer::Style,
+        layout: cosmic::iced::core::Layout<'_>,
+        cursor: cosmic::iced::core::mouse::Cursor,
+        viewport: &cosmic::iced::core::Rectangle,
     ) {
         let children = &[&self.image_button, &self.icon];
         // draw children in order
@@ -177,18 +178,18 @@ impl<Msg> Widget<Msg, cosmic::Theme, cosmic::Renderer> for WindowImage<'_, Msg> 
         self.size()
     }
 
-    fn tag(&self) -> cosmic::iced_core::widget::tree::Tag {
-        cosmic::iced_core::widget::tree::Tag::stateless()
+    fn tag(&self) -> cosmic::iced::core::widget::tree::Tag {
+        cosmic::iced::core::widget::tree::Tag::stateless()
     }
 
-    fn state(&self) -> cosmic::iced_core::widget::tree::State {
-        cosmic::iced_core::widget::tree::State::None
+    fn state(&self) -> cosmic::iced::core::widget::tree::State {
+        cosmic::iced::core::widget::tree::State::None
     }
 
     fn operate(
         &mut self,
-        tree: &mut cosmic::iced_core::widget::Tree,
-        layout: cosmic::iced_core::Layout<'_>,
+        tree: &mut cosmic::iced::core::widget::Tree,
+        layout: cosmic::iced::core::Layout<'_>,
         renderer: &cosmic::Renderer,
         operation: &mut dyn cosmic::widget::Operation<()>,
     ) {
@@ -209,14 +210,14 @@ impl<Msg> Widget<Msg, cosmic::Theme, cosmic::Renderer> for WindowImage<'_, Msg> 
 
     fn update(
         &mut self,
-        state: &mut cosmic::iced_core::widget::Tree,
-        event: &cosmic::iced_core::Event,
-        layout: cosmic::iced_core::Layout<'_>,
-        cursor: cosmic::iced_core::mouse::Cursor,
+        state: &mut cosmic::iced::core::widget::Tree,
+        event: &cosmic::iced::core::Event,
+        layout: cosmic::iced::core::Layout<'_>,
+        cursor: cosmic::iced::core::mouse::Cursor,
         renderer: &cosmic::Renderer,
-        clipboard: &mut dyn cosmic::iced_core::Clipboard,
-        shell: &mut cosmic::iced_core::Shell<'_, Msg>,
-        viewport: &cosmic::iced_core::Rectangle,
+        clipboard: &mut dyn cosmic::iced::core::Clipboard,
+        shell: &mut cosmic::iced::core::Shell<'_, Msg>,
+        viewport: &cosmic::iced::core::Rectangle,
     ) {
         let children = [&mut self.image_button, &mut self.icon];
 
@@ -241,12 +242,12 @@ impl<Msg> Widget<Msg, cosmic::Theme, cosmic::Renderer> for WindowImage<'_, Msg> 
 
     fn mouse_interaction(
         &self,
-        state: &cosmic::iced_core::widget::Tree,
-        layout: cosmic::iced_core::Layout<'_>,
-        cursor: cosmic::iced_core::mouse::Cursor,
-        viewport: &cosmic::iced_core::Rectangle,
+        state: &cosmic::iced::core::widget::Tree,
+        layout: cosmic::iced::core::Layout<'_>,
+        cursor: cosmic::iced::core::mouse::Cursor,
+        viewport: &cosmic::iced::core::Rectangle,
         renderer: &cosmic::Renderer,
-    ) -> cosmic::iced_core::mouse::Interaction {
+    ) -> cosmic::iced::core::mouse::Interaction {
         let children = [&self.image_button, &self.icon];
         let layout = layout.children().collect::<Vec<_>>();
         for (i, (layout, child)) in layout
@@ -263,7 +264,7 @@ impl<Msg> Widget<Msg, cosmic::Theme, cosmic::Renderer> for WindowImage<'_, Msg> 
                 return interaction;
             }
         }
-        cosmic::iced_core::mouse::Interaction::Idle
+        cosmic::iced::core::mouse::Interaction::Idle
     }
 
     fn id(&self) -> Option<cosmic::widget::Id> {

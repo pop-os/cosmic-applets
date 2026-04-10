@@ -12,8 +12,8 @@ use std::{
 };
 
 use cosmic::{
+    iced::stream,
     iced::{self, Subscription},
-    iced_futures::stream,
 };
 use drm::{
     control::{

@@ -10,8 +10,8 @@ use cosmic::{
         Size,
         cosmic_panel_config::{PanelAnchor, PanelSize},
     },
+    iced::widget::row,
     iced::{self, Length},
-    iced_widget::row,
     surface,
     widget::{Id, autosize},
 };
@@ -65,7 +65,7 @@ impl Button {
                 cosmic::widget::icon(icon)
                     .class(if symbolic {
                         cosmic::theme::Svg::Custom(std::rc::Rc::new(|theme| {
-                            cosmic::iced_widget::svg::Style {
+                            cosmic::iced::widget::svg::Style {
                                 color: Some(theme.cosmic().background.on.into()),
                             }
                         }))

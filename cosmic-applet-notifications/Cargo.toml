@@ -5,11 +5,11 @@ edition = "2024"
 license = "GPL-3.0-only"
 
 [dependencies]
+cosmic-notifications-util = { git = "https://github.com/pop-os/cosmic-notifications" }
+cosmic-notifications-config = { git = "https://github.com/pop-os/cosmic-notifications" }
 anyhow.workspace = true
 libcosmic.workspace = true
 tokio.workspace = true
-cosmic-notifications-util = { git = "https://github.com/pop-os/cosmic-notifications" }
-cosmic-notifications-config = { git = "https://github.com/pop-os/cosmic-notifications" }
 # cosmic-notifications-util = { path = "../../cosmic-notifications-daemon/cosmic-notifications-util" }
 # cosmic-notifications-config = { path = "../../cosmic-notifications-daemon/cosmic-notifications-config" }
 futures-util = { workspace = true, features = ["sink"] }

@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use cosmic::{
+    iced::stream,
     iced::{self, Subscription, futures::SinkExt},
-    iced_futures::stream,
 };
 use std::{fmt::Debug, hash::Hash};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};

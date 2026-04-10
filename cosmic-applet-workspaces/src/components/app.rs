@@ -13,6 +13,7 @@ use cctk::{
 use cosmic::{
     Element, Task, Theme, app,
     applet::cosmic_panel_config::PanelAnchor,
+    iced::core::{Background, Border},
     iced::{
         Alignment,
         Event::Mouse,
@@ -20,7 +21,6 @@ use cosmic::{
         mouse::{self, ScrollDelta},
         widget::{button, column, row},
     },
-    iced_core::{Background, Border},
     scroll::DiscreteScrollState,
     surface,
     widget::{Id, autosize, container, space},

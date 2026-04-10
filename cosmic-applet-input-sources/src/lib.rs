@@ -10,14 +10,14 @@ use cosmic::{
     applet::{self},
     cosmic_config::{self, ConfigSet, CosmicConfigEntry},
     cosmic_theme::Spacing,
+    iced::Subscription,
     iced::{
         Rectangle, Task,
         platform_specific::shell::commands::popup::{destroy_popup, get_popup},
         widget::{column, row},
         window::Id,
     },
-    iced_futures::Subscription,
-    iced_runtime::{Appearance, core::window},
+    iced::{core::window, runtime::Appearance},
     prelude::*,
     surface, theme,
     widget::{

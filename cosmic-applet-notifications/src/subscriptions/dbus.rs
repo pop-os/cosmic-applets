@@ -4,7 +4,7 @@
 use crate::subscriptions::freedesktop_proxy::NotificationsProxy;
 use cosmic::{
     iced::futures::{self, SinkExt},
-    iced_futures::{Subscription, stream},
+    iced::{Subscription, stream},
 };
 use futures_util::StreamExt;
 use tokio::sync::mpsc::{Receiver, Sender, channel};

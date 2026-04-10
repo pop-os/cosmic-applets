@@ -6,6 +6,8 @@ use cosmic::{
     applet::{cosmic_panel_config::PanelAnchor, menu_button, padded_control},
     cctk::sctk::reexports::calloop,
     cosmic_theme::Spacing,
+    iced::stream,
+    iced::widget::Column,
     iced::{
         Alignment, Length, Rectangle, Subscription,
         futures::{SinkExt, StreamExt, channel::mpsc},
@@ -13,8 +15,6 @@ use cosmic::{
         widget::{column, row, rule},
         window,
     },
-    iced_futures::stream,
-    iced_widget::Column,
     surface, theme,
     widget::{
         Button, Grid, Id, autosize, button, container, divider, grid, icon, rectangle_tracker::*,

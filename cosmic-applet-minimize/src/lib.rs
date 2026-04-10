@@ -28,7 +28,7 @@ use cosmic::{
     widget::{autosize::autosize, mouse_area},
 };
 
-use cosmic::iced_widget::{Column, Row};
+use cosmic::iced::widget::{Column, Row};
 
 use cosmic::{Element, widget::tooltip};
 use std::sync::LazyLock;
@@ -362,14 +362,14 @@ impl cosmic::Application for Minimize {
             PanelAnchor::Top | PanelAnchor::Bottom
         ) {
             Row::with_children(icon_buttons)
-                .align_y(cosmic::iced_core::Alignment::Center)
+                .align_y(cosmic::iced::core::Alignment::Center)
                 .height(Length::Shrink)
                 .width(Length::Shrink)
                 .spacing(spacing as f32)
                 .into()
         } else {
             Column::with_children(icon_buttons)
-                .align_x(cosmic::iced_core::Alignment::Center)
+                .align_x(cosmic::iced::core::Alignment::Center)
                 .height(Length::Shrink)
                 .width(Length::Shrink)
                 .spacing(spacing as f32)
@@ -457,13 +457,13 @@ impl cosmic::Application for Minimize {
                 ) {
                     Element::from(
                         Row::with_children(icon_buttons)
-                            .align_y(cosmic::iced_core::Alignment::Center)
+                            .align_y(cosmic::iced::core::Alignment::Center)
                             .height(Length::Shrink)
                             .width(Length::Shrink),
                     )
                 } else {
                     Column::with_children(icon_buttons)
-                        .align_x(cosmic::iced_core::Alignment::Center)
+                        .align_x(cosmic::iced::core::Alignment::Center)
                         .height(Length::Shrink)
                         .width(Length::Shrink)
                         .into()

@@ -27,6 +27,7 @@ use cosmic::{
     },
     cosmic_config::{Config, CosmicConfigEntry},
     desktop::IconSourceExt,
+    iced::runtime::{core::event, dnd::peek_dnd},
     iced::{
         self, Alignment, Background, Border, Length, Limits, Padding, Subscription,
         advanced::text::{Ellipsize, EllipsizeHeightLimit},
@@ -39,7 +40,6 @@ use cosmic::{
         },
         window,
     },
-    iced_runtime::{core::event, dnd::peek_dnd},
     surface,
     theme::{self, Button, Container},
     widget::{
@@ -2478,14 +2478,14 @@ impl cosmic::Application for CosmicAppList {
         Subscription::batch([
             wayland_subscription().map(Message::Wayland),
             listen_with(|e, _, id| match e {
-                cosmic::iced_runtime::core::Event::PlatformSpecific(
-                    event::PlatformSpecific::Wayland(event::wayland::Event::Seat(e, seat)),
-                ) => match e {
+                cosmic::iced::core::Event::PlatformSpecific(event::PlatformSpecific::Wayland(
+                    event::wayland::Event::Seat(e, seat),
+                )) => match e {
                     event::wayland::SeatEvent::Enter => Some(Message::NewSeat(seat)),
                     event::wayland::SeatEvent::Leave => Some(Message::RemovedSeat),
                 },
-                cosmic::iced_core::Event::Mouse(
-                    cosmic::iced_core::mouse::Event::ButtonPressed(_),
+                cosmic::iced::core::Event::Mouse(
+                    cosmic::iced::core::mouse::Event::ButtonPressed(_),
                 ) => Some(Message::Pressed(id)),
                 _ => None,
             }),

@@ -19,11 +19,11 @@ use bluer::{
 };
 
 use cosmic::{
+    iced::stream,
     iced::{
         self, Subscription,
         futures::{SinkExt, StreamExt},
     },
-    iced_futures::stream,
 };
 
 use futures::{FutureExt, stream::FuturesUnordered};
