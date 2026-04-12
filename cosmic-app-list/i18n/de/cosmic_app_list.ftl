@@ -1,5 +1,5 @@
-cosmic-app-list = Anwendungsleiste
-pin = Favorisieren
+cosmic-app-list = App-Übersicht
+pin = An App-Übersicht anheften
 quit = Beenden
 quit-all = Alle beenden
 new-window = Neues Fenster

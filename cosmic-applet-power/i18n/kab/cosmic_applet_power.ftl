@@ -29,3 +29,8 @@ confirm-body =
         [log-out] yeffeɣ
        *[other] isnes tigawt yettwafernen
     } s wudem awurman deg { $countdown } n tsinin.
+settings = Iɣewwaṛen…
+lock-screen = Sekkeṛ agdil
+power = Tazmart
+lock-screen-shortcut = Afellay (Sup) + Asenser (Esc)
+log-out-shortcut = Afellay+ Shift + Asenser

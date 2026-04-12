@@ -3,7 +3,7 @@ settings = الإعدادات...
 lock-screen = قفل الشاشة
 lock-screen-shortcut = سوبر + Escape
 log-out = سجِّل الخروج
-log-out-shortcut = سوبر + Shift + Escape
+log-out-shortcut = Super + Shift + Escape
 suspend = علِّق
 restart = أعد التشغيل
 shutdown = أطفئ
@@ -13,7 +13,7 @@ confirm-button =
     { $action ->
         [restart] { restart }
         [suspend] { suspend }
-        [shutdown] إيقاف التشغيل
+        [shutdown] أطفئ
         [log-out] { log-out }
        *[other] { confirm }
     }
@@ -29,7 +29,7 @@ confirm-body =
     سيقوم النظام بـ { $action ->
         [restart] إعادة التشغيل
         [suspend] تعليق
-        [shutdown] إيقاف التشغيل
+        [shutdown] إطفاء
         [lock-screen] قفل الشاشة
         [log-out] تسجيل الخروج
        *[other] تطبيق الإجراء المحدد
