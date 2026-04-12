@@ -145,6 +145,10 @@ impl State {
         self.item.name()
     }
 
+    pub fn sni_id(&self) -> &str {
+        self.item.sni_id()
+    }
+
     pub fn icon_handle(&self) -> &icon::Handle {
         &self.icon_handle
     }

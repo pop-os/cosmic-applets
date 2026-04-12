@@ -11,6 +11,7 @@ use zbus::zvariant::{self, OwnedValue};
 #[derive(Clone, Debug)]
 pub struct StatusNotifierItem {
     name: String,
+    sni_id: String,
     is_menu: bool,
     item_proxy: StatusNotifierItemProxy<'static>,
     menu_proxy: Option<DBusMenuProxy<'static>>,
@@ -47,6 +48,7 @@ impl StatusNotifierItem {
             .await?;
 
         let is_menu = item_proxy.item_is_menu().await.unwrap_or(false);
+        let sni_id = item_proxy.sni_id().await.unwrap_or_default();
 
         let menu_proxy = if let Ok(menu_path) = item_proxy.menu().await {
             Some(
@@ -62,6 +64,7 @@ impl StatusNotifierItem {
 
         Ok(Self {
             name,
+            sni_id,
             is_menu,
             item_proxy,
             menu_proxy,
@@ -70,6 +73,10 @@ impl StatusNotifierItem {
 
     pub fn name(&self) -> &str {
         &self.name
+    }
+
+    pub fn sni_id(&self) -> &str {
+        &self.sni_id
     }
 
     // TODO: Only fetch changed part of layout, if that's any faster
@@ -177,6 +184,9 @@ async fn get_layout(menu_proxy: DBusMenuProxy<'static>) -> Result<Layout, String
 
 #[zbus::proxy(interface = "org.kde.StatusNotifierItem")]
 pub trait StatusNotifierItem {
+    #[zbus(property, name = "Id")]
+    fn sni_id(&self) -> zbus::Result<String>;
+
     #[zbus(property)]
     fn icon_name(&self) -> zbus::Result<String>;
 

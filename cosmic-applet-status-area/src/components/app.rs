@@ -11,11 +11,10 @@ use cosmic::{
     iced::{
         self, Length, Subscription,
         platform_specific::shell::commands::popup::{destroy_popup, get_popup},
-        theme::Style,
         window,
     },
     surface,
-    widget::{container, mouse_area},
+    widget::{container, divider, mouse_area},
 };
 use std::collections::BTreeMap;
 
@@ -23,6 +22,36 @@ use crate::{
     components::status_menu,
     subscriptions::{status_notifier_item::StatusNotifierItem, status_notifier_watcher},
 };
+
+fn hidden_items_path() -> std::path::PathBuf {
+    let config_dir = std::env::var("XDG_CONFIG_HOME")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|_| {
+            let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
+            std::path::PathBuf::from(home).join(".config")
+        });
+    config_dir.join("cosmic/com.system76.CosmicAppletStatusArea/hidden_items.txt")
+}
+
+fn load_hidden_items() -> Vec<String> {
+    std::fs::read_to_string(hidden_items_path())
+        .ok()
+        .map(|s| {
+            s.lines()
+                .filter(|l| !l.is_empty())
+                .map(String::from)
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn save_hidden_items(items: &[String]) {
+    let path = hidden_items_path();
+    if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    let _ = std::fs::write(path, items.join("\n"));
+}
 
 #[derive(Clone, Debug)]
 pub enum Msg {
@@ -38,9 +67,11 @@ pub enum Msg {
     ToggleOverflow,
     HoveredOverflow,
     Token(TokenUpdate),
+    HideItem(usize),
+    UnhideItem(usize),
+    ToggleHiddenOverflow,
 }
 
-#[derive(Default)]
 pub(crate) struct App {
     core: app::Core,
     connection: Option<zbus::Connection>,
@@ -50,9 +81,33 @@ pub(crate) struct App {
     popup: Option<window::Id>,
     overflow_popup: Option<window::Id>,
     token_tx: Option<calloop::channel::Sender<TokenRequest>>,
+    hidden_items: Vec<String>,
+    hidden_popup: Option<window::Id>,
+}
+
+impl Default for App {
+    fn default() -> Self {
+        Self {
+            core: app::Core::default(),
+            connection: None,
+            menus: BTreeMap::new(),
+            open_menu: None,
+            max_menu_id: 0,
+            popup: None,
+            overflow_popup: None,
+            token_tx: None,
+            hidden_items: load_hidden_items(),
+            hidden_popup: None,
+        }
+    }
 }
 
 impl App {
+    fn is_hidden(&self, menu: &status_menu::State) -> bool {
+        let id = menu.sni_id();
+        !id.is_empty() && self.hidden_items.contains(&id.to_string())
+    }
+
     fn next_menu_id(&mut self) -> usize {
         self.max_menu_id += 1;
         self.max_menu_id
@@ -96,6 +151,35 @@ impl App {
                     .max(1),
             )
         }
+    }
+
+    fn view_hidden_popup(&self) -> cosmic::Element<'_, Msg> {
+        let children = self
+            .menus
+            .iter()
+            .filter(|(_, menu)| self.is_hidden(menu))
+            .map(|(id, menu)| {
+                mouse_area(
+                    menu_icon_button(&self.core.applet, menu).on_press_down(Msg::TogglePopup(*id)),
+                )
+                .on_right_press(Msg::UnhideItem(*id))
+                .on_enter(Msg::Hovered(*id))
+                .into()
+            });
+
+        self.core
+            .applet
+            .popup_container(container(
+                if matches!(
+                    self.core.applet.anchor,
+                    PanelAnchor::Left | PanelAnchor::Right
+                ) {
+                    Element::from(iced::widget::column(children))
+                } else {
+                    Element::from(iced::widget::row(children))
+                },
+            ))
+            .into()
     }
 
     fn view_overflow_popup(&self) -> cosmic::Element<'_, Msg> {
@@ -173,6 +257,9 @@ impl cosmic::Application for App {
                 if self.popup == Some(surface) {
                     self.popup = None;
                     self.open_menu = None;
+                }
+                if self.hidden_popup == Some(surface) {
+                    self.hidden_popup = None;
                 }
                 Task::none()
             }
@@ -404,6 +491,79 @@ impl cosmic::Application for App {
                     return Task::none();
                 }
             }
+            Msg::HideItem(id) => {
+                if let Some(menu) = self.menus.get(&id) {
+                    let sni_id = menu.sni_id().to_string();
+                    if !sni_id.is_empty() && !self.hidden_items.contains(&sni_id) {
+                        self.hidden_items.push(sni_id);
+                        save_hidden_items(&self.hidden_items);
+                    }
+                }
+                // Close the popup
+                if let Some(popup_id) = self.popup.take() {
+                    self.open_menu = None;
+                    return destroy_popup(popup_id);
+                }
+                return self.resize_window();
+            }
+            Msg::UnhideItem(id) => {
+                if let Some(menu) = self.menus.get(&id) {
+                    let sni_id = menu.sni_id().to_string();
+                    self.hidden_items.retain(|s| s != &sni_id);
+                    save_hidden_items(&self.hidden_items);
+                }
+                // Close the hidden popup
+                let mut cmds = Vec::new();
+                if let Some(popup_id) = self.hidden_popup.take() {
+                    cmds.push(destroy_popup(popup_id));
+                }
+                if let Some(popup_id) = self.popup.take() {
+                    self.open_menu = None;
+                    cmds.push(destroy_popup(popup_id));
+                }
+                cmds.push(self.resize_window());
+                return Task::batch(cmds);
+            }
+            Msg::ToggleHiddenOverflow => {
+                if let Some(popup_id) = self.hidden_popup.take() {
+                    self.popup = None;
+                    self.open_menu = None;
+                    return destroy_popup(popup_id);
+                } else {
+                    let popup_id = self.next_popup_id();
+                    let visible_count = self
+                        .menus
+                        .iter()
+                        .filter(|(_, menu)| !self.is_hidden(menu))
+                        .count();
+                    let mut popup_settings = self.core.applet.get_popup_settings(
+                        self.core.main_window_id().unwrap(),
+                        popup_id,
+                        None,
+                        None,
+                        None,
+                    );
+                    popup_settings.close_with_children = false;
+
+                    if matches!(
+                        self.core.applet.anchor,
+                        PanelAnchor::Left | PanelAnchor::Right
+                    ) {
+                        let suggested_size = self.core.applet.suggested_size(true).1
+                            + 2 * self.core.applet.suggested_padding(true).1;
+                        popup_settings.positioner.anchor_rect.y =
+                            visible_count as i32 * suggested_size as i32;
+                    } else {
+                        let suggested_size = self.core.applet.suggested_size(true).0
+                            + 2 * self.core.applet.suggested_padding(true).0;
+                        popup_settings.positioner.anchor_rect.x =
+                            visible_count as i32 * suggested_size as i32;
+                    }
+
+                    self.hidden_popup = Some(popup_id);
+                    return get_popup(popup_settings);
+                }
+            }
             Msg::HoveredOverflow => {
                 let mut cmds = Vec::new();
                 if self.overflow_popup.is_some() {
@@ -467,12 +627,15 @@ impl cosmic::Application for App {
     fn view(&self) -> cosmic::Element<'_, Msg> {
         let overflow_index = self.overflow_index();
 
+        let has_hidden = self.menus.iter().any(|(_, menu)| self.is_hidden(menu));
+
         let children = self
             .menus
             .iter()
-            .take(overflow_index.unwrap_or(self.menus.len()))
+            .filter(|(_, menu)| !self.is_hidden(menu))
+            .take(overflow_index.unwrap_or(usize::MAX))
             .map(|(id, menu)| {
-                mouse_area(menu_icon_button(&self.core.applet, &menu).on_press(Msg::Activate(*id)))
+                mouse_area(menu_icon_button(&self.core.applet, menu).on_press(Msg::Activate(*id)))
                     .on_right_press(Msg::TogglePopup(*id))
                     .on_enter(Msg::Hovered(*id))
                     .into()
@@ -487,8 +650,9 @@ impl cosmic::Application for App {
                 ) {
                     Element::from(iced::widget::column(children))
                 } else {
-                    iced::widget::row(children)
-                        .push_maybe(overflow_index.map(|_| {
+                    let mut items: Vec<Element<'_, Msg>> = children.collect();
+                    if overflow_index.is_some() {
+                        items.push(
                             mouse_area(
                                 self.core
                                     .applet
@@ -501,8 +665,21 @@ impl cosmic::Application for App {
                                     .on_press_down(Msg::ToggleOverflow),
                             )
                             .on_enter(Msg::HoveredOverflow)
-                        }))
-                        .into()
+                            .into(),
+                        );
+                    }
+                    if has_hidden {
+                        items.push(
+                            mouse_area(
+                                self.core
+                                    .applet
+                                    .icon_button("view-more-horizontal-symbolic")
+                                    .on_press_down(Msg::ToggleHiddenOverflow),
+                            )
+                            .into(),
+                        );
+                    }
+                    iced::widget::row(items).into()
                 },
             )
             .into()
@@ -517,20 +694,52 @@ impl cosmic::Application for App {
             return self.view_overflow_popup();
         }
 
+        if self
+            .hidden_popup
+            .as_ref()
+            .is_some_and(|id| *id == surface)
+        {
+            return self.view_hidden_popup();
+        }
+
         let theme = self.core.system_theme();
         let cosmic = theme.cosmic();
         let corners = cosmic.corner_radii;
         let pad = corners.radius_m[0];
         match self.open_menu {
             Some(id) => match self.menus.get(&id) {
-                Some(menu) => self
-                    .core
-                    .applet
-                    .popup_container(
-                        container(menu.popup_view().map(move |msg| Msg::StatusMenu((id, msg))))
+                Some(menu) => {
+                    let is_hidden = self.is_hidden(menu);
+                    let hide_label = if is_hidden {
+                        "Show in tray"
+                    } else {
+                        "Hide from tray"
+                    };
+                    let hide_msg = if is_hidden {
+                        Msg::UnhideItem(id)
+                    } else {
+                        Msg::HideItem(id)
+                    };
+
+                    self.core
+                        .applet
+                        .popup_container(
+                            container(
+                                iced::widget::column![
+                                    menu.popup_view()
+                                        .map(move |msg| Msg::StatusMenu((id, msg))),
+                                    divider::horizontal::default(),
+                                    cosmic::widget::button::text(hide_label)
+                                        .on_press(hide_msg)
+                                        .width(Length::Fill)
+                                        .class(cosmic::theme::Button::MenuItem),
+                                ]
+                                .width(Length::Fill),
+                            )
                             .padding([pad, 0.]),
-                    )
-                    .into(),
+                        )
+                        .into()
+                }
                 None => unreachable!(),
             },
             None => iced::widget::text("").into(),
