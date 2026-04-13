@@ -652,7 +652,8 @@ impl CosmicAppList {
 
         let on_active_workspace = self.active_workspaces.is_empty()
             || toplevel_info.workspace.is_empty()
-            || self.active_workspaces
+            || self
+                .active_workspaces
                 .iter()
                 .any(|workspace| toplevel_info.workspace.contains(workspace));
 
@@ -665,7 +666,10 @@ impl CosmicAppList {
                     .iter()
                     .find(|(_, info)| info.name.as_ref() == Some(&self.core.applet.output_name))
                     .map_or(true, |(active_output, _)| {
-                        toplevel_info.output.iter().any(|output| output == active_output)
+                        toplevel_info
+                            .output
+                            .iter()
+                            .any(|output| output == active_output)
                     });
 
                 on_active_output && on_active_workspace
