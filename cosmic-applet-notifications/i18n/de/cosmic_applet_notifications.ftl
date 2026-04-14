@@ -1,12 +1,14 @@
 hours-ago =
-    Vor { $duration } { $duration ->
-        [one] Stunde
-       *[other] Stunden
+    { $duration ->
+        [0] Gerade eben
+        [one] Vor 1 Stunde
+       *[other] Vor { $duration } Stunden
     }
 minutes-ago =
-    Vor { $duration } { $duration ->
-        [one] Minute
-       *[other] Minuten
+    { $duration ->
+        [0] Gerade eben
+        [one] Vor 1 Minute
+       *[other] Vor { $duration } Minuten
     }
 show-less = Weniger anzeigen
 show-more = { $more } weitere anzeigen

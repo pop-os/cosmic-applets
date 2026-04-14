@@ -1,0 +1,14 @@
+power-settings = Configuració de rendiment i bateria...
+hours = h
+until-empty = fins a esgotar-se
+battery-desc = Baix rendiment i menor consum d'energia.
+max-charge = Augmenta la vida útil de la bateria establint un límit de càrrega del 80%
+balanced = Balancejat
+battery = Bateria
+seconds = s
+dgpu-running = La targeta gràfica externa està activada i podria reduir l'autonomia de la bateria
+performance = Rendiment
+performance-desc = Alt rendiment i major consum d'energia.
+minutes = m
+balanced-desc = Rendiment i consum d'energia equilibrats.
+dgpu-applications = Programes utilitzant la targeta gràfica externa { $gpu_name }

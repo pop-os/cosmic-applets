@@ -1,5 +1,5 @@
 battery = Bateria
-battery-desc = Uso reduzido de energia e desempenho.
+battery-desc = Utilização reduzida de energia e desempenho.
 balanced = Equilibrado
 balanced-desc = Desempenho padrão e uso de bateria.
 performance = Alto desempenho
