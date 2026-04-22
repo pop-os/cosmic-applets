@@ -172,7 +172,14 @@ impl Model {
 
                             None
                         })
-                        .unwrap_or_else(|| self.sinks.description[pos].clone());
+                        .unwrap_or_else(|| {
+                            [
+                                &node.device_profile_description,
+                                " - ",
+                                &*self.sources.description[pos],
+                            ]
+                            .concat()
+                        });
 
                     if let Some(default_node_id) = self.default_sink {
                         if default_node_id == node_id {
@@ -230,7 +237,16 @@ impl Model {
 
                             None
                         })
-                        .unwrap_or_else(|| Some(self.sources.description[pos].clone()))
+                        .unwrap_or_else(|| {
+                            Some(
+                                [
+                                    &node.device_profile_description,
+                                    " - ",
+                                    &*self.sources.description[pos],
+                                ]
+                                .concat(),
+                            )
+                        })
                     {
                         self.sources.display[pos] = name;
                     } else {
