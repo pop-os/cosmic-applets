@@ -16,7 +16,7 @@ use cosmic::{
         Alignment, Length, Subscription,
         advanced::text::{Ellipsize, EllipsizeHeightLimit},
         platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
-        widget::{self, column, row},
+        widget::{self, column, rich_text, row},
         window,
     },
     surface, theme,
@@ -26,7 +26,7 @@ use cosmic::{
 use cosmic::iced::futures::executor::block_on;
 
 use cosmic_notifications_config::NotificationsConfig;
-use cosmic_notifications_util::{ActionId, Image, Notification};
+use cosmic_notifications_util::{ActionId, Image, Notification, markup};
 use std::{borrow::Cow, collections::HashMap, path::PathBuf, sync::LazyLock};
 use subscriptions::notifications::{self, NotificationsAppletProxy};
 use tokio::sync::mpsc::Sender;
@@ -456,8 +456,11 @@ impl cosmic::Application for Notifications {
                                     column![
                                         text::body(n.summary.lines().next().unwrap_or_default())
                                             .width(Length::Fill),
-                                        text::caption(n.body.lines().next().unwrap_or_default())
-                                            .width(Length::Fill)
+                                        Element::from(
+                                            rich_text(markup::html_to_spans(&n.body))
+                                                .size(12.0)
+                                                .width(Length::Fill)
+                                        )
                                     ]
                                 )
                                 .width(Length::Fill),
