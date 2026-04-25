@@ -26,16 +26,13 @@ tracing-log.workspace = true
 tracing-subscriber.workspace = true
 tracing.workspace = true
 zbus.workspace = true
-nm-secret-agent-manager = { git = "https://github.com/pop-os/dbus-settings-bindings/" }
 indexmap = "2.13.0"
 secure-string = "0.3.0"
 uuid = { version = "1.21.0", features = ["v4"] }
+nmrs = "3.0"
+
 
 
 [dependencies.cosmic-settings-network-manager-subscription]
 git = "https://github.com/pop-os/cosmic-settings/"
 # path = "../../cosmic-settings/subscriptions/network-manager"
-
-[dependencies.cosmic-settings-airplane-mode-subscription]
-git = "https://github.com/pop-os/cosmic-settings/"
-# path = "../../cosmic-settings/subscriptions/airplane-mode"
