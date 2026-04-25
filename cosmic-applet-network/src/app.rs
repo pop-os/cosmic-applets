@@ -1,21 +1,21 @@
 use anyhow::Context;
-use cosmic_dbus_networkmanager::settings::{NetworkManagerSettings, connection::Settings};
 use cosmic_settings_network_manager_subscription::{
     self as network_manager, NetworkManagerState, UUID,
-    active_conns::active_conns_subscription,
     available_wifi::{AccessPoint, NetworkType},
     current_networks::ActiveConnectionInfo,
     hw_address::HwAddress,
-    nm_secret_agent::{self, PasswordFlag, SecretSender},
 };
 use indexmap::IndexMap;
+use nmrs::{
+    NetworkManager as NmrsManager, SettingsSummary,
+    agent::{SecretAgent, SecretAgentCapabilities, SecretRequest, SecretResponder, SecretSetting},
+};
 use rustc_hash::FxHashSet;
 use secure_string::SecureString;
 use std::{
     borrow::Cow,
-    collections::{BTreeMap, BTreeSet},
+    collections::{BTreeMap, HashMap},
     sync::{Arc, LazyLock},
-    time::Duration,
 };
 
 use cosmic::{
@@ -33,18 +33,17 @@ use cosmic::{
     },
     surface, theme,
     widget::{
-        Column, Id, Row, button, column, container, divider,
+        Id, button, column, container, divider,
         icon::{self, from_name},
         row, scrollable, secure_input, text, text_input, toggler,
     },
 };
-use cosmic_dbus_networkmanager::interface::{
-    access_point,
-    enums::{ActiveConnectionState, DeviceState, NmConnectivityState, NmState},
+use cosmic_dbus_networkmanager::interface::enums::{
+    ActiveConnectionState, DeviceState, NmConnectivityState,
 };
 
-use futures::{StreamExt, channel::mpsc::TrySendError};
-use zbus::{Connection, zvariant::ObjectPath};
+use futures::{StreamExt, lock::Mutex as AsyncMutex};
+use zbus::Connection;
 
 use crate::{config, fl};
 
@@ -74,14 +73,6 @@ impl NewConnectionState {
         }
         .ssid
     }
-    pub fn hw_address(&self) -> HwAddress {
-        match self {
-            Self::EnterPassword { access_point, .. } => access_point,
-            Self::Waiting(ap) => ap,
-            Self::Failure(ap) => ap,
-        }
-        .hw_address
-    }
 }
 
 impl From<NewConnectionState> for AccessPoint {
@@ -101,51 +92,53 @@ pub struct MyNetworkState {
     pub known_vpns: IndexMap<UUID, ConnectionSettings>,
     pub ssid_to_uuid: BTreeMap<Box<str>, Box<str>>,
     pub devices: Vec<Arc<network_manager::devices::DeviceInfo>>,
-    pub password: Option<Password>,
-    pub connecting: BTreeSet<network_manager::SSID>,
     pub nm_state: NetworkManagerState,
     pub requested_vpn: Option<RequestedVpn>,
 }
 
+/// Shared, take-once handle to an `nmrs` [`SecretResponder`]. Cloned freely
+/// across `Message` boundaries; the first consumer to `lock().take()` it owns
+/// the reply to NetworkManager.
+pub type SecretResponderHandle = Arc<AsyncMutex<Option<SecretResponder>>>;
+
 #[derive(Debug, Clone)]
 pub struct RequestedVpn {
-    name: String,
     uuid: Arc<str>,
     description: Option<String>,
     password: SecureString,
     password_hidden: bool,
-    tx: SecretSender,
+    responder: SecretResponderHandle,
+    /// VPN secret keys NM hinted as needed (e.g. `["password"]`). When empty,
+    /// `"password"` is used as a fallback.
+    secret_keys: Vec<String>,
 }
 
 #[derive(Clone, Debug)]
 pub enum ConnectionSettings {
-    Vpn(VpnConnectionSettings),
+    Vpn { id: String },
     Wireguard { id: String },
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct VpnConnectionSettings {
-    id: String,
-    username: Option<String>,
-    connection_type: Option<ConnectionType>,
-    password_flag: Option<PasswordFlag>,
+/// Local mirror of the secret-agent events the applet cares about. Sourced
+/// from `nmrs::agent` instead of the previous `nm_secret_agent` subscription.
+#[derive(Debug, Clone)]
+pub enum NmAgentEvent {
+    RequestSecret {
+        connection_uuid: String,
+        connection_id: String,
+        setting: AgentSetting,
+        responder: SecretResponderHandle,
+    },
+    CancelGetSecrets,
+    Failed(String),
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-enum ConnectionType {
-    Password,
-}
-
-impl VpnConnectionSettings {
-    fn password_flag(&self) -> Option<PasswordFlag> {
-        self.connection_type
-            .as_ref()
-            .is_some_and(|ct| match ct {
-                ConnectionType::Password => true,
-            })
-            .then_some(self.password_flag)
-            .flatten()
-    }
+#[derive(Debug, Clone)]
+pub enum AgentSetting {
+    WifiPsk { ssid: String },
+    WifiEap,
+    Vpn { secret_keys: Vec<String> },
+    Other,
 }
 
 #[derive(Default)]
@@ -157,7 +150,6 @@ struct CosmicNetworkApplet {
     // NM state
     nm_sender: Option<futures::channel::mpsc::UnboundedSender<network_manager::Request>>,
     nm_task: Option<tokio::sync::oneshot::Sender<()>>,
-    secret_tx: Option<tokio::sync::mpsc::Sender<nm_secret_agent::Request>>,
     nm_state: MyNetworkState,
 
     // UI state
@@ -264,8 +256,9 @@ fn vpn_section<'a>(
         if show_available_vpns {
             for (uuid, connection) in &nm_state.known_vpns {
                 let id = match connection {
-                    ConnectionSettings::Vpn(connection) => connection.id.as_str(),
-                    ConnectionSettings::Wireguard { id } => id.as_str(),
+                    ConnectionSettings::Vpn { id } | ConnectionSettings::Wireguard { id } => {
+                        id.as_str()
+                    }
                 };
                 // Check if this VPN is currently active
                 let is_active = nm_state.nm_state.active_conns.iter().any(
@@ -366,15 +359,12 @@ impl CosmicNetworkApplet {
     }
 
     fn update_togglers(&mut self, state: &NetworkManagerState) {
-        let mut changed = false;
         if self.nm_state.nm_state.wifi_enabled != state.wifi_enabled {
             self.nm_state.nm_state.wifi_enabled = state.wifi_enabled;
-            changed = true;
         }
 
         if self.nm_state.nm_state.airplane_mode != state.airplane_mode {
             self.nm_state.nm_state.airplane_mode = state.airplane_mode;
-            changed = true;
         }
     }
 
@@ -397,53 +387,88 @@ impl CosmicNetworkApplet {
     }
 
     fn connect_vpn(&mut self, uuid: Arc<str>) -> Task<cosmic::Action<Message>> {
-        if let Some((tx, conn)) = self.nm_sender.clone().zip(self.conn.clone()) {
-            cosmic::task::future(async move {
-                // Find the connection by UUID
-                if let Ok(nm_settings) = NetworkManagerSettings::new(&conn).await {
-                    if let Ok(connections) = nm_settings.list_connections().await {
-                        for connection in connections {
-                            if let Ok(settings) = connection.get_settings().await {
-                                let settings = Settings::new(settings);
-                                if let Some(conn_settings) = &settings.connection {
-                                    if conn_settings.uuid.as_ref().is_some_and(|conn_uuid| {
-                                        conn_uuid.as_str() == uuid.as_ref()
-                                    }) {
-                                        let path = connection.inner().path().clone().to_owned();
-                                        if let Err(err) =
-                                            tx.unbounded_send(network_manager::Request::Activate(
-                                                ObjectPath::try_from("/").unwrap(),
-                                                path,
-                                            ))
-                                        {
-                                            if err.is_disconnected() {
-                                                return zbus::Connection::system()
-                                                    .await
-                                                    .context(
-                                                        "failed to create system dbus connection",
-                                                    )
-                                                    .map_or_else(
-                                                        |why| Message::Error(why.to_string()),
-                                                        Message::NetworkManagerConnect,
-                                                    );
-                                            }
-
-                                            tracing::error!("{err:?}");
-                                        }
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                Message::Refresh
-            })
-        } else {
-            tracing::warn!("No sender available to activate VPN.");
-            Task::none()
-        }
+        cosmic::task::future(async move {
+            match NmrsManager::new().await {
+                Ok(nm) => match nm.connect_vpn_by_uuid(&uuid).await {
+                    Ok(()) => Message::Refresh,
+                    Err(e) => Message::Error(format!("activate VPN {uuid}: {e}")),
+                },
+                Err(e) => Message::Error(format!("nmrs init: {e}")),
+            }
+        })
     }
+}
+
+/// Registers an `nmrs` secret agent on the system bus and yields its
+/// requests + cancellations as [`NmAgentEvent`] for the applet to handle.
+fn secret_agent_task(identifier: String) -> Task<NmAgentEvent> {
+    cosmic::Task::stream(async_fn_stream::fn_stream(move |emitter| async move {
+        let registration = SecretAgent::builder()
+            .with_identifier(identifier)
+            .with_capabilities(SecretAgentCapabilities::VPN_HINTS)
+            .register()
+            .await;
+
+        let (mut handle, mut requests) = match registration {
+            Ok(pair) => pair,
+            Err(e) => {
+                let _ = emitter.emit(NmAgentEvent::Failed(e.to_string())).await;
+                return;
+            }
+        };
+
+        loop {
+            tokio::select! {
+                req = requests.next() => match req {
+                    Some(req) => {
+                        let event = secret_request_to_event(req);
+                        let _ = emitter.emit(event).await;
+                    }
+                    None => break,
+                },
+                cancel = handle.cancellations().next() => match cancel {
+                    Some(_reason) => {
+                        let _ = emitter.emit(NmAgentEvent::CancelGetSecrets).await;
+                    }
+                    None => break,
+                },
+            }
+        }
+
+        if let Err(e) = handle.unregister().await {
+            tracing::warn!("failed to unregister secret agent: {e}");
+        }
+    }))
+}
+
+fn secret_request_to_event(req: SecretRequest) -> NmAgentEvent {
+    let setting = match req.setting {
+        SecretSetting::WifiPsk { ssid } => AgentSetting::WifiPsk { ssid },
+        SecretSetting::WifiEap { .. } => AgentSetting::WifiEap,
+        SecretSetting::Vpn { .. } => AgentSetting::Vpn {
+            secret_keys: req.hints.clone(),
+        },
+        _ => AgentSetting::Other,
+    };
+
+    NmAgentEvent::RequestSecret {
+        connection_uuid: req.connection_uuid,
+        connection_id: req.connection_id,
+        setting,
+        responder: Arc::new(AsyncMutex::new(Some(req.responder))),
+    }
+}
+
+/// Reply with [`NoSecrets`](nmrs::agent::SecretResponder::no_secrets) to free
+/// NetworkManager when the applet decides not to use the responder. Dropping
+/// it would also auto-reply, but doing it explicitly keeps the log clean.
+fn release_responder(responder: SecretResponderHandle) -> Task<cosmic::Action<Message>> {
+    cosmic::task::future(async move {
+        if let Some(r) = responder.lock().await.take() {
+            let _ = r.no_secrets().await;
+        }
+        Message::NoOp
+    })
 }
 
 #[derive(Debug, Clone)]
@@ -460,12 +485,13 @@ pub(crate) enum Message {
     TogglePasswordVisibility,
     FocusSecureInput,
     NoOp,
+    #[allow(dead_code)] // required by `cosmic::applet` surface path; not always emitted
     Surface(surface::Action),
     ActivateVpn(Arc<str>),   // UUID of VPN to activate
     DeactivateVpn(Arc<str>), // UUID of VPN to deactivate
     ToggleVpnList,           // Show/hide available VPNs
     /// An update from the secret agent
-    SecretAgent(network_manager::nm_secret_agent::Event),
+    SecretAgent(NmAgentEvent),
     /// Connect to a WiFi network access point.
     Connect(network_manager::SSID, HwAddress),
     /// Connect with a password
@@ -499,16 +525,6 @@ pub(crate) enum Message {
     CancelVPNConnection,
     /// Selects a device to display connections from
     SelectDevice(Option<Arc<network_manager::devices::DeviceInfo>>),
-}
-
-#[derive(Debug, Clone)]
-struct Password {
-    ssid: network_manager::SSID,
-    hw_address: HwAddress,
-    identity: Option<String>,
-    password: SecureString,
-    password_hidden: bool,
-    tx: SecretSender,
 }
 
 fn connection_settings(conn: zbus::Connection) -> Task<Message> {
@@ -634,109 +650,30 @@ impl CosmicNetworkApplet {
     }
 }
 
-fn load_vpns(conn: zbus::Connection) -> Task<crate::app::Message> {
-    let settings = async move {
-        let settings = network_manager::dbus::settings::NetworkManagerSettings::new(&conn).await?;
-
-        _ = settings.load_connections(&[]).await;
-
-        let settings = settings
-            // Get a list of known connections.
-            .list_connections()
-            .await?
-            // Prepare for wrapping in a concurrent stream.
-            .into_iter()
-            .map(|conn| async move { conn })
-            // Create a concurrent stream for each connection.
-            .apply(futures::stream::FuturesOrdered::from_iter)
-            // Concurrently fetch settings for each connection, and filter for VPN.
-            .filter_map(|conn| async move {
-                let settings = conn.get_settings().await.ok()?;
-
-                let connection = settings.get("connection")?;
-
-                match connection
-                    .get("type")?
-                    .downcast_ref::<String>()
-                    .ok()?
-                    .as_str()
-                {
-                    "vpn" => (),
-
-                    "wireguard" => {
-                        let id = connection.get("id")?.downcast_ref::<String>().ok()?;
-                        let uuid = connection.get("uuid")?.downcast_ref::<String>().ok()?;
-                        return Some((Arc::from(uuid), ConnectionSettings::Wireguard { id }));
-                    }
-
-                    _ => return None,
-                }
-
-                let vpn = settings.get("vpn")?;
-                let id = connection.get("id")?.downcast_ref::<String>().ok()?;
-                let uuid = connection.get("uuid")?.downcast_ref::<String>().ok()?;
-
-                let (connection_type, username, password_flag) = vpn
-                    .get("data")
-                    .and_then(|data| data.downcast_ref::<zbus::zvariant::Dict>().ok())
-                    .map(|dict| {
-                        let (mut connection_type, mut password_flag) = (None, None);
-                        let mut username = vpn
-                            .get("user-name")
-                            .and_then(|u| u.downcast_ref::<String>().ok());
-                        if dict
-                            .get::<String, String>(&String::from("connection-type"))
-                            .ok()
-                            .flatten()
-                            .as_deref()
-                            // may be "password" or "password-tls"
-                            .is_some_and(|p| p.starts_with("password"))
-                        {
-                            connection_type = Some(ConnectionType::Password);
-                            username = Some(username.unwrap_or_default());
-
-                            password_flag = dict
-                                .get::<String, String>(&String::from("password-flags"))
-                                .ok()
-                                .flatten()
-                                .and_then(|value| match value.as_str() {
-                                    "0" => Some(PasswordFlag::None),
-                                    "1" => Some(PasswordFlag::AgentOwned),
-                                    "2" => Some(PasswordFlag::NotSaved),
-                                    "4" => Some(PasswordFlag::NotRequired),
-                                    _ => None,
-                                });
-                        }
-
-                        (connection_type, username, password_flag)
-                    })
-                    .unwrap_or_default();
-
-                Some((
-                    Arc::from(uuid),
-                    ConnectionSettings::Vpn(VpnConnectionSettings {
-                        id,
-                        connection_type,
-                        password_flag,
-                        username,
-                    }),
-                ))
-            })
-            // Reduce the settings list into
-            .fold(IndexMap::new(), |mut set, (uuid, data)| async move {
-                set.insert(uuid, data);
-                set
-            })
-            .await;
-
-        Ok::<_, zbus::Error>(settings)
-    };
-
+fn load_vpns(_conn: zbus::Connection) -> Task<crate::app::Message> {
     cosmic::task::future(async move {
-        settings.await.map_or_else(
-            |why| Message::Error(why.to_string()),
-            Message::KnownConnections,
-        )
+        let nm = match NmrsManager::new().await {
+            Ok(nm) => nm,
+            Err(e) => return Message::Error(format!("nmrs init: {e}")),
+        };
+
+        let saved = match nm.list_saved_connections().await {
+            Ok(saved) => saved,
+            Err(e) => return Message::Error(format!("list saved connections: {e}")),
+        };
+
+        let mut map: IndexMap<UUID, ConnectionSettings> = IndexMap::new();
+        for c in saved {
+            let uuid: UUID = Arc::from(c.uuid.as_str());
+            let entry = match c.summary {
+                SettingsSummary::WireGuard { .. } => ConnectionSettings::Wireguard { id: c.id },
+                SettingsSummary::Vpn { .. } => ConnectionSettings::Vpn { id: c.id },
+                _ => continue,
+            };
+            map.insert(uuid, entry);
+        }
+
+        Message::KnownConnections(map)
     })
 }
 
@@ -759,7 +696,7 @@ impl cosmic::Application for CosmicNetworkApplet {
     const APP_ID: &'static str = config::APP_ID;
 
     fn init(core: cosmic::app::Core, _flags: ()) -> (Self, app::Task<Message>) {
-        let mut applet = Self {
+        let applet = Self {
             core,
             icon_name: "network-wired-disconnected-symbolic".to_string(),
             token_tx: None,
@@ -789,19 +726,11 @@ impl cosmic::Application for CosmicNetworkApplet {
                         tasks.push(update_state(conn.clone()));
                         tasks.push(update_devices(conn.clone()));
                         tasks.push(load_vpns(conn));
-                        let (tx, rx) = tokio::sync::mpsc::channel(4);
-                        self.secret_tx = Some(tx);
                         let my_id = format!(
                             "com.system76.CosmicSettings.Applet.{}.NetworkManager.SecretAgent",
                             uuid::Uuid::new_v4()
                         );
-                        tasks.push(
-                            cosmic::Task::stream(nm_secret_agent::secret_agent_stream(
-                                my_id.clone(),
-                                rx,
-                            ))
-                            .map(Message::SecretAgent),
-                        );
+                        tasks.push(secret_agent_task(my_id).map(Message::SecretAgent));
                     }
                     // TODO request update of state maybe
                     let new_id = window::Id::unique();
@@ -823,17 +752,20 @@ impl cosmic::Application for CosmicNetworkApplet {
             }
             Message::ToggleAirplaneMode(enabled) => {
                 self.toggle_wifi_ctr += 1;
-                if let Some(tx) = self.nm_sender.as_mut() {
-                    if let Err(err) =
-                        tx.unbounded_send(network_manager::Request::SetAirplaneMode(enabled))
-                    {
-                        if err.is_disconnected() {
-                            return system_conn().map(cosmic::Action::App);
-                        }
-
-                        tracing::error!("{err:?}");
+                self.nm_state.nm_state.airplane_mode = enabled;
+                return cosmic::task::future(async move {
+                    match NmrsManager::new().await {
+                        Ok(nm) => match nm.set_airplane_mode(enabled).await {
+                            Ok(()) => Message::Refresh,
+                            Err(e) => {
+                                tracing::warn!("set_airplane_mode partial failure: {e}");
+                                Message::Refresh
+                            }
+                        },
+                        Err(e) => Message::Error(format!("nmrs init: {e}")),
                     }
-                }
+                })
+                .map(cosmic::Action::App);
             }
             Message::SelectWirelessAccessPoint(access_point) => {
                 let Some(tx) = self.nm_sender.as_ref() else {
@@ -845,7 +777,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                         tx.unbounded_send(network_manager::Request::SelectAccessPoint(
                             access_point.ssid.clone(),
                             access_point.network_type,
-                            self.secret_tx.clone(),
+                            None,
                             self.active_device.as_ref().map(|d| d.interface.clone()),
                         ))
                     {
@@ -862,21 +794,19 @@ impl cosmic::Application for CosmicNetworkApplet {
                         .nm_state
                         .known_access_points
                         .contains(&access_point)
-                    {
-                        if let Err(err) =
+                        && let Err(err) =
                             tx.unbounded_send(network_manager::Request::SelectAccessPoint(
                                 access_point.ssid.clone(),
                                 access_point.network_type,
-                                self.secret_tx.clone(),
+                                None,
                                 self.active_device.as_ref().map(|d| d.interface.clone()),
                             ))
-                        {
-                            if err.is_disconnected() {
-                                return system_conn().map(cosmic::Action::App);
-                            }
-
-                            tracing::error!("{err:?}");
+                    {
+                        if err.is_disconnected() {
+                            return system_conn().map(cosmic::Action::App);
                         }
+
+                        tracing::error!("{err:?}");
                     }
                     self.new_connection = Some(NewConnectionState::EnterPassword {
                         access_point,
@@ -915,7 +845,6 @@ impl cosmic::Application for CosmicNetworkApplet {
                         _ = cancel.send(());
                     }
 
-                    self.secret_tx = None;
                     return system_conn().map(cosmic::Action::App);
                 }
             }
@@ -981,19 +910,23 @@ impl cosmic::Application for CosmicNetworkApplet {
                     tracing::warn!("Failed to find known access point with ssid: {}", ssid);
                     return Task::none();
                 };
-                if let Some(tx) = self.nm_sender.as_ref() {
-                    if let Err(err) =
-                        tx.unbounded_send(network_manager::Request::Forget(ssid.into()))
-                    {
-                        if err.is_disconnected() {
-                            return system_conn().map(cosmic::Action::App);
-                        }
-
-                        tracing::error!("{err:?}");
+                self.show_visible_networks = true;
+                let ssid_for_task = ssid.clone();
+                let forget_task = cosmic::task::future(async move {
+                    match NmrsManager::new().await {
+                        Ok(nm) => match nm.forget(&ssid_for_task).await {
+                            Ok(()) => Message::Refresh,
+                            Err(e) => {
+                                tracing::warn!("forget {ssid_for_task} failed: {e}");
+                                Message::Refresh
+                            }
+                        },
+                        Err(e) => Message::Error(format!("nmrs init: {e}")),
                     }
-                    self.show_visible_networks = true;
-                    return self.update(Message::SelectWirelessAccessPoint(ap));
-                }
+                })
+                .map(cosmic::Action::App);
+                let reconnect_task = self.update(Message::SelectWirelessAccessPoint(ap));
+                return Task::batch(vec![forget_task, reconnect_task]);
             }
             Message::Surface(a) => {
                 return cosmic::task::message(cosmic::Action::Cosmic(
@@ -1003,17 +936,17 @@ impl cosmic::Application for CosmicNetworkApplet {
             Message::ActivateVpn(uuid) => {
                 return self.connect_vpn(uuid.clone());
             }
-            Message::DeactivateVpn(name) => {
-                if let Some(tx) = self.nm_sender.as_ref() {
-                    if let Err(err) = tx.unbounded_send(network_manager::Request::Deactivate(name))
-                    {
-                        if err.is_disconnected() {
-                            return system_conn().map(cosmic::Action::App);
-                        }
-
-                        tracing::error!("{err:?}");
+            Message::DeactivateVpn(uuid) => {
+                return cosmic::task::future(async move {
+                    match NmrsManager::new().await {
+                        Ok(nm) => match nm.disconnect_vpn_by_uuid(&uuid).await {
+                            Ok(()) => Message::Refresh,
+                            Err(e) => Message::Error(format!("disconnect VPN {uuid}: {e}")),
+                        },
+                        Err(e) => Message::Error(format!("nmrs init: {e}")),
                     }
-                }
+                })
+                .map(cosmic::Action::App);
             }
             Message::ToggleVpnList => {
                 self.show_available_vpns = !self.show_available_vpns;
@@ -1038,7 +971,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                 if let Err(err) = tx.unbounded_send(network_manager::Request::SelectAccessPoint(
                     ssid,
                     network_type,
-                    self.secret_tx.clone(),
+                    None,
                     self.active_device.as_ref().map(|d| d.interface.clone()),
                 )) {
                     if err.is_disconnected() {
@@ -1067,7 +1000,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                         ssid: access_point.ssid.to_string(),
                         identity: is_enterprise.then(|| identity.clone()),
                         password,
-                        secret_tx: self.secret_tx.clone(),
+                        secret_tx: None,
                         interface: self.active_device.as_ref().map(|d| d.interface.clone()),
                     }) {
                         if err.is_disconnected() {
@@ -1153,9 +1086,9 @@ impl cosmic::Application for CosmicNetworkApplet {
                 } => {
                     if let network_manager::Request::SelectAccessPoint(
                         ssid,
-                        hw_address,
+                        _hw_address,
                         _network_type,
-                        secret_tx,
+                        _secret_tx,
                     ) = &req
                     {
                         let conn_match = self
@@ -1167,15 +1100,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                             if let Some(ActiveConnectionInfo::WiFi { state, .. }) = state
                                 .active_conns
                                 .iter_mut()
-                                .find(|ap| {
-                                    let ap_hw_address = match ap {
-                                        ActiveConnectionInfo::Wired { hw_address, .. }
-                                        | ActiveConnectionInfo::WiFi { hw_address, .. } => {
-                                            HwAddress::from_str(&hw_address).unwrap()
-                                        }
-                                        ActiveConnectionInfo::Vpn { .. } => HwAddress::default(),
-                                    };
-                                    ap.name().as_str() == ssid.as_ref()})
+                                .find(|ap| ap.name().as_str() == ssid.as_ref())
                             {
                                 *state = ActiveConnectionState::Activated;
                             }
@@ -1192,8 +1117,8 @@ impl cosmic::Application for CosmicNetworkApplet {
                         ssid,
                         identity: _,
                         password: _,
-                        secret_tx,
-                        interface
+                        secret_tx: _,
+                        interface: _,
                     } = &req
                     {
                         if let Some(NewConnectionState::Waiting(access_point)) =
@@ -1207,14 +1132,13 @@ impl cosmic::Application for CosmicNetworkApplet {
                             } else {
                                 self.show_visible_networks = false;
                             }
-                        } else if let Some(NewConnectionState::EnterPassword {
-                            access_point, ..
-                        }) = self.new_connection.as_ref()
+                        } else if let Some(NewConnectionState::EnterPassword { access_point, .. }) =
+                            self.new_connection.as_ref()
+                            && success
+                            && ssid.as_str() == access_point.ssid.as_ref()
                         {
-                            if success && ssid.as_str() == access_point.ssid.as_ref() {
-                                self.new_connection = None;
-                                self.show_visible_networks = false;
-                            }
+                            self.new_connection = None;
+                            self.show_visible_networks = false;
                         }
                     } else if self
                     .new_connection
@@ -1246,9 +1170,9 @@ impl cosmic::Application for CosmicNetworkApplet {
                     }
                 }
                 cosmic_settings_network_manager_subscription::Event::WiFiCredentials {
-                    ssid,
-                    password,
-                    security_type,
+                    ssid: _,
+                    password: _,
+                    security_type: _,
                 } => {}
             },
             Message::NetworkManagerConnect(connection) => {
@@ -1271,72 +1195,91 @@ impl cosmic::Application for CosmicNetworkApplet {
                 self.nm_state.devices = device_infos.into_iter().map(Arc::new).collect();
             }
             Message::WiFiEnable(enable) => {
-                if let Some(sender) = self.nm_sender.as_mut() {
-                    if let Err(err) =
-                        sender.unbounded_send(network_manager::Request::SetWiFi(enable))
-                    {
-                        if err.is_disconnected() {
-                            return system_conn().map(cosmic::Action::App);
-                        }
-
-                        tracing::error!("{err:?}");
+                self.nm_state.nm_state.wifi_enabled = enable;
+                return cosmic::task::future(async move {
+                    match NmrsManager::new().await {
+                        Ok(nm) => match nm.set_wireless_enabled(enable).await {
+                            Ok(()) => Message::Refresh,
+                            Err(e) => Message::Error(format!("set_wireless_enabled: {e}")),
+                        },
+                        Err(e) => Message::Error(format!("nmrs init: {e}")),
                     }
-                    if let Err(err) = sender.unbounded_send(network_manager::Request::Reload) {
-                        if err.is_disconnected() {
-                            return system_conn().map(cosmic::Action::App);
-                        }
-
-                        tracing::error!("{err:?}");
-                    }
-                }
+                })
+                .map(cosmic::Action::App);
             }
             Message::SecretAgent(agent_event) => match agent_event {
-                nm_secret_agent::Event::RequestSecret {
-                    uuid,
-                    name,
-                    description,
-                    previous,
-                    tx,
-                    ..
+                NmAgentEvent::RequestSecret {
+                    connection_uuid,
+                    connection_id,
+                    setting,
+                    responder,
                 } => {
+                    let description = (!connection_id.is_empty()).then_some(connection_id);
+                    let known_vpn = self
+                        .nm_state
+                        .known_vpns
+                        .contains_key(connection_uuid.as_str());
+
+                    let mut consumed = false;
+
                     if let Some(state) = self.new_connection.as_mut() {
                         match state {
                             NewConnectionState::EnterPassword { access_point, .. }
                             | NewConnectionState::Waiting(access_point)
                             | NewConnectionState::Failure(access_point) => {
-                                if self
+                                let matches_ssid = matches!(
+                                    &setting,
+                                    AgentSetting::WifiPsk { ssid }
+                                        if ssid == access_point.ssid.as_ref()
+                                );
+                                let matches_uuid = self
                                     .nm_state
                                     .ssid_to_uuid
                                     .get(access_point.ssid.as_ref())
-                                    .is_some_and(|ap_uuid| ap_uuid.as_ref() == uuid.as_str())
-                                {
+                                    .is_some_and(|ap_uuid| {
+                                        ap_uuid.as_ref() == connection_uuid.as_str()
+                                    });
+
+                                if matches_ssid || matches_uuid {
                                     *state = NewConnectionState::EnterPassword {
                                         access_point: access_point.clone(),
-                                        description,
+                                        description: description.clone(),
                                         identity: String::new(),
                                         password: String::new().into(),
                                         password_hidden: true,
-                                    }
+                                    };
                                 }
                             }
                         }
-                    } else if self.nm_state.known_vpns.contains_key(uuid.as_str()) {
+                    } else if known_vpn {
+                        let secret_keys = match &setting {
+                            AgentSetting::Vpn { secret_keys } => secret_keys.clone(),
+                            _ => Vec::new(),
+                        };
                         self.nm_state.requested_vpn = Some(RequestedVpn {
-                            name,
-                            uuid: uuid.into(),
+                            uuid: connection_uuid.into(),
                             description,
-                            password: previous,
+                            password: SecureString::from(String::new()),
                             password_hidden: true,
-                            tx,
+                            responder: responder.clone(),
+                            secret_keys,
                         });
+                        consumed = true;
+                    }
+
+                    // The applet's Wi-Fi flow re-issues the password through
+                    // `Authenticate` rather than the agent. Free NM with
+                    // `NoSecrets` so it doesn't sit on a stalled GetSecrets call.
+                    if !consumed {
+                        return release_responder(responder);
                     }
                 }
-                nm_secret_agent::Event::CancelGetSecrets { .. } => {
+                NmAgentEvent::CancelGetSecrets => {
                     self.new_connection = None;
                     self.nm_state.requested_vpn = None;
                 }
-                nm_secret_agent::Event::Failed(error) => {
-                    tracing::error!("Error from secret agent: {error:?}");
+                NmAgentEvent::Failed(error) => {
+                    tracing::error!("Error from secret agent: {error}");
                 }
             },
             Message::KnownConnections(index_map) => {
@@ -1358,12 +1301,30 @@ impl cosmic::Application for CosmicNetworkApplet {
                 }
             }
             Message::ConnectVPNWithPassword => {
-                if let Some(RequestedVpn { password, tx, .. }) = self.nm_state.requested_vpn.take()
+                if let Some(RequestedVpn {
+                    password,
+                    responder,
+                    secret_keys,
+                    ..
+                }) = self.nm_state.requested_vpn.take()
                 {
                     return Task::future(async move {
-                        let mut guard = tx.lock().await;
-                        if let Some(tx) = guard.take() {
-                            let _ = tx.send(password);
+                        let Some(responder) = responder.lock().await.take() else {
+                            return Message::Refresh;
+                        };
+
+                        let mut secrets: HashMap<String, String> = HashMap::new();
+                        let value = password.unsecure().to_owned();
+                        if secret_keys.is_empty() {
+                            secrets.insert("password".to_owned(), value);
+                        } else {
+                            for key in secret_keys {
+                                secrets.insert(key, value.clone());
+                            }
+                        }
+
+                        if let Err(e) = responder.vpn_secrets(secrets).await {
+                            tracing::error!("vpn secret reply failed: {e}");
                         }
                         Message::Refresh
                     })
@@ -1376,7 +1337,15 @@ impl cosmic::Application for CosmicNetworkApplet {
                 }
             }
             Message::CancelVPNConnection => {
-                self.nm_state.requested_vpn = None;
+                if let Some(req) = self.nm_state.requested_vpn.take() {
+                    return Task::future(async move {
+                        if let Some(responder) = req.responder.lock().await.take() {
+                            let _ = responder.cancel().await;
+                        }
+                        Message::NoOp
+                    })
+                    .map(cosmic::Action::App);
+                }
             }
         }
         Task::none()
@@ -1441,7 +1410,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                 }
                 ActiveConnectionInfo::Wired {
                     name,
-                    hw_address,
+                    hw_address: _,
                     speed,
                     ip_addresses,
                 } => {
@@ -1561,7 +1530,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                             .icon_size(16)
                             .on_press(Message::ResetFailedKnownSsid(
                                 name.clone(),
-                                HwAddress::from_str(&hw_address).unwrap(),
+                                HwAddress::from_str(hw_address).unwrap(),
                             ))
                             .into(),
                         );
@@ -1576,7 +1545,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                             )
                             .on_press(Message::Disconnect(
                                 Arc::from(name.as_str()),
-                                HwAddress::from_str(&hw_address).unwrap(),
+                                HwAddress::from_str(hw_address).unwrap(),
                             )),
                         )])
                         .align_x(Alignment::Center),
@@ -1733,14 +1702,13 @@ impl cosmic::Application for CosmicNetworkApplet {
         }
 
         for known in &self.nm_state.nm_state.known_access_points {
-            if let Some(active_device) = self.active_device.as_ref() {
-                if active_device
+            if let Some(active_device) = self.active_device.as_ref()
+                && active_device
                     .known_connections
                     .iter()
-                    .all(|c| &c.id != known.ssid.as_ref())
-                {
-                    continue;
-                }
+                    .all(|c| c.id != *known.ssid)
+            {
+                continue;
             }
             let mut btn_content = Vec::with_capacity(2);
             let ssid = text::body(known.ssid.as_ref()).width(Length::Fill);
@@ -1872,43 +1840,43 @@ impl cosmic::Application for CosmicNetworkApplet {
                     content = content.push(id);
 
                     let is_enterprise = matches!(access_point.network_type, NetworkType::EAP);
-                    let enter_password_col =
-                        cosmic::widget::column::with_capacity(4)
-                            .push_maybe(is_enterprise.then(|| text::body(fl!("identity"))))
-                            .push_maybe(is_enterprise.then(|| {
-                                text_input::text_input("", identity)
-                                    .on_input(|i| Message::IdentityUpdate(i))
-                            }))
-                            .push(text::body(fl!("enter-password")))
-                            .push_maybe(description.as_ref().map(|d| text::body(d.clone())))
-                            .push(
-                                text_input::secure_input(
-                                    "",
-                                    password.unsecure(),
-                                    Some(Message::TogglePasswordVisibility),
-                                    *password_hidden,
-                                )
-                                .id(SECURE_INPUT_WIFI.clone())
-                                .on_input(|s| Message::PasswordUpdate(SecureString::from(s)))
-                                .on_paste(|s| Message::PasswordUpdate(SecureString::from(s)))
-                                .on_submit(|_| Message::ConnectWithPassword),
+                    let enter_password_col = cosmic::widget::column::with_capacity(4)
+                        .push_maybe(is_enterprise.then(|| text::body(fl!("identity"))))
+                        .push_maybe(is_enterprise.then(|| {
+                            text_input::text_input("", identity).on_input(Message::IdentityUpdate)
+                        }))
+                        .push(text::body(fl!("enter-password")))
+                        .push_maybe(description.as_ref().map(|d| text::body(d.clone())))
+                        .push(
+                            text_input::secure_input(
+                                "",
+                                password.unsecure(),
+                                Some(Message::TogglePasswordVisibility),
+                                *password_hidden,
                             )
-                            .push_maybe(access_point.wps_push.then(|| {
+                            .id(SECURE_INPUT_WIFI.clone())
+                            .on_input(|s| Message::PasswordUpdate(SecureString::from(s)))
+                            .on_paste(|s| Message::PasswordUpdate(SecureString::from(s)))
+                            .on_submit(|_| Message::ConnectWithPassword),
+                        )
+                        .push_maybe(
+                            access_point.wps_push.then(|| {
                                 container(text::body(fl!("router-wps-button"))).padding(8)
-                            }))
-                            .push(
-                                row::with_children([
-                                    Element::from(
-                                        button::standard(fl!("cancel"))
-                                            .on_press(Message::CancelNewConnection),
-                                    ),
-                                    Element::from(
-                                        button::suggested(fl!("connect"))
-                                            .on_press(Message::ConnectWithPassword),
-                                    ),
-                                ])
-                                .spacing(24),
-                            );
+                            }),
+                        )
+                        .push(
+                            row::with_children([
+                                Element::from(
+                                    button::standard(fl!("cancel"))
+                                        .on_press(Message::CancelNewConnection),
+                                ),
+                                Element::from(
+                                    button::suggested(fl!("connect"))
+                                        .on_press(Message::ConnectWithPassword),
+                                ),
+                            ])
+                            .spacing(24),
+                        );
                     let col =
                         padded_control(enter_password_col.spacing(8).align_x(Alignment::Center))
                             .align_x(Alignment::Center);
@@ -1987,7 +1955,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                 .filter(|ap| {
                     let among_active = self.nm_state.nm_state.active_conns.iter().any(|a| {
                         let hw_address = active_conn_hw_address(a);
-                        ap.ssid.as_ref() == &a.name() && ap.hw_address == hw_address
+                        ap.ssid.as_ref() == a.name() && ap.hw_address == hw_address
                     });
                     let among_known =
                         self.nm_state
