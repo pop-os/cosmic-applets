@@ -1,0 +1,12 @@
+confirm-pin = Потврдите да се овај ПИН подудара са оним приказаним на { $deviceName }
+bluetooth = Блутут
+unsuccessful = Неуспешно упаривање
+pairable = Упарив
+try-again = Покушај поново
+check-device = Постарајте се да је { $deviceName } укључен, у домету и спреман за упаривање.
+other-devices = Други блутут уређаји
+cancel = Откажи
+connected = Повезано
+confirm = Потврди
+settings = Подешавања блутута...
+discoverable = Откривљив

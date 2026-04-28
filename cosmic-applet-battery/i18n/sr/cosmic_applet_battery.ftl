@@ -1,0 +1,11 @@
+power-settings = Подешавања напајања и батерије...
+hours = ч
+until-empty = до празне
+battery-desc = Смањена делотворност и употреба струје.
+balanced = Уравнотежено
+battery = Батерија
+seconds = с
+performance = Најбрже
+performance-desc = Висока делотворност и употреба струје.
+minutes = м
+balanced-desc = Уобичајена делотворност и употреба батерије.
