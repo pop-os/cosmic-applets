@@ -287,6 +287,7 @@ impl Window {
                         .unwrap()
                         .format(&datetime)
                         .to_string()
+                        .replace(",", "")
                 }
             } else {
                 let mut fs = fieldsets::T::medium();
