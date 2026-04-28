@@ -1,0 +1,11 @@
+power = Напајање
+lock-screen = Закључај екран
+shutdown = Угаси
+log-out = Одјава
+restart = Поново покрени
+log-out-shortcut = Супер + Шифт + Есц
+cancel = Откажи
+suspend = Обустави
+confirm = Потврди
+settings = Подешавања...
+lock-screen-shortcut = Супер + Есц
