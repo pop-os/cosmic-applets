@@ -133,20 +133,26 @@ impl cosmic::Application for CosmicA11yApplet {
             }
             Message::TogglePopup => {
                 if let Some(p) = self.popup.take() {
-                    return destroy_popup(p);
+                    return cosmic::surface::surface_task(cosmic::surface::action::destroy_popup(
+                        p,
+                    ));
                 } else {
-                    let new_id = window::Id::unique();
-                    self.popup.replace(new_id);
+                    return cosmic::surface::surface_task(cosmic::surface::action::app_popup(
+                        |app: &mut CosmicA11yApplet| {
+                            let new_id = window::Id::unique();
+                            app.popup.replace(new_id);
 
-                    let popup_settings = self.core.applet.get_popup_settings(
-                        self.core.main_window_id().unwrap(),
-                        new_id,
-                        Some((1, 1)),
+                            let popup_settings = app.core.applet.get_popup_settings(
+                                app.core.main_window_id().unwrap(),
+                                new_id,
+                                Some((1, 1)),
+                                None,
+                                None,
+                            );
+                            popup_settings
+                        },
                         None,
-                        None,
-                    );
-
-                    return get_popup(popup_settings);
+                    ));
                 }
             }
             Message::CloseRequested(id) => {

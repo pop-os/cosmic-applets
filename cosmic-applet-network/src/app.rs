@@ -741,22 +741,29 @@ impl cosmic::Application for CosmicNetworkApplet {
                         );
                         tasks.push(secret_agent_task(my_id).map(Message::SecretAgent));
                     }
-                    // TODO request update of state maybe
-                    let new_id = window::Id::unique();
-                    self.popup.replace(new_id);
 
-                    let popup_settings = self.core.applet.get_popup_settings(
-                        self.core.main_window_id().unwrap(),
-                        new_id,
-                        None,
-                        None,
-                        None,
-                    );
+                    tasks.push(system_conn().map(cosmic::Action::App));
 
-                    tasks.push(system_conn());
-                    tasks.push(get_popup(popup_settings));
+                    tasks.push(cosmic::surface::surface_task(
+                        cosmic::surface::action::app_popup(
+                            |app: &mut Self| {
+                                let new_id = window::Id::unique();
+                                app.popup.replace(new_id);
 
-                    return Task::batch(tasks).map(cosmic::Action::App);
+                                let popup_settings = app.core.applet.get_popup_settings(
+                                    app.core.main_window_id().unwrap(),
+                                    new_id,
+                                    None,
+                                    None,
+                                    None,
+                                );
+                                popup_settings
+                            },
+                            None,
+                        ),
+                    ));
+
+                    return Task::batch(tasks);
                 }
             }
             Message::ToggleAirplaneMode(enabled) => {

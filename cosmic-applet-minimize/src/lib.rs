@@ -248,40 +248,47 @@ impl cosmic::Application for Minimize {
             }
             Message::OpenOverflowPopup => {
                 if let Some(id) = self.overflow_popup.take() {
-                    return destroy_popup(id);
+                    return cosmic::surface::surface_task(cosmic::surface::action::destroy_popup(
+                        id,
+                    ));
                 } else {
-                    let new_id = window::Id::unique();
-                    let pos = self.max_icon_count().unwrap_or_default();
+                    return cosmic::surface::surface_task(cosmic::surface::action::app_popup(
+                        |app: &mut Self| {
+                            let new_id = window::Id::unique();
+                            let pos = app.max_icon_count().unwrap_or_default();
 
-                    self.overflow_popup = Some(new_id);
-                    let icon_size = self.core.applet.suggested_size(true).0 as u32
-                        + 2 * self.core.applet.suggested_padding(true).1 as u32;
-                    let spacing = self.core.system_theme().cosmic().space_xxs() as u32;
-                    let major_axis_len = (icon_size + spacing) * (pos.saturating_sub(1) as u32);
-                    let rectangle = match self.core.applet.anchor {
-                        PanelAnchor::Top | PanelAnchor::Bottom => iced::Rectangle {
-                            x: major_axis_len as i32,
-                            y: 0,
-                            width: icon_size as i32,
-                            height: icon_size as i32,
+                            app.overflow_popup = Some(new_id);
+                            let icon_size = app.core.applet.suggested_size(true).0 as u32
+                                + 2 * app.core.applet.suggested_padding(true).1 as u32;
+                            let spacing = app.core.system_theme().cosmic().space_xxs() as u32;
+                            let major_axis_len =
+                                (icon_size + spacing) * (pos.saturating_sub(1) as u32);
+                            let rectangle = match app.core.applet.anchor {
+                                PanelAnchor::Top | PanelAnchor::Bottom => iced::Rectangle {
+                                    x: major_axis_len as i32,
+                                    y: 0,
+                                    width: icon_size as i32,
+                                    height: icon_size as i32,
+                                },
+                                PanelAnchor::Left | PanelAnchor::Right => iced::Rectangle {
+                                    x: 0,
+                                    y: major_axis_len as i32,
+                                    width: icon_size as i32,
+                                    height: icon_size as i32,
+                                },
+                            };
+                            let mut popup_settings = app.core.applet.get_popup_settings(
+                                app.core.main_window_id().unwrap(),
+                                new_id,
+                                None,
+                                None,
+                                None,
+                            );
+                            popup_settings.positioner.anchor_rect = rectangle;
+                            popup_settings
                         },
-                        PanelAnchor::Left | PanelAnchor::Right => iced::Rectangle {
-                            x: 0,
-                            y: major_axis_len as i32,
-                            width: icon_size as i32,
-                            height: icon_size as i32,
-                        },
-                    };
-                    let mut popup_settings = self.core.applet.get_popup_settings(
-                        self.core.main_window_id().unwrap(),
-                        new_id,
                         None,
-                        None,
-                        None,
-                    );
-                    popup_settings.positioner.anchor_rect = rectangle;
-
-                    return get_popup(popup_settings);
+                    ));
                 }
             }
             Message::CloseOverflowPopup => todo!(),

@@ -365,23 +365,30 @@ impl cosmic::Application for CosmicBatteryApplet {
                         let _ = tx.send(KeyboardBacklightRequest::Get);
                     }
 
-                    let new_id = window::Id::unique();
-                    self.popup.replace(new_id);
-
-                    let popup_settings = self.core.applet.get_popup_settings(
-                        self.core.main_window_id().unwrap(),
-                        new_id,
-                        Some((1, 1)),
-                        None,
-                        None,
-                    );
                     if let Some(tx) = self.power_profile_sender.as_ref() {
                         let _ = tx.send(PowerProfileRequest::Get);
                     }
                     if let Some(tx) = self.update_trigger.as_ref() {
                         let _ = tx.send(());
                     }
-                    let mut tasks = vec![get_popup(popup_settings)];
+                    let mut tasks = vec![cosmic::surface::surface_task(
+                        cosmic::surface::action::app_popup(
+                            |app: &mut Self| {
+                                let new_id = window::Id::unique();
+                                app.popup.replace(new_id);
+
+                                let popup_settings = app.core.applet.get_popup_settings(
+                                    app.core.main_window_id().unwrap(),
+                                    new_id,
+                                    Some((1, 1)),
+                                    None,
+                                    None,
+                                );
+                                popup_settings
+                            },
+                            None,
+                        ),
+                    )];
                     if let Some(tx) = &self.settings_daemon_sender {
                         let _ = tx.send(settings_daemon::Request::GetDisplayBrightness);
                         let _ = tx.send(settings_daemon::Request::GetMaxDisplayBrightness);

@@ -142,19 +142,23 @@ impl cosmic::Application for Window {
         match message {
             Message::TogglePopup => {
                 return if let Some(p) = self.popup.take() {
-                    destroy_popup(p)
+                    return crate::surface::surface_task(crate::surface::action::destroy_popup(p));
                 } else {
-                    let new_id = Id::unique();
-                    self.popup.replace(new_id);
-                    let popup_settings = self.core.applet.get_popup_settings(
-                        self.core.main_window_id().unwrap(),
-                        new_id,
+                    return crate::surface::surface_task(crate::surface::action::app_popup(
+                        |app: &mut Window| {
+                            let new_id = Id::unique();
+                            app.popup.replace(new_id);
+                            let popup_settings = app.core.applet.get_popup_settings(
+                                app.core.main_window_id().unwrap(),
+                                new_id,
+                                None,
+                                None,
+                                None,
+                            );
+                            popup_settings
+                        },
                         None,
-                        None,
-                        None,
-                    );
-
-                    get_popup(popup_settings)
+                    ));
                 };
             }
             Message::PopupClosed(id) => {
