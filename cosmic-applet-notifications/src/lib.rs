@@ -157,18 +157,22 @@ impl cosmic::Application for Notifications {
                 if let Some(p) = self.popup.take() {
                     return destroy_popup(p);
                 } else {
-                    let new_id = window::Id::unique();
-                    self.popup.replace(new_id);
+                    return cosmic::surface::surface_task(cosmic::surface::action::app_popup(
+                        |app: &mut Self| {
+                            let new_id = window::Id::unique();
+                            app.popup.replace(new_id);
 
-                    let popup_settings = self.core.applet.get_popup_settings(
-                        self.core.main_window_id().unwrap(),
-                        new_id,
+                            let popup_settings = app.core.applet.get_popup_settings(
+                                app.core.main_window_id().unwrap(),
+                                new_id,
+                                None,
+                                None,
+                                None,
+                            );
+                            popup_settings
+                        },
                         None,
-                        None,
-                        None,
-                    );
-
-                    return get_popup(popup_settings);
+                    ));
                 }
             }
             Message::DoNotDisturb(b) => {

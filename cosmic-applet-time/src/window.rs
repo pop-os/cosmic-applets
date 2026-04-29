@@ -520,35 +520,39 @@ impl cosmic::Application for Window {
                 if let Some(p) = self.popup.take() {
                     destroy_popup(p)
                 } else {
-                    self.date_today = self.now.date();
-                    self.date_selected = self.date_today;
+                    return cosmic::surface::surface_task(cosmic::surface::action::app_popup(
+                        |app: &mut Self| {
+                            app.date_today = app.now.date();
+                            app.date_selected = app.date_today;
 
-                    let new_id = window::Id::unique();
-                    self.popup = Some(new_id);
+                            let new_id = window::Id::unique();
+                            app.popup = Some(new_id);
 
-                    let mut popup_settings = self.core.applet.get_popup_settings(
-                        self.core.main_window_id().unwrap(),
-                        new_id,
+                            let mut popup_settings = app.core.applet.get_popup_settings(
+                                app.core.main_window_id().unwrap(),
+                                new_id,
+                                None,
+                                None,
+                                None,
+                            );
+                            let Rectangle {
+                                x,
+                                y,
+                                width,
+                                height,
+                            } = app.rectangle;
+                            popup_settings.positioner.anchor_rect = Rectangle::<i32> {
+                                x: x.max(1.) as i32,
+                                y: y.max(1.) as i32,
+                                width: width.max(1.) as i32,
+                                height: height.max(1.) as i32,
+                            };
+
+                            popup_settings.positioner.size = None;
+                            popup_settings
+                        },
                         None,
-                        None,
-                        None,
-                    );
-                    let Rectangle {
-                        x,
-                        y,
-                        width,
-                        height,
-                    } = self.rectangle;
-                    popup_settings.positioner.anchor_rect = Rectangle::<i32> {
-                        x: x.max(1.) as i32,
-                        y: y.max(1.) as i32,
-                        width: width.max(1.) as i32,
-                        height: height.max(1.) as i32,
-                    };
-
-                    popup_settings.positioner.size = None;
-
-                    get_popup(popup_settings)
+                    ));
                 }
             }
             Message::Tick => {

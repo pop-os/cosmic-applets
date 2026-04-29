@@ -237,38 +237,48 @@ impl cosmic::Application for App {
                     if let Some(popup_id) = self.popup.take() {
                         cmds.push(destroy_popup(popup_id));
                     }
-                    let popup_id = self.next_popup_id();
-                    let i = self.menus.keys().position(|&i| i == id).unwrap();
-                    let (i, parent) = self
-                        .overflow_index()
-                        .and_then(|overflow_i| {
-                            if overflow_i <= i {
-                                Some(i - overflow_i).zip(self.overflow_popup)
-                            } else {
-                                Some((i, self.core.main_window_id().unwrap()))
-                            }
-                        })
-                        .unwrap_or((i, self.core.main_window_id().unwrap()));
 
-                    let mut popup_settings = self
-                        .core
-                        .applet
-                        .get_popup_settings(parent, popup_id, None, None, None);
-                    self.popup = Some(popup_id);
+                    let popup_task =
+                        cosmic::surface::surface_task(cosmic::surface::action::app_popup(
+                            move |app: &mut Self| {
+                                let popup_id = app.next_popup_id();
+                                let i = app.menus.keys().position(|&i| i == id).unwrap();
+                                let (i, parent) = app
+                                    .overflow_index()
+                                    .and_then(|overflow_i| {
+                                        if overflow_i <= i {
+                                            Some(i - overflow_i).zip(app.overflow_popup)
+                                        } else {
+                                            Some((i, app.core.main_window_id().unwrap()))
+                                        }
+                                    })
+                                    .unwrap_or((i, app.core.main_window_id().unwrap()));
 
-                    if matches!(
-                        self.core.applet.anchor,
-                        PanelAnchor::Left | PanelAnchor::Right
-                    ) {
-                        let suggested_size = self.core.applet.suggested_size(false).1
-                            + 2 * self.core.applet.suggested_padding(false).1;
-                        popup_settings.positioner.anchor_rect.y = i as i32 * suggested_size as i32;
-                    } else {
-                        let suggested_size = self.core.applet.suggested_size(false).0
-                            + 2 * self.core.applet.suggested_padding(false).1;
-                        popup_settings.positioner.anchor_rect.x = i as i32 * suggested_size as i32;
-                    }
-                    cmds.push(get_popup(popup_settings));
+                                let mut popup_settings = app
+                                    .core
+                                    .applet
+                                    .get_popup_settings(parent, popup_id, None, None, None);
+                                app.popup = Some(popup_id);
+
+                                if matches!(
+                                    app.core.applet.anchor,
+                                    PanelAnchor::Left | PanelAnchor::Right
+                                ) {
+                                    let suggested_size = app.core.applet.suggested_size(false).1
+                                        + 2 * app.core.applet.suggested_padding(false).1;
+                                    popup_settings.positioner.anchor_rect.y =
+                                        i as i32 * suggested_size as i32;
+                                } else {
+                                    let suggested_size = app.core.applet.suggested_size(false).0
+                                        + 2 * app.core.applet.suggested_padding(false).1;
+                                    popup_settings.positioner.anchor_rect.x =
+                                        i as i32 * suggested_size as i32;
+                                }
+                                popup_settings
+                            },
+                            None,
+                        ));
+                    cmds.push(popup_task);
                     return app::Task::batch(cmds);
                 } else if let Some(popup_id) = self.popup {
                     self.menus[&id].closed();
@@ -326,39 +336,48 @@ impl cosmic::Application for App {
                 } else {
                     return Task::none();
                 }
-                let popup_id = self.next_popup_id();
-                let i = self.menus.keys().position(|&i| i == id).unwrap();
+                let popup_task = cosmic::surface::surface_task(cosmic::surface::action::app_popup(
+                    move |app: &mut Self| {
+                        let popup_id = app.next_popup_id();
+                        let i = app.menus.keys().position(|&i| i == id).unwrap();
 
-                let (i, parent) = self
-                    .overflow_index()
-                    .and_then(|overflow_i| {
-                        if overflow_i <= i {
-                            Some(i - overflow_i).zip(self.overflow_popup)
+                        let (i, parent) = app
+                            .overflow_index()
+                            .and_then(|overflow_i| {
+                                if overflow_i <= i {
+                                    Some(i - overflow_i).zip(app.overflow_popup)
+                                } else {
+                                    Some((i, app.core.main_window_id().unwrap()))
+                                }
+                            })
+                            .unwrap_or((i, app.core.main_window_id().unwrap()));
+
+                        let mut popup_settings = app
+                            .core
+                            .applet
+                            .get_popup_settings(parent, popup_id, None, None, None);
+                        app.popup = Some(popup_id);
+
+                        if matches!(
+                            app.core.applet.anchor,
+                            PanelAnchor::Left | PanelAnchor::Right
+                        ) {
+                            let suggested_size = app.core.applet.suggested_size(true).1
+                                + 2 * app.core.applet.suggested_padding(true).1;
+                            popup_settings.positioner.anchor_rect.y =
+                                i as i32 * suggested_size as i32;
                         } else {
-                            Some((i, self.core.main_window_id().unwrap()))
+                            let suggested_size = app.core.applet.suggested_size(true).0
+                                + 2 * app.core.applet.suggested_padding(true).0;
+                            popup_settings.positioner.anchor_rect.x =
+                                i as i32 * suggested_size as i32;
                         }
-                    })
-                    .unwrap_or((i, self.core.main_window_id().unwrap()));
+                        popup_settings
+                    },
+                    None,
+                ));
+                cmds.push(popup_task);
 
-                let mut popup_settings = self
-                    .core
-                    .applet
-                    .get_popup_settings(parent, popup_id, None, None, None);
-                self.popup = Some(popup_id);
-
-                if matches!(
-                    self.core.applet.anchor,
-                    PanelAnchor::Left | PanelAnchor::Right
-                ) {
-                    let suggested_size = self.core.applet.suggested_size(true).1
-                        + 2 * self.core.applet.suggested_padding(true).1;
-                    popup_settings.positioner.anchor_rect.y = i as i32 * suggested_size as i32;
-                } else {
-                    let suggested_size = self.core.applet.suggested_size(true).0
-                        + 2 * self.core.applet.suggested_padding(true).0;
-                    popup_settings.positioner.anchor_rect.x = i as i32 * suggested_size as i32;
-                }
-                cmds.push(get_popup(popup_settings));
                 Task::batch(cmds)
             }
             Msg::Surface(a) => {
@@ -373,33 +392,40 @@ impl cosmic::Application for App {
                     return destroy_popup(popup_id);
                 } else if let Some(overflow_index) = self.overflow_index() {
                     // If we don't have an overflow, create it
-                    let popup_id = self.next_popup_id();
-                    let mut popup_settings = self.core.applet.get_popup_settings(
-                        self.core.main_window_id().unwrap(),
-                        popup_id,
-                        None,
-                        None,
-                        None,
-                    );
-                    popup_settings.close_with_children = false;
+                    let popup_task =
+                        cosmic::surface::surface_task(cosmic::surface::action::app_popup(
+                            move |app: &mut Self| {
+                                let popup_id = app.next_popup_id();
+                                let mut popup_settings = app.core.applet.get_popup_settings(
+                                    app.core.main_window_id().unwrap(),
+                                    popup_id,
+                                    None,
+                                    None,
+                                    None,
+                                );
+                                popup_settings.close_with_children = false;
 
-                    if matches!(
-                        self.core.applet.anchor,
-                        PanelAnchor::Left | PanelAnchor::Right
-                    ) {
-                        let suggested_size = self.core.applet.suggested_size(true).1
-                            + 2 * self.core.applet.suggested_padding(true).1;
-                        popup_settings.positioner.anchor_rect.y =
-                            overflow_index as i32 * suggested_size as i32;
-                    } else {
-                        let suggested_size = self.core.applet.suggested_size(true).0
-                            + 2 * self.core.applet.suggested_padding(true).0;
-                        popup_settings.positioner.anchor_rect.x =
-                            overflow_index as i32 * suggested_size as i32;
-                    }
+                                if matches!(
+                                    app.core.applet.anchor,
+                                    PanelAnchor::Left | PanelAnchor::Right
+                                ) {
+                                    let suggested_size = app.core.applet.suggested_size(true).1
+                                        + 2 * app.core.applet.suggested_padding(true).1;
+                                    popup_settings.positioner.anchor_rect.y =
+                                        overflow_index as i32 * suggested_size as i32;
+                                } else {
+                                    let suggested_size = app.core.applet.suggested_size(true).0
+                                        + 2 * app.core.applet.suggested_padding(true).0;
+                                    popup_settings.positioner.anchor_rect.x =
+                                        overflow_index as i32 * suggested_size as i32;
+                                }
 
-                    self.overflow_popup = Some(popup_id);
-                    return get_popup(popup_settings);
+                                app.overflow_popup = Some(popup_id);
+                                popup_settings
+                            },
+                            None,
+                        ));
+                    return popup_task;
                 } else {
                     return Task::none();
                 }
@@ -417,34 +443,40 @@ impl cosmic::Application for App {
                 } else {
                     return Task::none();
                 }
-
-                let popup_id = self.next_popup_id();
-                let mut popup_settings = self.core.applet.get_popup_settings(
-                    self.core.main_window_id().unwrap(),
-                    popup_id,
-                    None,
-                    None,
-                    None,
-                );
-                self.popup = Some(popup_id);
-
                 let Some(i) = self.overflow_index() else {
                     return Task::batch(cmds);
                 };
+                let popup_task = cosmic::surface::surface_task(cosmic::surface::action::app_popup(
+                    move |app: &mut Self| {
+                        let popup_id = app.next_popup_id();
+                        let mut popup_settings = app.core.applet.get_popup_settings(
+                            app.core.main_window_id().unwrap(),
+                            popup_id,
+                            None,
+                            None,
+                            None,
+                        );
+                        app.popup = Some(popup_id);
 
-                if matches!(
-                    self.core.applet.anchor,
-                    PanelAnchor::Left | PanelAnchor::Right
-                ) {
-                    let suggested_size = self.core.applet.suggested_size(false).1
-                        + 2 * self.core.applet.suggested_padding(false).1;
-                    popup_settings.positioner.anchor_rect.y = i as i32 * suggested_size as i32;
-                } else {
-                    let suggested_size = self.core.applet.suggested_size(false).0
-                        + 2 * self.core.applet.suggested_padding(false).1;
-                    popup_settings.positioner.anchor_rect.x = i as i32 * suggested_size as i32;
-                }
-                cmds.push(get_popup(popup_settings));
+                        if matches!(
+                            app.core.applet.anchor,
+                            PanelAnchor::Left | PanelAnchor::Right
+                        ) {
+                            let suggested_size = app.core.applet.suggested_size(false).1
+                                + 2 * app.core.applet.suggested_padding(false).1;
+                            popup_settings.positioner.anchor_rect.y =
+                                i as i32 * suggested_size as i32;
+                        } else {
+                            let suggested_size = app.core.applet.suggested_size(false).0
+                                + 2 * app.core.applet.suggested_padding(false).1;
+                            popup_settings.positioner.anchor_rect.x =
+                                i as i32 * suggested_size as i32;
+                        }
+                        popup_settings
+                    },
+                    None,
+                ));
+                cmds.push(popup_task);
                 Task::batch(cmds)
             }
         }
@@ -595,7 +627,7 @@ fn menu_icon_button<'a>(
                 .class(if symbolic {
                     cosmic::theme::Svg::Custom(std::rc::Rc::new(|theme| {
                         cosmic::iced::widget::svg::Style {
-                            color: Some(theme.cosmic().background.on.into()),
+                            color: Some(theme.cosmic().background(theme.transparent).on.into()),
                         }
                     }))
                 } else {

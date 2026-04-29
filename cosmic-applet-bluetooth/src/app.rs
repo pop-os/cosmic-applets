@@ -120,20 +120,24 @@ impl cosmic::Application for CosmicBluetoothApplet {
                 } else {
                     set_discovery(true);
 
-                    // TODO request update of state maybe
-                    let new_id = window::Id::unique();
-                    self.popup.replace(new_id);
-
-                    let popup_settings = self.core.applet.get_popup_settings(
-                        self.core.main_window_id().unwrap(),
-                        new_id,
-                        None,
-                        None,
-                        None,
-                    );
+                    let get_popup_task =
+                        cosmic::surface::surface_task(cosmic::surface::action::app_popup(
+                            move |app: &mut Self| {
+                                let new_id = window::Id::unique();
+                                app.popup.replace(new_id);
+                                app.core.applet.get_popup_settings(
+                                    app.core.main_window_id().unwrap(),
+                                    new_id,
+                                    None,
+                                    None,
+                                    None,
+                                )
+                            },
+                            None,
+                        ));
 
                     return Task::batch([
-                        get_popup(popup_settings),
+                        get_popup_task,
                         cosmic::task::future(set_tick(Duration::from_secs(3)))
                             .map(|()| cosmic::Action::App(Message::Ignore)),
                     ]);

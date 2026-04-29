@@ -786,9 +786,9 @@ impl cosmic::Application for CosmicNetworkApplet {
                 } else {
                     let mut tasks = Vec::with_capacity(2);
                     if let Some(conn) = self.conn.clone() {
-                        tasks.push(update_state(conn.clone()));
-                        tasks.push(update_devices(conn.clone()));
-                        tasks.push(load_vpns(conn));
+                        tasks.push(update_state(conn.clone()).map(cosmic::Action::App));
+                        tasks.push(update_devices(conn.clone()).map(cosmic::Action::App));
+                        tasks.push(load_vpns(conn.clone()).map(cosmic::Action::App));
                         let (tx, rx) = tokio::sync::mpsc::channel(4);
                         self.secret_tx = Some(tx);
                         let my_id = format!(
@@ -800,25 +800,33 @@ impl cosmic::Application for CosmicNetworkApplet {
                                 my_id.clone(),
                                 rx,
                             ))
-                            .map(Message::SecretAgent),
+                            .map(Message::SecretAgent)
+                            .map(cosmic::Action::App),
                         );
                     }
-                    // TODO request update of state maybe
-                    let new_id = window::Id::unique();
-                    self.popup.replace(new_id);
 
-                    let popup_settings = self.core.applet.get_popup_settings(
-                        self.core.main_window_id().unwrap(),
-                        new_id,
-                        None,
-                        None,
-                        None,
-                    );
+                    tasks.push(system_conn().map(cosmic::Action::App));
 
-                    tasks.push(system_conn());
-                    tasks.push(get_popup(popup_settings));
+                    tasks.push(cosmic::surface::surface_task(
+                        cosmic::surface::action::app_popup(
+                            |app: &mut Self| {
+                                let new_id = window::Id::unique();
+                                app.popup.replace(new_id);
 
-                    return Task::batch(tasks).map(cosmic::Action::App);
+                                let popup_settings = app.core.applet.get_popup_settings(
+                                    app.core.main_window_id().unwrap(),
+                                    new_id,
+                                    None,
+                                    None,
+                                    None,
+                                );
+                                popup_settings
+                            },
+                            None,
+                        ),
+                    ));
+
+                    return Task::batch(tasks);
                 }
             }
             Message::ToggleAirplaneMode(enabled) => {

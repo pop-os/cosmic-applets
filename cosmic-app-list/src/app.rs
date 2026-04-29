@@ -906,44 +906,52 @@ impl cosmic::Application for CosmicAppList {
                     .iter()
                     .chain(self.pinned_list.iter())
                     .find(|t| t.id == id)
+                    .cloned()
                 {
-                    let Some(rectangle) = self.rectangles.get(&toplevel_group.id.into()) else {
+                    let Some(rectangle) = self.rectangles.get(&toplevel_group.id.into()).copied()
+                    else {
                         tracing::error!("No rectangle found for toplevel group");
                         return Task::none();
                     };
+                    let popup_task =
+                        cosmic::surface::surface_task(cosmic::surface::action::app_popup(
+                            move |app: &mut Self| {
+                                let new_id = window::Id::unique();
+                                app.popup = Some(Popup {
+                                    parent: parent_window_id,
+                                    id: new_id,
+                                    dock_item: toplevel_group.clone(),
+                                    popup_type: PopupType::RightClickMenu,
+                                });
 
-                    let new_id = window::Id::unique();
-                    self.popup = Some(Popup {
-                        parent: parent_window_id,
-                        id: new_id,
-                        dock_item: toplevel_group.clone(),
-                        popup_type: PopupType::RightClickMenu,
-                    });
-
-                    let mut popup_settings = self.core.applet.get_popup_settings(
-                        parent_window_id,
-                        new_id,
-                        None,
-                        None,
-                        None,
-                    );
-                    let iced::Rectangle {
-                        x,
-                        y,
-                        width,
-                        height,
-                    } = *rectangle;
-                    popup_settings.positioner.anchor_rect = iced::Rectangle::<i32> {
-                        x: x as i32,
-                        y: y as i32,
-                        width: width as i32,
-                        height: height as i32,
-                    };
+                                let mut popup_settings = app.core.applet.get_popup_settings(
+                                    parent_window_id,
+                                    new_id,
+                                    None,
+                                    None,
+                                    None,
+                                );
+                                let iced::Rectangle {
+                                    x,
+                                    y,
+                                    width,
+                                    height,
+                                } = rectangle;
+                                popup_settings.positioner.anchor_rect = iced::Rectangle::<i32> {
+                                    x: x as i32,
+                                    y: y as i32,
+                                    width: width as i32,
+                                    height: height as i32,
+                                };
+                                popup_settings
+                            },
+                            None,
+                        ));
 
                     let gpu_update = Task::perform(try_get_gpus(), |gpus| {
                         cosmic::Action::App(Message::GpuRequest(gpus))
                     });
-                    return Task::batch([gpu_update, get_popup(popup_settings)]);
+                    return Task::batch([gpu_update, popup_task]);
                 }
             }
             Message::ToplevelListPopup(id, parent_window_id) => {
@@ -974,10 +982,10 @@ impl cosmic::Application for CosmicAppList {
                         }
                     }
 
-                    let Some(rectangle) = self.rectangles.get(&toplevel_group.id.into()) else {
+                    let Some(rectangle) = self.rectangles.get(&toplevel_group.id.into()).copied()
+                    else {
                         return Task::none();
                     };
-
                     let new_id = window::Id::unique();
                     self.popup = Some(Popup {
                         parent: parent_window_id,
@@ -985,48 +993,55 @@ impl cosmic::Application for CosmicAppList {
                         dock_item: toplevel_group.clone(),
                         popup_type: PopupType::ToplevelList,
                     });
+                    let popup_task =
+                        cosmic::surface::surface_task(cosmic::surface::action::app_popup(
+                            move |app: &mut Self| {
+                                let mut popup_settings = app.core.applet.get_popup_settings(
+                                    parent_window_id,
+                                    new_id,
+                                    None,
+                                    None,
+                                    None,
+                                );
+                                let iced::Rectangle {
+                                    x,
+                                    y,
+                                    width,
+                                    height,
+                                } = rectangle;
+                                popup_settings.positioner.anchor_rect = iced::Rectangle::<i32> {
+                                    x: x as i32,
+                                    y: y as i32,
+                                    width: width as i32,
+                                    height: height as i32,
+                                };
+                                let max_windows = 7.0;
+                                let window_spacing = 8.0;
+                                popup_settings.positioner.size_limits = match app.core.applet.anchor
+                                {
+                                    PanelAnchor::Right | PanelAnchor::Left => Limits::NONE
+                                        .min_width(100.0)
+                                        .min_height(30.0)
+                                        .max_width(window_spacing * 2.0 + TOPLEVEL_BUTTON_WIDTH)
+                                        .max_height(
+                                            TOPLEVEL_BUTTON_HEIGHT * max_windows
+                                                + window_spacing * (max_windows + 1.0),
+                                        ),
+                                    PanelAnchor::Bottom | PanelAnchor::Top => Limits::NONE
+                                        .min_width(30.0)
+                                        .min_height(100.0)
+                                        .max_width(
+                                            TOPLEVEL_BUTTON_WIDTH * max_windows
+                                                + window_spacing * (max_windows + 1.0),
+                                        )
+                                        .max_height(window_spacing * 2.0 + TOPLEVEL_BUTTON_HEIGHT),
+                                };
+                                popup_settings
+                            },
+                            None,
+                        ));
 
-                    let mut popup_settings = self.core.applet.get_popup_settings(
-                        parent_window_id,
-                        new_id,
-                        None,
-                        None,
-                        None,
-                    );
-                    let iced::Rectangle {
-                        x,
-                        y,
-                        width,
-                        height,
-                    } = *rectangle;
-                    popup_settings.positioner.anchor_rect = iced::Rectangle::<i32> {
-                        x: x as i32,
-                        y: y as i32,
-                        width: width as i32,
-                        height: height as i32,
-                    };
-                    let max_windows = 7.0;
-                    let window_spacing = 8.0;
-                    popup_settings.positioner.size_limits = match self.core.applet.anchor {
-                        PanelAnchor::Right | PanelAnchor::Left => Limits::NONE
-                            .min_width(100.0)
-                            .min_height(30.0)
-                            .max_width(window_spacing * 2.0 + TOPLEVEL_BUTTON_WIDTH)
-                            .max_height(
-                                TOPLEVEL_BUTTON_HEIGHT * max_windows
-                                    + window_spacing * (max_windows + 1.0),
-                            ),
-                        PanelAnchor::Bottom | PanelAnchor::Top => Limits::NONE
-                            .min_width(30.0)
-                            .min_height(100.0)
-                            .max_width(
-                                TOPLEVEL_BUTTON_WIDTH * max_windows
-                                    + window_spacing * (max_windows + 1.0),
-                            )
-                            .max_height(window_spacing * 2.0 + TOPLEVEL_BUTTON_HEIGHT),
-                    };
-
-                    return get_popup(popup_settings);
+                    return popup_task;
                 }
             }
             Message::ToplevelHoverChanged(handle, entering) => {
@@ -1590,52 +1605,62 @@ impl cosmic::Application for CosmicAppList {
                 if create_new {
                     let new_id = window::Id::unique();
                     self.overflow_active_popup = Some(new_id);
-                    let rectangle = self.rectangles.get(&DockItemId::ActiveOverflow);
-                    let mut popup_settings = self.core.applet.get_popup_settings(
-                        self.core.main_window_id().unwrap(),
-                        new_id,
-                        None,
-                        None,
-                        None,
-                    );
-                    if let Some(iced::Rectangle {
+                    let Some(iced::Rectangle {
                         x,
                         y,
                         width,
                         height,
-                    }) = rectangle
-                    {
-                        popup_settings.positioner.anchor_rect = iced::Rectangle::<i32> {
-                            x: *x as i32,
-                            y: *y as i32,
-                            width: *width as i32,
-                            height: *height as i32,
-                        };
-                    }
-                    let applet_suggested_size = self.core.applet.suggested_size(false).0
-                        + 2 * self.core.applet.suggested_padding(false).0;
-                    let (_favorite_popup_cutoff, active_popup_cutoff) =
-                        self.panel_overflow_lengths();
-                    let popup_applet_count =
-                        self.active_list.len().saturating_sub(
-                            (active_popup_cutoff.unwrap_or_default()).saturating_sub(1),
-                        ) as f32;
-                    let popup_applet_size = applet_suggested_size as f32 * popup_applet_count
-                        + 4.0 * (popup_applet_count - 1.);
-                    let (max_width, max_height) = match self.core.applet.anchor {
-                        PanelAnchor::Top | PanelAnchor::Bottom => {
-                            (popup_applet_size, applet_suggested_size as f32)
-                        }
-                        PanelAnchor::Left | PanelAnchor::Right => {
-                            (applet_suggested_size as f32, popup_applet_size)
-                        }
+                    }) = self.rectangles.get(&DockItemId::ActiveOverflow).copied()
+                    else {
+                        return Task::none();
                     };
-                    popup_settings.positioner.size_limits = Limits::NONE
-                        .max_width(max_width)
-                        .min_width(1.)
-                        .max_height(max_height)
-                        .min_height(1.);
-                    cmds.push(get_popup(popup_settings));
+
+                    let popup_task =
+                        cosmic::surface::surface_task(cosmic::surface::action::app_popup(
+                            move |app: &mut Self| {
+                                let mut popup_settings = app.core.applet.get_popup_settings(
+                                    app.core.main_window_id().unwrap(),
+                                    new_id,
+                                    None,
+                                    None,
+                                    None,
+                                );
+
+                                popup_settings.positioner.anchor_rect = iced::Rectangle::<i32> {
+                                    x: x as i32,
+                                    y: y as i32,
+                                    width: width as i32,
+                                    height: height as i32,
+                                };
+
+                                let applet_suggested_size = app.core.applet.suggested_size(false).0
+                                    + 2 * app.core.applet.suggested_padding(false).0;
+                                let (_favorite_popup_cutoff, active_popup_cutoff) =
+                                    app.panel_overflow_lengths();
+                                let popup_applet_count = app.active_list.len().saturating_sub(
+                                    (active_popup_cutoff.unwrap_or_default()).saturating_sub(1),
+                                ) as f32;
+                                let popup_applet_size = applet_suggested_size as f32
+                                    * popup_applet_count
+                                    + 4.0 * (popup_applet_count - 1.);
+                                let (max_width, max_height) = match app.core.applet.anchor {
+                                    PanelAnchor::Top | PanelAnchor::Bottom => {
+                                        (popup_applet_size, applet_suggested_size as f32)
+                                    }
+                                    PanelAnchor::Left | PanelAnchor::Right => {
+                                        (applet_suggested_size as f32, popup_applet_size)
+                                    }
+                                };
+                                popup_settings.positioner.size_limits = Limits::NONE
+                                    .max_width(max_width)
+                                    .min_width(1.)
+                                    .max_height(max_height)
+                                    .min_height(1.);
+                                popup_settings
+                            },
+                            None,
+                        ));
+                    cmds.push(popup_task);
                 }
                 return Task::batch(cmds);
             }
@@ -1647,52 +1672,62 @@ impl cosmic::Application for CosmicAppList {
                 if create_new {
                     let new_id = window::Id::unique();
                     self.overflow_favorites_popup = Some(new_id);
-                    let rectangle = self.rectangles.get(&DockItemId::FavoritesOverflow);
-                    let mut popup_settings = self.core.applet.get_popup_settings(
-                        self.core.main_window_id().unwrap(),
-                        new_id,
-                        None,
-                        None,
-                        None,
-                    );
-                    if let Some(iced::Rectangle {
+                    let Some(iced::Rectangle {
                         x,
                         y,
                         width,
                         height,
-                    }) = rectangle
-                    {
-                        popup_settings.positioner.anchor_rect = iced::Rectangle::<i32> {
-                            x: *x as i32,
-                            y: *y as i32,
-                            width: *width as i32,
-                            height: *height as i32,
-                        };
-                    }
-                    let applet_suggested_size = self.core.applet.suggested_size(false).0
-                        + 2 * self.core.applet.suggested_padding(false).0;
-                    let (favorite_popup_cutoff, _active_popup_cutoff) =
-                        self.panel_overflow_lengths();
-                    let popup_applet_count =
-                        self.pinned_list.len().saturating_sub(
-                            favorite_popup_cutoff.unwrap_or_default().saturating_sub(1),
-                        ) as f32;
-                    let popup_applet_size = applet_suggested_size as f32 * popup_applet_count
-                        + 4.0 * (popup_applet_count - 1.);
-                    let (max_width, max_height) = match self.core.applet.anchor {
-                        PanelAnchor::Top | PanelAnchor::Bottom => {
-                            (popup_applet_size, applet_suggested_size as f32)
-                        }
-                        PanelAnchor::Left | PanelAnchor::Right => {
-                            (applet_suggested_size as f32, popup_applet_size)
-                        }
+                    }) = self.rectangles.get(&DockItemId::FavoritesOverflow).copied()
+                    else {
+                        return Task::none();
                     };
-                    popup_settings.positioner.size_limits = Limits::NONE
-                        .max_width(max_width)
-                        .min_width(1.)
-                        .max_height(max_height)
-                        .min_height(1.);
-                    cmds.push(get_popup(popup_settings));
+
+                    let popup_task =
+                        cosmic::surface::surface_task(cosmic::surface::action::app_popup(
+                            move |app: &mut Self| {
+                                let mut popup_settings = app.core.applet.get_popup_settings(
+                                    app.core.main_window_id().unwrap(),
+                                    new_id,
+                                    None,
+                                    None,
+                                    None,
+                                );
+
+                                popup_settings.positioner.anchor_rect = iced::Rectangle::<i32> {
+                                    x: x as i32,
+                                    y: y as i32,
+                                    width: width as i32,
+                                    height: height as i32,
+                                };
+
+                                let applet_suggested_size = app.core.applet.suggested_size(false).0
+                                    + 2 * app.core.applet.suggested_padding(false).0;
+                                let (favorite_popup_cutoff, _active_popup_cutoff) =
+                                    app.panel_overflow_lengths();
+                                let popup_applet_count = app.pinned_list.len().saturating_sub(
+                                    favorite_popup_cutoff.unwrap_or_default().saturating_sub(1),
+                                ) as f32;
+                                let popup_applet_size = applet_suggested_size as f32
+                                    * popup_applet_count
+                                    + 4.0 * (popup_applet_count - 1.);
+                                let (max_width, max_height) = match app.core.applet.anchor {
+                                    PanelAnchor::Top | PanelAnchor::Bottom => {
+                                        (popup_applet_size, applet_suggested_size as f32)
+                                    }
+                                    PanelAnchor::Left | PanelAnchor::Right => {
+                                        (applet_suggested_size as f32, popup_applet_size)
+                                    }
+                                };
+                                popup_settings.positioner.size_limits = Limits::NONE
+                                    .max_width(max_width)
+                                    .min_width(1.)
+                                    .max_height(max_height)
+                                    .min_height(1.);
+                                popup_settings
+                            },
+                            None,
+                        ));
+                    cmds.push(popup_task);
                 }
                 return Task::batch(cmds);
             }
@@ -2200,7 +2235,7 @@ impl cosmic::Application for CosmicAppList {
                                 //TODO: move style to libcosmic
                                 .class(theme::Container::custom(|theme| {
                                     let cosmic = theme.cosmic();
-                                    let component = &cosmic.background.component;
+                                    let component = &cosmic.background(theme.transparent).component;
                                     container::Style {
                                         icon_color: Some(component.on.into()),
                                         text_color: Some(component.on.into()),

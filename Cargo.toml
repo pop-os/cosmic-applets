@@ -25,11 +25,11 @@ resolver = "3"
 
 [workspace.dependencies]
 anyhow = "1.0.102"
-cctk = { git = "https://github.com/pop-os/cosmic-protocols", package = "cosmic-client-toolkit", rev = "d0e95be" }
+cctk = { git = "https://github.com/pop-os/cosmic-protocols", package = "cosmic-client-toolkit", rev = "a7d2d7a" }
 cosmic-applets-config = { path = "cosmic-applets-config" }
 cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols", default-features = false, features = [
     "client",
-], rev = "d0e95be" }
+], rev = "a7d2d7a" }
 
 futures = "0.3"
 futures-util = "0.3"
@@ -70,24 +70,20 @@ opt-level = 1
 [workspace.metadata.cargo-machete]
 ignored = ["libcosmic"]
 
-# [patch."https://github.com/pop-os/libcosmic"]
+[patch."https://github.com/pop-os/libcosmic"]
 # cosmic-config = { path = "../libcosmic/cosmic-config" }
 # libcosmic = { path = "../libcosmic" }
 # iced_futures = { path = "../libcosmic/iced/futures" }
-# cosmic-config = { git = "https://github.com/pop-os/libcosmic//" }
-# libcosmic = { git = "https://github.com/pop-os/libcosmic//" }
-# iced_futures = { git = "https://github.com/pop-os/libcosmic//" }
-
-# [patch."https://github.com/pop-os/winit.git"]
-# winit = { git = "https://github.com/rust-windowing/winit.git", rev = "241b7a80bba96c91fa3901729cd5dec66abb9be4" }
-# winit = { path = "../winit" }
+cosmic-config = { git = "https://github.com/pop-os/libcosmic//", branch = "theme-v2" }
+libcosmic = { git = "https://github.com/pop-os/libcosmic//", branch = "theme-v2" }
+iced_futures = { git = "https://github.com/pop-os/libcosmic//", branch = "theme-v2" }
 
 [patch."https://github.com/smithay/client-toolkit.git"]
 sctk = { package = "smithay-client-toolkit", version = "0.20.0" }
 
 [patch."https://github.com/pop-os/cosmic-protocols"]
-cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols//", branch = "main" }
-cosmic-client-toolkit = { git = "https://github.com/pop-os/cosmic-protocols//", branch = "main" }
+cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols//", rev = "a7d2d7a" }
+cosmic-client-toolkit = { git = "https://github.com/pop-os/cosmic-protocols//", rev = "a7d2d7a" }
 
 # [patch.'https://github.com/pop-os/dbus-settings-bindings']
 # cosmic-dbus-networkmanager = { path = "../dbus-settings-bindings/networkmanager" }

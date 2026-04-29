@@ -24,8 +24,8 @@ zbus.workspace = true
 serde.workspace = true
 
 [dependencies.cosmic-settings-upower-subscription]
-git = "https://github.com/pop-os/cosmic-settings"
-# path = "../../cosmic-settings/subscriptions/upower"
+# git = "https://github.com/pop-os/cosmic-settings"
+path = "../../cosmic-settings/subscriptions/upower"
 
 [dependencies.cosmic-settings-daemon-subscription]
 git = "https://github.com/pop-os/cosmic-settings"

@@ -274,32 +274,39 @@ impl cosmic::Application for Audio {
             Message::Ignore => {}
             Message::TogglePopup => {
                 if let Some(p) = self.popup.take() {
-                    return destroy_popup(p);
+                    return cosmic::surface::surface_task(cosmic::surface::action::destroy_popup(
+                        p,
+                    ));
                 } else {
-                    let new_id = window::Id::unique();
-                    self.popup.replace(new_id);
+                    return cosmic::surface::surface_task(cosmic::surface::action::app_popup(
+                        |app: &mut Self| {
+                            let new_id = window::Id::unique();
+                            app.popup.replace(new_id);
 
-                    (self.max_sink_volume, self.sink_breakpoints) = if amplification_sink() {
-                        (150, &[100][..])
-                    } else {
-                        (100, &[][..])
-                    };
+                            (app.max_sink_volume, app.sink_breakpoints) = if amplification_sink() {
+                                (150, &[100][..])
+                            } else {
+                                (100, &[][..])
+                            };
 
-                    (self.max_source_volume, self.source_breakpoints) = if amplification_source() {
-                        (150, &[100][..])
-                    } else {
-                        (100, &[][..])
-                    };
+                            (app.max_source_volume, app.source_breakpoints) =
+                                if amplification_source() {
+                                    (150, &[100][..])
+                                } else {
+                                    (100, &[][..])
+                                };
 
-                    let popup_settings = self.core.applet.get_popup_settings(
-                        self.core.main_window_id().unwrap(),
-                        new_id,
+                            let popup_settings = app.core.applet.get_popup_settings(
+                                app.core.main_window_id().unwrap(),
+                                new_id,
+                                None,
+                                None,
+                                None,
+                            );
+                            popup_settings
+                        },
                         None,
-                        None,
-                        None,
-                    );
-
-                    return get_popup(popup_settings);
+                    ));
                 }
             }
 
