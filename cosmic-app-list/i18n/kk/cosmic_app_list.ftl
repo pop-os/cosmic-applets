@@ -1,5 +1,5 @@
 quit = Шығу
-run = Іске қосу
+run = Орындау
 run-on = { $gpu } арқылы іске қосу
 run-on-default = (Әдепкі)
 cosmic-app-list = Қолданбалар сөресі
