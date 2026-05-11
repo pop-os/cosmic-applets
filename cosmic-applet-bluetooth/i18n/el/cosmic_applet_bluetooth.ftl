@@ -1,2 +1,12 @@
 cancel = Ακύρωση
 confirm = Επιβεβαίωση
+bluetooth = Bluetooth
+confirm-pin = Επιβεβαιώστε ότι το ακόλουθο PIN είναι ίδιο με αυτό που εμφανίζεται στο { $deviceName }
+unsuccessful = Ανεπιτυχής σύζευξη
+pairable = Συνδέσιμο
+try-again = Δοκιμή ξανά
+check-device = Βεβαιωθείτε ότι το { $deviceName } είναι ενεργοποιημένο, βρίσκεται εντός εμβέλειας και είναι έτοιμο για σύζευξη.
+other-devices = Άλλες συσκευές Bluetooth
+connected = Συνδέθηκε
+settings = Ρυθμίσεις Bluetooth...
+discoverable = Ορατό

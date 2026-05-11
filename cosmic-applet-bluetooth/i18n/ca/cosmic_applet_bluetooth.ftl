@@ -1,0 +1,12 @@
+confirm-pin = Si us plau, verifiqueu que el següent PIN coincideix amb el mostrat a { $deviceName }
+bluetooth = Bluetooth
+unsuccessful = Error d'Emparellament
+pairable = Emparellable
+try-again = Reintentar
+check-device = Si us plau, verifiqueu que { $deviceName } estigui encès, a l'abast i llest per emparellar-se.
+other-devices = Altres dispositius Bluetooth
+cancel = Cancel·lar
+connected = Connectat
+confirm = Confirmar
+settings = Configuració del Bluetooth...
+discoverable = Descobrible

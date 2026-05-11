@@ -1,4 +1,4 @@
-battery = 省電
+battery = 電池
 battery-desc = 降低效能與耗電量。
 balanced = 平衡
 balanced-desc = 標準效能與耗電量。
