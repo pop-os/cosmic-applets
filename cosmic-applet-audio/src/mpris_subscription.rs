@@ -1,7 +1,13 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
-use std::{borrow::Cow, fmt::Debug, hash::Hash, path::PathBuf};
+use std::{
+    borrow::Cow,
+    collections::hash_map::DefaultHasher,
+    fmt::Debug,
+    hash::{Hash, Hasher},
+    path::PathBuf,
+};
 
 use cosmic::{
     iced::futures::{self, SinkExt, StreamExt, future::OptionFuture},
@@ -12,12 +18,96 @@ use mpris2_zbus::{
     media_player::MediaPlayer,
     player::{PlaybackStatus, Player},
 };
+use reqwest::header::CONTENT_TYPE;
 use tokio::join;
 use urlencoding::decode;
 use zbus::{
     Connection,
     names::{BusName, OwnedBusName},
 };
+
+const MAX_ARTWORK_BYTES: usize = 10 * 1024 * 1024;
+
+fn cache_dir() -> Option<PathBuf> {
+    std::env::var_os("XDG_CACHE_HOME")
+        .map(PathBuf::from)
+        .or_else(|| std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".cache")))
+        .map(|cache_root| cache_root.join("cosmic-applet-audio").join("artwork"))
+}
+
+fn extension_from_content_type(content_type: &str) -> Option<&'static str> {
+    match content_type.split(';').next()?.trim() {
+        "image/jpeg" => Some("jpg"),
+        "image/png" => Some("png"),
+        "image/webp" => Some("webp"),
+        "image/gif" => Some("gif"),
+        "image/svg+xml" => Some("svg"),
+        _ => None,
+    }
+}
+
+fn extension_from_url(url: &url::Url) -> Option<String> {
+    let segment = url.path_segments()?.next_back()?;
+    let (_, extension) = segment.rsplit_once('.')?;
+    let extension = extension.to_ascii_lowercase();
+    if extension.is_empty()
+        || extension.len() > 5
+        || !extension.chars().all(|c| c.is_ascii_alphanumeric())
+    {
+        return None;
+    }
+    Some(extension)
+}
+
+async fn resolve_icon_path(art_url: Option<String>) -> Option<PathBuf> {
+    let art_url = art_url?;
+    let parsed = url::Url::parse(&art_url).ok()?;
+
+    if parsed.scheme() == "file" {
+        return parsed.to_file_path().ok();
+    }
+
+    if !matches!(parsed.scheme(), "http" | "https") {
+        return None;
+    }
+
+    let cache_dir = cache_dir()?;
+    tokio::fs::create_dir_all(&cache_dir).await.ok()?;
+
+    let mut hasher = DefaultHasher::new();
+    art_url.hash(&mut hasher);
+    let cache_key = format!("{:016x}", hasher.finish());
+
+    for extension in ["jpg", "png", "webp", "gif", "svg"] {
+        let path = cache_dir.join(format!("{cache_key}.{extension}"));
+        if path.exists() {
+            return Some(path);
+        }
+    }
+
+    let response = reqwest::Client::new().get(art_url).send().await.ok()?;
+    if !response.status().is_success() {
+        return None;
+    }
+
+    let extension = response
+        .headers()
+        .get(CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .and_then(extension_from_content_type)
+        .map(str::to_string)
+        .or_else(|| extension_from_url(&parsed))
+        .unwrap_or_else(|| "jpg".to_string());
+
+    let bytes = response.bytes().await.ok()?;
+    if bytes.is_empty() || bytes.len() > MAX_ARTWORK_BYTES {
+        return None;
+    }
+
+    let path = cache_dir.join(format!("{cache_key}.{extension}"));
+    tokio::fs::write(&path, &bytes).await.ok()?;
+    Some(path)
+}
 
 #[derive(Clone, Debug)]
 pub struct PlayerStatus {
@@ -37,6 +127,7 @@ impl PlayerStatus {
         let metadata = player.metadata().await.ok()?;
         let pathname = metadata.url().unwrap_or_default();
         let pathbuf = PathBuf::from(pathname);
+        let art_url = metadata.art_url();
 
         let title = metadata
             .title()
@@ -48,16 +139,7 @@ impl PlayerStatus {
         let artists = metadata
             .artists()
             .map(|a| a.into_iter().map(Cow::from).collect::<Vec<_>>());
-        let icon = metadata
-            .art_url()
-            .and_then(|u| url::Url::parse(&u).ok())
-            .and_then(|u| {
-                if u.scheme() == "file" {
-                    u.to_file_path().ok()
-                } else {
-                    None
-                }
-            });
+        let icon = resolve_icon_path(art_url).await;
 
         let (playback_status, can_pause, can_play, can_go_previous, can_go_next) = join!(
             player.playback_status(),
