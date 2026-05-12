@@ -286,9 +286,10 @@ impl cosmic::Application for App {
                 TokenUpdate::ActivationToken { token, exec: id } => {
                     if let Some(id_str) = id.strip_prefix("activate:") {
                         if let Ok(real_id) = id_str.parse::<usize>()
-                            && let Some(menu) = self.menus.get(&real_id) {
-                                return activate(real_id, &menu.item, token.clone());
-                            }
+                            && let Some(menu) = self.menus.get(&real_id)
+                        {
+                            return activate(real_id, &menu.item, token.clone());
+                        }
                         return Task::none();
                     }
                     if let Some(((state, id), token)) = str::parse(&id)
@@ -358,9 +359,7 @@ impl cosmic::Application for App {
                 Task::batch(cmds)
             }
             Msg::Surface(a) => {
-                cosmic::task::message(cosmic::Action::Cosmic(
-                    cosmic::app::Action::Surface(a),
-                ))
+                cosmic::task::message(cosmic::Action::Cosmic(cosmic::app::Action::Surface(a)))
             }
             Msg::ToggleOverflow => {
                 if let Some(popup_id) = self.overflow_popup.take() {

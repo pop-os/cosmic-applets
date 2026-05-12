@@ -36,7 +36,9 @@ use cosmic::{
         row, scrollable, secure_input, text, text_input, toggler,
     },
 };
-use cosmic_dbus_networkmanager::interface::enums::{ActiveConnectionState, DeviceState, NmConnectivityState};
+use cosmic_dbus_networkmanager::interface::enums::{
+    ActiveConnectionState, DeviceState, NmConnectivityState,
+};
 
 use futures::StreamExt;
 use zbus::{Connection, zvariant::ObjectPath};
@@ -396,40 +398,41 @@ impl CosmicNetworkApplet {
             cosmic::task::future(async move {
                 // Find the connection by UUID
                 if let Ok(nm_settings) = NetworkManagerSettings::new(&conn).await
-                    && let Ok(connections) = nm_settings.list_connections().await {
-                        for connection in connections {
-                            if let Ok(settings) = connection.get_settings().await {
-                                let settings = Settings::new(settings);
-                                if let Some(conn_settings) = &settings.connection
-                                    && conn_settings.uuid.as_ref().is_some_and(|conn_uuid| {
-                                        conn_uuid.as_str() == uuid.as_ref()
-                                    }) {
-                                        let path = connection.inner().path().clone().to_owned();
-                                        if let Err(err) =
-                                            tx.unbounded_send(network_manager::Request::Activate(
-                                                ObjectPath::try_from("/").unwrap(),
-                                                path,
-                                            ))
-                                        {
-                                            if err.is_disconnected() {
-                                                return zbus::Connection::system()
-                                                    .await
-                                                    .context(
-                                                        "failed to create system dbus connection",
-                                                    )
-                                                    .map_or_else(
-                                                        |why| Message::Error(why.to_string()),
-                                                        Message::NetworkManagerConnect,
-                                                    );
-                                            }
-
-                                            tracing::error!("{err:?}");
-                                        }
-                                        break;
+                    && let Ok(connections) = nm_settings.list_connections().await
+                {
+                    for connection in connections {
+                        if let Ok(settings) = connection.get_settings().await {
+                            let settings = Settings::new(settings);
+                            if let Some(conn_settings) = &settings.connection
+                                && conn_settings
+                                    .uuid
+                                    .as_ref()
+                                    .is_some_and(|conn_uuid| conn_uuid.as_str() == uuid.as_ref())
+                            {
+                                let path = connection.inner().path().clone().to_owned();
+                                if let Err(err) =
+                                    tx.unbounded_send(network_manager::Request::Activate(
+                                        ObjectPath::try_from("/").unwrap(),
+                                        path,
+                                    ))
+                                {
+                                    if err.is_disconnected() {
+                                        return zbus::Connection::system()
+                                            .await
+                                            .context("failed to create system dbus connection")
+                                            .map_or_else(
+                                                |why| Message::Error(why.to_string()),
+                                                Message::NetworkManagerConnect,
+                                            );
                                     }
+
+                                    tracing::error!("{err:?}");
+                                }
+                                break;
                             }
                         }
                     }
+                }
                 Message::Refresh
             })
         } else {
@@ -819,13 +822,13 @@ impl cosmic::Application for CosmicNetworkApplet {
                 if let Some(tx) = self.nm_sender.as_mut()
                     && let Err(err) =
                         tx.unbounded_send(network_manager::Request::SetAirplaneMode(enabled))
-                    {
-                        if err.is_disconnected() {
-                            return system_conn().map(cosmic::Action::App);
-                        }
-
-                        tracing::error!("{err:?}");
+                {
+                    if err.is_disconnected() {
+                        return system_conn().map(cosmic::Action::App);
                     }
+
+                    tracing::error!("{err:?}");
+                }
             }
             Message::SelectWirelessAccessPoint(access_point) => {
                 let Some(tx) = self.nm_sender.as_ref() else {
@@ -861,13 +864,13 @@ impl cosmic::Application for CosmicNetworkApplet {
                                 self.secret_tx.clone(),
                                 self.active_device.as_ref().map(|d| d.interface.clone()),
                             ))
-                        {
-                            if err.is_disconnected() {
-                                return system_conn().map(cosmic::Action::App);
-                            }
-
-                            tracing::error!("{err:?}");
+                    {
+                        if err.is_disconnected() {
+                            return system_conn().map(cosmic::Action::App);
                         }
+
+                        tracing::error!("{err:?}");
+                    }
                     self.new_connection = Some(NewConnectionState::EnterPassword {
                         access_point,
                         description: None,
@@ -996,13 +999,13 @@ impl cosmic::Application for CosmicNetworkApplet {
             Message::DeactivateVpn(name) => {
                 if let Some(tx) = self.nm_sender.as_ref()
                     && let Err(err) = tx.unbounded_send(network_manager::Request::Deactivate(name))
-                    {
-                        if err.is_disconnected() {
-                            return system_conn().map(cosmic::Action::App);
-                        }
-
-                        tracing::error!("{err:?}");
+                {
+                    if err.is_disconnected() {
+                        return system_conn().map(cosmic::Action::App);
                     }
+
+                    tracing::error!("{err:?}");
+                }
             }
             Message::ToggleVpnList => {
                 self.show_available_vpns = !self.show_available_vpns;
@@ -1725,9 +1728,9 @@ impl cosmic::Application for CosmicNetworkApplet {
                     .known_connections
                     .iter()
                     .all(|c| c.id != known.ssid.as_ref())
-                {
-                    continue;
-                }
+            {
+                continue;
+            }
             let mut btn_content = Vec::with_capacity(2);
             let ssid = text::body(known.ssid.as_ref()).width(Length::Fill);
             if known.working {
@@ -1858,43 +1861,43 @@ impl cosmic::Application for CosmicNetworkApplet {
                     content = content.push(id);
 
                     let is_enterprise = matches!(access_point.network_type, NetworkType::EAP);
-                    let enter_password_col =
-                        cosmic::widget::column::with_capacity(4)
-                            .push_maybe(is_enterprise.then(|| text::body(fl!("identity"))))
-                            .push_maybe(is_enterprise.then(|| {
-                                text_input::text_input("", identity)
-                                    .on_input(Message::IdentityUpdate)
-                            }))
-                            .push(text::body(fl!("enter-password")))
-                            .push_maybe(description.as_ref().map(|d| text::body(d.clone())))
-                            .push(
-                                text_input::secure_input(
-                                    "",
-                                    password.unsecure(),
-                                    Some(Message::TogglePasswordVisibility),
-                                    *password_hidden,
-                                )
-                                .id(SECURE_INPUT_WIFI.clone())
-                                .on_input(|s| Message::PasswordUpdate(SecureString::from(s)))
-                                .on_paste(|s| Message::PasswordUpdate(SecureString::from(s)))
-                                .on_submit(|_| Message::ConnectWithPassword),
+                    let enter_password_col = cosmic::widget::column::with_capacity(4)
+                        .push_maybe(is_enterprise.then(|| text::body(fl!("identity"))))
+                        .push_maybe(is_enterprise.then(|| {
+                            text_input::text_input("", identity).on_input(Message::IdentityUpdate)
+                        }))
+                        .push(text::body(fl!("enter-password")))
+                        .push_maybe(description.as_ref().map(|d| text::body(d.clone())))
+                        .push(
+                            text_input::secure_input(
+                                "",
+                                password.unsecure(),
+                                Some(Message::TogglePasswordVisibility),
+                                *password_hidden,
                             )
-                            .push_maybe(access_point.wps_push.then(|| {
+                            .id(SECURE_INPUT_WIFI.clone())
+                            .on_input(|s| Message::PasswordUpdate(SecureString::from(s)))
+                            .on_paste(|s| Message::PasswordUpdate(SecureString::from(s)))
+                            .on_submit(|_| Message::ConnectWithPassword),
+                        )
+                        .push_maybe(
+                            access_point.wps_push.then(|| {
                                 container(text::body(fl!("router-wps-button"))).padding(8)
-                            }))
-                            .push(
-                                row::with_children([
-                                    Element::from(
-                                        button::standard(fl!("cancel"))
-                                            .on_press(Message::CancelNewConnection),
-                                    ),
-                                    Element::from(
-                                        button::suggested(fl!("connect"))
-                                            .on_press(Message::ConnectWithPassword),
-                                    ),
-                                ])
-                                .spacing(24),
-                            );
+                            }),
+                        )
+                        .push(
+                            row::with_children([
+                                Element::from(
+                                    button::standard(fl!("cancel"))
+                                        .on_press(Message::CancelNewConnection),
+                                ),
+                                Element::from(
+                                    button::suggested(fl!("connect"))
+                                        .on_press(Message::ConnectWithPassword),
+                                ),
+                            ])
+                            .spacing(24),
+                        );
                     let col =
                         padded_control(enter_password_col.spacing(8).align_x(Alignment::Center))
                             .align_x(Alignment::Center);

@@ -625,10 +625,11 @@ pub(crate) fn wayland_handler(
                 WaylandRequest::Toplevel(req) => match req {
                     ToplevelRequest::Activate(handle) => {
                         if let Some(cosmic_toplevel) = state.cosmic_toplevel(&handle)
-                            && let Some(seat) = state.seat_state.seats().next() {
-                                let manager = &state.toplevel_manager_state.manager;
-                                manager.activate(&cosmic_toplevel, &seat);
-                            }
+                            && let Some(seat) = state.seat_state.seats().next()
+                        {
+                            let manager = &state.toplevel_manager_state.manager;
+                            manager.activate(&cosmic_toplevel, &seat);
+                        }
                     }
                     ToplevelRequest::Minimize(handle) => {
                         if let Some(cosmic_toplevel) = state.cosmic_toplevel(&handle) {

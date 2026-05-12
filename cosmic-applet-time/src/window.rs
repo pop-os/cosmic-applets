@@ -68,9 +68,10 @@ fn get_system_locale() -> Locale {
 
             // Try language-only fallback (e.g., "en" from "en-US")
             if let Some(lang) = cleaned_locale.split('-').next()
-                && let Ok(locale) = Locale::try_from_str(lang) {
-                    return locale;
-                }
+                && let Ok(locale) = Locale::try_from_str(lang)
+            {
+                return locale;
+            }
         }
     }
     tracing::warn!("No valid locale found in environment, using fallback");
@@ -551,10 +552,10 @@ impl cosmic::Application for Window {
                 }
             }
             Message::Tick => {
-                self.now = self.timezone.as_ref().map_or_else(
-                    Zoned::now,
-                    |tz| Zoned::now().with_time_zone(tz.clone()),
-                );
+                self.now = self
+                    .timezone
+                    .as_ref()
+                    .map_or_else(Zoned::now, |tz| Zoned::now().with_time_zone(tz.clone()));
                 Task::none()
             }
             Message::Rectangle(u) => {
@@ -667,9 +668,7 @@ impl cosmic::Application for Window {
                 self.update(Message::Tick)
             }
             Message::Surface(a) => {
-                cosmic::task::message(cosmic::Action::Cosmic(
-                    cosmic::app::Action::Surface(a),
-                ))
+                cosmic::task::message(cosmic::Action::Cosmic(cosmic::app::Action::Surface(a)))
             }
         }
     }

@@ -314,14 +314,15 @@ fn update<Message: Clone, Theme, Renderer>(
                 .as_ref()
                 .or(widget.on_mouse_exit.as_ref())
                 .is_some()
-                && let Event::Mouse(mouse::Event::CursorMoved { .. }) = event {
-                    state.is_out_of_bounds = true;
-                    if let Some(message) = widget.on_mouse_exit.as_ref() {
-                        shell.publish(message.clone());
-                    }
-                    shell.capture_event();
-                    return;
-                }
+            && let Event::Mouse(mouse::Event::CursorMoved { .. }) = event
+        {
+            state.is_out_of_bounds = true;
+            if let Some(message) = widget.on_mouse_exit.as_ref() {
+                shell.publish(message.clone());
+            }
+            shell.capture_event();
+            return;
+        }
 
         return;
     }
@@ -329,64 +330,69 @@ fn update<Message: Clone, Theme, Renderer>(
     if let Some(message) = widget.on_press.as_ref()
         && let Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left))
         | Event::Touch(touch::Event::FingerPressed { .. }) = event
-        {
-            state.drag_initiated = cursor.position();
-            shell.publish(message.clone());
-            shell.capture_event();
-            return;
-        }
+    {
+        state.drag_initiated = cursor.position();
+        shell.publish(message.clone());
+        shell.capture_event();
+        return;
+    }
 
     if let Some(message) = widget.on_release.as_ref()
         && let Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left))
         | Event::Touch(touch::Event::FingerLifted { .. }) = event
-        {
-            state.drag_initiated = None;
-            shell.publish(message.clone());
-            shell.capture_event();
-            return;
-        }
+    {
+        state.drag_initiated = None;
+        shell.publish(message.clone());
+        shell.capture_event();
+        return;
+    }
 
     if let Some(message) = widget.on_right_press.as_ref()
-        && let Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Right)) = event {
-            shell.publish(message.clone());
-            shell.capture_event();
-            return;
-        }
+        && let Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Right)) = event
+    {
+        shell.publish(message.clone());
+        shell.capture_event();
+        return;
+    }
 
     if let Some(message) = widget.on_right_release.as_ref()
-        && let Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Right)) = event {
-            shell.publish(message.clone());
-            shell.capture_event();
-            return;
-        }
+        && let Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Right)) = event
+    {
+        shell.publish(message.clone());
+        shell.capture_event();
+        return;
+    }
 
     if let Some(message) = widget.on_middle_press.as_ref()
-        && let Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Middle)) = event {
-            shell.publish(message.clone());
-            shell.capture_event();
-            return;
-        }
+        && let Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Middle)) = event
+    {
+        shell.publish(message.clone());
+        shell.capture_event();
+        return;
+    }
 
     if let Some(message) = widget.on_middle_release.as_ref()
-        && let Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Middle)) = event {
-            shell.publish(message.clone());
+        && let Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Middle)) = event
+    {
+        shell.publish(message.clone());
 
-            shell.capture_event();
-            return;
-        }
+        shell.capture_event();
+        return;
+    }
     if let Some(message) = widget
         .on_mouse_enter
         .as_ref()
         .or(widget.on_mouse_exit.as_ref())
         && let Event::Mouse(mouse::Event::CursorMoved { .. }) = event
-            && state.is_out_of_bounds {
-                state.is_out_of_bounds = false;
-                if widget.on_mouse_enter.is_some() {
-                    shell.publish(message.clone());
-                }
-                shell.capture_event();
-                return;
-            }
+        && state.is_out_of_bounds
+    {
+        state.is_out_of_bounds = false;
+        if widget.on_mouse_enter.is_some() {
+            shell.publish(message.clone());
+        }
+        shell.capture_event();
+        return;
+    }
 
     if state.drag_initiated.is_none() && widget.on_drag.is_some() {
         if let Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left))
@@ -396,16 +402,18 @@ fn update<Message: Clone, Theme, Renderer>(
         }
     } else if let Some((message, drag_source)) = widget.on_drag.as_ref().zip(state.drag_initiated)
         && let Some(position) = cursor.position()
-            && position.distance(drag_source) > 1.0 {
-                state.drag_initiated = None;
-                shell.publish(message.clone());
-                shell.capture_event();
-                return;
-            }
+        && position.distance(drag_source) > 1.0
+    {
+        state.drag_initiated = None;
+        shell.publish(message.clone());
+        shell.capture_event();
+        return;
+    }
 
     if let Some(message) = widget.on_mouse_wheel.as_ref()
-        && let Event::Mouse(mouse::Event::WheelScrolled { delta }) = event {
-            shell.publish((message)(*delta));
-            shell.capture_event();
-        }
+        && let Event::Mouse(mouse::Event::WheelScrolled { delta }) = event
+    {
+        shell.publish((message)(*delta));
+        shell.capture_event();
+    }
 }

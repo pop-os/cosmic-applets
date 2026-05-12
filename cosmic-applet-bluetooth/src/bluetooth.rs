@@ -98,9 +98,10 @@ pub fn bluetooth_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
                 // Initialize connection.
                 let mut session_state = loop {
                     if let Ok(session) = Session::new().await
-                        && let Ok(state) = BluerSessionState::new(session).await {
-                            break state;
-                        }
+                        && let Ok(state) = BluerSessionState::new(session).await
+                    {
+                        break state;
+                    }
 
                     retry_count = retry_count.saturating_add(1);
                     () = tokio::time::sleep(Duration::from_millis(
@@ -753,11 +754,11 @@ impl BluerSessionState {
                                     .arg(id)
                                     .output()
                                     .await
-                                {
-                                    tracing::error!(
-                                        "Failed to set bluetooth state using rfkill. {err:?}"
-                                    );
-                                }
+                            {
+                                tracing::error!(
+                                    "Failed to set bluetooth state using rfkill. {err:?}"
+                                );
+                            }
 
                             if *enabled {
                                 _ = wake_up_tx.send(()).await;

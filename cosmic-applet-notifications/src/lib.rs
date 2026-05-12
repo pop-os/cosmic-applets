@@ -174,9 +174,10 @@ impl cosmic::Application for Notifications {
             Message::DoNotDisturb(b) => {
                 self.config.do_not_disturb = b;
                 if let Some(helper) = &self.config_helper
-                    && let Err(err) = self.config.write_entry(helper) {
-                        tracing::error!("{:?}", err);
-                    }
+                    && let Err(err) = self.config.write_entry(helper)
+                {
+                    tracing::error!("{:?}", err);
+                }
             }
             Message::NotificationEvent(event) => match event {
                 notifications::Output::Notification(n) => {

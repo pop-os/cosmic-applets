@@ -277,9 +277,10 @@ impl cosmic::Application for CosmicBatteryApplet {
                     return Task::none();
                 }
                 if let Some(tx) = &self.kbd_sender
-                    && let Some(b) = self.kbd_brightness {
-                        let _ = tx.send(KeyboardBacklightRequest::Set(b));
-                    }
+                    && let Some(b) = self.kbd_brightness
+                {
+                    let _ = tx.send(KeyboardBacklightRequest::Set(b));
+                }
                 return cosmic::iced::Task::perform(
                     tokio::time::sleep(Duration::from_millis(200)),
                     |()| cosmic::Action::App(Message::SetKbdBrightnessDebounced),
@@ -291,9 +292,10 @@ impl cosmic::Application for CosmicBatteryApplet {
                 }
 
                 if let Some(tx) = &self.settings_daemon_sender
-                    && let Some(b) = self.screen_brightness {
-                        let _ = tx.send(settings_daemon::Request::SetDisplayBrightness(b));
-                    }
+                    && let Some(b) = self.screen_brightness
+                {
+                    let _ = tx.send(settings_daemon::Request::SetDisplayBrightness(b));
+                }
                 return cosmic::iced::Task::perform(
                     tokio::time::sleep(Duration::from_millis(200)),
                     |()| cosmic::Action::App(Message::SetScreenBrightnessDebounced),
@@ -302,18 +304,20 @@ impl cosmic::Application for CosmicBatteryApplet {
             Message::ReleaseKbdBrightness => {
                 self.dragging_kbd_brightness = false;
                 if let Some(tx) = &self.kbd_sender
-                    && let Some(b) = self.kbd_brightness {
-                        let _ = tx.send(KeyboardBacklightRequest::Set(b));
-                    }
+                    && let Some(b) = self.kbd_brightness
+                {
+                    let _ = tx.send(KeyboardBacklightRequest::Set(b));
+                }
             }
             Message::ReleaseScreenBrightness => {
                 self.dragging_screen_brightness = false;
 
                 self.update_display();
                 if let Some(tx) = &self.settings_daemon_sender
-                    && let Some(b) = self.screen_brightness {
-                        let _ = tx.send(settings_daemon::Request::SetDisplayBrightness(b));
-                    }
+                    && let Some(b) = self.screen_brightness
+                {
+                    let _ = tx.send(settings_daemon::Request::SetDisplayBrightness(b));
+                }
             }
             Message::InitChargingLimit(enable) => {
                 if let Some(enable) = enable {
@@ -750,64 +754,66 @@ impl cosmic::Application for CosmicBatteryApplet {
         }
 
         if let Some(max_screen_brightness) = self.max_screen_brightness
-            && let Some(screen_brightness) = self.screen_brightness {
-                content.push(
-                    padded_control(
-                        row![
-                            icon::from_name(self.display_icon_name.as_str())
-                                .size(24)
-                                .symbolic(true),
-                            slider(
-                                0..=max_screen_brightness,
-                                screen_brightness,
-                                Message::SetScreenBrightness
-                            )
-                            .on_release(Message::ReleaseScreenBrightness),
-                            container(
-                                text(format!(
-                                    "{:.0}%",
-                                    self.screen_brightness_percent().unwrap_or(0.) * 100.
-                                ))
-                                .size(16)
-                            )
-                            .width(Length::Fixed(40.0))
-                            .align_x(Alignment::End)
-                        ]
-                        .spacing(12),
-                    )
-                    .into(),
-                );
-            }
+            && let Some(screen_brightness) = self.screen_brightness
+        {
+            content.push(
+                padded_control(
+                    row![
+                        icon::from_name(self.display_icon_name.as_str())
+                            .size(24)
+                            .symbolic(true),
+                        slider(
+                            0..=max_screen_brightness,
+                            screen_brightness,
+                            Message::SetScreenBrightness
+                        )
+                        .on_release(Message::ReleaseScreenBrightness),
+                        container(
+                            text(format!(
+                                "{:.0}%",
+                                self.screen_brightness_percent().unwrap_or(0.) * 100.
+                            ))
+                            .size(16)
+                        )
+                        .width(Length::Fixed(40.0))
+                        .align_x(Alignment::End)
+                    ]
+                    .spacing(12),
+                )
+                .into(),
+            );
+        }
 
         if let Some(max_kbd_brightness) = self.max_kbd_brightness
-            && let Some(kbd_brightness) = self.kbd_brightness {
-                content.push(
-                    padded_control(
-                        row![
-                            icon::from_name("keyboard-brightness-symbolic")
-                                .size(24)
-                                .symbolic(true),
-                            slider(
-                                0..=max_kbd_brightness,
-                                kbd_brightness,
-                                Message::SetKbdBrightness
-                            )
-                            .on_release(Message::ReleaseKbdBrightness),
-                            container(
-                                text(format!(
-                                    "{:.0}%",
-                                    100. * kbd_brightness as f64 / max_kbd_brightness as f64
-                                ))
-                                .size(16)
-                            )
-                            .width(Length::Fixed(40.0))
-                            .align_x(Alignment::End)
-                        ]
-                        .spacing(12),
-                    )
-                    .into(),
-                );
-            }
+            && let Some(kbd_brightness) = self.kbd_brightness
+        {
+            content.push(
+                padded_control(
+                    row![
+                        icon::from_name("keyboard-brightness-symbolic")
+                            .size(24)
+                            .symbolic(true),
+                        slider(
+                            0..=max_kbd_brightness,
+                            kbd_brightness,
+                            Message::SetKbdBrightness
+                        )
+                        .on_release(Message::ReleaseKbdBrightness),
+                        container(
+                            text(format!(
+                                "{:.0}%",
+                                100. * kbd_brightness as f64 / max_kbd_brightness as f64
+                            ))
+                            .size(16)
+                        )
+                        .width(Length::Fixed(40.0))
+                        .align_x(Alignment::End)
+                    ]
+                    .spacing(12),
+                )
+                .into(),
+            );
+        }
 
         content.push(
             padded_control(divider::horizontal::default())

@@ -68,9 +68,10 @@ struct CosmicAppletStatusNotifierWatcher {
 impl CosmicAppletStatusNotifierWatcher {
     fn register_applet(&mut self, #[zbus(header)] hdr: Header<'_>) {
         if let Some(sender) = hdr.sender()
-            && self.unique_names.has_unique_name(sender) {
-                self.applets.insert(sender.to_owned());
-            }
+            && self.unique_names.has_unique_name(sender)
+        {
+            self.applets.insert(sender.to_owned());
+        }
     }
 }
 

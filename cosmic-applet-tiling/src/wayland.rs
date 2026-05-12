@@ -90,23 +90,24 @@ pub fn spawn_workspaces(tx: mpsc::Sender<TilingState>) -> SyncSender<AppRequest>
                     Event::Msg(AppRequest::TilingState(autotile)) => {
                         if let Some(w) = state.workspace_state.workspace_groups().find_map(|g| {
                             if let Some(o) = state.expected_output.as_ref()
-                                && !g.outputs.contains(o) {
-                                    return None;
-                                }
+                                && !g.outputs.contains(o)
+                            {
+                                return None;
+                            }
                             g.workspaces
                                 .iter()
                                 .filter_map(|handle| state.workspace_state.workspace_info(handle))
                                 .find(|w| w.state.contains(ext_workspace_handle_v1::State::Active))
-                        })
-                            && let Some(cosmic_handle) = &w.cosmic_handle {
-                                cosmic_handle.set_tiling_state(autotile);
-                                state
-                                    .workspace_state
-                                    .workspace_manager()
-                                    .get()
-                                    .unwrap()
-                                    .commit();
-                            }
+                        }) && let Some(cosmic_handle) = &w.cosmic_handle
+                        {
+                            cosmic_handle.set_tiling_state(autotile);
+                            state
+                                .workspace_state
+                                .workspace_manager()
+                                .get()
+                                .unwrap()
+                                .commit();
+                        }
                     }
                     Event::Msg(AppRequest::DefaultBehavior(tiling)) => {
                         for w in state
@@ -220,9 +221,10 @@ impl OutputHandler for State {
         if info.name.as_deref() == Some(&self.configured_output) {
             self.expected_output = Some(output);
             if self.have_workspaces
-                && let Some(s) = self.tiling_state() {
-                    let _ = block_on(self.tx.send(s));
-                }
+                && let Some(s) = self.tiling_state()
+            {
+                let _ = block_on(self.tx.send(s));
+            }
         }
     }
 
