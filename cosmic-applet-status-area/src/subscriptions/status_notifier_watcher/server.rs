@@ -118,8 +118,8 @@ pub async fn create_service(connection: &zbus::Connection) -> zbus::Result<()> {
                     eprintln!("Lost bus name: {NAME}");
                     have_bus_name = false;
                 }
-            } else if let BusName::Unique(name) = &args.name {
-                if args.new_owner.is_none() {
+            } else if let BusName::Unique(name) = &args.name
+                && args.new_owner.is_none() {
                     let mut interface = interface.get_mut().await;
                     if let Some(idx) = interface
                         .items
@@ -133,7 +133,6 @@ pub async fn create_service(connection: &zbus::Connection) -> zbus::Result<()> {
                             .unwrap();
                     }
                 }
-            }
         }
     });
 

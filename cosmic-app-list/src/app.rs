@@ -657,7 +657,7 @@ impl CosmicAppList {
                     .output_list
                     .iter()
                     .find(|(_, info)| info.name.as_ref() == Some(&self.core.applet.output_name))
-                    .map_or(true, |(active_output, _)| {
+                    .is_none_or(|(active_output, _)| {
                         toplevel_info
                             .output
                             .iter()
@@ -1139,8 +1139,8 @@ impl cosmic::Application for CosmicAppList {
             }
             Message::DragFinished => {
                 if let Some((_, mut toplevel_group, _, _pinned_pos)) = self.dnd_source.take() {
-                    if self.dnd_offer.take().is_some() {
-                        if let Some((_, toplevel_group, _, pinned_pos)) = self.dnd_source.as_ref() {
+                    if self.dnd_offer.take().is_some()
+                        && let Some((_, toplevel_group, _, pinned_pos)) = self.dnd_source.as_ref() {
                             let mut pos = 0;
                             self.pinned_list.retain_mut(|pinned| {
                                 let matched_id =
@@ -1153,7 +1153,6 @@ impl cosmic::Application for CosmicAppList {
                                 ret
                             });
                         }
-                    }
 
                     if !self
                         .pinned_list
@@ -1227,8 +1226,8 @@ impl cosmic::Application for CosmicAppList {
                     tracing::error!("Couldn't peek at hovered path.");
                     return Task::none();
                 };
-                if let Some(DndOffer { dock_item, .. }) = self.dnd_offer.as_mut() {
-                    if let Ok(de) = fde::DesktopEntry::from_path(file_path.0, Some(&self.locales)) {
+                if let Some(DndOffer { dock_item, .. }) = self.dnd_offer.as_mut()
+                    && let Ok(de) = fde::DesktopEntry::from_path(file_path.0, Some(&self.locales)) {
                         self.item_ctr += 1;
                         *dock_item = Some(DockItem {
                             id: self.item_ctr,
@@ -1237,7 +1236,6 @@ impl cosmic::Application for CosmicAppList {
                             desktop_info: de,
                         });
                     }
-                }
             }
             Message::DndDropFinished => {
                 // we actually should have the data already, if not, we probably shouldn't do

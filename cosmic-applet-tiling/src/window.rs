@@ -26,7 +26,7 @@ use cosmic::{
 };
 use cosmic_comp_config::{CosmicCompConfig, TileBehavior};
 use cosmic_protocols::workspace::v2::client::zcosmic_workspace_handle_v2::TilingState;
-use std::{thread, time::Instant};
+use std::thread;
 use tracing::error;
 
 const ID: &str = "com.system76.CosmicAppletTiling";

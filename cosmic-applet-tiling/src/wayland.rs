@@ -89,17 +89,16 @@ pub fn spawn_workspaces(tx: mpsc::Sender<TilingState>) -> SyncSender<AppRequest>
                 .insert_source(workspaces_rx, |e, (), state| match e {
                     Event::Msg(AppRequest::TilingState(autotile)) => {
                         if let Some(w) = state.workspace_state.workspace_groups().find_map(|g| {
-                            if let Some(o) = state.expected_output.as_ref() {
-                                if !g.outputs.contains(o) {
+                            if let Some(o) = state.expected_output.as_ref()
+                                && !g.outputs.contains(o) {
                                     return None;
                                 }
-                            }
                             g.workspaces
                                 .iter()
                                 .filter_map(|handle| state.workspace_state.workspace_info(handle))
                                 .find(|w| w.state.contains(ext_workspace_handle_v1::State::Active))
-                        }) {
-                            if let Some(cosmic_handle) = &w.cosmic_handle {
+                        })
+                            && let Some(cosmic_handle) = &w.cosmic_handle {
                                 cosmic_handle.set_tiling_state(autotile);
                                 state
                                     .workspace_state
@@ -108,7 +107,6 @@ pub fn spawn_workspaces(tx: mpsc::Sender<TilingState>) -> SyncSender<AppRequest>
                                     .unwrap()
                                     .commit();
                             }
-                        }
                     }
                     Event::Msg(AppRequest::DefaultBehavior(tiling)) => {
                         for w in state
@@ -221,11 +219,10 @@ impl OutputHandler for State {
         let info = self.output_state.info(&output).unwrap();
         if info.name.as_deref() == Some(&self.configured_output) {
             self.expected_output = Some(output);
-            if self.have_workspaces {
-                if let Some(s) = self.tiling_state() {
+            if self.have_workspaces
+                && let Some(s) = self.tiling_state() {
                     let _ = block_on(self.tx.send(s));
                 }
-            }
         }
     }
 

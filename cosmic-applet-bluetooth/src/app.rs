@@ -24,7 +24,7 @@ use cosmic::{
     widget::{button, divider, icon, scrollable, text},
 };
 use futures::FutureExt;
-use std::{collections::HashMap, sync::LazyLock, time::Duration};
+use std::{collections::HashMap, time::Duration};
 use tokio::sync::mpsc::Sender;
 
 use crate::{
@@ -145,7 +145,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
             }
             Message::BluetoothEvent(e) => match e {
                 BluerEvent::RequestResponse {
-                    req,
+                    req: _,
                     state,
                     err_msg,
                 } => {

@@ -40,7 +40,7 @@ use cosmic_settings_upower_subscription::{
 };
 
 use rustc_hash::FxHashMap;
-use std::{path::PathBuf, sync::LazyLock, time::Duration};
+use std::{path::PathBuf, time::Duration};
 use tokio::sync::mpsc::UnboundedSender;
 
 // XXX improve
@@ -276,11 +276,10 @@ impl cosmic::Application for CosmicBatteryApplet {
                 if !self.dragging_kbd_brightness {
                     return Task::none();
                 }
-                if let Some(tx) = &self.kbd_sender {
-                    if let Some(b) = self.kbd_brightness {
+                if let Some(tx) = &self.kbd_sender
+                    && let Some(b) = self.kbd_brightness {
                         let _ = tx.send(KeyboardBacklightRequest::Set(b));
                     }
-                }
                 return cosmic::iced::Task::perform(
                     tokio::time::sleep(Duration::from_millis(200)),
                     |()| cosmic::Action::App(Message::SetKbdBrightnessDebounced),
@@ -291,11 +290,10 @@ impl cosmic::Application for CosmicBatteryApplet {
                     return Task::none();
                 }
 
-                if let Some(tx) = &self.settings_daemon_sender {
-                    if let Some(b) = self.screen_brightness {
+                if let Some(tx) = &self.settings_daemon_sender
+                    && let Some(b) = self.screen_brightness {
                         let _ = tx.send(settings_daemon::Request::SetDisplayBrightness(b));
                     }
-                }
                 return cosmic::iced::Task::perform(
                     tokio::time::sleep(Duration::from_millis(200)),
                     |()| cosmic::Action::App(Message::SetScreenBrightnessDebounced),
@@ -303,21 +301,19 @@ impl cosmic::Application for CosmicBatteryApplet {
             }
             Message::ReleaseKbdBrightness => {
                 self.dragging_kbd_brightness = false;
-                if let Some(tx) = &self.kbd_sender {
-                    if let Some(b) = self.kbd_brightness {
+                if let Some(tx) = &self.kbd_sender
+                    && let Some(b) = self.kbd_brightness {
                         let _ = tx.send(KeyboardBacklightRequest::Set(b));
                     }
-                }
             }
             Message::ReleaseScreenBrightness => {
                 self.dragging_screen_brightness = false;
 
                 self.update_display();
-                if let Some(tx) = &self.settings_daemon_sender {
-                    if let Some(b) = self.screen_brightness {
+                if let Some(tx) = &self.settings_daemon_sender
+                    && let Some(b) = self.screen_brightness {
                         let _ = tx.send(settings_daemon::Request::SetDisplayBrightness(b));
                     }
-                }
             }
             Message::InitChargingLimit(enable) => {
                 if let Some(enable) = enable {
@@ -511,7 +507,7 @@ impl cosmic::Application for CosmicBatteryApplet {
         Task::none()
     }
 
-    fn view(&self) -> Element<Message> {
+    fn view(&self) -> Element<'_, Message> {
         let is_horizontal = match self.core.applet.anchor {
             PanelAnchor::Top | PanelAnchor::Bottom => true,
             PanelAnchor::Left | PanelAnchor::Right => false,
@@ -753,8 +749,8 @@ impl cosmic::Application for CosmicBatteryApplet {
             );
         }
 
-        if let Some(max_screen_brightness) = self.max_screen_brightness {
-            if let Some(screen_brightness) = self.screen_brightness {
+        if let Some(max_screen_brightness) = self.max_screen_brightness
+            && let Some(screen_brightness) = self.screen_brightness {
                 content.push(
                     padded_control(
                         row![
@@ -782,10 +778,9 @@ impl cosmic::Application for CosmicBatteryApplet {
                     .into(),
                 );
             }
-        }
 
-        if let Some(max_kbd_brightness) = self.max_kbd_brightness {
-            if let Some(kbd_brightness) = self.kbd_brightness {
+        if let Some(max_kbd_brightness) = self.max_kbd_brightness
+            && let Some(kbd_brightness) = self.kbd_brightness {
                 content.push(
                     padded_control(
                         row![
@@ -813,7 +808,6 @@ impl cosmic::Application for CosmicBatteryApplet {
                     .into(),
                 );
             }
-        }
 
         content.push(
             padded_control(divider::horizontal::default())

@@ -11,7 +11,6 @@ use cosmic::{
     iced::{
         self, Length, Subscription,
         platform_specific::shell::commands::popup::{destroy_popup, get_popup},
-        theme::Style,
         window,
     },
     surface,
@@ -103,7 +102,7 @@ impl App {
         let overflow_index = self.overflow_index().unwrap_or(0);
         let children = self.menus.iter().skip(overflow_index).map(|(id, menu)| {
             mouse_area(
-                menu_icon_button(&self.core.applet, &menu).on_press_down(Msg::TogglePopup(*id)),
+                menu_icon_button(&self.core.applet, menu).on_press_down(Msg::TogglePopup(*id)),
             )
             .on_enter(Msg::Hovered(*id))
             .into()
@@ -162,10 +161,8 @@ impl cosmic::Application for App {
                         app_id: Self::APP_ID.to_string(),
                         exec: format!("activate:{}", id),
                     });
-                } else {
-                    if let Some(menu) = self.menus.get(&id) {
-                        return activate(id, &menu.item, None);
-                    }
+                } else if let Some(menu) = self.menus.get(&id) {
+                    return activate(id, &menu.item, None);
                 }
                 Task::none()
             }
@@ -280,19 +277,18 @@ impl cosmic::Application for App {
             Msg::Token(u) => match u {
                 TokenUpdate::Init(tx) => {
                     self.token_tx = Some(tx);
-                    return Task::none();
+                    Task::none()
                 }
                 TokenUpdate::Finished => {
                     self.token_tx = None;
-                    return Task::none();
+                    Task::none()
                 }
                 TokenUpdate::ActivationToken { token, exec: id } => {
                     if let Some(id_str) = id.strip_prefix("activate:") {
-                        if let Ok(real_id) = id_str.parse::<usize>() {
-                            if let Some(menu) = self.menus.get(&real_id) {
+                        if let Ok(real_id) = id_str.parse::<usize>()
+                            && let Some(menu) = self.menus.get(&real_id) {
                                 return activate(real_id, &menu.item, token.clone());
                             }
-                        }
                         return Task::none();
                     }
                     if let Some(((state, id), token)) = str::parse(&id)
@@ -308,7 +304,7 @@ impl cosmic::Application for App {
                             )
                             .map(move |msg| cosmic::action::app(Msg::StatusMenu((id, msg))));
                     }
-                    return Task::none();
+                    Task::none()
                 }
             },
             Msg::Hovered(id) => {
@@ -362,15 +358,15 @@ impl cosmic::Application for App {
                 Task::batch(cmds)
             }
             Msg::Surface(a) => {
-                return cosmic::task::message(cosmic::Action::Cosmic(
+                cosmic::task::message(cosmic::Action::Cosmic(
                     cosmic::app::Action::Surface(a),
-                ));
+                ))
             }
             Msg::ToggleOverflow => {
                 if let Some(popup_id) = self.overflow_popup.take() {
                     self.popup = None;
                     self.open_menu = None;
-                    return destroy_popup(popup_id);
+                    destroy_popup(popup_id)
                 } else if let Some(overflow_index) = self.overflow_index() {
                     // If we don't have an overflow, create it
                     let popup_id = self.next_popup_id();
@@ -399,9 +395,9 @@ impl cosmic::Application for App {
                     }
 
                     self.overflow_popup = Some(popup_id);
-                    return get_popup(popup_settings);
+                    get_popup(popup_settings)
                 } else {
-                    return Task::none();
+                    Task::none()
                 }
             }
             Msg::HoveredOverflow => {
@@ -472,7 +468,7 @@ impl cosmic::Application for App {
             .iter()
             .take(overflow_index.unwrap_or(self.menus.len()))
             .map(|(id, menu)| {
-                mouse_area(menu_icon_button(&self.core.applet, &menu).on_press(Msg::Activate(*id)))
+                mouse_area(menu_icon_button(&self.core.applet, menu).on_press(Msg::Activate(*id)))
                     .on_right_press(Msg::TogglePopup(*id))
                     .on_enter(Msg::Hovered(*id))
                     .into()
@@ -577,7 +573,7 @@ fn menu_icon_button<'a>(
     let icon = menu.icon_handle().clone();
 
     let theme = cosmic::theme::active();
-    let theme = theme.cosmic();
+    let _theme = theme.cosmic();
 
     let suggested = applet.suggested_size(true);
     let padding = applet.suggested_padding(true).1;

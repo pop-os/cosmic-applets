@@ -20,14 +20,14 @@ use cosmic::{
         window,
     },
     surface, theme,
-    widget::{Column, button, cards, container, divider, icon, scrollable, space, text, toggler},
+    widget::{Column, button, cards, container, divider, icon, scrollable, text, toggler},
 };
 
 use cosmic::iced::futures::executor::block_on;
 
 use cosmic_notifications_config::NotificationsConfig;
 use cosmic_notifications_util::{ActionId, Image, Notification, markup};
-use std::{borrow::Cow, collections::HashMap, path::PathBuf, sync::LazyLock};
+use std::{borrow::Cow, collections::HashMap};
 use subscriptions::notifications::{self, NotificationsAppletProxy};
 use tokio::sync::mpsc::Sender;
 use tracing::info;
@@ -173,11 +173,10 @@ impl cosmic::Application for Notifications {
             }
             Message::DoNotDisturb(b) => {
                 self.config.do_not_disturb = b;
-                if let Some(helper) = &self.config_helper {
-                    if let Err(err) = self.config.write_entry(helper) {
+                if let Some(helper) = &self.config_helper
+                    && let Err(err) = self.config.write_entry(helper) {
                         tracing::error!("{:?}", err);
                     }
-                }
             }
             Message::NotificationEvent(event) => match event {
                 notifications::Output::Notification(n) => {
@@ -279,7 +278,7 @@ impl cosmic::Application for Notifications {
                 }
             }
             Message::CardsToggled(name, expanded) => {
-                let id = if let Some((id, _, n_expanded, ..)) = self
+                let _id = if let Some((id, _, n_expanded, ..)) = self
                     .cards
                     .iter_mut()
                     .find(|c| c.1.iter().any(|notif| name == notif.app_name))

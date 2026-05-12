@@ -26,10 +26,9 @@ use cosmic::{
 };
 
 use cosmic_settings_a11y_manager_subscription::{
-    self as cosmic_a11y_manager, AccessibilityEvent, AccessibilityRequest, ColorFilter,
+    AccessibilityEvent, AccessibilityRequest, ColorFilter,
 };
 use cosmic_settings_accessibility_subscription::{self as accessibility};
-use std::sync::LazyLock;
 use tokio::sync::mpsc::UnboundedSender;
 
 pub fn run() -> cosmic::iced::Result {
