@@ -62,10 +62,9 @@ cosmic-config = { git = "https://github.com/pop-os/libcosmic" }
 serde = { version = "1.0.228", features = ["derive"] }
 
 [profile.release]
-# opt-level = 3
-# panic = "abort"
-# lto = "thin"
-opt-level = 1
+opt-level = 3
+panic = "abort"
+lto = "thin"
 
 [workspace.metadata.cargo-machete]
 ignored = ["libcosmic"]
