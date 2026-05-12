@@ -368,6 +368,10 @@ impl cosmic::Application for CosmicBatteryApplet {
                         let _ = tx.send(());
                     }
                     let mut tasks = vec![get_popup(popup_settings)];
+                    if let Some(tx) = &self.settings_daemon_sender {
+                        let _ = tx.send(settings_daemon::Request::GetDisplayBrightness);
+                        let _ = tx.send(settings_daemon::Request::GetMaxDisplayBrightness);
+                    }
                     // Try again every time a popup is opened
                     if self.charging_limit.is_none() {
                         tasks.push(Task::perform(get_charging_limit(), |limit| {
