@@ -29,7 +29,7 @@ zbus.workspace = true
 indexmap = "2.13.0"
 secure-string = "0.3.0"
 uuid = { version = "1.21.0", features = ["v4"] }
-nmrs = "3.1"
+nmrs = "3.1.3"
 
 
 
