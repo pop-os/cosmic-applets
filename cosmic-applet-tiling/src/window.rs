@@ -147,6 +147,7 @@ impl cosmic::Application for Window {
                     destroy_popup(p)
                 } else {
                     return cosmic::surface::surface_task(cosmic::surface::action::app_popup(
+                        |_| Default::default(),
                         |app: &mut Self| {
                             let new_id = Id::unique();
                             app.popup = Some(new_id);

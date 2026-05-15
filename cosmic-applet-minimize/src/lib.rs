@@ -253,6 +253,7 @@ impl cosmic::Application for Minimize {
                     ));
                 } else {
                     return cosmic::surface::surface_task(cosmic::surface::action::app_popup(
+                        |_| Default::default(),
                         |app: &mut Self| {
                             let new_id = window::Id::unique();
                             let pos = app.max_icon_count().unwrap_or_default();

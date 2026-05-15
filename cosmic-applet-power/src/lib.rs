@@ -125,6 +125,7 @@ impl cosmic::Application for Power {
                     ));
                 } else {
                     return cosmic::surface::surface_task(cosmic::surface::action::app_popup(
+                        |_| Default::default(),
                         |app: &mut Power| {
                             let new_id = window::Id::unique();
                             app.popup.replace(new_id);

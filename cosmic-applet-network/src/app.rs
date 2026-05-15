@@ -731,21 +731,26 @@ impl cosmic::Application for CosmicNetworkApplet {
                 } else {
                     let mut tasks = Vec::with_capacity(2);
                     if let Some(conn) = self.conn.clone() {
-                        tasks.push(update_state(conn.clone()));
-                        tasks.push(update_devices(conn.clone()));
-                        tasks.push(load_vpns(conn));
+                        tasks.push(update_state(conn.clone()).map(cosmic::Action::App));
+                        tasks.push(update_devices(conn.clone()).map(cosmic::Action::App));
+                        tasks.push(load_vpns(conn).map(cosmic::Action::App));
                         let uuid = uuid::Uuid::new_v4().to_string().replace("-", "_");
 
                         let my_id = format!(
                             "com.system76.CosmicSettings.Applet._{uuid}.NetworkManager.SecretAgent",
                         );
-                        tasks.push(secret_agent_task(my_id).map(Message::SecretAgent));
+                        tasks.push(
+                            secret_agent_task(my_id)
+                                .map(Message::SecretAgent)
+                                .map(cosmic::Action::App),
+                        );
                     }
 
                     tasks.push(system_conn().map(cosmic::Action::App));
 
                     tasks.push(cosmic::surface::surface_task(
                         cosmic::surface::action::app_popup(
+                            |_| Default::default(),
                             |app: &mut Self| {
                                 let new_id = window::Id::unique();
                                 app.popup.replace(new_id);

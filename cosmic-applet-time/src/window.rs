@@ -521,6 +521,7 @@ impl cosmic::Application for Window {
                     destroy_popup(p)
                 } else {
                     return cosmic::surface::surface_task(cosmic::surface::action::app_popup(
+                        |_| Default::default(),
                         |app: &mut Self| {
                             app.date_today = app.now.date();
                             app.date_selected = app.date_today;

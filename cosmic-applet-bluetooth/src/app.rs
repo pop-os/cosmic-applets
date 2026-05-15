@@ -122,6 +122,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
 
                     let get_popup_task =
                         cosmic::surface::surface_task(cosmic::surface::action::app_popup(
+                            |_| Default::default(),
                             move |app: &mut Self| {
                                 let new_id = window::Id::unique();
                                 app.popup.replace(new_id);

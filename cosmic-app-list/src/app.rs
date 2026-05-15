@@ -915,6 +915,7 @@ impl cosmic::Application for CosmicAppList {
                     };
                     let popup_task =
                         cosmic::surface::surface_task(cosmic::surface::action::app_popup(
+                            |_| Default::default(),
                             move |app: &mut Self| {
                                 let new_id = window::Id::unique();
                                 app.popup = Some(Popup {
@@ -995,6 +996,7 @@ impl cosmic::Application for CosmicAppList {
                     });
                     let popup_task =
                         cosmic::surface::surface_task(cosmic::surface::action::app_popup(
+                            |_| Default::default(),
                             move |app: &mut Self| {
                                 let mut popup_settings = app.core.applet.get_popup_settings(
                                     parent_window_id,
@@ -1617,6 +1619,7 @@ impl cosmic::Application for CosmicAppList {
 
                     let popup_task =
                         cosmic::surface::surface_task(cosmic::surface::action::app_popup(
+                            |_| Default::default(),
                             move |app: &mut Self| {
                                 let mut popup_settings = app.core.applet.get_popup_settings(
                                     app.core.main_window_id().unwrap(),
@@ -1684,6 +1687,7 @@ impl cosmic::Application for CosmicAppList {
 
                     let popup_task =
                         cosmic::surface::surface_task(cosmic::surface::action::app_popup(
+                            |_| Default::default(),
                             move |app: &mut Self| {
                                 let mut popup_settings = app.core.applet.get_popup_settings(
                                     app.core.main_window_id().unwrap(),

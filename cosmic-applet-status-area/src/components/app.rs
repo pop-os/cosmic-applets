@@ -240,6 +240,7 @@ impl cosmic::Application for App {
 
                     let popup_task =
                         cosmic::surface::surface_task(cosmic::surface::action::app_popup(
+                            |_| Default::default(),
                             move |app: &mut Self| {
                                 let popup_id = app.next_popup_id();
                                 let i = app.menus.keys().position(|&i| i == id).unwrap();
@@ -337,6 +338,7 @@ impl cosmic::Application for App {
                     return Task::none();
                 }
                 let popup_task = cosmic::surface::surface_task(cosmic::surface::action::app_popup(
+                    |_| Default::default(),
                     move |app: &mut Self| {
                         let popup_id = app.next_popup_id();
                         let i = app.menus.keys().position(|&i| i == id).unwrap();
@@ -394,6 +396,7 @@ impl cosmic::Application for App {
                     // If we don't have an overflow, create it
                     let popup_task =
                         cosmic::surface::surface_task(cosmic::surface::action::app_popup(
+                            |_| Default::default(),
                             move |app: &mut Self| {
                                 let popup_id = app.next_popup_id();
                                 let mut popup_settings = app.core.applet.get_popup_settings(
@@ -447,6 +450,7 @@ impl cosmic::Application for App {
                     return Task::batch(cmds);
                 };
                 let popup_task = cosmic::surface::surface_task(cosmic::surface::action::app_popup(
+                    |_| Default::default(),
                     move |app: &mut Self| {
                         let popup_id = app.next_popup_id();
                         let mut popup_settings = app.core.applet.get_popup_settings(

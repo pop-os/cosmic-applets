@@ -138,6 +138,7 @@ impl cosmic::Application for CosmicA11yApplet {
                     ));
                 } else {
                     return cosmic::surface::surface_task(cosmic::surface::action::app_popup(
+                        |_| Default::default(),
                         |app: &mut CosmicA11yApplet| {
                             let new_id = window::Id::unique();
                             app.popup.replace(new_id);

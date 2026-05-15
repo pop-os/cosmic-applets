@@ -145,6 +145,7 @@ impl cosmic::Application for Window {
                     return crate::surface::surface_task(crate::surface::action::destroy_popup(p));
                 } else {
                     return crate::surface::surface_task(crate::surface::action::app_popup(
+                        |_| Default::default(),
                         |app: &mut Window| {
                             let new_id = Id::unique();
                             app.popup.replace(new_id);
