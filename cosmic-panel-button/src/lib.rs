@@ -123,11 +123,15 @@ impl cosmic::Application for Button {
     fn update(&mut self, message: Msg) -> app::Task<Msg> {
         match message {
             Msg::Press => {
-                let _ = Command::new("sh")
+                if let Ok(mut child) = Command::new("sh")
                     .arg("-c")
-                    .arg(&self.desktop.exec)
+                    .arg(format!("exec {}", self.desktop.exec))
                     .spawn()
-                    .unwrap();
+                {
+                    std::thread::spawn(move || {
+                        let _ = child.wait();
+                    });
+                }
             }
             Msg::ConfigUpdated(conf) => {
                 self.config = conf
