@@ -360,10 +360,9 @@ impl cosmic::Application for Audio {
                 self.config.show_media_controls_in_top_panel = enabled;
                 if let Ok(helper) =
                     cosmic::cosmic_config::Config::new(Self::APP_ID, AudioAppletConfig::VERSION)
+                    && let Err(err) = self.config.write_entry(&helper)
                 {
-                    if let Err(err) = self.config.write_entry(&helper) {
-                        tracing::error!(?err, "Error writing config");
-                    }
+                    tracing::error!(?err, "Error writing config");
                 }
             }
             Message::CloseRequested(id) => {

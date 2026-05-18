@@ -48,7 +48,7 @@ impl Button {
         icon: cosmic::widget::icon::Handle,
     ) -> cosmic::widget::Button<'a, Message> {
         let theme = cosmic::theme::active();
-        let theme = theme.cosmic();
+        let _theme = theme.cosmic();
 
         let suggested = self.core.applet.suggested_size(icon.symbolic);
         let (major_padding, applet_padding_minor_axis) =
@@ -222,21 +222,21 @@ pub fn run() -> iced::Result {
 
     for mut path in fde::default_paths() {
         path.push(&filename);
-        if let Ok(bytes) = fs::read_to_string(&path) {
-            if let Ok(entry) = DesktopEntry::from_str(&path, &bytes, Some(&locales)) {
-                desktop = Some(Desktop {
-                    name: entry.name(&locales).map_or_else(
-                        || panic!("Desktop file '{filename}' doesn't have `Name`"),
-                        |x| x.to_string(),
-                    ),
-                    icon: entry.icon().map(|x| x.to_string()),
-                    exec: entry.exec().map_or_else(
-                        || panic!("Desktop file '{filename}' doesn't have `Exec`"),
-                        |x| x.to_string(),
-                    ),
-                });
-                break;
-            }
+        if let Ok(bytes) = fs::read_to_string(&path)
+            && let Ok(entry) = DesktopEntry::from_str(&path, &bytes, Some(&locales))
+        {
+            desktop = Some(Desktop {
+                name: entry.name(&locales).map_or_else(
+                    || panic!("Desktop file '{filename}' doesn't have `Name`"),
+                    |x| x.to_string(),
+                ),
+                icon: entry.icon().map(|x| x.to_string()),
+                exec: entry.exec().map_or_else(
+                    || panic!("Desktop file '{filename}' doesn't have `Exec`"),
+                    |x| x.to_string(),
+                ),
+            });
+            break;
         }
     }
     let desktop = desktop.unwrap_or_else(|| {

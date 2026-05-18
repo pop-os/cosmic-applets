@@ -5,7 +5,7 @@ use cosmic::iced::core::Point;
 
 use cosmic::iced::core::{
     Clipboard, Element, Layout, Length, Rectangle, Shell, Size, Widget,
-    event::{self, Event},
+    event::Event,
     layout, mouse, overlay, renderer, touch,
     widget::{Operation, Tree, tree},
 };
@@ -191,7 +191,7 @@ where
     ) {
         self.content.as_widget_mut().update(
             &mut tree.children[0],
-            &event,
+            event,
             layout,
             cursor,
             renderer,
@@ -205,7 +205,7 @@ where
 
         update(
             self,
-            &event,
+            event,
             layout,
             cursor,
             shell,
@@ -308,96 +308,90 @@ fn update<Message: Clone, Theme, Renderer>(
     state: &mut State,
 ) {
     if !cursor.is_over(layout.bounds()) {
-        if !state.is_out_of_bounds {
-            if widget
+        if !state.is_out_of_bounds
+            && widget
                 .on_mouse_enter
                 .as_ref()
                 .or(widget.on_mouse_exit.as_ref())
                 .is_some()
-            {
-                if let Event::Mouse(mouse::Event::CursorMoved { .. }) = event {
-                    state.is_out_of_bounds = true;
-                    if let Some(message) = widget.on_mouse_exit.as_ref() {
-                        shell.publish(message.clone());
-                    }
-                    shell.capture_event();
-                    return;
-                }
+            && let Event::Mouse(mouse::Event::CursorMoved { .. }) = event
+        {
+            state.is_out_of_bounds = true;
+            if let Some(message) = widget.on_mouse_exit.as_ref() {
+                shell.publish(message.clone());
             }
+            shell.capture_event();
+            return;
         }
 
         return;
     }
 
-    if let Some(message) = widget.on_press.as_ref() {
-        if let Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left))
+    if let Some(message) = widget.on_press.as_ref()
+        && let Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left))
         | Event::Touch(touch::Event::FingerPressed { .. }) = event
-        {
-            state.drag_initiated = cursor.position();
-            shell.publish(message.clone());
-            shell.capture_event();
-            return;
-        }
+    {
+        state.drag_initiated = cursor.position();
+        shell.publish(message.clone());
+        shell.capture_event();
+        return;
     }
 
-    if let Some(message) = widget.on_release.as_ref() {
-        if let Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left))
+    if let Some(message) = widget.on_release.as_ref()
+        && let Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left))
         | Event::Touch(touch::Event::FingerLifted { .. }) = event
-        {
-            state.drag_initiated = None;
-            shell.publish(message.clone());
-            shell.capture_event();
-            return;
-        }
+    {
+        state.drag_initiated = None;
+        shell.publish(message.clone());
+        shell.capture_event();
+        return;
     }
 
-    if let Some(message) = widget.on_right_press.as_ref() {
-        if let Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Right)) = event {
-            shell.publish(message.clone());
-            shell.capture_event();
-            return;
-        }
+    if let Some(message) = widget.on_right_press.as_ref()
+        && let Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Right)) = event
+    {
+        shell.publish(message.clone());
+        shell.capture_event();
+        return;
     }
 
-    if let Some(message) = widget.on_right_release.as_ref() {
-        if let Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Right)) = event {
-            shell.publish(message.clone());
-            shell.capture_event();
-            return;
-        }
+    if let Some(message) = widget.on_right_release.as_ref()
+        && let Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Right)) = event
+    {
+        shell.publish(message.clone());
+        shell.capture_event();
+        return;
     }
 
-    if let Some(message) = widget.on_middle_press.as_ref() {
-        if let Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Middle)) = event {
-            shell.publish(message.clone());
-            shell.capture_event();
-            return;
-        }
+    if let Some(message) = widget.on_middle_press.as_ref()
+        && let Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Middle)) = event
+    {
+        shell.publish(message.clone());
+        shell.capture_event();
+        return;
     }
 
-    if let Some(message) = widget.on_middle_release.as_ref() {
-        if let Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Middle)) = event {
-            shell.publish(message.clone());
+    if let Some(message) = widget.on_middle_release.as_ref()
+        && let Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Middle)) = event
+    {
+        shell.publish(message.clone());
 
-            shell.capture_event();
-            return;
-        }
+        shell.capture_event();
+        return;
     }
     if let Some(message) = widget
         .on_mouse_enter
         .as_ref()
         .or(widget.on_mouse_exit.as_ref())
+        && let Event::Mouse(mouse::Event::CursorMoved { .. }) = event
+        && state.is_out_of_bounds
     {
-        if let Event::Mouse(mouse::Event::CursorMoved { .. }) = event {
-            if state.is_out_of_bounds {
-                state.is_out_of_bounds = false;
-                if widget.on_mouse_enter.is_some() {
-                    shell.publish(message.clone());
-                }
-                shell.capture_event();
-                return;
-            }
+        state.is_out_of_bounds = false;
+        if widget.on_mouse_enter.is_some() {
+            shell.publish(message.clone());
         }
+        shell.capture_event();
+        return;
     }
 
     if state.drag_initiated.is_none() && widget.on_drag.is_some() {
@@ -406,22 +400,20 @@ fn update<Message: Clone, Theme, Renderer>(
         {
             state.drag_initiated = cursor.position();
         }
-    } else if let Some((message, drag_source)) = widget.on_drag.as_ref().zip(state.drag_initiated) {
-        if let Some(position) = cursor.position() {
-            if position.distance(drag_source) > 1.0 {
-                state.drag_initiated = None;
-                shell.publish(message.clone());
-                shell.capture_event();
-                return;
-            }
-        }
+    } else if let Some((message, drag_source)) = widget.on_drag.as_ref().zip(state.drag_initiated)
+        && let Some(position) = cursor.position()
+        && position.distance(drag_source) > 1.0
+    {
+        state.drag_initiated = None;
+        shell.publish(message.clone());
+        shell.capture_event();
+        return;
     }
 
-    if let Some(message) = widget.on_mouse_wheel.as_ref() {
-        if let Event::Mouse(mouse::Event::WheelScrolled { delta }) = event {
-            shell.publish((message)(*delta));
-            shell.capture_event();
-            return;
-        }
+    if let Some(message) = widget.on_mouse_wheel.as_ref()
+        && let Event::Mouse(mouse::Event::WheelScrolled { delta }) = event
+    {
+        shell.publish((message)(*delta));
+        shell.capture_event();
     }
 }

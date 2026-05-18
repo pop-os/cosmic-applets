@@ -16,7 +16,7 @@ use cosmic::{
         window,
     },
     surface, theme,
-    widget::{Space, button, divider, icon, space, text},
+    widget::{button, divider, icon, space, text},
 };
 use std::sync::LazyLock;
 

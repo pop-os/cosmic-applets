@@ -316,7 +316,7 @@ impl cosmic::Application for Minimize {
         } else {
             (cross_padding, major_padding)
         };
-        let theme = self.core.system_theme().cosmic();
+        let _theme = self.core.system_theme().cosmic();
         let icon_buttons = self.apps[..max_icon_count].iter().map(|app| {
             self.core
                 .applet
@@ -420,7 +420,7 @@ impl cosmic::Application for Minimize {
             (cross_padding, major_padding)
         };
         let theme = self.core.system_theme().cosmic();
-        let space_xxs = theme.space_xxs();
+        let _space_xxs = theme.space_xxs();
         let icon_buttons = self.apps[max_icon_count..].iter().map(|app| {
             tooltip(
                 Element::from(crate::window_image::WindowImage::new(

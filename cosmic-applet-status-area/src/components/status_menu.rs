@@ -8,7 +8,7 @@ use cosmic::{
     iced,
     widget::icon::{self, IconFallback},
 };
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use crate::subscriptions::status_notifier_item::{IconUpdate, Layout, StatusNotifierItem};
 

@@ -97,10 +97,10 @@ pub fn bluetooth_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
 
                 // Initialize connection.
                 let mut session_state = loop {
-                    if let Ok(session) = Session::new().await {
-                        if let Ok(state) = BluerSessionState::new(session).await {
-                            break state;
-                        }
+                    if let Ok(session) = Session::new().await
+                        && let Ok(state) = BluerSessionState::new(session).await
+                    {
+                        break state;
                     }
 
                     retry_count = retry_count.saturating_add(1);
@@ -748,18 +748,16 @@ impl BluerSessionState {
                                         (name == cname).then_some(id.to_string())
                                     })
                                 })
-                            {
-                                if let Err(err) = tokio::process::Command::new("rfkill")
+                                && let Err(err) = tokio::process::Command::new("rfkill")
                                     .env("PATH", rfkill_path_var())
                                     .arg(if *enabled { "unblock" } else { "block" })
                                     .arg(id)
                                     .output()
                                     .await
-                                {
-                                    tracing::error!(
-                                        "Failed to set bluetooth state using rfkill. {err:?}"
-                                    );
-                                }
+                            {
+                                tracing::error!(
+                                    "Failed to set bluetooth state using rfkill. {err:?}"
+                                );
                             }
 
                             if *enabled {
@@ -774,10 +772,8 @@ impl BluerSessionState {
                                 let res = device.pair().await;
                                 if let Err(err) = res {
                                     err_msg = Some(err.to_string());
-                                } else {
-                                    if let Err(err) = device.set_trusted(true).await {
-                                        tracing::error!(?err, "Failed to trust device.");
-                                    }
+                                } else if let Err(err) = device.set_trusted(true).await {
+                                    tracing::error!(?err, "Failed to trust device.");
                                 }
                             }
                         }
@@ -789,10 +785,8 @@ impl BluerSessionState {
                                 let res = device.connect().await;
                                 if let Err(err) = res {
                                     err_msg = Some(err.to_string());
-                                } else {
-                                    if let Err(err) = device.set_trusted(true).await {
-                                        tracing::error!(?err, "Failed to trust device.");
-                                    }
+                                } else if let Err(err) = device.set_trusted(true).await {
+                                    tracing::error!(?err, "Failed to trust device.");
                                 }
                             }
                         }

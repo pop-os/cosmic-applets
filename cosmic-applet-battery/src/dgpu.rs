@@ -525,11 +525,10 @@ async fn start_listening(
                                     }
                                 },
                                 EventType::Change => {
-                                    if let Some(path) = event.devnode() {
-                                        if let Some(gpu) = monitor.gpus.iter_mut().find(|gpu| gpu.path == path) {
+                                    if let Some(path) = event.devnode()
+                                        && let Some(gpu) = monitor.gpus.iter_mut().find(|gpu| gpu.path == path) {
                                             gpu.interval.reset_immediately();
                                         }
-                                    }
                                 }
                                 EventType::Remove => {
                                     if let Some(path) = event.devnode() {

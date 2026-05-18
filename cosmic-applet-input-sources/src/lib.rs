@@ -3,7 +3,6 @@
 
 mod localize;
 
-use cosmic::iced::{Alignment, Length};
 use cosmic::{
     app,
     app::Core,
@@ -11,19 +10,17 @@ use cosmic::{
     cosmic_config::{self, ConfigSet, CosmicConfigEntry},
     cosmic_theme::Spacing,
     iced::Subscription,
+    iced::core::window,
     iced::{
         Rectangle, Task,
         platform_specific::shell::commands::popup::{destroy_popup, get_popup},
-        widget::{column, row},
         window::Id,
     },
-    iced::{core::window, runtime::Appearance},
     prelude::*,
     surface, theme,
     widget::{
         self, autosize,
         rectangle_tracker::{RectangleTracker, RectangleUpdate, rectangle_tracker_subscription},
-        space,
     },
 };
 use cosmic_comp_config::CosmicCompConfig;
@@ -192,12 +189,11 @@ impl cosmic::Application for Window {
 
                 self.comp_config.xkb_config.layout = new_layout;
                 self.comp_config.xkb_config.variant = new_variant;
-                if let Some(comp_config_handler) = &self.comp_config_handler {
-                    if let Err(err) =
+                if let Some(comp_config_handler) = &self.comp_config_handler
+                    && let Err(err) =
                         comp_config_handler.set("xkb_config", &self.comp_config.xkb_config)
-                    {
-                        tracing::error!("Failed to set config 'xkb_config' {err}");
-                    }
+                {
+                    tracing::error!("Failed to set config 'xkb_config' {err}");
                 }
             }
             Message::Surface(a) => {
