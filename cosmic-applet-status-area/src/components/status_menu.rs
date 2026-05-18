@@ -26,6 +26,7 @@ pub struct State {
     expanded: Option<i32>,
     // TODO handle icon with multiple sizes?
     icon_handle: icon::Handle,
+    icon_theme_path: Option<PathBuf>,
     click_event: Option<(i32, bool)>,
 }
 
@@ -39,6 +40,7 @@ impl State {
                 icon_handle: icon::from_name("application-default")
                     .prefer_svg(true)
                     .handle(),
+                icon_theme_path: None,
                 click_event: None,
             },
             iced::Task::none(),
@@ -63,6 +65,7 @@ impl State {
             }
             Msg::Icon(update) => {
                 let icon_name = update.name.unwrap_or_default();
+                self.icon_theme_path = update.theme_path;
 
                 // Use the icon pixmap if an icon was not defined by name.
                 if icon_name.is_empty() {
@@ -93,13 +96,18 @@ impl State {
                 self.icon_handle = if Path::new(&icon_name).exists() {
                     icon::from_path(Path::new(&icon_name).to_path_buf()).symbolic(true)
                 } else {
-                    icon::from_name(icon_name)
-                        .prefer_svg(true)
-                        .fallback(Some(IconFallback::Names(vec![
+                    let mut builder = icon::from_name(icon_name).prefer_svg(true).fallback(Some(
+                        IconFallback::Names(vec![
                             "application-default".into(),
                             "application-x-executable".into(),
-                        ])))
-                        .handle()
+                        ]),
+                    ));
+
+                    if let Some(ref theme_path) = self.icon_theme_path {
+                        builder = builder.with_extra_paths(vec![theme_path.clone()]);
+                    }
+
+                    builder.handle()
                 };
 
                 iced::Task::none()
