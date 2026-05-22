@@ -27,25 +27,28 @@ use cosmic::{
     },
     cosmic_config::{Config, CosmicConfigEntry},
     desktop::IconSourceExt,
-    iced::runtime::{core::event, dnd::peek_dnd},
     iced::{
         self, Alignment, Background, Border, Length, Limits, Padding, Subscription,
         advanced::text::{Ellipsize, EllipsizeHeightLimit},
         clipboard::mime::{AllowedMimeTypes, AsMimeTypes},
         event::listen_with,
         platform_specific::shell::commands::popup::{destroy_popup, get_popup},
+        runtime::{core::event, dnd::peek_dnd, platform_specific::wayland::CornerRadius},
         widget::{
-            Column, Row, column, mouse_area, row, rule::vertical as vertical_rule,
-            space::horizontal as horizontal_space, space::vertical as vertical_space, stack,
+            Column, Row, column, mouse_area, row,
+            rule::vertical as vertical_rule,
+            space::{horizontal as horizontal_space, vertical as vertical_space},
+            stack,
         },
         window,
     },
-    surface,
+    surface::{self, action::LiveSettings},
     theme::{self, Button, Container},
     widget::{
         DndDestination, Image, button, container, divider, dnd_source,
         icon::{self, from_name},
         image::Handle,
+        menu,
         rectangle_tracker::{RectangleTracker, RectangleUpdate, rectangle_tracker_subscription},
         svg, text,
     },
@@ -913,9 +916,18 @@ impl cosmic::Application for CosmicAppList {
                         tracing::error!("No rectangle found for toplevel group");
                         return Task::none();
                     };
+                    let corners = self.core.system_theme().cosmic().corner_radii.radius_s;
                     let popup_task =
                         cosmic::surface::surface_task(cosmic::surface::action::app_popup(
-                            |_| Default::default(),
+                            move |_| LiveSettings {
+                                corners: Some(CornerRadius {
+                                    top_left: corners[0] as u32 + 1,
+                                    top_right: corners[1] as u32 + 1,
+                                    bottom_left: corners[3] as u32 + 1,
+                                    bottom_right: corners[2] as u32 + 1,
+                                }),
+                                ..Default::default()
+                            },
                             move |app: &mut Self| {
                                 let new_id = window::Id::unique();
                                 app.popup = Some(Popup {
@@ -2125,7 +2137,8 @@ impl cosmic::Application for CosmicAppList {
                             .width(Length::Fill)
                     }
 
-                    let mut content = column![].align_x(Alignment::Center);
+                    let mut content =
+                        menu::menu_column::MenuColumn::with_capacity(4).align_x(Alignment::Center);
 
                     if let Some(exec) = desktop_info.exec() {
                         if !toplevels.is_empty() {
