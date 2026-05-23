@@ -63,6 +63,7 @@ impl State {
             }
             Msg::Icon(update) => {
                 let icon_name = update.name.unwrap_or_default();
+                let theme_path = update.theme_path;
 
                 // Use the icon pixmap if an icon was not defined by name.
                 if icon_name.is_empty() {
@@ -92,6 +93,11 @@ impl State {
                 // Load icon by path if the name is a path.
                 self.icon_handle = if Path::new(&icon_name).exists() {
                     icon::from_path(Path::new(&icon_name).to_path_buf()).symbolic(true)
+                } else if let Some(resolved) = theme_path
+                    .as_deref()
+                    .and_then(|tp| find_icon_in_theme_path(tp, &icon_name))
+                {
+                    icon::from_path(resolved)
                 } else {
                     icon::from_name(icon_name)
                         .prefer_svg(true)
@@ -272,4 +278,50 @@ fn row_button(content: Vec<cosmic::Element<Msg>>) -> cosmic::widget::Button<Msg>
             .align_y(iced::Alignment::Center)
             .width(iced::Length::Fill),
     )
+}
+
+// Search an SNI item's IconThemePath for `name`.<svg|png|xpm>. The path is not
+// guaranteed to follow the XDG icon theme spec — JetBrains Toolbox stores
+// icons flat at the root, Dropbox uses hicolor/<size>/<context>/<file> — so
+// check the path directly first, then walk a small depth.
+fn find_icon_in_theme_path(theme_path: &Path, name: &str) -> Option<PathBuf> {
+    const EXTS: &[&str] = &["svg", "png", "xpm"];
+    const WALK_DEPTH: u32 = 5;
+
+    let candidates: Vec<String> = EXTS.iter().map(|e| format!("{name}.{e}")).collect();
+
+    for cand in &candidates {
+        let path = theme_path.join(cand);
+        if path.is_file() {
+            return Some(path);
+        }
+    }
+
+    walk_for_icon(theme_path, &candidates, WALK_DEPTH)
+}
+
+fn walk_for_icon(dir: &Path, candidates: &[String], depth: u32) -> Option<PathBuf> {
+    if depth == 0 {
+        return None;
+    }
+    let entries = std::fs::read_dir(dir).ok()?;
+    let mut subdirs = Vec::new();
+    for entry in entries.flatten() {
+        let Ok(file_type) = entry.file_type() else { continue };
+        let path = entry.path();
+        if file_type.is_file() {
+            let file_name = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
+            if candidates.iter().any(|c| c == file_name) {
+                return Some(path);
+            }
+        } else if file_type.is_dir() {
+            subdirs.push(path);
+        }
+    }
+    for subdir in subdirs {
+        if let Some(found) = walk_for_icon(&subdir, candidates, depth - 1) {
+            return Some(found);
+        }
+    }
+    None
 }

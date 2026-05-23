@@ -1,7 +1,7 @@
 // Copyright 2023 System76 <info@system76.com>
 // SPDX-License-Identifier: GPL-3.0-only
 
-use std::hash::Hash;
+use std::{hash::Hash, path::PathBuf};
 
 use cosmic::iced::{self, Subscription};
 use futures::{FutureExt, StreamExt};
@@ -27,7 +27,7 @@ pub struct Icon {
 pub struct IconUpdate {
     pub name: Option<String>,
     pub pixmap: Option<Vec<Icon>>,
-    // pub theme_path: Option<PathBuf>,
+    pub theme_path: Option<PathBuf>,
 }
 
 impl StatusNotifierItem {
@@ -118,11 +118,11 @@ impl StatusNotifierItem {
         async fn icon_events(item_proxy: StatusNotifierItemProxy<'static>) -> IconUpdate {
             let icon_name = item_proxy.icon_name().await;
             let icon_pixmap = item_proxy.icon_pixmap().await;
-            // let icon_theme_path = item_proxy.icon_theme_path().await.map(PathBuf::from);
+            let icon_theme_path = item_proxy.icon_theme_path().await.map(PathBuf::from);
             IconUpdate {
                 name: icon_name.ok(),
                 pixmap: icon_pixmap.ok(),
-                // theme_path: icon_theme_path.ok().filter(|x| !x.as_os_str().is_empty()),
+                theme_path: icon_theme_path.ok().filter(|x| !x.as_os_str().is_empty()),
             }
         }
 
