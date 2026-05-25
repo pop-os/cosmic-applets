@@ -33,4 +33,4 @@ confirm-body =
         [lock-screen] zárolni fogja a képernyőt
         [log-out] kijelentkezik
        *[other] alkalmazni fogja a kiválasztott műveletet
-    } { $countdown } másodperc múlva
+    } { $countdown } másodperc múlva.
