@@ -1,14 +1,14 @@
 hours-ago =
     { $duration ->
-        [0] Most
-        [one] 1 órával ezelőtt
-       *[other] { $duration } órával ezelőtt
+        [0] Épp most
+        [one] 1 órája
+       *[other] { $duration } órája
     }
 minutes-ago =
     { $duration ->
-        [0] Most
-        [one] 1 perccel ezelőtt
-       *[other] { $duration } perccel ezelőtt
+        [0] Épp most
+        [one] 1 perce
+       *[other] { $duration } perce
     }
 show-less = Kevesebb megjelenítése
 show-more = { $more } további megjelenítése
