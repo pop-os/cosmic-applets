@@ -726,9 +726,10 @@ impl cosmic::Application for CosmicNetworkApplet {
                         tasks.push(update_state(conn.clone()));
                         tasks.push(update_devices(conn.clone()));
                         tasks.push(load_vpns(conn));
+                        let uuid = uuid::Uuid::new_v4().to_string().replace("-", "_");
+
                         let my_id = format!(
-                            "com.system76.CosmicSettings.Applet.{}.NetworkManager.SecretAgent",
-                            uuid::Uuid::new_v4()
+                            "com.system76.CosmicSettings.Applet._{uuid}.NetworkManager.SecretAgent",
                         );
                         tasks.push(secret_agent_task(my_id).map(Message::SecretAgent));
                     }
