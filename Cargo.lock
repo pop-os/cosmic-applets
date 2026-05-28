@@ -1567,7 +1567,7 @@ dependencies = [
 [[package]]
 name = "cosmic-settings-upower-subscription"
 version = "1.0.7"
-source = "git+https://github.com/pop-os/cosmic-settings#f19da761296a28ea97d6dadc2971de0bf2c0ad85"
+source = "git+https://github.com/pop-os/cosmic-settings#81912bed6cdebe2719e29e6bd1453e7b977acb0e"
 dependencies = [
  "futures",
  "iced_futures",
