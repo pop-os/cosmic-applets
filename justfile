@@ -65,7 +65,7 @@ install: (_install_bin 'cosmic-applets') (_link_applet 'cosmic-panel-button') (_
 # Vendor Cargo dependencies locally
 vendor:
     mkdir -p .cargo
-    cargo vendor | head -n -1 > .cargo/config
+    cargo vendor --locked | head -n -1 > .cargo/config
     echo 'directory = "vendor"' >> .cargo/config
     tar pcf vendor.tar vendor
     rm -rf vendor
