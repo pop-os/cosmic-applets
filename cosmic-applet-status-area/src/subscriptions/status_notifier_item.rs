@@ -31,6 +31,18 @@ pub struct IconUpdate {
     pub theme_path: Option<PathBuf>,
 }
 
+/// Read an item's current icon-related properties; module-level so it is unit-testable against a fake item.
+pub(crate) async fn icon_events(item_proxy: StatusNotifierItemProxy<'static>) -> IconUpdate {
+    let icon_name = item_proxy.icon_name().await;
+    let icon_pixmap = item_proxy.icon_pixmap().await;
+    let icon_theme_path = item_proxy.icon_theme_path().await.map(PathBuf::from);
+    IconUpdate {
+        name: icon_name.ok(),
+        pixmap: icon_pixmap.ok(),
+        theme_path: icon_theme_path.ok().filter(|x| !x.as_os_str().is_empty()),
+    }
+}
+
 impl StatusNotifierItem {
     pub async fn new(connection: &zbus::Connection, name: String) -> zbus::Result<Self> {
         let (dest, path) = if let Some(idx) = name.find('/') {
@@ -116,17 +128,6 @@ impl StatusNotifierItem {
     }
 
     pub fn icon_subscription(&self) -> iced::Subscription<IconUpdate> {
-        async fn icon_events(item_proxy: StatusNotifierItemProxy<'static>) -> IconUpdate {
-            let icon_name = item_proxy.icon_name().await;
-            let icon_pixmap = item_proxy.icon_pixmap().await;
-            let icon_theme_path = item_proxy.icon_theme_path().await.map(PathBuf::from);
-            IconUpdate {
-                name: icon_name.ok(),
-                pixmap: icon_pixmap.ok(),
-                theme_path: icon_theme_path.ok().filter(|x| !x.as_os_str().is_empty()),
-            }
-        }
-
         let item_proxy = self.item_proxy.clone();
         struct Wrapper {
             item_proxy: StatusNotifierItemProxy<'static>,
@@ -331,4 +332,131 @@ pub trait DBusMenu {
         updated_props: Vec<(i32, std::collections::HashMap<String, zvariant::OwnedValue>)>,
         removed_props: Vec<(i32, Vec<String>)>,
     ) -> zbus::Result<()>;
+}
+
+#[cfg(test)]
+mod tests {
+    //! Drive the applet's real proxy + logic against a fake StatusNotifierItem on a private bus.
+    //! Tests skip when no session bus is present; run with:
+    //!   dbus-run-session -- cargo test -p cosmic-applet-status-area
+
+    use super::*;
+    use std::sync::Arc;
+    use tokio::sync::Mutex;
+    use zbus::Connection;
+    use zbus::object_server::SignalEmitter;
+    use zbus::zvariant::OwnedObjectPath;
+
+    #[derive(Default)]
+    pub(crate) struct FakeState {
+        pub icon_name: String,
+        pub icon_theme_path: String,
+        pub icon_pixmap: Vec<(i32, i32, Vec<u8>)>,
+    }
+
+    pub(crate) struct FakeItem {
+        pub state: Arc<Mutex<FakeState>>,
+    }
+
+    #[zbus::interface(name = "org.kde.StatusNotifierItem")]
+    impl FakeItem {
+        #[zbus(property)]
+        async fn icon_name(&self) -> String {
+            self.state.lock().await.icon_name.clone()
+        }
+
+        #[zbus(property)]
+        async fn icon_theme_path(&self) -> String {
+            self.state.lock().await.icon_theme_path.clone()
+        }
+
+        #[zbus(property)]
+        async fn icon_pixmap(&self) -> Vec<(i32, i32, Vec<u8>)> {
+            self.state.lock().await.icon_pixmap.clone()
+        }
+
+        #[zbus(property)]
+        async fn item_is_menu(&self) -> bool {
+            false
+        }
+
+        #[zbus(property)]
+        async fn menu(&self) -> OwnedObjectPath {
+            OwnedObjectPath::try_from("/MenuBar").unwrap()
+        }
+
+        #[zbus(signal)]
+        async fn new_icon(emitter: &SignalEmitter<'_>) -> zbus::Result<()>;
+    }
+
+    /// Spawn a fake item on its own connection; returns `(connection, bus_name, object_path)`.
+    pub(crate) async fn spawn_fake(state: FakeState) -> (Connection, String, OwnedObjectPath) {
+        let path = OwnedObjectPath::try_from("/StatusNotifierItem").unwrap();
+        let conn = Connection::session().await.expect("session bus");
+        conn.object_server()
+            .at(
+                &path,
+                FakeItem {
+                    state: Arc::new(Mutex::new(state)),
+                },
+            )
+            .await
+            .expect("serve fake item");
+        let name = conn.unique_name().expect("unique name").to_string();
+        (conn, name, path)
+    }
+
+    /// Build the applet's real proxy pointed at a fake item, on its own connection
+    /// (a proxy sharing the server's connection self-deadlocks).
+    async fn proxy_for(name: String, path: OwnedObjectPath) -> StatusNotifierItemProxy<'static> {
+        let conn = Connection::session().await.expect("client session bus");
+        StatusNotifierItemProxy::builder(&conn)
+            .cache_properties(zbus::proxy::CacheProperties::No)
+            .destination(name)
+            .unwrap()
+            .path(path)
+            .unwrap()
+            .build()
+            .await
+            .unwrap()
+    }
+
+    fn has_session_bus() -> bool {
+        !std::env::var("DBUS_SESSION_BUS_ADDRESS")
+            .unwrap_or_default()
+            .is_empty()
+    }
+
+    #[tokio::test]
+    async fn icon_events_reads_name_and_theme_path() {
+        if !has_session_bus() {
+            eprintln!("skipping: needs `dbus-run-session -- cargo test`");
+            return;
+        }
+
+        let (_server_conn, name, path) = spawn_fake(FakeState {
+            icon_name: "toolbox-tray-color".into(),
+            icon_theme_path: "/home/user/.local/share/JetBrains/Toolbox/bin".into(),
+            icon_pixmap: Vec::new(),
+        })
+        .await;
+
+        let proxy = proxy_for(name, path).await;
+        // zbus's default method timeout is infinite; fail fast on a misfixture.
+        let update = tokio::time::timeout(std::time::Duration::from_secs(10), icon_events(proxy))
+            .await
+            .expect("icon_events timed out (no reply from fake item)");
+
+        assert_eq!(update.name.as_deref(), Some("toolbox-tray-color"));
+        assert_eq!(
+            update.theme_path,
+            Some(PathBuf::from(
+                "/home/user/.local/share/JetBrains/Toolbox/bin"
+            ))
+        );
+        assert!(
+            update.pixmap.is_some_and(|p| p.is_empty()),
+            "empty IconPixmap should read back as Some(empty), mirroring JetBrains"
+        );
+    }
 }
