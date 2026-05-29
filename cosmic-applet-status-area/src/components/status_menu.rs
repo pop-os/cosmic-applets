@@ -27,7 +27,14 @@ pub struct State {
     // TODO handle icon with multiple sizes?
     icon_handle: icon::Handle,
     icon_theme_path: Option<PathBuf>,
+    /// Latest Status; defaults to "Active" so an item is visible before its first IconUpdate.
+    status: String,
     click_event: Option<(i32, bool)>,
+}
+
+/// An item is hidden only when it explicitly reports Status "Passive"; any other value stays visible.
+fn status_is_passive(status: &str) -> bool {
+    status == "Passive"
 }
 
 impl State {
@@ -41,6 +48,7 @@ impl State {
                     .prefer_svg(true)
                     .handle(),
                 icon_theme_path: None,
+                status: "Active".to_string(),
                 click_event: None,
             },
             iced::Task::none(),
@@ -64,6 +72,7 @@ impl State {
                 iced::Task::none()
             }
             Msg::Icon(update) => {
+                self.status = update.status;
                 let icon_name = update.name.unwrap_or_default();
                 self.icon_theme_path = update.theme_path;
 
@@ -151,6 +160,11 @@ impl State {
 
     pub fn name(&self) -> &str {
         self.item.name()
+    }
+
+    /// Whether the item is Passive and so must be hidden from the panel.
+    pub fn is_passive(&self) -> bool {
+        status_is_passive(&self.status)
     }
 
     pub fn icon_handle(&self) -> &icon::Handle {
@@ -280,4 +294,20 @@ fn row_button(content: Vec<cosmic::Element<Msg>>) -> cosmic::widget::Button<Msg>
             .align_y(iced::Alignment::Center)
             .width(iced::Length::Fill),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn is_passive_true_only_for_passive() {
+        assert!(status_is_passive("Passive"));
+        for s in ["Active", "NeedsAttention", "", "passive", "garbage"] {
+            assert!(
+                !status_is_passive(s),
+                "{s:?} must NOT be treated as Passive"
+            );
+        }
+    }
 }

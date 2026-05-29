@@ -29,6 +29,8 @@ pub struct IconUpdate {
     pub name: Option<String>,
     pub pixmap: Option<Vec<Icon>>,
     pub theme_path: Option<PathBuf>,
+    /// "Active" | "Passive" | "NeedsAttention"; the "absent ⇒ Active" default is applied in `icon_events`.
+    pub status: String,
 }
 
 /// Read an item's current icon-related properties; module-level so it is unit-testable against a fake item.
@@ -36,10 +38,18 @@ pub(crate) async fn icon_events(item_proxy: StatusNotifierItemProxy<'static>) ->
     let icon_name = item_proxy.icon_name().await;
     let icon_pixmap = item_proxy.icon_pixmap().await;
     let icon_theme_path = item_proxy.icon_theme_path().await.map(PathBuf::from);
+    // Default to "Active": a missing/throwing Status must never hide a conformant-but-quirky item.
+    let status = item_proxy
+        .status()
+        .await
+        .ok()
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| "Active".to_string());
     IconUpdate {
         name: icon_name.ok(),
         pixmap: icon_pixmap.ok(),
         theme_path: icon_theme_path.ok().filter(|x| !x.as_os_str().is_empty()),
+        status,
     }
 }
 
@@ -189,6 +199,10 @@ pub trait StatusNotifierItem {
     #[zbus(property)]
     fn icon_pixmap(&self) -> zbus::Result<Vec<Icon>>;
 
+    // "Active" | "Passive" | "NeedsAttention"; caller defaults to "Active" on Err/empty.
+    #[zbus(property)]
+    fn status(&self) -> zbus::Result<String>;
+
     #[zbus(property)]
     fn menu(&self) -> zbus::Result<zvariant::OwnedObjectPath>;
 
@@ -197,6 +211,9 @@ pub trait StatusNotifierItem {
 
     #[zbus(signal)]
     fn new_icon(&self) -> zbus::Result<()>;
+
+    #[zbus(signal)]
+    fn new_status(&self, status: String) -> zbus::Result<()>;
 
     fn provide_xdg_activation_token(&self, token: String) -> zbus::Result<()>;
 
@@ -352,6 +369,10 @@ mod tests {
         pub icon_name: String,
         pub icon_theme_path: String,
         pub icon_pixmap: Vec<(i32, i32, Vec<u8>)>,
+        /// "" => served as "" => `icon_events` defaults to "Active".
+        pub status: String,
+        /// Models JetBrains throwing on a Status Get.
+        pub throw_on_status: bool,
     }
 
     pub(crate) struct FakeItem {
@@ -376,6 +397,15 @@ mod tests {
         }
 
         #[zbus(property)]
+        async fn status(&self) -> zbus::fdo::Result<String> {
+            let s = self.state.lock().await;
+            if s.throw_on_status {
+                return Err(zbus::fdo::Error::Failed("status getter throws".into()));
+            }
+            Ok(s.status.clone())
+        }
+
+        #[zbus(property)]
         async fn item_is_menu(&self) -> bool {
             false
         }
@@ -387,6 +417,9 @@ mod tests {
 
         #[zbus(signal)]
         async fn new_icon(emitter: &SignalEmitter<'_>) -> zbus::Result<()>;
+
+        #[zbus(signal)]
+        async fn new_status(emitter: &SignalEmitter<'_>, status: &str) -> zbus::Result<()>;
     }
 
     /// Spawn a fake item on its own connection; returns `(connection, bus_name, object_path)`.
@@ -438,6 +471,7 @@ mod tests {
             icon_name: "toolbox-tray-color".into(),
             icon_theme_path: "/home/user/.local/share/JetBrains/Toolbox/bin".into(),
             icon_pixmap: Vec::new(),
+            ..Default::default()
         })
         .await;
 
@@ -458,5 +492,53 @@ mod tests {
             update.pixmap.is_some_and(|p| p.is_empty()),
             "empty IconPixmap should read back as Some(empty), mirroring JetBrains"
         );
+        assert_eq!(update.status, "Active");
+    }
+
+    /// Run `icon_events` against a fresh proxy with the defensive timeout.
+    async fn fetch(name: String, path: OwnedObjectPath) -> IconUpdate {
+        let proxy = proxy_for(name, path).await;
+        tokio::time::timeout(std::time::Duration::from_secs(10), icon_events(proxy))
+            .await
+            .expect("icon_events timed out (no reply from fake item)")
+    }
+
+    #[tokio::test]
+    async fn status_defaults_to_active_when_absent() {
+        if !has_session_bus() {
+            return;
+        }
+        let (_c, name, path) = spawn_fake(FakeState {
+            status: String::new(),
+            ..Default::default()
+        })
+        .await;
+        assert_eq!(fetch(name, path).await.status, "Active");
+    }
+
+    #[tokio::test]
+    async fn status_defaults_to_active_when_get_throws() {
+        if !has_session_bus() {
+            return;
+        }
+        let (_c, name, path) = spawn_fake(FakeState {
+            throw_on_status: true,
+            ..Default::default()
+        })
+        .await;
+        assert_eq!(fetch(name, path).await.status, "Active");
+    }
+
+    #[tokio::test]
+    async fn status_passive_is_read() {
+        if !has_session_bus() {
+            return;
+        }
+        let (_c, name, path) = spawn_fake(FakeState {
+            status: "Passive".into(),
+            ..Default::default()
+        })
+        .await;
+        assert_eq!(fetch(name, path).await.status, "Passive");
     }
 }
