@@ -568,22 +568,21 @@ impl BluerSessionState {
                 tick(&mut interval).await;
                 let new_status = adapter_clone.is_powered().await.unwrap_or_default();
                 devices = build_device_list(devices, &adapter_clone).await;
-                if new_status != status {
-                    status = new_status;
-                    let state = BluerState {
-                        devices: devices.clone(),
-                        bluetooth_enabled: status,
-                    };
-                    if state.bluetooth_enabled {
-                        for d in &state.devices {
-                            if d.paired_and_trusted() {
-                                _ = req_tx.send(BluerRequest::ConnectDevice(d.address)).await;
-                            }
+                let power_changed = new_status != status;
+                status = new_status;
+                let state = BluerState {
+                    devices: devices.clone(),
+                    bluetooth_enabled: status,
+                };
+                if power_changed && state.bluetooth_enabled {
+                    for d in &state.devices {
+                        if d.paired_and_trusted() {
+                            _ = req_tx.send(BluerRequest::ConnectDevice(d.address)).await;
                         }
                     }
                     _ = wake_up_discover_tx.send(()).await;
-                    let _ = tx.send(BluerSessionEvent::ChangesProcessed(state)).await;
                 }
+                let _ = tx.send(BluerSessionEvent::ChangesProcessed(state)).await;
             }
         });
     }
@@ -674,6 +673,9 @@ impl BluerSessionState {
                                 }
                             }
 
+                            // Always refresh power state from the adapter
+                            // to avoid stale cached is_powered values
+                            is_powered = adapter_clone.is_powered().await.unwrap_or_default();
                             let _ = tx
                                 .send(BluerSessionEvent::ChangesProcessed(BluerState {
                                     devices: devices.clone(),
