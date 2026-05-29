@@ -664,6 +664,13 @@ fn load_vpns(_conn: zbus::Connection) -> Task<crate::app::Message> {
 
         let mut map: IndexMap<UUID, ConnectionSettings> = IndexMap::new();
         for c in saved {
+            // Skip in-memory-only NM connections — assumed connections that NM
+            // auto-generated from externally-managed interfaces (e.g. one
+            // brought up by wg-quick@wg0.service) report unsaved=true and
+            // evaporate on deactivate, leaving the applet's toggle dead.
+            if c.unsaved {
+                continue;
+            }
             let uuid: UUID = Arc::from(c.uuid.as_str());
             let entry = match c.summary {
                 SettingsSummary::WireGuard { .. } => ConnectionSettings::Wireguard { id: c.id },
