@@ -171,9 +171,45 @@ impl StatusNotifierItem {
             |Wrapper { item_proxy, .. }| {
                 let item_proxy = item_proxy.clone();
                 async move {
-                    let new_icon_stream = item_proxy.receive_new_icon().await.unwrap();
+                    use futures::stream::{self, StreamExt};
+
+                    // On a failed signal registration, substitute an empty stream
+                    // (instead of unwrapping) so one bad subscription cannot abort
+                    // the task; `.boxed()` unifies the stream types for stream_select!.
+                    fn stream_or_empty<S, T>(
+                        r: zbus::Result<S>,
+                    ) -> futures::stream::BoxStream<'static, ()>
+                    where
+                        S: futures::Stream<Item = T> + Send + 'static,
+                    {
+                        match r {
+                            Ok(s) => s.map(|_| ()).boxed(),
+                            Err(err) => {
+                                tracing::warn!("SNI signal subscribe failed, skipping: {err}");
+                                stream::empty().boxed()
+                            }
+                        }
+                    }
+
+                    let new_icon = stream_or_empty(item_proxy.receive_new_icon().await);
+                    let new_status = stream_or_empty(item_proxy.receive_new_status().await);
+                    let new_attention =
+                        stream_or_empty(item_proxy.receive_new_attention_icon().await);
+                    let new_theme_path =
+                        stream_or_empty(item_proxy.receive_new_icon_theme_path().await);
+
+                    // Any of the four signals triggers a full `icon_events` refetch.
+                    let triggers = futures::stream_select!(
+                        new_icon,
+                        new_status,
+                        new_attention,
+                        new_theme_path
+                    );
+
+                    // Preserve the initial render so the first IconUpdate fires
+                    // even when the item emits zero signals.
                     futures::stream::once(async {})
-                        .chain(new_icon_stream.map(|_| ()))
+                        .chain(triggers)
                         .then(move |()| icon_events(item_proxy.clone()))
                 }
                 .flatten_stream()
@@ -240,6 +276,10 @@ pub trait StatusNotifierItem {
 
     #[zbus(signal)]
     fn new_attention_icon(&self) -> zbus::Result<()>;
+
+    // Ayatana extension; carries the new path.
+    #[zbus(signal)]
+    fn new_icon_theme_path(&self, icon_theme_path: String) -> zbus::Result<()>;
 
     fn provide_xdg_activation_token(&self, token: String) -> zbus::Result<()>;
 
@@ -469,6 +509,12 @@ mod tests {
 
         #[zbus(signal)]
         async fn new_attention_icon(emitter: &SignalEmitter<'_>) -> zbus::Result<()>;
+
+        #[zbus(signal)]
+        async fn new_icon_theme_path(
+            emitter: &SignalEmitter<'_>,
+            icon_theme_path: &str,
+        ) -> zbus::Result<()>;
     }
 
     /// Spawn a fake item on its own connection; returns `(connection, bus_name, object_path)`.
@@ -633,5 +679,122 @@ mod tests {
         })
         .await;
         assert!(fetch(name, path).await.attention_name.is_none());
+    }
+
+    // Each new signal must be observable so the merged `stream_select!` refetches.
+
+    async fn emit_new_status(server: &Connection, path: &OwnedObjectPath, status: &str) {
+        let iface_ref = server
+            .object_server()
+            .interface::<_, FakeItem>(path)
+            .await
+            .expect("interface ref");
+        FakeItem::new_status(iface_ref.signal_emitter(), status)
+            .await
+            .expect("emit new_status");
+    }
+
+    async fn emit_new_attention_icon(server: &Connection, path: &OwnedObjectPath) {
+        let iface_ref = server
+            .object_server()
+            .interface::<_, FakeItem>(path)
+            .await
+            .expect("interface ref");
+        FakeItem::new_attention_icon(iface_ref.signal_emitter())
+            .await
+            .expect("emit new_attention_icon");
+    }
+
+    async fn emit_new_icon_theme_path(server: &Connection, path: &OwnedObjectPath, p: &str) {
+        let iface_ref = server
+            .object_server()
+            .interface::<_, FakeItem>(path)
+            .await
+            .expect("interface ref");
+        FakeItem::new_icon_theme_path(iface_ref.signal_emitter(), p)
+            .await
+            .expect("emit new_icon_theme_path");
+    }
+
+    #[tokio::test]
+    async fn new_status_triggers_refetch() {
+        if !has_session_bus() {
+            return;
+        }
+        let (server, name, path) = spawn_fake(FakeState::default()).await;
+        let proxy = proxy_for(name, path.clone()).await;
+        let mut stream = proxy
+            .receive_new_status()
+            .await
+            .expect("subscribe new_status");
+        emit_new_status(&server, &path, "NeedsAttention").await;
+        let got = tokio::time::timeout(std::time::Duration::from_secs(10), stream.next())
+            .await
+            .expect("new_status stream did not yield");
+        assert!(got.is_some());
+    }
+
+    #[tokio::test]
+    async fn new_attention_icon_triggers_refetch() {
+        if !has_session_bus() {
+            return;
+        }
+        let (server, name, path) = spawn_fake(FakeState::default()).await;
+        let proxy = proxy_for(name, path.clone()).await;
+        let mut stream = proxy
+            .receive_new_attention_icon()
+            .await
+            .expect("subscribe new_attention_icon");
+        emit_new_attention_icon(&server, &path).await;
+        let got = tokio::time::timeout(std::time::Duration::from_secs(10), stream.next())
+            .await
+            .expect("new_attention_icon stream did not yield");
+        assert!(got.is_some());
+    }
+
+    #[tokio::test]
+    async fn new_icon_theme_path_triggers_refetch() {
+        if !has_session_bus() {
+            return;
+        }
+        let (server, name, path) = spawn_fake(FakeState::default()).await;
+        let proxy = proxy_for(name, path.clone()).await;
+        let mut stream = proxy
+            .receive_new_icon_theme_path()
+            .await
+            .expect("subscribe new_icon_theme_path");
+        emit_new_icon_theme_path(&server, &path, "/new/path").await;
+        let got = tokio::time::timeout(std::time::Duration::from_secs(10), stream.next())
+            .await
+            .expect("new_icon_theme_path stream did not yield");
+        assert!(got.is_some());
+    }
+
+    /// A theme-path change with no NewIcon is now picked up.
+    #[tokio::test]
+    async fn icon_theme_path_change_picked_up() {
+        if !has_session_bus() {
+            return;
+        }
+        let state = Arc::new(Mutex::new(FakeState::default()));
+        let path = OwnedObjectPath::try_from("/StatusNotifierItem").unwrap();
+        let server = Connection::session().await.expect("session bus");
+        server
+            .object_server()
+            .at(
+                &path,
+                FakeItem {
+                    state: state.clone(),
+                },
+            )
+            .await
+            .expect("serve fake item");
+        let name = server.unique_name().expect("unique name").to_string();
+
+        state.lock().await.icon_theme_path = "/new/path".into();
+        emit_new_icon_theme_path(&server, &path, "/new/path").await;
+
+        let update = fetch(name, path).await;
+        assert_eq!(update.theme_path, Some(PathBuf::from("/new/path")));
     }
 }
