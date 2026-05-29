@@ -31,6 +31,8 @@ pub struct IconUpdate {
     pub theme_path: Option<PathBuf>,
     /// "Active" | "Passive" | "NeedsAttention"; the "absent ⇒ Active" default is applied in `icon_events`.
     pub status: String,
+    pub attention_name: Option<String>,
+    pub attention_pixmap: Option<Vec<Icon>>,
 }
 
 /// Read an item's current icon-related properties; module-level so it is unit-testable against a fake item.
@@ -45,11 +47,24 @@ pub(crate) async fn icon_events(item_proxy: StatusNotifierItemProxy<'static>) ->
         .ok()
         .filter(|s| !s.is_empty())
         .unwrap_or_else(|| "Active".to_string());
+    // Empty or err ⇒ None so the attention-icon preference rule sees a clean Option.
+    let attention_name = item_proxy
+        .attention_icon_name()
+        .await
+        .ok()
+        .filter(|s| !s.is_empty());
+    let attention_pixmap = item_proxy
+        .attention_icon_pixmap()
+        .await
+        .ok()
+        .filter(|p| !p.is_empty());
     IconUpdate {
         name: icon_name.ok(),
         pixmap: icon_pixmap.ok(),
         theme_path: icon_theme_path.ok().filter(|x| !x.as_os_str().is_empty()),
         status,
+        attention_name,
+        attention_pixmap,
     }
 }
 
@@ -203,6 +218,14 @@ pub trait StatusNotifierItem {
     #[zbus(property)]
     fn status(&self) -> zbus::Result<String>;
 
+    // Shown only while `status == "NeedsAttention"`.
+    #[zbus(property)]
+    fn attention_icon_name(&self) -> zbus::Result<String>;
+
+    // https://www.freedesktop.org/wiki/Specifications/StatusNotifierItem/Icons
+    #[zbus(property)]
+    fn attention_icon_pixmap(&self) -> zbus::Result<Vec<Icon>>;
+
     #[zbus(property)]
     fn menu(&self) -> zbus::Result<zvariant::OwnedObjectPath>;
 
@@ -214,6 +237,9 @@ pub trait StatusNotifierItem {
 
     #[zbus(signal)]
     fn new_status(&self, status: String) -> zbus::Result<()>;
+
+    #[zbus(signal)]
+    fn new_attention_icon(&self) -> zbus::Result<()>;
 
     fn provide_xdg_activation_token(&self, token: String) -> zbus::Result<()>;
 
@@ -371,8 +397,12 @@ mod tests {
         pub icon_pixmap: Vec<(i32, i32, Vec<u8>)>,
         /// "" => served as "" => `icon_events` defaults to "Active".
         pub status: String,
+        pub attention_icon_name: String,
+        pub attention_icon_pixmap: Vec<(i32, i32, Vec<u8>)>,
         /// Models JetBrains throwing on a Status Get.
         pub throw_on_status: bool,
+        /// Models JetBrains throwing on an AttentionIconName Get.
+        pub throw_on_attention: bool,
     }
 
     pub(crate) struct FakeItem {
@@ -406,6 +436,22 @@ mod tests {
         }
 
         #[zbus(property)]
+        async fn attention_icon_name(&self) -> zbus::fdo::Result<String> {
+            let s = self.state.lock().await;
+            if s.throw_on_attention {
+                return Err(zbus::fdo::Error::Failed(
+                    "Cannot invoke \"Object.getClass()\" because \"data\" is null".into(),
+                ));
+            }
+            Ok(s.attention_icon_name.clone())
+        }
+
+        #[zbus(property)]
+        async fn attention_icon_pixmap(&self) -> Vec<(i32, i32, Vec<u8>)> {
+            self.state.lock().await.attention_icon_pixmap.clone()
+        }
+
+        #[zbus(property)]
         async fn item_is_menu(&self) -> bool {
             false
         }
@@ -420,6 +466,9 @@ mod tests {
 
         #[zbus(signal)]
         async fn new_status(emitter: &SignalEmitter<'_>, status: &str) -> zbus::Result<()>;
+
+        #[zbus(signal)]
+        async fn new_attention_icon(emitter: &SignalEmitter<'_>) -> zbus::Result<()>;
     }
 
     /// Spawn a fake item on its own connection; returns `(connection, bus_name, object_path)`.
@@ -540,5 +589,49 @@ mod tests {
         })
         .await;
         assert_eq!(fetch(name, path).await.status, "Passive");
+    }
+
+    #[tokio::test]
+    async fn attention_icon_read_when_present() {
+        if !has_session_bus() {
+            return;
+        }
+        let (_c, name, path) = spawn_fake(FakeState {
+            status: "NeedsAttention".into(),
+            attention_icon_name: "chat-attention".into(),
+            ..Default::default()
+        })
+        .await;
+        let update = fetch(name, path).await;
+        assert_eq!(update.status, "NeedsAttention");
+        assert_eq!(update.attention_name.as_deref(), Some("chat-attention"));
+    }
+
+    #[tokio::test]
+    async fn attention_icon_absent_when_get_throws() {
+        if !has_session_bus() {
+            return;
+        }
+        let (_c, name, path) = spawn_fake(FakeState {
+            status: "NeedsAttention".into(),
+            throw_on_attention: true,
+            ..Default::default()
+        })
+        .await;
+        assert!(fetch(name, path).await.attention_name.is_none());
+    }
+
+    #[tokio::test]
+    async fn attention_icon_empty_reads_none() {
+        if !has_session_bus() {
+            return;
+        }
+        let (_c, name, path) = spawn_fake(FakeState {
+            status: "NeedsAttention".into(),
+            attention_icon_name: String::new(),
+            ..Default::default()
+        })
+        .await;
+        assert!(fetch(name, path).await.attention_name.is_none());
     }
 }

@@ -10,7 +10,7 @@ use cosmic::{
 };
 use std::path::{Path, PathBuf};
 
-use crate::subscriptions::status_notifier_item::{IconUpdate, Layout, StatusNotifierItem};
+use crate::subscriptions::status_notifier_item::{Icon, IconUpdate, Layout, StatusNotifierItem};
 
 #[derive(Clone, Debug)]
 pub enum Msg {
@@ -35,6 +35,25 @@ pub struct State {
 /// An item is hidden only when it explicitly reports Status "Passive"; any other value stays visible.
 fn status_is_passive(status: &str) -> bool {
     status == "Passive"
+}
+
+/// Choose the icon name + pixmap source, preferring the attention icon only
+/// while status is "NeedsAttention"; otherwise fall through to the normal icon.
+fn pick_icon_source(update: &IconUpdate) -> (String, Option<Vec<Icon>>) {
+    let attention_active = update.status == "NeedsAttention";
+    if attention_active && update.attention_name.is_some() {
+        (
+            update.attention_name.clone().unwrap_or_default(),
+            update.attention_pixmap.clone(),
+        )
+    } else if attention_active && update.attention_pixmap.is_some() {
+        (String::new(), update.attention_pixmap.clone())
+    } else {
+        (
+            update.name.clone().unwrap_or_default(),
+            update.pixmap.clone(),
+        )
+    }
 }
 
 impl State {
@@ -72,13 +91,15 @@ impl State {
                 iced::Task::none()
             }
             Msg::Icon(update) => {
-                self.status = update.status;
-                let icon_name = update.name.unwrap_or_default();
-                self.icon_theme_path = update.theme_path;
+                self.status = update.status.clone();
+                self.icon_theme_path = update.theme_path.clone();
+
+                // Prefer the attention icon while asking for attention; otherwise the normal icon.
+                let (icon_name, pixmap) = pick_icon_source(&update);
 
                 // Use the icon pixmap if an icon was not defined by name.
                 if icon_name.is_empty() {
-                    let icon_pixmap = update.pixmap.and_then(|icons| icons
+                    let icon_pixmap = pixmap.and_then(|icons| icons
                         .into_iter()
                         .max_by_key(|i| (i.width, i.height))
                         .map(|mut i| {
@@ -300,6 +321,22 @@ fn row_button(content: Vec<cosmic::Element<Msg>>) -> cosmic::widget::Button<Msg>
 mod tests {
     use super::*;
 
+    fn update(
+        status: &str,
+        name: Option<&str>,
+        attention_name: Option<&str>,
+        attention_pixmap: Option<Vec<Icon>>,
+    ) -> IconUpdate {
+        IconUpdate {
+            name: name.map(str::to_string),
+            pixmap: None,
+            theme_path: None,
+            status: status.to_string(),
+            attention_name: attention_name.map(str::to_string),
+            attention_pixmap,
+        }
+    }
+
     #[test]
     fn is_passive_true_only_for_passive() {
         assert!(status_is_passive("Passive"));
@@ -309,5 +346,39 @@ mod tests {
                 "{s:?} must NOT be treated as Passive"
             );
         }
+    }
+
+    #[test]
+    fn attention_icon_preferred_when_needs_attention() {
+        let u = update("NeedsAttention", Some("normal"), Some("attn"), None);
+        let (name, _pixmap) = pick_icon_source(&u);
+        assert_eq!(name, "attn");
+    }
+
+    #[test]
+    fn attention_name_ignored_when_not_needs_attention() {
+        let u = update("Active", Some("normal"), Some("attn"), None);
+        let (name, _pixmap) = pick_icon_source(&u);
+        assert_eq!(name, "normal");
+    }
+
+    #[test]
+    fn needs_attention_without_attention_icon_falls_back() {
+        let u = update("NeedsAttention", Some("normal"), None, None);
+        let (name, _pixmap) = pick_icon_source(&u);
+        assert_eq!(name, "normal");
+    }
+
+    #[test]
+    fn needs_attention_attention_pixmap_only_forces_pixmap_branch() {
+        let pm = vec![Icon {
+            width: 1,
+            height: 1,
+            bytes: vec![0, 0, 0, 0],
+        }];
+        let u = update("NeedsAttention", Some("normal"), None, Some(pm.clone()));
+        let (name, pixmap) = pick_icon_source(&u);
+        assert_eq!(name, "", "empty name forces the pixmap branch");
+        assert!(pixmap.is_some_and(|p| p.len() == 1));
     }
 }
