@@ -277,12 +277,16 @@ impl Model {
 
             audio_client::Event::Route(device_id, index, route) => {
                 let routes = self.device_routes.entry(device_id).or_default();
-                if routes.len() < index as usize + 1 {
-                    let additional = (index as usize + 1) - routes.capacity();
-                    routes.reserve_exact(additional);
-                    routes.extend(std::iter::repeat_n(RouteInfo::default(), additional));
+                if index == 0 {
+                    *routes = vec![route];
+                } else {
+                    if routes.len() < index as usize + 1 {
+                        let additional = (index as usize + 1) - routes.capacity();
+                        routes.reserve_exact(additional);
+                        routes.extend(std::iter::repeat_n(RouteInfo::default(), additional));
+                    }
+                    routes[index as usize] = route;
                 }
-                routes[index as usize] = route;
             }
 
             audio_client::Event::RemoveNode(node_id) => {
