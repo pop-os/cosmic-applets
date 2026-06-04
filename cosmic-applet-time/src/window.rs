@@ -52,6 +52,17 @@ static AUTOSIZE_MAIN_ID: LazyLock<Id> = LazyLock::new(|| Id::new("autosize-main"
 // so those specifiers aren't listed here. This list is non-exhaustive, and it's possible that %X
 // and other specifiers have to be added depending on locales.
 const STRFTIME_SECONDS: &[char] = &['S', 'T', '+', 's'];
+const WEEK_COLUMN_WIDTH: f32 = 32.0;
+const CALENDAR_CELL_SIZE: f32 = 44.0;
+
+fn week_number_text_style(theme: &theme::Theme) -> cosmic::iced::widget::text::Style {
+    let mut color = theme.cosmic().background.component.on;
+    color.alpha *= 0.55;
+    cosmic::iced::widget::text::Style {
+        color: Some(color.into()),
+        ..Default::default()
+    }
+}
 
 fn get_system_locale() -> Locale {
     for var in ["LC_TIME", "LC_ALL", "LANG"] {
@@ -149,13 +160,22 @@ impl Window {
         let prefs = DateTimeFormatterPreferences::from(self.locale.clone());
         let weekday = DateTimeFormatter::try_new(prefs, fieldsets::E::short()).unwrap();
 
+        if self.config.show_week_numbers {
+            calendar = calendar.push(
+                text::caption("W")
+                    .class(theme::Text::Custom(week_number_text_style))
+                    .apply(container)
+                    .center_x(Length::Fixed(WEEK_COLUMN_WIDTH)),
+            );
+        }
+
         for i in 0..7 {
             let date = first_day.checked_add(i.days()).unwrap();
             let datetime = self.create_datetime(&date);
             calendar = calendar.push(
                 text::caption(weekday.format(&datetime).to_string())
                     .apply(container)
-                    .center_x(Length::Fixed(44.0)),
+                    .center_x(Length::Fixed(CALENDAR_CELL_SIZE)),
             );
         }
         calendar = calendar.insert_row();
@@ -168,6 +188,18 @@ impl Window {
             let date = first_day
                 .checked_add(i.days())
                 .expect("valid date in calendar range");
+
+            if self.config.show_week_numbers && i % 7 == 0 {
+                calendar = calendar.push(
+                    text::caption(format!("{}", date.iso_week_date().week()))
+                        .class(theme::Text::Custom(week_number_text_style))
+                        .apply(container)
+                        .width(Length::Fixed(WEEK_COLUMN_WIDTH))
+                        .height(Length::Fixed(CALENDAR_CELL_SIZE))
+                        .center_x(Length::Fixed(WEEK_COLUMN_WIDTH))
+                        .center_y(Length::Fixed(CALENDAR_CELL_SIZE)),
+                );
+            }
             let is_month = date.first_of_month() == self.date_selected.first_of_month();
             let is_day = date == self.date_selected;
             let is_today = date == self.date_today;
