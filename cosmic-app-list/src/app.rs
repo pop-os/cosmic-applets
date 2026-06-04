@@ -919,15 +919,7 @@ impl cosmic::Application for CosmicAppList {
                     let corners = self.core.system_theme().cosmic().corner_radii.radius_s;
                     let popup_task =
                         cosmic::surface::surface_task(cosmic::surface::action::app_popup(
-                            move |_| LiveSettings {
-                                corners: Some(CornerRadius {
-                                    top_left: corners[0] as u32 + 1,
-                                    top_right: corners[1] as u32 + 1,
-                                    bottom_left: corners[3] as u32 + 1,
-                                    bottom_right: corners[2] as u32 + 1,
-                                }),
-                                ..Default::default()
-                            },
+                            move |_| LiveSettings::default(),
                             move |app: &mut Self| {
                                 let new_id = window::Id::unique();
                                 app.popup = Some(Popup {
@@ -2249,22 +2241,6 @@ impl cosmic::Application for CosmicAppList {
                         .popup_container(
                             container(content)
                                 .padding(1)
-                                //TODO: move style to libcosmic
-                                .class(theme::Container::custom(|theme| {
-                                    let cosmic = theme.cosmic();
-                                    let component = &cosmic.background(theme.transparent).component;
-                                    container::Style {
-                                        icon_color: Some(component.on.into()),
-                                        text_color: Some(component.on.into()),
-                                        background: Some(Background::Color(component.base.into())),
-                                        border: Border {
-                                            radius: cosmic.radius_s().into(),
-                                            width: 1.0,
-                                            color: component.divider.into(),
-                                        },
-                                        ..Default::default()
-                                    }
-                                }))
                                 .height(Length::Shrink)
                                 .width(Length::Fill),
                         )
