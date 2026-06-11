@@ -164,26 +164,20 @@ impl Model {
                                 }
 
                                 if route.devices.contains(&node_card_profile_device) {
-                                    return Some(
-                                        [
-                                            &*self.translate(&route.description),
-                                            " - ",
-                                            &self.sinks.description[pos],
-                                        ]
-                                        .concat(),
-                                    );
+                                    return Some(node_name(
+                                        &self.translate(&route.description),
+                                        &self.sinks.description[pos],
+                                    ));
                                 }
                             }
 
                             None
                         })
                         .unwrap_or_else(|| {
-                            [
+                            node_name(
                                 &node.device_profile_description,
-                                " - ",
-                                &*self.sinks.description[pos],
-                            ]
-                            .concat()
+                                &self.sinks.description[pos],
+                            )
                         });
 
                     if let Some(default_node_id) = self.default_sink
@@ -229,28 +223,20 @@ impl Model {
                                 }
 
                                 if route.devices.contains(&node_card_profile_device) {
-                                    return Some(
-                                        [
-                                            &*self.translate(&route.description),
-                                            " - ",
-                                            &self.sources.description[pos],
-                                        ]
-                                        .concat(),
-                                    );
+                                    return Some(node_name(
+                                        &self.translate(&route.description),
+                                        &self.sources.description[pos],
+                                    ));
                                 }
                             }
 
                             None
                         })
                         .unwrap_or_else(|| {
-                            Some(
-                                [
-                                    &node.device_profile_description,
-                                    " - ",
-                                    &*self.sources.description[pos],
-                                ]
-                                .concat(),
-                            )
+                            Some(node_name(
+                                &node.device_profile_description,
+                                &self.sources.description[pos],
+                            ))
                         })
                     {
                         self.sources.display[pos] = name;
@@ -329,8 +315,10 @@ impl Model {
                 };
 
                 if route.devices.contains(&card_profile_device) {
-                    self.sinks.display[pos] =
-                        [&route.description, " - ", &self.sinks.description[pos]].concat();
+                    self.sinks.display[pos] = node_name(
+                        &self.translate(&route.description),
+                        &self.sinks.description[pos],
+                    );
                     break;
                 }
             }
@@ -345,8 +333,10 @@ impl Model {
                 };
 
                 if route.devices.contains(&card_profile_device) {
-                    self.sources.display[pos] =
-                        [&route.description, " - ", &self.sources.description[pos]].concat();
+                    self.sources.display[pos] = node_name(
+                        &self.translate(&route.description),
+                        &self.sources.description[pos],
+                    );
                     break;
                 }
             }
@@ -358,5 +348,13 @@ impl Model {
             .replace("High Definition", "HD")
             .replace("DisplayPort", "DP")
             .replace("Controller", "")
+    }
+}
+
+fn node_name(route: &str, node: &str) -> String {
+    if route.is_empty() {
+        node.to_owned()
+    } else {
+        [route, " - ", node].concat()
     }
 }
