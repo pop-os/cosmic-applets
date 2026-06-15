@@ -323,22 +323,24 @@ impl cosmic::Application for Audio {
             }
 
             Message::SetDefaultSink(pos) => {
-                if let Some(&node_id) = self.model.sinks.id.get(pos) {
-                    if let Some(client) = self.audio_client.as_mut() {
-                        futures::executor::block_on(async {
-                            _ = client.borrow_mut().conn.set_default(node_id, true).await;
-                        });
-                    }
+                if let Some(&pos) = self.model.sinks.sorted_index.get(pos)
+                    && let Some(&node_id) = self.model.sinks.id.get(pos as usize)
+                    && let Some(client) = self.audio_client.as_mut()
+                {
+                    futures::executor::block_on(async {
+                        _ = client.borrow_mut().conn.set_default(node_id, true).await;
+                    });
                 }
             }
 
             Message::SetDefaultSource(pos) => {
-                if let Some(&node_id) = self.model.sources.id.get(pos) {
-                    if let Some(client) = self.audio_client.as_mut() {
-                        futures::executor::block_on(async {
-                            _ = client.borrow_mut().conn.set_default(node_id, true).await;
-                        });
-                    }
+                if let Some(&pos) = self.model.sources.sorted_index.get(pos)
+                    && let Some(&node_id) = self.model.sources.id.get(pos as usize)
+                    && let Some(client) = self.audio_client.as_mut()
+                {
+                    futures::executor::block_on(async {
+                        _ = client.borrow_mut().conn.set_default(node_id, true).await;
+                    });
                 }
             }
 
@@ -382,10 +384,9 @@ impl cosmic::Application for Audio {
                 self.config.show_media_controls_in_top_panel = enabled;
                 if let Ok(helper) =
                     cosmic::cosmic_config::Config::new(Self::APP_ID, AudioAppletConfig::VERSION)
+                    && let Err(err) = self.config.write_entry(&helper)
                 {
-                    if let Err(err) = self.config.write_entry(&helper) {
-                        tracing::error!(?err, "Error writing config");
-                    }
+                    tracing::error!(?err, "Error writing config");
                 }
             }
             Message::CloseRequested(id) => {
@@ -621,16 +622,16 @@ impl cosmic::Application for Audio {
             space_xxs, space_s, ..
         } = theme::active().cosmic().spacing;
 
-        let sink = self
+        let sink: Option<&str> = self
             .model
             .sinks
-            .active
-            .map(|pos| self.model.sinks.display[pos].as_str());
-        let source = self
+            .active()
+            .map(|pos| self.model.sinks.sorted_display[pos].as_ref());
+        let source: Option<&str> = self
             .model
             .sources
-            .active
-            .map(|pos| self.model.sources.display[pos].as_str());
+            .active()
+            .map(|pos| self.model.sources.sorted_display[pos].as_ref());
 
         let mut audio_content = {
             let output_slider = slider(
@@ -696,7 +697,7 @@ impl cosmic::Application for Audio {
                         Some(sink) => sink.to_owned(),
                         None => fl!("no-device"),
                     },
-                    &self.model.sinks.display,
+                    &self.model.sinks.sorted_display,
                     Message::OutputToggle,
                     Message::SetDefaultSink,
                 ),
@@ -707,7 +708,7 @@ impl cosmic::Application for Audio {
                         Some(source) => source.to_owned(),
                         None => fl!("no-device"),
                     },
-                    &self.model.sources.display,
+                    &self.model.sources.sorted_display,
                     Message::InputToggle,
                     Message::SetDefaultSource,
                 )
@@ -822,20 +823,20 @@ impl cosmic::Application for Audio {
     }
 }
 
-fn revealer(
+fn revealer<'a>(
     open: bool,
     title: String,
     selected: String,
-    devices: &[String],
+    devices: &'a [Arc<str>],
     toggle: Message,
     mut change: impl FnMut(usize) -> Message + 'static,
-) -> widget::Column<'static, Message, crate::Theme, Renderer> {
+) -> widget::Column<'a, Message, crate::Theme, Renderer> {
     if open {
-        devices.iter().cloned().enumerate().fold(
+        devices.iter().enumerate().fold(
             column![revealer_head(open, title, selected, toggle)].width(Length::Fill),
-            |col, (id, name)| {
+            move |col, (id, name)| {
                 col.push(
-                    text::body(name)
+                    text::body(name.as_ref())
                         .apply(menu_button)
                         .on_press(change(id))
                         .width(Length::Fill)
