@@ -1107,7 +1107,9 @@ dependencies = [
 name = "cosmic-applet-input-sources"
 version = "1.0.15"
 dependencies = [
+ "cosmic-client-toolkit",
  "cosmic-comp-config",
+ "futures",
  "i18n-embed",
  "i18n-embed-fl",
  "libcosmic",
