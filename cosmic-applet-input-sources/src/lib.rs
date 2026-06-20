@@ -3,37 +3,60 @@
 
 mod localize;
 
-use cosmic::iced::{Alignment, Length};
+use cctk::{
+    cosmic_protocols::keyboard_layout::v1::client::zcosmic_keyboard_layout_v1::ZcosmicKeyboardLayoutV1,
+    wayland_client::{Connection, Proxy, backend::Backend},
+};
 use cosmic::{
     app,
     app::Core,
     applet::{self},
-    cosmic_config::{self, ConfigSet, CosmicConfigEntry},
+    cosmic_config::{self, CosmicConfigEntry},
     cosmic_theme::Spacing,
     iced::Subscription,
+    iced::core::window,
     iced::{
-        Rectangle, Task,
+        self, Rectangle, Task,
+        event::wayland::{Event as WaylandEvent, OutputEvent},
         platform_specific::shell::commands::popup::{destroy_popup, get_popup},
-        widget::{column, row},
         window::Id,
     },
-    iced::{core::window, runtime::Appearance},
     prelude::*,
     surface, theme,
     widget::{
         self, autosize,
         rectangle_tracker::{RectangleTracker, RectangleUpdate, rectangle_tracker_subscription},
-        space,
     },
 };
 use cosmic_comp_config::CosmicCompConfig;
-use std::sync::LazyLock;
+use std::{
+    os::unix::{
+        io::{FromRawFd, RawFd},
+        net::UnixStream,
+    },
+    sync::LazyLock,
+};
 use xkb_data::KeyboardLayout;
+
+mod wayland;
 
 static AUTOSIZE_MAIN_ID: LazyLock<widget::Id> = LazyLock::new(|| widget::Id::new("autosize-main"));
 pub const ID: &str = "com.system76.CosmicAppletInputSources";
 
 pub fn run() -> cosmic::iced::Result {
+    let socket = std::env::var("X_PRIVILEGED_WAYLAND_SOCKET")
+        .ok()
+        .and_then(|fd| {
+            fd.parse::<RawFd>()
+                .ok()
+                .map(|fd| unsafe { UnixStream::from_raw_fd(fd) })
+        });
+    let wayland_connection = if let Some(socket) = socket {
+        Some(Connection::from_socket(socket).unwrap())
+    } else {
+        None
+    };
+
     localize::localize();
 
     let layouts = match xkb_data::all_keyboard_layouts() {
@@ -44,7 +67,7 @@ pub fn run() -> cosmic::iced::Result {
         }
     };
 
-    let (comp_config_handler, comp_config) =
+    let comp_config =
         match cosmic_config::Config::new("com.system76.CosmicComp", CosmicCompConfig::VERSION) {
             Ok(config_handler) => {
                 let config = match CosmicCompConfig::get_entry(&config_handler) {
@@ -54,17 +77,17 @@ pub fn run() -> cosmic::iced::Result {
                         config
                     }
                 };
-                (Some(config_handler), config)
+                config
             }
             Err(err) => {
                 tracing::error!("failed to create config handler: {}", err);
-                (None, CosmicCompConfig::default())
+                CosmicCompConfig::default()
             }
         };
 
     cosmic::applet::run::<Window>(Flags {
+        wayland_connection,
         comp_config,
-        comp_config_handler,
         layouts: layouts.layout_list.layout,
     })
 }
@@ -80,11 +103,13 @@ pub struct Window {
     core: Core,
     popup: Option<Id>,
     comp_config: CosmicCompConfig,
-    comp_config_handler: Option<cosmic_config::Config>,
     layouts: Vec<KeyboardLayout>,
     active_layouts: Vec<ActiveLayout>,
     rectangle_tracker: Option<RectangleTracker<u32>>,
     rectangle: Rectangle,
+    wayland_connection: Option<Connection>,
+    keyboard_layout: Option<ZcosmicKeyboardLayoutV1>,
+    current_layout: usize,
 }
 
 #[derive(Clone, Debug)]
@@ -96,12 +121,14 @@ pub enum Message {
     KeyboardSettings,
     Surface(surface::Action),
     Rectangle(RectangleUpdate<u32>),
+    WaylandConnection(Backend),
+    Wayland(wayland::Event),
 }
 
 #[derive(Debug)]
 pub struct Flags {
+    wayland_connection: Option<Connection>,
     pub comp_config: CosmicCompConfig,
-    pub comp_config_handler: Option<cosmic_config::Config>,
     pub layouts: Vec<KeyboardLayout>,
 }
 
@@ -122,7 +149,6 @@ impl cosmic::Application for Window {
 
     fn init(core: Core, flags: Self::Flags) -> (Self, app::Task<Self::Message>) {
         let window = Window {
-            comp_config_handler: flags.comp_config_handler,
             layouts: flags.layouts,
             core,
             popup: None,
@@ -130,6 +156,9 @@ impl cosmic::Application for Window {
             active_layouts: Vec::new(),
             rectangle_tracker: None,
             rectangle: Rectangle::default(),
+            wayland_connection: flags.wayland_connection,
+            keyboard_layout: None,
+            current_layout: 0,
         };
         (window, Task::none())
     }
@@ -172,31 +201,10 @@ impl cosmic::Application for Window {
                 tokio::spawn(cosmic::process::spawn(cmd));
             }
             Message::SetActiveLayout(pos) => {
-                if pos == 0 {
-                    return Task::none();
-                }
-
-                self.active_layouts.swap(0, pos);
-                let mut new_layout = String::new();
-                let mut new_variant = String::new();
-
-                for layout in &self.active_layouts {
-                    new_layout.push_str(&layout.layout);
-                    new_layout.push(',');
-                    new_variant.push_str(&layout.variant);
-                    new_variant.push(',');
-                }
-
-                let _excess_comma = new_layout.pop();
-                let _excess_comma = new_variant.pop();
-
-                self.comp_config.xkb_config.layout = new_layout;
-                self.comp_config.xkb_config.variant = new_variant;
-                if let Some(comp_config_handler) = &self.comp_config_handler {
-                    if let Err(err) =
-                        comp_config_handler.set("xkb_config", &self.comp_config.xkb_config)
-                    {
-                        tracing::error!("Failed to set config 'xkb_config' {err}");
+                if let Some(keyboard_layout) = &self.keyboard_layout {
+                    keyboard_layout.set_group(pos as u32);
+                    if let Some(backend) = keyboard_layout.backend().upgrade() {
+                        let _ = backend.flush();
                     }
                 }
             }
@@ -213,13 +221,26 @@ impl cosmic::Application for Window {
                     self.rectangle_tracker = Some(tracker);
                 }
             },
+            Message::WaylandConnection(backend) => {
+                if self.wayland_connection.is_none() {
+                    self.wayland_connection = Some(Connection::from_backend(backend));
+                }
+            }
+            Message::Wayland(w) => match w {
+                wayland::Event::KeyboardLayout(keyboard_layout) => {
+                    self.keyboard_layout = Some(keyboard_layout);
+                }
+                wayland::Event::Group(group) => {
+                    self.current_layout = group as usize;
+                }
+            },
         }
 
         Task::none()
     }
 
     fn view(&self) -> Element<'_, Self::Message> {
-        let applet_text = if let Some(l) = self.active_layouts.first() {
+        let applet_text = if let Some(l) = self.active_layouts.get(self.current_layout) {
             if !l.variant.is_empty() {
                 format!("{} ({})", l.layout, l.variant)
             } else {
@@ -252,8 +273,13 @@ impl cosmic::Application for Window {
         let mut content_list =
             widget::column::with_capacity(4 + self.active_layouts.len()).padding([8, 0]);
         for (id, layout) in self.active_layouts.iter().enumerate() {
+            let font = if id == self.current_layout {
+                cosmic::font::bold()
+            } else {
+                cosmic::font::default()
+            };
             let group = widget::column::with_capacity(2)
-                .push(widget::text::body(layout.description.as_str()))
+                .push(widget::text::body(layout.description.as_str()).font(font))
                 .push(widget::text::caption(layout.layout.as_str()));
             content_list = content_list
                 .push(applet::menu_button(group).on_press(Message::SetActiveLayout(id)));
@@ -274,7 +300,7 @@ impl cosmic::Application for Window {
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {
-        Subscription::batch(vec![
+        let mut subscriptions = vec![
             rectangle_tracker_subscription(0).map(|e| Message::Rectangle(e.1)),
             self.core
                 .watch_config("com.system76.CosmicComp")
@@ -288,7 +314,23 @@ impl cosmic::Application for Window {
                     }
                     Message::CompConfig(Box::new(update.config))
                 }),
-        ])
+        ];
+        subscriptions.push(if let Some(connection) = &self.wayland_connection {
+            wayland::subscription(connection.clone()).map(Message::Wayland)
+        } else {
+            iced::event::listen_with(|evt, _, _| match evt {
+                iced::Event::PlatformSpecific(iced::event::PlatformSpecific::Wayland(evt)) => {
+                    if let WaylandEvent::Output(OutputEvent::Created(_), output) = evt {
+                        if let Some(backend) = output.backend().upgrade() {
+                            return Some(Message::WaylandConnection(backend));
+                        }
+                    }
+                    None
+                }
+                _ => None,
+            })
+        });
+        Subscription::batch(subscriptions)
     }
 
     fn style(&self) -> Option<cosmic::iced::theme::Style> {
