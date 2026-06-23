@@ -46,3 +46,6 @@ cosmic-panel-launcher-button-keywords = COSMIC;애플릿;런처;실행기;
 cosmic-panel-workspaces-button = 작업 공간 버튼
 cosmic-panel-workspaces-button-comment = 작업 공간 관리 및 전환을 위해 작업 공간 개요 열기
 cosmic-panel-workspaces-button-keywords = COSMIC;애플릿;작업 공간;개요;
+cosmic-applet-workspaces-comment = 패널에서 번호가 지정된 작업 공간 간 전환
+cosmic-applet-tiling-comment = 활성 창 강조, 현재 및 작업 공간별 자동 타일링 관리
+cosmic-applet-workspaces = 번호가 지정된 작업 공간

@@ -1,0 +1,14 @@
+battery = Betarî
+seconds = ç
+minutes = x
+hours = d
+until-empty = Heya vala dibe
+power-settings = Sazkariyên hêz û betariyê...
+battery-desc = Bikaranîna hêzê kêmkirî û performans.
+balanced = Hevseng
+balanced-desc = Performansa standard û bikaranîna betariyê.
+performance = Performansa bilind
+performance-desc = Performansa bilind û bikaranîna hêzê.
+max-charge = Jiyana betariyê xwe dirêj bike bi riya danîna sînorê herî mezin yê tijîkrinê %80
+dgpu-running = YKG a veqetandî çalak e û dikare jiyana betariyê kêm bike
+dgpu-applications = Sepanên ku YKG a veqetandî ya { $gpu_name } bi kar tînin
