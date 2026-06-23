@@ -47,6 +47,7 @@ use cosmic::{
         icon::{self, from_name},
         image::Handle,
         rectangle_tracker::{RectangleTracker, RectangleUpdate, rectangle_tracker_subscription},
+        scrollable::{horizontal, scrollable},
         svg, text,
     },
 };
@@ -478,6 +479,21 @@ async fn try_get_gpus() -> Option<Vec<Gpu>> {
 
 const TOPLEVEL_BUTTON_WIDTH: f32 = 192.0;
 const TOPLEVEL_BUTTON_HEIGHT: f32 = 156.0;
+const MAX_VISIBLE_TOPLEVEL_PREVIEWS: f32 = 7.0;
+const TOPLEVEL_PREVIEW_SPACING: f32 = 8.0;
+const SCROLLABLE_MENU_MAX_HEIGHT: f32 = 400.0;
+
+fn toplevel_preview_viewport_width() -> f32 {
+    TOPLEVEL_PREVIEW_SPACING * 2.0
+        + TOPLEVEL_BUTTON_WIDTH * MAX_VISIBLE_TOPLEVEL_PREVIEWS
+        + TOPLEVEL_PREVIEW_SPACING * (MAX_VISIBLE_TOPLEVEL_PREVIEWS - 1.0)
+}
+
+fn toplevel_preview_viewport_height() -> f32 {
+    TOPLEVEL_PREVIEW_SPACING * 2.0
+        + TOPLEVEL_BUTTON_HEIGHT * MAX_VISIBLE_TOPLEVEL_PREVIEWS
+        + TOPLEVEL_PREVIEW_SPACING * (MAX_VISIBLE_TOPLEVEL_PREVIEWS - 1.0)
+}
 
 fn toplevel_button<'a>(
     img: Option<WaylandImage>,
@@ -1005,25 +1021,19 @@ impl cosmic::Application for CosmicAppList {
                         width: width as i32,
                         height: height as i32,
                     };
-                    let max_windows = 7.0;
-                    let window_spacing = 8.0;
                     popup_settings.positioner.size_limits = match self.core.applet.anchor {
                         PanelAnchor::Right | PanelAnchor::Left => Limits::NONE
                             .min_width(100.0)
                             .min_height(30.0)
-                            .max_width(window_spacing * 2.0 + TOPLEVEL_BUTTON_WIDTH)
-                            .max_height(
-                                TOPLEVEL_BUTTON_HEIGHT * max_windows
-                                    + window_spacing * (max_windows + 1.0),
-                            ),
+                            .max_width(TOPLEVEL_PREVIEW_SPACING * 2.0 + TOPLEVEL_BUTTON_WIDTH)
+                            .max_height(toplevel_preview_viewport_height()),
                         PanelAnchor::Bottom | PanelAnchor::Top => Limits::NONE
                             .min_width(30.0)
                             .min_height(100.0)
-                            .max_width(
-                                TOPLEVEL_BUTTON_WIDTH * max_windows
-                                    + window_spacing * (max_windows + 1.0),
-                            )
-                            .max_height(window_spacing * 2.0 + TOPLEVEL_BUTTON_HEIGHT),
+                            .max_width(toplevel_preview_viewport_width())
+                            .max_height(
+                                TOPLEVEL_PREVIEW_SPACING * 2.0 + TOPLEVEL_BUTTON_HEIGHT,
+                            ),
                     };
 
                     return get_popup(popup_settings);
@@ -2150,7 +2160,12 @@ impl cosmic::Application for CosmicAppList {
                                 .on_press(Message::Activate(info.foreign_toplevel.clone())),
                             );
                         }
-                        content = content.push(list_col);
+                        let window_list = if toplevels.len() > 8 {
+                            scrollable(list_col).height(Length::Fixed(SCROLLABLE_MENU_MAX_HEIGHT))
+                        } else {
+                            scrollable(list_col)
+                        };
+                        content = content.push(window_list);
                         content = content.push(divider::horizontal::light());
                     }
 
@@ -2227,10 +2242,10 @@ impl cosmic::Application for CosmicAppList {
                 }
                 PopupType::ToplevelList => match self.core.applet.anchor {
                     PanelAnchor::Left | PanelAnchor::Right => {
-                        let mut content =
+                        let mut previews =
                             column![].padding(8).align_x(Alignment::Center).spacing(8);
                         for (info, img) in toplevels {
-                            content = content.push(toplevel_button(
+                            previews = previews.push(toplevel_button(
                                 img.clone(),
                                 info.title.clone(),
                                 info.foreign_toplevel.clone(),
@@ -2238,6 +2253,8 @@ impl cosmic::Application for CosmicAppList {
                                 self.is_hovered(&info.foreign_toplevel),
                             ));
                         }
+                        let content = scrollable(previews)
+                            .height(Length::Fixed(toplevel_preview_viewport_height()));
                         self.core
                             .applet
                             .popup_container(content)
@@ -2245,9 +2262,10 @@ impl cosmic::Application for CosmicAppList {
                             .into()
                     }
                     PanelAnchor::Bottom | PanelAnchor::Top => {
-                        let mut content = row![].padding(8).align_y(Alignment::Center).spacing(8);
+                        let mut previews =
+                            row![].padding(8).align_y(Alignment::Center).spacing(8);
                         for (info, img) in toplevels {
-                            content = content.push(toplevel_button(
+                            previews = previews.push(toplevel_button(
                                 img.clone(),
                                 info.title.clone(),
                                 info.foreign_toplevel.clone(),
@@ -2255,6 +2273,8 @@ impl cosmic::Application for CosmicAppList {
                                 self.is_hovered(&info.foreign_toplevel),
                             ));
                         }
+                        let content = horizontal(previews)
+                            .width(Length::Fixed(toplevel_preview_viewport_width()));
                         self.core
                             .applet
                             .popup_container(content)
