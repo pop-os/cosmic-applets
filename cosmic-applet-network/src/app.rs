@@ -405,6 +405,13 @@ fn secret_agent_task(identifier: String) -> Task<NmAgentEvent> {
     cosmic::Task::stream(async_fn_stream::fn_stream(move |emitter| async move {
         let registration = SecretAgent::builder()
             .with_identifier(identifier)
+            // NetworkManager always calls registered secret agents back at this
+            // fixed, spec-mandated object path. nmrs defaults to a non-conformant
+            // path (`/com/system76/CosmicApplets/nmrs/SecretAgent`), so NM's
+            // GetSecrets call fails with "Unknown object" and surfaces to the user
+            // as "No agents were available for this request" — no VPN/OTP prompt.
+            // See pop-os/cosmic-applets#1444.
+            .with_object_path("/org/freedesktop/NetworkManager/SecretAgent")
             .with_capabilities(SecretAgentCapabilities::VPN_HINTS)
             .register()
             .await;
