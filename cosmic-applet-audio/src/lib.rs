@@ -19,13 +19,17 @@ use cosmic::{
     cosmic_config::CosmicConfigEntry,
     cosmic_theme::Spacing,
     iced::{
-        self, Alignment, Length, Subscription,
+        self, Alignment, Length, Rectangle, Subscription,
         futures::StreamExt,
         widget::{self, column, row, slider},
         window,
     },
     surface, theme,
-    widget::{Row, button, container, divider, icon, space, text, toggler},
+    widget::{
+        Row, button, container, divider, icon,
+        rectangle_tracker::{RectangleTracker, RectangleUpdate, rectangle_tracker_subscription},
+        space, text, toggler,
+    },
 };
 use cosmic_settings_audio_client::{self as audio_client, CosmicAudioProxy};
 use futures::SinkExt;
@@ -73,6 +77,8 @@ pub struct Audio {
     player_status: Option<mpris_subscription::PlayerStatus>,
     /// Used to request an activation token for opening cosmic-settings.
     token_tx: Option<calloop::channel::Sender<TokenRequest>>,
+    rectangle_tracker: Option<RectangleTracker<u32>>,
+    rectangle: Option<iced::Rectangle>,
 }
 
 impl Audio {
@@ -138,6 +144,7 @@ pub enum Message {
     OpenSettings,
     Subscription(audio_client::Event),
     Surface(surface::Action),
+    Rectangle(RectangleUpdate<u32>),
 }
 
 // TODO
@@ -272,6 +279,14 @@ impl cosmic::Application for Audio {
 
     fn update(&mut self, message: Message) -> app::Task<Message> {
         match message {
+            Message::Rectangle(u) => match u {
+                RectangleUpdate::Rectangle(r) => {
+                    self.rectangle = Some(r.1);
+                }
+                RectangleUpdate::Init(tracker) => {
+                    self.rectangle_tracker.replace(tracker);
+                }
+            },
             Message::Ignore => {}
             Message::TogglePopup => {
                 if let Some(p) = self.popup.take() {
@@ -292,14 +307,21 @@ impl cosmic::Application for Audio {
                         (100, &[][..])
                     };
 
-                    let popup_settings = self.core.applet.get_popup_settings(
+                    let mut popup_settings = self.core.applet.get_popup_settings(
                         self.core.main_window_id().unwrap(),
                         new_id,
                         None,
                         None,
                         None,
                     );
-
+                    if let Some(r) = self.rectangle {
+                        popup_settings.positioner.anchor_rect = Rectangle {
+                            x: r.x as i32,
+                            y: r.y as i32,
+                            width: r.width as i32,
+                            height: r.height as i32,
+                        };
+                    }
                     return get_popup(popup_settings);
                 }
             }
@@ -548,6 +570,7 @@ impl cosmic::Application for Audio {
                     },
                 )
             }),
+            rectangle_tracker_subscription(0).map(|update| Message::Rectangle(update.1)),
         ])
     }
 
@@ -573,48 +596,59 @@ impl cosmic::Application for Audio {
             Message::SetSinkVolume(new_volume as u32)
         });
 
+        let mut has_playback_buttons = false;
         let playback_buttons = (!self.core.applet.suggested_bounds.as_ref().is_some_and(|c| {
             // if we have a configure for width and height, we're in a overflow popup
             c.width > 0. && c.height > 0.
         }))
         .then(|| self.playback_buttons());
 
-        self.core
-            .applet
-            .autosize_window(
-                if let Some(playback_buttons) = playback_buttons
-                    && !playback_buttons.is_empty()
-                {
-                    match self.core.applet.anchor {
-                        PanelAnchor::Left | PanelAnchor::Right => Element::from(
-                            applet_column::Column::with_children(playback_buttons)
-                                .push(btn)
-                                .align_x(Alignment::Center)
-                                .height(Length::Shrink)
-                                // TODO configurable variable from the panel?
-                                .spacing(
-                                    -(self.core.applet.suggested_padding(true).0 as f32)
-                                        * self.core.applet.padding_overlap,
-                                ),
+        let mut ret = if let Some(playback_buttons) = playback_buttons
+            && !playback_buttons.is_empty()
+        {
+            has_playback_buttons = true;
+            Element::from(match self.core.applet.anchor {
+                PanelAnchor::Left | PanelAnchor::Right => Element::from(
+                    applet_column::Column::with_children(playback_buttons)
+                        .push(btn)
+                        .align_x(Alignment::Center)
+                        .height(Length::Shrink)
+                        // TODO configurable variable from the panel?
+                        .spacing(
+                            -(self.core.applet.suggested_padding(true).0 as f32)
+                                * self.core.applet.padding_overlap,
                         ),
-                        PanelAnchor::Top | PanelAnchor::Bottom => {
-                            applet_row::Row::with_children(playback_buttons)
-                                .push(btn)
-                                .align_y(Alignment::Center)
-                                .width(Length::Shrink)
-                                // TODO configurable variable from the panel?
-                                .spacing(
-                                    -(self.core.applet.suggested_padding(true).0 as f32)
-                                        * self.core.applet.padding_overlap,
-                                )
-                                .into()
-                        }
-                    }
-                } else {
-                    btn.into()
-                },
-            )
-            .into()
+                ),
+                PanelAnchor::Top | PanelAnchor::Bottom => {
+                    applet_row::Row::with_children(playback_buttons)
+                        .push(btn)
+                        .align_y(Alignment::Center)
+                        .width(Length::Shrink)
+                        // TODO configurable variable from the panel?
+                        .spacing(
+                            -(self.core.applet.suggested_padding(true).0 as f32)
+                                * self.core.applet.padding_overlap,
+                        )
+                        .into()
+                }
+            })
+        } else {
+            btn.into()
+        };
+
+        if let Some(tracker) = self.rectangle_tracker.as_ref()
+            && has_playback_buttons
+        {
+            ret = tracker.container(0, ret).into()
+        }
+
+        if !self.core.applet.suggested_bounds.as_ref().is_some_and(|c| {
+            // if we have a configure for width and height, we're in a overflow popup
+            c.width > 0. && c.height > 0.
+        }) {
+            ret = self.core.applet.autosize_window(ret).into();
+        }
+        ret
     }
 
     fn view_window(&self, _id: window::Id) -> Element<'_, Message> {
