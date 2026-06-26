@@ -28,6 +28,7 @@ tracing.workspace = true
 zbus.workspace = true
 indexmap = "2.13.0"
 secure-string = "0.3.0"
+secret-service = { version = "5.1.0", features = ["rt-tokio-crypto-rust"] }
 uuid = { version = "1.21.0", features = ["v4"] }
 nmrs = "3.1.3"
 

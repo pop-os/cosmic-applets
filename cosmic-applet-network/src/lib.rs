@@ -3,6 +3,7 @@
 mod app;
 mod config;
 mod localize;
+mod secret_store;
 mod utils;
 
 use crate::localize::localize;

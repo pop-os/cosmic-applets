@@ -45,11 +45,18 @@ use cosmic_dbus_networkmanager::interface::enums::{
 use futures::{StreamExt, lock::Mutex as AsyncMutex};
 use zbus::Connection;
 
-use crate::{config, fl};
+use crate::{config, fl, secret_store};
 
 pub fn run() -> cosmic::iced::Result {
     cosmic::applet::run::<CosmicNetworkApplet>(())
 }
+
+/// `NM_SETTING_SECRET_FLAG_NOT_SAVED`: secret must be requested every time
+/// (e.g. OTP), so it is never cached or pre-filled.
+const SECRET_FLAG_NOT_SAVED: u32 = 0x2;
+
+/// NM VPN setting name, used as the keyring `setting_name`.
+const VPN_SETTING: &str = "vpn";
 
 #[derive(Debug, Clone)]
 enum NewConnectionState {
@@ -111,11 +118,13 @@ pub struct RequestedVpn {
     /// VPN secret keys NM hinted as needed (e.g. `["password"]`). When empty,
     /// `"password"` is used as a fallback.
     secret_keys: Vec<String>,
+    /// `vpn.password-flags`; controls whether the secret is cached/pre-filled.
+    password_flags: u32,
 }
 
 #[derive(Clone, Debug)]
 pub enum ConnectionSettings {
-    Vpn { id: String },
+    Vpn { id: String, password_flags: u32 },
     Wireguard { id: String },
 }
 
@@ -256,7 +265,7 @@ fn vpn_section<'a>(
         if show_available_vpns {
             for (uuid, connection) in &nm_state.known_vpns {
                 let id = match connection {
-                    ConnectionSettings::Vpn { id } | ConnectionSettings::Wireguard { id } => {
+                    ConnectionSettings::Vpn { id, .. } | ConnectionSettings::Wireguard { id } => {
                         id.as_str()
                     }
                 };
@@ -523,6 +532,11 @@ pub(crate) enum Message {
     ToggleVPNPasswordVisibility,
     ConnectVPNWithPassword,
     VPNPasswordUpdate(SecureString),
+    /// Pre-fill the VPN password dialog with a cached secret from the keyring.
+    VpnPasswordPrefill {
+        uuid: Arc<str>,
+        password: SecureString,
+    },
     CancelVPNConnection,
     /// Selects a device to display connections from
     SelectDevice(Option<Arc<network_manager::devices::DeviceInfo>>),
@@ -675,7 +689,10 @@ fn load_vpns(_conn: zbus::Connection) -> Task<crate::app::Message> {
             let uuid: UUID = Arc::from(c.uuid.as_str());
             let entry = match c.summary {
                 SettingsSummary::WireGuard { .. } => ConnectionSettings::Wireguard { id: c.id },
-                SettingsSummary::Vpn { .. } => ConnectionSettings::Vpn { id: c.id },
+                SettingsSummary::Vpn { password_flags, .. } => ConnectionSettings::Vpn {
+                    id: c.id,
+                    password_flags: password_flags.0,
+                },
                 _ => continue,
             };
             map.insert(uuid, entry);
@@ -1265,15 +1282,43 @@ impl cosmic::Application for CosmicNetworkApplet {
                             AgentSetting::Vpn { secret_keys } => secret_keys.clone(),
                             _ => Vec::new(),
                         };
+                        let password_flags =
+                            match self.nm_state.known_vpns.get(connection_uuid.as_str()) {
+                                Some(ConnectionSettings::Vpn { password_flags, .. }) => {
+                                    *password_flags
+                                }
+                                _ => 0,
+                            };
+                        let uuid: Arc<str> = connection_uuid.as_str().into();
                         self.nm_state.requested_vpn = Some(RequestedVpn {
-                            uuid: connection_uuid.into(),
+                            uuid: uuid.clone(),
                             description,
                             password: SecureString::from(String::new()),
                             password_hidden: true,
                             responder: responder.clone(),
-                            secret_keys,
+                            secret_keys: secret_keys.clone(),
+                            password_flags,
                         });
                         consumed = true;
+
+                        // Pre-fill from the keyring cache, unless NM flags this
+                        // secret not-to-save (OTP); a stale value would mislead.
+                        if password_flags & SECRET_FLAG_NOT_SAVED == 0 {
+                            return cosmic::task::future(async move {
+                                let stored = secret_store::lookup(&uuid, VPN_SETTING).await;
+                                let password = secret_keys
+                                    .iter()
+                                    .find_map(|k| stored.get(k))
+                                    .or_else(|| stored.get("password"))
+                                    .cloned();
+                                match password {
+                                    Some(password) => {
+                                        Message::VpnPasswordPrefill { uuid, password }
+                                    }
+                                    None => Message::NoOp,
+                                }
+                            });
+                        }
                     }
 
                     // The applet's Wi-Fi flow re-issues the password through
@@ -1311,9 +1356,11 @@ impl cosmic::Application for CosmicNetworkApplet {
             }
             Message::ConnectVPNWithPassword => {
                 if let Some(RequestedVpn {
+                    uuid,
                     password,
                     responder,
                     secret_keys,
+                    password_flags,
                     ..
                 }) = self.nm_state.requested_vpn.take()
                 {
@@ -1332,12 +1379,26 @@ impl cosmic::Application for CosmicNetworkApplet {
                             }
                         }
 
+                        // Cache for next time's pre-fill, unless flagged not-to-save (OTP).
+                        if password_flags & SECRET_FLAG_NOT_SAVED == 0 {
+                            secret_store::store(&uuid, VPN_SETTING, &secrets).await;
+                        }
+
                         if let Err(e) = responder.vpn_secrets(secrets).await {
                             tracing::error!("vpn secret reply failed: {e}");
                         }
                         Message::Refresh
                     })
                     .map(cosmic::Action::App);
+                }
+            }
+            Message::VpnPasswordPrefill { uuid, password } => {
+                // Only fill if it's still the same request and untouched.
+                if let Some(requested_vpn) = self.nm_state.requested_vpn.as_mut()
+                    && requested_vpn.uuid == uuid
+                    && requested_vpn.password.unsecure().is_empty()
+                {
+                    requested_vpn.password = password;
                 }
             }
             Message::VPNPasswordUpdate(secure_string) => {

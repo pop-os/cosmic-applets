@@ -1154,6 +1154,7 @@ dependencies = [
  "nmrs",
  "rust-embed",
  "rustc-hash 2.1.2",
+ "secret-service",
  "secure-string",
  "tokio",
  "tracing",
