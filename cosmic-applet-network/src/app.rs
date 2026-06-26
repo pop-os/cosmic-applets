@@ -35,7 +35,7 @@ use cosmic::{
     widget::{
         Id, button, column, container, divider,
         icon::{self, from_name},
-        row, scrollable, secure_input, text, text_input, toggler,
+        indeterminate_circular, row, scrollable, secure_input, text, text_input, toggler,
     },
 };
 use cosmic_dbus_networkmanager::interface::enums::{
@@ -1516,12 +1516,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                     ];
                     match state {
                         ActiveConnectionState::Activating | ActiveConnectionState::Deactivating => {
-                            btn_content.push(
-                                icon::from_name("process-working-symbolic")
-                                    .size(24)
-                                    .symbolic(true)
-                                    .into(),
-                            );
+                            btn_content.push(indeterminate_circular().size(24.0).into());
                         }
                         ActiveConnectionState::Activated => btn_content.push(
                             text::body(fl!("connected"))
@@ -1729,12 +1724,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                         .into(),
                 );
                 btn_content.push(ssid.into());
-                btn_content.push(
-                    icon::from_name("process-working-symbolic")
-                        .size(24)
-                        .symbolic(true)
-                        .into(),
-                );
+                btn_content.push(indeterminate_circular().size(24.0).into());
             } else if matches!(known.state, DeviceState::Unavailable) {
                 btn_content.push(
                     icon::from_name("network-wireless-disconnected-symbolic")
@@ -1906,10 +1896,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                     let connecting = padded_control(
                         row::with_children([
                             Element::from(id),
-                            icon::from_name("process-working-symbolic")
-                                .size(24)
-                                .symbolic(true)
-                                .into(),
+                            indeterminate_circular().size(24.0).into(),
                         ])
                         .spacing(8),
                     );
