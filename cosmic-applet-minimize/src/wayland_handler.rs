@@ -121,6 +121,7 @@ struct AppData {
     toplevel_info_state: ToplevelInfoState,
     toplevel_manager_state: ToplevelManagerState,
     seat_state: SeatState,
+    captured_toplevels: std::collections::HashSet<ExtForeignToplevelHandleV1>,
 }
 
 struct CaptureData {
@@ -351,6 +352,36 @@ impl AppData {
             }
         });
     }
+
+    fn handle_toplevel(&mut self, toplevel: &ExtForeignToplevelHandleV1, is_new: bool) {
+        let Some(info) = self.toplevel_info_state.info(toplevel) else {
+            return;
+        };
+        if info
+            .state
+            .contains(&zcosmic_toplevel_handle_v1::State::Minimized)
+        {
+            // Capture a thumbnail once, on the transition into minimized.
+            if self.captured_toplevels.insert(toplevel.clone()) {
+                self.send_image(toplevel.clone());
+            }
+            let update = if is_new {
+                ToplevelUpdate::Add(info.clone())
+            } else {
+                ToplevelUpdate::Update(info.clone())
+            };
+            let _ = futures::executor::block_on(self.tx.send(WaylandUpdate::Toplevel(update)));
+        } else {
+            self.remove_toplevel(toplevel);
+        }
+    }
+
+    fn remove_toplevel(&mut self, toplevel: &ExtForeignToplevelHandleV1) {
+        self.captured_toplevels.remove(toplevel);
+        let _ = futures::executor::block_on(self.tx.send(WaylandUpdate::Toplevel(
+            ToplevelUpdate::Remove(toplevel.clone()),
+        )));
+    }
 }
 
 impl ToplevelInfoHandler for AppData {
@@ -364,23 +395,7 @@ impl ToplevelInfoHandler for AppData {
         _qh: &QueueHandle<Self>,
         toplevel: &ExtForeignToplevelHandleV1,
     ) {
-        if let Some(info) = self.toplevel_info_state.info(toplevel) {
-            if info
-                .state
-                .contains(&zcosmic_toplevel_handle_v1::State::Minimized)
-            {
-                // spawn thread for sending the image
-                self.send_image(toplevel.clone());
-                let _ = futures::executor::block_on(
-                    self.tx
-                        .send(WaylandUpdate::Toplevel(ToplevelUpdate::Add(info.clone()))),
-                );
-            } else {
-                let _ = futures::executor::block_on(self.tx.send(WaylandUpdate::Toplevel(
-                    ToplevelUpdate::Remove(toplevel.clone()),
-                )));
-            }
-        }
+        self.handle_toplevel(toplevel, true);
     }
 
     fn update_toplevel(
@@ -389,21 +404,7 @@ impl ToplevelInfoHandler for AppData {
         _qh: &QueueHandle<Self>,
         toplevel: &ExtForeignToplevelHandleV1,
     ) {
-        if let Some(info) = self.toplevel_info_state.info(toplevel) {
-            if info
-                .state
-                .contains(&zcosmic_toplevel_handle_v1::State::Minimized)
-            {
-                self.send_image(toplevel.clone());
-                let _ = futures::executor::block_on(self.tx.send(WaylandUpdate::Toplevel(
-                    ToplevelUpdate::Update(info.clone()),
-                )));
-            } else {
-                let _ = futures::executor::block_on(self.tx.send(WaylandUpdate::Toplevel(
-                    ToplevelUpdate::Remove(toplevel.clone()),
-                )));
-            }
-        }
+        self.handle_toplevel(toplevel, false);
     }
 
     fn toplevel_closed(
@@ -412,9 +413,7 @@ impl ToplevelInfoHandler for AppData {
         _qh: &QueueHandle<Self>,
         toplevel: &ExtForeignToplevelHandleV1,
     ) {
-        let _ = futures::executor::block_on(self.tx.send(WaylandUpdate::Toplevel(
-            ToplevelUpdate::Remove(toplevel.clone()),
-        )));
+        self.remove_toplevel(toplevel);
     }
 }
 
@@ -482,6 +481,7 @@ pub(crate) fn wayland_handler(
         toplevel_manager_state: ToplevelManagerState::new(&registry_state, &qh),
         queue_handle: qh,
         registry_state,
+        captured_toplevels: std::collections::HashSet::new(),
     };
 
     loop {

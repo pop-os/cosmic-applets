@@ -1,0 +1,12 @@
+cancel = Têk bibe
+bluetooth = Bluetooth
+connected = Hat girêdan
+other-devices = Amûrên Bluetooth ên din
+settings = Sazkariyên Bluetooth...
+confirm-pin = Tika ye piştrast bike ku PIN a jêrîn bi ya ku li ser { $deviceName } tê xuyakirin re li hev tê
+confirm = Bipejirîne
+check-device = Piştrast bike ku { $deviceName } çalak e, di hundir rêjeyê de ye, û amade ye ji bo cotkirinê.
+try-again = Dîsa hewl bide
+discoverable = Dîtbar
+pairable = Cotbar
+unsuccessful = Cotkirin têkçûyî ye
