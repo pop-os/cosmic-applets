@@ -405,6 +405,7 @@ fn secret_agent_task(identifier: String) -> Task<NmAgentEvent> {
     cosmic::Task::stream(async_fn_stream::fn_stream(move |emitter| async move {
         let registration = SecretAgent::builder()
             .with_identifier(identifier)
+            .with_object_path("/org/freedesktop/NetworkManager/SecretAgent")
             .with_capabilities(SecretAgentCapabilities::VPN_HINTS)
             .register()
             .await;
