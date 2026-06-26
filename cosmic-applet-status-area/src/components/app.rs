@@ -65,7 +65,8 @@ impl App {
     fn resize_window(&self) -> app::Task<Msg> {
         let icon_size = self.core.applet.suggested_size(true).0 as u32
             + self.core.applet.suggested_padding(true).1 as u32 * 2;
-        let n = self.menus.len() as u32;
+        // Size to the visible count so a Passive item does not widen the panel.
+        let n = self.visible_menus().count() as u32;
         window::resize(
             self.core.main_window_id().unwrap(),
             iced::Size::new(1.max(icon_size * n) as f32, icon_size as f32),
@@ -84,7 +85,8 @@ impl App {
         let button_total_size = self.core.applet.suggested_size(true).0
             + self.core.applet.suggested_padding(true).1 * 2;
 
-        let menu_count = self.menus.len();
+        // Count only visible items so the skip/take split matches the rendered row.
+        let menu_count = self.visible_menus().count();
 
         let btn_count = max_major_axis_len / button_total_size as u32;
         if btn_count >= menu_count as u32 {
@@ -98,14 +100,26 @@ impl App {
         }
     }
 
+    /// The menus rendered as icons, in id order, with Passive items excluded
+    /// from every position/index/count computation so the popup anchor math
+    /// stays in sync with the on-screen row.
+    fn visible_menus(
+        &self,
+    ) -> impl DoubleEndedIterator<Item = (usize, &status_menu::State)> + Clone {
+        self.menus
+            .iter()
+            .filter(|(_, m)| !m.is_passive())
+            .map(|(id, m)| (*id, m))
+    }
+
     fn view_overflow_popup(&self) -> cosmic::Element<'_, Msg> {
         // Render the overflow popup with the menus that are not shown in the main view
         let overflow_index = self.overflow_index().unwrap_or(0);
-        let children = self.menus.iter().skip(overflow_index).map(|(id, menu)| {
+        let children = self.visible_menus().skip(overflow_index).map(|(id, menu)| {
             mouse_area(
-                menu_icon_button(&self.core.applet, &menu).on_press_down(Msg::TogglePopup(*id)),
+                menu_icon_button(&self.core.applet, &menu).on_press_down(Msg::TogglePopup(id)),
             )
-            .on_enter(Msg::Hovered(*id))
+            .on_enter(Msg::Hovered(id))
             .into()
         });
 
@@ -238,7 +252,10 @@ impl cosmic::Application for App {
                         cmds.push(destroy_popup(popup_id));
                     }
                     let popup_id = self.next_popup_id();
-                    let i = self.menus.keys().position(|&i| i == id).unwrap();
+                    // Anchor within the visible set; a Passive/absent id has no slot — bail.
+                    let Some(i) = self.visible_menus().position(|(mid, _)| mid == id) else {
+                        return Task::none();
+                    };
                     let (i, parent) = self
                         .overflow_index()
                         .and_then(|overflow_i| {
@@ -327,7 +344,10 @@ impl cosmic::Application for App {
                     return Task::none();
                 }
                 let popup_id = self.next_popup_id();
-                let i = self.menus.keys().position(|&i| i == id).unwrap();
+                // Anchor within the visible set; a Passive/absent id has no slot — bail.
+                let Some(i) = self.visible_menus().position(|(mid, _)| mid == id) else {
+                    return Task::none();
+                };
 
                 let (i, parent) = self
                     .overflow_index()
@@ -467,14 +487,15 @@ impl cosmic::Application for App {
     fn view(&self) -> cosmic::Element<'_, Msg> {
         let overflow_index = self.overflow_index();
 
+        // Bind first: inlining into `take(...)` would borrow `self` twice.
+        let visible_count = self.visible_menus().count();
         let children = self
-            .menus
-            .iter()
-            .take(overflow_index.unwrap_or(self.menus.len()))
+            .visible_menus()
+            .take(overflow_index.unwrap_or(visible_count))
             .map(|(id, menu)| {
-                mouse_area(menu_icon_button(&self.core.applet, &menu).on_press(Msg::Activate(*id)))
-                    .on_right_press(Msg::TogglePopup(*id))
-                    .on_enter(Msg::Hovered(*id))
+                mouse_area(menu_icon_button(&self.core.applet, &menu).on_press(Msg::Activate(id)))
+                    .on_right_press(Msg::TogglePopup(id))
+                    .on_enter(Msg::Hovered(id))
                     .into()
             });
 
