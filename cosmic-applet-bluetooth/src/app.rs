@@ -21,7 +21,7 @@ use cosmic::{
         widget::{Column, column, container, row},
     },
     theme,
-    widget::{button, divider, icon, scrollable, text},
+    widget::{button, divider, icon, indeterminate_circular, scrollable, text},
 };
 use futures::FutureExt;
 use std::{collections::HashMap, sync::LazyLock, time::Duration};
@@ -367,14 +367,12 @@ impl cosmic::Application for CosmicBluetoothApplet {
                     );
                 }
                 BluerDeviceStatus::Paired => {}
-                BluerDeviceStatus::Connecting | BluerDeviceStatus::Disconnecting => {
-                    row = row.push(
-                        icon::from_name("process-working-symbolic")
-                            .size(24)
-                            .symbolic(true),
-                    );
+                BluerDeviceStatus::Connecting
+                | BluerDeviceStatus::Disconnecting
+                | BluerDeviceStatus::Pairing => {
+                    row = row.push(indeterminate_circular().size(24.0));
                 }
-                BluerDeviceStatus::Disconnected | BluerDeviceStatus::Pairing => continue,
+                BluerDeviceStatus::Disconnected => continue,
             }
 
             known_bluetooth.push(
