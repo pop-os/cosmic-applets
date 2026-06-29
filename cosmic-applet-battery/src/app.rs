@@ -40,7 +40,7 @@ use cosmic_settings_upower_subscription::{
 };
 
 use rustc_hash::FxHashMap;
-use std::{path::PathBuf, sync::LazyLock, time::Duration};
+use std::{path::PathBuf, time::Duration};
 use tokio::sync::mpsc::UnboundedSender;
 
 // XXX improve
@@ -168,6 +168,20 @@ impl CosmicBatteryApplet {
     fn set_charging_limit(&mut self, limit: bool) {
         self.charging_limit = Some(limit);
         self.update_battery(self.battery_percent, self.on_battery);
+    }
+
+    fn panel_icon_name(&self) -> &str {
+        if self.no_battery {
+            if self.screen_brightness.is_some() {
+                self.display_icon_name.as_str()
+            } else if self.kbd_brightness.is_some() {
+                "keyboard-brightness-symbolic"
+            } else {
+                "plugged-into-power-symbolic"
+            }
+        } else {
+            self.icon_name.as_str()
+        }
     }
 }
 
@@ -521,19 +535,9 @@ impl cosmic::Application for CosmicBatteryApplet {
         let applet_padding = self.core.applet.suggested_padding(true);
 
         let mut children = vec![
-            icon::from_name(if self.no_battery {
-                if self.screen_brightness.is_some() {
-                    self.display_icon_name.as_str()
-                } else if self.kbd_brightness.is_some() {
-                    "keyboard-brightness-symbolic"
-                } else {
-                    self.icon_name.as_str()
-                }
-            } else {
-                self.icon_name.as_str()
-            })
-            .size(suggested_size.0)
-            .into(),
+            icon::from_name(self.panel_icon_name())
+                .size(suggested_size.0)
+                .into(),
         ];
 
         if self.config.show_percentage && !self.no_battery {
