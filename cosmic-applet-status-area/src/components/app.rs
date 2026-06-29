@@ -9,11 +9,14 @@ use cosmic::{
     },
     cctk::sctk::reexports::calloop,
     iced::{
-        self, Length, Subscription,
+        self,
+        Event::Mouse,
+        Length, Subscription, event,
+        mouse::{self, ScrollDelta},
         platform_specific::shell::commands::popup::{destroy_popup, get_popup},
-        theme::Style,
         window,
     },
+    scroll::{DiscreteScrollDelta, DiscreteScrollState},
     surface,
     widget::{container, mouse_area},
 };
@@ -33,7 +36,8 @@ pub enum Msg {
     StatusMenu((usize, status_menu::Msg)),
     StatusNotifier(status_notifier_watcher::Event),
     TogglePopup(usize),
-    Hovered(usize),
+    Hovered(Option<usize>),
+    WheelScrolled(ScrollDelta),
     Surface(surface::Action),
     ToggleOverflow,
     HoveredOverflow,
@@ -49,6 +53,8 @@ pub(crate) struct App {
     max_menu_id: usize,
     popup: Option<window::Id>,
     overflow_popup: Option<window::Id>,
+    hovered_menu: Option<usize>,
+    scroll_states: BTreeMap<usize, DiscreteScrollState>,
     token_tx: Option<calloop::channel::Sender<TokenRequest>>,
 }
 
@@ -103,9 +109,10 @@ impl App {
         let overflow_index = self.overflow_index().unwrap_or(0);
         let children = self.menus.iter().skip(overflow_index).map(|(id, menu)| {
             mouse_area(
-                menu_icon_button(&self.core.applet, &menu).on_press_down(Msg::TogglePopup(*id)),
+                menu_icon_button(&self.core.applet, menu).on_press_down(Msg::TogglePopup(*id)),
             )
-            .on_enter(Msg::Hovered(*id))
+            .on_enter(Msg::Hovered(Some(*id)))
+            .on_exit(Msg::Hovered(None))
             .into()
         });
 
@@ -210,6 +217,7 @@ impl cosmic::Application for App {
                     {
                         let id = *id;
                         self.menus.remove(&id);
+                        self.scroll_states.remove(&id);
                         if self.open_menu == Some(id) {
                             self.open_menu = None;
                             if let Some(popup_id) = self.popup {
@@ -312,6 +320,10 @@ impl cosmic::Application for App {
                 }
             },
             Msg::Hovered(id) => {
+                self.hovered_menu = id;
+                let Some(id) = id else {
+                    return Task::none();
+                };
                 let mut cmds = Vec::new();
                 if let Some(old_id) = self.open_menu.take() {
                     if old_id != id {
@@ -361,6 +373,19 @@ impl cosmic::Application for App {
                 cmds.push(get_popup(popup_settings));
                 Task::batch(cmds)
             }
+            Msg::WheelScrolled(delta) => {
+                let Some(id) = self.hovered_menu else {
+                    return Task::none();
+                };
+                let discrete_delta = self.scroll_states.entry(id).or_default().update(delta);
+                let Some((delta, orientation)) = discrete_scroll_delta(discrete_delta) else {
+                    return Task::none();
+                };
+                let Some(menu) = self.menus.get(&id) else {
+                    return Task::none();
+                };
+                scroll(id, menu.item.item_proxy().clone(), delta, orientation)
+            }
             Msg::Surface(a) => {
                 return cosmic::task::message(cosmic::Action::Cosmic(
                     cosmic::app::Action::Surface(a),
@@ -405,6 +430,7 @@ impl cosmic::Application for App {
                 }
             }
             Msg::HoveredOverflow => {
+                self.hovered_menu = None;
                 let mut cmds = Vec::new();
                 if self.overflow_popup.is_some() {
                     // If we already have an overflow popup, do nothing
@@ -460,6 +486,12 @@ impl cosmic::Application for App {
             subscriptions.push(menu.subscription(is_open).with(*id).map(Msg::StatusMenu));
         }
         subscriptions.push(activation_token_subscription(0).map(Msg::Token));
+        subscriptions.push(event::listen_with(|e, status, _| match (e, status) {
+            (Mouse(mouse::Event::WheelScrolled { delta }), event::Status::Ignored) => {
+                Some(Msg::WheelScrolled(delta))
+            }
+            _ => None,
+        }));
 
         iced::Subscription::batch(subscriptions)
     }
@@ -472,9 +504,10 @@ impl cosmic::Application for App {
             .iter()
             .take(overflow_index.unwrap_or(self.menus.len()))
             .map(|(id, menu)| {
-                mouse_area(menu_icon_button(&self.core.applet, &menu).on_press(Msg::Activate(*id)))
+                mouse_area(menu_icon_button(&self.core.applet, menu).on_press(Msg::Activate(*id)))
                     .on_right_press(Msg::TogglePopup(*id))
-                    .on_enter(Msg::Hovered(*id))
+                    .on_enter(Msg::Hovered(Some(*id)))
+                    .on_exit(Msg::Hovered(None))
                     .into()
             });
 
@@ -570,6 +603,33 @@ fn activate(
     })
 }
 
+fn scroll(
+    id: usize,
+    item_proxy: crate::subscriptions::status_notifier_item::StatusNotifierItemProxy<'static>,
+    delta: i32,
+    orientation: &'static str,
+) -> Task<cosmic::Action<Msg>> {
+    Task::future(async move {
+        match item_proxy.scroll(delta, orientation).await {
+            Ok(_) => cosmic::action::app(Msg::None),
+            Err(err) => {
+                tracing::error!("Scroll failed for {}: {}", id, err);
+                cosmic::action::app(Msg::None)
+            }
+        }
+    })
+}
+
+fn discrete_scroll_delta(delta: DiscreteScrollDelta) -> Option<(i32, &'static str)> {
+    if delta.y != 0 {
+        Some((delta.y as i32, "vertical"))
+    } else if delta.x != 0 {
+        Some((delta.x as i32, "horizontal"))
+    } else {
+        None
+    }
+}
+
 fn menu_icon_button<'a>(
     applet: &'a cosmic::applet::Context,
     menu: &'a status_menu::State,
@@ -613,4 +673,44 @@ fn menu_icon_button<'a>(
 
 pub fn main() -> iced::Result {
     cosmic::applet::run::<App>(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn discrete_scroll_prefers_vertical_delta() {
+        assert_eq!(
+            discrete_scroll_delta(cosmic::scroll::DiscreteScrollDelta { x: 4, y: -2 }),
+            Some((-2, "vertical"))
+        );
+    }
+
+    #[test]
+    fn discrete_scroll_uses_horizontal_delta_when_vertical_is_zero() {
+        assert_eq!(
+            discrete_scroll_delta(cosmic::scroll::DiscreteScrollDelta { x: 3, y: 0 }),
+            Some((3, "horizontal"))
+        );
+    }
+
+    #[test]
+    fn discrete_scroll_ignores_zero_delta() {
+        assert_eq!(
+            discrete_scroll_delta(cosmic::scroll::DiscreteScrollDelta { x: 0, y: 0 }),
+            None
+        );
+    }
+
+    #[test]
+    fn pixel_scroll_accumulates_before_emitting_discrete_delta() {
+        let mut state = cosmic::scroll::DiscreteScrollState::default();
+
+        let first = state.update(ScrollDelta::Pixels { x: 0.0, y: 12.0 });
+        assert_eq!(discrete_scroll_delta(first), None);
+
+        let second = state.update(ScrollDelta::Pixels { x: 0.0, y: 12.0 });
+        assert_eq!(discrete_scroll_delta(second), Some((1, "vertical")));
+    }
 }
