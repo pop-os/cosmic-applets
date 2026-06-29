@@ -51,13 +51,16 @@ pub async fn watch(connection: &zbus::Connection) -> zbus::Result<EventStream> {
 
     let items = watcher.registered_status_notifier_items().await?;
     let connection = connection.clone();
+    // Seed concurrently (bounded); `buffered` keeps the watcher's enumeration order.
     let items_stream = futures::stream::iter(items.into_iter())
-        .then(move |name| status_notifier_item(connection.clone(), name));
-
-    Ok(Box::pin(items_stream.chain(futures::stream_select!(
+        .map(move |name| status_notifier_item(connection.clone(), name))
+        .buffered(16);
+    // Merge seed with live streams so live registrations flow during seeding.
+    Ok(Box::pin(futures::stream_select!(
+        items_stream,
         registered_stream,
         unregistered_stream
-    ))))
+    )))
 }
 
 async fn item_registered(connection: zbus::Connection, evt: StatusNotifierItemRegistered) -> Event {
@@ -68,8 +71,13 @@ async fn item_registered(connection: zbus::Connection, evt: StatusNotifierItemRe
 }
 
 async fn status_notifier_item(connection: zbus::Connection, name: String) -> Event {
-    match StatusNotifierItem::new(&connection, name).await {
-        Ok(item) => Event::Registered(item),
-        Err(err) => Event::Error(err.to_string()),
+    // Cap construction; zbus' default method timeout is unbounded.
+    let build = StatusNotifierItem::new(&connection, name.clone());
+    match tokio::time::timeout(std::time::Duration::from_secs(5), build).await {
+        Ok(Ok(item)) => Event::Registered(item),
+        Ok(Err(err)) => Event::Error(err.to_string()),
+        Err(_) => Event::Error(format!(
+            "status notifier item `{name}` timed out during construction"
+        )),
     }
 }
