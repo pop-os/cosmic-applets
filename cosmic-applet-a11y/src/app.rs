@@ -26,10 +26,9 @@ use cosmic::{
 };
 
 use cosmic_settings_a11y_manager_subscription::{
-    self as cosmic_a11y_manager, AccessibilityEvent, AccessibilityRequest, ColorFilter,
+    AccessibilityEvent, AccessibilityRequest, ColorFilter,
 };
 use cosmic_settings_accessibility_subscription::{self as accessibility};
-use std::sync::LazyLock;
 use tokio::sync::mpsc::UnboundedSender;
 
 pub fn run() -> cosmic::iced::Result {
@@ -49,6 +48,7 @@ struct CosmicA11yApplet {
     wayland_protocol_version: Option<u32>,
     token_tx: Option<channel::Sender<TokenRequest>>,
     screen_filter_active: bool,
+    screen_filter: ColorFilter,
 }
 
 #[derive(Debug, Clone)]
@@ -116,18 +116,19 @@ impl cosmic::Application for CosmicA11yApplet {
                     self.inverted_colors_enabled = enabled;
                     let _ = tx.send(AccessibilityRequest::ScreenFilter {
                         inverted: enabled,
-                        filter: None,
+                        filter: ColorFilter::Unknown,
+                        filter_state: self.screen_filter_active,
                     });
                 } else {
                     self.inverted_colors_enabled = false;
                 }
             }
             Message::FilterColorsEnabled(enabled) => {
-                if let Some(sender) = self.wayland_sender.as_ref() {
-                    self.screen_filter_active = enabled;
-                    let _ = sender.send(AccessibilityRequest::ScreenFilter {
+                if let Some(tx) = &self.wayland_sender {
+                    let _ = tx.send(AccessibilityRequest::ScreenFilter {
                         inverted: self.inverted_colors_enabled,
-                        filter: enabled.then_some(ColorFilter::Unknown),
+                        filter: ColorFilter::Unknown,
+                        filter_state: enabled,
                     });
                 }
             }
@@ -268,8 +269,14 @@ impl cosmic::Application for CosmicA11yApplet {
                 WaylandUpdate::State(AccessibilityEvent::Magnifier(enabled)) => {
                     self.magnifier_enabled = enabled;
                 }
-                WaylandUpdate::State(AccessibilityEvent::ScreenFilter { inverted, .. }) => {
+                WaylandUpdate::State(AccessibilityEvent::ScreenFilter {
+                    inverted,
+                    filter,
+                    filter_state,
+                }) => {
                     self.inverted_colors_enabled = inverted;
+                    self.screen_filter = filter;
+                    self.screen_filter_active = filter_state;
                 }
                 WaylandUpdate::State(AccessibilityEvent::Closed) => {
                     self.screen_filter_active = false;
@@ -343,7 +350,7 @@ impl cosmic::Application for CosmicA11yApplet {
                 .text_size(14),
         );
 
-        let content_list = Column::with_capacity(5)
+        let content_list = Column::new()
             .push(reader_toggle)
             .push_maybe(
                 self.wayland_protocol_version
@@ -357,7 +364,7 @@ impl cosmic::Application for CosmicA11yApplet {
             )
             .push_maybe(
                 self.wayland_protocol_version
-                    .is_some_and(|ver| ver >= 3)
+                    .is_some_and(|ver| ver >= 2)
                     .then_some(filter_colors_toggle),
             )
             .push(hc_colors_toggle)
