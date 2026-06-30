@@ -24,7 +24,7 @@ impl Default for TimeAppletConfig {
             first_day_of_week: 6,
             show_date_in_top_panel: true,
             show_weekday: false,
-            show_week_numbers: true,
+            show_week_numbers: false,
             format_strftime: Default::default(),
         }
     }
