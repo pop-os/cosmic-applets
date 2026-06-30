@@ -52,8 +52,10 @@ static AUTOSIZE_MAIN_ID: LazyLock<Id> = LazyLock::new(|| Id::new("autosize-main"
 // so those specifiers aren't listed here. This list is non-exhaustive, and it's possible that %X
 // and other specifiers have to be added depending on locales.
 const STRFTIME_SECONDS: &[char] = &['S', 'T', '+', 's'];
-const WEEK_COLUMN_WIDTH: f32 = 32.0;
+const WEEK_COLUMN_WIDTH: f32 = 28.0;
+const CALENDAR_PADDING_WIDTH: f32 = 12.0;
 const CALENDAR_CELL_SIZE: f32 = 44.0;
+const CALENDAR_COLUMN_SPACING: f32 = 4.0;
 
 fn week_number_text_style(theme: &theme::Theme) -> cosmic::iced::widget::text::Style {
     let mut color = theme.cosmic().background.component.on;
@@ -140,7 +142,9 @@ impl Window {
     }
 
     fn calendar_grid(&self) -> Grid<'_, Message> {
-        let mut calendar = grid().width(Length::Fill);
+        let mut calendar = grid()
+            .width(Length::Fill)
+            .column_spacing(CALENDAR_COLUMN_SPACING as u16);
         let first_day_of_week = match self.config.first_day_of_week {
             0 => Weekday::Monday,
             1 => Weekday::Tuesday,
@@ -771,6 +775,17 @@ impl cosmic::Application for Window {
 
         let calendar = self.calendar_grid();
 
+        // Total popup width = 7 day columns + inter-day gaps + padding
+        // + week column + gap between week and Monday (only when enabled).
+        let popup_width = (7.0 * CALENDAR_CELL_SIZE
+            + 6.0 * CALENDAR_COLUMN_SPACING
+            + 2.0 * CALENDAR_PADDING_WIDTH
+            + if self.config.show_week_numbers {
+                WEEK_COLUMN_WIDTH + CALENDAR_COLUMN_SPACING
+            } else {
+                0.0
+            });
+
         let content_list = column![
             row![
                 column![date, day_of_week],
@@ -779,16 +794,21 @@ impl cosmic::Application for Window {
             ]
             .align_y(Alignment::Center)
             .padding([12, 20]),
-            calendar.padding([0, 12].into()),
+            calendar.padding([0.0, CALENDAR_PADDING_WIDTH].into()),
             padded_control(divider::horizontal::default()).padding([space_xxs, space_s]),
             menu_button(text::body(fl!("datetime-settings")))
                 .on_press(Message::OpenDateTimeSettings),
         ]
-        .padding([8, 0]);
+        .padding([8, 0])
+        .width(popup_width);
 
         self.core
             .applet
             .popup_container(container(content_list))
+            .limits(
+                cosmic::iced::core::layout::Limits::NONE
+                    .min_width(popup_width)
+            )
             .into()
     }
 
@@ -812,8 +832,8 @@ fn date_button(day: i8, is_month: bool, is_day: bool, is_today: bool) -> Button<
             .center(Length::Fill),
     )
     .class(style)
-    .height(Length::Fixed(44.0))
-    .width(Length::Fixed(44.0));
+    .height(Length::Fixed(CALENDAR_CELL_SIZE))
+    .width(Length::Fixed(CALENDAR_CELL_SIZE));
 
     if is_month {
         button.on_press(Message::SelectDay(day))
