@@ -805,10 +805,7 @@ impl cosmic::Application for Window {
         self.core
             .applet
             .popup_container(container(content_list))
-            .limits(
-                cosmic::iced::core::layout::Limits::NONE
-                    .min_width(popup_width)
-            )
+            .limits(cosmic::iced::core::layout::Limits::NONE.min_width(popup_width))
             .into()
     }
 
