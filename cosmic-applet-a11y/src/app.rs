@@ -127,7 +127,7 @@ impl cosmic::Application for CosmicA11yApplet {
                 if let Some(tx) = &self.wayland_sender {
                     let _ = tx.send(AccessibilityRequest::ScreenFilter {
                         inverted: self.inverted_colors_enabled,
-                        filter: ColorFilter::Unknown,
+                        filter: self.screen_filter,
                         filter_state: enabled,
                     });
                 }
@@ -365,7 +365,7 @@ impl cosmic::Application for CosmicA11yApplet {
             )
             .push_maybe(
                 self.wayland_protocol_version
-                    .is_some_and(|ver| ver >= 2)
+                    .is_some_and(|ver| ver >= 2 && self.screen_filter != ColorFilter::Unknown)
                     .then_some(filter_colors_toggle),
             )
             .push(padded_control(divider::horizontal::default()).padding([space_xxs, space_s]))
