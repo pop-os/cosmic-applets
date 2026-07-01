@@ -11,7 +11,6 @@ use cosmic::{
     app,
     app::Core,
     applet::{self},
-    cosmic_config::{self, CosmicConfigEntry},
     cosmic_theme::Spacing,
     iced::Subscription,
     iced::core::window,
@@ -28,7 +27,7 @@ use cosmic::{
         rectangle_tracker::{RectangleTracker, RectangleUpdate, rectangle_tracker_subscription},
     },
 };
-use cosmic_comp_config::CosmicCompConfig;
+use cosmic_comp_config::{CosmicCompConfig, XkbConfig};
 use std::{
     os::unix::{
         io::{FromRawFd, RawFd},
@@ -67,27 +66,8 @@ pub fn run() -> cosmic::iced::Result {
         }
     };
 
-    let comp_config =
-        match cosmic_config::Config::new("com.system76.CosmicComp", CosmicCompConfig::VERSION) {
-            Ok(config_handler) => {
-                let config = match CosmicCompConfig::get_entry(&config_handler) {
-                    Ok(ok) => ok,
-                    Err((errs, config)) => {
-                        tracing::error!("errors loading config: {:?}", errs);
-                        config
-                    }
-                };
-                config
-            }
-            Err(err) => {
-                tracing::error!("failed to create config handler: {}", err);
-                CosmicCompConfig::default()
-            }
-        };
-
     cosmic::applet::run::<Window>(Flags {
         wayland_connection,
-        comp_config,
         layouts: layouts.layout_list.layout,
     })
 }
@@ -102,7 +82,6 @@ pub struct ActiveLayout {
 pub struct Window {
     core: Core,
     popup: Option<Id>,
-    comp_config: CosmicCompConfig,
     layouts: Vec<KeyboardLayout>,
     active_layouts: Vec<ActiveLayout>,
     rectangle_tracker: Option<RectangleTracker<u32>>,
@@ -128,7 +107,6 @@ pub enum Message {
 #[derive(Debug)]
 pub struct Flags {
     wayland_connection: Option<Connection>,
-    pub comp_config: CosmicCompConfig,
     pub layouts: Vec<KeyboardLayout>,
 }
 
@@ -152,7 +130,6 @@ impl cosmic::Application for Window {
             layouts: flags.layouts,
             core,
             popup: None,
-            comp_config: flags.comp_config,
             active_layouts: Vec::new(),
             rectangle_tracker: None,
             rectangle: Rectangle::default(),
@@ -197,8 +174,7 @@ impl cosmic::Application for Window {
                 }
             }
             Message::CompConfig(config) => {
-                self.comp_config = *config;
-                self.active_layouts = self.update_xkb();
+                self.active_layouts = self.update_xkb(&config.xkb_config);
             }
             Message::KeyboardSettings => {
                 let mut cmd = std::process::Command::new("cosmic-settings");
@@ -343,9 +319,8 @@ impl cosmic::Application for Window {
     }
 }
 impl Window {
-    fn update_xkb(&self) -> Vec<ActiveLayout> {
+    fn update_xkb(&self, xkb: &XkbConfig) -> Vec<ActiveLayout> {
         let mut active_layouts = Vec::new();
-        let xkb = &self.comp_config.xkb_config;
 
         let layouts = xkb.layout.split_terminator(',');
 
