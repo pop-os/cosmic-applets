@@ -357,6 +357,7 @@ impl cosmic::Application for CosmicA11yApplet {
                     .is_some()
                     .then_some(magnifier_toggle),
             )
+            .push(hc_colors_toggle)
             .push_maybe(
                 self.wayland_protocol_version
                     .is_some_and(|ver| ver >= 2)
@@ -367,7 +368,6 @@ impl cosmic::Application for CosmicA11yApplet {
                     .is_some_and(|ver| ver >= 2)
                     .then_some(filter_colors_toggle),
             )
-            .push(hc_colors_toggle)
             .push(padded_control(divider::horizontal::default()).padding([space_xxs, space_s]))
             .push(menu_button(text::body(fl!("settings"))).on_press(Message::OpenSettings))
             .padding([8, 0]);
