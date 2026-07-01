@@ -167,18 +167,21 @@ pub enum ActiveConnectionInfo {
         name: String,
         hw_address: String,
         speed: u32,
-        ip_addresses: Vec<String>,
+        ip4_address: Option<String>,
+        ip6_address: Option<String>,
     },
     WiFi {
         name: String,
-        ip_addresses: Vec<String>,
+        ip4_address: Option<String>,
+        ip6_address: Option<String>,
         state: ActiveConnectionState,
         strength: u8,
         hw_address: String,
     },
     Vpn {
         name: String,
-        ip_addresses: Vec<String>,
+        ip4_address: Option<String>,
+        ip6_address: Option<String>,
     },
 }
 
@@ -447,8 +450,15 @@ fn vpn_section<'a>(
     vpn_col
 }
 
-fn ip_addresses(ip4_address: Option<String>, ip6_address: Option<String>) -> Vec<String> {
-    ip4_address.into_iter().chain(ip6_address).collect()
+fn ip_address_elements<'a>(
+    ip4_address: &Option<String>,
+    _ip6_address: &Option<String>,
+) -> Vec<Element<'a, Message>> {
+    let mut elements = Vec::with_capacity(1);
+    if let Some(addr) = ip4_address {
+        elements.push(text(format!("{}: {}", fl!("ipv4"), addr)).size(12).into());
+    }
+    elements
 }
 
 fn network_type(security: nmrs::SecurityFeatures) -> NetworkType {
@@ -599,18 +609,21 @@ fn snapshot_to_applet(snapshot: NetworkSnapshot) -> AppletSnapshot {
                 name: wired.id.clone(),
                 hw_address: wired.hw_address.clone().unwrap_or_default(),
                 speed: wired.speed_mbps.unwrap_or_default(),
-                ip_addresses: ip_addresses(wired.ip4_address.clone(), wired.ip6_address.clone()),
+                ip4_address: wired.ip4_address.clone(),
+                ip6_address: wired.ip6_address.clone(),
             }),
             ActiveConnection::Wifi(wifi) => Some(ActiveConnectionInfo::WiFi {
                 name: wifi.ssid.clone(),
-                ip_addresses: ip_addresses(wifi.ip4_address.clone(), wifi.ip6_address.clone()),
+                ip4_address: wifi.ip4_address.clone(),
+                ip6_address: wifi.ip6_address.clone(),
                 state: wifi.state,
                 strength: wifi.strength.unwrap_or_default(),
                 hw_address: wifi.bssid.clone().unwrap_or_default(),
             }),
             ActiveConnection::Vpn(vpn) => Some(ActiveConnectionInfo::Vpn {
                 name: vpn.id.clone(),
-                ip_addresses: ip_addresses(vpn.ip4_address.clone(), vpn.ip6_address.clone()),
+                ip4_address: vpn.ip4_address.clone(),
+                ip6_address: vpn.ip6_address.clone(),
             }),
             ActiveConnection::Other(_) | _ => None,
         })
@@ -1450,16 +1463,20 @@ impl cosmic::Application for CosmicNetworkApplet {
         let mut known_wifi = Vec::new();
         for conn in &self.nm_state.nm_state.active_conns {
             match conn {
-                ActiveConnectionInfo::Vpn { name, ip_addresses } => {
+                ActiveConnectionInfo::Vpn {
+                    name,
+                    ip4_address,
+                    ip6_address,
+                } => {
                     if self.active_device.as_ref().is_some_and(|d| {
                         d.active_connection.as_ref().is_none_or(|a| a.0.id != *name)
                     }) {
                         continue;
                     }
-                    let mut ipv4 = Vec::with_capacity(ip_addresses.len() + 1);
-                    ipv4.push(text::body(name).into());
-                    for addr in ip_addresses {
-                        ipv4.push(text::caption(format!("{}: {}", fl!("ipv4"), addr)).into());
+                    let mut info_col = Vec::with_capacity(3);
+                    info_col.push(text::body(name).into());
+                    for elem in ip_address_elements(ip4_address, ip6_address) {
+                        info_col.push(elem);
                     }
                     vpn_ethernet_col = vpn_ethernet_col.push(
                         column::with_capacity::<Message, cosmic::Theme, _>(2)
@@ -1473,7 +1490,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                                         )
                                         .size(40),
                                     ),
-                                    column::with_children(ipv4).into(),
+                                    column::with_children(info_col).into(),
                                     text::body(fl!("connected"))
                                         .width(Length::Fill)
                                         .align_x(Alignment::End)
@@ -1493,18 +1510,17 @@ impl cosmic::Application for CosmicNetworkApplet {
                     name,
                     hw_address: _,
                     speed,
-                    ip_addresses,
+                    ip4_address,
+                    ip6_address,
                 } => {
                     if self.active_device.as_ref().is_some_and(|d| {
                         d.active_connection.as_ref().is_none_or(|a| a.0.id != *name)
                     }) {
                         continue;
                     }
-                    let mut ipv4 = Vec::with_capacity(ip_addresses.len() + 1);
-                    ipv4.push(text::body(name).into());
-                    for addr in ip_addresses {
-                        ipv4.push(text(format!("{}: {}", fl!("ipv4"), addr)).size(12).into());
-                    }
+                    let mut info_col = Vec::with_capacity(3);
+                    info_col.push(text::body(name).into());
+                    info_col.extend(ip_address_elements(ip4_address, ip6_address));
 
                     let mut right_column = vec![text::body(fl!("connected")).into()];
 
@@ -1542,7 +1558,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                                         )
                                         .size(40),
                                     ),
-                                    column::with_children(ipv4).into(),
+                                    column::with_children(info_col).into(),
                                     column::with_children(right_column)
                                         .width(Length::Fill)
                                         .align_x(Alignment::End)
@@ -1560,7 +1576,8 @@ impl cosmic::Application for CosmicNetworkApplet {
                 }
                 ActiveConnectionInfo::WiFi {
                     name,
-                    ip_addresses,
+                    ip4_address,
+                    ip6_address,
                     state,
                     strength,
                     hw_address,
@@ -1570,10 +1587,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                     }) {
                         continue;
                     }
-                    let mut ipv4 = Vec::with_capacity(ip_addresses.len());
-                    for addr in ip_addresses {
-                        ipv4.push(text(format!("{}: {}", fl!("ipv4"), addr)).size(12).into());
-                    }
+                    let ip_elements = ip_address_elements(ip4_address, ip6_address);
                     let mut btn_content = vec![
                         icon::from_name(wifi_icon(*strength))
                             .size(24)
@@ -1581,7 +1595,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                             .into(),
                         column::with_children([
                             text::body(name).into(),
-                            column::with_children(ipv4).into(),
+                            column::with_children(ip_elements).into(),
                         ])
                         .width(Length::Fill)
                         .into(),
@@ -1778,6 +1792,9 @@ impl cosmic::Application for CosmicNetworkApplet {
         }
 
         for known in &self.nm_state.nm_state.known_access_points {
+            if matches!(known.state, DeviceState::Activated) {
+                continue;
+            }
             if let Some(active_device) = self.active_device.as_ref()
                 && active_device
                     .known_connections
