@@ -1,6 +1,6 @@
 cosmic-app-list = Alkalmazástálca
 pin = Rögzítés az alkalmazástálcára
-quit = Kilépés
+quit = Leállítás
 quit-all = Kilépés az összesből
 new-window = Új ablak
 run = Futtatás

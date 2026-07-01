@@ -1,6 +1,6 @@
 cosmic-app-list = دُرج التطبيقات
 pin = ثبِّت في درج التطبيقات
-quit = أنهِ
+quit = إنهِ
 quit-all = أنهِ الكل
 new-window = نافذة جديدة
 run = شغِّل

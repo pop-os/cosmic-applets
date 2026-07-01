@@ -1,6 +1,6 @@
 cosmic-app-list = Панель застосунків
 pin = Закріпити
-quit = Вийти
+quit = Завершити
 quit-all = Закрити всі
 new-window = Нове вікно
 run = Виконати
