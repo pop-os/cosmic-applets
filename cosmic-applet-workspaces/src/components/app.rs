@@ -202,24 +202,20 @@ impl cosmic::Application for IcedWorkspacesApplet {
             let content = column!(content, space::horizontal().width(Length::Fixed(width)))
                 .align_x(Alignment::Center);
 
-            let btn = button(
-                container(content)
-                    .align_x(Alignment::Center)
-                    .align_y(Alignment::Center),
-            )
-            .padding(if horizontal {
-                [0, self.core.applet.suggested_padding(true).1]
-            } else {
-                [self.core.applet.suggested_padding(true).1, 0]
-            })
-            .on_press(
-                if w.state.contains(ext_workspace_handle_v1::State::Active) {
-                    Message::WorkspaceOverview
+            let btn = button(content)
+                .padding(if horizontal {
+                    [0, self.core.applet.suggested_padding(true).1]
                 } else {
-                    Message::WorkspacePressed(w.handle.clone())
-                },
-            )
-            .padding(0);
+                    [self.core.applet.suggested_padding(true).1, 0]
+                })
+                .on_press(
+                    if w.state.contains(ext_workspace_handle_v1::State::Active) {
+                        Message::WorkspaceOverview
+                    } else {
+                        Message::WorkspacePressed(w.handle.clone())
+                    },
+                )
+                .padding(0);
 
             btn.class(
                 if w.state.contains(ext_workspace_handle_v1::State::Active) {
