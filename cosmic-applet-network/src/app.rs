@@ -1761,7 +1761,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                         .icon_size(16)
                         .on_press(Message::ResetFailedKnownSsid(
                             known.ssid.to_string(),
-                            known.hw_address,
+                            known.hw_address.clone(),
                         ))
                         .into(),
                 );
@@ -1777,12 +1777,14 @@ impl cosmic::Application for CosmicNetworkApplet {
                 | DeviceState::Unknown
                 | DeviceState::Unmanaged
                 | DeviceState::Disconnected
-                | DeviceState::NeedAuth => {
-                    btn.on_press(Message::Connect(known.ssid.clone(), known.hw_address))
-                }
-                DeviceState::Activated => {
-                    btn.on_press(Message::Disconnect(known.ssid.clone(), known.hw_address))
-                }
+                | DeviceState::NeedAuth => btn.on_press(Message::Connect(
+                    known.ssid.clone(),
+                    known.hw_address.clone(),
+                )),
+                DeviceState::Activated => btn.on_press(Message::Disconnect(
+                    known.ssid.clone(),
+                    known.hw_address.clone(),
+                )),
                 _ => btn,
             };
             known_wifi.push(Element::from(

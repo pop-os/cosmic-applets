@@ -313,7 +313,7 @@ impl cosmic::Application for Audio {
                                     (100, &[][..])
                                 };
 
-                            let popup_settings = app.core.applet.get_popup_settings(
+                            let mut popup_settings = app.core.applet.get_popup_settings(
                                 app.core.main_window_id().unwrap(),
                                 new_id,
                                 None,
