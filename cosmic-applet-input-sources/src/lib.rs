@@ -3,7 +3,7 @@
 
 mod localize;
 
-use cosmic::iced::{Alignment, Length};
+use cosmic::iced::{Alignment, Font, Length};
 use cosmic::{
     app,
     app::Core,
@@ -228,7 +228,7 @@ impl cosmic::Application for Window {
         } else {
             String::new()
         };
-        let input_source_text = self.core.applet.text(applet_text);
+        let input_source_text = self.core.applet.text(applet_text).font(Font::MONOSPACE);
         let button = self
             .core
             .applet
