@@ -1862,18 +1862,15 @@ impl cosmic::Application for CosmicNetworkApplet {
                     .spacing(8),
             );
             btn = match known.state {
+                // Activated entries are skipped above (shown in the active
+                // connections section instead), so no Disconnect arm is needed here.
                 DeviceState::Failed
                 | DeviceState::Unknown
                 | DeviceState::Unmanaged
                 | DeviceState::Disconnected
-                | DeviceState::NeedAuth => btn.on_press(Message::Connect(
-                    known.ssid.clone(),
-                    known.hw_address.clone(),
-                )),
-                DeviceState::Activated => btn.on_press(Message::Disconnect(
-                    known.ssid.clone(),
-                    known.hw_address.clone(),
-                )),
+                | DeviceState::NeedAuth => {
+                    btn.on_press(Message::Connect(known.ssid.clone(), known.hw_address))
+                }
                 _ => btn,
             };
             known_wifi.push(Element::from(
