@@ -456,6 +456,9 @@ fn ip_address_elements<'a>(
 ) -> Vec<Element<'a, Message>> {
     let mut elements = Vec::with_capacity(1);
     if let Some(addr) = ip4_address {
+        // Strip the subnet mask (e.g. "10.0.0.2/24" -> "10.0.0.2"); the drop-down
+        // only needs the address itself for glancing at the host on a local network.
+        let addr = addr.split('/').next().unwrap_or(addr.as_str());
         elements.push(text(format!("{}: {}", fl!("ipv4"), addr)).size(12).into());
     }
     elements
@@ -629,9 +632,10 @@ fn snapshot_to_applet(snapshot: NetworkSnapshot) -> AppletSnapshot {
         })
         .collect();
 
-    let wireless_access_points = summary
+    let mut wireless_access_points = summary
         .wifi_groups
         .iter()
+        .filter(|group| !group.ssid.is_empty())
         .map(|group| {
             let strongest = &group.strongest;
             AccessPoint {
@@ -646,6 +650,7 @@ fn snapshot_to_applet(snapshot: NetworkSnapshot) -> AppletSnapshot {
             }
         })
         .collect::<Vec<_>>();
+    wireless_access_points.sort_by(|a, b| b.strength.cmp(&a.strength));
 
     let known_access_points = summary
         .wifi_groups
