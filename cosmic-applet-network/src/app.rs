@@ -635,7 +635,7 @@ fn snapshot_to_applet(snapshot: NetworkSnapshot) -> AppletSnapshot {
     let mut wireless_access_points = summary
         .wifi_groups
         .iter()
-        .filter(|group| !group.ssid.is_empty())
+        .filter(|group| !group.ssid.is_empty() && !group.strongest.ssid_bytes.is_empty())
         .map(|group| {
             let strongest = &group.strongest;
             AccessPoint {
