@@ -658,6 +658,7 @@ fn snapshot_to_applet(snapshot: NetworkSnapshot) -> AppletSnapshot {
         .filter(|group| group.known || group.active)
         .map(|group| {
             let strongest = &group.strongest;
+            let device_state = DeviceState::from(&strongest.device_state);
             AccessPoint {
                 ssid: Arc::from(group.ssid.as_str()),
                 network_type: network_type(strongest.security),
@@ -665,8 +666,10 @@ fn snapshot_to_applet(snapshot: NetworkSnapshot) -> AppletSnapshot {
                 strength: strongest.strength,
                 state: if group.active {
                     DeviceState::Activated
+                } else if matches!(device_state, DeviceState::Activated) {
+                    DeviceState::Disconnected
                 } else {
-                    DeviceState::from(&strongest.device_state)
+                    device_state
                 },
                 working: false,
                 wps_push: strongest.security.wps,
