@@ -250,6 +250,7 @@ pub struct MyNetworkState {
     pub devices: Vec<Arc<DeviceInfo>>,
     pub nm_state: NetworkManagerState,
     pub requested_vpn: Option<RequestedVpn>,
+    pub pending_vpn: Option<PendingVpn>,
 }
 
 /// Shared, take-once handle to an `nmrs` [`SecretResponder`]. Cloned freely
@@ -267,6 +268,18 @@ pub struct RequestedVpn {
     /// VPN secret keys NM hinted as needed (e.g. `["password"]`). When empty,
     /// `"password"` is used as a fallback.
     secret_keys: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct PendingVpn {
+    uuid: Arc<str>,
+    action: PendingVpnAction,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PendingVpnAction {
+    Activate,
+    Deactivate,
 }
 
 #[derive(Clone, Debug)]
@@ -417,6 +430,11 @@ fn vpn_section<'a>(
                 let is_active = nm_state.nm_state.active_conns.iter().any(
                     |conn| matches!(conn, ActiveConnectionInfo::Vpn { name, .. } if name == id),
                 );
+                let pending_action = nm_state
+                    .pending_vpn
+                    .as_ref()
+                    .filter(|pending| pending.uuid.as_ref() == uuid.as_ref())
+                    .map(|pending| pending.action);
 
                 let mut btn_content = vec![
                     icon::from_name("network-vpn-symbolic")
@@ -429,6 +447,9 @@ fn vpn_section<'a>(
                 if is_active {
                     btn_content.push(text::body(fl!("connected")).align_x(Alignment::End).into());
                 }
+                if pending_action.is_some() {
+                    btn_content.push(indeterminate_circular().size(24.0).into());
+                }
 
                 let mut btn = menu_button(
                     row::with_children(btn_content)
@@ -436,7 +457,9 @@ fn vpn_section<'a>(
                         .spacing(8),
                 );
 
-                btn = if is_active {
+                btn = if pending_action.is_some() {
+                    btn
+                } else if is_active {
                     btn.on_press(Message::DeactivateVpn(uuid.clone()))
                 } else {
                     btn.on_press(Message::ActivateVpn(uuid.clone()))
@@ -724,10 +747,11 @@ fn snapshot_to_applet(snapshot: NetworkSnapshot) -> AppletSnapshot {
 impl CosmicNetworkApplet {
     fn apply_snapshot(&mut self, snapshot: AppletSnapshot) {
         let previous_connectivity = self.nm_state.nm_state.connectivity;
-        self.update_nm_state(snapshot.state);
         self.nm_state.devices = snapshot.devices.into_iter().map(Arc::new).collect();
         self.nm_state.known_vpns = snapshot.known_vpns;
         self.nm_state.ssid_to_uuid = snapshot.ssid_to_uuid;
+        self.update_nm_state(snapshot.state);
+        self.clear_completed_pending_vpn();
 
         if !previous_connectivity.is_captive() && self.nm_state.nm_state.connectivity.is_captive() {
             let mut browser = std::process::Command::new("xdg-open");
@@ -738,6 +762,34 @@ impl CosmicNetworkApplet {
                     .unwrap_or("http://204.pop-os.org/"),
             );
             tokio::spawn(cosmic::process::spawn(browser));
+        }
+    }
+
+    fn clear_completed_pending_vpn(&mut self) {
+        let Some(pending) = self.nm_state.pending_vpn.as_ref() else {
+            return;
+        };
+        let Some(connection) = self.nm_state.known_vpns.get(&pending.uuid) else {
+            self.nm_state.pending_vpn = None;
+            self.update_icon_name();
+            return;
+        };
+        let id = match connection {
+            ConnectionSettings::Vpn { id } | ConnectionSettings::Wireguard { id } => id,
+        };
+        let is_active = self
+            .nm_state
+            .nm_state
+            .active_conns
+            .iter()
+            .any(|conn| matches!(conn, ActiveConnectionInfo::Vpn { name, .. } if name == id));
+        let completed = match pending.action {
+            PendingVpnAction::Activate => is_active,
+            PendingVpnAction::Deactivate => !is_active,
+        };
+        if completed {
+            self.nm_state.pending_vpn = None;
+            self.update_icon_name();
         }
     }
 
@@ -777,6 +829,22 @@ impl CosmicNetworkApplet {
     }
 
     fn update_icon_name(&mut self) {
+        if self
+            .nm_state
+            .pending_vpn
+            .as_ref()
+            .is_some_and(|pending| pending.action == PendingVpnAction::Activate)
+            || self
+                .nm_state
+                .nm_state
+                .active_conns
+                .iter()
+                .any(|conn| matches!(conn, ActiveConnectionInfo::Vpn { .. }))
+        {
+            self.icon_name = "network-vpn-symbolic".to_string();
+            return;
+        }
+
         self.icon_name = self
             .nm_state
             .nm_state
@@ -789,12 +857,7 @@ impl CosmicNetworkApplet {
                         "network-wired-disconnected-symbolic",
                         ActiveConnectionInfo::WiFi { strength, .. },
                     ) => wifi_icon(*strength),
-                    (_, ActiveConnectionInfo::Wired { .. })
-                        if icon_name != "network-vpn-symbolic" =>
-                    {
-                        "network-wired-symbolic"
-                    }
-                    (_, ActiveConnectionInfo::Vpn { .. }) => "network-vpn-symbolic",
+                    (_, ActiveConnectionInfo::Wired { .. }) => "network-wired-symbolic",
                     _ => icon_name,
                 },
             )
@@ -831,12 +894,18 @@ impl CosmicNetworkApplet {
 
     fn connect_vpn(&mut self, uuid: Arc<str>) -> Task<cosmic::Action<Message>> {
         cosmic::task::future(async move {
-            match NmrsManager::new().await {
-                Ok(nm) => match nm.connect_vpn_by_uuid(&uuid).await {
-                    Ok(()) => Message::Refresh,
-                    Err(e) => Message::Error(format!("activate VPN {uuid}: {e}")),
-                },
-                Err(e) => Message::Error(format!("nmrs init: {e}")),
+            let error = match NmrsManager::new().await {
+                Ok(nm) => nm
+                    .connect_vpn_by_uuid(&uuid)
+                    .await
+                    .err()
+                    .map(|e| format!("activate VPN {uuid}: {e}")),
+                Err(e) => Some(format!("nmrs init: {e}")),
+            };
+            Message::VpnOperationFinished {
+                uuid,
+                action: PendingVpnAction::Activate,
+                error,
             }
         })
         .map(cosmic::Action::App)
@@ -934,7 +1003,12 @@ pub(crate) enum Message {
     Surface(surface::Action),
     ActivateVpn(Arc<str>),   // UUID of VPN to activate
     DeactivateVpn(Arc<str>), // UUID of VPN to deactivate
-    ToggleVpnList,           // Show/hide available VPNs
+    VpnOperationFinished {
+        uuid: Arc<str>,
+        action: PendingVpnAction,
+        error: Option<String>,
+    },
+    ToggleVpnList, // Show/hide available VPNs
     /// An update from the secret agent
     SecretAgent(NmAgentEvent),
     /// Connect to a WiFi network access point.
@@ -1193,19 +1267,58 @@ impl cosmic::Application for CosmicNetworkApplet {
                 ));
             }
             Message::ActivateVpn(uuid) => {
-                return self.connect_vpn(uuid.clone());
+                self.nm_state.pending_vpn = Some(PendingVpn {
+                    uuid: uuid.clone(),
+                    action: PendingVpnAction::Activate,
+                });
+                self.update_icon_name();
+                return Task::batch(vec![
+                    snapshot_task().map(cosmic::Action::App),
+                    self.connect_vpn(uuid.clone()),
+                ]);
             }
             Message::DeactivateVpn(uuid) => {
-                return cosmic::task::future(async move {
-                    match NmrsManager::new().await {
-                        Ok(nm) => match nm.disconnect_vpn_by_uuid(&uuid).await {
-                            Ok(()) => Message::Refresh,
-                            Err(e) => Message::Error(format!("disconnect VPN {uuid}: {e}")),
-                        },
-                        Err(e) => Message::Error(format!("nmrs init: {e}")),
+                self.nm_state.pending_vpn = Some(PendingVpn {
+                    uuid: uuid.clone(),
+                    action: PendingVpnAction::Deactivate,
+                });
+                self.update_icon_name();
+                let disconnect_task = cosmic::task::future(async move {
+                    let error = match NmrsManager::new().await {
+                        Ok(nm) => nm
+                            .disconnect_vpn_by_uuid(&uuid)
+                            .await
+                            .err()
+                            .map(|e| format!("disconnect VPN {uuid}: {e}")),
+                        Err(e) => Some(format!("nmrs init: {e}")),
+                    };
+                    Message::VpnOperationFinished {
+                        uuid,
+                        action: PendingVpnAction::Deactivate,
+                        error,
                     }
                 })
                 .map(cosmic::Action::App);
+                return Task::batch(vec![
+                    snapshot_task().map(cosmic::Action::App),
+                    disconnect_task,
+                ]);
+            }
+            Message::VpnOperationFinished {
+                uuid,
+                action,
+                error,
+            } => {
+                if self.nm_state.pending_vpn.as_ref().is_some_and(|pending| {
+                    pending.uuid.as_ref() == uuid.as_ref() && pending.action == action
+                }) {
+                    self.nm_state.pending_vpn = None;
+                    self.update_icon_name();
+                }
+                if let Some(error) = error {
+                    tracing::error!("{error}");
+                }
+                return snapshot_task().map(cosmic::Action::App);
             }
             Message::ToggleVpnList => {
                 self.show_available_vpns = !self.show_available_vpns;
@@ -1499,7 +1612,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                                 row::with_children([
                                     Element::from(
                                         icon::icon(
-                                            icon::from_name(self.icon_name.clone())
+                                            icon::from_name("network-vpn-symbolic")
                                                 .symbolic(true)
                                                 .into(),
                                         )
@@ -1567,7 +1680,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                                 row::with_children([
                                     Element::from(
                                         icon::icon(
-                                            icon::from_name(self.icon_name.clone())
+                                            icon::from_name("network-wired-symbolic")
                                                 .symbolic(true)
                                                 .into(),
                                         )
