@@ -638,6 +638,21 @@ fn snapshot_to_applet(snapshot: NetworkSnapshot) -> AppletSnapshot {
                 ip4_address: wired.ip4_address.clone(),
                 ip6_address: wired.ip6_address.clone(),
             }),
+            ActiveConnection::Wifi(wifi)
+                if known_vpns.values().any(|connection| {
+                    matches!(
+                        connection,
+                        ConnectionSettings::Vpn { id } | ConnectionSettings::Wireguard { id }
+                            if id == &wifi.ssid
+                    )
+                }) =>
+            {
+                Some(ActiveConnectionInfo::Vpn {
+                    name: wifi.ssid.clone(),
+                    ip4_address: wifi.ip4_address.clone(),
+                    ip6_address: wifi.ip6_address.clone(),
+                })
+            }
             ActiveConnection::Wifi(wifi) => Some(ActiveConnectionInfo::WiFi {
                 name: wifi.ssid.clone(),
                 ip4_address: wifi.ip4_address.clone(),
