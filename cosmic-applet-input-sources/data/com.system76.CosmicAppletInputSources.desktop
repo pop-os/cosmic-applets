@@ -12,4 +12,5 @@ NoDisplay=true
 X-CosmicApplet=true
 X-CosmicShrinkable=true
 X-CosmicHoverPopup=Auto
+X-HostWaylandDisplay=true
 X-OverflowPriority=10

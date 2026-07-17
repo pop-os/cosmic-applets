@@ -66,7 +66,7 @@ impl Button {
                     .class(if symbolic {
                         cosmic::theme::Svg::Custom(std::rc::Rc::new(|theme| {
                             cosmic::iced::widget::svg::Style {
-                                color: Some(theme.cosmic().background.on.into()),
+                                color: Some(theme.cosmic().background(theme.transparent).on.into()),
                             }
                         }))
                     } else {

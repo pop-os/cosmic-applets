@@ -855,13 +855,7 @@ async fn bluer_state(adapter: &Adapter) -> BluerState {
 
 #[inline(never)]
 async fn build_device_list(mut devices: Vec<BluerDevice>, adapter: &Adapter) -> Vec<BluerDevice> {
-    let addrs: Vec<Address> = adapter
-        .device_addresses()
-        .await
-        .unwrap_or_default()
-        .into_iter()
-        .filter(|addr| !devices.iter().any(|d| d.address == *addr))
-        .collect();
+    let addrs = adapter.device_addresses().await.unwrap_or_default();
 
     devices.clear();
     if addrs.len() > devices.capacity() {
