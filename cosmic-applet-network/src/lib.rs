@@ -3,6 +3,7 @@
 mod app;
 mod config;
 mod localize;
+mod vpn_auth;
 
 use crate::localize::localize;
 
