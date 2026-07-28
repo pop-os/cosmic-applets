@@ -1,5 +1,5 @@
 new-window = Νέο παράθυρο
-quit = Έξοδος
+quit = Τερματισμός
 cosmic-app-list = Περιοχή εφαρμογών
 run = Εκτέλεση
 run-on = Εκτέλεση με { $gpu }

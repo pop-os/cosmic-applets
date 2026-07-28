@@ -1,4 +1,4 @@
-quit = ਬਾਹਰ
+quit = ਸਮਾਪਤ
 cosmic-app-list = ਐਪ ਟਰੇ
 pin = ਐਪ ਟਰੇ ਵਿੱਚ ਟੰਗੋ
 quit-all = ਸਭ ਵਿੱਚੋਂ ਬਾਹਰ
