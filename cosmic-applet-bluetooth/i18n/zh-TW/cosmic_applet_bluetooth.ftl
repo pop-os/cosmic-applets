@@ -1,7 +1,7 @@
 bluetooth = 藍牙
 other-devices = 其他藍牙裝置
 settings = 藍牙設定…
-connected = 已經連線
+connected = 已連線
 confirm-pin = 請確認此 PIN 碼與 { $deviceName } 上顯示的是否相符
 confirm = 確認
 cancel = 取消

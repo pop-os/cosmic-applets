@@ -1,6 +1,6 @@
 cosmic-app-list = Zasobnik aplikacji
 pin = Przypnij do zasobnika aplikacji
-quit = Zamknij
+quit = Zakończ
 quit-all = Zamknij wszystkie
 new-window = Nowe okno
 run = Uruchom

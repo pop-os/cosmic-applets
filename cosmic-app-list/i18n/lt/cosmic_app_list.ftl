@@ -1,5 +1,5 @@
 new-window = Naujas Langas
-quit = Išeiti
+quit = Išjungti
 run = Paleisti
 run-on = Paleisti naudojantis { $gpu }
 run-on-default = (Numatytas)
