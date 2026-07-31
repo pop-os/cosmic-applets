@@ -23,7 +23,7 @@ jobs:
           components: clippy
       - name: install dependencies
         run: sudo apt update && sudo apt install -y libxkbcommon-dev libwayland-dev libdbus-1-dev libpulse-dev libpipewire-0.3-dev libinput-dev
-      - uses: actions-rs-plus/clippy-check@v2
+      - uses: actions-rs-plus/clippy-check@v2.7.0
         with:
           toolchain: 1.93.1
           args: --all --all-targets --all-features
