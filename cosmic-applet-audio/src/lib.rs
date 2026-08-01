@@ -128,20 +128,29 @@ impl Audio {
     ///
     /// This is a looser match than a true desktop-file app-id, so lookups may
     /// occasionally miss — pavucontrol has the same limitation.
-    fn stream_icon(&self, app_id: &str, icon_name: Option<&str>) -> cosmic::widget::icon::Handle {
+    fn stream_icon(
+        &self,
+        app_id: &str,
+        app_name: &str,
+        icon_name: Option<&str>,
+    ) -> cosmic::widget::icon::Handle {
         let icon_name = icon_name.unwrap_or_else(|| {
-            let unicase_appid = fde::unicase::Ascii::new(app_id);
-            fde::find_app_by_id(&self.desktop_entries, unicase_appid)
-                // PipeWire commonly reports a process binary (e.g. `zen-bin`),
-                // while the desktop-entry ID is unrelated (e.g. `zen.desktop`).
-                .or_else(|| {
-                    self.desktop_entries.iter().find(|entry| {
-                        entry
-                            .exec()
-                            .and_then(|exec| exec.split_whitespace().next())
-                            .and_then(|command| Path::new(command).file_name())
-                            .is_some_and(|binary| binary.eq_ignore_ascii_case(app_id))
-                    })
+            [app_id, app_name]
+                .into_iter()
+                .find_map(|candidate| {
+                    let unicase_appid = fde::unicase::Ascii::new(candidate);
+                    fde::find_app_by_id(&self.desktop_entries, unicase_appid)
+                        // PipeWire commonly reports a process binary (e.g. `zen-bin`),
+                        // while the desktop-entry ID is unrelated (e.g. `zen.desktop`).
+                        .or_else(|| {
+                            self.desktop_entries.iter().find(|entry| {
+                                entry
+                                    .exec()
+                                    .and_then(|exec| exec.split_whitespace().next())
+                                    .and_then(|command| Path::new(command).file_name())
+                                    .is_some_and(|binary| binary.eq_ignore_ascii_case(candidate))
+                            })
+                        })
                 })
                 .and_then(|de| de.icon())
                 .unwrap_or(app_id)
@@ -179,6 +188,7 @@ impl Audio {
             row![
                 icon(self.stream_icon(
                     &self.model.streams.app_id[pos],
+                    display_name,
                     self.model.streams.icon_name[pos].as_deref(),
                 ))
                 .size(24),
