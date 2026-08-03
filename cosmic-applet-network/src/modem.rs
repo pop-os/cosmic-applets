@@ -2,6 +2,8 @@
 
 //! ModemManager integration for mobile broadband state shown by the network applet.
 
+use std::time::Duration;
+
 use futures::StreamExt;
 use zbus::{Connection, fdo::ObjectManagerProxy, proxy};
 
@@ -102,13 +104,12 @@ trait Modem {
     #[zbus(property, name = "SignalQuality")]
     fn signal_quality(&self) -> zbus::Result<(u32, bool)>;
 
-    #[zbus(property, name = "State")]
-    fn state(&self) -> zbus::Result<i32>;
 }
 
-/// Subscribes to ModemManager property and object lifecycle changes. A new
-/// status is emitted immediately and every time signal strength, radio access
-/// technology, or the set of available modems changes.
+/// Subscribes to ModemManager lifecycle changes and refreshes all modem
+/// properties at a short fixed interval. Polling avoids subscribing only to
+/// the first modem when more than one is present, while still keeping signal
+/// and radio-technology updates close to real time.
 pub fn events_task() -> cosmic::Task<crate::app::Message> {
     cosmic::Task::stream(async_fn_stream::fn_stream(|emitter| async move {
         let connection = match Connection::system().await {
@@ -179,42 +180,8 @@ pub fn events_task() -> cosmic::Task<crate::app::Message> {
                 }
             }
 
-            let Some(path) = paths.first() else {
-                tokio::select! {
-                    _ = interfaces_added.next() => {},
-                    _ = interfaces_removed.next() => {},
-                }
-                continue;
-            };
-
-            let proxy = match ModemProxy::builder(&connection).path(path.as_str()) {
-                Ok(builder) => match builder.build().await {
-                    Ok(proxy) => proxy,
-                    Err(error) => {
-                        let _ = emitter
-                            .emit(Err(format!("watch modem properties: {error}")))
-                            .await;
-                        return;
-                    }
-                },
-                Err(error) => {
-                    let _ = emitter
-                        .emit(Err(format!("build modem proxy: {error}")))
-                        .await;
-                    return;
-                }
-            };
-
-            let (mut technologies, mut signal_quality, mut state) = (
-                proxy.receive_access_technologies_changed().await.skip(1),
-                proxy.receive_signal_quality_changed().await.skip(1),
-                proxy.receive_state_changed().await.skip(1),
-            );
-
             tokio::select! {
-                _ = technologies.next() => {},
-                _ = signal_quality.next() => {},
-                _ = state.next() => {},
+                _ = tokio::time::sleep(Duration::from_secs(2)) => {},
                 _ = interfaces_added.next() => {},
                 _ = interfaces_removed.next() => {},
             }
@@ -243,30 +210,43 @@ async fn modem_paths(manager: &ObjectManagerProxy<'_>) -> Result<Vec<String>, St
 
 async fn read_statuses(connection: &Connection, paths: &[String]) -> Result<Vec<Status>, String> {
     let mut statuses = Vec::with_capacity(paths.len());
+    let mut last_error = None;
     for path in paths {
-        let proxy = ModemProxy::builder(connection)
-            .path(path.as_str())
-            .map_err(|error| format!("build modem proxy: {error}"))?
-            .build()
-            .await
-            .map_err(|error| format!("read modem properties: {error}"))?;
-        let (interface, access_technologies, signal_quality) = futures::join!(
-            proxy.primary_port(),
-            proxy.access_technologies(),
-            proxy.signal_quality(),
-        );
-        let (signal_quality, recent) = signal_quality
-            .map_err(|error| format!("read modem signal quality: {error}"))?;
-        statuses.push(Status {
-            interface: interface.map_err(|error| format!("read modem interface: {error}"))?,
-            technology: Technology::from_access_technologies(
-                access_technologies
-                    .map_err(|error| format!("read modem access technology: {error}"))?,
-            ),
-            signal_quality: recent.then_some(signal_quality.min(100) as u8),
-        });
+        match read_status(connection, path).await {
+            Ok(status) => statuses.push(status),
+            Err(error) => last_error = Some(error),
+        }
     }
+
+    if statuses.is_empty() {
+        return last_error.map_or_else(|| Ok(statuses), Err);
+    }
+
     Ok(statuses)
+}
+
+async fn read_status(connection: &Connection, path: &str) -> Result<Status, String> {
+    let proxy = ModemProxy::builder(connection)
+        .path(path)
+        .map_err(|error| format!("build modem proxy: {error}"))?
+        .build()
+        .await
+        .map_err(|error| format!("read modem properties: {error}"))?;
+    let (interface, access_technologies, signal_quality) = futures::join!(
+        proxy.primary_port(),
+        proxy.access_technologies(),
+        proxy.signal_quality(),
+    );
+    let (signal_quality, recent) = signal_quality
+        .map_err(|error| format!("read modem signal quality: {error}"))?;
+
+    Ok(Status {
+        interface: interface.map_err(|error| format!("read modem interface: {error}"))?,
+        technology: Technology::from_access_technologies(
+            access_technologies.map_err(|error| format!("read modem access technology: {error}"))?,
+        ),
+        signal_quality: recent.then_some(signal_quality.min(100) as u8),
+    })
 }
 
 #[cfg(test)]
@@ -282,6 +262,26 @@ mod tests {
     }
 
     #[test]
+    fn classifies_each_supported_radio_generation() {
+        assert_eq!(
+            Technology::from_access_technologies(ACCESS_TECHNOLOGY_GPRS),
+            Technology::TwoG
+        );
+        assert_eq!(
+            Technology::from_access_technologies(ACCESS_TECHNOLOGY_HSPA_PLUS),
+            Technology::ThreeG
+        );
+        assert_eq!(
+            Technology::from_access_technologies(ACCESS_TECHNOLOGY_LTE),
+            Technology::FourG
+        );
+        assert_eq!(
+            Technology::from_access_technologies(ACCESS_TECHNOLOGY_5GNR_MMWAVE),
+            Technology::FiveG
+        );
+    }
+
+    #[test]
     fn maps_signal_quality_to_standard_icon_levels() {
         let status = |signal_quality| Status {
             signal_quality,
@@ -290,5 +290,6 @@ mod tests {
         assert_eq!(status(Some(24)).signal_icon(), "network-cellular-signal-weak-symbolic");
         assert_eq!(status(Some(25)).signal_icon(), "network-cellular-signal-ok-symbolic");
         assert_eq!(status(Some(75)).signal_icon(), "network-cellular-signal-excellent-symbolic");
+        assert_eq!(status(None).signal_icon(), "network-cellular-signal-none-symbolic");
     }
 }

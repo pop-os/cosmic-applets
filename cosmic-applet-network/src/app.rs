@@ -947,22 +947,11 @@ impl CosmicNetworkApplet {
             interface.as_deref()
         })?;
 
-        self.nm_state
-            .modems
-            .iter()
-            .find(|modem| modem.interface == active_interface)
-            .or_else(|| (self.nm_state.modems.len() == 1).then(|| self.nm_state.modems.first())?)
+        modem_for_interface(&self.nm_state.modems, Some(active_interface))
     }
 
     fn modem_for_interface(&self, interface: Option<&str>) -> Option<&modem::Status> {
-        interface
-            .and_then(|interface| {
-                self.nm_state
-                    .modems
-                    .iter()
-                    .find(|modem| modem.interface == interface)
-            })
-            .or_else(|| (self.nm_state.modems.len() == 1).then(|| self.nm_state.modems.first())?)
+        modem_for_interface(&self.nm_state.modems, interface)
     }
 
     fn view_window_return<'a>(
@@ -2503,5 +2492,48 @@ fn active_conn_hw_address(conn: &ActiveConnectionInfo) -> HwAddress {
         ActiveConnectionInfo::Mobile { .. } | ActiveConnectionInfo::Vpn { .. } => {
             HwAddress::default()
         }
+    }
+}
+
+fn modem_for_interface<'a>(
+    modems: &'a [modem::Status],
+    interface: Option<&str>,
+) -> Option<&'a modem::Status> {
+    interface
+        .and_then(|interface| modems.iter().find(|modem| modem.interface == interface))
+        .or_else(|| (modems.len() == 1).then(|| modems.first())?)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn modem(interface: &str) -> modem::Status {
+        modem::Status {
+            interface: interface.to_owned(),
+            ..modem::Status::default()
+        }
+    }
+
+    #[test]
+    fn modem_selection_uses_the_active_connection_interface() {
+        let modems = [modem("wwan0"), modem("wwan1")];
+
+        assert_eq!(
+            modem_for_interface(&modems, Some("wwan1")).map(|modem| modem.interface.as_str()),
+            Some("wwan1")
+        );
+        assert_eq!(modem_for_interface(&modems, Some("missing")), None);
+    }
+
+    #[test]
+    fn modem_selection_only_falls_back_when_unambiguous() {
+        let modem = modem("wwan0");
+
+        assert_eq!(
+            modem_for_interface(std::slice::from_ref(&modem), None)
+                .map(|modem| modem.interface.as_str()),
+            Some("wwan0")
+        );
     }
 }
