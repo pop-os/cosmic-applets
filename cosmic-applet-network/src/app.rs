@@ -41,7 +41,7 @@ use futures::{
     lock::Mutex as AsyncMutex,
 };
 
-use crate::{config, fl};
+use crate::{config, fl, modem};
 
 pub fn run() -> cosmic::iced::Result {
     cosmic::applet::run::<CosmicNetworkApplet>(())
@@ -167,6 +167,13 @@ pub struct AccessPoint {
 
 #[derive(Debug, Clone)]
 pub enum ActiveConnectionInfo {
+    Mobile {
+        name: String,
+        interface: Option<String>,
+        ip4_address: Option<String>,
+        ip6_address: Option<String>,
+        state: ActiveConnectionState,
+    },
     Wired {
         name: String,
         hw_address: String,
@@ -192,7 +199,10 @@ pub enum ActiveConnectionInfo {
 impl ActiveConnectionInfo {
     fn name(&self) -> &str {
         match self {
-            Self::Wired { name, .. } | Self::WiFi { name, .. } | Self::Vpn { name, .. } => name,
+            Self::Mobile { name, .. }
+            | Self::Wired { name, .. }
+            | Self::WiFi { name, .. }
+            | Self::Vpn { name, .. } => name,
         }
     }
 }
@@ -200,6 +210,8 @@ impl ActiveConnectionInfo {
 #[derive(Debug, Clone)]
 pub struct NetworkManagerState {
     pub wifi_enabled: bool,
+    pub wwan_enabled: bool,
+    pub wwan_available: bool,
     pub airplane_mode: bool,
     pub connectivity: ConnectivityState,
     pub active_conns: Vec<ActiveConnectionInfo>,
@@ -211,6 +223,8 @@ impl Default for NetworkManagerState {
     fn default() -> Self {
         Self {
             wifi_enabled: true,
+            wwan_enabled: true,
+            wwan_available: false,
             airplane_mode: false,
             connectivity: ConnectivityState::Unknown,
             active_conns: Vec::new(),
@@ -253,6 +267,7 @@ pub struct MyNetworkState {
     pub ssid_to_uuid: BTreeMap<Box<str>, Box<str>>,
     pub devices: Vec<Arc<DeviceInfo>>,
     pub nm_state: NetworkManagerState,
+    pub modems: Vec<modem::Status>,
     pub requested_vpn: Option<RequestedVpn>,
     pub pending_vpn: Option<PendingVpn>,
 }
@@ -666,6 +681,17 @@ fn snapshot_to_applet(snapshot: NetworkSnapshot) -> AppletSnapshot {
                 strength: wifi.strength.unwrap_or_default(),
                 hw_address: wifi.bssid.clone().unwrap_or_default(),
             }),
+            ActiveConnection::Other(connection)
+                if is_mobile_connection_type(connection.connection_type.as_deref()) =>
+            {
+                Some(ActiveConnectionInfo::Mobile {
+                    name: connection.id.clone(),
+                    interface: connection.interface.clone(),
+                    ip4_address: connection.ip4_address.clone(),
+                    ip6_address: connection.ip6_address.clone(),
+                    state: connection.state,
+                })
+            }
             ActiveConnection::Vpn(vpn) => Some(ActiveConnectionInfo::Vpn {
                 name: vpn.id.clone(),
                 ip4_address: vpn.ip4_address.clone(),
@@ -751,6 +777,8 @@ fn snapshot_to_applet(snapshot: NetworkSnapshot) -> AppletSnapshot {
     AppletSnapshot {
         state: NetworkManagerState {
             wifi_enabled: snapshot.wifi.enabled,
+            wwan_enabled: snapshot.wwan.enabled,
+            wwan_available: snapshot.wwan.present,
             airplane_mode: summary.airplane_mode.is_airplane_mode(),
             connectivity: summary.connectivity.state,
             active_conns,
@@ -762,6 +790,10 @@ fn snapshot_to_applet(snapshot: NetworkSnapshot) -> AppletSnapshot {
         ssid_to_uuid,
         captive_portal_url: summary.connectivity.captive_portal_url.clone(),
     }
+}
+
+fn is_mobile_connection_type(connection_type: Option<&str>) -> bool {
+    matches!(connection_type, Some("gsm") | Some("cdma"))
 }
 
 impl CosmicNetworkApplet {
@@ -865,6 +897,11 @@ impl CosmicNetworkApplet {
             return;
         }
 
+        if let Some(modem) = self.active_mobile_modem() {
+            self.icon_name = modem.signal_icon().to_owned();
+            return;
+        }
+
         self.icon_name = self
             .nm_state
             .nm_state
@@ -892,6 +929,40 @@ impl CosmicNetworkApplet {
         if self.nm_state.nm_state.airplane_mode != state.airplane_mode {
             self.nm_state.nm_state.airplane_mode = state.airplane_mode;
         }
+
+        if self.nm_state.nm_state.wwan_enabled != state.wwan_enabled {
+            self.nm_state.nm_state.wwan_enabled = state.wwan_enabled;
+        }
+
+        if self.nm_state.nm_state.wwan_available != state.wwan_available {
+            self.nm_state.nm_state.wwan_available = state.wwan_available;
+        }
+    }
+
+    fn active_mobile_modem(&self) -> Option<&modem::Status> {
+        let active_interface = self.nm_state.nm_state.active_conns.iter().find_map(|connection| {
+            let ActiveConnectionInfo::Mobile { interface, .. } = connection else {
+                return None;
+            };
+            interface.as_deref()
+        })?;
+
+        self.nm_state
+            .modems
+            .iter()
+            .find(|modem| modem.interface == active_interface)
+            .or_else(|| (self.nm_state.modems.len() == 1).then(|| self.nm_state.modems.first())?)
+    }
+
+    fn modem_for_interface(&self, interface: Option<&str>) -> Option<&modem::Status> {
+        interface
+            .and_then(|interface| {
+                self.nm_state
+                    .modems
+                    .iter()
+                    .find(|modem| modem.interface == interface)
+            })
+            .or_else(|| (self.nm_state.modems.len() == 1).then(|| self.nm_state.modems.first())?)
     }
 
     fn view_window_return<'a>(
@@ -929,6 +1000,47 @@ impl CosmicNetworkApplet {
             }
         })
         .map(cosmic::Action::App)
+    }
+
+    fn mobile_applet_view(&self, modem: &modem::Status) -> Element<'_, Message> {
+        let suggested_size = self.core.applet.suggested_size(true);
+        let applet_padding = self.core.applet.suggested_padding(true);
+        let (horizontal_padding, vertical_padding) = if self.core.applet.is_horizontal() {
+            (applet_padding.0, applet_padding.1)
+        } else {
+            (applet_padding.1, applet_padding.0)
+        };
+
+        let signal = icon::from_name(modem.signal_icon())
+            .size(suggested_size.0)
+            .symbolic(true);
+        let technology = self
+            .core
+            .applet
+            .text(modem.technology.label())
+            .height(Length::Fixed(suggested_size.1 as f32))
+            .align_y(Alignment::Center);
+        let content: Element<'_, Message> = if self.core.applet.is_horizontal() {
+            row::with_children([signal.into(), technology.into()])
+                .spacing(applet_padding.1)
+                .align_y(Alignment::Center)
+                .into()
+        } else {
+            column::with_children([signal.into(), technology.into()])
+                .spacing(applet_padding.1)
+                .align_x(Alignment::Center)
+                .into()
+        };
+
+        self.core
+            .applet
+            .autosize_window(
+                button::custom(content)
+                    .on_press_down(Message::TogglePopup)
+                    .class(theme::Button::AppletIcon)
+                    .padding([vertical_padding, horizontal_padding]),
+            )
+            .into()
     }
 }
 
@@ -1052,6 +1164,8 @@ pub(crate) enum Message {
     },
     /// An error occurred.
     Error(String),
+    /// A ModemManager update with mobile technology and signal quality.
+    ModemStatus(Vec<modem::Status>),
     /// Identity update from the dialog
     IdentityUpdate(String),
     /// An update from NetworkManager.
@@ -1062,6 +1176,8 @@ pub(crate) enum Message {
     Snapshot(AppletSnapshot),
     /// Toggle WiFi access
     WiFiEnable(bool),
+    /// Toggle mobile broadband access.
+    WWANEnable(bool),
     /// Refresh state
     Refresh,
     ToggleVPNPasswordVisibility,
@@ -1099,6 +1215,7 @@ impl cosmic::Application for CosmicNetworkApplet {
             Task::batch(vec![
                 snapshot_task(),
                 network_events_task(),
+                modem::events_task(),
                 secret_agent_task(my_id, secret_agent_reregister_rx).map(Message::SecretAgent),
             ])
             .map(cosmic::Action::App),
@@ -1396,7 +1513,8 @@ impl cosmic::Application for CosmicNetworkApplet {
                             | ActiveConnectionInfo::WiFi { hw_address, .. } => {
                                 HwAddress::from_str(hw_address).unwrap_or_default()
                             }
-                            ActiveConnectionInfo::Vpn { .. } => HwAddress::default(),
+                            ActiveConnectionInfo::Mobile { .. }
+                            | ActiveConnectionInfo::Vpn { .. } => HwAddress::default(),
                         };
                         c.name() == ssid.as_ref() && c_hw_address == hw_address
                     })
@@ -1416,6 +1534,10 @@ impl cosmic::Application for CosmicNetworkApplet {
             }
             Message::Error(error) => {
                 tracing::error!("error: {error:?}")
+            }
+            Message::ModemStatus(statuses) => {
+                self.nm_state.modems = statuses;
+                self.update_icon_name();
             }
             Message::IdentityUpdate(new_identity) => {
                 if let Some(NewConnectionState::EnterPassword { identity, .. }) =
@@ -1473,6 +1595,19 @@ impl cosmic::Application for CosmicNetworkApplet {
                         Ok(nm) => match nm.set_wireless_enabled(enable).await {
                             Ok(()) => Message::Refresh,
                             Err(e) => Message::Error(format!("set_wireless_enabled: {e}")),
+                        },
+                        Err(e) => Message::Error(format!("nmrs init: {e}")),
+                    }
+                })
+                .map(cosmic::Action::App);
+            }
+            Message::WWANEnable(enable) => {
+                self.nm_state.nm_state.wwan_enabled = enable;
+                return cosmic::task::future(async move {
+                    match NmrsManager::new().await {
+                        Ok(nm) => match nm.set_wwan_enabled(enable).await {
+                            Ok(()) => Message::Refresh,
+                            Err(e) => Message::Error(format!("set_wwan_enabled: {e}")),
                         },
                         Err(e) => Message::Error(format!("nmrs init: {e}")),
                     }
@@ -1614,6 +1749,10 @@ impl cosmic::Application for CosmicNetworkApplet {
     }
 
     fn view(&self) -> Element<'_, Message> {
+        if let Some(modem) = self.active_mobile_modem() {
+            return self.mobile_applet_view(modem);
+        }
+
         self.core
             .applet
             .icon_button(&self.icon_name)
@@ -1631,6 +1770,77 @@ impl cosmic::Application for CosmicNetworkApplet {
         let mut known_wifi = Vec::new();
         for conn in &self.nm_state.nm_state.active_conns {
             match conn {
+                ActiveConnectionInfo::Mobile {
+                    name,
+                    interface,
+                    ip4_address,
+                    ip6_address,
+                    state,
+                } => {
+                    if self.active_device.is_some() {
+                        continue;
+                    }
+                    let modem = self.modem_for_interface(interface.as_deref());
+                    let technology = modem
+                        .map(|modem| modem.technology.label())
+                        .unwrap_or("Mobile");
+                    let signal = modem.and_then(|modem| modem.signal_quality);
+                    let mut info_col = vec![text::body(name).into()];
+                    info_col.push(
+                        text(match signal {
+                            Some(signal) => format!("{technology} · {signal}%"),
+                            None => technology.to_owned(),
+                        })
+                        .size(12)
+                        .into(),
+                    );
+                    info_col.extend(ip_address_elements(ip4_address, ip6_address));
+
+                    let mut right_column = Vec::with_capacity(1);
+                    match state {
+                        ActiveConnectionState::Activating | ActiveConnectionState::Deactivating => {
+                            right_column.push(indeterminate_circular().size(24.0).into());
+                        }
+                        ActiveConnectionState::Activated => {
+                            right_column.push(text::body(fl!("connected")).into());
+                        }
+                        _ => {}
+                    }
+
+                    vpn_ethernet_col = vpn_ethernet_col
+                        .push(
+                            column::with_capacity(2).push(
+                                row::with_children([
+                                    Element::from(
+                                        icon::icon(
+                                            icon::from_name(
+                                                modem
+                                                    .map(modem::Status::signal_icon)
+                                                    .unwrap_or(
+                                                        "network-cellular-connected-symbolic",
+                                                    ),
+                                            )
+                                            .symbolic(true)
+                                            .into(),
+                                        )
+                                        .size(40),
+                                    ),
+                                    column::with_children(info_col).into(),
+                                    column::with_children(right_column)
+                                        .width(Length::Fill)
+                                        .align_x(Alignment::End)
+                                        .into(),
+                                ])
+                                .align_y(Alignment::Center)
+                                .spacing(8)
+                                .padding(menu_control_padding()),
+                            ),
+                        )
+                        .push(
+                            padded_control(divider::horizontal::default())
+                                .padding([space_xxs, space_s]),
+                        );
+                }
                 ActiveConnectionInfo::Vpn {
                     name,
                     ip4_address,
@@ -1862,6 +2072,19 @@ impl cosmic::Application for CosmicNetworkApplet {
                         .width(Length::Fill),
                 ))
                 .align_x(Alignment::Center);
+
+            if self.nm_state.nm_state.wwan_available {
+                content = content.push(
+                    padded_control(
+                        toggler(self.nm_state.nm_state.wwan_enabled)
+                            .label(fl!("mobile-broadband"))
+                            .on_toggle(Message::WWANEnable)
+                            .text_size(14)
+                            .width(Length::Fill),
+                    )
+                    .align_x(Alignment::Center),
+                );
+            }
         }
         if self.nm_state.nm_state.airplane_mode {
             content = content.push(
@@ -2277,6 +2500,8 @@ fn active_conn_hw_address(conn: &ActiveConnectionInfo) -> HwAddress {
         | ActiveConnectionInfo::WiFi { hw_address, .. } => {
             HwAddress::from_str(hw_address).unwrap_or_default()
         }
-        ActiveConnectionInfo::Vpn { .. } => HwAddress::default(),
+        ActiveConnectionInfo::Mobile { .. } | ActiveConnectionInfo::Vpn { .. } => {
+            HwAddress::default()
+        }
     }
 }

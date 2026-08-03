@@ -3,6 +3,7 @@
 mod app;
 mod config;
 mod localize;
+mod modem;
 
 use crate::localize::localize;
 
