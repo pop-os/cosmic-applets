@@ -940,12 +940,17 @@ impl CosmicNetworkApplet {
     }
 
     fn active_mobile_modem(&self) -> Option<&modem::Status> {
-        let active_interface = self.nm_state.nm_state.active_conns.iter().find_map(|connection| {
-            let ActiveConnectionInfo::Mobile { interface, .. } = connection else {
-                return None;
-            };
-            interface.as_deref()
-        })?;
+        let active_interface =
+            self.nm_state
+                .nm_state
+                .active_conns
+                .iter()
+                .find_map(|connection| {
+                    let ActiveConnectionInfo::Mobile { interface, .. } = connection else {
+                        return None;
+                    };
+                    interface.as_deref()
+                })?;
 
         modem_for_interface(&self.nm_state.modems, Some(active_interface))
     }
@@ -1803,11 +1808,9 @@ impl cosmic::Application for CosmicNetworkApplet {
                                     Element::from(
                                         icon::icon(
                                             icon::from_name(
-                                                modem
-                                                    .map(modem::Status::signal_icon)
-                                                    .unwrap_or(
-                                                        "network-cellular-connected-symbolic",
-                                                    ),
+                                                modem.map(modem::Status::signal_icon).unwrap_or(
+                                                    "network-cellular-connected-symbolic",
+                                                ),
                                             )
                                             .symbolic(true)
                                             .into(),

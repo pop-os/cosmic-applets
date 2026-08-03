@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! ModemManager integration for mobile broadband state shown by the network applet.
+//! `ModemManager` integration for mobile broadband state shown by the network applet.
 
 use std::time::Duration;
 
@@ -70,10 +70,10 @@ impl Technology {
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Status {
-    /// Network interface exposed by ModemManager, e.g. `wwan0mbim0`.
+    /// Network interface exposed by `ModemManager`, e.g. `wwan0mbim0`.
     pub interface: String,
     pub technology: Technology,
-    /// Percentage reported by ModemManager. `None` means no recent measurement.
+    /// Percentage reported by `ModemManager`. `None` means no recent measurement.
     pub signal_quality: Option<u8>,
 }
 
@@ -103,10 +103,9 @@ trait Modem {
 
     #[zbus(property, name = "SignalQuality")]
     fn signal_quality(&self) -> zbus::Result<(u32, bool)>;
-
 }
 
-/// Subscribes to ModemManager lifecycle changes and refreshes all modem
+/// Subscribes to `ModemManager` lifecycle changes and refreshes all modem
 /// properties at a short fixed interval. Polling avoids subscribing only to
 /// the first modem when more than one is present, while still keeping signal
 /// and radio-technology updates close to real time.
@@ -115,7 +114,7 @@ pub fn events_task() -> cosmic::Task<crate::app::Message> {
         let connection = match Connection::system().await {
             Ok(connection) => connection,
             Err(error) => {
-                let _ = emitter
+                let () = emitter
                     .emit(Err(format!("connect to ModemManager: {error}")))
                     .await;
                 return;
@@ -129,14 +128,14 @@ pub fn events_task() -> cosmic::Task<crate::app::Message> {
             Ok(builder) => match builder.build().await {
                 Ok(manager) => manager,
                 Err(error) => {
-                    let _ = emitter
+                    let () = emitter
                         .emit(Err(format!("connect to ModemManager: {error}")))
                         .await;
                     return;
                 }
             },
             Err(error) => {
-                let _ = emitter
+                let () = emitter
                     .emit(Err(format!("build ModemManager proxy: {error}")))
                     .await;
                 return;
@@ -146,7 +145,7 @@ pub fn events_task() -> cosmic::Task<crate::app::Message> {
         let mut interfaces_added = match manager.receive_interfaces_added().await {
             Ok(stream) => stream,
             Err(error) => {
-                let _ = emitter
+                let () = emitter
                     .emit(Err(format!("watch ModemManager devices: {error}")))
                     .await;
                 return;
@@ -155,7 +154,7 @@ pub fn events_task() -> cosmic::Task<crate::app::Message> {
         let mut interfaces_removed = match manager.receive_interfaces_removed().await {
             Ok(stream) => stream,
             Err(error) => {
-                let _ = emitter
+                let () = emitter
                     .emit(Err(format!("watch ModemManager devices: {error}")))
                     .await;
                 return;
@@ -166,7 +165,7 @@ pub fn events_task() -> cosmic::Task<crate::app::Message> {
             let paths = match modem_paths(&manager).await {
                 Ok(paths) => paths,
                 Err(error) => {
-                    let _ = emitter.emit(Err(error)).await;
+                    let () = emitter.emit(Err(error)).await;
                     return;
                 }
             };
@@ -181,7 +180,7 @@ pub fn events_task() -> cosmic::Task<crate::app::Message> {
             }
 
             tokio::select! {
-                _ = tokio::time::sleep(Duration::from_secs(2)) => {},
+                () = tokio::time::sleep(Duration::from_secs(2)) => {},
                 _ = interfaces_added.next() => {},
                 _ = interfaces_removed.next() => {},
             }
@@ -237,13 +236,14 @@ async fn read_status(connection: &Connection, path: &str) -> Result<Status, Stri
         proxy.access_technologies(),
         proxy.signal_quality(),
     );
-    let (signal_quality, recent) = signal_quality
-        .map_err(|error| format!("read modem signal quality: {error}"))?;
+    let (signal_quality, recent) =
+        signal_quality.map_err(|error| format!("read modem signal quality: {error}"))?;
 
     Ok(Status {
         interface: interface.map_err(|error| format!("read modem interface: {error}"))?,
         technology: Technology::from_access_technologies(
-            access_technologies.map_err(|error| format!("read modem access technology: {error}"))?,
+            access_technologies
+                .map_err(|error| format!("read modem access technology: {error}"))?,
         ),
         signal_quality: recent.then_some(signal_quality.min(100) as u8),
     })
@@ -287,9 +287,21 @@ mod tests {
             signal_quality,
             ..Status::default()
         };
-        assert_eq!(status(Some(24)).signal_icon(), "network-cellular-signal-weak-symbolic");
-        assert_eq!(status(Some(25)).signal_icon(), "network-cellular-signal-ok-symbolic");
-        assert_eq!(status(Some(75)).signal_icon(), "network-cellular-signal-excellent-symbolic");
-        assert_eq!(status(None).signal_icon(), "network-cellular-signal-none-symbolic");
+        assert_eq!(
+            status(Some(24)).signal_icon(),
+            "network-cellular-signal-weak-symbolic"
+        );
+        assert_eq!(
+            status(Some(25)).signal_icon(),
+            "network-cellular-signal-ok-symbolic"
+        );
+        assert_eq!(
+            status(Some(75)).signal_icon(),
+            "network-cellular-signal-excellent-symbolic"
+        );
+        assert_eq!(
+            status(None).signal_icon(),
+            "network-cellular-signal-none-symbolic"
+        );
     }
 }
