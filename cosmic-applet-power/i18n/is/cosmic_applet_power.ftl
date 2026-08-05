@@ -17,3 +17,21 @@ confirm-title =
         [log-out] Loka öllum forritum og skrá út
        *[other] Virkja valda aðgerð
     } núna?
+
+confirm-button = {
+    $action -> 
+        [restart] { restart }
+        [suspend] { suspend}
+        [shutdown] Slökkva
+        [log-out] { log-out }
+        *[other] { confirm}
+}
+confirm-body = 
+    Kerfið mun { $action ->
+        [restart] endurræsa
+        [suspend] fara í svefn
+        [shutdown] slökkva á sér
+        [lock-screen] læsa skjánum
+        [log-out] skrá út
+        *[other] framkvæma völdu aðgerðina
+    } sjálfkrafa eftir { $countdown } sekúndur.

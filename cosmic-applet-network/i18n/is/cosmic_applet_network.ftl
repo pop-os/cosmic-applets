@@ -19,3 +19,7 @@ router-wps-button = Þú getur líka tengst með því að ýta á „WPS“-tak
 unable-to-connect = Get ekki tengst við net
 check-wifi-connection = Gakktu úr skugga um að Wi-Fi sé tengt internetinu og lykilorðið sé rétt
 reset = Endurstilla
+
+gigabits-per-second = Gbps
+terabits-per-second = Tbps
+vpn-connections = VPN-tengingar

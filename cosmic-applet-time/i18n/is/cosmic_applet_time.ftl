@@ -1,0 +1,3 @@
+
+
+datetime-settings = Stillingar fyrir dagsetningu, tíma og dagatal...
