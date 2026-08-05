@@ -35,7 +35,11 @@ use cosmic::{
     },
 };
 
-use futures::{StreamExt, lock::Mutex as AsyncMutex};
+use futures::{
+    StreamExt,
+    channel::mpsc::{UnboundedReceiver, UnboundedSender, unbounded},
+    lock::Mutex as AsyncMutex,
+};
 
 use crate::{config, fl};
 
@@ -325,6 +329,7 @@ struct CosmicNetworkApplet {
     new_connection: Option<NewConnectionState>,
     toggle_wifi_ctr: u128,
     token_tx: Option<calloop::channel::Sender<TokenRequest>>,
+    secret_agent_reregister_tx: Option<UnboundedSender<()>>,
     failed_known_ssids: FxHashSet<Arc<str>>,
 
     /// When defined, displays connections for the specific device.
@@ -929,7 +934,10 @@ impl CosmicNetworkApplet {
 
 /// Registers an `nmrs` secret agent on the system bus and yields its
 /// requests + cancellations as [`NmAgentEvent`] for the applet to handle.
-fn secret_agent_task(identifier: String) -> Task<NmAgentEvent> {
+fn secret_agent_task(
+    identifier: String,
+    mut reregister_requests: UnboundedReceiver<()>,
+) -> Task<NmAgentEvent> {
     cosmic::Task::stream(async_fn_stream::fn_stream(move |emitter| async move {
         let registration = SecretAgent::builder()
             .with_identifier(identifier)
@@ -960,6 +968,11 @@ fn secret_agent_task(identifier: String) -> Task<NmAgentEvent> {
                         let _ = emitter.emit(NmAgentEvent::CancelGetSecrets).await;
                     }
                     None => break,
+                },
+                Some(()) = reregister_requests.next() => {
+                    if let Err(e) = handle.reregister().await {
+                        tracing::warn!("failed to re-register secret agent: {e}");
+                    }
                 },
             }
         }
@@ -1076,13 +1089,17 @@ impl cosmic::Application for CosmicNetworkApplet {
         let uuid = uuid::Uuid::new_v4().to_string().replace("-", "_");
         let my_id =
             format!("com.system76.CosmicSettings.Applet._{uuid}.NetworkManager.SecretAgent",);
+        let (secret_agent_reregister_tx, secret_agent_reregister_rx) = unbounded();
 
         (
-            applet,
+            Self {
+                secret_agent_reregister_tx: Some(secret_agent_reregister_tx),
+                ..applet
+            },
             Task::batch(vec![
                 snapshot_task(),
                 network_events_task(),
-                secret_agent_task(my_id).map(Message::SecretAgent),
+                secret_agent_task(my_id, secret_agent_reregister_rx).map(Message::SecretAgent),
             ])
             .map(cosmic::Action::App),
         )
@@ -1427,7 +1444,15 @@ impl cosmic::Application for CosmicNetworkApplet {
             }
             Message::NetworkEvent(event) => {
                 if matches!(event, NetworkEvent::NetworkManagerRestarted) {
-                    tracing::debug!("NetworkManager restarted; refreshing network snapshot");
+                    tracing::debug!(
+                        "NetworkManager restarted; refreshing network snapshot and secret agent"
+                    );
+                    if let Some(mut tx) = self.secret_agent_reregister_tx.clone() {
+                        if let Err(e) = tx.unbounded_send(()) {
+                            tracing::warn!("secret agent re-registration task stopped: {e}");
+                            self.secret_agent_reregister_tx = None;
+                        }
+                    }
                 }
                 return snapshot_task().map(cosmic::Action::App);
             }
