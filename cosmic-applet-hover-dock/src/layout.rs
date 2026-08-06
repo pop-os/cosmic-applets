@@ -53,7 +53,6 @@ impl Spring {
         }
         !settled
     }
-
 }
 
 /// Geometry of the icon row, in logical pixels.
@@ -65,8 +64,6 @@ pub struct Metrics {
     pub magnification: f32,
     /// How far the pointer's influence reaches, counted in icon widths.
     pub reach: f32,
-    /// Space between the icons and the edge of the dock's background.
-    pub padding: f32,
 }
 
 impl Default for Metrics {
@@ -76,7 +73,6 @@ impl Default for Metrics {
             spacing: 10.0,
             magnification: 1.8,
             reach: 2.5,
-            padding: 8.0,
         }
     }
 }
@@ -103,12 +99,6 @@ impl Metrics {
             return 0.0;
         }
         count as f32 * self.icon_size + (count - 1) as f32 * self.spacing
-    }
-
-    /// The tallest an icon can get — the surface has to be this tall plus
-    /// padding, or a magnified icon would be cut off at the top.
-    pub fn max_icon_size(&self) -> f32 {
-        self.icon_size * self.magnification
     }
 
     /// How big each icon wants to be, given where the pointer is.
@@ -186,8 +176,8 @@ impl Metrics {
         if along <= 0.0 {
             return resting_start;
         }
-        let total: f32 = widths.iter().sum::<f32>()
-            + (widths.len().saturating_sub(1)) as f32 * self.spacing;
+        let total: f32 =
+            widths.iter().sum::<f32>() + (widths.len().saturating_sub(1)) as f32 * self.spacing;
         if along >= resting {
             return resting_start + resting - total;
         }
@@ -254,7 +244,6 @@ mod tests {
             spacing: 10.0,
             magnification: 2.0,
             reach: 2.0,
-            padding: 8.0,
         }
     }
 
@@ -270,8 +259,14 @@ mod tests {
         // Dead centre of the middle icon of five.
         let scales = m.target_scales(5, Some(500.0), 500.0);
 
-        assert!((scales[2] - 2.0).abs() < 0.001, "hovered icon is at full size");
-        assert!(scales[1] > 1.0 && scales[1] < scales[2], "neighbour grows less");
+        assert!(
+            (scales[2] - 2.0).abs() < 0.001,
+            "hovered icon is at full size"
+        );
+        assert!(
+            scales[1] > 1.0 && scales[1] < scales[2],
+            "neighbour grows less"
+        );
         assert!(scales[3] > 1.0 && scales[3] < scales[2]);
         assert!(scales[1] > scales[0], "the effect falls off with distance");
         // Symmetric around the pointer.
@@ -375,7 +370,6 @@ mod tests {
         spring.step(2.0, 2.0);
         assert!(spring.value <= 2.5, "value ran away: {}", spring.value);
     }
-
 
     #[test]
     fn an_empty_dock_does_not_panic() {

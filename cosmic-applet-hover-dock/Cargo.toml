@@ -5,7 +5,9 @@ edition = "2024"
 license = "GPL-3.0-only"
 
 [dependencies]
+cctk.workspace = true
 cosmic-app-list-config = { path = "../cosmic-app-list/cosmic-app-list-config" }
+futures.workspace = true
 i18n-embed-fl.workspace = true
 i18n-embed.workspace = true
 libcosmic.workspace = true

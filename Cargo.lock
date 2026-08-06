@@ -1075,6 +1075,8 @@ name = "cosmic-applet-hover-dock"
 version = "1.0.15"
 dependencies = [
  "cosmic-app-list-config",
+ "cosmic-client-toolkit",
+ "futures",
  "i18n-embed",
  "i18n-embed-fl",
  "libcosmic",
