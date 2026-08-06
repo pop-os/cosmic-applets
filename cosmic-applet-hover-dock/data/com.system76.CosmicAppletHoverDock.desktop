@@ -1,0 +1,14 @@
+[Desktop Entry]
+Name=Hover Dock
+Comment=Launch pinned apps from a dock that magnifies under the pointer
+Type=Application
+Exec=cosmic-applet-hover-dock
+Terminal=false
+Categories=COSMIC;
+Keywords=COSMIC;Applet;Dock;Magnify;Zoom;Launcher;
+Icon=com.system76.CosmicAppletHoverDock
+StartupNotify=true
+NoDisplay=true
+X-CosmicApplet=true
+X-OverflowPriority=100
+X-OverflowMinSize=4

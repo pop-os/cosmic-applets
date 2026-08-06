@@ -1071,6 +1071,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "cosmic-applet-hover-dock"
+version = "1.0.15"
+dependencies = [
+ "cosmic-app-list-config",
+ "i18n-embed",
+ "i18n-embed-fl",
+ "libcosmic",
+ "rust-embed",
+ "tokio",
+ "tracing",
+ "tracing-log",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "cosmic-applet-input-sources"
 version = "1.0.15"
 dependencies = [
@@ -1245,6 +1260,7 @@ dependencies = [
  "cosmic-applet-audio",
  "cosmic-applet-battery",
  "cosmic-applet-bluetooth",
+ "cosmic-applet-hover-dock",
  "cosmic-applet-input-sources",
  "cosmic-applet-minimize",
  "cosmic-applet-network",

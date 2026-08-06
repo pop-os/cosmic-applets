@@ -1,0 +1,29 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Size=256">
+<rect id="Rectangle 418" x="8" y="40" width="240" height="176" rx="16" fill="url(#paint0_linear_2049_378)"/>
+<rect id="Rectangle 419" x="24" y="94" width="96" height="68" rx="8" fill="white"/>
+<rect id="Rectangle 439" x="136" y="94" width="96" height="68" rx="8" fill="white"/>
+<circle id="Ellipse 25" cx="112" cy="102" r="4" fill="#229FAD"/>
+<circle id="Ellipse 28" cx="224" cy="102" r="4" fill="#229FAD"/>
+<circle id="Ellipse 26" cx="102" cy="102" r="4" fill="#229FAD"/>
+<circle id="Ellipse 29" cx="214" cy="102" r="4" fill="#229FAD"/>
+<circle id="Ellipse 27" cx="92" cy="102" r="4" fill="#229FAD"/>
+<circle id="Ellipse 30" cx="204" cy="102" r="4" fill="#229FAD"/>
+<rect id="Rectangle 440" x="92" y="138" width="32" height="32" rx="8" fill="url(#paint1_linear_2049_378)"/>
+<rect id="Rectangle 441" x="204" y="139" width="32" height="32" rx="8" fill="url(#paint2_linear_2049_378)"/>
+</g>
+<defs>
+<linearGradient id="paint0_linear_2049_378" x1="248" y1="40" x2="6.11676" y2="213.373" gradientUnits="userSpaceOnUse">
+<stop stop-color="#49BAC8"/>
+<stop offset="1" stop-color="#229FAD"/>
+</linearGradient>
+<linearGradient id="paint1_linear_2049_378" x1="92" y1="170" x2="124.659" y2="138.687" gradientUnits="userSpaceOnUse">
+<stop stop-color="#DDC74C"/>
+<stop offset="1" stop-color="#F7E062"/>
+</linearGradient>
+<linearGradient id="paint2_linear_2049_378" x1="204" y1="171" x2="236.659" y2="139.687" gradientUnits="userSpaceOnUse">
+<stop stop-color="#C48400"/>
+<stop offset="1" stop-color="#FFAD00"/>
+</linearGradient>
+</defs>
+</svg>

@@ -16,6 +16,10 @@ cosmic-applet-bluetooth-keywords = COSMIC;Applet;Bluetooth;
 cosmic-applet-input-sources = Input Sources
 cosmic-applet-input-sources-comment = Switch between input sources
 cosmic-applet-input-sources-keywords = COSMIC;Applet;Input;Source;
+cosmic-applet-hover-dock = Hover Dock
+cosmic-applet-hover-dock-comment = Launch pinned apps from a dock that magnifies under the pointer
+cosmic-applet-hover-dock-keywords = COSMIC;Applet;Dock;Magnify;Zoom;Launcher;
+
 cosmic-applet-minimize = Minimized Windows
 cosmic-applet-minimize-comment = Manage minimized windows
 cosmic-applet-minimize-keywords = COSMIC;Applet;Minimize;

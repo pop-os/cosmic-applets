@@ -2,6 +2,7 @@
 /usr/bin/cosmic-applets /usr/bin/cosmic-applet-audio
 /usr/bin/cosmic-applets /usr/bin/cosmic-applet-battery
 /usr/bin/cosmic-applets /usr/bin/cosmic-applet-bluetooth
+/usr/bin/cosmic-applets /usr/bin/cosmic-applet-hover-dock
 /usr/bin/cosmic-applets /usr/bin/cosmic-applet-minimize
 /usr/bin/cosmic-applets /usr/bin/cosmic-applet-network
 /usr/bin/cosmic-applets /usr/bin/cosmic-applet-notifications

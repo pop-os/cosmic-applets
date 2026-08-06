@@ -1,0 +1,16 @@
+[package]
+name = "cosmic-applet-hover-dock"
+version = "1.0.15"
+edition = "2024"
+license = "GPL-3.0-only"
+
+[dependencies]
+cosmic-app-list-config = { path = "../cosmic-app-list/cosmic-app-list-config" }
+i18n-embed-fl.workspace = true
+i18n-embed.workspace = true
+libcosmic.workspace = true
+rust-embed.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-log.workspace = true
+tracing-subscriber.workspace = true

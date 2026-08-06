@@ -13,6 +13,7 @@ cosmic-applet-audio = { path = "../cosmic-applet-audio" }
 cosmic-applet-a11y = { path = "../cosmic-applet-a11y" }
 cosmic-applet-battery = { path = "../cosmic-applet-battery" }
 cosmic-applet-bluetooth = { path = "../cosmic-applet-bluetooth" }
+cosmic-applet-hover-dock = { path = "../cosmic-applet-hover-dock" }
 cosmic-applet-minimize = { path = "../cosmic-applet-minimize" }
 cosmic-applet-network = { path = "../cosmic-applet-network" }
 cosmic-applet-notifications = { path = "../cosmic-applet-notifications" }

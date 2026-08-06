@@ -1,0 +1,1 @@
+hover-dock = Hover Dock

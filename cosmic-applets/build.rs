@@ -42,6 +42,12 @@ fn main() {
             "cosmic-applet-input-sources-keywords",
         ),
         (
+            "com.system76.CosmicAppletHoverDock",
+            "cosmic-applet-hover-dock",
+            "cosmic-applet-hover-dock-comment",
+            "cosmic-applet-hover-dock-keywords",
+        ),
+        (
             "com.system76.CosmicAppletMinimize",
             "cosmic-applet-minimize",
             "cosmic-applet-minimize-comment",
