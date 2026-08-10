@@ -3,7 +3,7 @@
 
 use std::sync::Arc;
 
-use cosmic_settings_audio_client::{self as audio_client, Availability, RouteInfo};
+use cosmic_settings_audio_client::{self as audio_client, Availability, NodeKind, RouteInfo};
 use intmap::IntMap;
 
 pub type DeviceId = u32;
@@ -15,6 +15,7 @@ pub struct Model {
     pub node_devices: IntMap<NodeId, Option<u32>>,
     pub sinks: Nodes,
     pub sources: Nodes,
+    pub streams: Streams,
     pub active_sink: ActiveNode,
     pub active_source: ActiveNode,
     pub default_sink: Option<NodeId>,
@@ -88,6 +89,36 @@ pub struct ActiveNode {
     pub mute: bool,
 }
 
+/// Per-application playback streams (sink-input equivalent).
+///
+/// Unlike `Nodes`, there is no "active"/"default" stream concept, so this doesn't
+/// carry the `sorted_display`/`sorted_index`/`active` machinery `Nodes` needs to back
+/// a device-selection dropdown — streams are always enumerated in full.
+#[derive(Debug, Default)]
+pub struct Streams {
+    pub id: Vec<NodeId>,
+    pub volume: Vec<u32>,
+    pub display_name: Vec<Arc<str>>,
+    pub app_id: Vec<Arc<str>>,
+    pub icon_name: Vec<Option<Arc<str>>>,
+    pub media_name: Vec<Option<Arc<str>>>,
+}
+
+impl Streams {
+    pub fn remove(&mut self, node_id: u32) -> bool {
+        let Some(pos) = self.id.iter().position(|id| node_id == *id) else {
+            return false;
+        };
+        self.volume.remove(pos);
+        self.display_name.remove(pos);
+        self.app_id.remove(pos);
+        self.icon_name.remove(pos);
+        self.media_name.remove(pos);
+        self.id.remove(pos);
+        true
+    }
+}
+
 impl Model {
     pub fn update(&mut self, event: audio_client::Event) {
         tracing::debug!(?event, "update");
@@ -130,6 +161,8 @@ impl Model {
                         self.active_source.volume = self.sources.volume[pos];
                         self.active_source.volume_text = self.active_source.volume.to_string();
                     }
+                } else if let Some(pos) = self.streams.id.iter().position(|id| node_id == *id) {
+                    self.streams.volume[pos] = volume;
                 }
             }
 
@@ -155,7 +188,42 @@ impl Model {
 
             audio_client::Event::Node(node_id, node) => {
                 self.node_devices.insert(node_id, node.device_id);
-                if node.is_sink {
+                if matches!(node.kind, Some(NodeKind::StreamOutput)) {
+                    let app_id: Arc<str> = node
+                        .application_binary
+                        .clone()
+                        .or_else(|| node.application_name.clone())
+                        .unwrap_or_else(|| node.name.clone())
+                        .into();
+                    let display_name: Arc<str> = node
+                        .application_name
+                        .clone()
+                        .or_else(|| node.application_binary.clone())
+                        .unwrap_or_else(|| node.name.clone())
+                        .into();
+                    let media_name: Option<Arc<str>> = node.media_name.clone().map(Into::into);
+                    let icon_name: Option<Arc<str>> =
+                        node.application_icon_name.clone().map(Into::into);
+                    if let Some(pos) = self.streams.id.iter().position(|&id| id == node_id) {
+                        self.streams.app_id[pos] = app_id;
+                        self.streams.display_name[pos] = display_name;
+                        self.streams.icon_name[pos] = icon_name;
+                        self.streams.media_name[pos] = media_name;
+                    } else {
+                        self.streams.id.push(node_id);
+                        self.streams.volume.push(0);
+                        self.streams.display_name.push(display_name);
+                        self.streams.app_id.push(app_id);
+                        self.streams.icon_name.push(icon_name);
+                        self.streams.media_name.push(media_name);
+                    }
+
+                    return;
+                }
+
+                if matches!(node.kind, Some(NodeKind::Sink))
+                    || (node.kind.is_none() && node.is_sink)
+                {
                     let pos = if let Some(pos) = self.sinks.id.iter().position(|&id| id == node_id)
                     {
                         self.sinks.description[pos] = self.translate(&node.description);
@@ -308,8 +376,8 @@ impl Model {
             audio_client::Event::RemoveNode(node_id) => {
                 self.node_devices.remove(node_id);
 
-                if !self.sinks.remove(node_id) {
-                    self.sources.remove(node_id);
+                if !self.sinks.remove(node_id) && !self.sources.remove(node_id) {
+                    self.streams.remove(node_id);
                 }
             }
 
@@ -390,4 +458,63 @@ fn node_name(route: &str, node: &str) -> Arc<str> {
         [route, " - ", node].concat()
     }
     .into()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn node(kind: NodeKind) -> audio_client::NodeInfo {
+        audio_client::NodeInfo {
+            name: "test-node".into(),
+            description: String::new(),
+            device_profile_description: String::new(),
+            device_id: None,
+            card_profile_device: None,
+            is_sink: matches!(kind, NodeKind::Sink),
+            kind: Some(kind),
+            application_name: Some("Test Player".into()),
+            application_binary: Some("test-player".into()),
+            application_icon_name: Some("media-playback-start".into()),
+            media_name: Some("A test track".into()),
+        }
+    }
+
+    #[test]
+    fn playback_stream_tracks_volume_and_removal() {
+        let mut model = Model::default();
+        model.update(audio_client::Event::Node(42, node(NodeKind::StreamOutput)));
+
+        assert_eq!(model.streams.id, [42]);
+        assert_eq!(&*model.streams.display_name[0], "Test Player");
+        assert_eq!(&*model.streams.app_id[0], "test-player");
+        assert_eq!(model.streams.volume, [0]);
+
+        model.update(audio_client::Event::NodeVolume(42, 64, None));
+        assert_eq!(model.streams.volume, [64]);
+
+        model.update(audio_client::Event::RemoveNode(42));
+        assert!(model.streams.id.is_empty());
+        assert!(model.streams.volume.is_empty());
+    }
+
+    #[test]
+    fn device_nodes_do_not_appear_as_playback_streams() {
+        let mut model = Model::default();
+        model.update(audio_client::Event::Node(7, node(NodeKind::Source)));
+
+        assert!(model.streams.id.is_empty());
+    }
+
+    #[test]
+    fn legacy_sink_node_uses_is_sink() {
+        let mut model = Model::default();
+        let mut legacy_sink = node(NodeKind::Sink);
+        legacy_sink.kind = None;
+        legacy_sink.is_sink = true;
+
+        model.update(audio_client::Event::Node(7, legacy_sink));
+
+        assert_eq!(model.sinks.id, [7]);
+    }
 }
