@@ -31,6 +31,9 @@ pub trait SessionManager {
     /// CanShutdown method
     fn can_shutdown(&self) -> zbus::Result<bool>;
 
+    /// CanHibernate method
+    fn can_hibernate(&self) -> zbus::Result<bool>;
+
     /// GetClients method
     fn get_clients(&self) -> zbus::Result<Vec<zbus::zvariant::OwnedObjectPath>>;
 
@@ -39,6 +42,9 @@ pub trait SessionManager {
 
     /// GetLocale method
     fn get_locale(&self, category: i32) -> zbus::Result<String>;
+
+    /// Hibernate method
+    fn hibernate(&self) -> zbus::Result<()>;
 
     /// Inhibit method
     fn inhibit(
