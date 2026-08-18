@@ -1,0 +1,10 @@
+cosmic-applet-a11y-keywords = COSMIC; ᱮᱯᱞᱮᱴ; ᱮᱠᱥᱮᱥᱤᱵᱤᱞᱤᱴᱤ; A11y; ᱥᱠᱨᱤᱱ; ᱨᱤᱰᱟᱨ; ᱢᱮᱜᱽᱱᱤᱯᱷᱟᱭᱟᱨ; ᱠᱚᱱᱴᱨᱟᱥᱴ; ᱨᱚᱝ;
+cosmic-applet-bluetooth-comment = ᱵᱞᱩᱴᱩᱛᱷ ᱥᱟᱫᱷᱚᱱ ᱠᱚ ᱥᱚᱢᱵᱷᱲᱟᱣ ᱢᱮ
+cosmic-applet-input-sources-comment = ᱤᱱᱯᱩᱴ ᱥᱚᱨᱥ ᱠᱚ ᱛᱟᱞᱟ ᱨᱮ ᱵᱚᱫᱚᱞ ᱢᱮ
+cosmic-applet-input-sources-keywords = ᱠᱚᱥᱢᱤᱠ; ᱮᱯᱞᱮᱴ; ᱤᱱᱯᱩᱴ; ᱥᱨᱚᱛ;
+cosmic-applet-minimize = ᱦᱩᱰᱤᱧ ᱟᱠᱟᱱ ᱡᱟᱨᱞᱟ
+cosmic-applet-status-area = ᱱᱚᱴᱤᱯᱷᱤᱠᱮᱥᱚᱱ ᱴᱨᱮ
+cosmic-applet-status-area-comment = ᱮᱯᱞᱤᱠᱮᱥᱚᱱ ᱤᱱᱰᱤᱠᱮᱴᱚᱨ ᱚᱠᱟ ᱫᱚ ᱯᱮᱱᱮᱞ ᱨᱮ ᱢᱮᱱᱭᱩᱥ ᱮ ᱮᱠᱥᱯᱚᱨᱴ ᱫᱟᱲᱮᱭᱟᱜᱼᱟ
+cosmic-applet-status-area-keywords = ᱠᱚᱥᱢᱤᱠ; ᱮᱯᱞᱮᱴ; ᱮᱯ; ᱤᱱᱰᱤᱠᱮᱴᱚᱨ; ᱱᱚᱴᱤᱯᱷᱤᱠᱮᱥᱚᱱ; ᱴᱨᱮ; ᱥᱴᱮᱴᱟᱥ;
+cosmic-applet-time = ᱢᱟᱦᱟᱸ, ᱚᱠᱛᱚ ᱟᱨ ᱠᱮᱞᱮᱱᱰᱟᱨ
+cosmic-panel-launcher-button = ᱞᱚᱱᱪᱟᱨ ᱵᱩᱛᱟᱢ

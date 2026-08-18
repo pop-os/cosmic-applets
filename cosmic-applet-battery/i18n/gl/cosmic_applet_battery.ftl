@@ -1,0 +1,14 @@
+battery = Batería
+battery-desc = Reduce o consumo de enerxía e o rendemento.
+balanced = Balanceado
+balanced-desc = Rendemento e consumo de batería estándar.
+performance = Alto rendemento
+performance-desc = Alto rendemento e maior consumo de enerxía.
+max-charge = Aumenta a vida útil da batería limitando a carga máxima ao 80 %
+seconds = s
+minutes = m
+hours = h
+until-empty = ata baleirar
+power-settings = Axustes de enexía e batería...
+dgpu-running = A GPU dedicada está activa e pode reducir a duración da batería
+dgpu-applications = Aplicacións que están a usar a GPU dedicada { $gpu_name }

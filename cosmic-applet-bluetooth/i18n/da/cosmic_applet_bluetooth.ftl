@@ -1,0 +1,12 @@
+cancel = Annuller
+confirm-pin = Bekræft venligst, at følgende pinkode matcher den, der vises på { $deviceName }
+bluetooth = Bluetooth
+unsuccessful = Parring Mislykkedes
+pairable = Parbare
+try-again = Prøv Igen
+check-device = Sørg for, at { $deviceName } er slået til, inden for rækkevidde og klar til parring.
+other-devices = Andre Bluetooth-enheder
+connected = Forbundet
+confirm = Bekræft
+settings = Bluetooth-indstillinger...
+discoverable = Synlig

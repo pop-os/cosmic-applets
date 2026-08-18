@@ -1,0 +1,14 @@
+power-settings = Strøm- og Batteriindstillinger...
+hours = t
+until-empty = indtil tom
+battery-desc = Reduceret strømforbrug og ydeevne.
+max-charge = Forøg dit batteris levetid, ved at angive en maksimal opladningsværdi på 80%
+balanced = Balanceret
+battery = Batteri
+seconds = s
+dgpu-running = Diskret GPU er aktiv og kan reducere batterilevetiden
+performance = Høj Ydeevne
+performance-desc = Høj ydeevne og strømforbrug.
+minutes = m
+balanced-desc = Standard ydeevne og batteriforbrug.
+dgpu-applications = Applikationer som bruger { $gpu_name } diskret GPU

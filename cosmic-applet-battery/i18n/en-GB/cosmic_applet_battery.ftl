@@ -1,0 +1,14 @@
+power-settings = Power & Battery settings...
+hours = h
+until-empty = until empty
+battery-desc = Reduced power usage and performance.
+max-charge = Increase the lifespan of your battery by setting a maximum charge value of 80%
+balanced = Balanced
+battery = Battery
+seconds = s
+dgpu-running = Discrete GPU is active and can reduce battery life
+performance = High Performance
+performance-desc = High performance and power usage.
+minutes = m
+balanced-desc = Standard performance and battery usage.
+dgpu-applications = Applications using { $gpu_name } discrete GPU
