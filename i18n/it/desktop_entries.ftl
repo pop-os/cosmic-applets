@@ -46,3 +46,5 @@ cosmic-applet-status-area-keywords = COSMIC;Applet;Applicazione;Indicatore;Notif
 cosmic-applet-tiling-keywords = COSMIC;Applet;Affiancamento;Suggerimento;Area di lavoro;
 cosmic-applet-time-keywords = COSMIC;Applet;Data;Ora;Calendario;
 cosmic-applet-workspaces-keywords = COSMIC;Applet;Area di lavoro;
+cosmic-panel-app-button-keywords = COSMIC;Applet;App;Libreria;Tray;
+cosmic-panel-launcher-button-keywords = COSMIC;Applet;Launcher;Runner;
