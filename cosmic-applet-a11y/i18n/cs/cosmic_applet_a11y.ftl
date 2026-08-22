@@ -1,6 +1,6 @@
 screen-reader = Čtečka obrazovky
 magnifier = Lupa
-invert-colors = Převrátit barvy
+invert-colors = Inverze barev
 settings = Nastavení přístupnosti...
-filter-colors = Filtrovat barvy
+filter-colors = Filtr barev
 high-contrast = Vysoký kontrast
