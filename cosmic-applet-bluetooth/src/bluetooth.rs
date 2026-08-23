@@ -276,10 +276,9 @@ const DEFAULT_DEVICE_ICON: &str = "bluetooth-symbolic";
 impl BluerDevice {
     #[inline(never)]
     pub async fn from_device(device: &bluer::Device) -> Self {
-        let (mut name, is_paired, is_trusted, is_connected, battery_percent, icon) = futures::join!(
-            device
-                .name()
-                .map(|res| res.ok().flatten().unwrap_or(device.address().to_string())),
+        let (alias, name, is_paired, is_trusted, is_connected, battery_percent, icon) = futures::join!(
+            device.alias().map(|res| res.ok()),
+            device.name().map(|res| res.ok().flatten()),
             device.is_paired().map(Result::unwrap_or_default),
             device.is_trusted().map(Result::unwrap_or_default),
             device.is_connected().map(Result::unwrap_or_default),
@@ -288,10 +287,10 @@ impl BluerDevice {
                 .icon()
                 .map(|res| device_type_to_icon(&res.ok().flatten().unwrap_or_default()))
         );
-
-        if name.is_empty() {
-            name = device.address().to_string();
-        }
+        let name = alias
+            .filter(|name| !name.is_empty())
+            .or(name.filter(|name| !name.is_empty()))
+            .unwrap_or_else(|| device.address().to_string());
 
         let status = if is_connected {
             BluerDeviceStatus::Connected
