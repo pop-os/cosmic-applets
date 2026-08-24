@@ -1,4 +1,4 @@
-cancel = Annuller
+cancel = Afbryd
 confirm-pin = Bekræft venligst, at følgende pinkode matcher den, der vises på { $deviceName }
 bluetooth = Bluetooth
 unsuccessful = Parring Mislykkedes
