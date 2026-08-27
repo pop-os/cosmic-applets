@@ -431,22 +431,35 @@ fn vpn_section<'a>(
                         id.as_str()
                     }
                 };
-                // Check if this VPN is currently active
-                let is_active = nm_state.nm_state.active_conns.iter().any(
-                    |conn| matches!(conn, ActiveConnectionInfo::Vpn { name, .. } if name == id),
-                );
+                // Check if this VPN is currently active, and if so grab its IP addresses
+                let active_vpn = nm_state.nm_state.active_conns.iter().find_map(|conn| {
+                    if let ActiveConnectionInfo::Vpn { name, ip4_address, ip6_address } = conn {
+                        (name == id).then_some((ip4_address, ip6_address))
+                    } else {
+                        None
+                    }
+                });
+                let is_active = active_vpn.is_some();
                 let pending_action = nm_state
                     .pending_vpn
                     .as_ref()
                     .filter(|pending| pending.uuid.as_ref() == uuid.as_ref())
                     .map(|pending| pending.action);
 
+                let ip_elements = active_vpn
+                    .map(|(ip4, ip6)| ip_address_elements(ip4, ip6))
+                    .unwrap_or_default();
                 let mut btn_content = vec![
                     icon::from_name("network-vpn-symbolic")
                         .size(24)
                         .symbolic(true)
                         .into(),
-                    text::body(id).width(Length::Fill).into(),
+                    column::with_children([
+                        text::body(id).into(),
+                        column::with_children(ip_elements).into(),
+                    ])
+                    .width(Length::Fill)
+                    .into(),
                 ];
 
                 if is_active {
@@ -612,8 +625,12 @@ fn network_events_task() -> Task<Message> {
 
 fn snapshot_to_applet(snapshot: NetworkSnapshot) -> AppletSnapshot {
     let summary = snapshot.applet_summary();
+    // Sort so the VPN list has a stable order across snapshots; iterating
+    // the map directly would reorder the list on every connect/disconnect.
+    let mut saved_vpns: Vec<_> = summary.saved_vpns.values().collect();
+    saved_vpns.sort_by_cached_key(|vpn| (vpn.id.to_lowercase(), vpn.uuid.clone()));
     let mut known_vpns = IndexMap::new();
-    for vpn in summary.saved_vpns.values() {
+    for vpn in saved_vpns {
         let uuid: Uuid = Arc::from(vpn.uuid.as_str());
         let entry = match vpn.kind {
             Some(nmrs::VpnKind::WireGuard) => ConnectionSettings::Wireguard { id: vpn.id.clone() },
