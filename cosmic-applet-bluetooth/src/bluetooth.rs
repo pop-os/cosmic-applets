@@ -287,10 +287,11 @@ impl BluerDevice {
                 .icon()
                 .map(|res| device_type_to_icon(&res.ok().flatten().unwrap_or_default()))
         );
+        let address_string = device.address().to_string();
         let name = alias
-            .filter(|name| !name.is_empty())
+            .filter(|name| !name.is_empty() && *name != address_string.replace(':', "-"))
             .or(name.filter(|name| !name.is_empty()))
-            .unwrap_or_else(|| device.address().to_string());
+            .unwrap_or(address_string);
 
         let status = if is_connected {
             BluerDeviceStatus::Connected
