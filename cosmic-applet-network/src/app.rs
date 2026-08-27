@@ -1631,49 +1631,9 @@ impl cosmic::Application for CosmicNetworkApplet {
         let mut known_wifi = Vec::new();
         for conn in &self.nm_state.nm_state.active_conns {
             match conn {
-                ActiveConnectionInfo::Vpn {
-                    name,
-                    ip4_address,
-                    ip6_address,
-                } => {
-                    if self.active_device.as_ref().is_some_and(|d| {
-                        d.active_connection.as_ref().is_none_or(|a| a.0.id != *name)
-                    }) {
-                        continue;
-                    }
-                    let mut info_col = Vec::with_capacity(3);
-                    info_col.push(text::body(name).into());
-                    for elem in ip_address_elements(ip4_address, ip6_address) {
-                        info_col.push(elem);
-                    }
-                    vpn_ethernet_col = vpn_ethernet_col.push(
-                        column::with_capacity::<Message, cosmic::Theme, _>(2)
-                            .push(
-                                row::with_children([
-                                    Element::from(
-                                        icon::icon(
-                                            icon::from_name("network-vpn-symbolic")
-                                                .symbolic(true)
-                                                .into(),
-                                        )
-                                        .size(40),
-                                    ),
-                                    column::with_children(info_col).into(),
-                                    text::body(fl!("connected"))
-                                        .width(Length::Fill)
-                                        .align_x(Alignment::End)
-                                        .into(),
-                                ])
-                                .align_y(Alignment::Center)
-                                .spacing(8)
-                                .padding(menu_control_padding()),
-                            )
-                            .push(
-                                padded_control(divider::horizontal::default())
-                                    .padding([space_xxs, space_s]),
-                            ),
-                    );
-                }
+                // Active VPNs are rendered inline in `vpn_section`, not as a
+                // large panel at the top of the popup.
+                ActiveConnectionInfo::Vpn { .. } => continue,
                 ActiveConnectionInfo::Wired {
                     name,
                     hw_address: _,
