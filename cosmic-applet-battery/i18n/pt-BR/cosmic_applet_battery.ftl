@@ -1,4 +1,4 @@
-battery = Economia de energia
+battery = Bateria
 battery-desc = Uso reduzido de energia e desempenho limitado.
 balanced = Balanceado
 balanced-desc = Desempenho padrão e uso de bateria moderado.
