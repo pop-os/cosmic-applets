@@ -35,10 +35,9 @@ use cosmic::{
         platform_specific::shell::commands::popup::{destroy_popup, get_popup},
         runtime::{core::event, dnd::peek_dnd, platform_specific::wayland::CornerRadius},
         widget::{
-            Column, Row, column, mouse_area, row,
+            Column, Row, column, hover, mouse_area, row,
             rule::vertical as vertical_rule,
             space::{horizontal as horizontal_space, vertical as vertical_space},
-            stack,
         },
         window,
     },
@@ -376,7 +375,6 @@ struct CosmicAppList {
     active_workspaces: Vec<ExtWorkspaceHandleV1>,
     output_list: FxHashMap<WlOutput, OutputInfo>,
     locales: Vec<String>,
-    hovered_toplevel: Option<ExtForeignToplevelHandleV1>,
     overflow_favorites_popup: Option<window::Id>,
     overflow_active_popup: Option<window::Id>,
 }
@@ -395,7 +393,6 @@ enum Message {
     Popup(u32, window::Id),
     Pressed(window::Id),
     ToplevelListPopup(u32, window::Id),
-    ToplevelHoverChanged(ExtForeignToplevelHandleV1, bool),
     GpuRequest(Option<Vec<Gpu>>),
     CloseRequested(window::Id),
     ClosePopup,
@@ -487,7 +484,6 @@ fn toplevel_button<'a>(
     title: String,
     handle: ExtForeignToplevelHandleV1,
     is_focused: bool,
-    is_hovered: bool,
 ) -> Element<'a, Message> {
     let border = 1.0;
     let preview = column![
@@ -518,32 +514,29 @@ fn toplevel_button<'a>(
     ]
     .spacing(4)
     .padding([4, 4, 0, 4]);
-    let close_button_overlay = if is_hovered {
-        row![
-            horizontal_space(),
-            button::custom(icon::from_name("window-close-symbolic").size(16))
-                .class(Button::Destructive)
-                .on_press(Message::CloseToplevel(handle.clone()))
-                .padding(4)
-        ]
-    } else {
-        row![]
-    }
+    let close_button_overlay = row![
+        horizontal_space(),
+        button::custom(icon::from_name("window-close-symbolic").size(16))
+            .class(Button::Destructive)
+            .on_press(Message::CloseToplevel(handle.clone()))
+            .padding(4)
+    ]
+    .padding(4)
     .width(Length::Fill)
     .height(Length::Fill);
 
-    stack![preview, close_button_overlay]
+    let thumbnail = preview
         .apply(button::custom)
         .on_press(Message::Toggle(handle.clone()))
         .class(window_menu_style(is_focused))
         .width(Length::Fixed(TOPLEVEL_BUTTON_WIDTH))
         .height(Length::Fixed(TOPLEVEL_BUTTON_HEIGHT))
         .padding(4)
-        .selected(is_focused)
+        .selected(is_focused);
+
+    hover(thumbnail, close_button_overlay)
         .apply(mouse_area)
-        .on_enter(Message::ToplevelHoverChanged(handle.clone(), true))
-        .on_middle_press(Message::CloseToplevel(handle.clone()))
-        .on_exit(Message::ToplevelHoverChanged(handle, false))
+        .on_middle_press(Message::CloseToplevel(handle))
         .apply(Element::from)
 }
 
@@ -840,11 +833,6 @@ impl CosmicAppList {
     fn is_focused(&self, handle: &ExtForeignToplevelHandleV1) -> bool {
         self.currently_active_toplevel().contains(handle)
     }
-
-    // Check if a specific toplevel button is currently hovered
-    fn is_hovered(&self, handle: &ExtForeignToplevelHandleV1) -> bool {
-        self.hovered_toplevel.as_ref() == Some(handle)
-    }
 }
 
 impl cosmic::Application for CosmicAppList {
@@ -1048,14 +1036,6 @@ impl cosmic::Application for CosmicAppList {
                         ));
 
                     return popup_task;
-                }
-            }
-            Message::ToplevelHoverChanged(handle, entering) => {
-                match (entering, &self.hovered_toplevel) {
-                    (true, _) => self.hovered_toplevel = Some(handle),
-                    // prevents race condition
-                    (false, Some(h)) if h == &handle => self.hovered_toplevel = None,
-                    _ => {}
                 }
             }
             Message::PinApp(id) => {
@@ -2263,7 +2243,6 @@ impl cosmic::Application for CosmicAppList {
                                 info.title.clone(),
                                 info.foreign_toplevel.clone(),
                                 self.is_focused(&info.foreign_toplevel),
-                                self.is_hovered(&info.foreign_toplevel),
                             ));
                         }
                         self.core
@@ -2280,7 +2259,6 @@ impl cosmic::Application for CosmicAppList {
                                 info.title.clone(),
                                 info.foreign_toplevel.clone(),
                                 self.is_focused(&info.foreign_toplevel),
-                                self.is_hovered(&info.foreign_toplevel),
                             ));
                         }
                         self.core
