@@ -3,7 +3,9 @@
 
 use std::sync::Arc;
 
-use cosmic_settings_audio_client::{self as audio_client, Availability, RouteInfo};
+use cosmic_settings_audio_client::{
+    self as audio_client, Availability, RecordingInfo, RouteInfo, StreamState,
+};
 use intmap::IntMap;
 
 pub type DeviceId = u32;
@@ -19,6 +21,75 @@ pub struct Model {
     pub active_source: ActiveNode,
     pub default_sink: Option<NodeId>,
     pub default_source: Option<NodeId>,
+    pub recordings: IntMap<NodeId, RecordingInfo>,
+    pub recording_mute: IntMap<NodeId, bool>,
+}
+
+impl Model {
+    pub fn is_recording(&self) -> bool {
+        self.recordings
+            .iter()
+            .any(|(_, recording)| recording.state == StreamState::Running)
+    }
+
+    pub fn running_recordings(&self) -> Vec<(NodeId, String, Option<String>, bool)> {
+        let mut recordings = self
+            .recordings
+            .iter()
+            .filter(|(_, recording)| recording.state == StreamState::Running)
+            .map(|(id, recording)| {
+                let name = recording
+                    .application_name
+                    .as_deref()
+                    .or(recording.application_id.as_deref())
+                    .or(recording.media_name.as_deref())
+                    .unwrap_or(&recording.node_name)
+                    .to_owned();
+                let icon_name = recording
+                    .icon_name
+                    .as_deref()
+                    .or(recording.application_id.as_deref())
+                    .map(ToOwned::to_owned)
+                    .or_else(|| {
+                        recording.application_name.as_ref().map(|name| {
+                            name.to_lowercase()
+                                .replace(|character: char| !character.is_alphanumeric(), "-")
+                        })
+                    });
+                let muted = self.recording_mute.get(id).copied().unwrap_or(false);
+                (id, name, icon_name, muted)
+            })
+            .collect::<Vec<_>>();
+        recordings.sort_unstable_by(|(_, left, _, _), (_, right, _, _)| left.cmp(right));
+        recordings
+    }
+
+    pub fn recordings_muted(&self) -> bool {
+        let mut has_running_recording = false;
+        let all_muted = self
+            .recordings
+            .iter()
+            .filter(|(_, recording)| recording.state == StreamState::Running)
+            .all(|(id, _)| {
+                has_running_recording = true;
+                self.recording_mute.get(id).copied().unwrap_or(false)
+            });
+        has_running_recording && all_muted
+    }
+
+    pub fn recording_mute_toggle(&self) -> Option<(bool, Vec<NodeId>)> {
+        let recordings = self
+            .recordings
+            .iter()
+            .filter(|(_, recording)| recording.state == StreamState::Running)
+            .map(|(id, _)| id)
+            .collect::<Vec<_>>();
+        (!recordings.is_empty()).then(|| (!self.recordings_muted(), recordings))
+    }
+
+    pub fn set_recording_mute(&mut self, recording_id: NodeId, mute: bool) {
+        self.recording_mute.insert(recording_id, mute);
+    }
 }
 
 #[derive(Debug, Default)]
@@ -93,7 +164,9 @@ impl Model {
         tracing::debug!(?event, "update");
         match event {
             audio_client::Event::NodeMute(node_id, mute) => {
-                if let Some(pos) = self.sinks.id.iter().position(|id| node_id == *id) {
+                if self.recordings.contains_key(node_id) {
+                    self.recording_mute.insert(node_id, mute);
+                } else if let Some(pos) = self.sinks.id.iter().position(|id| node_id == *id) {
                     self.sinks.mute[pos] = mute;
                     if self.sinks.active == Some(pos) {
                         self.active_sink.mute = mute;
@@ -154,6 +227,9 @@ impl Model {
             }
 
             audio_client::Event::Node(node_id, node) => {
+                if self.recordings.contains_key(node_id) {
+                    return;
+                }
                 self.node_devices.insert(node_id, node.device_id);
                 if node.is_sink {
                     let pos = if let Some(pos) = self.sinks.id.iter().position(|&id| id == node_id)
@@ -287,6 +363,11 @@ impl Model {
                 }
             }
 
+            audio_client::Event::Recording(recording_id, recording) => {
+                self.sources.remove(recording_id);
+                self.recordings.insert(recording_id, recording);
+            }
+
             audio_client::Event::ActiveRoute(device_id, _index, route) => {
                 self.update_device_names(device_id, &route);
             }
@@ -306,6 +387,8 @@ impl Model {
             }
 
             audio_client::Event::RemoveNode(node_id) => {
+                self.recordings.remove(node_id);
+                self.recording_mute.remove(node_id);
                 self.node_devices.remove(node_id);
 
                 if !self.sinks.remove(node_id) {

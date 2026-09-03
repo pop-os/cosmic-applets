@@ -107,6 +107,14 @@ impl Audio {
         }
     }
 
+    fn recording_icon_name(&self) -> &'static str {
+        if self.model.recordings_muted() {
+            "microphone-sensitivity-muted-symbolic"
+        } else {
+            "microphone-sensitivity-high-symbolic"
+        }
+    }
+
     fn input_icon_name(&self) -> &'static str {
         let volume = self.model.active_source.volume;
         let mute = self.model.active_source.mute;
@@ -152,6 +160,8 @@ pub enum Message {
     Surface(surface::Action),
     ToggleMediaControlsInTopPanel(bool),
     TogglePopup,
+    ToggleRecordingMute,
+    ToggleRecordingMuteFor(model::NodeId),
     ToggleSinkMute,
     ToggleSourceMute,
     Token(TokenUpdate),
@@ -387,6 +397,61 @@ impl cosmic::Application for Audio {
                     futures::executor::block_on(async {
                         _ = client.conn.set_default(node_id, true).await;
                     });
+                }
+            }
+
+            Message::ToggleRecordingMute => {
+                let Some((mute, recordings)) = self.model.recording_mute_toggle() else {
+                    return Task::none();
+                };
+                if let Some(client) = self.audio_client.as_mut() {
+                    let updated_recordings = futures::executor::block_on(async {
+                        let mut updated_recordings = Vec::new();
+                        for recording_id in recordings {
+                            match client.conn.set_node_mute(recording_id, mute).await {
+                                Ok(Ok(_)) => updated_recordings.push(recording_id),
+                                Ok(Err(err)) => {
+                                    tracing::error!(
+                                        ?err,
+                                        recording_id,
+                                        "failed to mute recording stream"
+                                    );
+                                }
+                                Err(err) => {
+                                    tracing::error!(
+                                        ?err,
+                                        recording_id,
+                                        "failed to call audio daemon"
+                                    );
+                                }
+                            }
+                        }
+                        updated_recordings
+                    });
+                    for recording_id in updated_recordings {
+                        self.model.set_recording_mute(recording_id, mute);
+                    }
+                }
+            }
+
+            Message::ToggleRecordingMuteFor(recording_id) => {
+                let mute = !self
+                    .model
+                    .recording_mute
+                    .get(recording_id)
+                    .copied()
+                    .unwrap_or(false);
+                if let Some(client) = self.audio_client.as_mut() {
+                    match futures::executor::block_on(client.conn.set_node_mute(recording_id, mute))
+                    {
+                        Ok(Ok(_)) => self.model.set_recording_mute(recording_id, mute),
+                        Ok(Err(err)) => {
+                            tracing::error!(?err, recording_id, "failed to mute recording stream");
+                        }
+                        Err(err) => {
+                            tracing::error!(?err, recording_id, "failed to call audio daemon");
+                        }
+                    }
                 }
             }
 
@@ -636,20 +701,46 @@ impl cosmic::Application for Audio {
             Message::SetSinkVolume(new_volume as u32)
         });
 
-        let mut has_playback_buttons = false;
-        let playback_buttons = (!self.core.applet.suggested_bounds.as_ref().is_some_and(|c| {
-            // if we have a configure for width and height, we're in a overflow popup
+        let in_overflow = self.core.applet.suggested_bounds.as_ref().is_some_and(|c| {
+            // If we have a configure for width and height, we're in an overflow popup.
             c.width > 0. && c.height > 0.
-        }))
-        .then(|| self.playback_buttons());
+        });
+        let mut panel_buttons = if in_overflow {
+            Vec::new()
+        } else {
+            self.playback_buttons()
+        };
 
-        let mut ret = if let Some(playback_buttons) = playback_buttons
-            && !playback_buttons.is_empty()
-        {
-            has_playback_buttons = true;
+        if self.model.is_recording() {
+            let suggested_size = self.core.applet.suggested_size(true);
+            let icon = icon::from_name(self.recording_icon_name())
+                .symbolic(true)
+                .size(suggested_size.0)
+                .icon()
+                .class(if self.model.recordings_muted() {
+                    theme::Svg::default()
+                } else {
+                    theme::Svg::Custom(std::rc::Rc::new(|_| iced::widget::svg::Style {
+                        color: Some(iced::Color::from_rgb(1.0, 0.0, 0.0)),
+                    }))
+                })
+                .width(Length::Fixed(suggested_size.0 as f32))
+                .height(Length::Fixed(suggested_size.1 as f32));
+
+            panel_buttons.push(
+                self.core
+                    .applet
+                    .button_from_element(icon, true)
+                    .on_press_down(Message::ToggleRecordingMute)
+                    .into(),
+            );
+        }
+
+        let has_additional_buttons = !panel_buttons.is_empty();
+        let mut ret = if has_additional_buttons {
             Element::from(match self.core.applet.anchor {
                 PanelAnchor::Left | PanelAnchor::Right => Element::from(
-                    applet_column::Column::with_children(playback_buttons)
+                    applet_column::Column::with_children(panel_buttons)
                         .push(btn)
                         .align_x(Alignment::Center)
                         .height(Length::Shrink)
@@ -660,7 +751,7 @@ impl cosmic::Application for Audio {
                         ),
                 ),
                 PanelAnchor::Top | PanelAnchor::Bottom => {
-                    applet_row::Row::with_children(playback_buttons)
+                    applet_row::Row::with_children(panel_buttons)
                         .push(btn)
                         .align_y(Alignment::Center)
                         .width(Length::Shrink)
@@ -677,15 +768,12 @@ impl cosmic::Application for Audio {
         };
 
         if let Some(tracker) = self.rectangle_tracker.as_ref()
-            && has_playback_buttons
+            && has_additional_buttons
         {
             ret = tracker.container(0, ret).into()
         }
 
-        if !self.core.applet.suggested_bounds.as_ref().is_some_and(|c| {
-            // if we have a configure for width and height, we're in a overflow popup
-            c.width > 0. && c.height > 0.
-        }) {
+        if !in_overflow {
             ret = self.core.applet.autosize_window(ret).into();
         }
         ret
@@ -789,6 +877,49 @@ impl cosmic::Application for Audio {
             ]
             .align_x(Alignment::Start)
         };
+
+        let recordings = self.model.running_recordings();
+        if !recordings.is_empty() {
+            let has_many_recordings = recordings.len() > 3;
+            let mut recording_rows = column![].spacing(4);
+            for (recording_id, app, app_icon_name, muted) in recordings {
+                let mute_icon_name = if muted {
+                    "microphone-sensitivity-muted-symbolic"
+                } else {
+                    "microphone-sensitivity-high-symbolic"
+                };
+                let app_icon = app_icon_name.unwrap_or_else(|| {
+                    if muted {
+                        "microphone-sensitivity-muted-symbolic".to_owned()
+                    } else {
+                        "microphone-sensitivity-high-symbolic".to_owned()
+                    }
+                });
+                recording_rows = recording_rows.push(
+                    row![
+                        icon(icon::from_name(app_icon).size(20).symbolic(false).handle(),),
+                        text::body(app).width(Length::Fill),
+                        button::icon(icon::from_name(mute_icon_name).size(16).symbolic(true),)
+                            .class(cosmic::theme::Button::Icon)
+                            .icon_size(16)
+                            .line_height(16)
+                            .on_press(Message::ToggleRecordingMuteFor(recording_id)),
+                    ]
+                    .spacing(8)
+                    .align_y(Alignment::Center),
+                );
+            }
+            let recording_rows: Element<'_, Message> = if has_many_recordings {
+                widget::scrollable(recording_rows)
+                    .height(Length::Fixed(120.0))
+                    .into()
+            } else {
+                recording_rows.into()
+            };
+            audio_content = audio_content
+                .push(padded_control(divider::horizontal::default()).padding([space_xxs, space_s]))
+                .push(padded_control(recording_rows));
+        }
 
         if let Some(s) = self.player_status.as_ref() {
             let mut elements = Vec::with_capacity(5);
