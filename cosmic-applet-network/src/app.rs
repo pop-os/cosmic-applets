@@ -12,6 +12,7 @@ use std::{
     fmt,
     str::FromStr,
     sync::{Arc, LazyLock},
+    time::Duration,
 };
 
 use cosmic::{
@@ -41,7 +42,11 @@ use futures::{
     lock::Mutex as AsyncMutex,
 };
 
-use crate::{config, fl};
+use crate::{
+    config, fl,
+    graph::{self, GraphCaches},
+    stats::{self, InternetPing, InternetPingResult, LinkProbe, LiveStats},
+};
 
 pub fn run() -> cosmic::iced::Result {
     cosmic::applet::run::<CosmicNetworkApplet>(())
@@ -173,6 +178,7 @@ pub enum ActiveConnectionInfo {
         speed: u32,
         ip4_address: Option<String>,
         ip6_address: Option<String>,
+        interface: Option<String>,
     },
     WiFi {
         name: String,
@@ -181,11 +187,13 @@ pub enum ActiveConnectionInfo {
         state: ActiveConnectionState,
         strength: u8,
         hw_address: String,
+        interface: Option<String>,
     },
     Vpn {
         name: String,
         ip4_address: Option<String>,
         ip6_address: Option<String>,
+        interface: Option<String>,
     },
 }
 
@@ -195,6 +203,48 @@ impl ActiveConnectionInfo {
             Self::Wired { name, .. } | Self::WiFi { name, .. } | Self::Vpn { name, .. } => name,
         }
     }
+
+    fn ip4(&self) -> Option<&str> {
+        let address = match self {
+            Self::Wired { ip4_address, .. }
+            | Self::WiFi { ip4_address, .. }
+            | Self::Vpn { ip4_address, .. } => ip4_address.as_deref(),
+        }?;
+        Some(address.split('/').next().unwrap_or(address))
+    }
+
+    fn interface(&self) -> Option<&str> {
+        match self {
+            Self::Wired { interface, .. }
+            | Self::WiFi { interface, .. }
+            | Self::Vpn { interface, .. } => interface.as_deref(),
+        }
+    }
+
+    /// Prefer the kernel adapter for the default-route device so the header
+    /// reads `enp42s0` / `wlan0` instead of "Wired Connection 1".
+    fn display_title<'a>(&'a self, primary_iface: Option<&'a str>) -> &'a str {
+        if let Some(iface) = self.interface()
+            && primary_iface.is_none_or(|primary| primary == iface)
+        {
+            return iface;
+        }
+        if let (Self::Wired { .. }, Some(primary)) = (self, primary_iface)
+            && !looks_like_wifi(primary)
+        {
+            return primary;
+        }
+        if let (Self::WiFi { .. }, Some(primary)) = (self, primary_iface)
+            && looks_like_wifi(primary)
+        {
+            return primary;
+        }
+        self.name()
+    }
+}
+
+fn looks_like_wifi(iface: &str) -> bool {
+    iface.starts_with("wl") || iface.starts_with("wlan")
 }
 
 #[derive(Debug, Clone)]
@@ -334,6 +384,13 @@ struct CosmicNetworkApplet {
 
     /// When defined, displays connections for the specific device.
     active_device: Option<Arc<DeviceInfo>>,
+
+    /// Live link stats shown in the popup (rates, ping, DNS).
+    live_stats: LiveStats,
+    graph_caches: GraphCaches,
+    /// Increments on each popup close so in-flight probes are ignored.
+    stats_generation: u64,
+    ping_inflight: bool,
 }
 
 fn wifi_icon(strength: u8) -> &'static str {
@@ -642,6 +699,7 @@ fn snapshot_to_applet(snapshot: NetworkSnapshot) -> AppletSnapshot {
                 speed: wired.speed_mbps.unwrap_or_default(),
                 ip4_address: wired.ip4_address.clone(),
                 ip6_address: wired.ip6_address.clone(),
+                interface: wired.interface.clone(),
             }),
             ActiveConnection::Wifi(wifi)
                 if known_vpns.values().any(|connection| {
@@ -656,6 +714,7 @@ fn snapshot_to_applet(snapshot: NetworkSnapshot) -> AppletSnapshot {
                     name: wifi.ssid.clone(),
                     ip4_address: wifi.ip4_address.clone(),
                     ip6_address: wifi.ip6_address.clone(),
+                    interface: wifi.interface.clone(),
                 })
             }
             ActiveConnection::Wifi(wifi) => Some(ActiveConnectionInfo::WiFi {
@@ -665,11 +724,13 @@ fn snapshot_to_applet(snapshot: NetworkSnapshot) -> AppletSnapshot {
                 state: wifi.state,
                 strength: wifi.strength.unwrap_or_default(),
                 hw_address: wifi.bssid.clone().unwrap_or_default(),
+                interface: wifi.interface.clone(),
             }),
             ActiveConnection::Vpn(vpn) => Some(ActiveConnectionInfo::Vpn {
                 name: vpn.id.clone(),
                 ip4_address: vpn.ip4_address.clone(),
                 ip6_address: vpn.ip6_address.clone(),
+                interface: vpn.interface.clone(),
             }),
             ActiveConnection::Other(_) | _ => None,
         })
@@ -912,6 +973,51 @@ impl CosmicNetworkApplet {
             .into()
     }
 
+    fn sync_live_ip(&mut self) {
+        self.live_stats.ip = self
+            .nm_state
+            .nm_state
+            .active_conns
+            .iter()
+            .find_map(ActiveConnectionInfo::ip4)
+            .map(ToOwned::to_owned);
+    }
+
+    fn reset_live_stats(&mut self) {
+        self.stats_generation = self.stats_generation.wrapping_add(1);
+        self.ping_inflight = false;
+        self.live_stats.reset();
+        self.graph_caches.clear();
+    }
+
+    fn start_live_stats(&mut self) -> Task<cosmic::Action<Message>> {
+        self.stats_generation = self.stats_generation.wrapping_add(1);
+        self.ping_inflight = false;
+        self.live_stats.poll_counters();
+        self.sync_live_ip();
+        self.graph_caches.clear();
+        self.start_link_probe(true)
+    }
+
+    fn start_link_probe(&mut self, refresh_dns: bool) -> Task<cosmic::Action<Message>> {
+        if self.ping_inflight {
+            return Task::none();
+        }
+        self.ping_inflight = true;
+        let generation = self.stats_generation;
+        let gateway = self.live_stats.gateway.clone();
+        let iface = self.live_stats.interface.clone();
+        cosmic::task::future(async move {
+            stats::probe_link(generation, gateway, iface, refresh_dns).await
+        })
+        .map(Message::LinkProbe)
+        .map(cosmic::Action::App)
+    }
+
+    fn should_show_details(&self) -> bool {
+        self.live_stats.interface.is_some() || !self.nm_state.nm_state.active_conns.is_empty()
+    }
+
     fn connect_vpn(&mut self, uuid: Arc<str>) -> Task<cosmic::Action<Message>> {
         cosmic::task::future(async move {
             let error = match NmrsManager::new().await {
@@ -1070,6 +1176,13 @@ pub(crate) enum Message {
     CancelVPNConnection,
     /// Selects a device to display connections from
     SelectDevice(Option<Arc<DeviceInfo>>),
+    /// Refresh throughput / DNS / gateway while the popup is open.
+    PollLinkStats,
+    /// ICMP ping + optional resolvectl sample for the open popup generation.
+    LinkProbe(LinkProbe),
+    /// User-requested ICMP to 1.1.1.1 (`ping -c 3`).
+    PingInternet,
+    InternetPingResult(InternetPingResult),
 }
 
 impl cosmic::Application for CosmicNetworkApplet {
@@ -1118,10 +1231,12 @@ impl cosmic::Application for CosmicNetworkApplet {
             Message::TogglePopup => {
                 if let Some(p) = self.popup.take() {
                     self.show_visible_networks = false;
+                    self.reset_live_stats();
                     return destroy_popup(p);
                 } else {
-                    let mut tasks = Vec::with_capacity(2);
+                    let mut tasks = Vec::with_capacity(3);
                     tasks.push(snapshot_task().map(cosmic::Action::App));
+                    tasks.push(self.start_live_stats());
                     tasks.push(cosmic::surface::surface_task(
                         cosmic::surface::action::app_popup(
                             |_| Default::default(),
@@ -1211,6 +1326,7 @@ impl cosmic::Application for CosmicNetworkApplet {
             Message::CloseRequested(id) => {
                 if Some(id) == self.popup {
                     self.popup = None;
+                    self.reset_live_stats();
                 }
             }
             Message::OpenSettings => {
@@ -1241,6 +1357,39 @@ impl cosmic::Application for CosmicNetworkApplet {
             },
             Message::SelectDevice(device) => {
                 self.active_device = device;
+            }
+            Message::PollLinkStats => {
+                if self.popup.is_none() {
+                    return Task::none();
+                }
+                let iface_changed = self.live_stats.poll_counters();
+                self.sync_live_ip();
+                self.graph_caches.clear();
+                return self.start_link_probe(iface_changed);
+            }
+            Message::LinkProbe(sample) => {
+                if sample.generation != self.stats_generation {
+                    return Task::none();
+                }
+                self.ping_inflight = false;
+                self.live_stats.apply_probe(sample);
+                self.graph_caches.clear();
+            }
+            Message::PingInternet => {
+                if matches!(self.live_stats.internet_ping, InternetPing::Running) {
+                    return Task::none();
+                }
+                self.live_stats.internet_ping = InternetPing::Running;
+                let generation = self.stats_generation;
+                return cosmic::task::future(async move { stats::ping_internet(generation).await })
+                    .map(Message::InternetPingResult)
+                    .map(cosmic::Action::App);
+            }
+            Message::InternetPingResult(result) => {
+                if result.generation != self.stats_generation {
+                    return Task::none();
+                }
+                self.live_stats.apply_internet_ping(result);
             }
             Message::ResetFailedKnownSsid(ssid, hw_address) => {
                 let ap = if let Some(pos) = self
@@ -1622,9 +1771,10 @@ impl cosmic::Application for CosmicNetworkApplet {
     }
 
     fn view_window(&self, _id: window::Id) -> Element<'_, Message> {
+        let spacing = theme::active().cosmic().spacing;
         let Spacing {
             space_xxs, space_s, ..
-        } = theme::active().cosmic().spacing;
+        } = spacing;
 
         let mut vpn_ethernet_col: cosmic::iced::widget::Column<Message, cosmic::Theme> =
             cosmic::widget::column::with_capacity(1);
@@ -1635,6 +1785,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                     name,
                     ip4_address,
                     ip6_address,
+                    ..
                 } => {
                     if self.active_device.as_ref().is_some_and(|d| {
                         d.active_connection.as_ref().is_none_or(|a| a.0.id != *name)
@@ -1642,7 +1793,9 @@ impl cosmic::Application for CosmicNetworkApplet {
                         continue;
                     }
                     let mut info_col = Vec::with_capacity(3);
-                    info_col.push(text::body(name).into());
+                    info_col.push(
+                        text::body(conn.display_title(self.live_stats.interface.as_deref())).into(),
+                    );
                     for elem in ip_address_elements(ip4_address, ip6_address) {
                         info_col.push(elem);
                     }
@@ -1680,6 +1833,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                     speed,
                     ip4_address,
                     ip6_address,
+                    ..
                 } => {
                     if self.active_device.as_ref().is_some_and(|d| {
                         d.active_connection.as_ref().is_none_or(|a| a.0.id != *name)
@@ -1687,7 +1841,9 @@ impl cosmic::Application for CosmicNetworkApplet {
                         continue;
                     }
                     let mut info_col = Vec::with_capacity(3);
-                    info_col.push(text::body(name).into());
+                    info_col.push(
+                        text::body(conn.display_title(self.live_stats.interface.as_deref())).into(),
+                    );
                     info_col.extend(ip_address_elements(ip4_address, ip6_address));
 
                     let mut right_column = vec![text::body(fl!("connected")).into()];
@@ -1749,6 +1905,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                     state,
                     strength,
                     hw_address,
+                    ..
                 } => {
                     if self.active_device.as_ref().is_some_and(|d| {
                         d.active_connection.as_ref().is_none_or(|a| a.0.id != *name)
@@ -1756,17 +1913,18 @@ impl cosmic::Application for CosmicNetworkApplet {
                         continue;
                     }
                     let ip_elements = ip_address_elements(ip4_address, ip6_address);
+                    let title = conn.display_title(self.live_stats.interface.as_deref());
+                    let mut title_col = vec![text::body(title).into()];
+                    if title != name.as_str() {
+                        title_col.push(text::caption(name.as_str()).into());
+                    }
+                    title_col.push(column::with_children(ip_elements).into());
                     let mut btn_content = vec![
                         icon::from_name(wifi_icon(*strength))
                             .size(24)
                             .symbolic(true)
                             .into(),
-                        column::with_children([
-                            text::body(name).into(),
-                            column::with_children(ip_elements).into(),
-                        ])
-                        .width(Length::Fill)
-                        .into(),
+                        column::with_children(title_col).width(Length::Fill).into(),
                     ];
                     match state {
                         ActiveConnectionState::Activating | ActiveConnectionState::Deactivating => {
@@ -1862,6 +2020,15 @@ impl cosmic::Application for CosmicNetworkApplet {
                         .width(Length::Fill),
                 ))
                 .align_x(Alignment::Center);
+        }
+        if !self.nm_state.nm_state.airplane_mode && self.should_show_details() {
+            content = content
+                .push(padded_control(divider::horizontal::default()).padding([space_xxs, space_s]))
+                .push(padded_control(graph::details_panel(
+                    &self.live_stats,
+                    spacing,
+                    &self.graph_caches,
+                )));
         }
         if self.nm_state.nm_state.airplane_mode {
             content = content.push(
@@ -2259,7 +2426,15 @@ impl cosmic::Application for CosmicNetworkApplet {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        activation_token_subscription(0).map(Message::Token)
+        let token = activation_token_subscription(0).map(Message::Token);
+        if self.popup.is_some() {
+            Subscription::batch([
+                token,
+                cosmic::iced::time::every(Duration::from_secs(1)).map(|_| Message::PollLinkStats),
+            ])
+        } else {
+            token
+        }
     }
 
     fn style(&self) -> Option<cosmic::iced::theme::Style> {
