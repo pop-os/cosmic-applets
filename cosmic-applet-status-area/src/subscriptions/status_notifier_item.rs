@@ -97,16 +97,33 @@ impl StatusNotifierItem {
                 async move {
                     let initial = futures::stream::once(get_layout(menu_proxy.clone()));
 
-                    let layout_updated = menu_proxy.receive_layout_updated().await.unwrap();
-                    let props_updated =
-                        menu_proxy.receive_items_properties_updated().await.unwrap();
-
-                    // Merge both streams - any update triggers a layout refetch
-                    let updates = futures::stream_select!(
-                        layout_updated.map(|_| ()),
-                        props_updated.map(|_| ())
-                    )
-                    .then(move |()| get_layout(menu_proxy.clone()));
+                    let updates = match (
+                        menu_proxy.receive_layout_updated().await,
+                        menu_proxy.receive_items_properties_updated().await,
+                    ) {
+                        (Ok(layout_updated), Ok(props_updated)) => {
+                            // Merge both streams - any update triggers a layout refetch
+                            futures::stream_select!(
+                                layout_updated.map(|_| ()),
+                                props_updated.map(|_| ())
+                            )
+                            .then(move |()| get_layout(menu_proxy.clone()))
+                            .left_stream()
+                        }
+                        (layout_updated, props_updated) => {
+                            if let Err(err) = layout_updated {
+                                tracing::warn!(
+                                    "receive_layout_updated failed; no live layout updates: {err}"
+                                );
+                            }
+                            if let Err(err) = props_updated {
+                                tracing::warn!(
+                                    "receive_items_properties_updated failed; no live layout updates: {err}"
+                                );
+                            }
+                            futures::stream::empty().right_stream()
+                        }
+                    };
 
                     initial.chain(updates)
                 }
@@ -145,9 +162,15 @@ impl StatusNotifierItem {
             |Wrapper { item_proxy, .. }| {
                 let item_proxy = item_proxy.clone();
                 async move {
-                    let new_icon_stream = item_proxy.receive_new_icon().await.unwrap();
+                    let live = match item_proxy.receive_new_icon().await {
+                        Ok(new_icon_stream) => new_icon_stream.map(|_| ()).left_stream(),
+                        Err(err) => {
+                            tracing::warn!("receive_new_icon failed; no live icon updates: {err}");
+                            futures::stream::empty().right_stream()
+                        }
+                    };
                     futures::stream::once(async {})
-                        .chain(new_icon_stream.map(|_| ()))
+                        .chain(live)
                         .then(move |()| icon_events(item_proxy.clone()))
                 }
                 .flatten_stream()
