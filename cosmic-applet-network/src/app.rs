@@ -2,7 +2,10 @@ use indexmap::IndexMap;
 use nmrs::{
     ActiveConnection, ActiveConnectionState, ConnectType, ConnectivityState, EapOptions,
     NetworkEvent, NetworkManager as NmrsManager, NetworkSnapshot, WifiSecurity,
-    agent::{SecretAgent, SecretAgentCapabilities, SecretRequest, SecretResponder, SecretSetting},
+    agent::{
+        SecretAgent, SecretAgentCapabilities, SecretAgentFlags, SecretRequest, SecretResponder,
+        SecretSetting,
+    },
 };
 use rustc_hash::FxHashSet;
 use secure_string::SecureString;
@@ -41,7 +44,7 @@ use futures::{
     lock::Mutex as AsyncMutex,
 };
 
-use crate::{config, fl};
+use crate::{config, fl, vpn_auth};
 
 pub fn run() -> cosmic::iced::Result {
     cosmic::applet::run::<CosmicNetworkApplet>(())
@@ -299,7 +302,11 @@ pub enum NmAgentEvent {
     RequestSecret {
         connection_uuid: String,
         connection_id: String,
+        connection_path: String,
         setting: AgentSetting,
+        allow_interaction: bool,
+        request_new: bool,
+        existing_secrets: HashMap<String, String>,
         responder: SecretResponderHandle,
     },
     CancelGetSecrets,
@@ -310,7 +317,10 @@ pub enum NmAgentEvent {
 pub enum AgentSetting {
     WifiPsk { ssid: String },
     WifiEap,
-    Vpn { secret_keys: Vec<String> },
+    Vpn {
+        service_type: String,
+        secret_keys: Vec<String>,
+    },
     Other,
 }
 
@@ -331,6 +341,10 @@ struct CosmicNetworkApplet {
     token_tx: Option<calloop::channel::Sender<TokenRequest>>,
     secret_agent_reregister_tx: Option<UnboundedSender<()>>,
     failed_known_ssids: FxHashSet<Arc<str>>,
+
+    /// VPN UUIDs whose auth-dialog is currently open, to avoid spawning a
+    /// second helper when NetworkManager re-issues GetSecrets.
+    vpn_auth_in_flight: FxHashSet<Arc<str>>,
 
     /// When defined, displays connections for the specific device.
     active_device: Option<Arc<DeviceInfo>>,
@@ -987,7 +1001,8 @@ fn secret_request_to_event(req: SecretRequest) -> NmAgentEvent {
     let setting = match req.setting {
         SecretSetting::WifiPsk { ssid } => AgentSetting::WifiPsk { ssid },
         SecretSetting::WifiEap { .. } => AgentSetting::WifiEap,
-        SecretSetting::Vpn { .. } => AgentSetting::Vpn {
+        SecretSetting::Vpn { service_type, .. } => AgentSetting::Vpn {
+            service_type,
             secret_keys: req.hints.clone(),
         },
         _ => AgentSetting::Other,
@@ -996,7 +1011,11 @@ fn secret_request_to_event(req: SecretRequest) -> NmAgentEvent {
     NmAgentEvent::RequestSecret {
         connection_uuid: req.connection_uuid,
         connection_id: req.connection_id,
+        connection_path: req.connection_path.to_string(),
         setting,
+        allow_interaction: req.flags.contains(SecretAgentFlags::ALLOW_INTERACTION),
+        request_new: req.flags.contains(SecretAgentFlags::REQUEST_NEW),
+        existing_secrets: req.existing_secrets,
         responder: Arc::new(AsyncMutex::new(Some(req.responder))),
     }
 }
@@ -1068,6 +1087,8 @@ pub(crate) enum Message {
     ConnectVPNWithPassword,
     VPNPasswordUpdate(SecureString),
     CancelVPNConnection,
+    /// A VPN auth-dialog flow finished (success or failure) for this UUID.
+    VpnAuthFinished(Arc<str>),
     /// Selects a device to display connections from
     SelectDevice(Option<Arc<DeviceInfo>>),
 }
@@ -1483,10 +1504,14 @@ impl cosmic::Application for CosmicNetworkApplet {
                 NmAgentEvent::RequestSecret {
                     connection_uuid,
                     connection_id,
+                    connection_path,
                     setting,
+                    allow_interaction,
+                    request_new,
+                    existing_secrets,
                     responder,
                 } => {
-                    let description = (!connection_id.is_empty()).then_some(connection_id);
+                    let description = (!connection_id.is_empty()).then_some(connection_id.clone());
                     let known_vpn = self
                         .nm_state
                         .known_vpns
@@ -1524,19 +1549,117 @@ impl cosmic::Application for CosmicNetworkApplet {
                             }
                         }
                     } else if known_vpn {
-                        let secret_keys = match &setting {
-                            AgentSetting::Vpn { secret_keys } => secret_keys.clone(),
-                            _ => Vec::new(),
-                        };
-                        self.nm_state.requested_vpn = Some(RequestedVpn {
-                            uuid: connection_uuid.into(),
-                            description,
-                            password: SecureString::from(String::new()),
-                            password_hidden: true,
-                            responder: responder.clone(),
-                            secret_keys,
-                        });
-                        consumed = true;
+                        // Interactive VPNs (openconnect / AnyConnect SAML) are
+                        // authenticated by the plugin's own auth-dialog helper,
+                        // which owns the login UI (a WebKit browser for SAML).
+                        // Route to it instead of the native password prompt.
+                        if let AgentSetting::Vpn { service_type, .. } = &setting
+                            && allow_interaction
+                            && vpn_auth::needs_auth_dialog(service_type)
+                            && let Some(auth_dialog) = vpn_auth::find_auth_dialog(service_type)
+                        {
+                            let uuid_key: Arc<str> = connection_uuid.as_str().into();
+                            if self.vpn_auth_in_flight.contains(&uuid_key) {
+                                // A helper is already open for this VPN;
+                                // free NM instead of spawning a second one.
+                                return release_responder(responder);
+                            }
+                            self.vpn_auth_in_flight.insert(uuid_key.clone());
+                            let finish_key = uuid_key.clone();
+                            let responder = responder.clone();
+                            let service_type = service_type.clone();
+                            let uuid = connection_uuid.clone();
+                            let id = connection_id.clone();
+                            let path = connection_path.clone();
+                            let existing: Vec<(String, String)> =
+                                existing_secrets.into_iter().collect();
+                            return cosmic::task::future(async move {
+                                let data = match NmrsManager::new().await {
+                                    Ok(nm) => {
+                                        vpn_auth::fetch_vpn_data(
+                                            nm.dbus_connection(),
+                                            &path,
+                                        )
+                                        .await
+                                    }
+                                    Err(e) => {
+                                        tracing::warn!(
+                                            "nmrs init for vpn.data failed: {e}"
+                                        );
+                                        Vec::new()
+                                    }
+                                };
+                                let result = vpn_auth::run_auth_dialog(
+                                    &auth_dialog,
+                                    &uuid,
+                                    &id,
+                                    &service_type,
+                                    allow_interaction,
+                                    request_new,
+                                    &data,
+                                    &existing,
+                                )
+                                .await;
+                                if let Some(r) =
+                                    responder.lock().await.take()
+                                {
+                                    match result {
+                                        Ok(secrets) => {
+                                            if let Err(e) =
+                                                r.vpn_secrets(secrets).await
+                                            {
+                                                // Routine when the login
+                                                // outran NetworkManager's
+                                                // GetSecrets timeout: the
+                                                // reply channel is already
+                                                // closed. Not an error.
+                                                tracing::warn!(
+                                                    "vpn secret reply failed (request likely timed out): {e}"
+                                                );
+                                            }
+                                        }
+                                        Err(e) => {
+                                            tracing::warn!(
+                                                "vpn auth-dialog: {e}"
+                                            );
+                                            let _ = r.cancel().await;
+                                        }
+                                    }
+                                }
+                                Message::VpnAuthFinished(finish_key)
+                            })
+                            .map(cosmic::Action::App);
+                        }
+
+                        // Openconnect/SAML VPNs authenticate exclusively through
+                        // the auth-dialog handled above. Reaching here for one
+                        // means the dialog wasn't spawned — typically
+                        // NetworkManager's initial non-interactive probe
+                        // (allow_interaction = false). The native password field
+                        // is wrong for them (SAML has no password to collect), so
+                        // don't show it: leave `consumed` false and free NM with
+                        // NoSecrets below. NM then re-requests with interaction,
+                        // which routes to the auth-dialog.
+                        let needs_auth_dialog = matches!(
+                            &setting,
+                            AgentSetting::Vpn { service_type, .. }
+                                if vpn_auth::needs_auth_dialog(service_type)
+                        );
+                        if !needs_auth_dialog {
+                            let secret_keys = match &setting {
+                                AgentSetting::Vpn { secret_keys, .. } => secret_keys.clone(),
+                                _ => Vec::new(),
+                            };
+                            self.nm_state.requested_vpn = Some(RequestedVpn {
+                                uuid: connection_uuid.into(),
+                                description,
+                                password: SecureString::from(String::new()),
+                                password_hidden: true,
+                                responder: responder.clone(),
+                                secret_keys,
+                            });
+                            consumed = true;
+                        }
                     }
 
                     // The applet's Wi-Fi flow re-issues the password through
@@ -1608,6 +1731,10 @@ impl cosmic::Application for CosmicNetworkApplet {
                     })
                     .map(cosmic::Action::App);
                 }
+            }
+            Message::VpnAuthFinished(uuid) => {
+                self.vpn_auth_in_flight.remove(&uuid);
+                return snapshot_task().map(cosmic::Action::App);
             }
         }
         Task::none()
