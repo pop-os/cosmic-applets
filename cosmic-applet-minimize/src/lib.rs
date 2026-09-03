@@ -212,17 +212,27 @@ impl cosmic::Application for Minimize {
                         return iced::window::maximize(self.core.main_window_id().unwrap(), true);
                     }
                     ToplevelUpdate::Remove(handle) => {
-                        let prev_was_empty = self.apps.is_empty();
+                        let prev_size = self.apps.len();
                         self.apps
                             .retain(|a| a.toplevel_info.foreign_toplevel != handle);
                         self.apps.shrink_to_fit();
-                        let changed = prev_was_empty != self.apps.is_empty();
-                        if self.apps.is_empty() && changed {
-                            // hide the window
-                            return iced::window::minimize(
-                                self.core.main_window_id().unwrap(),
-                                true,
+                        if prev_size != self.apps.len() {
+                            let destroy_tooltip_task = cosmic::task::message(
+                                cosmic::Action::Cosmic(cosmic::app::Action::Surface(
+                                    surface::Action::DestroyTooltipPopup,
+                                )),
                             );
+                            if self.apps.is_empty() {
+                                return Task::batch(vec![
+                                    destroy_tooltip_task,
+                                    iced::window::minimize(
+                                        self.core.main_window_id().unwrap(),
+                                        true,
+                                    ),
+                                ]);
+                            } else {
+                                return destroy_tooltip_task;
+                            }
                         }
                     }
                 },
