@@ -21,19 +21,18 @@ use cosmic::{
         space, text,
     },
 };
-use jiff::{
-    Timestamp, ToSpan, Zoned,
-    civil::{Date, Weekday},
-    fmt::strtime,
-    tz::TimeZone,
-};
+use jiff::{Timestamp, ToSpan, Zoned, civil::Date, fmt::strtime, tz::TimeZone};
 use logind_zbus::manager::ManagerProxy;
 use std::hash::Hash;
 use std::sync::LazyLock;
 use timedate_zbus::TimeDateProxy;
 use tokio::{sync::watch, time};
 
-use crate::{config::TimeAppletConfig, fl, time::get_calendar_first};
+use crate::{
+    config::TimeAppletConfig,
+    fl,
+    time::{get_calendar_first, offset_to_weekday},
+};
 use cosmic::applet::token::subscription::{
     TokenRequest, TokenUpdate, activation_token_subscription,
 };
@@ -84,7 +83,8 @@ pub struct Window {
     now: Zoned,
     timezone: Option<TimeZone>,
     date_today: Date,
-    date_selected: Date,
+    date_selected: Option<Date>,
+    date_selected_use_day: bool,
     rectangle_tracker: Option<RectangleTracker<u32>>,
     rectangle: Rectangle,
     token_tx: Option<calloop::channel::Sender<TokenRequest>>,
@@ -110,7 +110,7 @@ pub enum Message {
 }
 
 impl Window {
-    fn create_datetime(&self, date: &Date) -> DateTime<icu::calendar::Gregorian> {
+    fn create_datetime(&self, date: Date) -> DateTime<icu::calendar::Gregorian> {
         DateTime {
             date: IcuDate::try_new_gregorian(
                 date.year() as i32,
@@ -130,19 +130,11 @@ impl Window {
 
     fn calendar_grid(&self) -> Grid<'_, Message> {
         let mut calendar = grid().width(Length::Fill);
-        let first_day_of_week = match self.config.first_day_of_week {
-            0 => Weekday::Monday,
-            1 => Weekday::Tuesday,
-            2 => Weekday::Wednesday,
-            3 => Weekday::Thursday,
-            4 => Weekday::Friday,
-            5 => Weekday::Saturday,
-            _ => Weekday::Sunday,
-        };
 
+        let first_day_of_week = offset_to_weekday(self.config.first_day_of_week);
         let first_day = get_calendar_first(
-            self.date_selected.year(),
-            self.date_selected.month(),
+            self.date_selected.unwrap_or(self.date_today).year(),
+            self.date_selected.unwrap_or(self.date_today).month(),
             first_day_of_week,
         );
 
@@ -151,7 +143,7 @@ impl Window {
 
         for i in 0..7 {
             let date = first_day.checked_add(i.days()).unwrap();
-            let datetime = self.create_datetime(&date);
+            let datetime = self.create_datetime(date);
             calendar = calendar.push(
                 text::caption(weekday.format(&datetime).to_string())
                     .apply(container)
@@ -168,8 +160,16 @@ impl Window {
             let date = first_day
                 .checked_add(i.days())
                 .expect("valid date in calendar range");
-            let is_month = date.first_of_month() == self.date_selected.first_of_month();
-            let is_day = date == self.date_selected;
+            let is_month = date.first_of_month()
+                == self
+                    .date_selected
+                    .unwrap_or(self.date_today)
+                    .first_of_month();
+            let is_day = self
+                .date_selected
+                .map_or(date == self.date_today, |selected| {
+                    self.date_selected_use_day && selected == date
+                });
             let is_today = date == self.date_today;
 
             calendar = calendar.push(date_button(date.day(), is_month, is_day, is_today));
@@ -198,7 +198,7 @@ impl Window {
         } else {
             let mut elements = Vec::new();
             let date = self.now.date();
-            let datetime = self.create_datetime(&date);
+            let datetime = self.create_datetime(date);
             let mut prefs = DateTimeFormatterPreferences::from(self.locale.clone());
             prefs.hour_cycle = Some(if self.config.military_time {
                 HourCycle::H23
@@ -260,7 +260,7 @@ impl Window {
         let formatted_date = if let Some(strftime) = self.maybe_strftime() {
             strftime
         } else {
-            let datetime = self.create_datetime(&self.now.date());
+            let datetime = self.create_datetime(self.now.date());
             let mut prefs = DateTimeFormatterPreferences::from(self.locale.clone());
             prefs.hour_cycle = Some(if self.config.military_time {
                 HourCycle::H23
@@ -336,7 +336,8 @@ impl cosmic::Application for Window {
                 now,
                 timezone: None,
                 date_today: today,
-                date_selected: today,
+                date_selected: None,
+                date_selected_use_day: false,
                 rectangle_tracker: None,
                 rectangle: Rectangle::default(),
                 token_tx: None,
@@ -361,7 +362,7 @@ impl cosmic::Application for Window {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        fn time_subscription(mut show_seconds: watch::Receiver<bool>) -> Subscription<Message> {
+        fn time_subscription(show_seconds: watch::Receiver<bool>) -> Subscription<Message> {
             struct Wrapper {
                 inner: watch::Receiver<bool>,
                 id: &'static str,
@@ -520,11 +521,11 @@ impl cosmic::Application for Window {
                 if let Some(p) = self.popup.take() {
                     destroy_popup(p)
                 } else {
-                    return cosmic::surface::surface_task(cosmic::surface::action::app_popup(
+                    cosmic::surface::surface_task(cosmic::surface::action::app_popup(
                         |_| Default::default(),
                         |app: &mut Self| {
                             app.date_today = app.now.date();
-                            app.date_selected = app.date_today;
+                            app.date_selected = None;
 
                             let new_id = window::Id::unique();
                             app.popup = Some(new_id);
@@ -553,7 +554,7 @@ impl cosmic::Application for Window {
                             popup_settings
                         },
                         None,
-                    ));
+                    ))
                 }
             }
             Message::Tick => {
@@ -577,30 +578,57 @@ impl cosmic::Application for Window {
             Message::CloseRequested(id) => {
                 if Some(id) == self.popup {
                     self.popup = None;
+                    self.date_selected = None;
                 }
                 Task::none()
             }
             Message::SelectDay(day) => {
-                if let Ok(date) = self.date_selected.with().day(day).build() {
-                    self.date_selected = date;
+                if let Some(date) = self
+                    .date_selected
+                    .unwrap_or(self.date_today)
+                    .with()
+                    .day(day)
+                    .build()
+                    .ok()
+                    && date != self.date_today
+                {
+                    self.date_selected = Some(date);
+                    self.date_selected_use_day = true;
                 } else {
-                    tracing::error!("invalid date");
+                    self.date_selected = None;
+                    self.date_selected_use_day = false;
                 }
                 Task::none()
             }
             Message::PreviousMonth => {
-                if let Ok(date) = self.date_selected.checked_sub(1.month()) {
-                    self.date_selected = date;
+                if let Some(date) = self
+                    .date_selected
+                    .unwrap_or(self.date_today)
+                    .checked_sub(1.month())
+                    .ok()
+                    && date != self.date_today
+                {
+                    self.date_selected = Some(date);
+                    self.date_selected_use_day = false;
                 } else {
-                    tracing::error!("invalid date");
+                    self.date_selected = None;
+                    self.date_selected_use_day = false;
                 }
                 Task::none()
             }
             Message::NextMonth => {
-                if let Ok(date) = self.date_selected.checked_add(1.month()) {
-                    self.date_selected = date;
+                if let Some(date) = self
+                    .date_selected
+                    .unwrap_or(self.date_today)
+                    .checked_add(1.month())
+                    .ok()
+                    && date != self.date_today
+                {
+                    self.date_selected = Some(date);
+                    self.date_selected_use_day = false;
                 } else {
-                    tracing::error!("invalid date");
+                    self.date_selected = None;
+                    self.date_selected_use_day = false;
                 }
                 Task::none()
             }
@@ -666,7 +694,7 @@ impl cosmic::Application for Window {
                 if let Ok(timezone) = TimeZone::get(&timezone) {
                     self.now = Zoned::now().with_time_zone(timezone.clone());
                     self.date_today = self.now.date();
-                    self.date_selected = self.date_today;
+                    self.date_selected = None;
                     self.timezone = Some(timezone);
                 }
 
@@ -715,7 +743,7 @@ impl cosmic::Application for Window {
             space_xxs, space_s, ..
         } = theme::active().cosmic().spacing;
 
-        let datetime = self.create_datetime(&self.date_selected);
+        let datetime = self.create_datetime(self.date_selected.unwrap_or(self.date_today));
         let prefs = DateTimeFormatterPreferences::from(self.locale.clone());
 
         let date = text(
