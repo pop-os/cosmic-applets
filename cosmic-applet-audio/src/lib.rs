@@ -33,10 +33,15 @@ use cosmic::{
 };
 use cosmic_settings_audio_client::{self as audio_client, CosmicAudioProxy};
 use futures::SinkExt;
-use iced::platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup};
 use mpris_subscription::{MprisRequest, MprisUpdate};
 use mpris2_zbus::player::PlaybackStatus;
-use std::{cell::RefCell, rc::Rc, sync::Arc};
+use std::{
+    sync::{
+        Arc,
+        atomic::{self, AtomicU32},
+    },
+    time::Duration,
+};
 
 mod config;
 mod mpris_subscription;
@@ -58,11 +63,15 @@ pub struct Audio {
     /// Track the applet's popup window.
     popup: Option<window::Id>,
     /// Varlink connection to `com.system76.CosmicSettings.Audio`.
-    audio_client: Option<Rc<RefCell<audio_client::Client>>>,
+    audio_client: Option<audio_client::Client>,
     /// Known audio device state
     model: model::Model,
     /// Whether to expand the revealer of a source or sink device.
     is_open: IsOpen,
+    /// Used to debounce sink volume updates.
+    applied_sink_volume: Arc<AtomicU32>,
+    /// Used to deboune source volume updates.
+    applied_source_volume: Arc<AtomicU32>,
     /// Max slider volume for the sink device, as determined by the amplification property.
     max_sink_volume: u32,
     /// Max slider volume for the source device, as determined by the amplification property.
@@ -125,26 +134,27 @@ enum IsOpen {
 pub enum Message {
     /// Connection to `com.system76.CosmicSettings`.
     Client(Arc<audio_client::Client>),
-    Ignore,
-    SetSinkVolume(u32),
-    SetSourceVolume(u32),
-    ToggleSinkMute,
-    ToggleSourceMute,
-    SetDefaultSink(usize),
-    SetDefaultSource(usize),
-    OutputToggle,
-    InputToggle,
-    TogglePopup,
     CloseRequested(window::Id),
-    ToggleMediaControlsInTopPanel(bool),
     ConfigChanged(AudioAppletConfig),
+    Ignore,
+    InputToggle,
     Mpris(mpris_subscription::MprisUpdate),
     MprisRequest(MprisRequest),
-    Token(TokenUpdate),
     OpenSettings,
+    OutputToggle,
+    ReattachClient(Arc<audio_client::Client>),
+    Rectangle(RectangleUpdate<u32>),
+    SetDefaultSink(usize),
+    SetDefaultSource(usize),
+    SetSinkVolume(u32),
+    SetSourceVolume(u32),
     Subscription(audio_client::Event),
     Surface(surface::Action),
-    Rectangle(RectangleUpdate<u32>),
+    ToggleMediaControlsInTopPanel(bool),
+    TogglePopup,
+    ToggleSinkMute,
+    ToggleSourceMute,
+    Token(TokenUpdate),
 }
 
 // TODO
@@ -287,6 +297,11 @@ impl cosmic::Application for Audio {
                     self.rectangle_tracker.replace(tracker);
                 }
             },
+            Message::ReattachClient(client) => {
+                if let Some(client) = Arc::into_inner(client) {
+                    self.audio_client = Some(client);
+                }
+            }
             Message::Ignore => {}
             Message::TogglePopup => {
                 if let Some(p) = self.popup.take() {
@@ -359,7 +374,7 @@ impl cosmic::Application for Audio {
                     && let Some(client) = self.audio_client.as_mut()
                 {
                     futures::executor::block_on(async {
-                        _ = client.borrow_mut().conn.set_default(node_id, true).await;
+                        _ = client.conn.set_default(node_id, true).await;
                     });
                 }
             }
@@ -370,7 +385,7 @@ impl cosmic::Application for Audio {
                     && let Some(client) = self.audio_client.as_mut()
                 {
                     futures::executor::block_on(async {
-                        _ = client.borrow_mut().conn.set_default(node_id, true).await;
+                        _ = client.conn.set_default(node_id, true).await;
                     });
                 }
             }
@@ -378,7 +393,7 @@ impl cosmic::Application for Audio {
             Message::ToggleSinkMute => {
                 if let Some(ref mut client) = self.audio_client {
                     futures::executor::block_on(async {
-                        _ = client.borrow_mut().conn.sink_mute_toggle().await;
+                        _ = client.conn.sink_mute_toggle().await;
                     });
                 }
             }
@@ -386,27 +401,43 @@ impl cosmic::Application for Audio {
             Message::ToggleSourceMute => {
                 if let Some(ref mut client) = self.audio_client {
                     futures::executor::block_on(async {
-                        _ = client.borrow_mut().conn.source_mute_toggle().await;
+                        _ = client.conn.source_mute_toggle().await;
                     });
                 }
             }
 
             Message::SetSinkVolume(volume) => {
-                if let Some(ref mut client) = self.audio_client {
-                    self.model.active_sink.volume = volume;
-                    self.model.active_sink.volume_text = volume.to_string();
-                    futures::executor::block_on(async {
-                        _ = client.borrow_mut().conn.set_sink_volume(volume).await;
+                self.applied_sink_volume
+                    .store(volume, atomic::Ordering::Relaxed);
+                self.model.active_sink.volume = volume;
+                self.model.active_sink.volume_text = volume.to_string();
+                if let Some(mut client) = self.audio_client.take() {
+                    let volume = Arc::clone(&self.applied_sink_volume);
+                    return cosmic::Task::future(async move {
+                        tokio::time::sleep(Duration::from_millis(128)).await;
+                        _ = client
+                            .conn
+                            .set_sink_volume(volume.load(atomic::Ordering::Relaxed))
+                            .await;
+                        Message::ReattachClient(Arc::new(client)).into()
                     });
                 }
             }
 
             Message::SetSourceVolume(volume) => {
-                if let Some(ref mut client) = self.audio_client {
-                    self.model.active_source.volume = volume;
-                    self.model.active_source.volume_text = volume.to_string();
-                    futures::executor::block_on(async {
-                        _ = client.borrow_mut().conn.set_source_volume(volume).await;
+                self.applied_source_volume
+                    .store(volume, atomic::Ordering::Relaxed);
+                self.model.active_source.volume = volume;
+                self.model.active_source.volume_text = volume.to_string();
+                if let Some(mut client) = self.audio_client.take() {
+                    let volume = Arc::clone(&self.applied_source_volume);
+                    return cosmic::Task::future(async move {
+                        tokio::time::sleep(Duration::from_millis(128)).await;
+                        _ = client
+                            .conn
+                            .set_source_volume(volume.load(atomic::Ordering::Relaxed))
+                            .await;
+                        Message::ReattachClient(Arc::new(client)).into()
                     });
                 }
             }
@@ -517,7 +548,7 @@ impl cosmic::Application for Audio {
             }
             Message::Client(client) => {
                 if let Some(client) = Arc::into_inner(client) {
-                    self.audio_client = Some(Rc::new(RefCell::new(client)));
+                    self.audio_client = Some(client);
                     self.model = model::Model::default();
                 }
             }

@@ -1,1 +1,12 @@
 cancel = Cancel
+confirm-pin = Please confirm that the following PIN matches the one displayed on { $deviceName }
+bluetooth = Bluetooth
+unsuccessful = Pairing Unsuccessful
+pairable = Pairable
+try-again = Try Again
+check-device = Make sure { $deviceName } is turned on, in range, and is ready to pair.
+other-devices = Other Bluetooth devices
+connected = Connected
+confirm = Confirm
+settings = Bluetooth settings...
+discoverable = Discoverable

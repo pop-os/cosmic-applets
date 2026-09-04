@@ -232,7 +232,11 @@ fn layout_view(layout: &Layout, expanded: Option<i32>) -> cosmic::Element<'_, Ms
             }
             if let Some(icon_data) = i.icon_data() {
                 let handle = iced::widget::image::Handle::from_bytes(icon_data.to_vec());
-                children.insert(0, iced::widget::Image::new(handle).into());
+                let icon = iced::widget::Image::new(handle)
+                    .width(iced::Length::Fixed(14.0))
+                    .height(iced::Length::Fixed(14.0))
+                    .content_fit(iced::core::ContentFit::Contain);
+                children.insert(0, icon.into());
             } else if let Some(icon_name) = i.icon_name() {
                 let icon = cosmic::widget::icon::from_name(icon_name)
                     .size(14)
