@@ -230,7 +230,13 @@ impl cosmic::Application for Window {
         } else {
             String::new()
         };
-        let input_source_text = self.core.applet.text(applet_text);
+        let reserved_width = self.core.applet.suggested_size(true).0;
+        let input_source_text = self
+            .core
+            .applet
+            .text(applet_text)
+            .width(iced::Length::Fixed(reserved_width.into()))
+            .align_x(iced::Alignment::Center);
         let button = self
             .core
             .applet
