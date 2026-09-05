@@ -500,7 +500,7 @@ impl cosmic::Application for Audio {
                         tokio::time::sleep(Duration::from_millis(128)).await;
                         _ = client
                             .conn
-                            .set_sink_volume(volume.load(atomic::Ordering::Relaxed))
+                            .set_source_volume(volume.load(atomic::Ordering::Relaxed))
                             .await;
                         Message::ReattachClient(Arc::new(client)).into()
                     });
