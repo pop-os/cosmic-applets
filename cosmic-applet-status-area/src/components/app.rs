@@ -13,11 +13,10 @@ use cosmic::{
         Event::Mouse,
         Length, Subscription, event,
         mouse::{self, ScrollDelta},
-        platform_specific::shell::commands::popup::{destroy_popup, get_popup},
+        platform_specific::shell::commands::popup::destroy_popup,
         window,
     },
     scroll::{DiscreteScrollDelta, DiscreteScrollState},
-    surface,
     widget::{container, mouse_area},
 };
 use std::collections::BTreeMap;
@@ -38,7 +37,6 @@ pub enum Msg {
     TogglePopup(usize),
     Hovered(Option<usize>),
     WheelScrolled(ScrollDelta),
-    Surface(surface::Action),
     ToggleOverflow,
     HoveredOverflow,
     Token(TokenUpdate),
@@ -407,11 +405,6 @@ impl cosmic::Application for App {
                 };
                 scroll(id, menu.item.item_proxy().clone(), delta, orientation)
             }
-            Msg::Surface(a) => {
-                return cosmic::task::message(cosmic::Action::Cosmic(
-                    cosmic::app::Action::Surface(a),
-                ));
-            }
             Msg::ToggleOverflow => {
                 if let Some(popup_id) = self.overflow_popup.take() {
                     self.popup = None;
@@ -673,7 +666,7 @@ fn menu_icon_button<'a>(
     let icon = menu.icon_handle().clone();
 
     let theme = cosmic::theme::active();
-    let theme = theme.cosmic();
+    let _theme = theme.cosmic();
 
     let suggested = applet.suggested_size(true);
     let padding = applet.suggested_padding(true).1;

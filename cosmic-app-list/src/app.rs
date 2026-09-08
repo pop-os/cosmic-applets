@@ -32,8 +32,8 @@ use cosmic::{
         advanced::text::{Ellipsize, EllipsizeHeightLimit},
         clipboard::mime::{AllowedMimeTypes, AsMimeTypes},
         event::listen_with,
-        platform_specific::shell::commands::popup::{destroy_popup, get_popup},
-        runtime::{core::event, dnd::peek_dnd, platform_specific::wayland::CornerRadius},
+        platform_specific::shell::commands::popup::destroy_popup,
+        runtime::{core::event, dnd::peek_dnd},
         widget::{
             Column, Row, column, mouse_area, row,
             rule::vertical as vertical_rule,
@@ -414,8 +414,6 @@ enum Message {
     DndMotion(f64, f64),
     DndDropFinished,
     DndData(Option<DndPathBuf>),
-    StartListeningForDnd,
-    StopListeningForDnd,
     IncrementSubscriptionCtr,
     ConfigUpdated(AppListConfig),
     OpenFavorites,
@@ -916,7 +914,7 @@ impl cosmic::Application for CosmicAppList {
                         tracing::error!("No rectangle found for toplevel group");
                         return Task::none();
                     };
-                    let corners = self.core.system_theme().cosmic().corner_radii.radius_s;
+                    let _corners = self.core.system_theme().cosmic().corner_radii.radius_s;
                     let popup_task =
                         cosmic::surface::surface_task(cosmic::surface::action::app_popup(
                             move |_| LiveSettings::default(),
@@ -1543,12 +1541,6 @@ impl cosmic::Application for CosmicAppList {
                 if let Some(p) = self.popup.take() {
                     return destroy_popup(p.id);
                 }
-            }
-            Message::StartListeningForDnd => {
-                self.is_listening_for_dnd = true;
-            }
-            Message::StopListeningForDnd => {
-                self.is_listening_for_dnd = false;
             }
             Message::IncrementSubscriptionCtr => {
                 self.subscription_ctr += 1;

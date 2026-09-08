@@ -17,7 +17,6 @@ use cosmic::{
     iced::{
         self, Rectangle, Task,
         event::wayland::{Event as WaylandEvent, OutputEvent},
-        platform_specific::shell::commands::popup::{destroy_popup, get_popup},
         window::Id,
     },
     prelude::*,
@@ -148,9 +147,9 @@ impl cosmic::Application for Window {
         match message {
             Message::TogglePopup => {
                 return if let Some(p) = self.popup.take() {
-                    return crate::surface::surface_task(crate::surface::action::destroy_popup(p));
+                    crate::surface::surface_task(crate::surface::action::destroy_popup(p))
                 } else {
-                    return crate::surface::surface_task(crate::surface::action::app_popup(
+                    crate::surface::surface_task(crate::surface::action::app_popup(
                         |_| Default::default(),
                         |app: &mut Window| {
                             let new_id = Id::unique();
@@ -165,7 +164,7 @@ impl cosmic::Application for Window {
                             popup_settings
                         },
                         None,
-                    ));
+                    ))
                 };
             }
             Message::PopupClosed(id) => {

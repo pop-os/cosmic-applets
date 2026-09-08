@@ -6,7 +6,6 @@ use cosmic::{
     app,
     applet::token::subscription::{TokenRequest, TokenUpdate, activation_token_subscription},
     cctk::sctk::reexports::calloop,
-    surface,
     widget::toggler,
 };
 
@@ -17,14 +16,14 @@ use cosmic::{
     iced::core::window,
     iced::{
         self, Alignment, Length, Subscription,
-        platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
+        platform_specific::shell::wayland::commands::popup::destroy_popup,
         widget::{Column, column, container, row},
     },
     theme,
     widget::{button, divider, icon, indeterminate_circular, scrollable, text},
 };
 use futures::FutureExt;
-use std::{collections::HashMap, sync::LazyLock, time::Duration};
+use std::{collections::HashMap, time::Duration};
 use tokio::sync::mpsc::Sender;
 
 use crate::{
@@ -75,7 +74,6 @@ enum Message {
     Token(TokenUpdate),
     OpenSettings,
     ToggleBluetooth(bool),
-    Surface(surface::Action),
 }
 
 impl cosmic::Application for CosmicBluetoothApplet {
@@ -149,11 +147,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
                 self.show_visible_devices = enabled;
             }
             Message::BluetoothEvent(e) => match e {
-                BluerEvent::RequestResponse {
-                    req,
-                    state,
-                    err_msg,
-                } => {
+                BluerEvent::RequestResponse { state, err_msg } => {
                     if let Some(err_msg) = err_msg {
                         eprintln!("bluetooth request error: {err_msg}");
                     }
@@ -301,11 +295,6 @@ impl cosmic::Application for CosmicBluetoothApplet {
                         let _ = tx.send(BluerRequest::SetBluetoothEnabled(enabled)).await;
                     });
                 }
-            }
-            Message::Surface(a) => {
-                return cosmic::task::message(cosmic::Action::Cosmic(
-                    cosmic::app::Action::Surface(a),
-                ));
             }
         }
         self.update_icon();

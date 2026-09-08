@@ -1447,7 +1447,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                     tracing::debug!(
                         "NetworkManager restarted; refreshing network snapshot and secret agent"
                     );
-                    if let Some(mut tx) = self.secret_agent_reregister_tx.clone() {
+                    if let Some(tx) = self.secret_agent_reregister_tx.clone() {
                         if let Err(e) = tx.unbounded_send(()) {
                             tracing::warn!("secret agent re-registration task stopped: {e}");
                             self.secret_agent_reregister_tx = None;

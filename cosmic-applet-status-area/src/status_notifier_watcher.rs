@@ -17,13 +17,12 @@ use crate::subscriptions::status_notifier_watcher::server::create_service;
 use crate::unique_names::UniqueNames;
 
 use futures::StreamExt;
-use std::{collections::HashSet, time::Duration};
+use std::collections::HashSet;
 use zbus::fdo;
 use zbus::message::Header;
 
 const DBUS_NAME: &str = "com.system76.CosmicStatusNotifierWatcher";
 const OBJECT_PATH: &str = "/CosmicStatusNotifierWatcher";
-const REFRESH_INTERVAL: Duration = Duration::from_secs(60);
 
 /// Run daemon
 pub fn run() -> cosmic::iced::Result {
@@ -42,7 +41,7 @@ pub async fn cosmic_register(conn: &zbus::Connection) -> zbus::Result<()> {
     tokio::spawn(async move {
         while let Some(value) = stream.next().await {
             if let Some(_unique_name) = value {
-                /// Register with new owner
+                // Register with new owner
                 let _ = cosmic_watcher.register_applet().await;
             }
         }

@@ -138,19 +138,11 @@ pub fn bluetooth_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
                             BluerEvent::DevicesChanged { state }
                         }
 
-                        BluerSessionEvent::RequestResponse {
-                            req,
-                            state,
-                            err_msg,
-                        } => BluerEvent::RequestResponse {
-                            req,
-                            state,
-                            err_msg,
-                        },
+                        BluerSessionEvent::RequestResponse { state, err_msg, .. } => {
+                            BluerEvent::RequestResponse { state, err_msg }
+                        }
 
                         BluerSessionEvent::AgentEvent(e) => BluerEvent::AgentEvent(e),
-
-                        _ => return,
                     };
 
                     _ = output.send(message).await;
@@ -201,7 +193,6 @@ pub enum BluerRequest {
 #[derive(Debug, Clone)]
 pub enum BluerEvent {
     RequestResponse {
-        req: BluerRequest,
         state: BluerState,
         err_msg: Option<String>,
     },
@@ -333,7 +324,6 @@ impl BluerDevice {
 #[derive(Debug, Clone)]
 pub enum BluerSessionEvent {
     RequestResponse {
-        req: BluerRequest,
         state: BluerState,
         err_msg: Option<String>,
     },
@@ -821,7 +811,6 @@ impl BluerSessionState {
 
                     let _ = tx_clone
                         .send(BluerSessionEvent::RequestResponse {
-                            req: req_clone,
                             state: bluer_state(&adapter_clone).await,
                             err_msg,
                         })

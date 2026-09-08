@@ -13,11 +13,10 @@ use cosmic::{
     cosmic_theme::Spacing,
     iced::widget::{column, row},
     iced::{
-        Length, Subscription,
-        platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
+        Length, Subscription, platform_specific::shell::wayland::commands::popup::destroy_popup,
         window::Id,
     },
-    surface, theme,
+    theme,
     widget::{
         container, divider,
         segmented_button::{self, Entity, SingleSelectModel},
@@ -26,7 +25,7 @@ use cosmic::{
 };
 use cosmic_comp_config::{CosmicCompConfig, TileBehavior};
 use cosmic_protocols::workspace::v2::client::zcosmic_workspace_handle_v2::TilingState;
-use std::{thread, time::Instant};
+use std::thread;
 use tracing::error;
 
 const ID: &str = "com.system76.CosmicAppletTiling";
@@ -55,7 +54,6 @@ pub enum Message {
     WorkspaceUpdate(WorkspacesUpdate),
     NewWorkspace(Entity),
     OpenSettings,
-    Surface(surface::Action),
 }
 
 impl cosmic::Application for Window {
@@ -232,11 +230,6 @@ impl cosmic::Application for Window {
                 let mut cmd = std::process::Command::new("cosmic-settings");
                 cmd.arg("window-management");
                 tokio::spawn(cosmic::process::spawn(cmd));
-            }
-            Message::Surface(a) => {
-                return cosmic::task::message(cosmic::Action::Cosmic(
-                    cosmic::app::Action::Surface(a),
-                ));
             }
         }
         Task::none()

@@ -15,21 +15,15 @@ use cosmic::{
     cctk::sctk::reexports::calloop::channel,
     cosmic_config::{self, CosmicConfigEntry},
     cosmic_theme::{CosmicPalette, Spacing, ThemeBuilder},
-    iced::{
-        Length, Subscription,
-        platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
-        window,
-    },
-    surface,
+    iced::{Length, Subscription, window},
     theme::{self, CosmicTheme},
     widget::{Column, divider, text, toggler},
 };
 
 use cosmic_settings_a11y_manager_subscription::{
-    self as cosmic_a11y_manager, AccessibilityEvent, AccessibilityRequest, ColorFilter,
+    AccessibilityEvent, AccessibilityRequest, ColorFilter,
 };
 use cosmic_settings_accessibility_subscription::{self as accessibility};
-use std::sync::LazyLock;
 use tokio::sync::mpsc::UnboundedSender;
 
 pub fn run() -> cosmic::iced::Result {
@@ -64,7 +58,6 @@ enum Message {
     OpenSettings,
     DBusUpdate(accessibility::Response),
     WaylandUpdate(WaylandUpdate),
-    Surface(surface::Action),
 }
 
 impl cosmic::Application for CosmicA11yApplet {
@@ -287,11 +280,6 @@ impl cosmic::Application for CosmicA11yApplet {
                     self.wayland_sender = Some(tx);
                 }
             },
-            Message::Surface(a) => {
-                return cosmic::task::message(cosmic::Action::Cosmic(
-                    cosmic::app::Action::Surface(a),
-                ));
-            }
         }
         Task::none()
     }

@@ -11,11 +11,11 @@ use cosmic::{
     iced::{
         Alignment, Length, Rectangle, Subscription,
         futures::{SinkExt, StreamExt, channel::mpsc},
-        platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
+        platform_specific::shell::wayland::commands::popup::destroy_popup,
         widget::{column, row, rule},
         window,
     },
-    surface, theme,
+    theme,
     widget::{
         Button, Grid, Id, autosize, button, container, divider, grid, icon, rectangle_tracker::*,
         space, text,
@@ -106,7 +106,6 @@ pub enum Message {
     Token(TokenUpdate),
     ConfigChanged(TimeAppletConfig),
     TimezoneUpdate(String),
-    Surface(surface::Action),
 }
 
 impl Window {
@@ -361,7 +360,7 @@ impl cosmic::Application for Window {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        fn time_subscription(mut show_seconds: watch::Receiver<bool>) -> Subscription<Message> {
+        fn time_subscription(show_seconds: watch::Receiver<bool>) -> Subscription<Message> {
             struct Wrapper {
                 inner: watch::Receiver<bool>,
                 id: &'static str,
@@ -376,7 +375,7 @@ impl cosmic::Application for Window {
                     inner: show_seconds,
                     id: "time-sub",
                 },
-                |Wrapper { inner, id }| {
+                |Wrapper { inner, id: _ }| {
                     let mut show_seconds = inner.clone();
                     stream::channel(1, move |mut output: mpsc::Sender<Message>| async move {
                         // Mark this receiver's state as changed so that it always receives an initial
@@ -671,11 +670,6 @@ impl cosmic::Application for Window {
                 }
 
                 self.update(Message::Tick)
-            }
-            Message::Surface(a) => {
-                return cosmic::task::message(cosmic::Action::Cosmic(
-                    cosmic::app::Action::Surface(a),
-                ));
             }
         }
     }

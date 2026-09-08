@@ -22,7 +22,6 @@ use cosmic::{
         widget::{button, column, row},
     },
     scroll::DiscreteScrollState,
-    surface,
     widget::{Id, autosize, container, space},
 };
 
@@ -89,7 +88,6 @@ enum Message {
     WorkspacePressed(ExtWorkspaceHandleV1),
     WheelScrolled(ScrollDelta),
     WorkspaceOverview,
-    Surface(surface::Action),
 }
 
 impl cosmic::Application for IcedWorkspacesApplet {
@@ -164,11 +162,6 @@ impl cosmic::Application for IcedWorkspacesApplet {
             }
             Message::WorkspaceOverview => {
                 let _ = ShellCommand::new("cosmic-workspaces").spawn();
-            }
-            Message::Surface(a) => {
-                return cosmic::task::message(cosmic::Action::Cosmic(
-                    cosmic::app::Action::Surface(a),
-                ));
             }
         }
         Task::none()

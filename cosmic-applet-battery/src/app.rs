@@ -23,11 +23,10 @@ use cosmic::{
     iced::core::{Alignment, Background, Border, Color, Shadow},
     iced::{
         Length, Subscription,
-        platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
+        platform_specific::shell::wayland::commands::popup::destroy_popup,
         widget::{Column, column, container, row},
         window,
     },
-    surface,
     theme::{self, Button},
     widget::{button, divider, icon, scrollable, slider, space, text, toggler},
 };
@@ -212,7 +211,6 @@ enum Message {
     OpenSettings,
     SettingsDaemon(settings_daemon::Event),
     ZbusConnection(zbus::Result<zbus::Connection>),
-    Surface(surface::Action),
 }
 
 impl cosmic::Application for CosmicBatteryApplet {
@@ -524,16 +522,11 @@ impl cosmic::Application for CosmicBatteryApplet {
                     }
                 }
             },
-            Message::Surface(a) => {
-                return cosmic::task::message(cosmic::Action::Cosmic(
-                    cosmic::app::Action::Surface(a),
-                ));
-            }
         }
         Task::none()
     }
 
-    fn view(&self) -> Element<Message> {
+    fn view(&self) -> Element<'_, Message> {
         let is_horizontal = match self.core.applet.anchor {
             PanelAnchor::Top | PanelAnchor::Bottom => true,
             PanelAnchor::Left | PanelAnchor::Right => false,

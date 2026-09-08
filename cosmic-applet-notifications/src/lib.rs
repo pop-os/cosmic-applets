@@ -15,19 +15,19 @@ use cosmic::{
     iced::{
         Alignment, Length, Subscription,
         advanced::text::{Ellipsize, EllipsizeHeightLimit},
-        platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
+        platform_specific::shell::wayland::commands::popup::destroy_popup,
         widget::{self, column, rich_text, row},
         window,
     },
-    surface, theme,
-    widget::{Column, button, cards, container, divider, icon, scrollable, space, text, toggler},
+    theme,
+    widget::{Column, button, cards, container, divider, icon, scrollable, text, toggler},
 };
 
 use cosmic::iced::futures::executor::block_on;
 
 use cosmic_notifications_config::NotificationsConfig;
 use cosmic_notifications_util::{ActionId, Image, Notification, markup};
-use std::{borrow::Cow, collections::HashMap, path::PathBuf, sync::LazyLock};
+use std::{borrow::Cow, collections::HashMap};
 use subscriptions::notifications::{self, NotificationsAppletProxy};
 use tokio::sync::mpsc::Sender;
 use tracing::info;
@@ -77,8 +77,6 @@ enum Message {
     ClearAll(Option<String>),
     CardsToggled(String, bool),
     Token(TokenUpdate),
-    OpenSettings,
-    Surface(surface::Action),
 }
 
 impl cosmic::Application for Notifications {
@@ -284,7 +282,7 @@ impl cosmic::Application for Notifications {
                 }
             }
             Message::CardsToggled(name, expanded) => {
-                let id = if let Some((id, _, n_expanded, ..)) = self
+                let _id = if let Some((id, _, n_expanded, ..)) = self
                     .cards
                     .iter_mut()
                     .find(|c| c.1.iter().any(|notif| name == notif.app_name))
@@ -300,15 +298,7 @@ impl cosmic::Application for Notifications {
                     self.popup = None;
                 }
             }
-            Message::OpenSettings => {
-                let exec = "cosmic-settings notifications".to_string();
-                if let Some(tx) = self.token_tx.as_ref() {
-                    let _ = tx.send(TokenRequest {
-                        app_id: Self::APP_ID.to_string(),
-                        exec,
-                    });
-                }
-            }
+
             Message::Token(u) => match u {
                 TokenUpdate::Init(tx) => {
                     self.token_tx = Some(tx);
@@ -365,11 +355,6 @@ impl cosmic::Application for Notifications {
                         }
                     });
                 }
-            }
-            Message::Surface(a) => {
-                return cosmic::task::message(cosmic::Action::Cosmic(
-                    cosmic::app::Action::Surface(a),
-                ));
             }
         }
         self.update_icon();
