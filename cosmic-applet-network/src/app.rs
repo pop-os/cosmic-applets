@@ -1,7 +1,7 @@
 use indexmap::IndexMap;
 use nmrs::{
-    ActiveConnection, ActiveConnectionState, ConnectType, ConnectivityState, EapOptions,
-    NetworkEvent, NetworkManager as NmrsManager, NetworkSnapshot, WifiSecurity,
+    ActiveConnection, ActiveConnectionState, ConnectByUuidConfig, ConnectType, ConnectivityState,
+    EapOptions, NetworkEvent, NetworkManager as NmrsManager, NetworkSnapshot, WifiSecurity,
     agent::{SecretAgent, SecretAgentCapabilities, SecretRequest, SecretResponder, SecretSetting},
 };
 use rustc_hash::FxHashSet;
@@ -916,7 +916,7 @@ impl CosmicNetworkApplet {
         cosmic::task::future(async move {
             let error = match NmrsManager::new().await {
                 Ok(nm) => nm
-                    .connect_vpn_by_uuid(&uuid)
+                    .connect_by_uuid(&uuid, ConnectByUuidConfig::default())
                     .await
                     .err()
                     .map(|e| format!("activate VPN {uuid}: {e}")),
@@ -1318,7 +1318,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                 let disconnect_task = cosmic::task::future(async move {
                     let error = match NmrsManager::new().await {
                         Ok(nm) => nm
-                            .disconnect_vpn_by_uuid(&uuid)
+                            .disconnect_by_uuid(&uuid)
                             .await
                             .err()
                             .map(|e| format!("disconnect VPN {uuid}: {e}")),
