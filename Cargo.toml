@@ -70,13 +70,13 @@ lto = "thin"
 [workspace.metadata.cargo-machete]
 ignored = ["libcosmic"]
 
-# [patch."https://github.com/pop-os/libcosmic"]
+[patch."https://github.com/pop-os/libcosmic"]
 # cosmic-config = { path = "../libcosmic/cosmic-config" }
 # libcosmic = { path = "../libcosmic" }
 # iced_futures = { path = "../libcosmic/iced/futures" }
-# cosmic-config = { git = "https://github.com/pop-os/libcosmic//", branch = "theme-v2" }
-# libcosmic = { git = "https://github.com/pop-os/libcosmic//", branch = "theme-v2" }
-# iced_futures = { git = "https://github.com/pop-os/libcosmic//", branch = "theme-v2" }
+cosmic-config = { git = "https://github.com/pop-os/libcosmic//", branch = "directional-nav" }
+libcosmic = { git = "https://github.com/pop-os/libcosmic//", branch = "directional-nav" }
+iced_futures = { git = "https://github.com/pop-os/libcosmic//", branch = "directional-nav" }
 
 [patch."https://github.com/smithay/client-toolkit.git"]
 sctk = { package = "smithay-client-toolkit", version = "0.20.0" }
