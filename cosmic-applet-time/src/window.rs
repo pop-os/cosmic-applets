@@ -776,7 +776,36 @@ fn date_button(day: i8, is_month: bool, is_day: bool, is_today: bool) -> Button<
     } else if is_today {
         button::ButtonClass::Standard
     } else {
-        button::ButtonClass::Text
+        button::ButtonClass::Custom {
+            active: Box::new(|_focused, theme| {
+                let on = Some(theme.cosmic().text_button.on.into());
+                button::Style {
+                    text_color: on,
+                    ..button::Style::new()
+                }
+            }),
+            disabled: Box::new(|theme| {
+                let on = Some(theme.cosmic().text_button.on.into());
+                button::Style {
+                    text_color: on,
+                    ..button::Style::new()
+                }
+            }),
+            hovered: Box::new(|_focused, theme| {
+                let on = Some(theme.cosmic().text_button.on.into());
+                button::Style {
+                    text_color: on,
+                    ..button::Style::new()
+                }
+            }),
+            pressed: Box::new(|_focused, theme| {
+                let on = Some(theme.cosmic().text_button.on.into());
+                button::Style {
+                    text_color: on,
+                    ..button::Style::new()
+                }
+            }),
+        }
     };
 
     let button = button::custom(
