@@ -21,7 +21,7 @@ use cosmic::{
 use std::sync::LazyLock;
 
 use logind_zbus::{
-    manager::ManagerProxy,
+    manager::{IsSupported, ManagerProxy},
     session::{SessionClass, SessionProxy, SessionType},
     user::UserProxy,
 };
@@ -44,12 +44,26 @@ pub fn run() -> cosmic::iced::Result {
     cosmic::applet::run::<Power>(())
 }
 
+async fn can_hibernate() -> bool {
+    let Ok(connection) = Connection::system().await else {
+        return false;
+    };
+    let Ok(manager_proxy) = ManagerProxy::new(&connection).await else {
+        return false;
+    };
+    matches!(
+        manager_proxy.can_hibernate().await,
+        Ok(IsSupported::Yes | IsSupported::Challenge)
+    )
+}
+
 struct Power {
     core: cosmic::app::Core,
     icon_name: String,
     popup: Option<window::Id>,
     token_tx: Option<calloop::channel::Sender<TokenRequest>>,
     subsurface_id: window::Id,
+    can_hibernate: bool,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -57,6 +71,7 @@ enum PowerAction {
     Lock,
     LogOut,
     Suspend,
+    Hibernate,
     Restart,
     Shutdown,
 }
@@ -68,6 +83,7 @@ impl PowerAction {
             PowerAction::Lock => iced::Task::perform(lock(), msg),
             PowerAction::LogOut => iced::Task::perform(log_out(), msg),
             PowerAction::Suspend => iced::Task::perform(suspend(), msg),
+            PowerAction::Hibernate => iced::Task::perform(hibernate(), msg),
             PowerAction::Restart => iced::Task::perform(restart(), msg),
             PowerAction::Shutdown => iced::Task::perform(shutdown(), msg),
         }
@@ -83,6 +99,7 @@ enum Message {
     Closed(window::Id),
     Token(TokenUpdate),
     Surface(surface::Action),
+    CanHibernate(bool)
 }
 
 impl cosmic::Application for Power {
@@ -107,8 +124,9 @@ impl cosmic::Application for Power {
                 subsurface_id: window::Id::unique(),
                 token_tx: None,
                 popup: Option::default(),
+                can_hibernate: false
             },
-            Task::none(),
+            Task::perform(can_hibernate(), |can_hibernate: bool| cosmic::action::app(Message::CanHibernate(can_hibernate))),
         )
     }
 
@@ -167,6 +185,12 @@ impl cosmic::Application for Power {
                         return PowerAction::Restart.perform();
                     }
                 }
+                PowerAction::Hibernate => {
+                    if let Err(err) = process::Command::new("cosmic-osd").arg("hibernate").spawn() {
+                        tracing::error!("Failed to spawn cosmic-osd. {err:?}");
+                        return PowerAction::Hibernate.perform();
+                    }
+                }
                 PowerAction::Shutdown => {
                     if let Err(err) = process::Command::new("cosmic-osd").arg("shutdown").spawn() {
                         tracing::error!("Failed to spawn cosmic-osd. {err:?}");
@@ -205,6 +229,9 @@ impl cosmic::Application for Power {
                 return cosmic::task::message(cosmic::Action::Cosmic(
                     cosmic::app::Action::Surface(a),
                 ));
+            }
+            Message::CanHibernate(can_hibernate) => {
+                self.can_hibernate = can_hibernate
             }
         }
         Task::none()
@@ -262,6 +289,10 @@ impl cosmic::Application for Power {
                 power_buttons(
                     "system-reboot-symbolic",
                     Message::Action(PowerAction::Restart)
+                ),
+                power_buttons(
+                    "system-hibernate-symbolic",
+                    Message::Action(PowerAction::Hibernate)
                 ),
                 power_buttons(
                     "system-shutdown-symbolic",
@@ -331,6 +362,12 @@ async fn suspend() -> zbus::Result<()> {
     let connection = Connection::system().await?;
     let manager_proxy = ManagerProxy::new(&connection).await?;
     manager_proxy.suspend(true).await
+}
+
+async fn hibernate() -> zbus::Result<()> {
+    let connection = Connection::system().await?;
+    let manager_proxy = ManagerProxy::new(&connection).await?;
+    manager_proxy.hibernate(true).await
 }
 
 async fn lock() -> zbus::Result<()> {
