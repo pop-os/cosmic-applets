@@ -19,7 +19,7 @@ use cosmic::{
     cosmic_config::CosmicConfigEntry,
     cosmic_theme::Spacing,
     iced::{
-        self, Alignment, Length, Rectangle, Subscription,
+        self, Alignment, Background, Length, Rectangle, Subscription,
         futures::StreamExt,
         widget::{self, column, row, slider},
         window,
@@ -907,11 +907,14 @@ fn revealer<'a>(
 ) -> widget::Column<'a, Message, crate::Theme, Renderer> {
     if open {
         devices.iter().enumerate().fold(
-            column![revealer_head(open, title, selected, toggle)].width(Length::Fill),
+            column![revealer_head(open, title, selected.clone(), toggle)].width(Length::Fill),
             move |col, (id, name)| {
+                let is_selected = name.as_ref() == selected;
                 col.push(
                     text::body(name.as_ref())
                         .apply(menu_button)
+                        .class(device_row_style(is_selected))
+                        .selected(is_selected)
                         .on_press(change(id))
                         .width(Length::Fill)
                         .padding([8, 48]),
@@ -920,6 +923,33 @@ fn revealer<'a>(
         )
     } else {
         column![revealer_head(open, title, selected, toggle)]
+    }
+}
+
+fn device_row_style(selected: bool) -> theme::Button {
+    theme::Button::Custom {
+        active: Box::new(move |focused, theme| {
+            let a = button::Catalog::active(theme, focused, selected, &theme::Button::AppletMenu);
+            button::Style {
+                background: if selected {
+                    Some(Background::Color(
+                        theme.cosmic().icon_button.selected_state_color().into(),
+                    ))
+                } else {
+                    a.background
+                },
+                ..a
+            }
+        }),
+        hovered: Box::new(move |focused, theme| {
+            let focused = selected || focused;
+            button::Catalog::hovered(theme, focused, focused, &theme::Button::AppletMenu)
+        }),
+        disabled: Box::new(|theme| button::Catalog::disabled(theme, &theme::Button::AppletMenu)),
+        pressed: Box::new(move |focused, theme| {
+            let focused = selected || focused;
+            button::Catalog::pressed(theme, focused, focused, &theme::Button::AppletMenu)
+        }),
     }
 }
 
