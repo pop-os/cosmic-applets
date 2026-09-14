@@ -1,4 +1,4 @@
-cancel = Sefsex
+cancel = Semmet
 connected = Yettwaqqen
 confirm = Sentem
 other-devices = Ibenkan-nniḍen n Bluetooth

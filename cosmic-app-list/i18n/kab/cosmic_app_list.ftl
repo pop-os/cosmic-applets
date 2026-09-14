@@ -1,7 +1,7 @@
 run = Selkem
 run-on = Selkem ɣef { $gpu }
 run-on-default = (Amezwer)
-quit = Tuffɣa
+quit = Ffeɣ
 quit-all = Ffeɣ-iten akk
 new-window = Asfaylu Amaynut
 cosmic-app-list = Afeggag n yisnasen
