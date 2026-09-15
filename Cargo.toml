@@ -71,11 +71,11 @@ lto = "thin"
 [workspace.metadata.cargo-machete]
 ignored = ["libcosmic"]
 
-# [patch."https://github.com/pop-os/libcosmic/"]
-# cosmic-config = { git = "https://github.com/pop-os/libcosmic//", branch = "cosmic-launch" }
-# cosmic-launch = { git = "https://github.com/pop-os/libcosmic//", branch = "cosmic-launch" }
-# libcosmic = { git = "https://github.com/pop-os/libcosmic//", branch = "cosmic-launch" }
-# iced_futures = { git = "https://github.com/pop-os/libcosmic//", branch = "cosmic-launch" }
+[patch."https://github.com/pop-os/libcosmic/"]
+cosmic-config = { git = "https://github.com/pop-os/libcosmic//", branch = "directional-nav" }
+cosmic-launch = { git = "https://github.com/pop-os/libcosmic//", branch = "directional-nav" }
+libcosmic = { git = "https://github.com/pop-os/libcosmic//", branch = "directional-nav" }
+iced_futures = { git = "https://github.com/pop-os/libcosmic//", branch = "directional-nav" }
 # cosmic-config = { path = "../libcosmic/cosmic-config" }
 # cosmic-launch = { path = "../libcosmic/cosmic-launch" }
 # libcosmic = { path = "../libcosmic" }
