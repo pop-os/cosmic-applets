@@ -1,1 +1,2 @@
 connected = Connectat
+cancel = Anullar

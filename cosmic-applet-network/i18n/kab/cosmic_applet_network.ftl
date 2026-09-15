@@ -1,4 +1,4 @@
-cancel = Sefsex
+cancel = Semmet
 connect = Qqen
 identity = Tamagit
 wifi = Wi-Fi
