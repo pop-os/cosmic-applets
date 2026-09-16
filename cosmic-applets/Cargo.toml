@@ -16,6 +16,7 @@ cosmic-applet-bluetooth = { path = "../cosmic-applet-bluetooth" }
 cosmic-applet-minimize = { path = "../cosmic-applet-minimize" }
 cosmic-applet-network = { path = "../cosmic-applet-network" }
 cosmic-applet-notifications = { path = "../cosmic-applet-notifications" }
+cosmic-applet-osk = { path = "../cosmic-applet-osk" }
 cosmic-applet-power = { path = "../cosmic-applet-power" }
 cosmic-applet-status-area = { path = "../cosmic-applet-status-area" }
 cosmic-applet-tiling = { path = "../cosmic-applet-tiling" }

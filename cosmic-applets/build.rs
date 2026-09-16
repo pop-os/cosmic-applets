@@ -60,6 +60,12 @@ fn main() {
             "cosmic-applet-notifications-keywords",
         ),
         (
+            "com.system76.CosmicAppletOsk",
+            "cosmic-applet-osk",
+            "cosmic-applet-osk-comment",
+            "cosmic-applet-osk-keywords",
+        ),
+        (
             "com.system76.CosmicAppletPower",
             "cosmic-applet-power",
             "cosmic-applet-power-comment",
