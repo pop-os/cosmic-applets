@@ -146,18 +146,21 @@ impl CaptureData {
         let overlay_cursor = if overlay_cursor { 1 } else { 0 };
 
         let session = Arc::new(Session::default());
-        let capture_session = self
-            .capturer
-            .create_session(
-                &CaptureSource::Toplevel(source),
-                CaptureOptions::empty(),
-                &self.qh,
-                SessionData {
-                    session: session.clone(),
-                    session_data: ScreencopySessionData::default(),
-                },
-            )
-            .unwrap();
+        let capture_session = match self.capturer.create_session(
+            &CaptureSource::Toplevel(source),
+            CaptureOptions::empty(),
+            &self.qh,
+            SessionData {
+                session: session.clone(),
+                session_data: ScreencopySessionData::default(),
+            },
+        ) {
+            Ok(session) => session,
+            Err(err) => {
+                tracing::debug!(?err, "Image-copy capture is unavailable");
+                return None;
+            }
+        };
         self.conn.flush().unwrap();
 
         let formats = session
