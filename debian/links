@@ -5,6 +5,7 @@
 /usr/bin/cosmic-applets /usr/bin/cosmic-applet-minimize
 /usr/bin/cosmic-applets /usr/bin/cosmic-applet-network
 /usr/bin/cosmic-applets /usr/bin/cosmic-applet-notifications
+/usr/bin/cosmic-applets /usr/bin/cosmic-applet-osk
 /usr/bin/cosmic-applets /usr/bin/cosmic-applet-power
 /usr/bin/cosmic-applets /usr/bin/cosmic-applet-status-area
 /usr/bin/cosmic-applets /usr/bin/cosmic-applet-tiling
