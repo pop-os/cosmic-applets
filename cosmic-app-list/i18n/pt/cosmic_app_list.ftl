@@ -1,4 +1,4 @@
-cosmic-app-list = Área de notificação das aplicações
+cosmic-app-list = Bandeja de aplicações
 pin = Adicionar aos favoritos
 quit = Sair
 quit-all = Sair de todos
