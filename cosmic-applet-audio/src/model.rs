@@ -74,8 +74,10 @@ impl Nodes {
         self.id.remove(pos);
         self.volume.remove(pos);
         self.dropdown_sort();
-        if self.active == Some(pos) {
-            self.active = None;
+        match self.active {
+            Some(active) if active == pos => self.active = None,
+            Some(active) if active > pos => self.active = Some(active - 1),
+            _ => {}
         }
         true
     }
