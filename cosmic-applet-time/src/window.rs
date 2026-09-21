@@ -91,6 +91,41 @@ pub struct Window {
     config: TimeAppletConfig,
     show_seconds_tx: watch::Sender<bool>,
     locale: Locale,
+    zones: Vec<WorldClock>,
+    shift_hours: i32,
+}
+
+/// An extra time zone shown in the calendar popup.
+pub struct WorldClock {
+    label: String,
+    tz: TimeZone,
+}
+
+/// Reads the configured zone list.
+///
+/// An entry is an IANA time zone id, optionally prefixed with a display label
+/// and a `|` separator. Entries naming an unknown zone are dropped.
+fn parse_world_clocks(entries: &[String]) -> Vec<WorldClock> {
+    entries
+        .iter()
+        .filter_map(|entry| {
+            let (label, id) = match entry.split_once('|') {
+                Some((label, id)) => (label.trim().to_string(), id.trim()),
+                None => {
+                    let id = entry.trim();
+                    let city = id.rsplit('/').next().unwrap_or(id).replace('_', " ");
+                    (city, id)
+                }
+            };
+            match TimeZone::get(id) {
+                Ok(tz) => Some(WorldClock { label, tz }),
+                Err(err) => {
+                    tracing::error!(?err, id, "Skipping unknown time zone");
+                    None
+                }
+            }
+        })
+        .collect()
 }
 
 #[derive(Debug, Clone)]
@@ -106,8 +141,30 @@ pub enum Message {
     Token(TokenUpdate),
     ConfigChanged(TimeAppletConfig),
     TimezoneUpdate(String),
+    ShiftForward,
+    ShiftBack,
+    ShiftReset,
+    OpenWorldClockConfig,
     Surface(surface::Action),
 }
+
+const WORLD_CLOCK_APP_ID: &str = "io.github.renanstigliani.CosmicAppletWorldClock";
+
+/// Path of the file holding the zone list.
+fn world_clocks_path() -> std::path::PathBuf {
+    let base = std::env::var_os("XDG_CONFIG_HOME")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| {
+            std::path::PathBuf::from(std::env::var_os("HOME").unwrap_or_default()).join(".config")
+        });
+    base.join("cosmic")
+        .join(WORLD_CLOCK_APP_ID)
+        .join("v1")
+        .join("world_clocks")
+}
+
+/// Largest shift the plus and minus buttons reach, in hours.
+const SHIFT_LIMIT: i32 = 72;
 
 impl Window {
     fn create_datetime(&self, date: &Date) -> DateTime<icu::calendar::Gregorian> {
@@ -176,6 +233,116 @@ impl Window {
         }
 
         calendar
+    }
+
+    /// The instant the popup describes.
+    ///
+    /// This is the selected calendar day at the current time of day, moved by
+    /// the shift the plus and minus buttons set. With no day selected and no
+    /// shift, it is the current time.
+    fn reference(&self) -> Zoned {
+        let tz = self.now.time_zone().clone();
+        let live = self
+            .date_selected
+            .at(self.now.hour(), self.now.minute(), 0, 0)
+            .to_zoned(tz.clone())
+            .unwrap_or_else(|_| self.now.clone());
+
+        if self.shift_hours == 0 {
+            return live;
+        }
+
+        // Stepping lands on whole hours. The first press moves to the hour
+        // boundary in that direction, so 10:35 becomes 11:00 or 10:00.
+        let on_the_hour = self
+            .date_selected
+            .at(self.now.hour(), 0, 0, 0)
+            .to_zoned(tz)
+            .unwrap_or_else(|_| live.clone());
+
+        let steps = if self.shift_hours < 0 && self.now.minute() != 0 {
+            self.shift_hours + 1
+        } else {
+            self.shift_hours
+        };
+
+        on_the_hour
+            .checked_add((steps as i64).hours())
+            .unwrap_or(on_the_hour)
+    }
+
+    /// One row per configured zone, under a row of shift controls.
+    ///
+    /// Every row is projected from the same instant, so the times stay correct
+    /// across daylight saving changes that only some of the zones observe.
+    fn world_clock_section(&self) -> Element<'_, Message> {
+        let Spacing { space_xxs, .. } = theme::active().cosmic().spacing;
+        let time_format = if self.config.military_time {
+            "%H:%M"
+        } else {
+            "%-I:%M %p"
+        };
+        let format_at = |zoned: &Zoned| strtime::format(time_format, zoned).unwrap_or_default();
+
+        let reference = self.reference();
+        let reference_date = reference.date();
+
+        // Reset only shows up once the popup is describing something other than
+        // the current time, which is the only time it does anything.
+        let shifted = self.shift_hours != 0 || self.date_selected != self.date_today;
+        let mut stepper = row![].spacing(space_xxs).align_y(Alignment::Center);
+        if shifted {
+            stepper = stepper.push(
+                button::icon(icon::from_name("edit-undo-symbolic"))
+                    .padding(8)
+                    .on_press(Message::ShiftReset),
+            );
+        }
+        stepper = stepper
+            .push(
+                button::icon(icon::from_name("list-remove-symbolic"))
+                    .padding(8)
+                    .on_press(Message::ShiftBack),
+            )
+            .push(
+                button::icon(icon::from_name("list-add-symbolic"))
+                    .padding(8)
+                    .on_press(Message::ShiftForward),
+            );
+
+        let controls = row![
+            button::icon(icon::from_name("emblem-system-symbolic"))
+                .padding(8)
+                .on_press(Message::OpenWorldClockConfig),
+            space::horizontal().width(Length::Fill),
+            stepper,
+        ]
+        .align_y(Alignment::Center);
+
+        let mut section = Column::new()
+            .spacing(space_xxs)
+            .push(controls.padding([0, 12]));
+
+        for clock in &self.zones {
+            let zoned = reference.timestamp().to_zoned(clock.tz.clone());
+            let day_marker = match zoned.date().cmp(&reference_date) {
+                std::cmp::Ordering::Greater => "  +1",
+                std::cmp::Ordering::Less => "  -1",
+                std::cmp::Ordering::Equal => "",
+            };
+
+            section = section.push(
+                row![
+                    text::body(clock.label.clone()),
+                    space::horizontal().width(Length::Fill),
+                    text::body(format!("{}{}", format_at(&zoned), day_marker)),
+                ]
+                .align_y(Alignment::Center)
+                .padding([0, 20]),
+            );
+        }
+
+        section.into()
     }
 
     /// Format with strftime if non-empty and ignore errors.
@@ -318,7 +485,7 @@ impl cosmic::Application for Window {
     type Message = Message;
     type Executor = cosmic::SingleThreadExecutor;
     type Flags = ();
-    const APP_ID: &str = "com.system76.CosmicAppletTime";
+    const APP_ID: &str = WORLD_CLOCK_APP_ID;
 
     fn init(core: app::Core, _flags: Self::Flags) -> (Self, app::Task<Self::Message>) {
         let locale = get_system_locale();
@@ -343,6 +510,8 @@ impl cosmic::Application for Window {
                 config: TimeAppletConfig::default(),
                 show_seconds_tx,
                 locale,
+                zones: Vec::new(),
+                shift_hours: 0,
             },
             Task::none(),
         )
@@ -525,6 +694,7 @@ impl cosmic::Application for Window {
                         |app: &mut Self| {
                             app.date_today = app.now.date();
                             app.date_selected = app.date_today;
+                            app.shift_hours = 0;
 
                             let new_id = window::Id::unique();
                             app.popup = Some(new_id);
@@ -616,6 +786,27 @@ impl cosmic::Application for Window {
                 }
                 Task::none()
             }
+            Message::OpenWorldClockConfig => {
+                let path = world_clocks_path();
+                if !path.exists() {
+                    if let Some(parent) = path.parent() {
+                        let _ = std::fs::create_dir_all(parent);
+                    }
+                    if let Err(err) = std::fs::write(&path, "[]") {
+                        tracing::error!(?err, "Failed to create the zone list file");
+                    }
+                }
+
+                if let Some(tx) = self.token_tx.as_ref() {
+                    let _ = tx.send(TokenRequest {
+                        app_id: Self::APP_ID.to_string(),
+                        exec: format!("cosmic-edit {}", path.display()),
+                    });
+                } else {
+                    tracing::error!("Wayland tx is None");
+                }
+                Task::none()
+            }
             Message::Token(u) => {
                 match u {
                     TokenUpdate::Init(tx) => {
@@ -624,19 +815,23 @@ impl cosmic::Application for Window {
                     TokenUpdate::Finished => {
                         self.token_tx = None;
                     }
-                    TokenUpdate::ActivationToken { token, .. } => {
-                        let mut cmd = std::process::Command::new("cosmic-settings");
-                        cmd.arg("time");
-                        if let Some(token) = token {
-                            cmd.env("XDG_ACTIVATION_TOKEN", &token);
-                            cmd.env("DESKTOP_STARTUP_ID", &token);
+                    TokenUpdate::ActivationToken { token, exec } => {
+                        let mut parts = exec.split_whitespace();
+                        if let Some(program) = parts.next() {
+                            let mut cmd = std::process::Command::new(program);
+                            cmd.args(parts);
+                            if let Some(token) = token {
+                                cmd.env("XDG_ACTIVATION_TOKEN", &token);
+                                cmd.env("DESKTOP_STARTUP_ID", &token);
+                            }
+                            tokio::spawn(cosmic::process::spawn(cmd));
                         }
-                        tokio::spawn(cosmic::process::spawn(cmd));
                     }
                 }
                 Task::none()
             }
             Message::ConfigChanged(c) => {
+                self.zones = parse_world_clocks(&c.world_clocks);
                 // Don't interrupt the tick subscription unless necessary
                 self.show_seconds_tx.send_if_modified(|show_seconds| {
                     if !c.format_strftime.is_empty() {
@@ -671,6 +866,19 @@ impl cosmic::Application for Window {
                 }
 
                 self.update(Message::Tick)
+            }
+            Message::ShiftForward => {
+                self.shift_hours = (self.shift_hours + 1).min(SHIFT_LIMIT);
+                Task::none()
+            }
+            Message::ShiftBack => {
+                self.shift_hours = (self.shift_hours - 1).max(-SHIFT_LIMIT);
+                Task::none()
+            }
+            Message::ShiftReset => {
+                self.shift_hours = 0;
+                self.date_selected = self.date_today;
+                Task::none()
             }
             Message::Surface(a) => {
                 return cosmic::task::message(cosmic::Action::Cosmic(
@@ -744,20 +952,40 @@ impl cosmic::Application for Window {
 
         let calendar = self.calendar_grid();
 
-        let content_list = column![
+        let mut content: Vec<Element<'_, Message>> = Vec::new();
+
+        if !self.zones.is_empty() {
+            content.push(self.world_clock_section());
+            content.push(
+                padded_control(divider::horizontal::default())
+                    .padding([space_xxs, space_s])
+                    .into(),
+            );
+        }
+
+        content.push(
             row![
                 column![date, day_of_week],
                 space::horizontal().width(Length::Fill),
                 month_controls,
             ]
             .align_y(Alignment::Center)
-            .padding([12, 20]),
-            calendar.padding([0, 12].into()),
-            padded_control(divider::horizontal::default()).padding([space_xxs, space_s]),
+            .padding([12, 20])
+            .into(),
+        );
+        content.push(calendar.padding([0, 12].into()).into());
+        content.push(
+            padded_control(divider::horizontal::default())
+                .padding([space_xxs, space_s])
+                .into(),
+        );
+        content.push(
             menu_button(text::body(fl!("datetime-settings")))
-                .on_press(Message::OpenDateTimeSettings),
-        ]
-        .padding([8, 0]);
+                .on_press(Message::OpenDateTimeSettings)
+                .into(),
+        );
+
+        let content_list = Column::with_children(content).padding([8, 0]);
 
         self.core
             .applet

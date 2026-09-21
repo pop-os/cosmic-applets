@@ -1,0 +1,14 @@
+[Desktop Entry]
+Name=World Clock
+Comment=Local time in the panel, with extra time zones and an hour stepper in the calendar popup
+Type=Application
+Exec=cosmic-applet-worldclock
+Terminal=false
+Categories=COSMIC;
+Keywords=COSMIC;Applet;Date;Time;Calendar;Timezone;World;
+Icon=com.system76.CosmicAppletTime-symbolic
+NoDisplay=true
+X-CosmicApplet=true
+X-CosmicShrinkable=true
+X-HostWaylandDisplay=true
+X-CosmicHoverPopup=Auto

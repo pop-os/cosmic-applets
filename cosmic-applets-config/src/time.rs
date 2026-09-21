@@ -13,6 +13,13 @@ pub struct TimeAppletConfig {
     pub show_weekday: bool,
     #[serde(default, skip_serializing_if = "str::is_empty")]
     pub format_strftime: String,
+    /// Extra time zones shown in the calendar popup.
+    ///
+    /// Each entry is an IANA time zone id, optionally prefixed with a display
+    /// label and a `|` separator, such as `SF|America/Los_Angeles`. Without a
+    /// label, the city part of the id is used.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub world_clocks: Vec<String>,
 }
 
 impl Default for TimeAppletConfig {
@@ -24,6 +31,7 @@ impl Default for TimeAppletConfig {
             show_date_in_top_panel: true,
             show_weekday: false,
             format_strftime: Default::default(),
+            world_clocks: Default::default(),
         }
     }
 }
