@@ -55,6 +55,7 @@
   <launchable type="desktop-id">com.system76.CosmicAppletMinimize.desktop</launchable>
   <launchable type="desktop-id">com.system76.CosmicAppletNetwork.desktop</launchable>
   <launchable type="desktop-id">com.system76.CosmicAppletNotifications.desktop</launchable>
+  <launchable type="desktop-id">com.system76.CosmicAppletOsk.desktop</launchable>
   <launchable type="desktop-id">com.system76.CosmicAppletPower.desktop</launchable>
   <launchable type="desktop-id">com.system76.CosmicAppletStatusArea.desktop</launchable>
   <launchable type="desktop-id">com.system76.CosmicAppletTiling.desktop</launchable>
@@ -83,6 +84,7 @@
       <binary>cosmic-applet-minimize</binary>
       <binary>cosmic-applet-network</binary>
       <binary>cosmic-applet-notifications</binary>
+      <binary>cosmic-applet-osk</binary>
       <binary>cosmic-applet-power</binary>
       <binary>cosmic-applet-status-area</binary>
       <binary>cosmic-applet-tiling</binary>

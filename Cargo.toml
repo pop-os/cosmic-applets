@@ -10,6 +10,7 @@ members = [
     "cosmic-applet-minimize",
     "cosmic-applet-network",
     "cosmic-applet-notifications",
+    "cosmic-applet-osk",
     "cosmic-applet-power",
     "cosmic-applet-status-area",
     "cosmic-applet-tiling",
@@ -27,6 +28,7 @@ resolver = "3"
 anyhow = "1.0.102"
 cctk = { git = "https://github.com/pop-os/cosmic-protocols", package = "cosmic-client-toolkit", rev = "a7d2d7a" }
 cosmic-applets-config = { path = "cosmic-applets-config" }
+cosmic-osk-config = { git = "https://github.com/pop-os/cosmic-osk" }
 cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols", default-features = false, features = [
     "client",
 ], rev = "a7d2d7a" }
