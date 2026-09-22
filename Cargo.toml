@@ -26,12 +26,12 @@ resolver = "3"
 
 [workspace.dependencies]
 anyhow = "1.0.102"
-cctk = { git = "https://github.com/pop-os/cosmic-protocols", package = "cosmic-client-toolkit", rev = "a7d2d7a" }
+cctk = { git = "https://github.com/pop-os/cosmic-protocols", package = "cosmic-client-toolkit", rev = "c0cff4d" }
 cosmic-applets-config = { path = "cosmic-applets-config" }
 cosmic-osk-config = { git = "https://github.com/pop-os/cosmic-osk" }
 cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols", default-features = false, features = [
     "client",
-], rev = "a7d2d7a" }
+], rev = "c0cff4d" }
 
 futures = "0.3"
 futures-util = "0.3"
@@ -84,8 +84,8 @@ ignored = ["libcosmic"]
 sctk = { package = "smithay-client-toolkit", version = "0.20.0" }
 
 [patch."https://github.com/pop-os/cosmic-protocols"]
-cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols//", rev = "32283d7" }
-cosmic-client-toolkit = { git = "https://github.com/pop-os/cosmic-protocols//", rev = "32283d7" }
+cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols//", rev = "c0cff4d" }
+cosmic-client-toolkit = { git = "https://github.com/pop-os/cosmic-protocols//", rev = "c0cff4d" }
 
 # [patch.'https://github.com/pop-os/dbus-settings-bindings']
 # cosmic-dbus-networkmanager = { path = "../dbus-settings-bindings/networkmanager" }
