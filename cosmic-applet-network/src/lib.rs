@@ -2,7 +2,9 @@
 
 mod app;
 mod config;
+mod graph;
 mod localize;
+mod stats;
 
 use crate::localize::localize;
 
