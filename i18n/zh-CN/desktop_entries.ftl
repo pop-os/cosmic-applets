@@ -49,3 +49,6 @@ cosmic-panel-workspaces-button-comment = 打开工作区总览以管理和切换
 cosmic-panel-workspaces-button-keywords = COSMIC;小部件;工作区;总览;
 cosmic-applet-power-keywords = COSMIC;小部件;用户;会话;锁屏;登录;登出;重启;关机;待机;
 cosmic-applet-status-area-comment = 可能在面板上显示的应用指示
+cosmic-applet-osk = 屏幕键盘按钮
+cosmic-applet-osk-comment = 打开屏幕键盘
+cosmic-applet-osk-keywords = COSMIC;小部件;OSK;键盘;
