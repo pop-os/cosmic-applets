@@ -49,3 +49,6 @@ cosmic-applet-power-comment = 鎖定畫面、登出、休眠、重新啟動及�
 cosmic-applet-tiling = 平鋪
 cosmic-panel-workspaces-button-comment = 啟動工作區總覽以管理和切換工作區
 cosmic-panel-workspaces-button-keywords = COSMIC;小程式;工作區;總覽;
+cosmic-applet-osk = 螢幕鍵盤按鈕
+cosmic-applet-osk-comment = 開啟螢幕鍵盤
+cosmic-applet-osk-keywords = COSMIC;Applet;OSK;Keyboard;小程式;螢幕鍵盤;鍵盤;

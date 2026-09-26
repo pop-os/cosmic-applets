@@ -49,3 +49,6 @@ cosmic-panel-launcher-button-keywords = COSMIC;Sepanok;Destpêker;Rêveber;
 cosmic-panel-workspaces-button = Bişkoka qadên xebatê
 cosmic-panel-workspaces-button-comment = Pêşdîtina qadên xebatê veke ji bo bi rê ve bibî û biguhêrînî
 cosmic-panel-workspaces-button-keywords = COSMIC;Sepan;Qada xebatê;Pêşdîtin;
+cosmic-applet-osk = Bişkoka kilîtdankê li ser dîmenderê
+cosmic-applet-osk-comment = Kilîtdankê li ser dîmenderê veke
+cosmic-applet-osk-keywords = COSMIC;Sepanok;OSK;Kilîtdank;

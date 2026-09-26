@@ -49,3 +49,6 @@ cosmic-panel-app-button-keywords = COSMIC;Applet;App;Bibliothek;Übersicht;
 cosmic-panel-launcher-button-keywords = COSMIC;Applet;Starter;Runner;
 cosmic-applet-status-area-comment = Anwendungsindikatoren, die Menüs in das Panel exportieren können
 cosmic-applet-tiling-comment = Verwalte den Aktiv-Hinweis, die aktuelle und die arbeitsflächenspezifische automatische Kachelung
+cosmic-applet-osk = Bildschirmtastatur-Schaltfläche
+cosmic-applet-osk-comment = Bildschirmtastatur öffnen
+cosmic-applet-osk-keywords = COSMIC;Applet;OSK;Tastatur;
