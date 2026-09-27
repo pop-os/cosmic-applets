@@ -51,6 +51,25 @@ const GO_NEXT: &str = "media-skip-forward-symbolic";
 const PAUSE: &str = "media-playback-pause-symbolic";
 const PLAY: &str = "media-playback-start-symbolic";
 
+const WHEEL_STEP: f32 = 5.0; // 5% per wheel event
+
+fn calculate_scroll_volume( 
+    delta: iced::mouse::ScrollDelta,
+    current_volume: u32,
+    max_volume: u32,
+) -> Option<u32> {
+    let scroll_vector = match delta {
+        iced::mouse::ScrollDelta::Lines { y, .. } => y.signum() * WHEEL_STEP,
+        iced::mouse::ScrollDelta::Pixels { y, .. } => y.signum(),
+    };
+    if scroll_vector == 0.0 {
+        return None;
+    }
+
+    let new_volume = (current_volume as f64 + (scroll_vector as f64)).clamp(0.0, max_volume as f64);
+    Some(new_volume as u32)
+}
+
 pub fn run() -> cosmic::iced::Result {
     localize();
     cosmic::applet::run::<Audio>(())
@@ -619,19 +638,9 @@ impl cosmic::Application for Audio {
             .icon_button(self.output_icon_name())
             .on_press_down(Message::TogglePopup);
 
-        const WHEEL_STEP: f32 = 5.0; // 5% per wheel event
         let btn = crate::mouse_area::MouseArea::new(btn).on_mouse_wheel(|delta| {
-            let scroll_vector = match delta {
-                iced::mouse::ScrollDelta::Lines { y, .. } => y.signum() * WHEEL_STEP, // -1/0/1
-                iced::mouse::ScrollDelta::Pixels { y, .. } => y.signum(),             // -1/0/1
-            };
-            if scroll_vector == 0.0 {
-                return Message::Ignore;
-            }
-
-            let new_volume = (self.model.active_sink.volume as f64 + (scroll_vector as f64))
-                .clamp(0.0, self.max_sink_volume as f64);
-            Message::SetSinkVolume(new_volume as u32)
+            calculate_scroll_volume(delta, self.model.active_sink.volume, self.max_sink_volume)
+                .map_or(Message::Ignore, Message::SetSinkVolume)
         });
 
         let mut has_playback_buttons = false;
@@ -706,21 +715,37 @@ impl cosmic::Application for Audio {
             .map(|pos| self.model.sources.sorted_display[pos].as_ref());
 
         let mut audio_content = {
-            let output_slider = slider(
-                0..=self.max_sink_volume,
-                self.model.active_sink.volume,
-                Message::SetSinkVolume,
+            let output_slider = crate::mouse_area::MouseArea::new(
+                slider(
+                    0..=self.max_sink_volume,
+                    self.model.active_sink.volume,
+                    Message::SetSinkVolume,
+                )
+                .width(Length::FillPortion(5))
+                .breakpoints(self.sink_breakpoints),
             )
-            .width(Length::FillPortion(5))
-            .breakpoints(self.sink_breakpoints);
+            .on_mouse_wheel(|delta| {
+                calculate_scroll_volume(delta, self.model.active_sink.volume, self.max_sink_volume)
+                    .map_or(Message::Ignore, Message::SetSinkVolume)
+            });
 
-            let input_slider = slider(
-                0..=self.max_source_volume,
-                self.model.active_source.volume,
-                Message::SetSourceVolume,
+            let input_slider = crate::mouse_area::MouseArea::new(
+                slider(
+                    0..=self.max_source_volume,
+                    self.model.active_source.volume,
+                    Message::SetSourceVolume,
+                )
+                .width(Length::FillPortion(5))
+                .breakpoints(self.source_breakpoints),
             )
-            .width(Length::FillPortion(5))
-            .breakpoints(self.source_breakpoints);
+            .on_mouse_wheel(|delta| {
+                calculate_scroll_volume(
+                    delta,
+                    self.model.active_source.volume,
+                    self.max_source_volume,
+                )
+                .map_or(Message::Ignore, Message::SetSourceVolume)
+            });
 
             column![
                 padded_control(
