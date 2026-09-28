@@ -49,3 +49,6 @@ cosmic-panel-launcher-button-keywords = COSMIC;Miniprogram;Programstartare;Köra
 cosmic-panel-workspaces-button-comment = Öppna arbetsyteöversikten för att hantera och växla arbetsytor
 cosmic-panel-workspaces-button-keywords = COSMIC;Miniprogram;Arbetsyta;Översikt;Applet;
 cosmic-applet-a11y-keywords = COSMIC;Miniprogram;Tillgänglighet;A11y;Skärmläsare;Förstoringsglas;Kontrast;Färg;Applet;
+cosmic-applet-osk = Knapp för virtuellt tangentbord
+cosmic-applet-osk-comment = Öppna virtuellt tangentbord
+cosmic-applet-osk-keywords = COSMIC;Miniprogram;OSK;Tangentbord;Virtuellt;On-screen;

@@ -49,3 +49,6 @@ cosmic-panel-launcher-button-keywords = COSMIC;Апплет;Жөнелткіш;�
 cosmic-panel-workspaces-button = Жұмыс орындары батырмасы
 cosmic-panel-workspaces-button-comment = Жұмыс орындарын басқару және ауыстыру үшін жұмыс орындары шолуын ашу
 cosmic-panel-workspaces-button-keywords = COSMIC;Апплет;Жұмыс орны;Шолу;
+cosmic-applet-osk = Экрандық пернетақта батырмасы
+cosmic-applet-osk-comment = Экрандық пернетақтаны ашу
+cosmic-applet-osk-keywords = COSMIC;Апплет;OSK;Пернетақта;

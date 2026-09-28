@@ -49,3 +49,6 @@ cosmic-panel-launcher-button-comment = Otwórz program startowy by wyszukać apl
 cosmic-panel-launcher-button-keywords = COSMIC;Aplet;Program startowy;Uruchamianie Programów;
 cosmic-panel-workspaces-button-comment = Otwórz podgląd obszarów roboczych by nimi zarządzać i przełączać się pomiędzy nimi
 cosmic-panel-workspaces-button-keywords = COSMIC;Aplet;Obszary Robocze;Podgląd;
+cosmic-applet-osk = Przycisk Klawiatury Ekranowej
+cosmic-applet-osk-comment = Otwórz klawiaturę ekranową
+cosmic-applet-osk-keywords = COSMIC;Aplet;OSK;Klawiatura;
