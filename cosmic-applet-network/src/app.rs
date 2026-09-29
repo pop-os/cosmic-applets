@@ -269,9 +269,6 @@ pub struct RequestedVpn {
     password: SecureString,
     password_hidden: bool,
     responder: SecretResponderHandle,
-    /// VPN secret keys NM hinted as needed (e.g. `["password"]`). When empty,
-    /// `"password"` is used as a fallback.
-    secret_keys: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -312,7 +309,7 @@ pub enum NmAgentEvent {
 pub enum AgentSetting {
     WifiPsk { ssid: String },
     WifiEap,
-    Vpn { secret_keys: Vec<String> },
+    Vpn,
     Other,
 }
 
@@ -989,9 +986,7 @@ fn secret_request_to_event(req: SecretRequest) -> NmAgentEvent {
     let setting = match req.setting {
         SecretSetting::WifiPsk { ssid } => AgentSetting::WifiPsk { ssid },
         SecretSetting::WifiEap { .. } => AgentSetting::WifiEap,
-        SecretSetting::Vpn { .. } => AgentSetting::Vpn {
-            secret_keys: req.hints.clone(),
-        },
+        SecretSetting::Vpn { .. } => AgentSetting::Vpn,
         _ => AgentSetting::Other,
     };
 
@@ -1004,12 +999,9 @@ fn secret_request_to_event(req: SecretRequest) -> NmAgentEvent {
     }
 }
 
-/// Pick a VPN secret from NM's payload: a hinted key first, else `"password"`.
-fn pick_secret(src: &HashMap<String, String>, keys: &[String]) -> Option<String> {
-    keys.iter()
-        .find_map(|k| src.get(k).filter(|s| !s.is_empty()))
-        .or_else(|| src.get("password").filter(|s| !s.is_empty()))
-        .cloned()
+/// Pick the VPN password from NM's existing-secrets payload, if present.
+fn pick_secret(src: &HashMap<String, String>) -> Option<String> {
+    src.get("password").filter(|s| !s.is_empty()).cloned()
 }
 
 /// Reply with [`NoSecrets`](nmrs::agent::SecretResponder::no_secrets) to free
@@ -1534,13 +1526,9 @@ impl cosmic::Application for CosmicNetworkApplet {
                             }
                         }
                     } else if known_vpn {
-                        let secret_keys = match &setting {
-                            AgentSetting::Vpn { secret_keys } => secret_keys.clone(),
-                            _ => Vec::new(),
-                        };
                         // Pre-fill with the saved secret NM sends in the request
                         // (system-owned secrets are included in the payload).
-                        let password = pick_secret(&existing_secrets, &secret_keys)
+                        let password = pick_secret(&existing_secrets)
                             .map(SecureString::from)
                             .unwrap_or_else(|| SecureString::from(String::new()));
                         self.nm_state.requested_vpn = Some(RequestedVpn {
@@ -1549,7 +1537,6 @@ impl cosmic::Application for CosmicNetworkApplet {
                             password,
                             password_hidden: true,
                             responder: responder.clone(),
-                            secret_keys,
                         });
                         consumed = true;
                     }
@@ -1581,7 +1568,6 @@ impl cosmic::Application for CosmicNetworkApplet {
                 if let Some(RequestedVpn {
                     password,
                     responder,
-                    secret_keys,
                     ..
                 }) = self.nm_state.requested_vpn.take()
                 {
@@ -1590,15 +1576,18 @@ impl cosmic::Application for CosmicNetworkApplet {
                             return Message::Refresh;
                         };
 
-                        let mut secrets: HashMap<String, String> = HashMap::new();
-                        let value = password.unsecure().to_owned();
-                        if secret_keys.is_empty() {
-                            secrets.insert("password".to_owned(), value);
-                        } else {
-                            for key in secret_keys {
-                                secrets.insert(key, value.clone());
-                            }
-                        }
+                        // This dialog only ever collects one value for one role
+                        // (the VPN password). NM's hints can legitimately mix in
+                        // other keys - "username" is connection data, not a
+                        // secret, and VPN plugins reject it outright; "cert-pass"
+                        // and "http-proxy-password" are real, distinct secrets
+                        // that just happen to share the request. Never echo the
+                        // entered password into any of those; always submit it
+                        // under "password" alone.
+                        let secrets = HashMap::from([(
+                            "password".to_owned(),
+                            password.unsecure().to_owned(),
+                        )]);
 
                         if let Err(e) = responder.vpn_secrets(secrets).await {
                             tracing::error!("vpn secret reply failed: {e}");
@@ -2308,32 +2297,26 @@ mod tests {
     }
 
     #[test]
-    fn hinted_key_is_preferred() {
+    fn returns_password_when_present() {
+        let s = secrets(&[("password", "pw")]);
+        assert_eq!(pick_secret(&s).as_deref(), Some("pw"));
+    }
+
+    #[test]
+    fn ignores_other_keys() {
         let s = secrets(&[("password", "pw"), ("otp", "123")]);
-        assert_eq!(pick_secret(&s, &["otp".into()]).as_deref(), Some("123"));
+        assert_eq!(pick_secret(&s).as_deref(), Some("pw"));
     }
 
     #[test]
-    fn empty_hint_list_falls_back_to_password() {
-        let s = secrets(&[("password", "pw")]);
-        assert_eq!(pick_secret(&s, &[]).as_deref(), Some("pw"));
+    fn missing_password_returns_none() {
+        let s = secrets(&[("otp", "123")]);
+        assert_eq!(pick_secret(&s), None);
     }
 
     #[test]
-    fn missing_hinted_key_falls_back_to_password() {
-        let s = secrets(&[("password", "pw")]);
-        assert_eq!(pick_secret(&s, &["absent".into()]).as_deref(), Some("pw"));
-    }
-
-    #[test]
-    fn empty_hinted_value_does_not_shadow_populated_fallback() {
-        let s = secrets(&[("otp", ""), ("password", "pw")]);
-        assert_eq!(pick_secret(&s, &["otp".into()]).as_deref(), Some("pw"));
-    }
-
-    #[test]
-    fn nothing_usable_returns_none() {
+    fn empty_password_returns_none() {
         let s = secrets(&[("password", "")]);
-        assert_eq!(pick_secret(&s, &["otp".into()]), None);
+        assert_eq!(pick_secret(&s), None);
     }
 }
