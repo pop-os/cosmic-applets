@@ -211,8 +211,12 @@ impl cosmic::Application for Power {
     fn view(&self) -> Element<'_, Message> {
         self.core
             .applet
-            .icon_button(&self.icon_name)
-            .on_press_down(Message::TogglePopup)
+            .autosize_window(
+                self.core
+                    .applet
+                    .icon_button(&self.icon_name)
+                    .on_press_down(Message::TogglePopup),
+            )
             .into()
     }
 

@@ -61,8 +61,12 @@ impl cosmic::Application for Button {
     fn view(&self) -> cosmic::Element<'_, Msg> {
         self.core
             .applet
-            .icon_button("input-keyboard-symbolic")
-            .on_press_down(Msg::Press)
+            .autosize_window(
+                self.core
+                    .applet
+                    .icon_button("input-keyboard-symbolic")
+                    .on_press_down(Msg::Press),
+            )
             .into()
     }
 }
