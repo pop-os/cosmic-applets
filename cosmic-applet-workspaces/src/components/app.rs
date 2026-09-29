@@ -172,6 +172,15 @@ impl cosmic::Application for IcedWorkspacesApplet {
         Task::none()
     }
 
+    fn on_applet_settings(&mut self) -> app::Task<Self::Message> {
+        self.layout = match self.core.applet.anchor {
+            PanelAnchor::Left | PanelAnchor::Right => Layout::Column,
+            PanelAnchor::Top | PanelAnchor::Bottom => Layout::Row,
+        };
+
+        Task::none()
+    }
+
     fn view(&self) -> Element<'_, Message> {
         if self.workspaces.is_empty() {
             return row![].padding(8).into();

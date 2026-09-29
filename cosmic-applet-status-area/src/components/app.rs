@@ -510,6 +510,10 @@ impl cosmic::Application for App {
         }
     }
 
+    fn on_applet_settings(&mut self) -> app::Task<Msg> {
+        self.resize_window()
+    }
+
     fn subscription(&self) -> Subscription<Msg> {
         let mut subscriptions = Vec::new();
 

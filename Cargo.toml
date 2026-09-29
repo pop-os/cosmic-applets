@@ -25,14 +25,15 @@ members = [
 resolver = "3"
 
 [workspace.dependencies]
-anyhow = "1.0.102"
+
 cctk = { git = "https://github.com/pop-os/cosmic-protocols", package = "cosmic-client-toolkit", rev = "c0cff4d" }
-cosmic-applets-config = { path = "cosmic-applets-config" }
-cosmic-osk-config = { git = "https://github.com/pop-os/cosmic-osk" }
 cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols", default-features = false, features = [
     "client",
 ], rev = "c0cff4d" }
 
+anyhow = "1.0.102"
+cosmic-applets-config = { path = "cosmic-applets-config" }
+cosmic-osk-config = { git = "https://github.com/pop-os/cosmic-osk" }
 futures = "0.3"
 futures-util = "0.3"
 i18n-embed = { version = "0.16.0", features = [
@@ -72,20 +73,24 @@ lto = "thin"
 [workspace.metadata.cargo-machete]
 ignored = ["libcosmic"]
 
-# [patch."https://github.com/pop-os/libcosmic"]
+[patch."https://github.com/pop-os/libcosmic"]
 # cosmic-config = { path = "../libcosmic/cosmic-config" }
 # libcosmic = { path = "../libcosmic" }
 # iced_futures = { path = "../libcosmic/iced/futures" }
-# cosmic-config = { git = "https://github.com/pop-os/libcosmic//", branch = "theme-v2" }
-# libcosmic = { git = "https://github.com/pop-os/libcosmic//", branch = "theme-v2" }
-# iced_futures = { git = "https://github.com/pop-os/libcosmic//", branch = "theme-v2" }
+cosmic-config = { git = "https://github.com/pop-os/libcosmic//", branch = "fewer-applet-restarts" }
+libcosmic = { git = "https://github.com/pop-os/libcosmic//", branch = "fewer-applet-restarts" }
+iced_futures = { git = "https://github.com/pop-os/libcosmic//", branch = "fewer-applet-restarts" }
 
 [patch."https://github.com/smithay/client-toolkit.git"]
 sctk = { package = "smithay-client-toolkit", version = "0.20.0" }
 
 [patch."https://github.com/pop-os/cosmic-protocols"]
-cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols//", rev = "c0cff4d" }
-cosmic-client-toolkit = { git = "https://github.com/pop-os/cosmic-protocols//", rev = "c0cff4d" }
+# cosmic-protocols = { path = "../cosmic-protocols" }
+# cosmic-client-toolkit = { path = "../cosmic-protocols/client-toolkit" }
+cctk = { git = "https://github.com/pop-os/cosmic-protocols//", package = "cosmic-client-toolkit", branch = "panel-applet" }
+cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols//", default-features = false, features = [
+    "client",
+], branch = "panel-applet" }
 
 # [patch.'https://github.com/pop-os/dbus-settings-bindings']
 # cosmic-dbus-networkmanager = { path = "../dbus-settings-bindings/networkmanager" }
