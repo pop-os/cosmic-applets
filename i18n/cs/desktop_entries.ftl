@@ -49,3 +49,6 @@ cosmic-panel-launcher-button-keywords = COSMIC;Applet;Spouštěč;Vyhledávání
 cosmic-panel-workspaces-button-comment = Přístup k přehledu pracovních ploch pro jejich správu a přepínání
 cosmic-panel-workspaces-button-keywords = COSMIC;Applet;Pracovní;Plocha;Plochy;Přehled;
 cosmic-applet-status-area-comment = Ikony aplikací, které mohou zobrazovat nabídky na panelu
+cosmic-applet-osk-keywords = COSMIC;Applet;OSK;Klávesnice;
+cosmic-applet-osk = Tlačítko klávesnice na obrazovce
+cosmic-applet-osk-comment = Otevře klávesnici na obrazovce

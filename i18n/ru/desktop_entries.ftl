@@ -49,3 +49,6 @@ cosmic-panel-launcher-button-keywords = COSMIC;Апплет;Панель;Зап�
 cosmic-panel-workspaces-button = Кнопка «Обзор»
 cosmic-panel-workspaces-button-comment = Открытие обзора рабочих столов для управления и переключения между ними
 cosmic-panel-workspaces-button-keywords = COSMIC;Апплет;Рабочий;Стол;Обзор;
+cosmic-applet-osk = Кнопка «Экранная клавиатура»
+cosmic-applet-osk-comment = Открытие Экранной клавиатуры
+cosmic-applet-osk-keywords = COSMIC;Апплет;OSK;Клавиатура;Экранная;
