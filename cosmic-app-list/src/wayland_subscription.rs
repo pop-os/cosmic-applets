@@ -120,6 +120,7 @@ pub enum WaylandUpdate {
         terminal: bool,
     },
     Image(ExtForeignToplevelHandleV1, WaylandImage),
+    Icon(ExtForeignToplevelHandleV1, u64, WaylandImage),
 }
 
 #[derive(Clone, Debug)]
