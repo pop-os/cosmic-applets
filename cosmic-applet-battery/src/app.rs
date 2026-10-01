@@ -43,6 +43,8 @@ use rustc_hash::FxHashMap;
 use std::{path::PathBuf, time::Duration};
 use tokio::sync::mpsc::UnboundedSender;
 
+const DISABLED_BUTTON_OPACITY: f32 = 0.5;
+
 // XXX improve
 // TODO: time to empty varies? needs averaging?
 fn format_duration(duration: Duration) -> String {
@@ -80,6 +82,7 @@ struct CosmicBatteryApplet {
     battery_percent: f64,
     no_battery: bool,
     on_battery: bool,
+    high_performance_when_plugged_in: bool,
     gpus: FxHashMap<PathBuf, GPUData>,
     update_trigger: Option<UnboundedSender<()>>,
     time_remaining: Duration,
@@ -207,6 +210,7 @@ enum Message {
     InitProfile(UnboundedSender<PowerProfileRequest>, Power),
     Profile(Power),
     SelectProfile(Power),
+    SetHighPerformanceWhenPluggedIn(bool),
     ConfigChanged(BatteryAppletConfig),
     Token(TokenUpdate),
     OpenSettings,
@@ -403,20 +407,29 @@ impl cosmic::Application for CosmicBatteryApplet {
                     return Task::batch(tasks);
                 }
             }
-            Message::UpowerDevice(event) => match event {
-                DeviceDbusEvent::Update {
-                    on_battery,
-                    percent,
-                    time_to_empty,
-                } => {
+            Message::UpowerDevice(event) => {
+                // TEMP: Override for testing.
+                if let Ok(_) = std::env::var("FORCE_POWERED") {
                     self.no_battery = false;
-                    self.update_battery(percent, on_battery);
-                    self.time_remaining = Duration::from_secs(time_to_empty as u64);
+                    self.on_battery = false;
+                    self.update_battery(100.0, false);
+                    return Task::none();
+                };
+                match event {
+                    DeviceDbusEvent::Update {
+                        on_battery,
+                        percent,
+                        time_to_empty,
+                    } => {
+                        self.no_battery = false;
+                        self.update_battery(percent, on_battery);
+                        self.time_remaining = Duration::from_secs(time_to_empty as u64);
+                    }
+                    DeviceDbusEvent::NoBattery => {
+                        self.no_battery = true;
+                    }
                 }
-                DeviceDbusEvent::NoBattery => {
-                    self.no_battery = true;
-                }
-            },
+            }
             Message::KeyboardBacklight(event) => match event {
                 KeyboardBacklightUpdate::Sender(tx) => {
                     self.kbd_sender = Some(tx);
@@ -444,6 +457,9 @@ impl cosmic::Application for CosmicBatteryApplet {
                 if let Some(tx) = self.power_profile_sender.as_ref() {
                     let _ = tx.send(PowerProfileRequest::Set(profile));
                 }
+            }
+            Message::SetHighPerformanceWhenPluggedIn(flag) => {
+                self.high_performance_when_plugged_in = flag;
             }
             Message::CloseRequested(id) => {
                 self.dragging_kbd_brightness = false;
@@ -674,69 +690,74 @@ impl cosmic::Application for CosmicBatteryApplet {
                     .into(),
             ]
         };
+
+        let profile_selection_enabled =
+            !self.high_performance_when_plugged_in || (self.on_battery && !self.no_battery);
+        let profile_text_class = if profile_selection_enabled {
+            cosmic::theme::Text::Default
+        } else {
+            cosmic::theme::Text::Custom(|theme| cosmic::iced::widget::text::Style {
+                color: Some(cosmic::iced::Color {
+                    a: DISABLED_BUTTON_OPACITY,
+                    ..theme.cosmic().background(theme.transparent).on.into()
+                }),
+                ..Default::default()
+            })
+        };
+        let profile_icon_opacity = if profile_selection_enabled {
+            1.0
+        } else {
+            DISABLED_BUTTON_OPACITY
+        };
+        let profile_button = |profile, profile_name, profile_desc| {
+            menu_button(
+                row![
+                    column![
+                        text::body(profile_name).class(profile_text_class),
+                        text::caption(profile_desc).class(profile_text_class)
+                    ]
+                    .width(Length::Fill),
+                    if self.power_profile == profile && profile_selection_enabled
+                        || profile == Power::Performance && !profile_selection_enabled
+                    {
+                        container(
+                            icon::from_name("emblem-ok-symbolic")
+                                .size(12)
+                                .symbolic(true)
+                                .icon()
+                                .opacity(profile_icon_opacity),
+                        )
+                    } else {
+                        container(space::horizontal().width(1.0))
+                    }
+                ]
+                .align_y(Alignment::Center),
+            )
+            .on_press_maybe(profile_selection_enabled.then_some(Message::SelectProfile(profile)))
+        };
+
         content.extend([
-            menu_button(
-                row![
-                    column![
-                        text::body(fl!("battery")),
-                        text::caption(fl!("battery-desc"))
-                    ]
-                    .width(Length::Fill),
-                    if matches!(self.power_profile, Power::Battery) {
-                        container(
-                            icon::from_name("emblem-ok-symbolic")
-                                .size(12)
-                                .symbolic(true),
-                        )
-                    } else {
-                        container(space::horizontal().width(1.0))
-                    }
-                ]
-                .align_y(Alignment::Center),
+            profile_button(Power::Battery, fl!("battery"), fl!("battery-desc")).into(),
+            profile_button(Power::Balanced, fl!("balanced"), fl!("balanced-desc")).into(),
+            profile_button(
+                Power::Performance,
+                fl!("performance"),
+                fl!("performance-desc"),
             )
-            .on_press(Message::SelectProfile(Power::Battery))
             .into(),
-            menu_button(
-                row![
-                    column![
-                        text::body(fl!("balanced")),
-                        text::caption(fl!("balanced-desc"))
-                    ]
-                    .width(Length::Fill),
-                    if matches!(self.power_profile, Power::Balanced) {
-                        container(
-                            icon::from_name("emblem-ok-symbolic")
-                                .size(12)
-                                .symbolic(true),
-                        )
-                    } else {
-                        container(space::horizontal().width(1.0))
-                    }
-                ]
-                .align_y(Alignment::Center),
+            padded_control(divider::horizontal::default())
+                .padding([space_xxs, space_s])
+                .into(),
+            padded_control(
+                toggler(self.high_performance_when_plugged_in)
+                    // TODO: i18n
+                    .label(Some(
+                        "Switch to High Performance when plugged in".to_string(),
+                    ))
+                    .on_toggle(Message::SetHighPerformanceWhenPluggedIn)
+                    .width(Length::Fill)
+                    .text_size(14),
             )
-            .on_press(Message::SelectProfile(Power::Balanced))
-            .into(),
-            menu_button(
-                row![
-                    column![
-                        text::body(fl!("performance")),
-                        text::caption(fl!("performance-desc"))
-                    ]
-                    .width(Length::Fill),
-                    if matches!(self.power_profile, Power::Performance) {
-                        container(
-                            icon::from_name("emblem-ok-symbolic")
-                                .size(12)
-                                .symbolic(true),
-                        )
-                    } else {
-                        container(space::horizontal().width(1.0))
-                    }
-                ]
-                .align_y(Alignment::Center),
-            )
-            .on_press(Message::SelectProfile(Power::Performance))
             .into(),
             padded_control(divider::horizontal::default())
                 .padding([space_xxs, space_s])
