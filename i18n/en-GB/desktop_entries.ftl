@@ -49,3 +49,6 @@ cosmic-panel-launcher-button-keywords = COSMIC;Applet;Launcher;Runner;
 cosmic-panel-workspaces-button = Workspaces Button
 cosmic-panel-workspaces-button-comment = Open the workspaces overview to manage and switch workspaces
 cosmic-panel-workspaces-button-keywords = COSMIC;Applet;Workspace;Overview;
+cosmic-applet-osk = On-screen Keyboard Button
+cosmic-applet-osk-comment = Open the on-screen keyboard
+cosmic-applet-osk-keywords = COSMIC;Applet;OSK;Keyboard;

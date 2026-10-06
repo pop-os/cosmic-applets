@@ -49,3 +49,6 @@ cosmic-panel-app-button-keywords = COSMIC;КОСМІК;КОСМОС;КОСМІЧ
 cosmic-panel-launcher-button-keywords = COSMIC;КОСМІК;КОСМОС;КОСМІЧНЕ;Віджет;Віджети;Запускач;Launcher;Пошук;Команди;
 cosmic-panel-workspaces-button-comment = Огляд робочих просторів для керування та перемикання
 cosmic-panel-workspaces-button-keywords = COSMIC;КОСМІК;КОСМОС;КОСМІЧНЕ;Віджет;Віджети;Робочий;Простір;Простори;Режим;Огляду;Overview;
+cosmic-applet-osk = Кнопка екранної клавіатури
+cosmic-applet-osk-comment = Відкрити екранну клавіатуру
+cosmic-applet-osk-keywords = COSMIC;Віджет;Екранна;Клавіатура;OSK;Keyboard;

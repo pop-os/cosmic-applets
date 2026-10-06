@@ -49,3 +49,6 @@ cosmic-panel-launcher-button-keywords = COSMIC;Applet;Peluncur;Penjalan;
 cosmic-panel-workspaces-button = Tombol Ruang Kerja
 cosmic-panel-workspaces-button-comment = Buka ikhtisar ruang kerja untuk mengelola dan mengalihkan ruang kerja
 cosmic-panel-workspaces-button-keywords = COSMIC;Applet;Ruang Kerja;Ikhtisar;
+cosmic-applet-osk = Tombol Papan Ketik di Layar
+cosmic-applet-osk-comment = Buka papan ketik di layar
+cosmic-applet-osk-keywords = COSMIC;Applet;OSK;Papan ketik;

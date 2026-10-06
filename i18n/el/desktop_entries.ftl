@@ -49,3 +49,6 @@ cosmic-panel-launcher-button = Κουμπί γραμμής εκκίνησης
 cosmic-panel-launcher-button-comment = Άνοιγμα της γραμμής εκκίνησης για αναζήτηση εφαρμογών και εκτέλεση εντολών
 cosmic-panel-launcher-button-keywords = Μικροεφαρμογή;Μενού;Εκκίνηση;Εκτέλεση;COSMIC;Applet;Launcher;Runner;
 cosmic-panel-workspaces-button-comment = Άνοιγμα των χώρων εργασίας για διαχείριση και εναλλαγή χώρων εργασίας
+cosmic-applet-osk = Κουμπί πληκτρολογίου οθόνης
+cosmic-applet-osk-comment = Άνοιγμα του πληκτρολογίου οθόνης
+cosmic-applet-osk-keywords = Μικροεφαρμογή;Πληκτρολόγιο;Οθόνης;Εικονικό;COSMIC;Applet;OSK;Keyboard;

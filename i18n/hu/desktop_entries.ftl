@@ -49,3 +49,6 @@ cosmic-applet-workspaces-keywords = COSMIC;kisalkalmazás;munkaterületek;
 cosmic-panel-app-button-comment = Az alkalmazáskönyvtár megnyitása a telepített alkalmazások indításához
 cosmic-panel-launcher-button-comment = Az indító megnyitása alkalmazások kereséséhez és parancsok futtatásához
 cosmic-panel-workspaces-button-comment = A munkaterületek áttekintőjének megnyitása munkaterületek kezeléséhez és váltásához
+cosmic-applet-osk = Képernyő-billentyűzet gomb
+cosmic-applet-osk-comment = A képernyő-billentyűzet megnyitása
+cosmic-applet-osk-keywords = COSMIC;kisalkalmazás;képernyő-billentyűzet;billentyűzet;
