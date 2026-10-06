@@ -49,3 +49,6 @@ cosmic-panel-launcher-button-keywords = COSMIC;Miniaplicación;Lanzador;Executor
 cosmic-panel-workspaces-button = Botón dos espazos de traballo
 cosmic-panel-workspaces-button-comment = Abre a vista xeral dos espazos de traballo para xestionalos e cambiar entre eles
 cosmic-panel-workspaces-button-keywords = COSMIC;Miniaplicación;Espazo de traballo;Vista xeral;
+cosmic-applet-osk = Botón do teclado na pantalla
+cosmic-applet-osk-comment = Abrir o teclado en pantalla
+cosmic-applet-osk-keywords = COSMIC;Miniaplicación;OSK;Teclado;

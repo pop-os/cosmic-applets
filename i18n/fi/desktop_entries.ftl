@@ -49,3 +49,6 @@ cosmic-panel-workspaces-button-keywords = COSMIC;Applet;Workspace;Overview;sovel
 cosmic-applet-tiling = Asettelu
 cosmic-applet-tiling-comment = Hallitse aktiivisen vihjeistystä, nykyistä ja työtilakohtaista automaattista asettelua
 cosmic-applet-tiling-keywords = COSMIC;Applet;Tiling;Hint;Workspace;sovelma;laatoitus;asettelu;vihje;työtila;
+cosmic-applet-osk = Näyttönäppäimistön painike
+cosmic-applet-osk-comment = Avaa näyttönäppäimistö
+cosmic-applet-osk-keywords = COSMIC;Applet;OSK;Keyboard;näyttönäppäimistö;näppäimistö;sovelma;
