@@ -8,7 +8,6 @@ Build-Depends:
   rustc (>=1.73.0),
   cargo,
   libclang-dev,
-  libdbus-1-dev,
   libegl-dev,
   libpulse-dev,
   libpipewire-0.3-dev,

@@ -6,7 +6,7 @@ license = "GPL-3.0-only"
 
 [dependencies]
 anyhow.workspace = true
-bluer = { version = "0.17", features = ["bluetoothd", "id"] }
+bluez-zbus = { git = "https://github.com/pop-os/dbus-settings-bindings" }
 futures.workspace = true
 i18n-embed-fl.workspace = true
 i18n-embed.workspace = true
@@ -18,3 +18,4 @@ tokio.workspace = true
 tracing-log.workspace = true
 tracing-subscriber.workspace = true
 tracing.workspace = true
+zbus.workspace = true

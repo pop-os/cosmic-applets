@@ -13,8 +13,8 @@ use std::{
     time::Duration,
 };
 
-use bluer::{
-    Adapter, AdapterProperty, Address, Session, Uuid,
+use crate::bluez::{
+    self, Adapter, AdapterProperty, Address, Session,
     agent::{Agent, AgentHandle},
 };
 
@@ -275,7 +275,7 @@ const DEFAULT_DEVICE_ICON: &str = "bluetooth-symbolic";
 
 impl BluerDevice {
     #[inline(never)]
-    pub async fn from_device(device: &bluer::Device) -> Self {
+    pub async fn from_device(device: &bluez::Device) -> Self {
         let (alias, name, is_paired, is_trusted, is_connected, battery_percent, icon) = futures::join!(
             device.alias().map(|res| res.ok()),
             device.name().map(|res| res.ok().flatten()),
@@ -349,7 +349,7 @@ pub enum BluerAgentEvent {
     RequestPasskey(BluerDevice),
     RequestConfirmation(BluerDevice, String, Sender<bool>), // Note mpsc channel is used bc the sender must be cloned in the iced Message machinery
     RequestDeviceAuthorization(BluerDevice, Sender<bool>),
-    RequestServiceAuthorization(BluerDevice, Uuid, Sender<bool>),
+    RequestServiceAuthorization(BluerDevice, String, Sender<bool>),
 }
 
 pub struct BluerSessionState {
@@ -391,7 +391,7 @@ impl BluerSessionState {
                 let tx_clone = tx_clone_1.clone();
                 Box::pin(async move {
                     let Ok(device) = agent_clone.device(req.device) else {
-                        return Err(bluer::agent::ReqError::Rejected);
+                        return Err(bluez::agent::ReqError::Rejected);
                     };
                     let _ = tx_clone
                         .send(BluerSessionEvent::AgentEvent(
@@ -409,7 +409,7 @@ impl BluerSessionState {
                 let tx_clone = tx_clone_2.clone();
                 Box::pin(async move {
                     let Ok(device) = agent_clone.device(req.device) else {
-                        return Err(bluer::agent::ReqError::Rejected);
+                        return Err(bluez::agent::ReqError::Rejected);
                     };
                     let _ = tx_clone
                         .send(BluerSessionEvent::AgentEvent(
@@ -428,7 +428,7 @@ impl BluerSessionState {
                 let tx_clone = tx_clone_3.clone();
                 Box::pin(async move {
                     let Ok(device) = agent_clone.device(req.device) else {
-                        return Err(bluer::agent::ReqError::Rejected);
+                        return Err(bluez::agent::ReqError::Rejected);
                     };
                     let _ = tx_clone
                         .send(BluerSessionEvent::AgentEvent(
@@ -446,7 +446,7 @@ impl BluerSessionState {
                 let tx_clone = tx_clone_4.clone();
                 Box::pin(async move {
                     let Ok(device) = agent_clone.device(req.device) else {
-                        return Err(bluer::agent::ReqError::Rejected);
+                        return Err(bluez::agent::ReqError::Rejected);
                     };
                     let _ = tx_clone
                         .send(BluerSessionEvent::AgentEvent(
@@ -464,7 +464,7 @@ impl BluerSessionState {
                 let tx_clone = tx_clone_5.clone();
                 Box::pin(async move {
                     let Ok(device) = agent_clone.device(req.device) else {
-                        return Err(bluer::agent::ReqError::Rejected);
+                        return Err(bluez::agent::ReqError::Rejected);
                     };
                     let (tx, mut rx) = channel(1);
                     let _ = tx_clone
@@ -479,7 +479,7 @@ impl BluerSessionState {
                     let res = rx.recv().await;
                     match res {
                         Some(res) if res => Ok(()),
-                        _ => Err(bluer::agent::ReqError::Rejected),
+                        _ => Err(bluez::agent::ReqError::Rejected),
                     }
                 })
             })),
@@ -488,7 +488,7 @@ impl BluerSessionState {
                 let tx_clone = tx_clone_6.clone();
                 Box::pin(async move {
                     let Ok(device) = agent_clone.device(req.device) else {
-                        return Err(bluer::agent::ReqError::Rejected);
+                        return Err(bluez::agent::ReqError::Rejected);
                     };
                     let (tx, mut rx) = channel(1);
                     let _ = tx_clone
@@ -502,7 +502,7 @@ impl BluerSessionState {
                     let res = rx.recv().await;
                     match res {
                         Some(res) if res => Ok(()),
-                        _ => Err(bluer::agent::ReqError::Rejected),
+                        _ => Err(bluez::agent::ReqError::Rejected),
                     }
                 })
             })),
@@ -511,7 +511,7 @@ impl BluerSessionState {
                 let tx_clone = tx_clone_7.clone();
                 Box::pin(async move {
                     let Ok(device) = agent_clone.device(req.device) else {
-                        return Err(bluer::agent::ReqError::Rejected);
+                        return Err(bluez::agent::ReqError::Rejected);
                     };
                     let (tx, mut rx) = channel(1);
                     // TODO better describe the service to the user
@@ -527,7 +527,7 @@ impl BluerSessionState {
                     let res = rx.recv().await;
                     match res {
                         Some(res) if res => Ok(()),
-                        _ => Err(bluer::agent::ReqError::Rejected),
+                        _ => Err(bluez::agent::ReqError::Rejected),
                     }
                 })
             })),
@@ -625,14 +625,14 @@ impl BluerSessionState {
                                 break;
                             };
                             match adapter_event {
-                                bluer::AdapterEvent::PropertyChanged(AdapterProperty::Powered(
+                                bluez::AdapterEvent::PropertyChanged(AdapterProperty::Powered(
                                     v,
                                 )) => {
                                     is_powered = v;
                                 }
                                 e => {
                                     match e {
-                                        bluer::AdapterEvent::DeviceAdded(address)
+                                        bluez::AdapterEvent::DeviceAdded(address)
                                             if !devices.iter().any(|d| d.address == address) =>
                                         {
                                             devices =
@@ -649,20 +649,20 @@ impl BluerSessionState {
                                                     .await;
                                             }
                                         }
-                                        bluer::AdapterEvent::DeviceRemoved(address)
+                                        bluez::AdapterEvent::DeviceRemoved(address)
                                             if devices.iter().any(|d| d.address == address) =>
                                         {
                                             // Remove the device from new_devices if it exists
                                             devices.retain(|d| d.address != address);
                                         }
 
-                                        bluer::AdapterEvent::PropertyChanged(p) => {
+                                        bluez::AdapterEvent::PropertyChanged(p) => {
                                             tracing::info!("property change ignored {p:?}");
                                             interval.tick().await;
                                             continue;
                                         }
-                                        bluer::AdapterEvent::DeviceAdded(address)
-                                        | bluer::AdapterEvent::DeviceRemoved(address) => {
+                                        bluez::AdapterEvent::DeviceAdded(address)
+                                        | bluez::AdapterEvent::DeviceRemoved(address) => {
                                             tracing::info!(
                                                 "device change that is already handled {address}"
                                             );
