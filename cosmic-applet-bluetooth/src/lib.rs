@@ -3,6 +3,7 @@
 
 mod app;
 mod bluetooth;
+mod bluez;
 mod config;
 mod localize;
 
