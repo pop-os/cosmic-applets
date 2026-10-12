@@ -26,7 +26,10 @@ use cosmic::{
         cosmic_panel_config::{PanelAnchor, PanelSize},
     },
     cosmic_config::{Config, CosmicConfigEntry},
-    desktop::IconSourceExt,
+    desktop::{
+        IconSourceExt,
+        gpu::{Descriptor, Preference},
+    },
     iced::{
         self, Alignment, Background, Border, Length, Limits, Padding, Subscription,
         advanced::text::{Ellipsize, EllipsizeHeightLimit},
@@ -61,7 +64,6 @@ use cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::Sta
 use futures::future::pending;
 use rustc_hash::FxHashMap;
 use std::{borrow::Cow, path::PathBuf, rc::Rc, str::FromStr, time::Duration};
-use switcheroo_control::Gpu;
 use tokio::time::sleep;
 use url::Url;
 
@@ -184,7 +186,7 @@ impl DockItem {
         rectangle_tracker: Option<&RectangleTracker<DockItemId>>,
         interaction_enabled: bool,
         dnd_source_enabled: bool,
-        gpus: Option<&[Gpu]>,
+        gpus: Option<&[Descriptor]>,
         is_focused: bool,
         dot_border_radius: [f32; 4],
         window_id: window::Id,
@@ -371,7 +373,7 @@ struct CosmicAppList {
     rectangles: FxHashMap<DockItemId, iced::Rectangle>,
     dnd_offer: Option<DndOffer>,
     is_listening_for_dnd: bool,
-    gpus: Option<Vec<Gpu>>,
+    gpus: Option<Vec<Descriptor>>,
     active_workspaces: Vec<ExtWorkspaceHandleV1>,
     output_list: FxHashMap<WlOutput, OutputInfo>,
     locales: Vec<String>,
@@ -393,7 +395,7 @@ enum Message {
     Popup(u32, window::Id),
     Pressed(window::Id),
     ToplevelListPopup(u32, window::Id),
-    GpuRequest(Option<Vec<Gpu>>),
+    GpuRequest(Option<Vec<Descriptor>>),
     CloseRequested(window::Id),
     ClosePopup,
     Activate(ExtForeignToplevelHandleV1),
@@ -458,7 +460,7 @@ fn index_in_list(
     }
 }
 
-async fn try_get_gpus() -> Option<Vec<Gpu>> {
+async fn try_get_gpus() -> Option<Vec<Descriptor>> {
     let connection = zbus::Connection::system().await.ok()?;
     let proxy = switcheroo_control::SwitcherooControlProxy::new(&connection)
         .await
@@ -473,7 +475,16 @@ async fn try_get_gpus() -> Option<Vec<Gpu>> {
         return None;
     }
 
-    Some(gpus)
+    Some(
+        gpus.into_iter()
+            .map(|gpu| Descriptor {
+                name: gpu.name,
+                environment: gpu.environment,
+                default: gpu.default,
+                discrete: gpu.discrete,
+            })
+            .collect(),
+    )
 }
 
 const TOPLEVEL_BUTTON_WIDTH: f32 = 192.0;
@@ -1475,12 +1486,14 @@ impl cosmic::Application for CosmicAppList {
                             envs.push(("XDG_ACTIVATION_TOKEN".to_string(), token.clone()));
                             envs.push(("DESKTOP_STARTUP_ID".to_string(), token));
                         }
-                        if let (Some(gpus), Some(idx)) = (self.gpus.as_ref(), gpu_idx) {
+                        if let Some(gpu) = self
+                            .gpus
+                            .as_deref()
+                            .zip(gpu_idx)
+                            .and_then(|(gpus, idx)| gpus.get(idx))
+                        {
                             envs.extend(
-                                gpus[idx]
-                                    .environment
-                                    .iter()
-                                    .map(|(k, v)| (k.clone(), v.clone())),
+                                gpu.environment.iter().map(|(k, v)| (k.clone(), v.clone())),
                             );
                         }
                         tokio::spawn(async move {
@@ -2114,16 +2127,16 @@ impl cosmic::Application for CosmicAppList {
                         if !toplevels.is_empty() {
                             content =
                                 content.push(menu_button(text::body(fl!("new-window"))).on_press(
-                                    Message::Exec(exec.to_string(), None, desktop_info.terminal()),
+                                    launch_exec(desktop_info, exec, self.gpus.as_deref()),
                                 ));
                         } else if let Some(gpus) = self.gpus.as_ref() {
-                            let default_idx = preferred_gpu_idx(desktop_info, gpus.iter());
+                            let default_idx = gpu_preference(desktop_info).preferred(gpus);
                             for (i, gpu) in gpus.iter().enumerate() {
                                 content = content.push(
                                     menu_button(text::body(format!(
                                         "{} {}",
                                         fl!("run-on", gpu = gpu.name.clone()),
-                                        if i == default_idx {
+                                        if Some(i) == default_idx {
                                             fl!("run-on-default")
                                         } else {
                                             String::new()
@@ -2137,9 +2150,10 @@ impl cosmic::Application for CosmicAppList {
                                 );
                             }
                         } else {
-                            content = content.push(menu_button(text::body(fl!("run"))).on_press(
-                                Message::Exec(exec.to_string(), None, desktop_info.terminal()),
-                            ));
+                            content =
+                                content.push(menu_button(text::body(fl!("run"))).on_press(
+                                    launch_exec(desktop_info, exec, self.gpus.as_deref()),
+                                ));
                         }
                         for action in desktop_info.actions().into_iter().flatten() {
                             if action == "new-window" {
@@ -2154,9 +2168,12 @@ impl cosmic::Application for CosmicAppList {
                             else {
                                 continue;
                             };
-                            content = content.push(menu_button(text::body(name)).on_press(
-                                Message::Exec(exec.into(), None, desktop_info.terminal()),
-                            ));
+                            content =
+                                content.push(menu_button(text::body(name)).on_press(launch_exec(
+                                    desktop_info,
+                                    exec,
+                                    self.gpus.as_deref(),
+                                )));
                         }
                         content = content.push(divider::horizontal::light());
                     }
@@ -2516,24 +2533,25 @@ impl cosmic::Application for CosmicAppList {
     }
 }
 
-fn launch_on_preferred_gpu(desktop_info: &DesktopEntry, gpus: Option<&[Gpu]>) -> Option<Message> {
+fn launch_on_preferred_gpu(
+    desktop_info: &DesktopEntry,
+    gpus: Option<&[Descriptor]>,
+) -> Option<Message> {
     let exec = desktop_info.exec()?;
-
-    let gpu_idx = gpus.map(|gpus| preferred_gpu_idx(desktop_info, gpus.iter()));
-
-    Some(Message::Exec(
-        exec.to_string(),
-        gpu_idx,
-        desktop_info.terminal(),
-    ))
+    Some(launch_exec(desktop_info, exec, gpus))
 }
 
-fn preferred_gpu_idx<'a, I>(desktop_info: &DesktopEntry, mut gpus: I) -> usize
-where
-    I: Iterator<Item = &'a Gpu>,
-{
-    gpus.position(|gpu| gpu.default ^ desktop_info.prefers_non_default_gpu())
-        .unwrap_or(0)
+fn launch_exec(desktop_info: &DesktopEntry, exec: &str, gpus: Option<&[Descriptor]>) -> Message {
+    let gpu_idx = gpus.and_then(|gpus| gpu_preference(desktop_info).select(gpus));
+    Message::Exec(exec.to_string(), gpu_idx, desktop_info.terminal())
+}
+
+fn gpu_preference(desktop_info: &DesktopEntry) -> Preference {
+    if desktop_info.prefers_non_default_gpu() {
+        Preference::NonDefault
+    } else {
+        Preference::Default
+    }
 }
 
 #[derive(Debug, Default, Clone)]
