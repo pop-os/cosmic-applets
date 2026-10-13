@@ -1,12 +1,11 @@
 //! A container for capturing mouse events.
 
 use cosmic::iced::Vector;
-use cosmic::iced::core::Point;
 
 use cosmic::iced::core::{
     Clipboard, Element, Layout, Length, Rectangle, Shell, Size, Widget,
     event::Event,
-    layout, mouse, overlay, renderer, touch,
+    layout, mouse, overlay, renderer,
     widget::{Operation, Tree, tree},
 };
 
@@ -14,79 +13,10 @@ use cosmic::iced::core::{
 #[allow(missing_debug_implementations)]
 pub struct MouseArea<'a, Message, Theme = crate::Theme, Renderer = crate::Renderer> {
     content: Element<'a, Message, Theme, Renderer>,
-    on_drag: Option<Message>,
-    on_press: Option<Message>,
-    on_release: Option<Message>,
-    on_right_press: Option<Message>,
-    on_right_release: Option<Message>,
-    on_middle_press: Option<Message>,
-    on_middle_release: Option<Message>,
-    on_mouse_enter: Option<Message>,
-    on_mouse_exit: Option<Message>,
     on_mouse_wheel: Option<Box<dyn Fn(mouse::ScrollDelta) -> Message + 'a>>,
 }
 
 impl<'a, Message, Theme, Renderer> MouseArea<'a, Message, Theme, Renderer> {
-    /// The message to emit when a drag is initiated.
-    #[must_use]
-    pub fn on_drag(mut self, message: Message) -> Self {
-        self.on_drag = Some(message);
-        self
-    }
-
-    /// The message to emit on a left button press.
-    #[must_use]
-    pub fn on_press(mut self, message: Message) -> Self {
-        self.on_press = Some(message);
-        self
-    }
-
-    /// The message to emit on a left button release.
-    #[must_use]
-    pub fn on_release(mut self, message: Message) -> Self {
-        self.on_release = Some(message);
-        self
-    }
-
-    /// The message to emit on a right button press.
-    #[must_use]
-    pub fn on_right_press(mut self, message: Message) -> Self {
-        self.on_right_press = Some(message);
-        self
-    }
-
-    /// The message to emit on a right button release.
-    #[must_use]
-    pub fn on_right_release(mut self, message: Message) -> Self {
-        self.on_right_release = Some(message);
-        self
-    }
-
-    /// The message to emit on a middle button press.
-    #[must_use]
-    pub fn on_middle_press(mut self, message: Message) -> Self {
-        self.on_middle_press = Some(message);
-        self
-    }
-
-    /// The message to emit on a middle button release.
-    #[must_use]
-    pub fn on_middle_release(mut self, message: Message) -> Self {
-        self.on_middle_release = Some(message);
-        self
-    }
-    #[must_use]
-    /// The message to emit on mouse enter.
-    pub fn on_mouse_enter(mut self, message: Message) -> Self {
-        self.on_mouse_enter = Some(message);
-        self
-    }
-    #[must_use]
-    /// The message to emit on mouse exit.
-    pub fn on_mouse_exit(mut self, message: Message) -> Self {
-        self.on_mouse_exit = Some(message);
-        self
-    }
     #[must_use]
     /// The message to emit when the mouse wheel is released.
     pub fn on_mouse_wheel(mut self, message: impl Fn(mouse::ScrollDelta) -> Message + 'a) -> Self {
@@ -96,34 +26,14 @@ impl<'a, Message, Theme, Renderer> MouseArea<'a, Message, Theme, Renderer> {
 }
 
 /// Local state of the [`MouseArea`].
-struct State {
-    // TODO: Support on_mouse_enter and on_mouse_exit
-    drag_initiated: Option<Point>,
-    is_out_of_bounds: bool,
-}
-impl Default for State {
-    fn default() -> Self {
-        Self {
-            drag_initiated: Option::default(),
-            is_out_of_bounds: true,
-        }
-    }
-}
+#[derive(Default)]
+struct State {}
 
 impl<'a, Message, Theme, Renderer> MouseArea<'a, Message, Theme, Renderer> {
     /// Creates a [`MouseArea`] with the given content.
     pub fn new(content: impl Into<Element<'a, Message, Theme, Renderer>>) -> Self {
         MouseArea {
             content: content.into(),
-            on_drag: None,
-            on_press: None,
-            on_release: None,
-            on_right_press: None,
-            on_right_release: None,
-            on_middle_press: None,
-            on_middle_release: None,
-            on_mouse_enter: None,
-            on_mouse_exit: None,
             on_mouse_wheel: None,
         }
     }
@@ -191,7 +101,7 @@ where
     ) {
         self.content.as_widget_mut().update(
             &mut tree.children[0],
-            &event,
+            event,
             layout,
             cursor,
             renderer,
@@ -205,7 +115,7 @@ where
 
         update(
             self,
-            &event,
+            event,
             layout,
             cursor,
             shell,
@@ -305,123 +215,16 @@ fn update<Message: Clone, Theme, Renderer>(
     layout: Layout<'_>,
     cursor: mouse::Cursor,
     shell: &mut Shell<'_, Message>,
-    state: &mut State,
+    _state: &mut State,
 ) {
     if !cursor.is_over(layout.bounds()) {
-        if !state.is_out_of_bounds {
-            if widget
-                .on_mouse_enter
-                .as_ref()
-                .or(widget.on_mouse_exit.as_ref())
-                .is_some()
-            {
-                if let Event::Mouse(mouse::Event::CursorMoved { .. }) = event {
-                    state.is_out_of_bounds = true;
-                    if let Some(message) = widget.on_mouse_exit.as_ref() {
-                        shell.publish(message.clone());
-                    }
-                    shell.capture_event();
-                    return;
-                }
-            }
-        }
-
         return;
     }
 
-    if let Some(message) = widget.on_press.as_ref() {
-        if let Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left))
-        | Event::Touch(touch::Event::FingerPressed { .. }) = event
-        {
-            state.drag_initiated = cursor.position();
-            shell.publish(message.clone());
-            shell.capture_event();
-            return;
-        }
-    }
-
-    if let Some(message) = widget.on_release.as_ref() {
-        if let Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left))
-        | Event::Touch(touch::Event::FingerLifted { .. }) = event
-        {
-            state.drag_initiated = None;
-            shell.publish(message.clone());
-            shell.capture_event();
-            return;
-        }
-    }
-
-    if let Some(message) = widget.on_right_press.as_ref() {
-        if let Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Right)) = event {
-            shell.publish(message.clone());
-            shell.capture_event();
-            return;
-        }
-    }
-
-    if let Some(message) = widget.on_right_release.as_ref() {
-        if let Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Right)) = event {
-            shell.publish(message.clone());
-            shell.capture_event();
-            return;
-        }
-    }
-
-    if let Some(message) = widget.on_middle_press.as_ref() {
-        if let Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Middle)) = event {
-            shell.publish(message.clone());
-            shell.capture_event();
-            return;
-        }
-    }
-
-    if let Some(message) = widget.on_middle_release.as_ref() {
-        if let Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Middle)) = event {
-            shell.publish(message.clone());
-
-            shell.capture_event();
-            return;
-        }
-    }
-    if let Some(message) = widget
-        .on_mouse_enter
-        .as_ref()
-        .or(widget.on_mouse_exit.as_ref())
+    if let Some(message) = widget.on_mouse_wheel.as_ref()
+        && let Event::Mouse(mouse::Event::WheelScrolled { delta }) = event
     {
-        if let Event::Mouse(mouse::Event::CursorMoved { .. }) = event {
-            if state.is_out_of_bounds {
-                state.is_out_of_bounds = false;
-                if widget.on_mouse_enter.is_some() {
-                    shell.publish(message.clone());
-                }
-                shell.capture_event();
-                return;
-            }
-        }
-    }
-
-    if state.drag_initiated.is_none() && widget.on_drag.is_some() {
-        if let Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left))
-        | Event::Touch(touch::Event::FingerPressed { .. }) = event
-        {
-            state.drag_initiated = cursor.position();
-        }
-    } else if let Some((message, drag_source)) = widget.on_drag.as_ref().zip(state.drag_initiated) {
-        if let Some(position) = cursor.position() {
-            if position.distance(drag_source) > 1.0 {
-                state.drag_initiated = None;
-                shell.publish(message.clone());
-                shell.capture_event();
-                return;
-            }
-        }
-    }
-
-    if let Some(message) = widget.on_mouse_wheel.as_ref() {
-        if let Event::Mouse(mouse::Event::WheelScrolled { delta }) = event {
-            shell.publish((message)(*delta));
-            shell.capture_event();
-            return;
-        }
+        shell.publish((message)(*delta));
+        shell.capture_event();
     }
 }
