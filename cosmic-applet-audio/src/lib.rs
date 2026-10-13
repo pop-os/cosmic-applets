@@ -456,7 +456,9 @@ impl cosmic::Application for Audio {
 
             Message::SetSinkVolumeScroll(volume) => {
                 let now = Instant::now();
-                if now.duration_since(self.scroll_volume_time).as_millis() < 192 {
+                if now.duration_since(self.scroll_volume_time).as_millis() < 192
+                    || self.model.active_sink.volume == volume
+                {
                     return app::Task::none();
                 }
 
