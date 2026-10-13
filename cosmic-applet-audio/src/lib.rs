@@ -40,7 +40,7 @@ use std::{
         Arc,
         atomic::{self, AtomicU32},
     },
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 mod config;
@@ -56,7 +56,6 @@ pub fn run() -> cosmic::iced::Result {
     cosmic::applet::run::<Audio>(())
 }
 
-#[derive(Default)]
 pub struct Audio {
     /// For interfacing with libcosmic.
     core: cosmic::app::Core,
@@ -76,6 +75,8 @@ pub struct Audio {
     max_sink_volume: u32,
     /// Max slider volume for the source device, as determined by the amplification property.
     max_source_volume: u32,
+    /// Throttles volume events when using the scroll wheel on the applet.
+    scroll_volume_time: Instant,
     /// Breakpoints for the sink volume slider.
     sink_breakpoints: &'static [u32],
     /// Breakpoitns for the source volume slider.
@@ -147,6 +148,7 @@ pub enum Message {
     SetDefaultSink(usize),
     SetDefaultSource(usize),
     SetSinkVolume(u32),
+    SetSinkVolumeScroll(u32),
     SetSourceVolume(u32),
     Subscription(audio_client::Event),
     Surface(surface::Action<Message>),
@@ -285,7 +287,18 @@ impl cosmic::Application for Audio {
                 sink_breakpoints,
                 max_source_volume,
                 source_breakpoints,
-                ..Default::default()
+                scroll_volume_time: Instant::now(),
+                model: model::Model::default(),
+                applied_sink_volume: Arc::default(),
+                applied_source_volume: Arc::default(),
+                audio_client: None,
+                config: AudioAppletConfig::default(),
+                is_open: IsOpen::default(),
+                player_status: None,
+                popup: None,
+                rectangle: None,
+                rectangle_tracker: None,
+                token_tx: None,
             },
             Task::none(),
         )
@@ -423,6 +436,7 @@ impl cosmic::Application for Audio {
             }
 
             Message::SetSinkVolume(volume) => {
+                self.model.active_sink.mute = false;
                 self.applied_sink_volume
                     .store(volume, atomic::Ordering::Relaxed);
                 self.model.active_sink.volume = volume;
@@ -431,6 +445,30 @@ impl cosmic::Application for Audio {
                     let volume = Arc::clone(&self.applied_sink_volume);
                     return cosmic::Task::future(async move {
                         tokio::time::sleep(Duration::from_millis(128)).await;
+                        _ = client
+                            .conn
+                            .set_sink_volume(volume.load(atomic::Ordering::Relaxed))
+                            .await;
+                        Message::ReattachClient(Arc::new(client)).into()
+                    });
+                }
+            }
+
+            Message::SetSinkVolumeScroll(volume) => {
+                let now = Instant::now();
+                if now.duration_since(self.scroll_volume_time).as_millis() < 192 {
+                    return app::Task::none();
+                }
+
+                self.scroll_volume_time = now;
+                self.model.active_sink.mute = false;
+                self.applied_sink_volume
+                    .store(volume, atomic::Ordering::Relaxed);
+                self.model.active_sink.volume = volume;
+                self.model.active_sink.volume_text = volume.to_string();
+                if let Some(mut client) = self.audio_client.take() {
+                    let volume = Arc::clone(&self.applied_sink_volume);
+                    return cosmic::Task::future(async move {
                         _ = client
                             .conn
                             .set_sink_volume(volume.load(atomic::Ordering::Relaxed))
@@ -639,15 +677,16 @@ impl cosmic::Application for Audio {
         let btn = crate::mouse_area::MouseArea::new(btn).on_mouse_wheel(|delta| {
             let scroll_vector = match delta {
                 iced::mouse::ScrollDelta::Lines { y, .. } => y.signum() * WHEEL_STEP, // -1/0/1
-                iced::mouse::ScrollDelta::Pixels { y, .. } => y.signum(),             // -1/0/1
+                iced::mouse::ScrollDelta::Pixels { y, .. } => y.signum() * WHEEL_STEP, // -1/0/1
             };
-            if scroll_vector == 0.0 {
+
+            if !scroll_vector.is_normal() {
                 return Message::Ignore;
             }
 
             let new_volume = (self.model.active_sink.volume as f64 + (scroll_vector as f64))
                 .clamp(0.0, self.max_sink_volume as f64);
-            Message::SetSinkVolume(new_volume as u32)
+            Message::SetSinkVolumeScroll(new_volume as u32)
         });
 
         let mut has_playback_buttons = false;
