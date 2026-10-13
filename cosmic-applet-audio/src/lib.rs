@@ -266,9 +266,25 @@ impl cosmic::Application for Audio {
     const APP_ID: &'static str = "com.system76.CosmicAppletAudio";
 
     fn init(core: cosmic::app::Core, _flags: ()) -> (Self, app::Task<Message>) {
+        let (max_sink_volume, sink_breakpoints) = if amplification_sink() {
+            (150, &[100][..])
+        } else {
+            (100, &[][..])
+        };
+
+        let (max_source_volume, source_breakpoints) = if amplification_source() {
+            (150, &[100][..])
+        } else {
+            (100, &[][..])
+        };
+
         (
             Self {
                 core,
+                max_sink_volume,
+                sink_breakpoints,
+                max_source_volume,
+                source_breakpoints,
                 ..Default::default()
             },
             Task::none(),
