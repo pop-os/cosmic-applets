@@ -149,6 +149,16 @@ impl Window {
         let prefs = DateTimeFormatterPreferences::from(self.locale.clone());
         let weekday = DateTimeFormatter::try_new(prefs, fieldsets::E::short()).unwrap();
 
+        let show_week = self.config.show_week_number;
+        let week_width = 12.0;
+
+        if show_week {
+            calendar = calendar.push(
+                text::caption("")
+                    .apply(container)
+                    .center_x(Length::Fixed(week_width)),
+            );
+        }
         for i in 0..7 {
             let date = first_day.checked_add(i.days()).unwrap();
             let datetime = self.create_datetime(&date);
@@ -158,16 +168,25 @@ impl Window {
                     .center_x(Length::Fixed(44.0)),
             );
         }
-        calendar = calendar.insert_row();
 
         for i in 0..42 {
-            if i > 0 && i % 7 == 0 {
-                calendar = calendar.insert_row();
-            }
-
             let date = first_day
                 .checked_add(i.days())
                 .expect("valid date in calendar range");
+
+            if i % 7 == 0 {
+                calendar = calendar.insert_row();
+                if show_week {
+                    let week = date.iso_week_date().week();
+                    calendar = calendar.push(
+                        text::caption(format!("{}", week))
+                            .apply(container)
+                            .center_x(Length::Fixed(week_width))
+                            .center_y(Length::Fixed(42.0)),
+                    );
+                }
+            }
+
             let is_month = date.first_of_month() == self.date_selected.first_of_month();
             let is_day = date == self.date_selected;
             let is_today = date == self.date_today;
@@ -783,8 +802,8 @@ fn date_button(day: i8, is_month: bool, is_day: bool, is_today: bool) -> Button<
             .center(Length::Fill),
     )
     .class(style)
-    .height(Length::Fixed(44.0))
-    .width(Length::Fixed(44.0));
+    .height(Length::Fixed(42.0))
+    .width(Length::Fixed(42.0));
 
     if is_month {
         button.on_press(Message::SelectDay(day))
