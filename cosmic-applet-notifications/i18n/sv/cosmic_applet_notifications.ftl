@@ -1,7 +1,7 @@
 hours-ago =
     { $duration ->
         [0] Alldeles nyss
-        [one] timma sedan
+        [one] 1 timma sedan
        *[other] { $duration } timmar sedan
     }
 minutes-ago =
