@@ -1,5 +1,5 @@
 cosmic-app-list = Programfält
-pin = Fäst till programfält
+pin = Fäst i programfält
 quit = Avsluta
 quit-all = Avsluta alla
 new-window = Nytt fönster
