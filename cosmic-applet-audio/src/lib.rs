@@ -792,7 +792,13 @@ impl cosmic::Application for Audio {
             let mut elements = Vec::with_capacity(5);
 
             if let Some(icon_path) = s.icon.clone() {
-                elements.push(icon(icon::from_path(icon_path)).size(36).into());
+                elements.push(
+                    image(icon_path)
+                        .width(Length::Fixed(56.0))
+                        .height(Length::Fill)
+                        .content_fit(ContentFit::Contain)
+                        .into(),
+                );
             }
 
             let title = if let Some(title) = s.title.as_ref() {
