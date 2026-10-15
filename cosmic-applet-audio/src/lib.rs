@@ -802,8 +802,8 @@ impl cosmic::Application for Audio {
             }
 
             let title = if let Some(title) = s.title.as_ref() {
-                if title.chars().count() > 22 {
-                    let mut title_trunc = title.chars().take(20).collect::<String>();
+                if title.chars().count() > 32 {
+                    let mut title_trunc = title.chars().take(30).collect::<String>();
                     title_trunc.push_str("...");
                     title_trunc
                 } else {
