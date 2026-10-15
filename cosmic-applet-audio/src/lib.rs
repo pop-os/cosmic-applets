@@ -5,6 +5,7 @@ mod localize;
 mod model;
 mod mouse_area;
 
+use crate::iced::ContentFit;
 use crate::localize::localize;
 use config::{AudioAppletConfig, amplification_sink, amplification_source};
 use cosmic::{
