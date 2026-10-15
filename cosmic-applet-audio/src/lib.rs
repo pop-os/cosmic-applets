@@ -8,7 +8,6 @@ mod mouse_area;
 use crate::iced::ContentFit;
 use crate::localize::localize;
 use config::{AudioAppletConfig, amplification_sink, amplification_source};
-use cosmic::iced::widget::image;
 use cosmic::{
     Apply, Element, Renderer, Task, Theme, app,
     applet::{
@@ -795,9 +794,8 @@ impl cosmic::Application for Audio {
 
             if let Some(icon_path) = s.icon.clone() {
                 elements.push(
-                    image(icon_path)
-                        .width(Length::Fixed(56.0))
-                        .height(Length::Fill)
+                    icon(icon::from_path(icon_path))
+                        .size(56)
                         .content_fit(ContentFit::Contain)
                         .into(),
                 );
