@@ -49,3 +49,6 @@ cosmic-applet-workspaces-keywords = COSMIC;Feidhmchláirín;Spás Oibre;
 cosmic-panel-app-button-keywords = COSMIC;Feidhmchláirín;Aip;Leabharlann;Tráidire;
 cosmic-panel-launcher-button-keywords = COSMIC;Feidhmchláirín;Lainseálaí;Reathaí;
 cosmic-panel-workspaces-button-keywords = COSMIC;Feidhmchláirín;Spás Oibre;Forbhreathnú;
+cosmic-applet-osk = Cnaipe Méarchláir ar an Scáileán
+cosmic-applet-osk-comment = Oscail an méarchlár ar an scáileán
+cosmic-applet-osk-keywords = COSMIC;Feidhmchlárán;OSK;Méarchlár;

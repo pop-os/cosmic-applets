@@ -1,4 +1,4 @@
-output = Utgång
+output = Skärm
 input = Ingång
 show-media-controls = Visa mediakontroller på panelen
 sound-settings = Ljudinställningar...
