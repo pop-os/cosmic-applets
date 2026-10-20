@@ -48,3 +48,6 @@ cosmic-applet-osk-comment = Dobrir lo clavièr virtual
 cosmic-applet-osk-keywords = COSMIC;Applet;OSK;Clavièr;
 cosmic-panel-workspaces-button-comment = Dobrir la vista generala dels espacis de trabalh per gerir e bascular d'espaci de trabalh
 cosmic-panel-workspaces-button-keywords = COSMIC;Applet;Espaci de trabalh;Vista generala;
+cosmic-applet-tiling-comment = Gerir l’indicacion de la fenèstra activa e lo mosaïc automatic actual o per espaci de trabalh
+cosmic-panel-app-button-keywords = COSMIC;Applet;Appli;Aplicacion;Bibliotèca;Tirador;
+cosmic-panel-launcher-button-keywords = COSMIC;Applet;Aviador;Executar;Lançar;

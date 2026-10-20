@@ -28,7 +28,7 @@ confirm-title =
 confirm-body =
     Systemet kommer att { $action ->
         [restart] starta om
-        [suspend] försättas i viloläge
+        [suspend] försättas i vänteläge
         [shutdown] stängas av
         [lock-screen] låsa skärmen
         [log-out] logga ut
