@@ -543,7 +543,8 @@ fn toplevel_button<'a>(
         .apply(mouse_area)
         .on_enter(Message::ToplevelHoverChanged(handle.clone(), true))
         .on_middle_press(Message::CloseToplevel(handle.clone()))
-        .on_exit(Message::ToplevelHoverChanged(handle, false))
+        .on_exit(Message::ToplevelHoverChanged(handle.clone(), false))
+        .on_move(move |_| Message::ToplevelHoverChanged(handle.clone(), true))
         .apply(Element::from)
 }
 
