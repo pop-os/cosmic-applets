@@ -5,6 +5,7 @@ mod localize;
 mod model;
 mod mouse_area;
 
+use crate::iced::ContentFit;
 use crate::localize::localize;
 use config::{AudioAppletConfig, amplification_sink, amplification_source};
 use cosmic::{
@@ -849,12 +850,17 @@ impl cosmic::Application for Audio {
             let mut elements = Vec::with_capacity(5);
 
             if let Some(icon_path) = s.icon.clone() {
-                elements.push(icon(icon::from_path(icon_path)).size(36).into());
+                elements.push(
+                    icon(icon::from_path(icon_path))
+                        .size(56)
+                        .content_fit(ContentFit::Contain)
+                        .into(),
+                );
             }
 
             let title = if let Some(title) = s.title.as_ref() {
-                if title.chars().count() > 22 {
-                    let mut title_trunc = title.chars().take(20).collect::<String>();
+                if title.chars().count() > 32 {
+                    let mut title_trunc = title.chars().take(30).collect::<String>();
                     title_trunc.push_str("...");
                     title_trunc
                 } else {
