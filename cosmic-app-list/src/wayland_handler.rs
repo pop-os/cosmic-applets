@@ -5,11 +5,14 @@ use crate::wayland_subscription::{
     OutputUpdate, ToplevelRequest, ToplevelUpdate, WaylandImage, WaylandRequest, WaylandUpdate,
 };
 use std::{
+    collections::{HashMap, VecDeque},
+    hash::Hash,
     os::{
         fd::{AsFd, FromRawFd, RawFd},
         unix::net::UnixStream,
     },
-    sync::{Arc, Condvar, Mutex, MutexGuard},
+    sync::{Arc, Condvar, Mutex, MutexGuard, Weak},
+    time::Duration,
 };
 
 use cctk::{
@@ -68,6 +71,16 @@ struct AppData {
     seat_state: SeatState,
     shm_state: Shm,
     activation_state: Option<ActivationState>,
+    icon_captures: HashMap<ExtForeignToplevelHandleV1, u64>,
+    capture_sessions: Arc<SessionRegistry>,
+    icon_capture_scheduler: Arc<IconCaptureScheduler>,
+}
+
+impl Drop for AppData {
+    fn drop(&mut self) {
+        self.icon_capture_scheduler.stop();
+        self.capture_sessions.cancel_all();
+    }
 }
 
 // Workspace and toplevel handling
@@ -235,10 +248,11 @@ impl ToplevelInfoHandler for AppData {
         _qh: &QueueHandle<Self>,
         toplevel: &ExtForeignToplevelHandleV1,
     ) {
-        if let Some(info) = self.toplevel_info_state.info(toplevel) {
+        if let Some(info) = self.toplevel_info_state.info(toplevel).cloned() {
             let _ = self
                 .tx
                 .unbounded_send(WaylandUpdate::Toplevel(ToplevelUpdate::Add(info.clone())));
+            self.send_icon(&info);
         }
     }
 
@@ -248,12 +262,13 @@ impl ToplevelInfoHandler for AppData {
         _qh: &QueueHandle<Self>,
         toplevel: &ExtForeignToplevelHandleV1,
     ) {
-        if let Some(info) = self.toplevel_info_state.info(toplevel) {
+        if let Some(info) = self.toplevel_info_state.info(toplevel).cloned() {
             let _ = self
                 .tx
                 .unbounded_send(WaylandUpdate::Toplevel(ToplevelUpdate::Update(
                     info.clone(),
                 )));
+            self.send_icon(&info);
         }
     }
 
@@ -263,6 +278,8 @@ impl ToplevelInfoHandler for AppData {
         _qh: &QueueHandle<Self>,
         toplevel: &ExtForeignToplevelHandleV1,
     ) {
+        self.icon_captures.remove(toplevel);
+        self.icon_capture_scheduler.remove(toplevel);
         let _ = self
             .tx
             .unbounded_send(WaylandUpdate::Toplevel(ToplevelUpdate::Remove(
@@ -277,6 +294,7 @@ impl ToplevelInfoHandler for AppData {
 struct SessionInner {
     formats: Option<Formats>,
     res: Option<Result<(), WEnum<FailureReason>>>,
+    stopped: bool,
 }
 
 // TODO: dmabuf? need to handle modifier negotation
@@ -284,6 +302,59 @@ struct SessionInner {
 struct Session {
     condvar: Condvar,
     inner: Mutex<SessionInner>,
+}
+
+#[derive(Default)]
+struct SessionRegistry {
+    inner: Mutex<SessionRegistryInner>,
+}
+
+#[derive(Default)]
+struct SessionRegistryInner {
+    stopped: bool,
+    sessions: Vec<Weak<Session>>,
+}
+
+impl SessionRegistry {
+    fn register(&self, session: &Arc<Session>) -> bool {
+        let stopped = {
+            let mut registry = self.inner.lock().unwrap();
+            if registry.stopped {
+                true
+            } else {
+                registry
+                    .sessions
+                    .retain(|session| session.strong_count() > 0);
+                registry.sessions.push(Arc::downgrade(session));
+                false
+            }
+        };
+        if stopped {
+            session.update(|data| data.stopped = true);
+            false
+        } else {
+            true
+        }
+    }
+
+    fn cancel_all(&self) {
+        let sessions = {
+            let mut registry = self.inner.lock().unwrap();
+            registry.stopped = true;
+            registry
+                .sessions
+                .drain(..)
+                .filter_map(|session| session.upgrade())
+                .collect::<Vec<_>>()
+        };
+        for session in sessions {
+            session.update(|data| data.stopped = true);
+        }
+    }
+}
+
+fn cancel_capture_sessions(registry: &SessionRegistry) {
+    registry.cancel_all();
 }
 
 #[derive(Default)]
@@ -314,6 +385,131 @@ impl Session {
         self.condvar
             .wait_while(self.inner.lock().unwrap(), |data| f(data))
             .unwrap()
+    }
+
+    fn wait_for_formats(&self) -> Option<Formats> {
+        let mut data = self.wait_while(|data| data.formats.is_none() && !data.stopped);
+        data.formats.take()
+    }
+
+    fn wait_for_formats_timeout(&self, timeout: Duration) -> Option<Formats> {
+        let (mut data, _) = self
+            .condvar
+            .wait_timeout_while(self.inner.lock().unwrap(), timeout, |data| {
+                data.formats.is_none() && !data.stopped
+            })
+            .unwrap();
+        data.formats.take()
+    }
+
+    fn wait_for_result(&self) -> Option<Result<(), WEnum<FailureReason>>> {
+        let mut data = self.wait_while(|data| data.res.is_none() && !data.stopped);
+        data.res.take()
+    }
+
+    fn wait_for_result_timeout(
+        &self,
+        timeout: Duration,
+    ) -> Option<Result<(), WEnum<FailureReason>>> {
+        let (mut data, _) = self
+            .condvar
+            .wait_timeout_while(self.inner.lock().unwrap(), timeout, |data| {
+                data.res.is_none() && !data.stopped
+            })
+            .unwrap();
+        data.res.take()
+    }
+
+    fn stop(&self) {
+        self.update(|data| data.stopped = true);
+    }
+
+    fn is_stopped(&self) -> bool {
+        self.inner.lock().unwrap().stopped
+    }
+}
+
+struct CoalescingCaptureQueue<K, V> {
+    max_entries: usize,
+    stopped: bool,
+    pending_order: VecDeque<K>,
+    pending: HashMap<K, V>,
+    active: HashMap<K, Arc<Session>>,
+}
+
+impl<K: Clone + Eq + Hash, V> CoalescingCaptureQueue<K, V> {
+    fn new(max_entries: usize) -> Self {
+        Self {
+            max_entries,
+            stopped: false,
+            pending_order: VecDeque::new(),
+            pending: HashMap::new(),
+            active: HashMap::new(),
+        }
+    }
+
+    fn enqueue(&mut self, key: K, value: V) -> bool {
+        if self.stopped {
+            return false;
+        }
+        let known = self.pending.contains_key(&key) || self.active.contains_key(&key);
+        if !known && self.len() >= self.max_entries {
+            return false;
+        }
+        if let Some(session) = self.active.get(&key) {
+            session.stop();
+        }
+        if self.pending.insert(key.clone(), value).is_none() {
+            self.pending_order.push_back(key);
+        }
+        true
+    }
+
+    fn next(&mut self) -> Option<(K, V, Arc<Session>)> {
+        while let Some(key) = self.pending_order.pop_front() {
+            let Some(value) = self.pending.remove(&key) else {
+                continue;
+            };
+            let session = Arc::new(Session::default());
+            self.active.insert(key.clone(), session.clone());
+            return Some((key, value, session));
+        }
+        None
+    }
+
+    fn finish(&mut self, key: &K, session: &Arc<Session>) {
+        if self
+            .active
+            .get(key)
+            .is_some_and(|active| Arc::ptr_eq(active, session))
+        {
+            self.active.remove(key);
+        }
+    }
+
+    fn remove(&mut self, key: &K) {
+        self.pending.remove(key);
+        self.pending_order.retain(|pending| pending != key);
+        if let Some(session) = self.active.remove(key) {
+            session.stop();
+        }
+    }
+
+    fn len(&self) -> usize {
+        self.pending
+            .keys()
+            .filter(|key| !self.active.contains_key(*key))
+            .count()
+            + self.active.len()
+    }
+
+    fn stop(&mut self) {
+        self.stopped = true;
+        self.pending.clear();
+        self.pending_order.clear();
+        for (_, session) in self.active.drain() {
+            session.stop();
+        }
     }
 }
 
@@ -358,15 +554,123 @@ struct CaptureData {
     conn: Connection,
     wl_shm: WlShm,
     capturer: Capturer,
+    sessions: Arc<SessionRegistry>,
+}
+
+const ICON_CAPTURE_WORKERS: usize = 4;
+const MAX_ICON_CAPTURE_JOBS: usize = 64;
+const ICON_CAPTURE_TIMEOUT: Duration = Duration::from_secs(10);
+
+struct IconCaptureJob {
+    capture_data: CaptureData,
+    source: CaptureSource,
+    handle: ExtForeignToplevelHandleV1,
+    generation: u64,
+    tx: UnboundedSender<WaylandUpdate>,
+}
+
+struct IconCaptureScheduler {
+    queue: Mutex<CoalescingCaptureQueue<ExtForeignToplevelHandleV1, IconCaptureJob>>,
+    ready: Condvar,
+}
+
+impl IconCaptureScheduler {
+    fn start() -> Arc<Self> {
+        let scheduler = Arc::new(Self {
+            queue: Mutex::new(CoalescingCaptureQueue::new(MAX_ICON_CAPTURE_JOBS)),
+            ready: Condvar::new(),
+        });
+        for index in 0..ICON_CAPTURE_WORKERS {
+            let scheduler = scheduler.clone();
+            std::thread::Builder::new()
+                .name(format!("app-list-icon-{index}"))
+                .spawn(move || scheduler.run())
+                .expect("failed to start icon capture worker");
+        }
+        scheduler
+    }
+
+    fn enqueue(&self, job: IconCaptureJob) -> bool {
+        let handle = job.handle.clone();
+        let queued = self.queue.lock().unwrap().enqueue(handle, job);
+        if queued {
+            self.ready.notify_one();
+        }
+        queued
+    }
+
+    fn remove(&self, handle: &ExtForeignToplevelHandleV1) {
+        self.queue.lock().unwrap().remove(handle);
+    }
+
+    fn stop(&self) {
+        self.queue.lock().unwrap().stop();
+        self.ready.notify_all();
+    }
+
+    fn run(&self) {
+        loop {
+            let next = {
+                let mut queue = self.queue.lock().unwrap();
+                loop {
+                    if let Some(next) = queue.next() {
+                        break Some(next);
+                    }
+                    if queue.stopped {
+                        break None;
+                    }
+                    queue = self.ready.wait(queue).unwrap();
+                }
+            };
+            let Some((handle, job, session)) = next else {
+                return;
+            };
+
+            if job.capture_data.sessions.register(&session) && !session.is_stopped() {
+                capture_icon_job(job, session.clone());
+            }
+            self.queue.lock().unwrap().finish(&handle, &session);
+        }
+    }
+}
+
+fn shm_buffer_layout(width: u32, height: u32) -> Option<(i32, i32, i32, u32)> {
+    const MAX_CAPTURE_PIXELS: u32 = 16 * 1024 * 1024;
+    let pixels = width.checked_mul(height)?;
+    if pixels == 0 || pixels > MAX_CAPTURE_PIXELS {
+        return None;
+    }
+    let width_i32 = i32::try_from(width).ok()?;
+    let height_i32 = i32::try_from(height).ok()?;
+    let stride = width_i32.checked_mul(4)?;
+    let len = pixels.checked_mul(4)?;
+    i32::try_from(len).ok()?;
+    Some((width_i32, height_i32, stride, len))
 }
 
 impl CaptureData {
     pub fn capture_source_shm_fd<Fd: AsFd>(
         &self,
         overlay_cursor: bool,
-        source: &ExtForeignToplevelHandleV1,
+        source: &CaptureSource,
         fd: Fd,
         len: Option<u32>,
+    ) -> Option<ShmImage<Fd>> {
+        let session = Arc::new(Session::default());
+        if !self.sessions.register(&session) {
+            return None;
+        }
+        self.capture_source_shm_fd_with_session(overlay_cursor, source, fd, len, session, None)
+    }
+
+    fn capture_source_shm_fd_with_session<Fd: AsFd>(
+        &self,
+        overlay_cursor: bool,
+        source: &CaptureSource,
+        fd: Fd,
+        len: Option<u32>,
+        session: Arc<Session>,
+        timeout: Option<Duration>,
     ) -> Option<ShmImage<Fd>> {
         // XXX error type?
         // TODO: way to get cursor metadata?
@@ -374,61 +678,59 @@ impl CaptureData {
         #[allow(unused_variables)] // TODO
         let overlay_cursor = if overlay_cursor { 1 } else { 0 };
 
-        let session = Arc::new(Session::default());
-        // Unwrap assumes compositor supports this capture type
-        let capture_session = self
-            .capturer
-            .create_session(
-                &CaptureSource::Toplevel(source.clone()),
-                CaptureOptions::empty(),
-                &self.qh,
-                SessionData {
-                    session: session.clone(),
-                    session_data: ScreencopySessionData::default(),
-                },
-            )
-            .unwrap();
-        self.conn.flush().unwrap();
-
-        let formats = session
-            .wait_while(|data| data.formats.is_none())
-            .formats
-            .take()
-            .unwrap();
-        let (width, height) = formats.buffer_size;
-
-        if width == 0 || height == 0 {
+        if session.is_stopped() {
             return None;
         }
+        let capture_session = match self.capturer.create_session(
+            source,
+            CaptureOptions::empty(),
+            &self.qh,
+            SessionData {
+                session: session.clone(),
+                session_data: ScreencopySessionData::default(),
+            },
+        ) {
+            Ok(session) => session,
+            Err(err) => {
+                tracing::debug!(?err, "Image-copy capture is unavailable");
+                return None;
+            }
+        };
+        self.conn.flush().unwrap();
+
+        let formats = if let Some(timeout) = timeout {
+            session.wait_for_formats_timeout(timeout)?
+        } else {
+            session.wait_for_formats()?
+        };
+        let (width, height) = formats.buffer_size;
+        let (width_i32, height_i32, stride_i32, buf_len) = shm_buffer_layout(width, height)?;
 
         // XXX
-        if !formats.shm_formats.contains(&wl_shm::Format::Abgr8888) {
+        let format = if formats.shm_formats.contains(&wl_shm::Format::Abgr8888) {
+            wl_shm::Format::Abgr8888
+        } else if formats.shm_formats.contains(&wl_shm::Format::Argb8888) {
+            wl_shm::Format::Argb8888
+        } else {
             tracing::error!("No suitable buffer format found");
             tracing::warn!("Available formats: {:#?}", formats);
             return None;
-        }
+        };
 
-        let buf_len = width * height * 4;
         if let Some(len) = len {
             if len != buf_len {
                 return None;
             }
-        } else if let Err(_err) = rustix::fs::ftruncate(&fd, buf_len.into()) {
+        } else if let Err(err) = rustix::fs::ftruncate(&fd, u64::from(buf_len)) {
+            tracing::error!(?err, "Failed to size screencopy buffer");
+            return None;
         }
         let pool = self
             .wl_shm
-            .create_pool(fd.as_fd(), buf_len as i32, &self.qh, ());
-        let buffer = pool.create_buffer(
-            0,
-            width as i32,
-            height as i32,
-            width as i32 * 4,
-            wl_shm::Format::Abgr8888,
-            &self.qh,
-            (),
-        );
+            .create_pool(fd.as_fd(), i32::try_from(buf_len).ok()?, &self.qh, ());
+        let buffer = pool.create_buffer(0, width_i32, height_i32, stride_i32, format, &self.qh, ());
 
-        capture_session.capture(
+        let frame = capture_session.capture(
             &buffer,
             &[],
             &self.qh,
@@ -440,18 +742,28 @@ impl CaptureData {
         self.conn.flush().unwrap();
 
         // TODO: wait for server to release buffer?
-        let res = session
-            .wait_while(|data| data.res.is_none())
-            .res
-            .take()
-            .unwrap();
+        let res = if let Some(timeout) = timeout {
+            session.wait_for_result_timeout(timeout)
+        } else {
+            session.wait_for_result()
+        };
+        frame.destroy();
         pool.destroy();
         buffer.destroy();
+        if let Err(err) = self.conn.flush() {
+            tracing::debug!(?err, "Failed to flush capture cleanup");
+        }
+        let res = res?;
 
         //std::thread::sleep(std::time::Duration::from_millis(16));
 
         if res.is_ok() {
-            Some(ShmImage { fd, width, height })
+            Some(ShmImage {
+                fd,
+                width,
+                height,
+                format,
+            })
         } else {
             None
         }
@@ -462,14 +774,100 @@ pub struct ShmImage<T: AsFd> {
     fd: T,
     pub width: u32,
     pub height: u32,
+    format: wl_shm::Format,
+}
+
+fn normalize_shm_pixels(format: wl_shm::Format, pixels: &mut [u8]) -> Option<()> {
+    if !matches!(format, wl_shm::Format::Abgr8888 | wl_shm::Format::Argb8888) {
+        return None;
+    }
+    for pixel in pixels.chunks_exact_mut(4) {
+        let packed = u32::from_ne_bytes(pixel.try_into().ok()?);
+        let alpha = (packed >> 24) as u8;
+        let (red, green, blue) = if format == wl_shm::Format::Argb8888 {
+            ((packed >> 16) as u8, (packed >> 8) as u8, packed as u8)
+        } else {
+            (packed as u8, (packed >> 8) as u8, (packed >> 16) as u8)
+        };
+        let unpremultiply = |channel: u8| {
+            if alpha == 0 {
+                0
+            } else {
+                (((u32::from(channel) * 255 + u32::from(alpha) / 2) / u32::from(alpha)).min(255))
+                    as u8
+            }
+        };
+        pixel.copy_from_slice(&[
+            unpremultiply(red),
+            unpremultiply(green),
+            unpremultiply(blue),
+            alpha,
+        ]);
+    }
+    Some(())
 }
 
 impl<T: AsFd> ShmImage<T> {
     pub fn image(&self) -> anyhow::Result<image::RgbaImage> {
         let mmap = unsafe { memmap2::Mmap::map(&self.fd.as_fd())? };
-        image::RgbaImage::from_raw(self.width, self.height, mmap.to_vec())
+        let mut pixels = mmap.to_vec();
+        normalize_shm_pixels(self.format, &mut pixels)
+            .ok_or_else(|| anyhow::anyhow!("ShmImage had an unsupported format"))?;
+        image::RgbaImage::from_raw(self.width, self.height, pixels)
             .ok_or_else(|| anyhow::anyhow!("ShmImage had incorrect size"))
     }
+}
+
+fn capture_icon_job(job: IconCaptureJob, session: Arc<Session>) {
+    let Ok(fd) = rustix::fs::memfd_create(c"app-list-icon", rustix::fs::MemfdFlags::CLOEXEC) else {
+        tracing::error!("Failed to get fd for icon capture");
+        return;
+    };
+    let Some(img) = job.capture_data.capture_source_shm_fd_with_session(
+        false,
+        &job.source,
+        fd,
+        None,
+        session,
+        Some(ICON_CAPTURE_TIMEOUT),
+    ) else {
+        tracing::debug!("Toplevel icon capture was canceled or failed");
+        return;
+    };
+    let Ok(img) = img.image() else {
+        tracing::error!("Failed to decode captured toplevel icon");
+        return;
+    };
+    if let Err(err) = job.tx.unbounded_send(WaylandUpdate::Icon(
+        job.handle,
+        job.generation,
+        WaylandImage::new(img),
+    )) {
+        tracing::error!("Failed to send icon event to subscription {err:?}");
+    }
+}
+
+fn mark_icon_capture_requested<K: Eq + Hash>(
+    requested: &mut HashMap<K, u64>,
+    key: K,
+    generation: u64,
+) -> bool {
+    if requested.get(&key) == Some(&generation) {
+        false
+    } else {
+        requested.insert(key, generation);
+        true
+    }
+}
+
+// Keep the current handle across same-generation metadata updates: it may be a
+// successfully captured raster fallback rather than the locally resolved name.
+pub(crate) fn should_replace_icon_handle(
+    old_generation: u64,
+    new_generation: u64,
+    new_icon_is_present: bool,
+) -> bool {
+    !new_icon_is_present || old_generation != new_generation
 }
 
 impl AppData {
@@ -490,6 +888,7 @@ impl AppData {
             conn: self.conn.clone(),
             wl_shm: self.shm_state.wl_shm().clone(),
             capturer: self.screencopy_state.capturer().clone(),
+            sessions: self.capture_sessions.clone(),
         };
         std::thread::spawn(move || {
             let name = c"app-list-screencopy";
@@ -499,7 +898,12 @@ impl AppData {
             };
 
             // XXX is this going to use to much memory?
-            let img = capture_data.capture_source_shm_fd(false, &handle, fd, None);
+            let img = capture_data.capture_source_shm_fd(
+                false,
+                &CaptureSource::Toplevel(handle.clone()),
+                fd,
+                None,
+            );
             if let Some(img) = img {
                 let Ok(img) = img.image() else {
                     tracing::error!("Failed to get RgbaImage");
@@ -533,6 +937,42 @@ impl AppData {
                 tracing::error!("Failed to capture image");
             }
         });
+    }
+
+    fn send_icon(&mut self, info: &cctk::toplevel_info::ToplevelInfo) {
+        let Some(icon) = info.icon.as_ref() else {
+            self.icon_captures.remove(&info.foreign_toplevel);
+            self.icon_capture_scheduler.remove(&info.foreign_toplevel);
+            return;
+        };
+        if !mark_icon_capture_requested(
+            &mut self.icon_captures,
+            info.foreign_toplevel.clone(),
+            info.icon_generation,
+        ) {
+            return;
+        }
+        let Ok(source) = icon.capture_source(256, 256) else {
+            self.icon_captures.remove(&info.foreign_toplevel);
+            return;
+        };
+        let capture_data = CaptureData {
+            qh: self.queue_handle.clone(),
+            conn: self.conn.clone(),
+            wl_shm: self.shm_state.wl_shm().clone(),
+            capturer: self.screencopy_state.capturer().clone(),
+            sessions: self.capture_sessions.clone(),
+        };
+        if !self.icon_capture_scheduler.enqueue(IconCaptureJob {
+            capture_data,
+            source,
+            handle: info.foreign_toplevel.clone(),
+            generation: info.icon_generation,
+            tx: self.tx.clone(),
+        }) {
+            self.icon_captures.remove(&info.foreign_toplevel);
+            tracing::warn!("Toplevel icon capture queue is full or stopped");
+        }
     }
 }
 
@@ -586,7 +1026,11 @@ impl ScreencopyHandler for AppData {
         });
     }
 
-    fn stopped(&mut self, _conn: &Connection, _qh: &QueueHandle<Self>, _session: &CaptureSession) {}
+    fn stopped(&mut self, _conn: &Connection, _qh: &QueueHandle<Self>, session: &CaptureSession) {
+        if let Some(session) = Session::for_session(session) {
+            session.update(|data| data.stopped = true);
+        }
+    }
 }
 
 pub(crate) fn wayland_handler(
@@ -702,6 +1146,9 @@ pub(crate) fn wayland_handler(
         seat_state: SeatState::new(&globals, &qh),
         shm_state: Shm::bind(&globals, &qh).unwrap(),
         activation_state: ActivationState::bind::<AppData>(&globals, &qh).ok(),
+        icon_captures: HashMap::new(),
+        capture_sessions: Arc::new(SessionRegistry::default()),
+        icon_capture_scheduler: IconCaptureScheduler::start(),
         queue_handle: qh,
     };
 
@@ -709,8 +1156,12 @@ pub(crate) fn wayland_handler(
         if app_data.exit {
             break;
         }
-        event_loop.dispatch(None, &mut app_data).unwrap();
+        if let Err(err) = event_loop.dispatch(None, &mut app_data) {
+            tracing::error!(?err, "Wayland event dispatch failed");
+            break;
+        }
     }
+    cancel_capture_sessions(&app_data.capture_sessions);
 }
 
 sctk::delegate_seat!(AppData);
