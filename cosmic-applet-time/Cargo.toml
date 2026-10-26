@@ -6,6 +6,7 @@ license = "GPL-3.0-only"
 
 [dependencies]
 cosmic-applets-config.workspace = true
+cosmic-launch = { workspace = true, features = ["systemd", "tokio"] }
 jiff = "0.2"
 i18n-embed-fl.workspace = true
 i18n-embed.workspace = true

@@ -45,6 +45,7 @@ use cctk::{
     },
     workspace::{WorkspaceHandler, WorkspaceState},
 };
+use cosmic::{Application, desktop::fde::DesktopEntry};
 use cosmic_protocols::{
     toplevel_info::v1::client::zcosmic_toplevel_handle_v1::ZcosmicToplevelHandleV1,
     toplevel_management::v1::client::zcosmic_toplevel_manager_v1,
@@ -149,14 +150,14 @@ impl ProvidesRegistryState for AppData {
 
 struct ExecRequestData {
     data: RequestData,
-    exec: String,
-    gpu_idx: Option<usize>,
-    terminal: bool,
+    entry: Arc<DesktopEntry>,
+    action: Option<String>,
+    gpu_override: Option<cosmic_launch::gpu::Preference>,
 }
 
 impl RequestDataExt for ExecRequestData {
     fn app_id(&self) -> Option<&str> {
-        self.data.app_id()
+        Some(self.entry.appid.as_ref())
     }
 
     fn seat_and_serial(&self) -> Option<(&WlSeat, u32)> {
@@ -172,11 +173,10 @@ impl ActivationHandler for AppData {
     type RequestData = ExecRequestData;
     fn new_token(&mut self, token: String, data: &ExecRequestData) {
         let _ = self.tx.unbounded_send(WaylandUpdate::ActivationToken {
+            entry: Arc::clone(&data.entry),
+            action: data.action.clone(),
             token: Some(token),
-            app_id: data.app_id().map(String::from),
-            exec: data.exec.clone(),
-            gpu_idx: data.gpu_idx,
-            terminal: data.terminal,
+            gpu_override: data.gpu_override,
         });
     }
 }
@@ -645,17 +645,16 @@ pub(crate) fn wayland_handler(
                     }
                 },
                 WaylandRequest::TokenRequest {
-                    app_id,
-                    exec,
-                    gpu_idx,
-                    terminal,
+                    entry,
+                    action,
+                    gpu_override,
                 } => {
                     if let Some(activation_state) = state.activation_state.as_ref() {
                         activation_state.request_token_with_data(
                             &state.queue_handle,
                             ExecRequestData {
                                 data: RequestData {
-                                    app_id: Some(app_id),
+                                    app_id: Some(crate::app::CosmicAppList::APP_ID.to_owned()),
                                     seat_and_serial: state
                                         .seat_state
                                         .seats()
@@ -663,18 +662,17 @@ pub(crate) fn wayland_handler(
                                         .map(|seat| (seat, 0)),
                                     surface: None,
                                 },
-                                exec,
-                                gpu_idx,
-                                terminal,
+                                entry,
+                                action,
+                                gpu_override,
                             },
                         );
                     } else {
                         let _ = state.tx.unbounded_send(WaylandUpdate::ActivationToken {
+                            entry,
+                            action,
                             token: None,
-                            app_id: Some(app_id),
-                            exec,
-                            gpu_idx,
-                            terminal,
+                            gpu_override,
                         });
                     }
                 }

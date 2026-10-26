@@ -6,6 +6,7 @@ license = "GPL-3.0-or-later"
 
 [dependencies]
 async-fn-stream = "0.3"
+cosmic-launch = { workspace = true, features = ["systemd", "tokio"] }
 futures.workspace = true
 futures-util.workspace = true
 i18n-embed-fl.workspace = true

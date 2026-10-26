@@ -32,8 +32,8 @@ use cosmic::{
         advanced::text::{Ellipsize, EllipsizeHeightLimit},
         clipboard::mime::{AllowedMimeTypes, AsMimeTypes},
         event::listen_with,
-        platform_specific::shell::commands::popup::{destroy_popup, get_popup},
-        runtime::{core::event, dnd::peek_dnd, platform_specific::wayland::CornerRadius},
+        platform_specific::shell::commands::popup::destroy_popup,
+        runtime::{core::event, dnd::peek_dnd},
         widget::{
             Column, Row, column, hover, mouse_area, row,
             rule::vertical as vertical_rule,
@@ -57,13 +57,23 @@ use cosmic::{
     widget::DndSource,
 };
 use cosmic_app_list_config::{APP_ID, AppListConfig};
+use cosmic_launch::gpu;
 use cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::State;
 use futures::future::pending;
 use rustc_hash::FxHashMap;
-use std::{borrow::Cow, path::PathBuf, rc::Rc, str::FromStr, time::Duration};
-use switcheroo_control::Gpu;
+use std::{
+    borrow::Cow,
+    path::PathBuf,
+    rc::Rc,
+    str::FromStr,
+    sync::{Arc, OnceLock},
+    time::Duration,
+};
 use tokio::time::sleep;
 use url::Url;
+
+/// Shared zbus session connection for reuse
+pub static SHARED_ZBUS_SESSION: OnceLock<Option<zbus::Connection>> = OnceLock::new();
 
 static MIME_TYPE: &str = "text/uri-list";
 
@@ -171,20 +181,20 @@ struct DockItem {
     id: u32,
     toplevels: Vec<(ToplevelInfo, Option<WaylandImage>)>,
     // Information found in the .desktop file
-    desktop_info: DesktopEntry,
+    desktop_info: Arc<DesktopEntry>,
     // We must use this because the id in `DesktopEntry` is an estimation.
     // Thus, if we unpin an item, we want to be sure to use the real id
     original_app_id: String,
 }
 
 impl DockItem {
+    #[allow(clippy::too_many_arguments)]
     fn as_icon(
         &self,
         applet: &Context,
         rectangle_tracker: Option<&RectangleTracker<DockItemId>>,
         interaction_enabled: bool,
         dnd_source_enabled: bool,
-        gpus: Option<&[Gpu]>,
         is_focused: bool,
         dot_border_radius: [f32; 4],
         window_id: window::Id,
@@ -291,7 +301,7 @@ impl DockItem {
             mouse_area(
                 icon_button
                     .on_press_maybe(if toplevel_count == 0 {
-                        launch_on_preferred_gpu(desktop_info, gpus)
+                        Some(Message::Exec(Arc::clone(desktop_info), None, None))
                     } else if toplevel_count == 1 {
                         filtered_toplevels
                             .first()
@@ -303,10 +313,7 @@ impl DockItem {
                     .height(Length::Shrink),
             )
             .on_right_release(Message::Popup(*id, window_id))
-            .on_middle_release({
-                launch_on_preferred_gpu(desktop_info, gpus)
-                    .unwrap_or(Message::Popup(*id, window_id))
-            })
+            .on_middle_release(Message::Exec(Arc::clone(desktop_info), None, None))
             .into()
         } else {
             icon_button.into()
@@ -355,7 +362,7 @@ pub struct Popup {
 }
 
 #[derive(Clone, Default)]
-struct CosmicAppList {
+pub struct CosmicAppList {
     core: cosmic::app::Core,
     popup: Option<Popup>,
     subscription_ctr: u32,
@@ -371,10 +378,10 @@ struct CosmicAppList {
     rectangles: FxHashMap<DockItemId, iced::Rectangle>,
     dnd_offer: Option<DndOffer>,
     is_listening_for_dnd: bool,
-    gpus: Option<Vec<Gpu>>,
+    gpus: Option<Arc<[gpu::Descriptor]>>,
     active_workspaces: Vec<ExtWorkspaceHandleV1>,
     output_list: FxHashMap<WlOutput, OutputInfo>,
-    locales: Vec<String>,
+    locales: Arc<[String]>,
     overflow_favorites_popup: Option<window::Id>,
     overflow_active_popup: Option<window::Id>,
 }
@@ -386,19 +393,18 @@ pub enum PopupType {
 }
 
 #[derive(Debug, Clone)]
-enum Message {
-    Wayland(WaylandUpdate),
+pub enum Message {
+    Wayland(Box<WaylandUpdate>),
     PinApp(u32),
     UnpinApp(u32),
     Popup(u32, window::Id),
     Pressed(window::Id),
     ToplevelListPopup(u32, window::Id),
-    GpuRequest(Option<Vec<Gpu>>),
     CloseRequested(window::Id),
     ClosePopup,
     Activate(ExtForeignToplevelHandleV1),
     Toggle(ExtForeignToplevelHandleV1),
-    Exec(String, Option<usize>, bool),
+    Exec(Arc<DesktopEntry>, Option<String>, Option<gpu::Preference>),
     CloseToplevel(ExtForeignToplevelHandleV1),
     Quit(String),
     NewSeat(WlSeat),
@@ -456,24 +462,6 @@ fn index_in_list(
     } else {
         index
     }
-}
-
-async fn try_get_gpus() -> Option<Vec<Gpu>> {
-    let connection = zbus::Connection::system().await.ok()?;
-    let proxy = switcheroo_control::SwitcherooControlProxy::new(&connection)
-        .await
-        .ok()?;
-
-    if !proxy.has_dual_gpu().await.ok()? {
-        return None;
-    }
-
-    let gpus = proxy.get_gpus().await.ok()?;
-    if gpus.is_empty() {
-        return None;
-    }
-
-    Some(gpus)
 }
 
 const TOPLEVEL_BUTTON_WIDTH: f32 = 192.0;
@@ -635,6 +623,15 @@ fn find_desktop_entries<'a>(
     })
 }
 
+#[inline]
+fn gpu_preference(desktop_entry: &DesktopEntry) -> gpu::Preference {
+    if desktop_entry.prefers_non_default_gpu() {
+        gpu::Preference::NonDefault
+    } else {
+        gpu::Preference::Default
+    }
+}
+
 impl CosmicAppList {
     // Cache all desktop entries to use when new apps are added to the dock.
     fn update_desktop_entries(&mut self) {
@@ -681,7 +678,7 @@ impl CosmicAppList {
             .map(|(pinned_ctr, (e, original_id))| DockItem {
                 id: pinned_ctr as u32,
                 toplevels: Vec::new(),
-                desktop_info: e,
+                desktop_info: Arc::new(e),
                 original_app_id: original_id.clone(),
             })
             .collect();
@@ -790,13 +787,13 @@ impl CosmicAppList {
         info: &ToplevelInfo,
         unicase_appid: Ascii<&str>,
     ) -> DesktopEntry {
-        if let Some(appid) = fde::find_app_by_id(&self.desktop_entries, unicase_appid) {
-            appid.clone()
+        if let Some(entry) = fde::find_app_by_id(&self.desktop_entries, unicase_appid) {
+            entry.clone()
         } else {
             // Update desktop entries in case it was not found.
             self.update_desktop_entries();
-            if let Some(appid) = fde::find_app_by_id(&self.desktop_entries, unicase_appid) {
-                appid.clone()
+            if let Some(entry) = fde::find_app_by_id(&self.desktop_entries, unicase_appid) {
+                entry.clone()
             } else {
                 tracing::error!(id = info.app_id, "could not find desktop entry for app");
                 let mut fallback_entry = fde::DesktopEntry::from_appid(info.app_id.clone());
@@ -847,24 +844,37 @@ impl cosmic::Application for CosmicAppList {
             .and_then(|c| AppListConfig::get_entry(&c).ok())
             .unwrap_or_default();
 
+        let gpus = futures::executor::block_on(async {
+            // Initialize dbus connections for shared reuse.
+            let (session, system) =
+                futures::future::join(zbus::Connection::session(), zbus::Connection::system())
+                    .await;
+
+            // Get a list of available GPUs.
+            let mut gpus: Option<Arc<[gpu::Descriptor]>> = None;
+            if let Ok(conn) = system.as_ref() {
+                gpus = cosmic_launch::gpu::enumerate(conn)
+                    .await
+                    .map(|iter| Arc::from(iter.collect::<Vec<_>>()));
+            }
+
+            _ = SHARED_ZBUS_SESSION.set(session.ok());
+
+            gpus
+        });
+
         let mut app_list = Self {
             core,
             config,
-            locales: get_languages_from_env(),
+            gpus,
+            locales: Arc::from(get_languages_from_env()),
             ..Default::default()
         };
 
         app_list.update_desktop_entries();
         app_list.update_pinned_list();
-
         app_list.item_ctr = app_list.pinned_list.len() as u32;
-
-        (
-            app_list,
-            Task::perform(try_get_gpus(), |gpus| {
-                cosmic::Action::App(Message::GpuRequest(gpus))
-            }),
-        )
+        (app_list, Task::none())
     }
 
     fn core(&self) -> &cosmic::app::Core {
@@ -904,7 +914,7 @@ impl cosmic::Application for CosmicAppList {
                         tracing::error!("No rectangle found for toplevel group");
                         return Task::none();
                     };
-                    let corners = self.core.system_theme().cosmic().corner_radii.radius_s;
+                    let corners: [f32; 4] = self.core.system_theme().cosmic().corner_radii.radius_s;
                     let popup_task =
                         cosmic::surface::surface_task(cosmic::surface::action::app_popup(
                             move |_| LiveSettings::default(),
@@ -941,10 +951,7 @@ impl cosmic::Application for CosmicAppList {
                             None,
                         ));
 
-                    let gpu_update = Task::perform(try_get_gpus(), |gpus| {
-                        cosmic::Action::App(Message::GpuRequest(gpus))
-                    });
-                    return Task::batch([gpu_update, popup_task]);
+                    return popup_task;
                 }
             }
             Message::ToplevelListPopup(id, parent_window_id) => {
@@ -1235,7 +1242,7 @@ impl cosmic::Application for CosmicAppList {
                             id: self.item_ctr,
                             toplevels: Vec::new(),
                             original_app_id: de.id().to_string(),
-                            desktop_info: de,
+                            desktop_info: Arc::new(de),
                         });
                     }
                 }
@@ -1290,7 +1297,7 @@ impl cosmic::Application for CosmicAppList {
                 }
             }
             Message::Wayland(event) => {
-                match event {
+                match *event {
                     WaylandUpdate::Init(tx) => {
                         self.wayland_sender.replace(tx);
                     }
@@ -1357,7 +1364,7 @@ impl cosmic::Application for CosmicAppList {
                                     id: self.item_ctr,
                                     original_app_id: info.app_id.clone(),
                                     toplevels: vec![(info, None)],
-                                    desktop_info: new_desktop_info,
+                                    desktop_info: Arc::new(new_desktop_info),
                                 });
                             }
                         }
@@ -1445,7 +1452,7 @@ impl cosmic::Application for CosmicAppList {
                                         id: self.item_ctr,
                                         original_app_id: info.app_id.clone(),
                                         toplevels: vec![(info, None)],
-                                        desktop_info: new_desktop_entry,
+                                        desktop_info: Arc::new(new_desktop_entry),
                                     });
                                 }
                             }
@@ -1464,33 +1471,40 @@ impl cosmic::Application for CosmicAppList {
                         }
                     },
                     WaylandUpdate::ActivationToken {
+                        entry,
+                        action,
                         token,
-                        app_id,
-                        exec,
-                        gpu_idx,
-                        terminal,
+                        gpu_override,
                     } => {
-                        let mut envs = Vec::new();
+                        let Some(conn) = SHARED_ZBUS_SESSION.get().unwrap() else {
+                            return Task::none();
+                        };
+
+                        let mut env_vars = Vec::new();
                         if let Some(token) = token {
-                            envs.push(("XDG_ACTIVATION_TOKEN".to_string(), token.clone()));
-                            envs.push(("DESKTOP_STARTUP_ID".to_string(), token));
+                            env_vars.push(("XDG_ACTIVATION_TOKEN".to_string(), token.clone()));
+                            env_vars.push(("DESKTOP_STARTUP_ID".to_string(), token));
                         }
-                        if let (Some(gpus), Some(idx)) = (self.gpus.as_ref(), gpu_idx) {
-                            envs.extend(
-                                gpus[idx]
-                                    .environment
-                                    .iter()
-                                    .map(|(k, v)| (k.clone(), v.clone())),
-                            );
-                        }
+
+                        let entry =
+                            cosmic_launch::EntryLauncher::new(entry, Arc::clone(&self.locales));
+
+                        let conn = conn.clone();
+                        let gpus = self.gpus.clone();
                         tokio::spawn(async move {
-                            cosmic::desktop::spawn_desktop_exec(
-                                exec,
-                                envs,
-                                app_id.as_deref(),
-                                terminal,
+                            if let Err(why) = cosmic_launch::spawn(
+                                &conn,
+                                &entry,
+                                action.as_deref(),
+                                gpus.as_deref().unwrap_or_default(),
+                                gpu_override,
+                                env_vars,
+                                &[] as &[String],
                             )
-                            .await;
+                            .await
+                            {
+                                tracing::error!(?why, "failed to spawn application");
+                            }
                         });
                     }
                 }
@@ -1501,13 +1515,12 @@ impl cosmic::Application for CosmicAppList {
             Message::RemovedSeat => {
                 self.seat.take();
             }
-            Message::Exec(exec, gpu_idx, terminal) => {
+            Message::Exec(entry, action, gpu_override) => {
                 if let Some(tx) = self.wayland_sender.as_ref() {
                     let _ = tx.send(WaylandRequest::TokenRequest {
-                        app_id: Self::APP_ID.to_string(),
-                        exec,
-                        gpu_idx,
-                        terminal,
+                        entry,
+                        action,
+                        gpu_override,
                     });
                 }
             }
@@ -1562,7 +1575,7 @@ impl cosmic::Application for CosmicAppList {
                                 DockItem {
                                     id: self.item_ctr,
                                     toplevels: Vec::new(),
-                                    desktop_info: de.clone(),
+                                    desktop_info: Arc::new(de),
                                     original_app_id: original_id.clone(),
                                 }
                             }
@@ -1579,9 +1592,6 @@ impl cosmic::Application for CosmicAppList {
                 if self.overflow_favorites_popup.is_some_and(|p| p == id) {
                     self.overflow_favorites_popup = None;
                 }
-            }
-            Message::GpuRequest(gpus) => {
-                self.gpus = gpus;
             }
             Message::OpenActive => {
                 let create_new = self.overflow_active_popup.is_none();
@@ -1792,7 +1802,6 @@ impl cosmic::Application for CosmicAppList {
                             self.rectangle_tracker.as_ref(),
                             self.popup.is_none(),
                             self.config.enable_drag_source,
-                            self.gpus.as_deref(),
                             filtered_is_focused,
                             dot_radius,
                             self.core.main_window_id().unwrap(),
@@ -1852,7 +1861,6 @@ impl cosmic::Application for CosmicAppList {
                     None,
                     false,
                     self.config.enable_drag_source,
-                    self.gpus.as_deref(),
                     filtered_is_focused,
                     dot_radius,
                     self.core.main_window_id().unwrap(),
@@ -1905,7 +1913,6 @@ impl cosmic::Application for CosmicAppList {
                                 self.rectangle_tracker.as_ref(),
                                 self.popup.is_none(),
                                 self.config.enable_drag_source,
-                                self.gpus.as_deref(),
                                 filtered_is_focused,
                                 dot_radius,
                                 self.core.main_window_id().unwrap(),
@@ -2110,52 +2117,57 @@ impl cosmic::Application for CosmicAppList {
                     let mut content =
                         menu::menu_column::MenuColumn::with_capacity(4).align_x(Alignment::Center);
 
-                    if let Some(exec) = desktop_info.exec() {
+                    if desktop_info.exec().is_some() {
                         if !toplevels.is_empty() {
                             content =
-                                content.push(menu_button(text::body(fl!("new-window"))).on_press(
-                                    Message::Exec(exec.to_string(), None, desktop_info.terminal()),
-                                ));
+                                content.push(
+                                    menu_button(text::body(fl!("new-window"))).on_press(
+                                        Message::Exec(Arc::clone(desktop_info), None, None),
+                                    ),
+                                );
                         } else if let Some(gpus) = self.gpus.as_ref() {
-                            let default_idx = preferred_gpu_idx(desktop_info, gpus.iter());
+                            let default_idx = gpu_preference(desktop_info).preferred(gpus);
+
                             for (i, gpu) in gpus.iter().enumerate() {
                                 content = content.push(
                                     menu_button(text::body(format!(
                                         "{} {}",
                                         fl!("run-on", gpu = gpu.name.clone()),
-                                        if i == default_idx {
+                                        if Some(i) == default_idx {
                                             fl!("run-on-default")
                                         } else {
                                             String::new()
                                         }
                                     )))
                                     .on_press(Message::Exec(
-                                        exec.to_string(),
-                                        Some(i),
-                                        desktop_info.terminal(),
+                                        Arc::clone(desktop_info),
+                                        None,
+                                        Some(gpu::Preference::Id(i)),
                                     )),
                                 );
                             }
                         } else {
-                            content = content.push(menu_button(text::body(fl!("run"))).on_press(
-                                Message::Exec(exec.to_string(), None, desktop_info.terminal()),
-                            ));
+                            content = content.push(
+                                menu_button(text::body(fl!("run"))).on_press(Message::Exec(
+                                    Arc::clone(desktop_info),
+                                    None,
+                                    None,
+                                )),
+                            );
                         }
                         for action in desktop_info.actions().into_iter().flatten() {
                             if action == "new-window" {
                                 continue;
                             }
 
-                            let Some(exec) = desktop_info.action_entry(action, "Exec") else {
-                                continue;
-                            };
                             let Some(name) =
                                 desktop_info.action_entry_localized(action, "Name", &self.locales)
                             else {
                                 continue;
                             };
+                            let action = name.as_ref().to_owned();
                             content = content.push(menu_button(text::body(name)).on_press(
-                                Message::Exec(exec.into(), None, desktop_info.terminal()),
+                                Message::Exec(Arc::clone(desktop_info), Some(action), None),
                             ));
                         }
                         content = content.push(divider::horizontal::light());
@@ -2312,7 +2324,6 @@ impl cosmic::Application for CosmicAppList {
                                 self.rectangle_tracker.as_ref(),
                                 self.popup.is_none(),
                                 self.config.enable_drag_source,
-                                self.gpus.as_deref(),
                                 filtered_is_focused,
                                 dot_radius,
                                 id,
@@ -2420,7 +2431,6 @@ impl cosmic::Application for CosmicAppList {
                                 self.rectangle_tracker.as_ref(),
                                 self.popup.is_none(),
                                 self.config.enable_drag_source,
-                                self.gpus.as_deref(),
                                 filtered_is_focused,
                                 dot_radius,
                                 id,
@@ -2484,7 +2494,7 @@ impl cosmic::Application for CosmicAppList {
 
     fn subscription(&self) -> Subscription<Message> {
         Subscription::batch([
-            wayland_subscription().map(Message::Wayland),
+            wayland_subscription().map(|e| Message::Wayland(Box::new(e))),
             listen_with(|e, _, id| match e {
                 cosmic::iced::core::Event::PlatformSpecific(event::PlatformSpecific::Wayland(
                     event::wayland::Event::Seat(e, seat),
@@ -2514,26 +2524,6 @@ impl cosmic::Application for CosmicAppList {
     fn on_close_requested(&self, id: window::Id) -> Option<Message> {
         Some(Message::CloseRequested(id))
     }
-}
-
-fn launch_on_preferred_gpu(desktop_info: &DesktopEntry, gpus: Option<&[Gpu]>) -> Option<Message> {
-    let exec = desktop_info.exec()?;
-
-    let gpu_idx = gpus.map(|gpus| preferred_gpu_idx(desktop_info, gpus.iter()));
-
-    Some(Message::Exec(
-        exec.to_string(),
-        gpu_idx,
-        desktop_info.terminal(),
-    ))
-}
-
-fn preferred_gpu_idx<'a, I>(desktop_info: &DesktopEntry, mut gpus: I) -> usize
-where
-    I: Iterator<Item = &'a Gpu>,
-{
-    gpus.position(|gpu| gpu.default ^ desktop_info.prefers_non_default_gpu())
-        .unwrap_or(0)
 }
 
 #[derive(Debug, Default, Clone)]

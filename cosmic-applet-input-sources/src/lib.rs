@@ -179,7 +179,7 @@ impl cosmic::Application for Window {
             Message::KeyboardSettings => {
                 let mut cmd = std::process::Command::new("cosmic-settings");
                 cmd.arg("keyboard");
-                tokio::spawn(cosmic::process::spawn(cmd));
+                tokio::spawn(cosmic_launch::process::spawn(cmd));
             }
             Message::SetActiveLayout(pos) => {
                 if let Some(keyboard_layout) = &self.keyboard_layout {

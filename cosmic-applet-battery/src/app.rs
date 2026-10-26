@@ -474,13 +474,33 @@ impl cosmic::Application for CosmicBatteryApplet {
                     self.token_tx = None;
                 }
                 TokenUpdate::ActivationToken { token, .. } => {
-                    let mut cmd = std::process::Command::new("cosmic-settings");
-                    cmd.arg("power");
+                    let Some(conn) = self.zbus_connection.clone() else {
+                        return Task::none();
+                    };
+
+                    let mut env_vars = Vec::new();
                     if let Some(token) = token {
-                        cmd.env("XDG_ACTIVATION_TOKEN", &token);
-                        cmd.env("DESKTOP_STARTUP_ID", &token);
+                        env_vars.push(("XDG_ACTIVATION_TOKEN".into(), token.clone()));
+                        env_vars.push(("DESKTOP_STARTUP_ID".into(), token));
                     }
-                    tokio::spawn(cosmic::process::spawn(cmd));
+
+                    let command = cosmic_launch::CustomExecutable::new(
+                        "com.system76.CosmicSettings".into(),
+                        "cosmic-settings power".into(),
+                    );
+
+                    tokio::spawn(async move {
+                        _ = cosmic_launch::spawn(
+                            &conn,
+                            &command,
+                            None,
+                            &[],
+                            None,
+                            env_vars,
+                            &[] as &[String],
+                        )
+                        .await;
+                    });
                 }
             },
             Message::GpuInit(tx) => {

@@ -198,7 +198,7 @@ impl cosmic::Application for Power {
                         cmd.env("XDG_ACTIVATION_TOKEN", &token);
                         cmd.env("DESKTOP_STARTUP_ID", &token);
                     }
-                    tokio::spawn(cosmic::process::spawn(cmd));
+                    tokio::spawn(cosmic_launch::process::spawn(cmd));
                 }
             },
             Message::Surface(a) => {

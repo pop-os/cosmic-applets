@@ -12,17 +12,18 @@ use cctk::{
     },
 };
 use cosmic::{
-    iced::core::Bytes,
-    iced::{self, Subscription, stream},
+    desktop::fde::DesktopEntry,
+    iced::{self, Subscription, core::Bytes, stream},
 };
+use cosmic_launch::gpu;
 use image::EncodableLayout;
 
 use futures::{
     SinkExt, StreamExt,
     channel::mpsc::{UnboundedReceiver, unbounded},
 };
-use std::fmt::Debug;
 use std::sync::LazyLock;
+use std::{fmt::Debug, sync::Arc};
 use tokio::sync::Mutex;
 
 use crate::wayland_handler::wayland_handler;
@@ -113,11 +114,10 @@ pub enum WaylandUpdate {
     Workspace(Vec<ExtWorkspaceHandleV1>),
     Output(OutputUpdate),
     ActivationToken {
+        entry: Arc<DesktopEntry>,
+        action: Option<String>,
         token: Option<String>,
-        app_id: Option<String>,
-        exec: String,
-        gpu_idx: Option<usize>,
-        terminal: bool,
+        gpu_override: Option<gpu::Preference>,
     },
     Image(ExtForeignToplevelHandleV1, WaylandImage),
 }
@@ -140,10 +140,9 @@ pub enum OutputUpdate {
 pub enum WaylandRequest {
     Toplevel(ToplevelRequest),
     TokenRequest {
-        app_id: String,
-        exec: String,
-        gpu_idx: Option<usize>,
-        terminal: bool,
+        entry: Arc<DesktopEntry>,
+        action: Option<String>,
+        gpu_override: Option<gpu::Preference>,
     },
     Screencopy(ExtForeignToplevelHandleV1),
 }
