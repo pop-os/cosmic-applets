@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 anyhow.workspace = true
 cctk.workspace = true
+cosmic-launch = { workspace = true, features = ["systemd", "tokio"] }
 cosmic-protocols.workspace = true
 i18n-embed-fl.workspace = true
 i18n-embed.workspace = true

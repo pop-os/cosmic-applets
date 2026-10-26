@@ -781,7 +781,7 @@ impl CosmicNetworkApplet {
                     .as_deref()
                     .unwrap_or("http://204.pop-os.org/"),
             );
-            tokio::spawn(cosmic::process::spawn(browser));
+            tokio::spawn(cosmic_launch::process::spawn(browser));
         }
     }
 
@@ -1236,7 +1236,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                         cmd.env("XDG_ACTIVATION_TOKEN", &token);
                         cmd.env("DESKTOP_STARTUP_ID", &token);
                     }
-                    tokio::spawn(cosmic::process::spawn(cmd));
+                    tokio::spawn(cosmic_launch::process::spawn(cmd));
                 }
             },
             Message::SelectDevice(device) => {

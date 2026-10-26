@@ -323,7 +323,7 @@ impl cosmic::Application for Notifications {
                         cmd.env("XDG_ACTIVATION_TOKEN", &token);
                         cmd.env("DESKTOP_STARTUP_ID", &token);
                     }
-                    tokio::spawn(cosmic::process::spawn(cmd));
+                    tokio::spawn(cosmic_launch::process::spawn(cmd));
                 }
             },
             Message::ActivateNotification(id) => {

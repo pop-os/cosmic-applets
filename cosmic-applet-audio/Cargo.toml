@@ -5,6 +5,7 @@ edition = "2024"
 license = "GPL-3.0-only"
 
 [dependencies]
+cosmic-launch = { workspace = true, features = ["systemd", "tokio"] }
 futures.workspace = true
 i18n-embed-fl.workspace = true
 i18n-embed.workspace = true

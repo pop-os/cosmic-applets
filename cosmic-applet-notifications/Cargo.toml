@@ -5,6 +5,7 @@ edition = "2024"
 license = "GPL-3.0-only"
 
 [dependencies]
+cosmic-launch = { workspace = true, features = ["systemd", "tokio"] }
 cosmic-notifications-util = { git = "https://github.com/pop-os/cosmic-notifications" }
 cosmic-notifications-config = { git = "https://github.com/pop-os/cosmic-notifications" }
 anyhow.workspace = true

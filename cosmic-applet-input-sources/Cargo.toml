@@ -7,6 +7,7 @@ license = "GPL-3.0-only"
 [dependencies]
 cctk.workspace = true
 cosmic-comp-config = { git = "https://github.com/pop-os/cosmic-comp.git", rev = "5eb5af4" }
+cosmic-launch = { workspace = true, features = ["systemd", "tokio"] }
 futures.workspace = true
 i18n-embed-fl.workspace = true
 i18n-embed.workspace = true

@@ -9,6 +9,7 @@ libcosmic.workspace = true
 anyhow.workspace = true
 cctk.workspace = true
 cosmic-comp-config = { git = "https://github.com/pop-os/cosmic-comp.git", rev = "5eb5af4" }
+cosmic-launch = { workspace = true, features = ["systemd", "tokio"] }
 cosmic-protocols.workspace = true
 i18n-embed-fl.workspace = true
 i18n-embed.workspace = true

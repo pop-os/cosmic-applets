@@ -256,8 +256,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
                 }
             }
             Message::CloseRequested(id) => {
-                if Some(id) == self.popup {
-                    self.popup = None;
+                if Some(id) == self.popup.take() {
                     set_discovery(false);
                 }
                 return cosmic::task::future(
@@ -288,7 +287,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
                         cmd.env("XDG_ACTIVATION_TOKEN", &token);
                         cmd.env("DESKTOP_STARTUP_ID", &token);
                     }
-                    tokio::spawn(cosmic::process::spawn(cmd));
+                    tokio::spawn(cosmic_launch::process::spawn(cmd));
                 }
             },
             Message::ToggleBluetooth(enabled) => {

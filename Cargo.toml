@@ -28,6 +28,8 @@ resolver = "3"
 anyhow = "1.0.102"
 cctk = { git = "https://github.com/pop-os/cosmic-protocols", package = "cosmic-client-toolkit", rev = "c0cff4d" }
 cosmic-applets-config = { path = "cosmic-applets-config" }
+cosmic-launch = { git = "https://github.com/pop-os/libcosmic" }
+cosmic-config = { git = "https://github.com/pop-os/libcosmic" }
 cosmic-osk-config = { git = "https://github.com/pop-os/cosmic-osk" }
 cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols", default-features = false, features = [
     "client",
@@ -47,7 +49,6 @@ libcosmic = { git = "https://github.com/pop-os/libcosmic", default-features = fa
     "multi-window",
     "tokio",
     "wayland",
-    "desktop-systemd-scope",
     "winit",
 ] }
 rust-embed = "8.11.0"
@@ -59,8 +60,6 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
 tracing-log = "0.2.0"
 tokio = { version = "1.49.0", features = ["full"] }
-# cosmic-config = { path = "../libcosmic/cosmic-config" }
-cosmic-config = { git = "https://github.com/pop-os/libcosmic" }
 serde = { version = "1.0.228", features = ["derive"] }
 zlink = "0.5.0"
 
@@ -72,13 +71,15 @@ lto = "thin"
 [workspace.metadata.cargo-machete]
 ignored = ["libcosmic"]
 
-# [patch."https://github.com/pop-os/libcosmic"]
+# [patch."https://github.com/pop-os/libcosmic/"]
+# cosmic-config = { git = "https://github.com/pop-os/libcosmic//", branch = "cosmic-launch" }
+# cosmic-launch = { git = "https://github.com/pop-os/libcosmic//", branch = "cosmic-launch" }
+# libcosmic = { git = "https://github.com/pop-os/libcosmic//", branch = "cosmic-launch" }
+# iced_futures = { git = "https://github.com/pop-os/libcosmic//", branch = "cosmic-launch" }
 # cosmic-config = { path = "../libcosmic/cosmic-config" }
+# cosmic-launch = { path = "../libcosmic/cosmic-launch" }
 # libcosmic = { path = "../libcosmic" }
 # iced_futures = { path = "../libcosmic/iced/futures" }
-# cosmic-config = { git = "https://github.com/pop-os/libcosmic//", branch = "theme-v2" }
-# libcosmic = { git = "https://github.com/pop-os/libcosmic//", branch = "theme-v2" }
-# iced_futures = { git = "https://github.com/pop-os/libcosmic//", branch = "theme-v2" }
 
 [patch."https://github.com/smithay/client-toolkit.git"]
 sctk = { package = "smithay-client-toolkit", version = "0.20.0" }
