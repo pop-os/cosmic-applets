@@ -1113,6 +1113,14 @@ impl cosmic::Application for CosmicNetworkApplet {
         &mut self.core
     }
 
+    fn on_escape(&mut self) -> app::Task<Self::Message> {
+        if let Some(p) = self.popup.take() {
+            self.show_visible_networks = false;
+            return destroy_popup(p);
+        }
+        Task::none()
+    }
+
     fn update(&mut self, message: Message) -> app::Task<Message> {
         match message {
             Message::TogglePopup => {
