@@ -188,14 +188,6 @@ impl cosmic::Application for CosmicBluetoothApplet {
                     crate::bluetooth::BluerAgentEvent::RequestDeviceAuthorization(_d, _tx) => {
                         // TODO anything to be done here?
                     }
-                    crate::bluetooth::BluerAgentEvent::RequestServiceAuthorization(
-                        _d,
-                        _service,
-                        _tx,
-                    ) => {
-                        // my headphones seem to always request this
-                        // doesn't seem to be defined in the UX mockups
-                    }
                 },
             },
             Message::Request(r) => {
