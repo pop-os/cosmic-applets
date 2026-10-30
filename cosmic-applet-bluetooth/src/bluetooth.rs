@@ -14,7 +14,7 @@ use std::{
 };
 
 use bluer::{
-    Adapter, AdapterProperty, Address, Session, Uuid,
+    Adapter, AdapterProperty, Address, Session,
     agent::{Agent, AgentHandle},
 };
 
@@ -349,7 +349,6 @@ pub enum BluerAgentEvent {
     RequestPasskey(BluerDevice),
     RequestConfirmation(BluerDevice, String, Sender<bool>), // Note mpsc channel is used bc the sender must be cloned in the iced Message machinery
     RequestDeviceAuthorization(BluerDevice, Sender<bool>),
-    RequestServiceAuthorization(BluerDevice, Uuid, Sender<bool>),
 }
 
 pub struct BluerSessionState {
@@ -375,7 +374,6 @@ impl BluerSessionState {
         let tx_clone_4 = tx.clone();
         let tx_clone_5 = tx.clone();
         let tx_clone_6 = tx.clone();
-        let tx_clone_7 = tx.clone();
         let adapter_clone_1 = adapter.clone();
         let adapter_clone_2 = adapter.clone();
         let adapter_clone_3 = adapter.clone();
@@ -508,25 +506,12 @@ impl BluerSessionState {
             })),
             authorize_service: Some(Box::new(move |req| {
                 let agent_clone = adapter_clone_7.clone();
-                let tx_clone = tx_clone_7.clone();
                 Box::pin(async move {
                     let Ok(device) = agent_clone.device(req.device) else {
                         return Err(bluer::agent::ReqError::Rejected);
                     };
-                    let (tx, mut rx) = channel(1);
-                    // TODO better describe the service to the user
-                    let _ = tx_clone
-                        .send(BluerSessionEvent::AgentEvent(
-                            BluerAgentEvent::RequestServiceAuthorization(
-                                BluerDevice::from_device(&device).await,
-                                req.service,
-                                tx,
-                            ),
-                        ))
-                        .await;
-                    let res = rx.recv().await;
-                    match res {
-                        Some(res) if res => Ok(()),
+                    match device.is_paired().await {
+                        Ok(true) => Ok(()),
                         _ => Err(bluer::agent::ReqError::Rejected),
                     }
                 })
