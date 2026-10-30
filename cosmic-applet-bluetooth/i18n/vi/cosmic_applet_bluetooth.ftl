@@ -1,0 +1,12 @@
+confirm-pin = Vui lòng xác nhận mã PIN sau đây trùng khớp với mã hiện ở trên { $deviceName }
+bluetooth = Bluetooth
+unsuccessful = Ghép nối không thành công
+pairable = Có thể ghép nối
+try-again = Thử lại
+check-device = Kiểm tra { $deviceName } đang bật, trong tầm kết nối, và sẵn sàng ghép nối.
+other-devices = Thiết bị Bluetooth khác
+connected = Đã kết nối
+confirm = Xác nhận
+settings = Cài đặt Bluetooth...
+discoverable = Có thể phát hiện
+cancel = Hủy

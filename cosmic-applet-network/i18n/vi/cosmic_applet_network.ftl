@@ -1,0 +1,9 @@
+connected = Đã kết nối
+cancel = Hủy
+gigabits-per-second = Gbps
+terabits-per-second = Tbps
+connect = Kết nối
+wifi = Wi-Fi
+identity = Danh tính
+network = Mạng
+settings = Cài đặt mạng...
