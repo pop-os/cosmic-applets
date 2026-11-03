@@ -2142,7 +2142,11 @@ impl cosmic::Application for CosmicAppList {
                                     .on_press(Message::Exec(
                                         Arc::clone(desktop_info),
                                         None,
-                                        Some(gpu::Preference::Id(i)),
+                                        if Some(i) == default_idx {
+                                            None
+                                        } else {
+                                            Some(gpu::Preference::Id(i))
+                                        },
                                     )),
                                 );
                             }
