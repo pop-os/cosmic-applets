@@ -2169,10 +2169,16 @@ impl cosmic::Application for CosmicAppList {
                             else {
                                 continue;
                             };
-                            let action = name.as_ref().to_owned();
-                            content = content.push(menu_button(text::body(name)).on_press(
-                                Message::Exec(Arc::clone(desktop_info), Some(action), None),
-                            ));
+
+                            content = content.push(
+                                menu_button(text::body(name.as_ref().to_owned())).on_press(
+                                    Message::Exec(
+                                        Arc::clone(desktop_info),
+                                        Some(action.to_string()),
+                                        None,
+                                    ),
+                                ),
+                            );
                         }
                         content = content.push(divider::horizontal::light());
                     }
