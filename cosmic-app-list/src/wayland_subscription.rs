@@ -86,7 +86,9 @@ async fn start_listening(
                     let (calloop_tx, calloop_rx) = calloop::channel::channel();
                     let (toplevel_tx, toplevel_rx) = unbounded();
                     let _ = std::thread::spawn(move || {
-                        wayland_handler(toplevel_tx, calloop_rx);
+                        if let Err(err) = wayland_handler(toplevel_tx, calloop_rx) {
+                            tracing::error!("Wayland handler failed: {err}");
+                        }
                     });
                     *guard = Some(toplevel_rx);
                     _ = output.send(WaylandUpdate::Init(calloop_tx)).await;

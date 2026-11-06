@@ -59,7 +59,6 @@ use cosmic::{
 use cosmic_app_list_config::{APP_ID, AppListConfig};
 use cosmic_launch::gpu;
 use cosmic_protocols::toplevel_info::v1::client::zcosmic_toplevel_handle_v1::State;
-use futures::future::pending;
 use rustc_hash::FxHashMap;
 use std::{
     borrow::Cow,
@@ -67,9 +66,7 @@ use std::{
     rc::Rc,
     str::FromStr,
     sync::{Arc, OnceLock},
-    time::Duration,
 };
-use tokio::time::sleep;
 use url::Url;
 
 /// Shared zbus session connection for reuse
@@ -365,7 +362,6 @@ pub struct Popup {
 pub struct CosmicAppList {
     core: cosmic::app::Core,
     popup: Option<Popup>,
-    subscription_ctr: u32,
     item_ctr: u32,
     desktop_entries: Vec<DesktopEntry>,
     active_list: Vec<DockItem>,
@@ -419,7 +415,6 @@ pub enum Message {
     DndData(Option<DndPathBuf>),
     StartListeningForDnd,
     StopListeningForDnd,
-    IncrementSubscriptionCtr,
     ConfigUpdated(AppListConfig),
     OpenFavorites,
     OpenActive,
@@ -1318,26 +1313,7 @@ impl cosmic::Application for CosmicAppList {
                         }
                     }
                     WaylandUpdate::Finished => {
-                        for t in &mut self.pinned_list {
-                            t.toplevels.clear();
-                        }
-                        self.active_list.clear();
-                        let subscription_ctr = self.subscription_ctr;
-                        let rand_d = fastrand::u64(0..100);
-                        return iced::Task::perform(
-                            async move {
-                                if let Some(millis) = 2u64
-                                    .checked_pow(subscription_ctr)
-                                    .and_then(|d| d.checked_add(rand_d))
-                                {
-                                    sleep(Duration::from_millis(millis)).await;
-                                } else {
-                                    pending::<()>().await;
-                                }
-                            },
-                            |()| Message::IncrementSubscriptionCtr,
-                        )
-                        .map(cosmic::action::app);
+                        std::process::exit(1);
                     }
                     WaylandUpdate::Toplevel(event) => match event {
                         ToplevelUpdate::Add(mut info) => {
@@ -1542,9 +1518,6 @@ impl cosmic::Application for CosmicAppList {
             }
             Message::StopListeningForDnd => {
                 self.is_listening_for_dnd = false;
-            }
-            Message::IncrementSubscriptionCtr => {
-                self.subscription_ctr += 1;
             }
             Message::ConfigUpdated(config) => {
                 self.config = config;
