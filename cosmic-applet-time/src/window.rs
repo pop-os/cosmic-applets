@@ -21,16 +21,16 @@ use cosmic::{
         space, text,
     },
 };
+use cosmic_login1_zbus::manager::ManagerProxy;
 use jiff::{
     Timestamp, ToSpan, Zoned,
     civil::{Date, Weekday},
     fmt::strtime,
     tz::TimeZone,
 };
-use logind_zbus::manager::ManagerProxy;
 use std::hash::Hash;
 use std::sync::LazyLock;
-use timedate_zbus::TimeDateProxy;
+use timedate1_zbus::TimeDateProxy;
 use tokio::{sync::watch, time};
 
 use crate::{config::TimeAppletConfig, fl, time::get_calendar_first};
