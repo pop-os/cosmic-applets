@@ -20,7 +20,7 @@ use cosmic::{
 };
 use std::sync::LazyLock;
 
-use logind_zbus::{
+use cosmic_login1_zbus::{
     manager::ManagerProxy,
     session::{SessionClass, SessionProxy, SessionType},
     user::UserProxy,
@@ -338,7 +338,7 @@ async fn lock() -> zbus::Result<()> {
     let our_uid = getuid().as_raw() as u32;
     let user_path = manager_proxy.get_user(our_uid).await?;
     let user = UserProxy::builder(&connection)
-        .path(user_path)?
+        .path(user_path)
         .build()
         .await?;
     // Lock all non-TTY sessions of this user
@@ -346,7 +346,7 @@ async fn lock() -> zbus::Result<()> {
     let mut locked_successfully = false;
     for (_, session_path) in sessions {
         let Ok(session) = SessionProxy::builder(&connection)
-            .path(session_path)?
+            .path(session_path)
             .build()
             .await
         else {

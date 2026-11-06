@@ -9,7 +9,7 @@ cosmic-launch = { workspace = true, features = ["systemd", "tokio"] }
 i18n-embed-fl.workspace = true
 i18n-embed.workspace = true
 libcosmic.workspace = true
-logind-zbus = "5.3.2"
+cosmic-login1-zbus = { git = "https://github.com/pop-os/dbus-settings-bindings" }
 rust-embed.workspace = true
 rustix.workspace = true
 tokio.workspace = true

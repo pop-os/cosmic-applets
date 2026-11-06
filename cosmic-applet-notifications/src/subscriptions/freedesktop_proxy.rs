@@ -45,7 +45,7 @@ pub trait Notifications {
         summary: &str,
         body: &str,
         actions: &[&str],
-        hints: std::collections::HashMap<&str, zbus::zvariant::Value<'_>>,
+        hints: std::collections::HashMap<&str, zbus::Variant<'_>>,
         expire_timeout: i32,
     ) -> zbus::Result<u32>;
 
