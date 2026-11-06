@@ -1,0 +1,14 @@
+power-settings = Cài đặt nguồn và pin...
+hours = h
+until-empty = cho đến khi hết
+battery-desc = Giảm tiêu hao điện và hiệu suất.
+max-charge = Tăng tuối thọ pin bằng cách thiết lập mức sạc tối đa 80%
+balanced = Cần bằng
+battery = Pin
+seconds = s
+dgpu-running = Đang sử dụng GPU rời, sẽ tăng tiêu hao pin
+performance = Hiệu suất cao
+performance-desc = Hiệu suất cao và tiêu hao nhiều điện.
+minutes = ph
+balanced-desc = Hiệu năng và mức sử dụng pin tiêu chuẩn.
+dgpu-applications = Ứng dụng sử dụng GPU rời { $gpu_name }
