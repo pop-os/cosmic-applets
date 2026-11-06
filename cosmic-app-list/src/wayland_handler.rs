@@ -10,6 +10,7 @@ use std::{
         unix::net::UnixStream,
     },
     sync::{Arc, Condvar, Mutex, MutexGuard},
+    time::Duration,
 };
 
 use cctk::{
@@ -277,6 +278,7 @@ impl ToplevelInfoHandler for AppData {
 struct SessionInner {
     formats: Option<Formats>,
     res: Option<Result<(), WEnum<FailureReason>>>,
+    stopped: bool,
 }
 
 // TODO: dmabuf? need to handle modifier negotation
@@ -312,8 +314,11 @@ impl Session {
         mut f: F,
     ) -> MutexGuard<'_, SessionInner> {
         self.condvar
-            .wait_while(self.inner.lock().unwrap(), |data| f(data))
+            .wait_timeout_while(self.inner.lock().unwrap(), Duration::from_secs(1), |data| {
+                !data.stopped && f(data)
+            })
             .unwrap()
+            .0
     }
 }
 
@@ -375,7 +380,6 @@ impl CaptureData {
         let overlay_cursor = if overlay_cursor { 1 } else { 0 };
 
         let session = Arc::new(Session::default());
-        // Unwrap assumes compositor supports this capture type
         let capture_session = self
             .capturer
             .create_session(
@@ -387,14 +391,13 @@ impl CaptureData {
                     session_data: ScreencopySessionData::default(),
                 },
             )
-            .unwrap();
-        self.conn.flush().unwrap();
+            .ok()?;
+        self.conn.flush().ok()?;
 
         let formats = session
             .wait_while(|data| data.formats.is_none())
             .formats
-            .take()
-            .unwrap();
+            .take()?;
         let (width, height) = formats.buffer_size;
 
         if width == 0 || height == 0 {
@@ -437,20 +440,18 @@ impl CaptureData {
                 session: capture_session.clone(),
             },
         );
-        self.conn.flush().unwrap();
-
         // TODO: wait for server to release buffer?
-        let res = session
-            .wait_while(|data| data.res.is_none())
-            .res
-            .take()
-            .unwrap();
+        let res = if self.conn.flush().is_ok() {
+            session.wait_while(|data| data.res.is_none()).res.take()
+        } else {
+            None
+        };
         pool.destroy();
         buffer.destroy();
 
         //std::thread::sleep(std::time::Duration::from_millis(16));
 
-        if res.is_ok() {
+        if let Some(Ok(())) = res {
             Some(ShmImage { fd, width, height })
         } else {
             None
@@ -586,13 +587,17 @@ impl ScreencopyHandler for AppData {
         });
     }
 
-    fn stopped(&mut self, _conn: &Connection, _qh: &QueueHandle<Self>, _session: &CaptureSession) {}
+    fn stopped(&mut self, _conn: &Connection, _qh: &QueueHandle<Self>, session: &CaptureSession) {
+        if let Some(session) = Session::for_session(session) {
+            session.update(|data| data.stopped = true);
+        }
+    }
 }
 
 pub(crate) fn wayland_handler(
     tx: UnboundedSender<WaylandUpdate>,
     rx: calloop::channel::Channel<WaylandRequest>,
-) {
+) -> anyhow::Result<()> {
     let socket = std::env::var("X_PRIVILEGED_WAYLAND_SOCKET")
         .ok()
         .and_then(|fd| {
@@ -602,19 +607,19 @@ pub(crate) fn wayland_handler(
         });
 
     let conn = if let Some(socket) = socket {
-        Connection::from_socket(socket).unwrap()
+        Connection::from_socket(socket)?
     } else {
-        Connection::connect_to_env().unwrap()
+        Connection::connect_to_env()?
     };
-    let (globals, event_queue) = registry_queue_init(&conn).unwrap();
+    let (globals, event_queue) = registry_queue_init(&conn)?;
 
-    let mut event_loop = calloop::EventLoop::<AppData>::try_new().unwrap();
+    let mut event_loop = calloop::EventLoop::<AppData>::try_new()?;
     let qh = event_queue.handle();
     let wayland_source = WaylandSource::new(conn.clone(), event_queue);
     let handle = event_loop.handle();
     wayland_source
         .insert(handle.clone())
-        .expect("Failed to insert wayland source.");
+        .map_err(|err| err.error)?;
 
     if handle
         .insert_source(rx, |event, (), state| match event {
@@ -683,7 +688,7 @@ pub(crate) fn wayland_handler(
         })
         .is_err()
     {
-        return;
+        return Ok(());
     }
     let registry_state = RegistryState::new(&globals);
 
@@ -707,8 +712,9 @@ pub(crate) fn wayland_handler(
         if app_data.exit {
             break;
         }
-        event_loop.dispatch(None, &mut app_data).unwrap();
+        event_loop.dispatch(None, &mut app_data)?;
     }
+    Ok(())
 }
 
 sctk::delegate_seat!(AppData);
