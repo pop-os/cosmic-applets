@@ -97,7 +97,7 @@ pub async fn create_service(connection: &zbus::Connection) -> zbus::Result<()> {
     let dbus_proxy = DBusProxy::new(connection).await?;
     let mut name_owner_changed_stream = dbus_proxy.receive_name_owner_changed().await?;
 
-    let flags = RequestNameFlags::AllowReplacement.into();
+    let flags = RequestNameFlags::ALLOW_REPLACEMENT.into();
     if dbus_proxy.request_name(NAME.as_ref(), flags).await? == RequestNameReply::InQueue {
         eprintln!("Bus name '{NAME}' already owned");
     }

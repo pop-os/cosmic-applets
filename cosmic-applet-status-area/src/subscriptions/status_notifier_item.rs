@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use cosmic::iced::{self, Subscription};
 use futures::{FutureExt, StreamExt};
 use rustc_hash::FxHashMap;
-use zbus::zvariant::{self, OwnedValue};
+use zbus::{DeserializeDict, OwnedObjectPath, OwnedVariant, Signature, Type, Variant};
 
 #[derive(Clone, Debug)]
 pub struct StatusNotifierItem {
@@ -17,7 +17,7 @@ pub struct StatusNotifierItem {
     menu_proxy: Option<DBusMenuProxy<'static>>,
 }
 
-#[derive(Clone, Debug, zvariant::Value)]
+#[derive(Clone, Debug, Variant, Type, serde::Deserialize)]
 pub struct Icon {
     pub width: i32,
     pub height: i32,
@@ -42,8 +42,8 @@ impl StatusNotifierItem {
         let item_proxy = StatusNotifierItemProxy::builder(connection)
             // Status icons don't seem to report property changes the normal way...
             .cache_properties(zbus::proxy::CacheProperties::No)
-            .destination(dest.to_string())?
-            .path(path.to_string())?
+            .destination(dest.to_string())
+            .path(path.to_string())
             .build()
             .await?;
 
@@ -52,8 +52,8 @@ impl StatusNotifierItem {
         let menu_proxy = if let Ok(menu_path) = item_proxy.menu().await {
             Some(
                 DBusMenuProxy::builder(connection)
-                    .destination(dest.to_string())?
-                    .path(menu_path)?
+                    .destination(dest.to_string())
+                    .path(menu_path)
                     .build()
                     .await?,
             )
@@ -189,7 +189,7 @@ pub trait StatusNotifierItem {
     fn icon_pixmap(&self) -> zbus::Result<Vec<Icon>>;
 
     #[zbus(property)]
-    fn menu(&self) -> zbus::Result<zvariant::OwnedObjectPath>;
+    fn menu(&self) -> zbus::Result<OwnedObjectPath>;
 
     #[zbus(property)]
     fn item_is_menu(&self) -> zbus::Result<bool>;
@@ -212,20 +212,16 @@ pub struct Layout(i32, LayoutProps, Vec<Layout>);
 impl<'a> serde::Deserialize<'a> for Layout {
     fn deserialize<D: serde::Deserializer<'a>>(deserializer: D) -> Result<Self, D::Error> {
         let (id, props, children) =
-            <(i32, LayoutProps, Vec<(zvariant::Signature, Self)>)>::deserialize(deserializer)?;
+            <(i32, LayoutProps, Vec<(Signature, Self)>)>::deserialize(deserializer)?;
         Ok(Self(id, props, children.into_iter().map(|x| x.1).collect()))
     }
 }
 
-impl zvariant::Type for Layout {
-    const SIGNATURE: &zvariant::Signature = <(
-        i32,
-        FxHashMap<String, zvariant::Value>,
-        Vec<zvariant::Value>,
-    )>::SIGNATURE;
+impl Type for Layout {
+    const SIGNATURE: &Signature = <(i32, FxHashMap<String, Variant>, Vec<Variant>)>::SIGNATURE;
 }
 
-#[derive(Clone, Debug, zvariant::DeserializeDict)]
+#[derive(Clone, Debug, DeserializeDict)]
 pub struct LayoutProps {
     #[zvariant(rename = "accessible-desc")]
     accessible_desc: Option<String>,
@@ -251,8 +247,8 @@ pub struct LayoutProps {
     // shortcut: Option<String>,
 }
 
-impl zvariant::Type for LayoutProps {
-    const SIGNATURE: &zvariant::Signature = <FxHashMap<String, zvariant::Value>>::SIGNATURE;
+impl Type for LayoutProps {
+    const SIGNATURE: &Signature = <FxHashMap<String, Variant>>::SIGNATURE;
 }
 
 #[allow(dead_code)]
@@ -319,8 +315,13 @@ pub trait DBusMenu {
         property_names: &[&str],
     ) -> zbus::Result<(u32, Layout)>;
 
-    fn event(&self, id: i32, event_id: &str, data: &OwnedValue, timestamp: u32)
-    -> zbus::Result<()>;
+    fn event(
+        &self,
+        id: i32,
+        event_id: &str,
+        data: &OwnedVariant,
+        timestamp: u32,
+    ) -> zbus::Result<()>;
 
     fn about_to_show(&self, id: i32) -> zbus::Result<bool>;
 
@@ -330,7 +331,7 @@ pub trait DBusMenu {
     #[zbus(signal)]
     fn items_properties_updated(
         &self,
-        updated_props: Vec<(i32, std::collections::HashMap<String, zvariant::OwnedValue>)>,
+        updated_props: Vec<(i32, std::collections::HashMap<String, OwnedVariant>)>,
         removed_props: Vec<(i32, Vec<String>)>,
     ) -> zbus::Result<()>;
 }

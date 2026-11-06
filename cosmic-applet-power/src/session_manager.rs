@@ -32,10 +32,10 @@ pub trait SessionManager {
     fn can_shutdown(&self) -> zbus::Result<bool>;
 
     /// GetClients method
-    fn get_clients(&self) -> zbus::Result<Vec<zbus::zvariant::OwnedObjectPath>>;
+    fn get_clients(&self) -> zbus::Result<Vec<zbus::OwnedObjectPath>>;
 
     /// GetInhibitors method
-    fn get_inhibitors(&self) -> zbus::Result<Vec<zbus::zvariant::OwnedObjectPath>>;
+    fn get_inhibitors(&self) -> zbus::Result<Vec<zbus::OwnedObjectPath>>;
 
     /// GetLocale method
     fn get_locale(&self, category: i32) -> zbus::Result<String>;
@@ -75,7 +75,7 @@ pub trait SessionManager {
         &self,
         app_id: &str,
         client_startup_id: &str,
-    ) -> zbus::Result<zbus::zvariant::OwnedObjectPath>;
+    ) -> zbus::Result<zbus::OwnedObjectPath>;
 
     /// RequestReboot method
     fn request_reboot(&self) -> zbus::Result<()>;
@@ -96,23 +96,23 @@ pub trait SessionManager {
     fn uninhibit(&self, inhibit_cookie: u32) -> zbus::Result<()>;
 
     /// UnregisterClient method
-    fn unregister_client(&self, client_id: &zbus::zvariant::ObjectPath<'_>) -> zbus::Result<()>;
+    fn unregister_client(&self, client_id: &zbus::ObjectPath<'_>) -> zbus::Result<()>;
 
     /// ClientAdded signal
     #[zbus(signal)]
-    fn client_added(&self, id: zbus::zvariant::ObjectPath<'_>) -> zbus::Result<()>;
+    fn client_added(&self, id: zbus::ObjectPath<'_>) -> zbus::Result<()>;
 
     /// ClientRemoved signal
     #[zbus(signal)]
-    fn client_removed(&self, id: zbus::zvariant::ObjectPath<'_>) -> zbus::Result<()>;
+    fn client_removed(&self, id: zbus::ObjectPath<'_>) -> zbus::Result<()>;
 
     /// InhibitorAdded signal
     #[zbus(signal)]
-    fn inhibitor_added(&self, id: zbus::zvariant::ObjectPath<'_>) -> zbus::Result<()>;
+    fn inhibitor_added(&self, id: zbus::ObjectPath<'_>) -> zbus::Result<()>;
 
     /// InhibitorRemoved signal
     #[zbus(signal)]
-    fn inhibitor_removed(&self, id: zbus::zvariant::ObjectPath<'_>) -> zbus::Result<()>;
+    fn inhibitor_removed(&self, id: zbus::ObjectPath<'_>) -> zbus::Result<()>;
 
     /// SessionOver signal
     #[zbus(signal)]

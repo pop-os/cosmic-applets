@@ -6,8 +6,8 @@ license = "GPL-3.0-only"
 
 [dependencies]
 cosmic-launch = { workspace = true, features = ["systemd", "tokio"] }
-cosmic-notifications-util = { git = "https://github.com/pop-os/cosmic-notifications" }
-cosmic-notifications-config = { git = "https://github.com/pop-os/cosmic-notifications" }
+cosmic-notifications-util = { git = "https://github.com/pop-os/cosmic-notifications", branch = "updates" }
+cosmic-notifications-config = { git = "https://github.com/pop-os/cosmic-notifications", branch = "updates" }
 anyhow.workspace = true
 libcosmic.workspace = true
 tokio.workspace = true

@@ -146,7 +146,7 @@ pub trait NotificationsApplet {
         summary: &str,
         body: &str,
         actions: Vec<&str>,
-        hints: HashMap<&str, zbus::zvariant::Value<'_>>,
+        hints: HashMap<&str, zbus::Variant<'_>>,
         expire_timeout: i32,
     ) -> zbus::Result<()>;
 
@@ -160,8 +160,7 @@ pub async fn get_proxy() -> anyhow::Result<NotificationsAppletProxy<'static>> {
 
     let stream = unsafe { std::os::unix::net::UnixStream::from_raw_fd(raw_fd) };
     stream.set_nonblocking(true)?;
-    let stream = tokio::net::UnixStream::from_std(stream)?;
-    let conn = Builder::socket(stream).p2p().build().await?;
+    let conn = Builder::unix_stream(stream).p2p().build().await?;
     trace!("Applet connection created");
     let proxy = NotificationsAppletProxy::new(&conn).await?;
 
