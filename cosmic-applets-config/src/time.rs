@@ -13,6 +13,8 @@ pub struct TimeAppletConfig {
     pub show_weekday: bool,
     #[serde(default, skip_serializing_if = "str::is_empty")]
     pub format_strftime: String,
+    #[serde(default)]
+    pub show_week_number: bool,
 }
 
 impl Default for TimeAppletConfig {
@@ -24,6 +26,7 @@ impl Default for TimeAppletConfig {
             show_date_in_top_panel: true,
             show_weekday: false,
             format_strftime: Default::default(),
+            show_week_number: true,
         }
     }
 }
