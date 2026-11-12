@@ -54,10 +54,13 @@ use futures::{SinkExt, channel::mpsc};
 use sctk::registry::{ProvidesRegistryState, RegistryState};
 use wayland_client::{Connection, QueueHandle, globals::registry_queue_init};
 
+const THUMBNAIL_MAX_EDGE: u32 = 128;
+
 #[derive(Default)]
 struct SessionInner {
     formats: Option<Formats>,
     res: Option<Result<(), WEnum<FailureReason>>>,
+    stopped: bool,
 }
 
 // TODO: dmabuf? need to handle modifier negotation
@@ -88,13 +91,42 @@ impl Session {
         self.condvar.notify_all();
     }
 
-    fn wait_while<F: FnMut(&SessionInner) -> bool>(
+    fn stop(&self) {
+        self.update(|data| data.stopped = true);
+    }
+
+    fn wait_for_formats(&self) -> Option<Formats> {
+        self.wait_for_formats_locked(self.inner.lock().unwrap())
+    }
+
+    fn wait_for_formats_locked(&self, data: MutexGuard<'_, SessionInner>) -> Option<Formats> {
+        let mut data = self.wait_while(data, |data| data.formats.is_none() && !data.stopped);
+        if data.stopped {
+            None
+        } else {
+            data.formats.take()
+        }
+    }
+
+    fn wait_for_result(&self) -> Option<Result<(), WEnum<FailureReason>>> {
+        self.wait_for_result_locked(self.inner.lock().unwrap())
+    }
+
+    fn wait_for_result_locked(
         &self,
+        data: MutexGuard<'_, SessionInner>,
+    ) -> Option<Result<(), WEnum<FailureReason>>> {
+        self.wait_while(data, |data| data.res.is_none() && !data.stopped)
+            .res
+            .take()
+    }
+
+    fn wait_while<'a, F: FnMut(&SessionInner) -> bool>(
+        &self,
+        data: MutexGuard<'a, SessionInner>,
         mut f: F,
-    ) -> MutexGuard<'_, SessionInner> {
-        self.condvar
-            .wait_while(self.inner.lock().unwrap(), |data| f(data))
-            .unwrap()
+    ) -> MutexGuard<'a, SessionInner> {
+        self.condvar.wait_while(data, |data| f(data)).unwrap()
     }
 }
 
@@ -160,11 +192,7 @@ impl CaptureData {
             .unwrap();
         self.conn.flush().unwrap();
 
-        let formats = session
-            .wait_while(|data| data.formats.is_none())
-            .formats
-            .take()
-            .unwrap();
+        let formats = session.wait_for_formats()?;
         let (width, height) = formats.buffer_size;
 
         if width == 0 || height == 0 {
@@ -210,17 +238,13 @@ impl CaptureData {
         self.conn.flush().unwrap();
 
         // TODO: wait for server to release buffer?
-        let res = session
-            .wait_while(|data| data.res.is_none())
-            .res
-            .take()
-            .unwrap();
+        let res = session.wait_for_result();
         pool.destroy();
         buffer.destroy();
 
         //std::thread::sleep(std::time::Duration::from_millis(16));
 
-        if res.is_ok() {
+        if res?.is_ok() {
             Some(ShmImage { fd, width, height })
         } else {
             None
@@ -235,10 +259,158 @@ pub struct ShmImage<T: AsFd> {
 }
 
 impl<T: AsFd> ShmImage<T> {
-    pub fn image(&self) -> anyhow::Result<image::RgbaImage> {
+    pub fn image(&self) -> anyhow::Result<image::ImageBuffer<image::Rgba<u8>, memmap2::Mmap>> {
         let mmap = unsafe { memmap2::Mmap::map(&self.fd.as_fd())? };
-        image::RgbaImage::from_raw(self.width, self.height, mmap.to_vec())
+        image::ImageBuffer::from_raw(self.width, self.height, mmap)
             .ok_or_else(|| anyhow::anyhow!("ShmImage had incorrect size"))
+    }
+}
+
+fn make_thumbnail<I>(image: &I) -> image::RgbaImage
+where
+    I: image::GenericImageView<Pixel = image::Rgba<u8>>,
+{
+    if image.width() == 0 || image.height() == 0 {
+        return image::RgbaImage::new(0, 0);
+    }
+
+    let max = image.width().max(image.height());
+    let ratio = max as f32 / THUMBNAIL_MAX_EDGE as f32;
+    let (width, height) = if ratio > 1.0 {
+        (
+            (image.width() as f32 / ratio).round() as u32,
+            (image.height() as f32 / ratio).round() as u32,
+        )
+    } else {
+        (image.width(), image.height())
+    };
+
+    let x_ratio = image.width() as f32 / width as f32;
+    let y_ratio = image.height() as f32 / height as f32;
+    image::RgbaImage::from_fn(width, height, |x, y| {
+        let source_x = ((x as f32 + 0.5) * x_ratio).floor() as u32;
+        let source_y = ((y as f32 + 0.5) * y_ratio).floor() as u32;
+        image.get_pixel(
+            source_x.min(image.width() - 1),
+            source_y.min(image.height() - 1),
+        )
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::{sync::mpsc, time::Duration};
+
+    const WAIT_TIMEOUT: Duration = Duration::from_secs(5);
+
+    #[test]
+    fn large_capture_stays_mapped_and_produces_a_bounded_thumbnail() {
+        const WIDTH: u32 = 1920;
+        const HEIGHT: u32 = 1080;
+        let len = u64::from(WIDTH) * u64::from(HEIGHT) * 4;
+        let fd = rustix::fs::memfd_create(
+            c"cosmic-minimize-thumbnail-test",
+            rustix::fs::MemfdFlags::CLOEXEC,
+        )
+        .unwrap();
+        rustix::fs::ftruncate(&fd, len).unwrap();
+
+        let image = ShmImage {
+            fd,
+            width: WIDTH,
+            height: HEIGHT,
+        }
+        .image()
+        .unwrap();
+
+        fn assert_mapped(_: &image::ImageBuffer<image::Rgba<u8>, memmap2::Mmap>) {}
+        assert_mapped(&image);
+
+        let thumbnail = make_thumbnail(&image);
+        assert_eq!(thumbnail.dimensions(), (128, 72));
+        assert!(thumbnail.as_raw().len() <= (THUMBNAIL_MAX_EDGE.pow(2) * 4) as usize);
+    }
+
+    #[test]
+    fn stopped_session_releases_formats_waiter() {
+        let session = Arc::new(Session::default());
+        let (entered_tx, entered_rx) = mpsc::channel();
+        let (done_tx, done_rx) = mpsc::channel();
+        let waiter = {
+            let session = session.clone();
+            std::thread::spawn(move || {
+                let data = session.inner.lock().unwrap();
+                entered_tx.send(()).unwrap();
+                done_tx
+                    .send(session.wait_for_formats_locked(data).is_none())
+                    .unwrap();
+            })
+        };
+
+        entered_rx.recv_timeout(WAIT_TIMEOUT).unwrap();
+        session.stop();
+        assert!(done_rx.recv_timeout(WAIT_TIMEOUT).unwrap());
+        waiter.join().unwrap();
+    }
+
+    #[test]
+    fn stopped_session_releases_result_waiter() {
+        let session = Arc::new(Session::default());
+        let (entered_tx, entered_rx) = mpsc::channel();
+        let (done_tx, done_rx) = mpsc::channel();
+        let waiter = {
+            let session = session.clone();
+            std::thread::spawn(move || {
+                let data = session.inner.lock().unwrap();
+                entered_tx.send(()).unwrap();
+                done_tx
+                    .send(session.wait_for_result_locked(data).is_none())
+                    .unwrap();
+            })
+        };
+
+        entered_rx.recv_timeout(WAIT_TIMEOUT).unwrap();
+        session.stop();
+        assert!(done_rx.recv_timeout(WAIT_TIMEOUT).unwrap());
+        waiter.join().unwrap();
+    }
+
+    #[test]
+    fn completed_result_wins_if_session_then_stops() {
+        let session = Session::default();
+        session.update(|data| {
+            data.res = Some(Ok(()));
+            data.stopped = true;
+        });
+
+        assert!(matches!(session.wait_for_result(), Some(Ok(()))));
+    }
+
+    #[test]
+    fn thumbnail_preserves_nearest_neighbor_output() {
+        // 62 / 7 exposes a one-pixel difference if the resize ratio is not
+        // rounded in the same order as image::imageops::resize.
+        let image = image::RgbaImage::from_fn(62, 1_134, |x, y| {
+            image::Rgba([
+                x.wrapping_mul(17) as u8,
+                y.wrapping_mul(29) as u8,
+                x.wrapping_add(y) as u8,
+                255,
+            ])
+        });
+        let expected =
+            image::imageops::resize(&image, 7, 128, image::imageops::FilterType::Nearest);
+
+        assert_eq!(make_thumbnail(&image), expected);
+        assert_eq!(
+            make_thumbnail(&image::RgbaImage::new(0, 0)).dimensions(),
+            (0, 0)
+        );
+        let thin = image::RgbaImage::new(1, 1_000);
+        let thin_expected =
+            image::imageops::resize(&thin, 0, 128, image::imageops::FilterType::Nearest);
+        assert_eq!(make_thumbnail(&thin), thin_expected);
     }
 }
 
@@ -305,7 +477,7 @@ impl AppData {
 
     fn send_image(&self, handle: ExtForeignToplevelHandleV1) {
         let mut tx = self.tx.clone();
-        let capure_data = CaptureData {
+        let capture_data = CaptureData {
             qh: self.queue_handle.clone(),
             conn: self.conn.clone(),
             wl_shm: self.shm_state.wl_shm().clone(),
@@ -318,32 +490,19 @@ impl AppData {
                 return;
             };
 
-            // XXX is this going to use to much memory?
-            let img = capure_data.capture_source_shm_fd(false, handle.clone(), fd, None);
-            if let Some(img) = img {
-                let Ok(mut img) = img.image() else {
+            let image = capture_data.capture_source_shm_fd(false, handle.clone(), fd, None);
+            if let Some(shm_image) = image {
+                let Ok(mapped_image) = shm_image.image() else {
                     tracing::error!("Failed to get RgbaImage");
                     return;
                 };
 
-                // resize to 128x128
-                let max = img.width().max(img.height());
-                let ratio = max as f32 / 128.0;
-
-                if ratio > 1.0 {
-                    let new_width = (img.width() as f32 / ratio).round();
-                    let new_height = (img.height() as f32 / ratio).round();
-
-                    img = image::imageops::resize(
-                        &img,
-                        new_width as u32,
-                        new_height as u32,
-                        image::imageops::FilterType::Nearest,
-                    );
-                }
+                drop(shm_image);
+                let thumbnail = make_thumbnail(&mapped_image);
+                drop(mapped_image);
 
                 if let Err(err) = futures::executor::block_on(
-                    tx.send(WaylandUpdate::Image(handle, WaylandImage::new(img))),
+                    tx.send(WaylandUpdate::Image(handle, WaylandImage::new(thumbnail))),
                 ) {
                     tracing::error!("Failed to send image event to subscription {err:?}");
                 }
@@ -542,7 +701,9 @@ impl ScreencopyHandler for AppData {
         });
     }
 
-    fn stopped(&mut self, _conn: &Connection, _qh: &QueueHandle<Self>, _session: &CaptureSession) {}
+    fn stopped(&mut self, _conn: &Connection, _qh: &QueueHandle<Self>, session: &CaptureSession) {
+        Session::for_session(session).unwrap().stop();
+    }
 }
 
 impl Dispatch<wl_shm_pool::WlShmPool, ()> for AppData {
