@@ -160,6 +160,14 @@ impl cosmic::Application for App {
         Some(cosmic::applet::style())
     }
 
+    fn on_escape(&mut self) -> app::Task<Self::Message> {
+        if let Some(p) = self.popup.take() {
+            self.open_menu = None;
+            return destroy_popup(p);
+        }
+        Task::none()
+    }
+
     fn update(&mut self, message: Msg) -> app::Task<Msg> {
         match message {
             Msg::None => Task::none(),
