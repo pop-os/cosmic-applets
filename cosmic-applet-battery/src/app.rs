@@ -698,7 +698,7 @@ impl cosmic::Application for CosmicBatteryApplet {
             menu_button(
                 row![
                     column![
-                        text::body(fl!("battery")),
+                        text::body(fl!("battery-mode")),
                         text::caption(fl!("battery-desc"))
                     ]
                     .width(Length::Fill),
