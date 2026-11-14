@@ -212,7 +212,7 @@ impl cosmic::Application for Power {
         self.core
             .applet
             .icon_button(&self.icon_name)
-            .on_press_down(Message::TogglePopup)
+            .on_press(Message::TogglePopup)
             .into()
     }
 

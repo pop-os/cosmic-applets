@@ -62,7 +62,7 @@ impl cosmic::Application for Button {
         self.core
             .applet
             .icon_button("input-keyboard-symbolic")
-            .on_press_down(Msg::Press)
+            .on_press(Msg::Press)
             .into()
     }
 }

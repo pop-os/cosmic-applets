@@ -694,7 +694,7 @@ impl cosmic::Application for Window {
         } else {
             [self.core.applet.suggested_padding(true).0, 0]
         })
-        .on_press_down(Message::TogglePopup)
+        .on_press(Message::TogglePopup)
         .class(cosmic::theme::Button::AppletIcon);
 
         autosize::autosize(

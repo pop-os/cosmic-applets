@@ -108,12 +108,10 @@ impl App {
         // Render the overflow popup with the menus that are not shown in the main view
         let overflow_index = self.overflow_index().unwrap_or(0);
         let children = self.menus.iter().skip(overflow_index).map(|(id, menu)| {
-            mouse_area(
-                menu_icon_button(&self.core.applet, menu).on_press_down(Msg::TogglePopup(*id)),
-            )
-            .on_enter(Msg::Hovered(Some(*id)))
-            .on_exit(Msg::Hovered(None))
-            .into()
+            mouse_area(menu_icon_button(&self.core.applet, menu).on_press(Msg::TogglePopup(*id)))
+                .on_enter(Msg::Hovered(Some(*id)))
+                .on_exit(Msg::Hovered(None))
+                .into()
         });
 
         self.core
@@ -565,7 +563,7 @@ impl cosmic::Application for App {
                                         PanelAnchor::Right => "go-previous-symbolic",
                                         PanelAnchor::Top => "go-down-symbolic",
                                     })
-                                    .on_press_down(Msg::ToggleOverflow),
+                                    .on_press(Msg::ToggleOverflow),
                             )
                             .on_enter(Msg::HoveredOverflow)
                         }))
