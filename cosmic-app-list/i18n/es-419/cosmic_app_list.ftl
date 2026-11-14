@@ -1,4 +1,4 @@
-cosmic-app-list = Lista de aplicaciones
+cosmic-app-list = Bandeja de aplicaciones
 pin = Fijar en la lista de aplicaciones
 quit = Cerrar
 quit-all = Cerrar todas
