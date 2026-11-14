@@ -298,7 +298,7 @@ impl cosmic::Application for CosmicA11yApplet {
         self.core
             .applet
             .icon_button("preferences-desktop-accessibility-symbolic")
-            .on_press_down(Message::TogglePopup)
+            .on_press(Message::TogglePopup)
             .into()
     }
 

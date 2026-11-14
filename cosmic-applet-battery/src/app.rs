@@ -611,7 +611,7 @@ impl cosmic::Application for CosmicBatteryApplet {
         };
 
         let btn: Element<'_, Message> = button::custom(btn_content)
-            .on_press_down(Message::TogglePopup)
+            .on_press(Message::TogglePopup)
             .class(Button::AppletIcon)
             .padding([vertical_padding, horizontal_padding])
             .into();
