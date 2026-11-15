@@ -15,21 +15,16 @@ use cosmic::{
     cctk::sctk::reexports::calloop::channel,
     cosmic_config::{self, CosmicConfigEntry},
     cosmic_theme::{CosmicPalette, Spacing, ThemeBuilder},
-    iced::{
-        Length, Subscription,
-        platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
-        window,
-    },
+    iced::{Length, Subscription, window},
     surface,
     theme::{self, CosmicTheme},
     widget::{Column, divider, text, toggler},
 };
 
 use cosmic_settings_a11y_manager_subscription::{
-    self as cosmic_a11y_manager, AccessibilityEvent, AccessibilityRequest, ColorFilter,
+    AccessibilityEvent, AccessibilityRequest, ColorFilter,
 };
 use cosmic_settings_accessibility_subscription::{self as accessibility};
-use std::sync::LazyLock;
 use tokio::sync::mpsc::UnboundedSender;
 
 pub fn run() -> cosmic::iced::Result {
@@ -143,14 +138,13 @@ impl cosmic::Application for CosmicA11yApplet {
                             let new_id = window::Id::unique();
                             app.popup.replace(new_id);
 
-                            let popup_settings = app.core.applet.get_popup_settings(
+                            app.core.applet.get_popup_settings(
                                 app.core.main_window_id().unwrap(),
                                 new_id,
                                 Some((1, 1)),
                                 None,
                                 None,
-                            );
-                            popup_settings
+                            )
                         },
                         None,
                     ));

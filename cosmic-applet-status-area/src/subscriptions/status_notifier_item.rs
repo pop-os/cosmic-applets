@@ -90,7 +90,7 @@ impl StatusNotifierItem {
         Subscription::run_with(
             Wrapper {
                 menu_proxy,
-                name: format!("status-notifier-item-layout-{}", &self.name),
+                name: format!("status-notifier-item-layout-{}", self.name),
             },
             |Wrapper { menu_proxy, .. }| {
                 let menu_proxy = menu_proxy.clone();
@@ -140,7 +140,7 @@ impl StatusNotifierItem {
         Subscription::run_with(
             Wrapper {
                 item_proxy,
-                name: format!("status-notifier-item-icon-{}", &self.name),
+                name: format!("status-notifier-item-icon-{}", self.name),
             },
             |Wrapper { item_proxy, .. }| {
                 let item_proxy = item_proxy.clone();

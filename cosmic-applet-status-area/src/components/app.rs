@@ -13,7 +13,7 @@ use cosmic::{
         Event::Mouse,
         Length, Subscription, event,
         mouse::{self, ScrollDelta},
-        platform_specific::shell::commands::popup::{destroy_popup, get_popup},
+        platform_specific::shell::commands::popup::destroy_popup,
         window,
     },
     scroll::{DiscreteScrollDelta, DiscreteScrollState},
@@ -297,18 +297,18 @@ impl cosmic::Application for App {
             Msg::Token(u) => match u {
                 TokenUpdate::Init(tx) => {
                     self.token_tx = Some(tx);
-                    return Task::none();
+                    Task::none()
                 }
                 TokenUpdate::Finished => {
                     self.token_tx = None;
-                    return Task::none();
+                    Task::none()
                 }
                 TokenUpdate::ActivationToken { token, exec: id } => {
                     if let Some(id_str) = id.strip_prefix("activate:") {
-                        if let Ok(real_id) = id_str.parse::<usize>() {
-                            if let Some(menu) = self.menus.get(&real_id) {
-                                return activate(real_id, &menu.item, token.clone());
-                            }
+                        if let Ok(real_id) = id_str.parse::<usize>()
+                            && let Some(menu) = self.menus.get(&real_id)
+                        {
+                            return activate(real_id, &menu.item, token.clone());
                         }
                         return Task::none();
                     }
@@ -325,7 +325,7 @@ impl cosmic::Application for App {
                             )
                             .map(move |msg| cosmic::action::app(Msg::StatusMenu((id, msg))));
                     }
-                    return Task::none();
+                    Task::none()
                 }
             },
             Msg::Hovered(id) => {
@@ -405,53 +405,49 @@ impl cosmic::Application for App {
                 };
                 scroll(id, menu.item.item_proxy().clone(), delta, orientation)
             }
-            Msg::Surface(a) => {
-                return cosmic::task::message(cosmic::Action::Surface(a));
-            }
+            Msg::Surface(a) => cosmic::task::message(cosmic::Action::Surface(a)),
             Msg::ToggleOverflow => {
                 if let Some(popup_id) = self.overflow_popup.take() {
                     self.popup = None;
                     self.open_menu = None;
-                    return destroy_popup(popup_id);
+                    destroy_popup(popup_id)
                 } else if let Some(overflow_index) = self.overflow_index() {
                     // If we don't have an overflow, create it
-                    let popup_task =
-                        cosmic::surface::surface_task(cosmic::surface::action::app_popup(
-                            |_| Default::default(),
-                            move |app: &mut Self| {
-                                let popup_id = app.next_popup_id();
-                                let mut popup_settings = app.core.applet.get_popup_settings(
-                                    app.core.main_window_id().unwrap(),
-                                    popup_id,
-                                    None,
-                                    None,
-                                    None,
-                                );
-                                popup_settings.close_with_children = false;
+                    cosmic::surface::surface_task(cosmic::surface::action::app_popup(
+                        |_| Default::default(),
+                        move |app: &mut Self| {
+                            let popup_id = app.next_popup_id();
+                            let mut popup_settings = app.core.applet.get_popup_settings(
+                                app.core.main_window_id().unwrap(),
+                                popup_id,
+                                None,
+                                None,
+                                None,
+                            );
+                            popup_settings.close_with_children = false;
 
-                                if matches!(
-                                    app.core.applet.anchor,
-                                    PanelAnchor::Left | PanelAnchor::Right
-                                ) {
-                                    let suggested_size = app.core.applet.suggested_size(true).1
-                                        + 2 * app.core.applet.suggested_padding(true).1;
-                                    popup_settings.positioner.anchor_rect.y =
-                                        overflow_index as i32 * suggested_size as i32;
-                                } else {
-                                    let suggested_size = app.core.applet.suggested_size(true).0
-                                        + 2 * app.core.applet.suggested_padding(true).0;
-                                    popup_settings.positioner.anchor_rect.x =
-                                        overflow_index as i32 * suggested_size as i32;
-                                }
+                            if matches!(
+                                app.core.applet.anchor,
+                                PanelAnchor::Left | PanelAnchor::Right
+                            ) {
+                                let suggested_size = app.core.applet.suggested_size(true).1
+                                    + 2 * app.core.applet.suggested_padding(true).1;
+                                popup_settings.positioner.anchor_rect.y =
+                                    overflow_index as i32 * suggested_size as i32;
+                            } else {
+                                let suggested_size = app.core.applet.suggested_size(true).0
+                                    + 2 * app.core.applet.suggested_padding(true).0;
+                                popup_settings.positioner.anchor_rect.x =
+                                    overflow_index as i32 * suggested_size as i32;
+                            }
 
-                                app.overflow_popup = Some(popup_id);
-                                popup_settings
-                            },
-                            None,
-                        ));
-                    return popup_task;
+                            app.overflow_popup = Some(popup_id);
+                            popup_settings
+                        },
+                        None,
+                    ))
                 } else {
-                    return Task::none();
+                    Task::none()
                 }
             }
             Msg::HoveredOverflow => {
@@ -667,9 +663,6 @@ fn menu_icon_button<'a>(
     menu: &'a status_menu::State,
 ) -> cosmic::widget::Button<'a, Msg> {
     let icon = menu.icon_handle().clone();
-
-    let theme = cosmic::theme::active();
-    let theme = theme.cosmic();
 
     let suggested = applet.suggested_size(true);
     let padding = applet.suggested_padding(true).1;
