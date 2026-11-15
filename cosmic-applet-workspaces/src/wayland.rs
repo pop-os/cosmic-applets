@@ -81,12 +81,11 @@ pub fn spawn_workspaces(tx: mpsc::Sender<Vec<Workspace>>) -> SyncSender<Workspac
                 .insert_source(workspaces_rx, |e, (), state| match e {
                     Event::Msg(WorkspaceEvent::Activate(handle)) => {
                         handle.activate();
-                        state
-                            .workspace_state
-                            .workspace_manager()
-                            .get()
-                            .unwrap()
-                            .commit();
+                        if let Ok(workspace_manager) =
+                            state.workspace_state.workspace_manager().get()
+                        {
+                            workspace_manager.commit();
+                        }
                     }
                     Event::Closed => {
                         if let Ok(workspace_manager) =
