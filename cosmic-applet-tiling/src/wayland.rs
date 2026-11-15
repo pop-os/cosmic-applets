@@ -101,12 +101,11 @@ pub fn spawn_workspaces(tx: mpsc::Sender<TilingState>) -> SyncSender<AppRequest>
                         }) {
                             if let Some(cosmic_handle) = &w.cosmic_handle {
                                 cosmic_handle.set_tiling_state(autotile);
-                                state
-                                    .workspace_state
-                                    .workspace_manager()
-                                    .get()
-                                    .unwrap()
-                                    .commit();
+                                if let Ok(workspace_manager) =
+                                    state.workspace_state.workspace_manager().get()
+                                {
+                                    workspace_manager.commit();
+                                }
                             }
                         }
                     }
@@ -124,12 +123,11 @@ pub fn spawn_workspaces(tx: mpsc::Sender<TilingState>) -> SyncSender<AppRequest>
                                 cosmic_handle.set_tiling_state(tiling);
                             }
                         }
-                        state
-                            .workspace_state
-                            .workspace_manager()
-                            .get()
-                            .unwrap()
-                            .commit();
+                        if let Ok(workspace_manager) =
+                            state.workspace_state.workspace_manager().get()
+                        {
+                            workspace_manager.commit();
+                        }
                     }
                     Event::Closed => {
                         if let Ok(workspace_manager) =
