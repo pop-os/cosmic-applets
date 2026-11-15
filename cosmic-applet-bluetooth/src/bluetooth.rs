@@ -97,10 +97,10 @@ pub fn bluetooth_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
 
                 // Initialize connection.
                 let mut session_state = loop {
-                    if let Ok(session) = Session::new().await {
-                        if let Ok(state) = BluerSessionState::new(session).await {
-                            break state;
-                        }
+                    if let Ok(session) = Session::new().await
+                        && let Ok(state) = BluerSessionState::new(session).await
+                    {
+                        break state;
                     }
 
                     retry_count = retry_count.saturating_add(1);
@@ -149,8 +149,6 @@ pub fn bluetooth_subscription<I: 'static + Hash + Copy + Send + Sync + Debug>(
                         },
 
                         BluerSessionEvent::AgentEvent(e) => BluerEvent::AgentEvent(e),
-
-                        _ => return,
                     };
 
                     _ = output.send(message).await;
@@ -605,57 +603,47 @@ impl BluerSessionState {
                             return;
                         };
 
-                        loop {
-                            let Some(adapter_event) = change_stream.next().await else {
-                                break;
-                            };
+                        while let Some(adapter_event) = change_stream.next().await {
                             match adapter_event {
                                 bluer::AdapterEvent::PropertyChanged(AdapterProperty::Powered(
                                     v,
                                 )) => {
                                     is_powered = v;
                                 }
-                                e => {
-                                    match e {
-                                        bluer::AdapterEvent::DeviceAdded(address)
-                                            if !devices.iter().any(|d| d.address == address) =>
-                                        {
-                                            devices =
-                                                build_device_list(Vec::new(), &adapter_clone).await;
-                                            for d in devices.iter().filter(|d| {
-                                                d.paired_and_trusted()
-                                                    && !matches!(
-                                                        d.status,
-                                                        BluerDeviceStatus::Connected
-                                                    )
-                                            }) {
-                                                _ = req_tx
-                                                    .send(BluerRequest::ConnectDevice(d.address))
-                                                    .await;
-                                            }
-                                        }
-                                        bluer::AdapterEvent::DeviceRemoved(address)
-                                            if devices.iter().any(|d| d.address == address) =>
-                                        {
-                                            // Remove the device from new_devices if it exists
-                                            devices.retain(|d| d.address != address);
-                                        }
-
-                                        bluer::AdapterEvent::PropertyChanged(p) => {
-                                            tracing::info!("property change ignored {p:?}");
-                                            interval.tick().await;
-                                            continue;
-                                        }
-                                        bluer::AdapterEvent::DeviceAdded(address)
-                                        | bluer::AdapterEvent::DeviceRemoved(address) => {
-                                            tracing::info!(
-                                                "device change that is already handled {address}"
-                                            );
-                                            interval.tick().await;
-                                            continue;
+                                e => match e {
+                                    bluer::AdapterEvent::DeviceAdded(address)
+                                        if !devices.iter().any(|d| d.address == address) =>
+                                    {
+                                        devices =
+                                            build_device_list(Vec::new(), &adapter_clone).await;
+                                        for d in devices.iter().filter(|d| {
+                                            d.paired_and_trusted()
+                                                && !matches!(d.status, BluerDeviceStatus::Connected)
+                                        }) {
+                                            _ = req_tx
+                                                .send(BluerRequest::ConnectDevice(d.address))
+                                                .await;
                                         }
                                     }
-                                }
+                                    bluer::AdapterEvent::DeviceRemoved(address)
+                                        if devices.iter().any(|d| d.address == address) =>
+                                    {
+                                        devices.retain(|d| d.address != address);
+                                    }
+                                    bluer::AdapterEvent::PropertyChanged(p) => {
+                                        tracing::info!("property change ignored {p:?}");
+                                        interval.tick().await;
+                                        continue;
+                                    }
+                                    bluer::AdapterEvent::DeviceAdded(address)
+                                    | bluer::AdapterEvent::DeviceRemoved(address) => {
+                                        tracing::info!(
+                                            "device change that is already handled {address}"
+                                        );
+                                        interval.tick().await;
+                                        continue;
+                                    }
+                                },
                             }
 
                             // Always refresh power state from the adapter
@@ -735,18 +723,16 @@ impl BluerSessionState {
                                         (name == cname).then_some(id.to_string())
                                     })
                                 })
-                            {
-                                if let Err(err) = tokio::process::Command::new("rfkill")
+                                && let Err(err) = tokio::process::Command::new("rfkill")
                                     .env("PATH", rfkill_path_var())
                                     .arg(if *enabled { "unblock" } else { "block" })
                                     .arg(id)
                                     .output()
                                     .await
-                                {
-                                    tracing::error!(
-                                        "Failed to set bluetooth state using rfkill. {err:?}"
-                                    );
-                                }
+                            {
+                                tracing::error!(
+                                    "Failed to set bluetooth state using rfkill. {err:?}"
+                                );
                             }
 
                             if *enabled {

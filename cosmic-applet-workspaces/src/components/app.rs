@@ -144,21 +144,20 @@ impl cosmic::Application for IcedWorkspacesApplet {
             }
             Message::WheelScrolled(delta) => {
                 let discrete_delta = self.scroll.update(delta);
-                if discrete_delta.y != 0 {
-                    if let Some(w_i) = self
+                if discrete_delta.y != 0
+                    && let Some(w_i) = self
                         .workspaces
                         .iter()
                         .position(|w| w.state.contains(ext_workspace_handle_v1::State::Active))
-                    {
-                        let d_i = (w_i as isize - discrete_delta.y)
-                            .rem_euclid(self.workspaces.len() as isize)
-                            as usize;
+                {
+                    let d_i = (w_i as isize - discrete_delta.y)
+                        .rem_euclid(self.workspaces.len() as isize)
+                        as usize;
 
-                        if let Some(tx) = self.workspace_tx.as_mut() {
-                            let _ = tx.try_send(WorkspaceEvent::Activate(
-                                self.workspaces[d_i].handle.clone(),
-                            ));
-                        }
+                    if let Some(tx) = self.workspace_tx.as_mut() {
+                        let _ = tx.try_send(WorkspaceEvent::Activate(
+                            self.workspaces[d_i].handle.clone(),
+                        ));
                     }
                 }
             }

@@ -51,7 +51,7 @@ pub async fn watch(connection: &zbus::Connection) -> zbus::Result<EventStream> {
 
     let items = watcher.registered_status_notifier_items().await?;
     let connection = connection.clone();
-    let items_stream = futures::stream::iter(items.into_iter())
+    let items_stream = futures::stream::iter(items)
         .then(move |name| status_notifier_item(connection.clone(), name));
 
     Ok(Box::pin(items_stream.chain(futures::stream_select!(

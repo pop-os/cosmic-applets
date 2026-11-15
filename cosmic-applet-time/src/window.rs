@@ -11,7 +11,7 @@ use cosmic::{
     iced::{
         Alignment, Length, Rectangle, Subscription,
         futures::{SinkExt, StreamExt, channel::mpsc},
-        platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
+        platform_specific::shell::wayland::commands::popup::destroy_popup,
         widget::{column, row, rule},
         window,
     },
@@ -67,10 +67,10 @@ fn get_system_locale() -> Locale {
             }
 
             // Try language-only fallback (e.g., "en" from "en-US")
-            if let Some(lang) = cleaned_locale.split('-').next() {
-                if let Ok(locale) = Locale::try_from_str(lang) {
-                    return locale;
-                }
+            if let Some(lang) = cleaned_locale.split('-').next()
+                && let Ok(locale) = Locale::try_from_str(lang)
+            {
+                return locale;
             }
         }
     }
@@ -361,7 +361,7 @@ impl cosmic::Application for Window {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        fn time_subscription(mut show_seconds: watch::Receiver<bool>) -> Subscription<Message> {
+        fn time_subscription(show_seconds: watch::Receiver<bool>) -> Subscription<Message> {
             struct Wrapper {
                 inner: watch::Receiver<bool>,
                 id: &'static str,
@@ -376,7 +376,7 @@ impl cosmic::Application for Window {
                     inner: show_seconds,
                     id: "time-sub",
                 },
-                |Wrapper { inner, id }| {
+                |Wrapper { inner, id: _ }| {
                     let mut show_seconds = inner.clone();
                     stream::channel(1, move |mut output: mpsc::Sender<Message>| async move {
                         // Mark this receiver's state as changed so that it always receives an initial
@@ -520,7 +520,7 @@ impl cosmic::Application for Window {
                 if let Some(p) = self.popup.take() {
                     destroy_popup(p)
                 } else {
-                    return cosmic::surface::surface_task(cosmic::surface::action::app_popup(
+                    cosmic::surface::surface_task(cosmic::surface::action::app_popup(
                         |_| Default::default(),
                         |app: &mut Self| {
                             app.date_today = app.now.date();
@@ -553,14 +553,14 @@ impl cosmic::Application for Window {
                             popup_settings
                         },
                         None,
-                    ));
+                    ))
                 }
             }
             Message::Tick => {
-                self.now = self.timezone.as_ref().map_or_else(
-                    || Zoned::now(),
-                    |tz| Zoned::now().with_time_zone(tz.clone()),
-                );
+                self.now = self
+                    .timezone
+                    .as_ref()
+                    .map_or_else(Zoned::now, |tz| Zoned::now().with_time_zone(tz.clone()));
                 Task::none()
             }
             Message::Rectangle(u) => {
@@ -672,9 +672,7 @@ impl cosmic::Application for Window {
 
                 self.update(Message::Tick)
             }
-            Message::Surface(a) => {
-                return cosmic::task::message(cosmic::Action::Surface(a));
-            }
+            Message::Surface(a) => cosmic::task::message(cosmic::Action::Surface(a)),
         }
     }
 
