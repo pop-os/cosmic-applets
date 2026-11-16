@@ -1242,7 +1242,7 @@ dependencies = [
  "i18n-embed",
  "i18n-embed-fl",
  "icu",
- "jiff 0.2.46",
+ "jiff 1.0.3",
  "libcosmic",
  "rust-embed",
  "timedate1-zbus",
