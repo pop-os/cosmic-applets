@@ -23,7 +23,7 @@ use cosmic::{
 };
 use cosmic_login1_zbus::manager::ManagerProxy;
 use jiff::{
-    Timestamp, ToSpan, Zoned,
+    Timestamp, ToSpan, ZonedDateTime,
     civil::{Date, Weekday},
     fmt::strtime,
     tz::TimeZone,
@@ -81,7 +81,7 @@ fn get_system_locale() -> Locale {
 pub struct Window {
     core: cosmic::app::Core,
     popup: Option<window::Id>,
-    now: Zoned,
+    now: ZonedDateTime,
     timezone: Option<TimeZone>,
     date_today: Date,
     date_selected: Date,
@@ -322,7 +322,7 @@ impl cosmic::Application for Window {
 
     fn init(core: app::Core, _flags: Self::Flags) -> (Self, app::Task<Self::Message>) {
         let locale = get_system_locale();
-        let now = Zoned::now();
+        let now = ZonedDateTime::now();
         // get today's date for highlighting purposes
         let today = now.date();
 
@@ -560,7 +560,9 @@ impl cosmic::Application for Window {
                 self.now = self
                     .timezone
                     .as_ref()
-                    .map_or_else(Zoned::now, |tz| Zoned::now().with_time_zone(tz.clone()));
+                    .map_or_else(ZonedDateTime::now, |tz| {
+                        ZonedDateTime::now().with_time_zone(tz.clone())
+                    });
                 Task::none()
             }
             Message::Rectangle(u) => {
@@ -664,7 +666,7 @@ impl cosmic::Application for Window {
             }
             Message::TimezoneUpdate(timezone) => {
                 if let Ok(timezone) = TimeZone::get(&timezone) {
-                    self.now = Zoned::now().with_time_zone(timezone.clone());
+                    self.now = ZonedDateTime::now().with_time_zone(timezone.clone());
                     self.date_today = self.now.date();
                     self.date_selected = self.date_today;
                     self.timezone = Some(timezone);
