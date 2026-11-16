@@ -72,6 +72,8 @@ impl From<NewConnectionState> for AccessPoint {
 
 pub static SECURE_INPUT_WIFI: LazyLock<Id> = LazyLock::new(Id::unique);
 
+const MAX_LIST_HEIGHT: f32 = 300.0;
+
 type Uuid = Arc<str>;
 type Ssid = Arc<str>;
 
@@ -348,6 +350,14 @@ fn wifi_icon(strength: u8) -> &'static str {
     }
 }
 
+fn scrollable_list<'a>(
+    items: impl IntoIterator<Item = Element<'a, Message>>,
+) -> Element<'a, Message> {
+    container(scrollable(column::with_children(items)).height(Length::Shrink))
+        .max_height(MAX_LIST_HEIGHT)
+        .into()
+}
+
 fn vpn_section<'a>(
     nm_state: &'a MyNetworkState,
     show_available_vpns: bool,
@@ -425,6 +435,7 @@ fn vpn_section<'a>(
         vpn_col = vpn_col.push(vpn_toggle_btn);
 
         if show_available_vpns {
+            let mut vpn_list = Vec::with_capacity(nm_state.known_vpns.len());
             for (uuid, connection) in &nm_state.known_vpns {
                 let id = match connection {
                     ConnectionSettings::Vpn { id } | ConnectionSettings::Wireguard { id } => {
@@ -470,7 +481,10 @@ fn vpn_section<'a>(
                     btn.on_press(Message::ActivateVpn(uuid.clone()))
                 };
 
-                vpn_col = vpn_col.push(btn);
+                vpn_list.push(btn.into());
+            }
+            if !vpn_list.is_empty() {
+                vpn_col = vpn_col.push(scrollable_list(vpn_list));
             }
         }
     }
@@ -2237,10 +2251,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                     .on_press(Message::SelectWirelessAccessPoint(ap.clone()));
                     button.into()
                 });
-            content = content.push(
-                scrollable::<'_, Message>(column::with_children(list_col))
-                    .height(Length::Fixed(300.0)),
-            );
+            content = content.push(scrollable_list(list_col));
         }
 
         // Add VPN connections section after wireless networks when they are expanded
