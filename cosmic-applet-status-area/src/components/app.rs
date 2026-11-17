@@ -233,6 +233,9 @@ impl cosmic::Application for App {
                 }
             },
             Msg::TogglePopup(id) => {
+                if !self.menus.contains_key(&id) {
+                    return Task::none();
+                }
                 self.open_menu = if self.open_menu.is_none() {
                     Some(id)
                 } else {
@@ -251,7 +254,7 @@ impl cosmic::Application for App {
                             |_| Default::default(),
                             move |app: &mut Self| {
                                 let popup_id = app.next_popup_id();
-                                let i = app.menus.keys().position(|&i| i == id).unwrap();
+                                let i = app.menus.keys().position(|&i| i == id).unwrap_or(0);
                                 let (i, parent) = app
                                     .overflow_index()
                                     .and_then(|overflow_i| {
@@ -353,7 +356,7 @@ impl cosmic::Application for App {
                     |_| Default::default(),
                     move |app: &mut Self| {
                         let popup_id = app.next_popup_id();
-                        let i = app.menus.keys().position(|&i| i == id).unwrap();
+                        let i = app.menus.keys().position(|&i| i == id).unwrap_or(0);
 
                         let (i, parent) = app
                             .overflow_index()
