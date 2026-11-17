@@ -836,7 +836,7 @@ impl cosmic::Application for CosmicAppList {
     fn init(core: cosmic::app::Core, _flags: Self::Flags) -> (Self, app::Task<Self::Message>) {
         let config = Config::new(APP_ID, AppListConfig::VERSION)
             .ok()
-            .and_then(|c| AppListConfig::get_entry(&c).ok())
+            .map(|c| AppListConfig::get_entry(&c).unwrap_or_else(|(_, config)| config))
             .unwrap_or_default();
 
         let gpus = futures::executor::block_on(async {
