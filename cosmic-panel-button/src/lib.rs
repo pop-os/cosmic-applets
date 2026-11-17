@@ -152,25 +152,25 @@ impl cosmic::Application for Button {
         // override for icon, later if text is updated to wrap, we may
         // use Override::Text to override this behavior
         autosize::autosize(
-            if self.desktop.icon.is_some()
-                && matches!(
+            if let Some(icon) = &self.desktop.icon
+                && (matches!(
                     self.core.applet.anchor,
                     PanelAnchor::Left | PanelAnchor::Right
-                )
-                || matches!(self.config.force_presentation, Some(Override::Icon))
-                || matches!(
-                    (&self.core.applet.size, &self.config.force_presentation),
-                    (
-                        Size::PanelSize(PanelSize::S | PanelSize::M | PanelSize::L | PanelSize::XL),
-                        None
-                    )
-                )
+                ) || matches!(self.config.force_presentation, Some(Override::Icon))
+                    || matches!(
+                        (&self.core.applet.size, &self.config.force_presentation),
+                        (
+                            Size::PanelSize(
+                                PanelSize::S | PanelSize::M | PanelSize::L | PanelSize::XL
+                            ),
+                            None
+                        )
+                    ))
             {
                 cosmic::Element::from(
                     self.core.applet.applet_tooltip::<Msg>(
                         self.icon_button_from_handle(
-                            cosmic::widget::icon::from_name(self.desktop.icon.clone().unwrap())
-                                .handle(),
+                            cosmic::widget::icon::from_name(icon.clone()).handle(),
                         )
                         .on_press_down(Msg::Press),
                         self.desktop.name.clone(),
@@ -220,21 +220,18 @@ pub fn run() -> iced::Result {
 
     for mut path in fde::default_paths() {
         path.push(&filename);
-        if let Ok(bytes) = fs::read_to_string(&path) {
-            if let Ok(entry) = DesktopEntry::from_str(&path, &bytes, Some(&locales)) {
-                desktop = Some(Desktop {
-                    name: entry.name(&locales).map_or_else(
-                        || panic!("Desktop file '{filename}' doesn't have `Name`"),
-                        |x| x.to_string(),
-                    ),
-                    icon: entry.icon().map(|x| x.to_string()),
-                    exec: entry.exec().map_or_else(
-                        || panic!("Desktop file '{filename}' doesn't have `Exec`"),
-                        |x| x.to_string(),
-                    ),
-                });
-                break;
-            }
+        if let Ok(bytes) = fs::read_to_string(&path)
+            && let Ok(entry) = DesktopEntry::from_str(&path, &bytes, Some(&locales))
+            && let Some(exec) = entry.exec()
+        {
+            desktop = Some(Desktop {
+                name: entry
+                    .name(&locales)
+                    .map_or_else(|| id.clone(), |x| x.to_string()),
+                icon: entry.icon().map(|x| x.to_string()),
+                exec: exec.to_string(),
+            });
+            break;
         }
     }
     let desktop = desktop.unwrap_or_else(|| {
