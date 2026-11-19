@@ -1,9 +1,9 @@
 battery = Batterij
-battery-desc = Verminderde prestaties en lager energieverbruik.
+battery-desc = Batterijbesparing, maar verminderde presentaties.
 balanced = Gebalanceerd
-balanced-desc = Normale prestaties en matig energieverbruik.
-performance = Hoge prestaties
-performance-desc = Maximale prestaties en hoger energieverbruik.
+balanced-desc = Normale prestaties en batterijverbruik.
+performance = Beste prestaties
+performance-desc = Beste prestaties, maar hoog energieverbruik.
 max-charge = Verleng de levensduur van uw batterij door een maximale laadwaarde van 80% in te stellen
 seconds = s
 minutes = m

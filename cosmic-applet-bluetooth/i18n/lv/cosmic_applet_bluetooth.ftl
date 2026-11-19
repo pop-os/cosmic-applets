@@ -1,0 +1,12 @@
+cancel = Atcelt
+confirm = Apstiprināt
+bluetooth = Bluetooth
+other-devices = Citas Bluetooth ierīces
+settings = Bluetooth iestatījumi...
+connected = Savienots
+confirm-pin = Lūdzu, apstipriniet, ka šis PIN sakrīt ar ierīcē { $deviceName } rādīto
+unsuccessful = Savienošana pārī neizdevās
+check-device = Pārliecinieties, ka { $deviceName } ir ieslēgta, sasniedzamā attālumā un gatava savienošanai pārī.
+try-again = Mēģināt vēlreiz
+discoverable = Atklājama
+pairable = Savienojama pārī
