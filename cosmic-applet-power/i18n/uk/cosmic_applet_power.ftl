@@ -25,12 +25,12 @@ confirm-title =
        *[other] Виконати обрану дію
     } зараз?
 confirm-body =
-    Система { $action ->
-        [restart] перезавантажиться
-        [suspend] призупинеться
-        [shutdown] вимкнеться
-        [lock-screen] заблокує екран
-        [log-out] завершить сеанс
-       *[other] виконає обрану дію
-    } автоматично через { $countdown } секунд.
+    { $action ->
+        [restart] Перезавантаження системи
+        [suspend] Призупинення системи
+        [shutdown] Вимкнення системи
+        [lock-screen] Блокування екрана
+        [log-out] Завершення сеансу
+       *[other] Виконання дії
+    } за { $countdown } секунд.
 log-out-shortcut = Super + Shift + Escape
