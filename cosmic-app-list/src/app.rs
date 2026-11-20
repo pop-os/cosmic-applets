@@ -216,9 +216,22 @@ impl DockItem {
 
         let app_icon = AppletIconData::new(applet);
 
-        let cosmic_icon = cosmic::widget::icon(
-            fde::IconSource::from_unknown(desktop_info.icon().unwrap_or_default()).as_cosmic_icon(),
-        )
+        // Load icon by path if the name is a path.
+        let cosmic_icon = match desktop_info.icon() {
+            Some(info) => {
+                if std::path::Path::new(&info).exists() {
+                    cosmic::widget::icon::from_path(PathBuf::from(&info)).icon()
+                } else {
+                    icon::from_name(info)
+                        .fallback(Some(icon::IconFallback::Names(vec![
+                            "application-default".into(),
+                            "application-x-executable".into(),
+                        ])))
+                        .icon()
+                }
+            }
+            None => cosmic::widget::icon::from_name("application-x-executable").icon(),
+        }
         // sets the preferred icon size variant
         .size(128)
         .width(app_icon.icon_size.into())
