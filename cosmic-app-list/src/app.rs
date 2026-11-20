@@ -217,7 +217,10 @@ impl DockItem {
         let app_icon = AppletIconData::new(applet);
 
         let cosmic_icon = cosmic::widget::icon(
-            fde::IconSource::from_unknown(desktop_info.icon().unwrap_or("application-x-executable")).as_cosmic_icon(),
+            fde::IconSource::from_unknown(
+                desktop_info.icon().unwrap_or("application-x-executable"),
+            )
+            .as_cosmic_icon(),
         )
         // sets the preferred icon size variant
         .size(128)
