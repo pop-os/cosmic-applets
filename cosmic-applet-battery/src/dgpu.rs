@@ -117,14 +117,16 @@ impl GpuMonitor {
         let seat_clone = seat.clone();
         let gpus = spawn_blocking(move || all_gpus(seat)).await.ok()?.ok()?;
 
-        let monitor = AsyncFd::new(WrappedSocket(
-            udev::MonitorBuilder::new()
-                .ok()?
-                .match_subsystem("drm")
-                .ok()?
-                .listen()
-                .ok()?,
-        ))
+        let monitor = unsafe {
+            AsyncFd::register(WrappedSocket(
+                udev::MonitorBuilder::new()
+                    .ok()?
+                    .match_subsystem("drm")
+                    .ok()?
+                    .listen()
+                    .ok()?,
+            ))
+        }
         .ok()?;
 
         let primary_gpu = gpus
@@ -525,10 +527,10 @@ async fn start_listening(
                                     }
                                 },
                                 EventType::Change => {
-                                    if let Some(path) = event.devnode() {
-                                        if let Some(gpu) = monitor.gpus.iter_mut().find(|gpu| gpu.path == path) {
-                                            gpu.interval.reset_immediately();
-                                        }
+                                    if let Some(path) = event.devnode()
+                                        && let Some(gpu) = monitor.gpus.iter_mut().find(|gpu| gpu.path == path)
+                                    {
+                                        gpu.interval.reset_immediately();
                                     }
                                 }
                                 EventType::Remove => {

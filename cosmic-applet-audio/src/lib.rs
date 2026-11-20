@@ -674,7 +674,7 @@ impl cosmic::Application for Audio {
             .core
             .applet
             .icon_button(self.output_icon_name())
-            .on_press_down(Message::TogglePopup);
+            .on_press(Message::TogglePopup);
 
         const WHEEL_STEP: f32 = 5.0; // 5% per wheel event
         let btn = crate::mouse_area::MouseArea::new(btn).on_mouse_wheel(|delta| {

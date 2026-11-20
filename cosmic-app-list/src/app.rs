@@ -653,7 +653,7 @@ impl CosmicAppList {
                     .output_list
                     .iter()
                     .find(|(_, info)| info.name.as_ref() == Some(&self.core.applet.output_name))
-                    .map_or(true, |(active_output, _)| {
+                    .is_none_or(|(active_output, _)| {
                         toplevel_info
                             .output
                             .iter()
@@ -909,7 +909,6 @@ impl cosmic::Application for CosmicAppList {
                         tracing::error!("No rectangle found for toplevel group");
                         return Task::none();
                     };
-                    let corners: [f32; 4] = self.core.system_theme().cosmic().corner_radii.radius_s;
                     let popup_task =
                         cosmic::surface::surface_task(cosmic::surface::action::app_popup(
                             move |_| LiveSettings::default(),
@@ -1140,20 +1139,20 @@ impl cosmic::Application for CosmicAppList {
             }
             Message::DragFinished => {
                 if let Some((_, mut toplevel_group, _, _pinned_pos)) = self.dnd_source.take() {
-                    if self.dnd_offer.take().is_some() {
-                        if let Some((_, toplevel_group, _, pinned_pos)) = self.dnd_source.as_ref() {
-                            let mut pos = 0;
-                            self.pinned_list.retain_mut(|pinned| {
-                                let matched_id =
-                                    pinned.desktop_info.id() == toplevel_group.desktop_info.id();
-                                let pinned_match =
-                                    pinned_pos.is_some_and(|pinned_pos| pinned_pos == pos);
-                                let ret = !matched_id || pinned_match;
+                    if self.dnd_offer.take().is_some()
+                        && let Some((_, toplevel_group, _, pinned_pos)) = self.dnd_source.as_ref()
+                    {
+                        let mut pos = 0;
+                        self.pinned_list.retain_mut(|pinned| {
+                            let matched_id =
+                                pinned.desktop_info.id() == toplevel_group.desktop_info.id();
+                            let pinned_match =
+                                pinned_pos.is_some_and(|pinned_pos| pinned_pos == pos);
+                            let ret = !matched_id || pinned_match;
 
-                                pos += 1;
-                                ret
-                            });
-                        }
+                            pos += 1;
+                            ret
+                        });
                     }
 
                     if !self
@@ -1230,16 +1229,16 @@ impl cosmic::Application for CosmicAppList {
                     tracing::error!("Couldn't peek at hovered path.");
                     return Task::none();
                 };
-                if let Some(DndOffer { dock_item, .. }) = self.dnd_offer.as_mut() {
-                    if let Ok(de) = fde::DesktopEntry::from_path(file_path.0, Some(&self.locales)) {
-                        self.item_ctr += 1;
-                        *dock_item = Some(DockItem {
-                            id: self.item_ctr,
-                            toplevels: Vec::new(),
-                            original_app_id: de.id().to_string(),
-                            desktop_info: Arc::new(de),
-                        });
-                    }
+                if let Some(DndOffer { dock_item, .. }) = self.dnd_offer.as_mut()
+                    && let Ok(de) = fde::DesktopEntry::from_path(file_path.0, Some(&self.locales))
+                {
+                    self.item_ctr += 1;
+                    *dock_item = Some(DockItem {
+                        id: self.item_ctr,
+                        toplevels: Vec::new(),
+                        original_app_id: de.id().to_string(),
+                        desktop_info: Arc::new(de),
+                    });
                 }
             }
             Message::DndDropFinished => {

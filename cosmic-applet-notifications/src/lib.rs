@@ -15,19 +15,19 @@ use cosmic::{
     iced::{
         Alignment, Length, Subscription,
         advanced::text::{Ellipsize, EllipsizeHeightLimit},
-        platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
+        platform_specific::shell::wayland::commands::popup::destroy_popup,
         widget::{self, column, rich_text, row},
         window,
     },
     surface, theme,
-    widget::{Column, button, cards, container, divider, icon, scrollable, space, text, toggler},
+    widget::{Column, button, cards, container, divider, icon, scrollable, text, toggler},
 };
 
 use cosmic::iced::futures::executor::block_on;
 
 use cosmic_notifications_config::NotificationsConfig;
 use cosmic_notifications_util::{ActionId, Image, Notification, markup};
-use std::{borrow::Cow, collections::HashMap, path::PathBuf, sync::LazyLock};
+use std::{borrow::Cow, collections::HashMap};
 use subscriptions::notifications::{self, NotificationsAppletProxy};
 use tokio::sync::mpsc::Sender;
 use tracing::info;
@@ -163,14 +163,13 @@ impl cosmic::Application for Notifications {
                             let new_id = window::Id::unique();
                             app.popup.replace(new_id);
 
-                            let popup_settings = app.core.applet.get_popup_settings(
+                            app.core.applet.get_popup_settings(
                                 app.core.main_window_id().unwrap(),
                                 new_id,
                                 None,
                                 None,
                                 None,
-                            );
-                            popup_settings
+                            )
                         },
                         None,
                     ));
@@ -178,10 +177,10 @@ impl cosmic::Application for Notifications {
             }
             Message::DoNotDisturb(b) => {
                 self.config.do_not_disturb = b;
-                if let Some(helper) = &self.config_helper {
-                    if let Err(err) = self.config.write_entry(helper) {
-                        tracing::error!("{:?}", err);
-                    }
+                if let Some(helper) = &self.config_helper
+                    && let Err(err) = self.config.write_entry(helper)
+                {
+                    tracing::error!("{:?}", err);
                 }
             }
             Message::NotificationEvent(event) => match event {
@@ -284,7 +283,7 @@ impl cosmic::Application for Notifications {
                 }
             }
             Message::CardsToggled(name, expanded) => {
-                let id = if let Some((id, _, n_expanded, ..)) = self
+                if let Some((id, _, n_expanded, ..)) = self
                     .cards
                     .iter_mut()
                     .find(|c| c.1.iter().any(|notif| name == notif.app_name))
@@ -378,7 +377,7 @@ impl cosmic::Application for Notifications {
         self.core
             .applet
             .icon_button(&self.icon_name)
-            .on_press_down(Message::TogglePopup)
+            .on_press(Message::TogglePopup)
             .into()
     }
 

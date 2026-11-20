@@ -707,7 +707,7 @@ fn snapshot_to_applet(snapshot: NetworkSnapshot) -> AppletSnapshot {
             }
         })
         .collect::<Vec<_>>();
-    wireless_access_points.sort_by(|a, b| b.strength.cmp(&a.strength));
+    wireless_access_points.sort_by_key(|a| std::cmp::Reverse(a.strength));
 
     let known_access_points = summary
         .wifi_groups
@@ -1143,14 +1143,13 @@ impl cosmic::Application for CosmicNetworkApplet {
                                 let new_id = window::Id::unique();
                                 app.popup.replace(new_id);
 
-                                let popup_settings = app.core.applet.get_popup_settings(
+                                app.core.applet.get_popup_settings(
                                     app.core.main_window_id().unwrap(),
                                     new_id,
                                     None,
                                     None,
                                     None,
-                                );
-                                popup_settings
+                                )
                             },
                             None,
                         ),
@@ -1459,11 +1458,11 @@ impl cosmic::Application for CosmicNetworkApplet {
                     tracing::debug!(
                         "NetworkManager restarted; refreshing network snapshot and secret agent"
                     );
-                    if let Some(mut tx) = self.secret_agent_reregister_tx.clone() {
-                        if let Err(e) = tx.unbounded_send(()) {
-                            tracing::warn!("secret agent re-registration task stopped: {e}");
-                            self.secret_agent_reregister_tx = None;
-                        }
+                    if let Some(tx) = self.secret_agent_reregister_tx.clone()
+                        && let Err(e) = tx.unbounded_send(())
+                    {
+                        tracing::warn!("secret agent re-registration task stopped: {e}");
+                        self.secret_agent_reregister_tx = None;
                     }
                 }
                 return snapshot_task().map(cosmic::Action::App);
@@ -1629,7 +1628,7 @@ impl cosmic::Application for CosmicNetworkApplet {
         self.core
             .applet
             .icon_button(&self.icon_name)
-            .on_press_down(Message::TogglePopup)
+            .on_press(Message::TogglePopup)
             .into()
     }
 
@@ -2018,7 +2017,7 @@ impl cosmic::Application for CosmicNetworkApplet {
                         .icon_size(16)
                         .on_press(Message::ResetFailedKnownSsid(
                             known.ssid.to_string(),
-                            known.hw_address.clone(),
+                            known.hw_address,
                         ))
                         .into(),
                 );

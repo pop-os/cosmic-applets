@@ -80,7 +80,7 @@ impl State {
                                 return icon::from_name("dialog-question").symbolic(true).handle();
                             }
                             // Convert ARGB to RGBA
-                            for pixel in i.bytes.chunks_exact_mut(4) {
+                            for pixel in i.bytes.as_chunks_mut::<4>().0 {
                                 pixel.rotate_left(1);
                             }
                             icon::from_raster_pixels(i.width as u32, i.height as u32, i.bytes)

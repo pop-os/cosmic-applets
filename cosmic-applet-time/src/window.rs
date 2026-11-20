@@ -11,7 +11,7 @@ use cosmic::{
     iced::{
         Alignment, Length, Rectangle, Subscription,
         futures::{SinkExt, StreamExt, channel::mpsc},
-        platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
+        platform_specific::shell::wayland::commands::popup::destroy_popup,
         widget::{column, row, rule},
         window,
     },
@@ -23,7 +23,7 @@ use cosmic::{
 };
 use cosmic_login1_zbus::manager::ManagerProxy;
 use jiff::{
-    Timestamp, ToSpan, Zoned,
+    Timestamp, ToSpan, ZonedDateTime,
     civil::{Date, Weekday},
     fmt::strtime,
     tz::TimeZone,
@@ -67,10 +67,10 @@ fn get_system_locale() -> Locale {
             }
 
             // Try language-only fallback (e.g., "en" from "en-US")
-            if let Some(lang) = cleaned_locale.split('-').next() {
-                if let Ok(locale) = Locale::try_from_str(lang) {
-                    return locale;
-                }
+            if let Some(lang) = cleaned_locale.split('-').next()
+                && let Ok(locale) = Locale::try_from_str(lang)
+            {
+                return locale;
             }
         }
     }
@@ -81,7 +81,7 @@ fn get_system_locale() -> Locale {
 pub struct Window {
     core: cosmic::app::Core,
     popup: Option<window::Id>,
-    now: Zoned,
+    now: ZonedDateTime,
     timezone: Option<TimeZone>,
     date_today: Date,
     date_selected: Date,
@@ -322,7 +322,7 @@ impl cosmic::Application for Window {
 
     fn init(core: app::Core, _flags: Self::Flags) -> (Self, app::Task<Self::Message>) {
         let locale = get_system_locale();
-        let now = Zoned::now();
+        let now = ZonedDateTime::now();
         // get today's date for highlighting purposes
         let today = now.date();
 
@@ -361,7 +361,7 @@ impl cosmic::Application for Window {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        fn time_subscription(mut show_seconds: watch::Receiver<bool>) -> Subscription<Message> {
+        fn time_subscription(show_seconds: watch::Receiver<bool>) -> Subscription<Message> {
             struct Wrapper {
                 inner: watch::Receiver<bool>,
                 id: &'static str,
@@ -376,7 +376,7 @@ impl cosmic::Application for Window {
                     inner: show_seconds,
                     id: "time-sub",
                 },
-                |Wrapper { inner, id }| {
+                |Wrapper { inner, id: _ }| {
                     let mut show_seconds = inner.clone();
                     stream::channel(1, move |mut output: mpsc::Sender<Message>| async move {
                         // Mark this receiver's state as changed so that it always receives an initial
@@ -520,7 +520,7 @@ impl cosmic::Application for Window {
                 if let Some(p) = self.popup.take() {
                     destroy_popup(p)
                 } else {
-                    return cosmic::surface::surface_task(cosmic::surface::action::app_popup(
+                    cosmic::surface::surface_task(cosmic::surface::action::app_popup(
                         |_| Default::default(),
                         |app: &mut Self| {
                             app.date_today = app.now.date();
@@ -553,14 +553,16 @@ impl cosmic::Application for Window {
                             popup_settings
                         },
                         None,
-                    ));
+                    ))
                 }
             }
             Message::Tick => {
-                self.now = self.timezone.as_ref().map_or_else(
-                    || Zoned::now(),
-                    |tz| Zoned::now().with_time_zone(tz.clone()),
-                );
+                self.now = self
+                    .timezone
+                    .as_ref()
+                    .map_or_else(ZonedDateTime::now, |tz| {
+                        ZonedDateTime::now().with_time_zone(tz.clone())
+                    });
                 Task::none()
             }
             Message::Rectangle(u) => {
@@ -664,7 +666,7 @@ impl cosmic::Application for Window {
             }
             Message::TimezoneUpdate(timezone) => {
                 if let Ok(timezone) = TimeZone::get(&timezone) {
-                    self.now = Zoned::now().with_time_zone(timezone.clone());
+                    self.now = ZonedDateTime::now().with_time_zone(timezone.clone());
                     self.date_today = self.now.date();
                     self.date_selected = self.date_today;
                     self.timezone = Some(timezone);
@@ -672,9 +674,7 @@ impl cosmic::Application for Window {
 
                 self.update(Message::Tick)
             }
-            Message::Surface(a) => {
-                return cosmic::task::message(cosmic::Action::Surface(a));
-            }
+            Message::Surface(a) => cosmic::task::message(cosmic::Action::Surface(a)),
         }
     }
 
@@ -694,7 +694,7 @@ impl cosmic::Application for Window {
         } else {
             [self.core.applet.suggested_padding(true).0, 0]
         })
-        .on_press_down(Message::TogglePopup)
+        .on_press(Message::TogglePopup)
         .class(cosmic::theme::Button::AppletIcon);
 
         autosize::autosize(

@@ -97,7 +97,7 @@ pub async fn create_service(connection: &zbus::Connection) -> zbus::Result<()> {
     let dbus_proxy = DBusProxy::new(connection).await?;
     let mut name_owner_changed_stream = dbus_proxy.receive_name_owner_changed().await?;
 
-    let flags = RequestNameFlags::ALLOW_REPLACEMENT.into();
+    let flags = RequestNameFlags::ALLOW_REPLACEMENT;
     if dbus_proxy.request_name(NAME.as_ref(), flags).await? == RequestNameReply::InQueue {
         eprintln!("Bus name '{NAME}' already owned");
     }
@@ -118,20 +118,20 @@ pub async fn create_service(connection: &zbus::Connection) -> zbus::Result<()> {
                     eprintln!("Lost bus name: {NAME}");
                     have_bus_name = false;
                 }
-            } else if let BusName::Unique(name) = &args.name {
-                if args.new_owner.is_none() {
-                    let mut interface = interface.get_mut().await;
-                    if let Some(idx) = interface
-                        .items
-                        .iter()
-                        .position(|(unique_name, _)| unique_name == name)
-                    {
-                        let ctxt = SignalEmitter::new(&connection, OBJECT_PATH).unwrap();
-                        let service = interface.items.remove(idx).1;
-                        StatusNotifierWatcher::status_notifier_item_unregistered(&ctxt, &service)
-                            .await
-                            .unwrap();
-                    }
+            } else if let BusName::Unique(name) = &args.name
+                && args.new_owner.is_none()
+            {
+                let mut interface = interface.get_mut().await;
+                if let Some(idx) = interface
+                    .items
+                    .iter()
+                    .position(|(unique_name, _)| unique_name == name)
+                {
+                    let ctxt = SignalEmitter::new(&connection, OBJECT_PATH).unwrap();
+                    let service = interface.items.remove(idx).1;
+                    StatusNotifierWatcher::status_notifier_item_unregistered(&ctxt, &service)
+                        .await
+                        .unwrap();
                 }
             }
         }

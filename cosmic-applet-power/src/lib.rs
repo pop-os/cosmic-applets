@@ -11,14 +11,12 @@ use cosmic::{
     cosmic_theme::Spacing,
     iced::{
         self, Alignment, Length, Subscription,
-        platform_specific::shell::commands::popup::{destroy_popup, get_popup},
         widget::{self, column, row},
         window,
     },
     surface, theme,
-    widget::{Space, button, divider, icon, space, text},
+    widget::{button, divider, icon, space, text},
 };
-use std::sync::LazyLock;
 
 use cosmic_login1_zbus::{
     manager::ManagerProxy,
@@ -35,9 +33,6 @@ pub mod session_manager;
 
 use crate::{cosmic_session::CosmicSessionProxy, session_manager::SessionManagerProxy};
 
-static SUBSURFACE_ID: LazyLock<cosmic::widget::Id> =
-    LazyLock::new(|| cosmic::widget::Id::new("subsurface"));
-
 pub fn run() -> cosmic::iced::Result {
     localize::localize();
 
@@ -49,7 +44,6 @@ struct Power {
     icon_name: String,
     popup: Option<window::Id>,
     token_tx: Option<calloop::channel::Sender<TokenRequest>>,
-    subsurface_id: window::Id,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -104,7 +98,6 @@ impl cosmic::Application for Power {
             Self {
                 core,
                 icon_name: "system-shutdown-symbolic".to_string(),
-                subsurface_id: window::Id::unique(),
                 token_tx: None,
                 popup: Option::default(),
             },
@@ -130,14 +123,13 @@ impl cosmic::Application for Power {
                             let new_id = window::Id::unique();
                             app.popup.replace(new_id);
 
-                            let popup_settings = app.core.applet.get_popup_settings(
+                            app.core.applet.get_popup_settings(
                                 app.core.main_window_id().unwrap(),
                                 new_id,
                                 None,
                                 None,
                                 None,
-                            );
-                            popup_settings
+                            )
                         },
                         None,
                     ));
@@ -212,7 +204,7 @@ impl cosmic::Application for Power {
         self.core
             .applet
             .icon_button(&self.icon_name)
-            .on_press_down(Message::TogglePopup)
+            .on_press(Message::TogglePopup)
             .into()
     }
 
