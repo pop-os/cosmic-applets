@@ -144,6 +144,13 @@ impl cosmic::Application for Window {
         Some(Message::PopupClosed(id))
     }
 
+    fn on_escape(&mut self) -> Task<cosmic::Action<Self::Message>> {
+        if let Some(p) = self.popup.take() {
+            return destroy_popup(p);
+        }
+        Task::none()
+    }
+
     fn update(&mut self, message: Self::Message) -> app::Task<Self::Message> {
         match message {
             Message::TogglePopup => {

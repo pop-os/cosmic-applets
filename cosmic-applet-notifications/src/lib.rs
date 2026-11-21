@@ -151,6 +151,13 @@ impl cosmic::Application for Notifications {
         ])
     }
 
+    fn on_escape(&mut self) -> app::Task<Self::Message> {
+        if let Some(p) = self.popup.take() {
+            return destroy_popup(p);
+        }
+        Task::none()
+    }
+
     fn update(&mut self, message: Self::Message) -> app::Task<Self::Message> {
         match message {
             Message::TogglePopup => {
