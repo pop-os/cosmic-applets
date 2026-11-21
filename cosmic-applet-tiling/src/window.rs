@@ -243,8 +243,12 @@ impl cosmic::Application for Window {
     fn view(&self) -> Element<'_, Self::Message> {
         self.core
             .applet
-            .icon_button(if self.autotiled { ON } else { OFF })
-            .on_press_down(Message::TogglePopup)
+            .autosize_window(
+                self.core
+                    .applet
+                    .icon_button(if self.autotiled { ON } else { OFF })
+                    .on_press_down(Message::TogglePopup),
+            )
             .into()
     }
 

@@ -297,8 +297,12 @@ impl cosmic::Application for CosmicA11yApplet {
     fn view(&self) -> Element<'_, Message> {
         self.core
             .applet
-            .icon_button("preferences-desktop-accessibility-symbolic")
-            .on_press_down(Message::TogglePopup)
+            .autosize_window(
+                self.core
+                    .applet
+                    .icon_button("preferences-desktop-accessibility-symbolic")
+                    .on_press_down(Message::TogglePopup),
+            )
             .into()
     }
 
