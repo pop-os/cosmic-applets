@@ -169,7 +169,7 @@ impl cosmic::Application for Minimize {
                     self.tx = Some(tx);
                 }
                 WaylandUpdate::Finished => {
-                    panic!("Wayland Subscription ended...")
+                    std::process::exit(1);
                 }
                 WaylandUpdate::Toplevel(t) => match t {
                     ToplevelUpdate::Add(toplevel_info) | ToplevelUpdate::Update(toplevel_info) => {
