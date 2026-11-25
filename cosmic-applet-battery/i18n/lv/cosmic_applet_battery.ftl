@@ -1,0 +1,14 @@
+battery = Akumulators
+battery-desc = Samazināts enerģijas patēriņš un veiktspēja.
+balanced = Līdzsvarots
+balanced-desc = Standarta veiktspēja un akumulatora lietojums.
+performance = Augsta veiktspēja
+performance-desc = Augsta veiktspēja un enerģijas patēriņš.
+max-charge = Paildziniet akumulatora mūžu, iestatot maksimālo uzlādes līmeni 80%
+seconds = s
+minutes = min
+hours = h
+until-empty = līdz izlādei
+power-settings = Barošanas un akumulatora iestatījumi...
+dgpu-running = Ir aktīvs diskrētais GPU, un tas var samazināt akumulatora darbības laiku
+dgpu-applications = Lietotnes, kas izmanto diskrēto GPU { $gpu_name }
