@@ -47,7 +47,7 @@ struct Notifications {
     dbus_sender: Option<Sender<subscriptions::dbus::Input>>,
     cards: Vec<(widget::Id, Vec<Notification>, bool, String, String, String)>,
     token_tx: Option<calloop::channel::Sender<TokenRequest>>,
-    proxy: NotificationsAppletProxy<'static>,
+    proxy: Option<NotificationsAppletProxy<'static>>,
     notifications_tx: Option<Sender<notifications::Input>>,
 }
 
@@ -115,7 +115,10 @@ impl cosmic::Application for Notifications {
             cards: Vec::new(),
             token_tx: Option::default(),
             proxy: block_on(crate::subscriptions::notifications::get_proxy())
-                .expect("Failed to get proxy"),
+                .inspect_err(|err| {
+                    tracing::error!(?err, "Failed to connect to the notifications daemon");
+                })
+                .ok(),
             notifications_tx: None,
         };
         _self.update_icon();
@@ -145,8 +148,9 @@ impl cosmic::Application for Notifications {
                     Message::Config(res.config)
                 }),
             subscriptions::dbus::proxy().map(Message::DbusEvent),
-            subscriptions::notifications::notifications(self.proxy.clone())
-                .map(Message::NotificationEvent),
+            self.proxy.clone().map_or_else(Subscription::none, |proxy| {
+                subscriptions::notifications::notifications(proxy).map(Message::NotificationEvent)
+            }),
             activation_token_subscription(0).map(Message::Token),
         ])
     }
