@@ -19,6 +19,7 @@
   <name xml:lang="sk">Aplety COSMIC</name>
   <name xml:lang="es">Applets COSMIC</name>
   <name xml:lang="sv">COSMIC Miniprogram</name>
+  <name xml:lang="uk">Віджети COSMIC</name>
   <summary>Applets for the COSMIC panel</summary>
   <summary xml:lang="ar">بريمجات للوحة COSMIC</summary>
   <summary xml:lang="bg">Графични обекти за панела на COSMIC</summary>
@@ -32,6 +33,7 @@
   <summary xml:lang="sk">Aplety pre panel COSMIC</summary>
   <summary xml:lang="es">Applets para el panel de COSMIC</summary>
   <summary xml:lang="sv">Miniprogram för COSMIC-panelen</summary>
+  <summary xml:lang="uk">Віджети для панелі COSMIC</summary>
   <description>
     <p>Applets for the COSMIC panel</p>
     <p xml:lang="ar">بريمجات للوحة COSMIC</p>
@@ -46,6 +48,7 @@
     <p xml:lang="sk">Aplety pre panel COSMIC</p>
     <p xml:lang="es">Applets para el panel de COSMIC</p>
     <p xml:lang="sv">Miniprogram för COSMIC-panelen</p>
+    <p xml:lang="uk">Віджети для панелі COSMIC</p>
   </description>
   <launchable type="desktop-id">com.system76.CosmicAppletAppList.desktop</launchable>
   <launchable type="desktop-id">com.system76.CosmicAppletAudio.desktop</launchable>
