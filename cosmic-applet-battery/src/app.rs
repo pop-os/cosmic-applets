@@ -174,7 +174,9 @@ impl CosmicBatteryApplet {
         if self.no_battery {
             if self.screen_brightness.is_some() {
                 self.display_icon_name.as_str()
-            } else if self.kbd_brightness.is_some() {
+            } else if self.kbd_brightness.is_some()
+                && self.max_kbd_brightness.is_some_and(|max| max > 0)
+            {
                 "keyboard-brightness-symbolic"
             } else {
                 "plugged-into-power-symbolic"
@@ -814,7 +816,7 @@ impl cosmic::Application for CosmicBatteryApplet {
             }
         }
 
-        if let Some(max_kbd_brightness) = self.max_kbd_brightness {
+        if let Some(max_kbd_brightness) = self.max_kbd_brightness.filter(|&max| max > 0) {
             if let Some(kbd_brightness) = self.kbd_brightness {
                 content.push(
                     padded_control(
