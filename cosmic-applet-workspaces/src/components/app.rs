@@ -236,9 +236,13 @@ impl cosmic::Application for IcedWorkspacesApplet {
                 .padding(0);
 
             btn.class(
-                if w.state.contains(ext_workspace_handle_v1::State::Active) && self.config.use_colored_buttons {
+                if w.state.contains(ext_workspace_handle_v1::State::Active)
+                    && self.config.use_colored_buttons
+                {
                     cosmic::theme::iced::Button::Primary
-                } else if w.state.contains(ext_workspace_handle_v1::State::Urgent) && self.config.use_colored_buttons {
+                } else if w.state.contains(ext_workspace_handle_v1::State::Urgent)
+                    && self.config.use_colored_buttons
+                {
                     let appearance = |theme: &Theme| {
                         let cosmic = theme.cosmic();
                         button::Style {
@@ -360,10 +364,6 @@ impl IcedWorkspacesApplet {
             self.config.default_workspace_glyph
         };
 
-        if glyph == '\0' {
-            '●'
-        } else {
-            glyph
-        }
+        if glyph == '\0' { '●' } else { glyph }
     }
 }
