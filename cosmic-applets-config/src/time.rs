@@ -6,6 +6,7 @@ use cosmic_config::{self, CosmicConfigEntry, cosmic_config_derive::CosmicConfigE
 #[derive(Debug, Clone, CosmicConfigEntry, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
 #[version = 1]
 pub struct TimeAppletConfig {
+    pub bold: bool,
     pub military_time: bool,
     pub show_seconds: bool,
     pub first_day_of_week: u8,
@@ -18,6 +19,7 @@ pub struct TimeAppletConfig {
 impl Default for TimeAppletConfig {
     fn default() -> Self {
         Self {
+            bold: false,
             military_time: false,
             show_seconds: false,
             first_day_of_week: 6,

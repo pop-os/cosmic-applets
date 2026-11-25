@@ -193,7 +193,14 @@ impl Window {
         let elements: Vec<Element<'_, Message>> = if let Some(strftime) = self.maybe_strftime() {
             strftime
                 .split_whitespace()
-                .map(|piece| self.core.applet.text(piece.to_owned()).into())
+                .map(|piece| {
+                    let mut text = self.core.applet.text(piece.to_owned());
+                    if self.config.bold {
+                        text = text.font(cosmic::font::bold())
+                    }
+
+                    text.into()
+                })
                 .collect()
         } else {
             let mut elements = Vec::new();
@@ -233,7 +240,12 @@ impl Window {
             // todo: split using formatToParts when it is implemented
             // https://github.com/unicode-org/icu4x/issues/4936#issuecomment-2128812667
             for p in formatted_time.split_whitespace().flat_map(|s| s.split(':')) {
-                elements.push(self.core.applet.text(p.to_owned()).into());
+                let mut text = self.core.applet.text(p.to_owned());
+                if self.config.bold {
+                    text = text.font(cosmic::font::bold())
+                }
+
+                elements.push(text.into());
             }
 
             elements
@@ -300,9 +312,14 @@ impl Window {
             }
         };
 
+        let mut text = self.core.applet.text(formatted_date);
+        if self.config.bold {
+            text = text.font(cosmic::font::bold());
+        }
+
         Element::from(
             row!(
-                self.core.applet.text(formatted_date),
+                text,
                 container(space::vertical().height(Length::Fixed(
                     (self.core.applet.suggested_size(true).1
                         + 2 * self.core.applet.suggested_padding(true).1)
