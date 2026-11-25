@@ -1,9 +1,10 @@
 battery = Battery
-battery-desc = Reduced power usage and performance.
+battery-mode = Extended battery life
+battery-desc = Reduced power usage and silent performance
 balanced = Balanced
-balanced-desc = Standard performance and battery usage.
-performance = High Performance
-performance-desc = High performance and power usage.
+balanced-desc = Quiet performance and moderate power usage
+performance = High performance
+performance-desc = Peak performance and power usage
 max-charge = Increase the lifespan of your battery by setting a maximum charge value of 80%
 seconds = s
 minutes = m
