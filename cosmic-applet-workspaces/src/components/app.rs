@@ -13,6 +13,7 @@ use cctk::{
 use cosmic::{
     Element, Task, Theme, app,
     applet::cosmic_panel_config::PanelAnchor,
+    cosmic_config::{Config, CosmicConfigEntry},
     iced::core::{Background, Border},
     iced::{
         Alignment,
@@ -25,6 +26,7 @@ use cosmic::{
     surface,
     widget::{Id, autosize, container, space},
 };
+use cosmic_applets_config::workspaces::WorkspacesAppletConfig;
 
 use crate::{
     config,
@@ -50,6 +52,7 @@ pub enum Layout {
 
 struct IcedWorkspacesApplet {
     core: cosmic::app::Core,
+    config: WorkspacesAppletConfig,
     workspaces: Vec<Workspace>,
     workspace_tx: Option<SyncSender<WorkspaceEvent>>,
     layout: Layout,
@@ -90,6 +93,7 @@ enum Message {
     WheelScrolled(ScrollDelta),
     WorkspaceOverview,
     Surface(surface::Action<Message>),
+    ConfigChanged(WorkspacesAppletConfig),
 }
 
 impl cosmic::Application for IcedWorkspacesApplet {
@@ -99,6 +103,11 @@ impl cosmic::Application for IcedWorkspacesApplet {
     const APP_ID: &'static str = config::APP_ID;
 
     fn init(core: cosmic::app::Core, _flags: Self::Flags) -> (Self, app::Task<Self::Message>) {
+        let config = Config::new(Self::APP_ID, WorkspacesAppletConfig::VERSION)
+            .ok()
+            .and_then(|c| WorkspacesAppletConfig::get_entry(&c).ok())
+            .unwrap_or_default();
+
         (
             Self {
                 layout: match &core.applet.anchor {
@@ -106,6 +115,7 @@ impl cosmic::Application for IcedWorkspacesApplet {
                     PanelAnchor::Top | PanelAnchor::Bottom => Layout::Row,
                 },
                 core,
+                config,
                 workspaces: Vec::new(),
                 workspace_tx: Option::default(),
                 scroll: DiscreteScrollState::default().rate_limit(Some(SCROLL_RATE_LIMIT)),
@@ -168,6 +178,9 @@ impl cosmic::Application for IcedWorkspacesApplet {
             Message::Surface(a) => {
                 return cosmic::task::message(cosmic::Action::Surface(a));
             }
+            Message::ConfigChanged(config) => {
+                self.config = config;
+            }
         }
         Task::none()
     }
@@ -186,7 +199,14 @@ impl cosmic::Application for IcedWorkspacesApplet {
         let popup_index = self.popup_index().unwrap_or(self.workspaces.len());
 
         let buttons = self.workspaces[..popup_index].iter().map(|w| {
-            let content = self.core.applet.text(&w.name).font(cosmic::font::bold());
+            let content = if self.config.use_custom_glyphs {
+                let glyph = self.workspace_glyph_char(w.state);
+                self.core.applet.text(String::from(glyph))
+            } else {
+                self.core.applet.text(w.name.clone())
+            };
+
+            let content = content.font(cosmic::font::bold());
 
             let (width, height) = if self.core.applet.is_horizontal() {
                 (suggested_total as f32, suggested_window_size.1.get() as f32)
@@ -216,9 +236,13 @@ impl cosmic::Application for IcedWorkspacesApplet {
                 .padding(0);
 
             btn.class(
-                if w.state.contains(ext_workspace_handle_v1::State::Active) {
+                if w.state.contains(ext_workspace_handle_v1::State::Active)
+                    && self.config.use_colored_buttons
+                {
                     cosmic::theme::iced::Button::Primary
-                } else if w.state.contains(ext_workspace_handle_v1::State::Urgent) {
+                } else if w.state.contains(ext_workspace_handle_v1::State::Urgent)
+                    && self.config.use_colored_buttons
+                {
                     let appearance = |theme: &Theme| {
                         let cosmic = theme.cosmic();
                         button::Style {
@@ -314,10 +338,32 @@ impl cosmic::Application for IcedWorkspacesApplet {
                 Mouse(mouse::Event::WheelScrolled { delta }) => Some(Message::WheelScrolled(delta)),
                 _ => None,
             }),
+            self.core.watch_config(Self::APP_ID).map(|u| {
+                for err in u.errors {
+                    tracing::error!(?err, "Error watching config");
+                }
+                Message::ConfigChanged(u.config)
+            }),
         ])
     }
 
     fn style(&self) -> Option<cosmic::iced::theme::Style> {
         Some(cosmic::applet::style())
+    }
+}
+
+impl IcedWorkspacesApplet {
+    fn workspace_glyph_char(&self, state: ext_workspace_handle_v1::State) -> char {
+        use ext_workspace_handle_v1::State;
+
+        let glyph = if state.contains(State::Urgent) {
+            self.config.urgent_workspace_glyph
+        } else if state.contains(State::Active) {
+            self.config.active_workspace_glyph
+        } else {
+            self.config.default_workspace_glyph
+        };
+
+        if glyph == '\0' { '●' } else { glyph }
     }
 }

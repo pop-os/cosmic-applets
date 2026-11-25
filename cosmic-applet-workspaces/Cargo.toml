@@ -6,6 +6,7 @@ edition = "2024"
 license = "GPL-3.0-only"
 
 [dependencies]
+cosmic-applets-config.workspace = true
 libcosmic.workspace = true
 cctk.workspace = true
 tracing.workspace = true
