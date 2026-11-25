@@ -825,6 +825,17 @@ impl CosmicAppList {
     fn is_focused(&self, handle: &ExtForeignToplevelHandleV1) -> bool {
         self.currently_active_toplevel().contains(handle)
     }
+
+    fn get_screen_position(&self, info: &ToplevelInfo) -> (i32, i32) {
+        let Some(output) = info.output.iter().next() else {
+            return (0, 0);
+        };
+
+        self.output_list
+            .get(output)
+            .and_then(|output_info| output_info.logical_position)
+            .unwrap_or((0, 0))
+    }
 }
 
 impl cosmic::Application for CosmicAppList {
@@ -2064,13 +2075,60 @@ impl cosmic::Application for CosmicAppList {
             };
 
             // Filter toplevels to only show windows on current monitor and workspace
-            let filtered_toplevels: Vec<_> = dock_item
+            let mut filtered_toplevels: Vec<&(ToplevelInfo, Option<WaylandImage>)> = dock_item
                 .toplevels
                 .iter()
                 .filter(|(toplevel_info, _)| {
                     self.is_on_current_monitor_and_workspace(toplevel_info)
                 })
                 .collect();
+
+            filtered_toplevels.sort_by(|(info_a, _), (info_b, _)| {
+                let screen_position_a = self.get_screen_position(info_a);
+                let screen_position_b = self.get_screen_position(info_b);
+
+                // Sort first by monitor, then by location on screen if A and B are on the same monitor.
+                if screen_position_a != screen_position_b {
+                    match self.core.applet.anchor {
+                        PanelAnchor::Left | PanelAnchor::Right => {
+                            if screen_position_a.1 > screen_position_b.1 {
+                                return std::cmp::Ordering::Greater;
+                            } else if screen_position_a.1 < screen_position_b.1 {
+                                return std::cmp::Ordering::Less;
+                            }
+                        }
+                        PanelAnchor::Top | PanelAnchor::Bottom => {
+                            if screen_position_a.0 > screen_position_b.0 {
+                                return std::cmp::Ordering::Greater;
+                            } else if screen_position_a.0 < screen_position_b.0 {
+                                return std::cmp::Ordering::Less;
+                            }
+                        }
+                    }
+                }
+
+                let a_position;
+                let b_position;
+                // Get x or y values, depending on where the panel is anchored.
+                match self.core.applet.anchor {
+                    PanelAnchor::Left | PanelAnchor::Right => {
+                        a_position = info_a.geometry.values().next().map_or(0, |g| g.y);
+                        b_position = info_b.geometry.values().next().map_or(0, |g| g.y);
+                    }
+                    PanelAnchor::Top | PanelAnchor::Bottom => {
+                        a_position = info_a.geometry.values().next().map_or(0, |g| g.x);
+                        b_position = info_b.geometry.values().next().map_or(0, |g| g.x);
+                    }
+                }
+
+                if a_position < b_position {
+                    std::cmp::Ordering::Less
+                } else if a_position > b_position {
+                    std::cmp::Ordering::Greater
+                } else {
+                    std::cmp::Ordering::Equal
+                }
+            });
 
             let toplevels = &filtered_toplevels;
             let desktop_info = &dock_item.desktop_info;
