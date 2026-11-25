@@ -22,6 +22,7 @@ use cosmic::{
     iced::{
         self, Alignment, Length, Rectangle, Subscription,
         futures::StreamExt,
+        platform_specific::shell::wayland::commands::popup::destroy_popup,
         widget::{self, column, row, slider},
         window,
     },
@@ -315,6 +316,13 @@ impl cosmic::Application for Audio {
 
     fn style(&self) -> Option<iced::theme::Style> {
         Some(cosmic::applet::style())
+    }
+
+    fn on_escape(&mut self) -> app::Task<Self::Message> {
+        if let Some(p) = self.popup.take() {
+            return destroy_popup(p);
+        }
+        Task::none()
     }
 
     fn update(&mut self, message: Message) -> app::Task<Message> {

@@ -360,6 +360,13 @@ impl cosmic::Application for Window {
         Some(cosmic::applet::style())
     }
 
+    fn on_escape(&mut self) -> app::Task<Self::Message> {
+        if let Some(p) = self.popup.take() {
+            return destroy_popup(p);
+        }
+        Task::none()
+    }
+
     fn subscription(&self) -> Subscription<Message> {
         fn time_subscription(mut show_seconds: watch::Receiver<bool>) -> Subscription<Message> {
             struct Wrapper {
