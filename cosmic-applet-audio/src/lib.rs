@@ -11,8 +11,8 @@ use config::{AudioAppletConfig, amplification_sink, amplification_source};
 use cosmic::{
     Apply, Element, Renderer, Task, Theme, app,
     applet::{
-        column as applet_column,
-        cosmic_panel_config::PanelAnchor,
+        Size, column as applet_column,
+        cosmic_panel_config::{PanelAnchor, PanelSize},
         menu_button, menu_control_padding, padded_control, row as applet_row,
         token::subscription::{TokenRequest, TokenUpdate, activation_token_subscription},
     },
@@ -670,11 +670,72 @@ impl cosmic::Application for Audio {
     }
 
     fn view(&self) -> Element<'_, Message> {
-        let btn = self
-            .core
-            .applet
-            .icon_button(self.output_icon_name())
-            .on_press_down(Message::TogglePopup);
+        let is_horizontal = match self.core.applet.anchor {
+            PanelAnchor::Top | PanelAnchor::Bottom => true,
+            PanelAnchor::Left | PanelAnchor::Right => false,
+        };
+
+        let suggested_size = self.core.applet.suggested_size(true);
+        let mut children = vec![
+            icon::from_name(self.output_icon_name())
+                .size(suggested_size.0)
+                .into(),
+        ];
+
+        if self.config.show_percentage {
+            let text = if self.model.active_sink.mute {
+                String::from("0%")
+            } else {
+                format!("{:.0}%", self.model.active_sink.volume)
+            };
+
+            let t = if is_horizontal {
+                self.core.applet.text(text)
+            } else {
+                match &self.core.applet.size {
+                    Size::Hardcoded(_) => text::text(text),
+                    Size::PanelSize(PanelSize::XS) => text::caption(text),
+                    Size::PanelSize(PanelSize::S) => text::body(text),
+                    Size::PanelSize(PanelSize::M) => text::title4(text),
+                    Size::PanelSize(PanelSize::L) => text::title3(text),
+                    _ => text::title2(text),
+                }
+                .width(Length::Fixed(suggested_size.0 as f32))
+            };
+
+            children.push(
+                t.font(cosmic::font::default())
+                    .height(Length::Fixed(suggested_size.1 as f32))
+                    .align_x(Alignment::Center)
+                    .align_y(Alignment::Center)
+                    .into(),
+            );
+        }
+
+        let applet_padding = self.core.applet.suggested_padding(true);
+        let btn_content: Element<_> = if is_horizontal {
+            row(children)
+                .spacing(applet_padding.1)
+                .align_y(Alignment::Center)
+                .into()
+        } else {
+            column(children)
+                .spacing(applet_padding.1)
+                .align_x(Alignment::Center)
+                .into()
+        };
+
+        let (horizontal_padding, vertical_padding) = if is_horizontal {
+            (applet_padding.0, applet_padding.1)
+        } else {
+            (applet_padding.1, applet_padding.0)
+        };
+
+        let btn: Element<'_, Message> = button::custom(btn_content)
+            .on_press_down(Message::TogglePopup)
+            .class(theme::Button::AppletIcon)
+            .padding([vertical_padding, horizontal_padding])
+            .into();
 
         const WHEEL_STEP: f32 = 5.0; // 5% per wheel event
         let btn = crate::mouse_area::MouseArea::new(btn).on_mouse_wheel(|delta| {
@@ -703,31 +764,23 @@ impl cosmic::Application for Audio {
             && !playback_buttons.is_empty()
         {
             has_playback_buttons = true;
-            Element::from(match self.core.applet.anchor {
-                PanelAnchor::Left | PanelAnchor::Right => Element::from(
-                    applet_column::Column::with_children(playback_buttons)
-                        .push(btn)
-                        .align_x(Alignment::Center)
-                        .height(Length::Shrink)
-                        // TODO configurable variable from the panel?
-                        .spacing(
-                            -(self.core.applet.suggested_padding(true).0 as f32)
-                                * self.core.applet.padding_overlap,
-                        ),
-                ),
-                PanelAnchor::Top | PanelAnchor::Bottom => {
-                    applet_row::Row::with_children(playback_buttons)
-                        .push(btn)
-                        .align_y(Alignment::Center)
-                        .width(Length::Shrink)
-                        // TODO configurable variable from the panel?
-                        .spacing(
-                            -(self.core.applet.suggested_padding(true).0 as f32)
-                                * self.core.applet.padding_overlap,
-                        )
-                        .into()
-                }
-            })
+            if is_horizontal {
+                applet_row::Row::with_children(playback_buttons)
+                    .push(btn)
+                    .align_y(Alignment::Center)
+                    .width(Length::Shrink)
+                    // TODO configurable variable from the panel?
+                    .spacing(-(applet_padding.0 as f32) * self.core.applet.padding_overlap)
+                    .into()
+            } else {
+                applet_column::Column::with_children(playback_buttons)
+                    .push(btn)
+                    .align_x(Alignment::Center)
+                    .height(Length::Shrink)
+                    // TODO configurable variable from the panel?
+                    .spacing(-(applet_padding.0 as f32) * self.core.applet.padding_overlap)
+                    .into()
+            }
         } else {
             btn.into()
         };
