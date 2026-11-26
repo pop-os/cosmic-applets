@@ -13,8 +13,7 @@ use cosmic::{
     cosmic_theme::Spacing,
     iced::widget::{column, row},
     iced::{
-        Length, Subscription,
-        platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
+        Length, Subscription, platform_specific::shell::wayland::commands::popup::destroy_popup,
         window::Id,
     },
     surface, theme,
@@ -26,7 +25,7 @@ use cosmic::{
 };
 use cosmic_comp_config::{CosmicCompConfig, TileBehavior};
 use cosmic_protocols::workspace::v2::client::zcosmic_workspace_handle_v2::TilingState;
-use std::{thread, time::Instant};
+use std::thread;
 use tracing::error;
 
 const ID: &str = "com.system76.CosmicAppletTiling";
@@ -151,14 +150,13 @@ impl cosmic::Application for Window {
                         |app: &mut Self| {
                             let new_id = Id::unique();
                             app.popup = Some(new_id);
-                            let popup_settings = app.core.applet.get_popup_settings(
+                            app.core.applet.get_popup_settings(
                                 app.core.main_window_id().unwrap(),
                                 new_id,
                                 Some((1, 1)),
                                 None,
                                 None,
-                            );
-                            popup_settings
+                            )
                         },
                         None,
                     ));
@@ -244,7 +242,7 @@ impl cosmic::Application for Window {
         self.core
             .applet
             .icon_button(if self.autotiled { ON } else { OFF })
-            .on_press_down(Message::TogglePopup)
+            .on_press(Message::TogglePopup)
             .into()
     }
 

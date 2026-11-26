@@ -17,14 +17,14 @@ use cosmic::{
     iced::core::window,
     iced::{
         self, Alignment, Length, Subscription,
-        platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
+        platform_specific::shell::wayland::commands::popup::destroy_popup,
         widget::{Column, column, container, row},
     },
     theme,
     widget::{button, divider, icon, indeterminate_circular, scrollable, text},
 };
 use futures::FutureExt;
-use std::{collections::HashMap, sync::LazyLock, time::Duration};
+use std::{collections::HashMap, time::Duration};
 use tokio::sync::mpsc::Sender;
 
 use crate::{
@@ -150,7 +150,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
             }
             Message::BluetoothEvent(e) => match e {
                 BluerEvent::RequestResponse {
-                    req,
+                    req: _,
                     state,
                     err_msg,
                 } => {
@@ -305,7 +305,7 @@ impl cosmic::Application for CosmicBluetoothApplet {
         self.core
             .applet
             .icon_button(&self.icon_name)
-            .on_press_down(Message::TogglePopup)
+            .on_press(Message::TogglePopup)
             .into()
     }
 

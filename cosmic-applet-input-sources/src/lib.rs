@@ -17,7 +17,6 @@ use cosmic::{
     iced::{
         self, Rectangle, Task,
         event::wayland::{Event as WaylandEvent, OutputEvent},
-        platform_specific::shell::commands::popup::{destroy_popup, get_popup},
         window::Id,
     },
     prelude::*,
@@ -50,11 +49,7 @@ pub fn run() -> cosmic::iced::Result {
                 .ok()
                 .map(|fd| unsafe { UnixStream::from_raw_fd(fd) })
         });
-    let wayland_connection = if let Some(socket) = socket {
-        Some(Connection::from_socket(socket).unwrap())
-    } else {
-        None
-    };
+    let wayland_connection = socket.map(|s| Connection::from_socket(s).unwrap());
 
     localize::localize();
 
@@ -148,24 +143,23 @@ impl cosmic::Application for Window {
         match message {
             Message::TogglePopup => {
                 return if let Some(p) = self.popup.take() {
-                    return crate::surface::surface_task(crate::surface::action::destroy_popup(p));
+                    crate::surface::surface_task(crate::surface::action::destroy_popup(p))
                 } else {
-                    return crate::surface::surface_task(crate::surface::action::app_popup(
+                    crate::surface::surface_task(crate::surface::action::app_popup(
                         |_| Default::default(),
                         |app: &mut Window| {
                             let new_id = Id::unique();
                             app.popup.replace(new_id);
-                            let popup_settings = app.core.applet.get_popup_settings(
+                            app.core.applet.get_popup_settings(
                                 app.core.main_window_id().unwrap(),
                                 new_id,
                                 None,
                                 None,
                                 None,
-                            );
-                            popup_settings
+                            )
                         },
                         None,
-                    ));
+                    ))
                 };
             }
             Message::PopupClosed(id) => {
@@ -210,7 +204,7 @@ impl cosmic::Application for Window {
                     self.keyboard_layout = Some(keyboard_layout);
                 }
                 wayland::Event::Group(group) => {
-                    self.current_layout = group as usize;
+                    self.current_layout = group;
                 }
             },
         }
@@ -299,10 +293,10 @@ impl cosmic::Application for Window {
         } else {
             iced::event::listen_with(|evt, _, _| match evt {
                 iced::Event::PlatformSpecific(iced::event::PlatformSpecific::Wayland(evt)) => {
-                    if let WaylandEvent::Output(OutputEvent::Created(_), output) = evt {
-                        if let Some(backend) = output.backend().upgrade() {
-                            return Some(Message::WaylandConnection(backend));
-                        }
+                    if let WaylandEvent::Output(OutputEvent::Created(_), output) = evt
+                        && let Some(backend) = output.backend().upgrade()
+                    {
+                        return Some(Message::WaylandConnection(backend));
                     }
                     None
                 }

@@ -42,7 +42,7 @@ pub async fn cosmic_register(conn: &zbus::Connection) -> zbus::Result<()> {
     tokio::spawn(async move {
         while let Some(value) = stream.next().await {
             if let Some(_unique_name) = value {
-                /// Register with new owner
+                // Register with new owner
                 let _ = cosmic_watcher.register_applet().await;
             }
         }
@@ -67,10 +67,10 @@ struct CosmicAppletStatusNotifierWatcher {
 #[zbus::interface(name = "com.system76.CosmicStatusNotifierWatcher")]
 impl CosmicAppletStatusNotifierWatcher {
     fn register_applet(&mut self, #[zbus(header)] hdr: Header<'_>) {
-        if let Some(sender) = hdr.sender() {
-            if self.unique_names.has_unique_name(sender) {
-                self.applets.insert(sender.to_owned());
-            }
+        if let Some(sender) = hdr.sender()
+            && self.unique_names.has_unique_name(sender)
+        {
+            self.applets.insert(sender.to_owned());
         }
     }
 }
@@ -138,7 +138,7 @@ async fn refresh_task(
     interface: zbus::object_server::InterfaceRef<CosmicAppletStatusNotifierWatcher>,
     abort_handle: futures::future::AbortHandle,
 ) {
-    let mut interval = tokio::time::interval(std::time::Duration::from_secs(60));
+    let mut interval = tokio::time::interval(REFRESH_INTERVAL);
     interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
     // Initial tick, waiting for first client to connect
     interval.tick().await;

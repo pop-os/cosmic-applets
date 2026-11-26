@@ -17,18 +17,12 @@ use cosmic::{
         wayland_protocols::ext::foreign_toplevel_list::v1::client::ext_foreign_toplevel_handle_v1::ExtForeignToplevelHandleV1,
     },
     desktop::fde,
-    iced::{
-        self, Length, Limits, Subscription,
-        id::Id as WidgetId,
-        platform_specific::shell::wayland::commands::popup::{destroy_popup, get_popup},
-        widget::text,
-        window::{self},
-    },
+    iced::{Alignment, Length, Limits, Rectangle, Subscription, id::Id as WidgetId, theme, window},
     surface,
     widget::{autosize::autosize, mouse_area},
 };
 
-use cosmic::iced::widget::{Column, Row};
+use cosmic::iced::widget::{Column, Row, text};
 
 use cosmic::{Element, widget::tooltip};
 use std::sync::LazyLock;
@@ -143,10 +137,8 @@ impl cosmic::Application for Minimize {
         };
 
         app.update_desktop_entries();
-        let t = iced::window::minimize::<cosmic::Action<Message>>(
-            app.core.main_window_id().unwrap(),
-            true,
-        );
+        let t =
+            window::minimize::<cosmic::Action<Message>>(app.core.main_window_id().unwrap(), true);
         (app, t)
     }
 
@@ -158,7 +150,7 @@ impl cosmic::Application for Minimize {
         &mut self.core
     }
 
-    fn style(&self) -> Option<iced::theme::Style> {
+    fn style(&self) -> Option<theme::Style> {
         Some(cosmic::applet::style())
     }
 
@@ -209,7 +201,7 @@ impl cosmic::Application for Minimize {
 
                         self.apps = apps;
 
-                        return iced::window::maximize(self.core.main_window_id().unwrap(), true);
+                        return window::maximize(self.core.main_window_id().unwrap(), true);
                     }
                     ToplevelUpdate::Remove(handle) => {
                         let prev_was_empty = self.apps.is_empty();
@@ -219,10 +211,7 @@ impl cosmic::Application for Minimize {
                         let changed = prev_was_empty != self.apps.is_empty();
                         if self.apps.is_empty() && changed {
                             // hide the window
-                            return iced::window::minimize(
-                                self.core.main_window_id().unwrap(),
-                                true,
-                            );
+                            return window::minimize(self.core.main_window_id().unwrap(), true);
                         }
                     }
                 },
@@ -265,13 +254,13 @@ impl cosmic::Application for Minimize {
                             let major_axis_len =
                                 (icon_size + spacing) * (pos.saturating_sub(1) as u32);
                             let rectangle = match app.core.applet.anchor {
-                                PanelAnchor::Top | PanelAnchor::Bottom => iced::Rectangle {
+                                PanelAnchor::Top | PanelAnchor::Bottom => Rectangle {
                                     x: major_axis_len as i32,
                                     y: 0,
                                     width: icon_size as i32,
                                     height: icon_size as i32,
                                 },
-                                PanelAnchor::Left | PanelAnchor::Right => iced::Rectangle {
+                                PanelAnchor::Left | PanelAnchor::Right => Rectangle {
                                     x: 0,
                                     y: major_axis_len as i32,
                                     width: icon_size as i32,
@@ -322,7 +311,6 @@ impl cosmic::Application for Minimize {
         } else {
             (cross_padding, major_padding)
         };
-        let theme = self.core.system_theme().cosmic();
         let icon_buttons = self.apps[..max_icon_count].iter().map(|app| {
             self.core
                 .applet
@@ -352,7 +340,7 @@ impl cosmic::Application for Minimize {
                 .core
                 .applet
                 .icon_button(icon)
-                .on_press_down(Message::OpenOverflowPopup);
+                .on_press(Message::OpenOverflowPopup);
 
             Some(btn.into())
         } else {
@@ -368,14 +356,14 @@ impl cosmic::Application for Minimize {
             PanelAnchor::Top | PanelAnchor::Bottom
         ) {
             Row::with_children(icon_buttons)
-                .align_y(cosmic::iced::core::Alignment::Center)
+                .align_y(Alignment::Center)
                 .height(Length::Shrink)
                 .width(Length::Shrink)
                 .spacing(spacing as f32)
                 .into()
         } else {
             Column::with_children(icon_buttons)
-                .align_x(cosmic::iced::core::Alignment::Center)
+                .align_x(Alignment::Center)
                 .height(Length::Shrink)
                 .width(Length::Shrink)
                 .spacing(spacing as f32)
@@ -425,8 +413,6 @@ impl cosmic::Application for Minimize {
         } else {
             (cross_padding, major_padding)
         };
-        let theme = self.core.system_theme().cosmic();
-        let space_xxs = theme.space_xxs();
         let icon_buttons = self.apps[max_icon_count..].iter().map(|app| {
             tooltip(
                 Element::from(crate::window_image::WindowImage::new(
@@ -463,13 +449,13 @@ impl cosmic::Application for Minimize {
                 ) {
                     Element::from(
                         Row::with_children(icon_buttons)
-                            .align_y(cosmic::iced::core::Alignment::Center)
+                            .align_y(Alignment::Center)
                             .height(Length::Shrink)
                             .width(Length::Shrink),
                     )
                 } else {
                     Column::with_children(icon_buttons)
-                        .align_x(cosmic::iced::core::Alignment::Center)
+                        .align_x(Alignment::Center)
                         .height(Length::Shrink)
                         .width(Length::Shrink)
                         .into()

@@ -195,12 +195,7 @@ impl<Msg> Widget<Msg, cosmic::Theme, cosmic::Renderer> for WindowImage<'_, Msg> 
     ) {
         let layout = layout.children().collect::<Vec<_>>();
         let children = [&mut self.image_button, &mut self.icon];
-        for (i, (layout, child)) in layout
-            .into_iter()
-            .zip(children.into_iter())
-            .enumerate()
-            .rev()
-        {
+        for (i, (layout, child)) in layout.into_iter().zip(children).enumerate().rev() {
             let tree = &mut tree.children[i];
             child
                 .as_widget_mut()
@@ -223,12 +218,7 @@ impl<Msg> Widget<Msg, cosmic::Theme, cosmic::Renderer> for WindowImage<'_, Msg> 
 
         let layout = layout.children().collect::<Vec<_>>();
         // draw children in order
-        for (i, (layout, child)) in layout
-            .into_iter()
-            .zip(children.into_iter())
-            .enumerate()
-            .rev()
-        {
+        for (i, (layout, child)) in layout.into_iter().zip(children).enumerate().rev() {
             let tree = &mut state.children[i];
 
             child.as_widget_mut().update(
@@ -250,12 +240,7 @@ impl<Msg> Widget<Msg, cosmic::Theme, cosmic::Renderer> for WindowImage<'_, Msg> 
     ) -> cosmic::iced::core::mouse::Interaction {
         let children = [&self.image_button, &self.icon];
         let layout = layout.children().collect::<Vec<_>>();
-        for (i, (layout, child)) in layout
-            .into_iter()
-            .zip(children.into_iter())
-            .enumerate()
-            .rev()
-        {
+        for (i, (layout, child)) in layout.into_iter().zip(children).enumerate().rev() {
             let tree = &state.children[i];
             let interaction = child
                 .as_widget()
