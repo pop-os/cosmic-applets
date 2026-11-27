@@ -29,4 +29,5 @@ pub fn amplification_source() -> bool {
 pub struct AudioAppletConfig {
     pub show_media_controls_in_top_panel: bool,
     pub show_percentage: bool,
+    pub bold_percentage_text: bool,
 }

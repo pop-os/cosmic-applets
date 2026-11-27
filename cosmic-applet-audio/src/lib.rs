@@ -689,7 +689,7 @@ impl cosmic::Application for Audio {
                 format!("{:.0}%", self.model.active_sink.volume)
             };
 
-            let t = if is_horizontal {
+            let mut t = if is_horizontal {
                 self.core.applet.text(text)
             } else {
                 match &self.core.applet.size {
@@ -703,9 +703,12 @@ impl cosmic::Application for Audio {
                 .width(Length::Fixed(suggested_size.0 as f32))
             };
 
+            if self.config.bold_percentage_text {
+                t = t.font(cosmic::font::bold());
+            }
+
             children.push(
-                t.font(cosmic::font::default())
-                    .height(Length::Fixed(suggested_size.1 as f32))
+                t.height(Length::Fixed(suggested_size.1 as f32))
                     .align_x(Alignment::Center)
                     .align_y(Alignment::Center)
                     .into(),
