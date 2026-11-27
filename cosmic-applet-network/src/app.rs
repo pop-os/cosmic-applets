@@ -17,10 +17,12 @@ use std::{
 use cosmic::{
     Element, Task, app,
     applet::{
+        cosmic_panel_config::PanelAnchor,
         menu_button, menu_control_padding, padded_control,
         token::subscription::{TokenRequest, TokenUpdate, activation_token_subscription},
     },
     cctk::sctk::reexports::calloop,
+    cosmic_config::{Config, CosmicConfigEntry},
     cosmic_theme::Spacing,
     iced::core::window,
     iced::{
@@ -34,6 +36,7 @@ use cosmic::{
         indeterminate_circular, row, scrollable, secure_input, text, text_input, toggler,
     },
 };
+use cosmic_applets_config::network::NetworkAppletConfig;
 
 use futures::{
     StreamExt,
@@ -319,6 +322,7 @@ pub enum AgentSetting {
 #[derive(Default)]
 struct CosmicNetworkApplet {
     core: cosmic::app::Core,
+    config: NetworkAppletConfig,
     icon_name: String,
     popup: Option<window::Id>,
 
@@ -1084,6 +1088,7 @@ pub(crate) enum Message {
     CancelVPNConnection,
     /// Selects a device to display connections from
     SelectDevice(Option<Arc<DeviceInfo>>),
+    ConfigChanged(NetworkAppletConfig),
 }
 
 impl cosmic::Application for CosmicNetworkApplet {
@@ -1099,6 +1104,11 @@ impl cosmic::Application for CosmicNetworkApplet {
             token_tx: None,
             ..Default::default()
         };
+
+        let config = Config::new(Self::APP_ID, NetworkAppletConfig::VERSION)
+            .ok()
+            .and_then(|c| NetworkAppletConfig::get_entry(&c).ok())
+            .unwrap_or_default();
 
         let uuid = uuid::Uuid::new_v4().to_string().replace("-", "_");
         let my_id =
@@ -1621,16 +1631,75 @@ impl cosmic::Application for CosmicNetworkApplet {
                     .map(cosmic::Action::App);
                 }
             }
+            Message::ConfigChanged(config) => {
+                self.config = config;
+            }
         }
         Task::none()
     }
 
     fn view(&self) -> Element<'_, Message> {
-        self.core
-            .applet
-            .icon_button(&self.icon_name)
+        let is_horizontal = match self.core.applet.anchor {
+            PanelAnchor::Top | PanelAnchor::Bottom => true,
+            PanelAnchor::Left | PanelAnchor::Right => false,
+        };
+
+        if !is_horizontal {
+            return self
+                .core
+                .applet
+                .icon_button(&self.icon_name)
+                .on_press_down(Message::TogglePopup)
+                .into();
+        }
+
+        let suggested_size = self.core.applet.suggested_size(true);
+        let mut children = vec![
+            icon::from_name(self.icon_name.clone())
+                .size(suggested_size.0)
+                .into(),
+        ];
+
+        if self.config.show_interface_name {
+            let interface_name = self
+                .nm_state
+                .nm_state
+                .active_conns
+                .iter()
+                .fold("Disconnected", |text, conn| match (text, conn) {
+                    ("Disconnected", ActiveConnectionInfo::WiFi { name, .. }) => name,
+                    (_, ActiveConnectionInfo::Wired { name, .. }) => name,
+                    (_, ActiveConnectionInfo::Vpn { name, .. }) => name,
+                    _ => text,
+                })
+                .to_string();
+
+            let mut text = self.core.applet.text(interface_name);
+            if self.config.bold_interface_name {
+                text = text.font(cosmic::font::bold());
+            }
+
+            children.push(
+                text.height(Length::Fixed(suggested_size.1 as f32))
+                    .align_x(Alignment::Center)
+                    .align_y(Alignment::Center)
+                    .into(),
+            );
+        }
+
+        let applet_padding = self.core.applet.suggested_padding(true);
+        let content: Element<_> = row(children)
+            .spacing(applet_padding.1)
+            .align_y(Alignment::Center)
+            .into();
+
+        let btn: Element<'_, Message> = button::custom(content)
             .on_press_down(Message::TogglePopup)
-            .into()
+            .class(theme::Button::AppletIcon)
+            .padding([applet_padding.1, applet_padding.0])
+            .into();
+
+        self.core.applet.autosize_window(btn).into()
     }
 
     fn view_window(&self, _id: window::Id) -> Element<'_, Message> {
@@ -2268,7 +2337,17 @@ impl cosmic::Application for CosmicNetworkApplet {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        activation_token_subscription(0).map(Message::Token)
+        let subscriptions = vec![
+            activation_token_subscription(0).map(Message::Token),
+            self.core.watch_config(Self::APP_ID).map(|u| {
+                for err in u.errors {
+                    tracing::error!(?err, "Error watching config");
+                }
+                Message::ConfigChanged(u.config)
+            }),
+        ];
+
+        Subscription::batch(subscriptions)
     }
 
     fn style(&self) -> Option<cosmic::iced::theme::Style> {
