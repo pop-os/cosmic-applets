@@ -8,4 +8,5 @@ use serde::{Deserialize, Serialize};
 #[version = 1]
 pub struct NetworkAppletConfig {
     pub show_interface_name: bool,
+    pub bold_interface_name: bool,
 }

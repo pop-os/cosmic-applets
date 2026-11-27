@@ -1661,7 +1661,7 @@ impl cosmic::Application for CosmicNetworkApplet {
         ];
 
         if self.config.show_interface_name {
-            let text = self
+            let interface_name = self
                 .nm_state
                 .nm_state
                 .active_conns
@@ -1674,12 +1674,13 @@ impl cosmic::Application for CosmicNetworkApplet {
                 })
                 .to_string();
 
+            let mut text = self.core.applet.text(interface_name);
+            if self.config.bold_interface_name {
+                text = text.font(cosmic::font::bold());
+            }
+
             children.push(
-                self.core
-                    .applet
-                    .text(text)
-                    .font(cosmic::font::default())
-                    .height(Length::Fixed(suggested_size.1 as f32))
+                text.height(Length::Fixed(suggested_size.1 as f32))
                     .align_x(Alignment::Center)
                     .align_y(Alignment::Center)
                     .into(),
@@ -2336,7 +2337,7 @@ impl cosmic::Application for CosmicNetworkApplet {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        let mut subscriptions = vec![
+        let subscriptions = vec![
             activation_token_subscription(0).map(Message::Token),
             self.core.watch_config(Self::APP_ID).map(|u| {
                 for err in u.errors {
