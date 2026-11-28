@@ -218,18 +218,7 @@ impl DockItem {
 
         // Load icon by path if the name is a path.
         let cosmic_icon = match desktop_info.icon() {
-            Some(info) => {
-                if std::path::Path::new(&info).exists() {
-                    cosmic::widget::icon::from_path(PathBuf::from(&info)).icon()
-                } else {
-                    icon::from_name(info)
-                        .fallback(Some(icon::IconFallback::Names(vec![
-                            "application-default".into(),
-                            "application-x-executable".into(),
-                        ])))
-                        .icon()
-                }
-            }
+            Some(info) => fde::IconSource::from_unknown(info).as_cosmic_icon().icon(),
             None => cosmic::widget::icon::from_name("application-x-executable").icon(),
         }
         // sets the preferred icon size variant
